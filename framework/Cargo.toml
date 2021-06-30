@@ -1,0 +1,110 @@
+[package]
+name = "bios-framework"
+version = "0.1.0"
+authors = ["gudaoxuri"]
+description = "BIOS project foundation framework"
+keywords = ["bios", "http", "web", "framework", "async"]
+categories = [
+    "network-programming",
+    "asynchronous",
+    "web-programming::http-server",
+    "web-programming::websocket"
+]
+homepage = "https://bios.idealworld.group/framework"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2018"
+exclude = ["/.travis.yml"]
+readme = "README.adoc"
+
+[lib]
+name = "bios_framework"
+path = "src/lib.rs"
+
+[features]
+default = ["rslog", "web_server"]
+
+rslog = ["log4rs"]
+
+web_server = ["actix-web", "actix-http", "actix-service", "actix-cors", "validator", "actix-web-validator"]
+
+web_client = ["awc", "actix-http"]
+
+openapi = ["web_server", "paperclip"]
+
+reldb = ["rbatis"]
+
+cache = ["redis"]
+
+mq = ["lapin", "amq-protocol-types", "async-global-executor"]
+
+test = ["testcontainers"]
+
+[dependencies]
+# Basic
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+derive_more = "0.99"
+log = "0.4"
+regex = "1.5"
+chrono = { version = "0.4", features = ["serde"] }
+bigdecimal = { version = "0.2", features = ["serde"] }
+env_logger = "0.8"
+log4rs = { version = "1", optional = true }
+config = "0.11"
+url = "2"
+lazy_static = "1.4"
+futures = "0.3"
+futures-util = "0.3"
+
+# Web
+actix-web = { version = "3", default-features = false, features = ["compress", "rustls"], optional = true }
+actix-http = { version = "2", optional = true }
+actix-service = { version = "1", optional = true }
+actix-cors = { version = "0.5", optional = true }
+validator = { version = "0.12", features = ["derive"], optional = true }
+actix-web-validator = { version = "2", optional = true }
+awc = { version = "2", features = ["rustls"], optional = true }
+
+# OpenAPI
+paperclip = { version = "0.5", features = ["actix"], optional = true }
+
+# RelDB
+rbatis = { version = "2", default-features = false, features = ["tokio1", "mysql"], optional = true }
+
+# Redis
+redis = { version = "0.20", features = ["tokio-comp"], optional = true }
+
+# Rabbit
+lapin = { version = "1.7", optional = true }
+amq-protocol-types = { version = "6", optional = true }
+async-global-executor = { version = "2", optional = true }
+
+# Test
+testcontainers = {version="0.12", optional = true }
+
+[dev-dependencies]
+# Common
+tokio = { version = "1", features = ["time", "rt", "macros"] }
+actix-rt = "1"
+
+[[test]]
+name = "test_web_client"
+required-features = ["test","web_client"]
+
+[[test]]
+name = "test_cache_client"
+required-features = ["test","testcontainers","cache"]
+
+[[test]]
+name = "test_mq_client"
+required-features = ["test","mq"]
+
+[[test]]
+name = "test_reldb_client"
+required-features = ["test","reldb"]
+
+
+
+
+

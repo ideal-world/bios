@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "framework",
+    "baas/modules/*",
+    "baas/services/*",
+    "examples/*/*",
+]
