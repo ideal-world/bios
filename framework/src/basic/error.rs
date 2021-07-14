@@ -27,7 +27,7 @@ pub type BIOSResult<T> = Result<T, BIOSError>;
 
 #[derive(Debug)]
 pub enum BIOSError {
-    E(String, String),
+    Custom(String, String),
     Box(Box<dyn Error + Send + Sync>),
     InternalError(String),
     IOError(String),
@@ -47,7 +47,7 @@ impl Display for BIOSError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             BIOSError::Box(e) => write!(f, "{:?}", e),
-            BIOSError::E(code, msg) => write!(f, "{}:{}", code, msg),
+            BIOSError::Custom(code, msg) => write!(f, "{}:{}", code, msg),
             BIOSError::InternalError(s) => write!(f, "{}", s),
             BIOSError::IOError(s) => write!(f, "{}", s),
             BIOSError::FormatError(s) => write!(f, "{}", s),

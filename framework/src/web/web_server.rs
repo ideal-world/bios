@@ -15,13 +15,11 @@
  */
 
 use std::fmt;
-use std::time::Duration;
 
 use actix_cors::Cors;
 use actix_http::{Request, Response};
-use actix_service::{IntoServiceFactory, ServiceFactory};
+use actix_service::{IntoServiceFactory, Service, ServiceFactory};
 use actix_web::body::MessageBody;
-use actix_web::client::{Client, Connector};
 use actix_web::dev::{AppConfig, Server};
 use actix_web::middleware::Logger;
 use actix_web::HttpServer;
@@ -34,17 +32,6 @@ use crate::web::error_handler::WebErrorHandler;
 pub struct BIOSWebServer;
 
 impl BIOSWebServer {
-    pub fn init_client(connect_timeout_sec: u64, request_timeout_sec: u64) -> Client {
-        Client::builder()
-            .connector(
-                Connector::new()
-                    .timeout(Duration::from_secs(connect_timeout_sec))
-                    .finish(),
-            )
-            .timeout(Duration::from_secs(request_timeout_sec))
-            .finish()
-    }
-
     pub fn init_logger() -> Logger {
         Logger::default()
     }
@@ -71,12 +58,15 @@ pub trait Init {
 impl<F, I, S, B> Init for HttpServer<F, I, S, B>
 where
     F: Fn() -> I + Send + Clone + 'static,
-    I: IntoServiceFactory<S> + 'static,
-    S: ServiceFactory<Config = AppConfig, Request = Request> + 'static,
-    S::Error: Into<actix_http::Error> + 'static,
+    I: IntoServiceFactory<S, Request> + 'static,
+    S: ServiceFactory<Request, Config = AppConfig> + 'static,
+    S::Error: Into<actix_web::Error> + 'static,
     S::InitError: fmt::Debug,
     S::Response: Into<Response<B>> + 'static,
     B: MessageBody + 'static,
+    B::Error: Into<Box<dyn std::error::Error>>,
+    <S::Service as Service<Request>>::Future: 'static,
+    S::Service: 'static,
 {
     fn init(self, conf: &FrameworkConfig) -> BIOSResult<Server> {
         let server = self.bind(((&conf.web.host).clone(), conf.web.port))?.run();

@@ -21,10 +21,11 @@ use bios_framework::web::web_client::BIOSWebClient;
 #[actix_rt::main]
 async fn main() -> BIOSResult<()> {
     BIOSLogger::init("").unwrap();
-    let client = BIOSWebClient::init(60, 60);
+    let client = BIOSWebClient::init(60, 60)?;
     let mut response = client
+        .raw()
         .get("https://www.baidu.com/")
-        .header("User-Agent", "Actix-web")
+        .insert_header(("User-Agent", "Actix-web"))
         .send()
         .await?;
     println!(

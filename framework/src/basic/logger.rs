@@ -21,7 +21,7 @@ use log::{LevelFilter, SetLoggerError};
 use log4rs;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::config::runtime::ConfigErrors;
-use log4rs::config::{Appender, Logger, Root};
+use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 
 use crate::basic::error::{BIOSError, BIOSResult, ERROR_DEFAULT_CODE};
@@ -46,7 +46,10 @@ impl BIOSLogger {
                 Default::default(),
             ) {
                 Ok(_) => Ok(()),
-                Err(e) => Err(BIOSError::E(ERROR_DEFAULT_CODE.to_string(), e.to_string())),
+                Err(e) => Err(BIOSError::Custom(
+                    ERROR_DEFAULT_CODE.to_string(),
+                    e.to_string(),
+                )),
             }
         } else {
             let stdout = ConsoleAppender::builder()
@@ -56,15 +59,6 @@ impl BIOSLogger {
                 .build();
             let conf_default = log4rs::config::Config::builder()
                 .appender(Appender::builder().build("stdout", Box::new(stdout)))
-                // The level of the current version of the SQL execution log is INFO
-                .logger(Logger::builder().build(
-                    "rbatis::plugin::log",
-                    if root_level == LevelFilter::Info {
-                        LevelFilter::Warn
-                    } else {
-                        root_level
-                    },
-                ))
                 .build(Root::builder().appender("stdout").build(root_level))?;
             log4rs::init_config(conf_default)?;
             Ok(())

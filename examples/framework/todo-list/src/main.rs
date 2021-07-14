@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-#[macro_use]
-extern crate rbatis;
-
 use actix_web::{App, HttpServer};
 
 use bios_framework::basic::config::{BIOSConfig, NoneConfig};
 use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::db::reldb_client::BIOSRelDBClient;
 use bios_framework::web::web_server::{BIOSWebServer, Init};
+use bios_framework::BIOSFuns;
 
 mod controller;
 mod domain;
@@ -33,15 +30,14 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "DEBUG");
     BIOSLogger::init("").unwrap();
     let conf = BIOSConfig::<NoneConfig>::init("./examples/framework/todo-list/conf").unwrap();
-    BIOSRelDBClient::init_by_conf(&conf.fw).await.unwrap();
-    initializer::init().await.unwrap();
     let fw_conf = conf.fw.clone();
+    BIOSFuns::init(&fw_conf).await.unwrap();
+    initializer::init().await.unwrap();
     HttpServer::new(move || {
         App::new()
-            .data(BIOSWebServer::init_client(60, 60))
-            .wrap(BIOSWebServer::init_logger())
             .wrap(BIOSWebServer::init_cors(&fw_conf))
             .wrap(BIOSWebServer::init_error_handlers())
+            .wrap(BIOSWebServer::init_logger())
             .service(controller::list_categories)
             .service(controller::add_category)
             .service(controller::modify_category)

@@ -19,10 +19,9 @@
 
 use actix_http::http::StatusCode;
 use actix_web::post;
-use actix_web::test::call_service;
+use actix_web::test::{call_service, read_body};
+use actix_web::web::Bytes;
 use actix_web::{test, App};
-use actix_web_validator::Json;
-use actix_web_validator::Query;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -30,16 +29,16 @@ use bios_framework::basic::config::FrameworkConfig;
 use bios_framework::basic::error::{BIOSError, BIOSResult};
 use bios_framework::basic::logger::BIOSLogger;
 use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios_framework::web::validate::json::Json;
+use bios_framework::web::validate::query::Query;
 use bios_framework::web::web_server::BIOSWebServer;
-
-use crate::basic::HttpBody;
 
 mod basic;
 
 #[actix_rt::test]
 async fn test_web_server() -> BIOSResult<()> {
     BIOSLogger::init("")?;
-    let mut app = test::init_service(
+    let app = test::init_service(
         App::new()
             //.wrap(BIOSWebServer::init_logger())
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
@@ -53,74 +52,82 @@ async fn test_web_server() -> BIOSResult<()> {
 
     // Normal
     let req = test::TestRequest::post().uri("/normal/11").to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert_eq!(
-        r#"{"code":"200","msg":"","body":"successful"}"#,
-        resp.take_body().as_str()
-    );
+    let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#)
+    );
 
     // Business Error
     let req = test::TestRequest::post().uri("/bus_error").to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert_eq!(
-        r#"{"code":"xxx01","msg":"business error","body":null}"#,
-        resp.take_body().as_str()
-    );
+    let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"code":"xxx01","msg":"business error","body":null}"#),
+    );
 
     // Not Found
     let req = test::TestRequest::post().uri("/not_found").to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert_eq!(
-        r#"{"body":null,"code":"404","msg":"method:POST, url:/not_found"}"#,
-        resp.take_body().as_str()
-    );
+    let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"body":null,"code":"404","msg":"method:POST, url:/not_found"}"#),
+    );
 
     // System Error
     let req = test::TestRequest::post().uri("/sys_error").to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert_eq!(
-        r#"{"body":null,"code":"500","msg":"没事，莫慌"}"#,
-        resp.take_body().as_str()
-    );
+    let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"body":null,"code":"500","msg":"没事，莫慌"}"#),
+    );
 
     // Validation
     let req = test::TestRequest::post().uri("/validation").to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert_eq!(
-        r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `id`"}"#,
-        resp.take_body().as_str()
-    );
+    let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(
+            r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `id`"}"#
+        ),
+    );
 
     let req = test::TestRequest::post()
         .uri("/validation?id=111")
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
+    let resp = call_service(&app, req).await;
     assert_eq!(
-        r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `response_type`"}"#,
-        resp.take_body().as_str()
+        read_body(resp).await,
+        Bytes::from(
+            r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `response_type`"}"#
+        ),
     );
 
     let req = test::TestRequest::post()
         .uri("/validation?id=-1")
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
+    let resp = call_service(&app, req).await;
     assert_eq!(
-        r#"{"body":null,"code":"400","msg":"Query deserialize error: invalid digit found in string"}"#,
-        resp.take_body().as_str()
+        read_body(resp).await,
+        Bytes::from(
+            r#"{"body":null,"code":"400","msg":"Query deserialize error: invalid digit found in string"}"#
+        ),
     );
 
     let req = test::TestRequest::post()
         .uri("/validation?id=111&response_type=XX")
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
+    let resp = call_service(&app, req).await;
     assert_eq!(
-        r#"{"body":null,"code":"400","msg":"Query deserialize error: unknown variant `XX`, expected `Token` or `Code`"}"#,
-        resp.take_body().as_str()
+        read_body(resp).await,
+        Bytes::from(
+            r#"{"body":null,"code":"400","msg":"Query deserialize error: unknown variant `XX`, expected `Token` or `Code`"}"#
+        ),
     );
 
     let req = test::TestRequest::post()
@@ -136,10 +143,10 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
+    let resp = call_service(&app, req).await;
     assert_eq!(
-        r#"{"code":"200","msg":"","body":"successful"}"#,
-        resp.take_body().as_str()
+        read_body(resp).await,
+        Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#),
     );
 
     let req = test::TestRequest::post()
@@ -155,10 +162,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp
-        .take_body()
-        .as_str()
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap()
         .contains("ValidationErrors({\\\"id\\\""));
 
     let req = test::TestRequest::post()
@@ -174,8 +180,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp.take_body().as_str().contains("ValidationErrors({\\\"req\\\": Field([ValidationError { code: \\\"required\\\", message: None, params: {\\\"value\\\": Null} }])})\"}"));
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap().contains("ValidationErrors({\\\"req\\\": Field([ValidationError { code: \\\"required\\\", message: None, params: {\\\"value\\\": Null} }])})\"}"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -190,8 +197,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp.take_body().as_str().contains("ValidationErrors({\\\"len\\\": Field([ValidationError { code: \\\"length\\\", message: Some(\\\"custom msg\\\")"));
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap().contains("ValidationErrors({\\\"len\\\": Field([ValidationError { code: \\\"length\\\", message: Some(\\\"custom msg\\\")"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -206,10 +214,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp
-        .take_body()
-        .as_str()
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap()
         .contains("ValidationErrors({\\\"eq\\\": Field([ValidationError { code: \\\"length\\\","));
 
     let req = test::TestRequest::post()
@@ -225,11 +232,13 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
+    let resp = call_service(&app, req).await;
 
-    assert!(resp.take_body().as_str().contains(
-        "ValidationErrors({\\\"range\\\": Field([ValidationError { code: \\\"range\\\","
-    ));
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap()
+        .contains(
+            "ValidationErrors({\\\"range\\\": Field([ValidationError { code: \\\"range\\\","
+        ));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -244,10 +253,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp
-        .take_body()
-        .as_str()
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap()
         .contains("ValidationErrors({\\\"url\\\": Field([ValidationError {"));
 
     let req = test::TestRequest::post()
@@ -263,8 +271,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp.take_body().as_str().contains("ValidationErrors({\\\"mail\\\": Field([ValidationError { code: \\\"email\\\", message: None, params: {\\\"value\\\": String(\\\"sunisle.org\\\")} }])})\"}"));
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap().contains("ValidationErrors({\\\"mail\\\": Field([ValidationError { code: \\\"email\\\", message: None, params: {\\\"value\\\": String(\\\"sunisle.org\\\")} }])})\"}"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -279,10 +288,9 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@163.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    assert!(resp
-        .take_body()
-        .as_str()
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap()
         .contains("ValidationErrors({\\\"cont\\\": Field([ValidationError"));
 
     let req = test::TestRequest::post()
@@ -298,9 +306,10 @@ async fn test_web_server() -> BIOSResult<()> {
             cont: "ddd@gmail.com".to_owned(),
         })
         .to_request();
-    let mut resp = call_service(&mut app, req).await;
-    let str = resp.take_body().as_str().to_string();
-    assert!(str.contains("Validation error: ValidationErrors({\\\"phone\\\""));
+    let resp = call_service(&app, req).await;
+    assert!(String::from_utf8(read_body(resp).await.to_vec())
+        .unwrap()
+        .contains("Validation error: ValidationErrors({\\\"phone\\\""));
 
     Ok(())
 }
@@ -348,7 +357,7 @@ struct ItemBody {
     url: String,
     #[validate(email)]
     mail: String,
-    #[validate(custom = "bios_framework::web::validate_handler::validate_phone")]
+    #[validate(custom = "bios_framework::web::validate::handler::validate_phone")]
     phone: String,
     #[validate(contains = "gmail")]
     cont: String,

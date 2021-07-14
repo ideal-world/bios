@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-use chrono::NaiveDateTime;
+use sea_query::Iden;
 
-#[crud_table(table_name:todo_category)]
-#[derive(Clone, Debug)]
-pub struct Category {
-    pub id: Option<i64>,
-    pub name: Option<String>,
+#[derive(Iden)]
+pub enum Category {
+    Table,
+    Id,
+    Name,
 }
 
-#[crud_table(table_name:todo_item)]
-#[derive(Clone, Debug)]
-pub struct Item {
-    pub id: Option<i64>,
-    pub content: Option<String>,
-    pub creator: Option<String>,
-    #[serde(skip_serializing)]
-    pub create_time: Option<NaiveDateTime>,
-    #[serde(skip_serializing)]
-    pub update_time: Option<NaiveDateTime>,
-    pub category_id: Option<i64>,
+#[derive(Iden)]
+pub enum Item {
+    Table,
+    Id,
+    Content,
+    Creator,
+    CreateTime,
+    UpdateTime,
+    CategoryId,
 }

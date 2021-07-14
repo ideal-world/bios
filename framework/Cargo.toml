@@ -17,22 +17,26 @@ edition = "2018"
 exclude = ["/.travis.yml"]
 readme = "README.adoc"
 
+[profile.release]
+lto = true
+codegen-units = 1
+
 [lib]
 name = "bios_framework"
 path = "src/lib.rs"
 
 [features]
-default = ["rslog", "web_server"]
+default = ["rslog", "web-server"]
 
 rslog = ["log4rs"]
 
-web_server = ["actix-web", "actix-http", "actix-service", "actix-cors", "validator", "actix-web-validator"]
+web-server = ["actix-web", "actix-http", "actix-service", "actix-cors", "validator", "actix-router", "mime", "serde_qs", "serde_urlencoded"]
 
-web_client = ["awc", "actix-http"]
+web-client = ["awc", "actix-http"]
 
-openapi = ["web_server", "paperclip"]
+openapi = ["web-server", "paperclip"]
 
-reldb = ["rbatis"]
+reldb = ["sea-query", "sqlx"]
 
 cache = ["redis"]
 
@@ -42,67 +46,78 @@ test = ["testcontainers"]
 
 [dependencies]
 # Basic
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-derive_more = "0.99"
-log = "0.4"
-regex = "1.5"
-chrono = { version = "0.4", features = ["serde"] }
-bigdecimal = { version = "0.2", features = ["serde"] }
-env_logger = "0.8"
-log4rs = { version = "1", optional = true }
-config = "0.11"
-url = "2"
-lazy_static = "1.4"
-futures = "0.3"
-futures-util = "0.3"
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+derive_more = "^0"
+log = "^0"
+regex = "^1"
+chrono = { version = "^0", features = ["serde"] }
+rust_decimal = { version = "^1" }
+env_logger = "^0"
+log4rs = { version = "^1", optional = true }
+config = "^0"
+url = "^2"
+lazy_static = "^1"
+futures = "^0"
+futures-util = "^0"
+uuid = "^0"
 
 # Web
-actix-web = { version = "3", default-features = false, features = ["compress", "rustls"], optional = true }
-actix-http = { version = "2", optional = true }
-actix-service = { version = "1", optional = true }
-actix-cors = { version = "0.5", optional = true }
-validator = { version = "0.12", features = ["derive"], optional = true }
-actix-web-validator = { version = "2", optional = true }
-awc = { version = "2", features = ["rustls"], optional = true }
+actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"], optional = true }
+actix-http = { version = "3.0.0-beta.8", optional = true }
+actix-service = { version = "^2", optional = true }
+actix-cors = { version = "0.6.0-beta.2", optional = true }
+actix-router = { version = "^0", optional = true }
+awc = { version = "3.0.0-beta.7", features = ["rustls"], optional = true }
+validator = { version = "^0", features = ["derive"], optional = true }
+mime = { version = "^0", optional = true }
+serde_qs = { version = "^0", features = ["actix"], optional = true }
+serde_urlencoded = { version = "^0", optional = true }
 
 # OpenAPI
-paperclip = { version = "0.5", features = ["actix"], optional = true }
+paperclip = { version = "^0", features = ["actix"], optional = true }
 
 # RelDB
-rbatis = { version = "2", default-features = false, features = ["tokio1", "mysql"], optional = true }
+# sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono","with-rust_decimal"], optional = true }
+sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono"], optional = true }
+sqlx = { version = "^0", default-features = false, features = ["macros", "mysql", "chrono", "decimal", "runtime-tokio-native-tls"], optional = true }
 
 # Redis
-redis = { version = "0.20", features = ["tokio-comp"], optional = true }
+redis = { version = "^0", features = ["tokio-comp"], optional = true }
 
 # Rabbit
-lapin = { version = "1.7", optional = true }
-amq-protocol-types = { version = "6", optional = true }
-async-global-executor = { version = "2", optional = true }
+lapin = { version = "^1", optional = true }
+amq-protocol-types = { version = "^6", optional = true }
+async-global-executor = { version = "^2", optional = true }
 
 # Test
-testcontainers = {version="0.12", optional = true }
+testcontainers = { version = "^0", optional = true }
 
 [dev-dependencies]
 # Common
-tokio = { version = "1", features = ["time", "rt", "macros"] }
-actix-rt = "1"
+tokio = { version = "^1", features = ["time", "rt", "macros"] }
+actix-rt = "^2"
+
+[[test]]
+name = "test_web_server"
+required-features = ["test", "web-client"]
 
 [[test]]
 name = "test_web_client"
-required-features = ["test","web_client"]
+required-features = ["test", "web-client"]
 
 [[test]]
 name = "test_cache_client"
-required-features = ["test","testcontainers","cache"]
+required-features = ["test", "testcontainers", "cache"]
 
 [[test]]
 name = "test_mq_client"
-required-features = ["test","mq"]
+required-features = ["test", "mq"]
 
 [[test]]
 name = "test_reldb_client"
-required-features = ["test","reldb"]
+required-features = ["test", "reldb"]
+
 
 
 

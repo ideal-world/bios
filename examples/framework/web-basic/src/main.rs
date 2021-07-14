@@ -19,6 +19,7 @@ use actix_web::{App, HttpServer};
 use bios_framework::basic::config::{BIOSConfig, NoneConfig};
 use bios_framework::basic::logger::BIOSLogger;
 use bios_framework::web::web_server::{BIOSWebServer, Init};
+use bios_framework::BIOSFuns;
 
 mod controller;
 
@@ -27,12 +28,12 @@ async fn main() -> std::io::Result<()> {
     BIOSLogger::init("").unwrap();
     let conf = BIOSConfig::<NoneConfig>::init("").unwrap();
     let fw_conf = conf.fw.clone();
+    BIOSFuns::init(&fw_conf).await.unwrap();
     HttpServer::new(move || {
         App::new()
-            .data(BIOSWebServer::init_client(60, 60))
-            .wrap(BIOSWebServer::init_logger())
             .wrap(BIOSWebServer::init_cors(&fw_conf))
             .wrap(BIOSWebServer::init_error_handlers())
+            .wrap(BIOSWebServer::init_logger())
             .service(controller::hello)
     })
     .init(&conf.fw)

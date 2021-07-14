@@ -19,10 +19,12 @@
 use redis::AsyncCommands;
 use tokio::time::{sleep, Duration};
 
+use bios_framework::basic::config::{CacheConfig, FrameworkConfig};
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::basic::logger::BIOSLogger;
 use bios_framework::cache::cache_client::BIOSCacheClient;
 use bios_framework::test::test_container::BIOSTestContainer;
+use bios_framework::BIOSFuns;
 
 #[tokio::test]
 async fn test_cache_client() -> BIOSResult<()> {
@@ -120,6 +122,23 @@ async fn test_cache_client() -> BIOSResult<()> {
         assert!(mem.contains(&"m1".to_string()));
         assert!(mem.contains(&"m2".to_string()));
         assert!(!mem.contains(&"m3".to_string()));
+
+        // Default test
+        BIOSFuns::init(&FrameworkConfig {
+            app: Default::default(),
+            web: Default::default(),
+            cache: CacheConfig { url },
+            db: Default::default(),
+            mq: Default::default(),
+            adv: Default::default(),
+        })
+        .await?;
+
+        let map_result = BIOSFuns::cache().hgetall("h").await?;
+        assert_eq!(map_result.len(), 3);
+        assert_eq!(map_result.get("f2").unwrap(), "v2");
+        assert_eq!(map_result.get("f0").unwrap(), "v0");
+        assert_eq!(map_result.get("f3").unwrap(), "1");
 
         Ok(())
     })

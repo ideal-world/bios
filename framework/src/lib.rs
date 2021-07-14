@@ -17,6 +17,107 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::ptr::replace;
+
+use crate::basic::config::FrameworkConfig;
+use crate::basic::error::BIOSResult;
+#[cfg(feature = "cache")]
+use crate::cache::cache_client::BIOSCacheClient;
+#[cfg(feature = "reldb")]
+use crate::db::reldb_client::BIOSRelDBClient;
+#[cfg(feature = "mq")]
+use crate::mq::mq_client::BIOSMQClient;
+#[cfg(feature = "web-client")]
+use crate::web::web_client::BIOSWebClient;
+
+static mut BIOS_INST: BIOSFuns = BIOSFuns {
+    #[cfg(feature = "reldb")]
+    reldb: None,
+    #[cfg(feature = "cache")]
+    cache: None,
+    #[cfg(feature = "mq")]
+    mq: None,
+    #[cfg(feature = "web-client")]
+    web_client: None,
+};
+
+pub struct BIOSFuns {
+    #[cfg(feature = "reldb")]
+    pub reldb: Option<BIOSRelDBClient>,
+    #[cfg(feature = "cache")]
+    pub cache: Option<BIOSCacheClient>,
+    #[cfg(feature = "mq")]
+    pub mq: Option<BIOSMQClient>,
+    #[cfg(feature = "web-client")]
+    pub web_client: Option<BIOSWebClient>,
+}
+
+impl BIOSFuns {
+    pub async fn init(conf: &FrameworkConfig) -> BIOSResult<()> {
+        #[cfg(feature = "reldb")]
+        {
+            let reldb_client = BIOSRelDBClient::init_by_conf(conf).await?;
+            unsafe { replace(&mut BIOS_INST.reldb, Some(reldb_client)) };
+        }
+        #[cfg(feature = "cache")]
+        {
+            let cache_client = BIOSCacheClient::init_by_conf(conf).await?;
+            unsafe { replace(&mut BIOS_INST.cache, Some(cache_client)) };
+        }
+        #[cfg(feature = "mq")]
+        {
+            let mq_client = BIOSMQClient::init_by_conf(conf).await?;
+            unsafe { replace(&mut BIOS_INST.mq, Some(mq_client)) };
+        }
+        #[cfg(feature = "web-client")]
+        {
+            let web_client = BIOSWebClient::init_by_conf(conf)?;
+            unsafe { replace(&mut BIOS_INST.web_client, Some(web_client)) };
+        }
+        BIOSResult::Ok(())
+    }
+
+    #[cfg(feature = "reldb")]
+    pub fn reldb() -> &'static BIOSRelDBClient {
+        unsafe {
+            match &BIOS_INST.reldb {
+                None => panic!("RelDB default instance does not exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
+    #[cfg(feature = "cache")]
+    pub fn cache() -> &'static mut BIOSCacheClient {
+        unsafe {
+            match &mut BIOS_INST.cache {
+                None => panic!("Cache default instance does not exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
+    #[cfg(feature = "mq")]
+    pub fn mq() -> &'static mut BIOSMQClient {
+        unsafe {
+            match &mut BIOS_INST.mq {
+                None => panic!("MQ default instance does not exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
+    #[cfg(feature = "web-client")]
+    pub fn web_client() -> &'static BIOSWebClient {
+        unsafe {
+            match &BIOS_INST.web_client {
+                None => panic!("Web Client default instance does not exist"),
+                Some(t) => t,
+            }
+        }
+    }
+}
+
 pub mod basic;
 #[cfg(feature = "cache")]
 pub mod cache;

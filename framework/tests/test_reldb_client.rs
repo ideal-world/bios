@@ -14,227 +14,377 @@
  * limitations under the License.
  */
 
-// https://github.com/rbatis/rbatis
-// https://github.com/rbatis/rbatis/blob/master/example/src/crud_test.rs
+// https://github.com/SeaQL/sea-query
 
-#[macro_use]
-extern crate rbatis;
+use chrono::{Local, NaiveDateTime};
+use sea_query::{ColumnDef, Expr, Iden, Order, Query, Table};
+use sqlx::Connection;
 
-use bigdecimal::BigDecimal;
-use chrono::NaiveDateTime;
-use rbatis::core::value::DateTimeNow;
-use rbatis::crud::{CRUDMut, CRUD};
-use rbatis::executor::Executor;
-use rbatis::plugin::page::{Page, PageRequest};
-
+use bios_framework::basic::config::{DBConfig, FrameworkConfig};
 use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::db::reldb_client::BIOSRelDBClient;
-use bios_framework::db::reldb_client::BIOSDB;
+use bios_framework::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
 use bios_framework::test::test_container::BIOSTestContainer;
+use bios_framework::BIOSFuns;
 
-#[crud_table(table_name:biz_activity)]
-#[derive(Clone, Debug)]
-struct BizActivity {
-    pub id: Option<String>,
-    pub name: Option<String>,
-    pub pc_link: Option<String>,
-    pub h5_link: Option<String>,
-    pub pc_banner_img: Option<String>,
-    pub h5_banner_img: Option<String>,
-    pub sort: Option<String>,
-    pub status: Option<i32>,
-    pub remark: Option<String>,
-    pub create_time: Option<NaiveDateTime>,
-    pub version: Option<BigDecimal>,
-    pub delete_flag: Option<i32>,
+#[derive(Iden)]
+enum BizActivity {
+    Table,
+    Id,
+    Name,
+    Status,
+    Remark,
+    CreateTime,
+    Version,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+struct BizActivityStruct {
+    id: i32,
+    name: String,
+    status: i32,
+    remark: String,
+    create_time: NaiveDateTime,
+    version: f64,
 }
 
 #[tokio::test]
 async fn test_reldb_client() -> BIOSResult<()> {
-    BIOSLogger::init("").unwrap();
     BIOSTestContainer::mysql(|url| async move {
-        BIOSRelDBClient::init(&url, 10).await?;
+        let client = BIOSRelDBClient::init(&url, 10).await?;
 
-        BIOSDB
-            .exec(
-                r#"
-CREATE TABLE `biz_activity` (
-  `id` varchar(50) NOT NULL DEFAULT '' COMMENT '唯一活动码',
-  `name` varchar(255) NOT NULL,
-  `pc_link` varchar(255) DEFAULT NULL,
-  `h5_link` varchar(255) DEFAULT NULL,
-  `sort` varchar(255) NOT NULL COMMENT '排序',
-  `status` int(11) NOT NULL COMMENT '状态（0：已下线，1：已上线）',
-  `version` int(11) NOT NULL,
-  `remark` varchar(255) DEFAULT NULL,
-  `create_time` datetime NOT NULL,
-  `delete_flag` int(1) NOT NULL,
-  `pc_banner_img` varchar(255) DEFAULT NULL,
-  `h5_banner_img` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8  COMMENT='运营管理-活动管理';
-    "#,
-                &vec![],
+        let sql_builder = Table::create()
+            .table(BizActivity::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(BizActivity::Id)
+                    .integer()
+                    .not_null()
+                    .auto_increment()
+                    .primary_key(),
             )
-            .await?;
-
-        BIOSDB
-            .save(&BizActivity {
-                id: Some("1".to_string()),
-                name: Some("测试".to_string()),
-                pc_link: None,
-                h5_link: None,
-                pc_banner_img: None,
-                h5_banner_img: None,
-                sort: Some("1".to_string()),
-                status: Some(1),
-                remark: None,
-                create_time: Some(NaiveDateTime::now()),
-                version: Some(BigDecimal::from(1)),
-                delete_flag: Some(1),
-            })
-            .await?;
-
-        BIOSDB
-            .save_batch(&vec![BizActivity {
-                id: Some("2".to_string()),
-                name: Some("测试".to_string()),
-                pc_link: Some("http://xxxx".to_string()),
-                h5_link: None,
-                pc_banner_img: None,
-                h5_banner_img: None,
-                sort: Some("1".to_string()),
-                status: Some(1),
-                remark: None,
-                create_time: Some(NaiveDateTime::now()),
-                version: Some(BigDecimal::from(1)),
-                delete_flag: Some(1),
-            }])
-            .await?;
-
-        let result_opt: Option<BizActivity> =
-            BIOSDB.fetch_by_column("id", &"0".to_string()).await?;
-        assert!(result_opt.is_none());
-
-        let result_opt: Option<BizActivity> =
-            BIOSDB.fetch_by_column("id", &"1".to_string()).await?;
-        assert_eq!(result_opt.unwrap().name.unwrap(), "测试");
-
-        let result_list: Vec<BizActivity> = BIOSDB.fetch_list().await?;
-        assert_eq!(result_list.len(), 2);
-
-        let result_list: Vec<BizActivity> = BIOSDB
-            .fetch_list_by_column("id", &["1".to_string()])
-            .await?;
-        assert_eq!(result_list.len(), 1);
-
-        let result_opt: Option<BizActivity> = BIOSDB
-            .fetch_by_wrapper(&BIOSDB.new_wrapper().eq("id", "1").and().eq("name", "测试"))
-            .await?;
-        assert_eq!(result_opt.unwrap().name.unwrap(), "测试");
-
-        BIOSDB
-            .remove_by_column::<BizActivity, _>("id", &"1".to_string())
-            .await?;
-
-        BIOSDB
-            .update_by_wrapper(
-                &mut BizActivity {
-                    id: Some("2".to_string()),
-                    name: Some("测试2".to_string()),
-                    pc_link: None,
-                    h5_link: None,
-                    pc_banner_img: None,
-                    h5_banner_img: None,
-                    sort: Some("1".to_string()),
-                    status: Some(1),
-                    remark: None,
-                    create_time: Some(NaiveDateTime::now()),
-                    version: Some(BigDecimal::from(1)),
-                    delete_flag: Some(1),
-                },
-                &BIOSDB.new_wrapper().eq("id", "2"),
-                true,
+            .col(ColumnDef::new(BizActivity::Name).not_null().string())
+            .col(
+                ColumnDef::new(BizActivity::Status)
+                    .not_null()
+                    .tiny_integer(),
             )
-            .await?;
-        let result_opt: Option<BizActivity> = BIOSDB
-            .fetch_by_wrapper(&BIOSDB.new_wrapper().eq("id", "2"))
-            .await?;
-        assert_eq!(result_opt.as_ref().unwrap().name.as_ref().unwrap(), "测试2");
-        assert_eq!(
-            result_opt.as_ref().unwrap().pc_link.as_ref().unwrap(),
-            "http://xxxx"
-        );
+            .col(ColumnDef::new(BizActivity::Remark).text())
+            .col(ColumnDef::new(BizActivity::CreateTime).date_time())
+            .col(ColumnDef::new(BizActivity::Version).not_null().double())
+            .done();
 
-        BIOSDB
-            .update_by_wrapper(
-                &mut BizActivity {
-                    id: Some("2".to_string()),
-                    name: Some("测试2".to_string()),
-                    pc_link: None,
-                    h5_link: None,
-                    pc_banner_img: None,
-                    h5_banner_img: None,
-                    sort: Some("1".to_string()),
-                    status: Some(1),
-                    remark: None,
-                    create_time: Some(NaiveDateTime::now()),
-                    version: Some(BigDecimal::from(1)),
-                    delete_flag: Some(1),
-                },
-                &BIOSDB.new_wrapper().eq("id", "2"),
-                false,
-            )
+        client.exec(&sql_builder, None).await?;
+
+        // Create
+
+        let sql_builder = Query::insert()
+            .into_table(BizActivity::Table)
+            .columns(vec![
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .values_panic(vec![
+                "测试".into(),
+                1.into(),
+                "".into(),
+                Local::now().naive_local().into(),
+                1.0.into(), // Decimal::from(1).into(),
+            ])
+            .done();
+        let result = client.exec(&sql_builder, None).await?;
+        let id = result.last_insert_id();
+        assert_eq!(id, 1);
+
+        // Read
+
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .limit(1)
+            .done();
+        let result = client
+            .fetch_all::<BizActivityStruct>(&sql_builder, None)
             .await?;
-        let result_opt: Option<BizActivity> = BIOSDB
-            .fetch_by_wrapper(&BIOSDB.new_wrapper().eq("id", "2"))
+        assert_eq!(result[0].name, "测试");
+        assert_eq!(result[0].version, 1.0);
+
+        // Update
+
+        let sql_builder = Query::update()
+            .table(BizActivity::Table)
+            .values(vec![(BizActivity::Status, 2.into())])
+            .and_where(Expr::col(BizActivity::Id).eq(id))
+            .done();
+        let result = client.exec(&sql_builder, None).await?;
+        assert_eq!(result.rows_affected(), 1);
+
+        // Read
+
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .done();
+        let result = client
+            .fetch_one::<BizActivityStruct>(&sql_builder, None)
             .await?;
-        assert_eq!(result_opt.as_ref().unwrap().name.as_ref().unwrap(), "测试2");
-        assert!(result_opt.as_ref().unwrap().pc_link.as_ref().is_none());
+        assert_eq!(result.status, 2);
 
-        // paging
+        // Pagination
 
-        let result_page: Page<BizActivity> = BIOSDB
-            .fetch_page_by_wrapper(&BIOSDB.new_wrapper(), &PageRequest::new(1, 20))
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .done();
+        let result = client
+            .pagination::<BizActivityStruct>(&sql_builder, 1, 10, None)
             .await?;
-        assert_eq!(result_page.page_no, 1);
-        assert_eq!(result_page.page_size, 20);
-        assert_eq!(result_page.pages, 1);
-        assert_eq!(result_page.total, 1);
-        assert_eq!(result_page.records.len(), 1);
-        assert_eq!(
-            result_page.records.get(0).unwrap().name.as_ref().unwrap(),
-            "测试2"
-        );
+        assert_eq!(result.page_number, 1);
+        assert_eq!(result.page_size, 10);
+        assert_eq!(result.total_size, 1);
+        assert_eq!(result.records[0].status, 2);
 
-        // TX
+        // Count
 
-        let mut tx = BIOSDB.acquire_begin().await?;
-        tx.update_by_wrapper(
-            &mut BizActivity {
-                id: Some("2".to_string()),
-                name: Some("测试3".to_string()),
-                pc_link: None,
-                h5_link: None,
-                pc_banner_img: None,
-                h5_banner_img: None,
-                sort: Some("1".to_string()),
-                status: Some(1),
-                remark: None,
-                create_time: Some(NaiveDateTime::now()),
-                version: Some(BigDecimal::from(1)),
-                delete_flag: Some(1),
+        let sql_builder = Query::select()
+            .columns(vec![BizActivity::Id])
+            .from(BizActivity::Table)
+            .done();
+        let result = client.count(&sql_builder, None).await?;
+        assert_eq!(result, 1);
+
+        // Delete
+
+        let sql_builder = Query::delete()
+            .from_table(BizActivity::Table)
+            .and_where(Expr::col(BizActivity::Id).eq(id))
+            .done();
+        let result = client.exec(&sql_builder, None).await?;
+        assert_eq!(result.rows_affected(), 1);
+
+        // Default test
+        BIOSFuns::init(&FrameworkConfig {
+            app: Default::default(),
+            web: Default::default(),
+            cache: Default::default(),
+            db: DBConfig {
+                url,
+                max_connections: 20,
             },
-            &BIOSDB.new_wrapper().eq("id", "2"),
-            vec![""],
-        )
+            mq: Default::default(),
+            adv: Default::default(),
+        })
         .await?;
-        tx.commit().await?;
-        let result_opt: Option<BizActivity> = BIOSDB
-            .fetch_by_wrapper(&BIOSDB.new_wrapper().eq("id", "2"))
+
+        let sql_builder = Query::select()
+            .columns(vec![BizActivity::Id])
+            .from(BizActivity::Table)
+            .done();
+        let result = BIOSFuns::reldb().count(&sql_builder, None).await?;
+        assert_eq!(result, 0);
+
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_reldb_client_with_tx() -> BIOSResult<()> {
+    BIOSTestContainer::mysql(|url| async move {
+        let client = BIOSRelDBClient::init(&url, 10).await?;
+
+        let mut conn = client.conn().await;
+        let mut tx = conn.begin().await?;
+
+        let sql_builder = Table::create()
+            .table(BizActivity::Table)
+            .if_not_exists()
+            .col(
+                ColumnDef::new(BizActivity::Id)
+                    .integer()
+                    .not_null()
+                    .auto_increment()
+                    .primary_key(),
+            )
+            .col(ColumnDef::new(BizActivity::Name).not_null().string())
+            .col(
+                ColumnDef::new(BizActivity::Status)
+                    .not_null()
+                    .tiny_integer(),
+            )
+            .col(ColumnDef::new(BizActivity::Remark).text())
+            .col(ColumnDef::new(BizActivity::CreateTime).date_time())
+            .col(ColumnDef::new(BizActivity::Version).not_null().double())
+            .done();
+
+        client.exec(&sql_builder, None).await?;
+
+        // Create
+
+        let sql_builder = Query::insert()
+            .into_table(BizActivity::Table)
+            .columns(vec![
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .values_panic(vec![
+                "测试".into(),
+                1.into(),
+                "".into(),
+                Local::now().naive_local().into(),
+                1.0.into(), // Decimal::from(1).into(),
+            ])
+            .done();
+
+        let result = client.exec(&sql_builder, Some(&mut tx)).await?;
+        let id = result.last_insert_id();
+        assert_eq!(id, 1);
+
+        // Rollback
+        tx.rollback().await?;
+
+        // Read, return empty
+
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .limit(1)
+            .done();
+        let result = client
+            .fetch_all::<BizActivityStruct>(&sql_builder, None)
             .await?;
-        assert_eq!(result_opt.unwrap().name.unwrap(), "测试3");
+        assert_eq!(result.len(), 0);
+
+        // Again
+
+        let mut conn = client.conn().await;
+        let mut tx = conn.begin().await?;
+
+        let sql_builder = Query::insert()
+            .into_table(BizActivity::Table)
+            .columns(vec![
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .values_panic(vec![
+                "测试".into(),
+                1.into(),
+                "".into(),
+                Local::now().naive_local().into(),
+                1.0.into(), // Decimal::from(1).into(),
+            ])
+            .done();
+
+        let result = client.exec(&sql_builder, Some(&mut tx)).await?;
+        let id = result.last_insert_id();
+        assert_eq!(id, 2);
+
+        // Read in TX, return one record
+
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .limit(1)
+            .done();
+        let result = client
+            .fetch_all::<BizActivityStruct>(&sql_builder, Some(&mut tx))
+            .await?;
+        assert_eq!(result[0].name, "测试");
+        assert_eq!(result[0].version, 1.0);
+
+        // Read NOT in TX, return empty
+
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .limit(1)
+            .done();
+        let result = client
+            .fetch_all::<BizActivityStruct>(&sql_builder, None)
+            .await?;
+        assert_eq!(result.len(), 0);
+
+        // Commit
+
+        tx.commit().await?;
+
+        // Read NOT in TX, return one record
+
+        let sql_builder = Query::select()
+            .columns(vec![
+                BizActivity::Id,
+                BizActivity::Name,
+                BizActivity::Status,
+                BizActivity::Remark,
+                BizActivity::CreateTime,
+                BizActivity::Version,
+            ])
+            .from(BizActivity::Table)
+            .order_by(BizActivity::Id, Order::Desc)
+            .limit(1)
+            .done();
+        let result = client
+            .fetch_all::<BizActivityStruct>(&sql_builder, None)
+            .await?;
+        assert_eq!(result[0].name, "测试");
+        assert_eq!(result[0].version, 1.0);
+
         Ok(())
     })
     .await

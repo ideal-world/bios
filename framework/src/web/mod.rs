@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#[cfg(feature = "web_server")]
+#[cfg(feature = "web-server")]
 pub mod error_handler;
-#[cfg(feature = "web_server")]
+#[cfg(feature = "web-server")]
 pub mod resp_handler;
-#[cfg(feature = "web_server")]
-pub mod validate_handler;
-#[cfg(feature = "web_client")]
+#[cfg(feature = "web-server")]
+pub mod validate;
+#[cfg(feature = "web-client")]
 pub mod web_client;
-#[cfg(feature = "web_server")]
+#[cfg(feature = "web-server")]
 pub mod web_server;

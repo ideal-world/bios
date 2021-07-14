@@ -70,6 +70,6 @@ impl BIOSTestContainer {
         let port = node
             .get_host_port(3306)
             .expect("Test port acquisition error");
-        fun(format!("mysql://root:123456@127.0.0.1:{}/test", port)).await
+        fun(format!("mysql://root:123456@localhost:{}/test", port)).await
     }
 }

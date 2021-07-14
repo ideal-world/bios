@@ -14,19 +14,9 @@
  * limitations under the License.
  */
 
-use actix_web::get;
-use serde::Deserialize;
-use validator::Validate;
-
-use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
-use bios_framework::web::validate::query::Query;
-
-#[derive(Deserialize, Validate)]
-pub struct Hi {
-    name: String,
-}
-
-#[get("/")]
-pub async fn hello(query: Query<Hi>) -> BIOSResp {
-    BIOSRespHelper::ok(format!("Hello {}", query.name))
-}
+pub mod error;
+pub mod handler;
+pub mod json;
+pub mod path;
+pub mod qsquery;
+pub mod query;
