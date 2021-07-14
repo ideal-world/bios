@@ -8,19 +8,20 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-derive_more = "0.99"
-log = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+derive_more = "^0"
+log = "^0"
+chrono = { version = "^0", features = ["serde"] }
 
-bios-framework = { path = "../../../framework", features = ["web_client", "reldb"] }
-actix-web = { version = "3", default-features = false, features = ["compress"] }
-validator = { version = "0.12", features = ["derive"] }
-actix-web-validator = "2"
+bios-framework = { path = "../../../framework", features = ["web-client", "reldb"] }
+actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"] }
+validator = { version = "^0", features = ["derive"] }
+actix-web-validator = "^2"
 
-rbatis = { version = "2", default-features = false, features = ["tokio1", "mysql"] }
+sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono"] }
+sqlx = { version = "^0", default-features = false, features = ["macros", "mysql", "chrono", "decimal", "runtime-tokio-native-tls"] }
 
 [dev-dependencies]
-awc = { version = "2", features = ["rustls"] }
-actix-rt = "1"
+awc = { version = "3.0.0-beta.7", features = ["rustls"] }
+actix-rt = "^2"

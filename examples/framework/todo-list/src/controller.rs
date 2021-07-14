@@ -15,67 +15,86 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use actix_web_validator::{Json, Query};
-use rbatis::crud::{CRUDMut, CRUD};
-use rbatis::plugin::page::PageRequest;
+use sea_query::{Alias, Expr, Query};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use sqlx::Connection;
 use validator::Validate;
 
-use bios_framework::db::reldb_client::BIOSDB;
+use bios_framework::db::reldb_client::SqlBuilderProcess;
 use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios_framework::web::validate::json::Json;
+use bios_framework::web::validate::query::Query as VQuery;
+use bios_framework::BIOSFuns;
 
 use crate::domain::{Category, Item};
+use sqlx::types::chrono::{DateTime, Utc};
 
 #[get("/categories")]
-pub async fn list_categories(query: Query<CategoryListReq>) -> BIOSResp {
-    let select = BIOSDB.new_wrapper().do_if(query.name.is_some(), |w| {
-        w.like("name", query.name.as_ref().unwrap())
-    });
-    let categories: Vec<CategoryResp> = BIOSDB
-        .fetch_list_by_wrapper::<Category>(&select)
-        .await?
-        .iter()
-        .map(|category| CategoryResp {
-            id: category.id.unwrap(),
-            name: category.name.as_ref().unwrap().to_string(),
+pub async fn list_categories(query: VQuery<CategoryListReq>) -> BIOSResp {
+    let sql_builder = Query::select()
+        .columns(vec![Category::Id, Category::Name])
+        .from(Category::Table)
+        .and_where_option(if query.name.as_ref().is_some() {
+            Some(Expr::col(Category::Name).like(query.name.as_ref().unwrap().as_str()))
+        } else {
+            None
         })
-        .collect();
+        .done();
+    let categories = BIOSFuns::reldb()
+        .fetch_all::<CategoryResp>(&sql_builder, None)
+        .await?;
     BIOSRespHelper::ok(categories)
 }
 
 #[post("/category")]
 pub async fn add_category(category: Json<CategoryAddOrModifyReq>) -> BIOSResp {
-    BIOSDB
-        .save(&Category {
-            id: None,
-            name: Some(category.name.to_string()),
-        })
-        .await?;
-    BIOSRespHelper::ok("")
+    let sql_builder = Query::insert()
+        .into_table(Category::Table)
+        .columns(vec![Category::Name])
+        .values_panic(vec![category.name.clone().into()])
+        .done();
+    let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
+    let id = result.last_insert_id();
+    BIOSRespHelper::ok(id)
 }
 
 #[put("/category/{id}")]
 pub async fn modify_category(req: HttpRequest, category: Json<CategoryAddOrModifyReq>) -> BIOSResp {
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
-    BIOSDB
-        .update_by_column(
-            "id",
-            &mut Category {
-                id: Some(id),
-                name: Some(category.name.to_string()),
-            },
-        )
-        .await?;
+    let sql_builder = Query::update()
+        .table(Category::Table)
+        .values(vec![(Category::Name, category.name.clone().into())])
+        .and_where(Expr::col(Category::Id).eq(id))
+        .done();
+    BIOSFuns::reldb().exec(&sql_builder, None).await?;
     BIOSRespHelper::ok("")
 }
 
 #[delete("/category/{id}")]
 pub async fn delete_category(req: HttpRequest) -> BIOSResp {
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
-    let mut tx = BIOSDB.acquire_begin().await?;
-    tx.remove_by_column::<Item, i64>("category_id", &id).await?;
-    tx.remove_by_column::<Category, i64>("id", &id).await?;
+    let mut conn = BIOSFuns::reldb().conn().await;
+    let mut tx = conn.begin().await?;
+
+    BIOSFuns::reldb()
+        .exec(
+            &Query::delete()
+                .from_table(Category::Table)
+                .and_where(Expr::col(Category::Id).eq(id))
+                .done(),
+            Some(&mut tx),
+        )
+        .await?;
+    BIOSFuns::reldb()
+        .exec(
+            &Query::delete()
+                .from_table(Item::Table)
+                .and_where(Expr::col(Item::CategoryId).eq(id))
+                .done(),
+            Some(&mut tx),
+        )
+        .await?;
+
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
@@ -92,7 +111,7 @@ pub struct CategoryAddOrModifyReq {
     name: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(sqlx::FromRow, Debug, Serialize)]
 pub struct CategoryResp {
     id: i64,
     name: String,
@@ -101,69 +120,80 @@ pub struct CategoryResp {
 // -----------------------
 
 #[get("/items")]
-pub async fn page_items(query: Query<ItemPageReq>) -> BIOSResp {
-    let (mut sql, mut args) = ("".to_owned(), Vec::<Value>::new());
-    if let Some(content) = &query.content {
-        sql += " and i.content like %?%";
-        args.push(Value::from(content.to_string()));
-    }
-    if let Some(category_id) = &query.category_id {
-        sql += " and i.category_id = ?";
-        args.push(Value::from(*category_id));
-    }
-    let categories = BIOSDB
-        .fetch_page::<ItemResp>(
-            &format!(
-                r#"
-    select i.id, i.content, i.creator, i.update_time, c.name as category_name from todo_item i
-      left join todo_category c on c.id = i.category_id
-      where 1 = 1{}
-    "#,
-                sql
-            ),
-            &args,
-            &PageRequest::new(
-                query.page_number.unwrap_or(1),
-                query.page_size.unwrap_or(10),
-            ),
+pub async fn page_items(query: VQuery<ItemPageReq>) -> BIOSResp {
+    let sql_builder = Query::select()
+        .columns(vec![
+            (Item::Table, Item::Id),
+            (Item::Table, Item::Content),
+            (Item::Table, Item::Creator),
+            (Item::Table, Item::CreateTime),
+            (Item::Table, Item::UpdateTime),
+        ])
+        .expr_as(
+            Expr::col((Category::Table, Category::Name)),
+            Alias::new("category_name"),
         )
+        .from(Item::Table)
+        .left_join(
+            Category::Table,
+            Expr::tbl(Category::Table, Category::Id).equals(Item::Table, Item::CategoryId),
+        )
+        .and_where_option(if query.content.as_ref().is_some() {
+            Some(Expr::col(Item::Content).like(query.content.as_ref().unwrap().as_str()))
+        } else {
+            None
+        })
+        .and_where_option(if query.category_id.is_some() {
+            Some(Expr::col(Item::Creator).eq(query.category_id.unwrap()))
+        } else {
+            None
+        })
+        .done();
+    let items = BIOSFuns::reldb()
+        .pagination::<ItemResp>(&sql_builder, query.page_number, query.page_size, None)
         .await?;
-    BIOSRespHelper::ok(categories)
+    BIOSRespHelper::ok(items)
 }
 
 #[post("/item")]
 pub async fn add_item(item: Json<ItemAddReq>) -> BIOSResp {
-    BIOSDB
-        .save(&Item {
-            id: None,
-            content: Some(item.content.to_string()),
-            creator: Some(item.creator.to_string()),
-            create_time: None,
-            update_time: None,
-            category_id: Some(item.category_id),
-        })
-        .await?;
-    BIOSRespHelper::ok("")
+    let sql_builder = Query::insert()
+        .into_table(Item::Table)
+        .columns(vec![Item::Content, Item::Creator, Item::CategoryId])
+        .values_panic(vec![
+            item.content.clone().into(),
+            item.creator.clone().into(),
+            item.category_id.into(),
+        ])
+        .done();
+    let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
+    let id = result.last_insert_id();
+    BIOSRespHelper::ok(id)
 }
 
 #[put("/item/{id}")]
 pub async fn modify_item(req: HttpRequest, item: Json<ItemModifyReq>) -> BIOSResp {
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
-    if BIOSDB
-        .update_by_column(
-            "id",
-            &mut Item {
-                id: Some(id),
-                content: item.content.clone(),
-                creator: item.creator.clone(),
-                create_time: None,
-                update_time: None,
-                category_id: None,
-            },
-        )
-        .await?
-        != 0
-    {
+    let mut values = Vec::new();
+    if item.content.as_ref().is_some() {
+        values.push((
+            Item::Content,
+            item.content.as_ref().unwrap().to_string().into(),
+        ));
+    }
+    if item.creator.as_ref().is_some() {
+        values.push((
+            Item::Creator,
+            item.creator.as_ref().unwrap().to_string().into(),
+        ));
+    }
+    let sql_builder = Query::update()
+        .table(Item::Table)
+        .values(values)
+        .and_where(Expr::col(Item::Id).eq(id))
+        .done();
+    let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
+    if result.rows_affected() != 0 {
         BIOSRespHelper::ok("")
     } else {
         BIOSRespHelper::bus_err("404", "")
@@ -173,7 +203,15 @@ pub async fn modify_item(req: HttpRequest, item: Json<ItemModifyReq>) -> BIOSRes
 #[delete("/item/{id}")]
 pub async fn delete_item(req: HttpRequest) -> BIOSResp {
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
-    BIOSDB.remove_by_column::<Item, i64>("id", &id).await?;
+    BIOSFuns::reldb()
+        .exec(
+            &Query::delete()
+                .from_table(Item::Table)
+                .and_where(Expr::col(Item::Id).eq(id))
+                .done(),
+            None,
+        )
+        .await?;
     BIOSRespHelper::ok("")
 }
 
@@ -182,8 +220,8 @@ pub struct ItemPageReq {
     #[validate(length(min = 2, max = 255))]
     content: Option<String>,
     category_id: Option<i64>,
-    page_number: Option<u64>,
-    page_size: Option<u64>,
+    page_number: u64,
+    page_size: u64,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -203,11 +241,11 @@ pub struct ItemModifyReq {
     pub creator: Option<String>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(sqlx::FromRow, Debug, Serialize)]
 pub struct ItemResp {
     pub id: i64,
     pub content: String,
     pub creator: String,
-    pub update_time: String,
+    pub update_time: DateTime<Utc>,
     pub category_name: String,
 }

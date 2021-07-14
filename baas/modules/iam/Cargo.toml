@@ -1,10 +1,30 @@
 [package]
-name = "iam"
+name = "bios-baas-iam"
 version = "0.1.0"
-authors = ["gudaoxuri <i@sunisle.org>"]
+authors = ["gudaoxuri"]
+description = "BIOS project BaaS IAM"
+keywords = ["bios", "iam", "ident", "auth", "user"]
+homepage = "https://bios.idealworld.group/framework"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
 edition = "2018"
+readme = "README.adoc"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+lto = true
+codegen-units = 1
+
+[lib]
+name = "bios_framework"
+path = "src/lib.rs"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+derive_more = "0.99"
+log = "0.4"
+
 bios-framework = { path = "../../../framework" }
+actix-web = { version = "3", default-features = false, features = ["compress"] }
+validator = { version = "0.12", features = ["derive"] }
+actix-web-validator = "2"

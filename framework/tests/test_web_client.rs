@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
-// https://docs.rs/awc/2.0.3/awc/
+// https://docs.rs/awc
 
 use awc::http::StatusCode;
 
+use bios_framework::basic::config::FrameworkConfig;
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::basic::logger::BIOSLogger;
 use bios_framework::web::web_client::BIOSWebClient;
+use bios_framework::BIOSFuns;
 
 #[actix_rt::test]
 async fn test_web_client() -> BIOSResult<()> {
     BIOSLogger::init("")?;
-    let client = BIOSWebClient::init(60, 60);
+    let client = BIOSWebClient::init(60, 60)?;
+    let client = client.raw();
     let response = client
         .get("https://www.baidu.com")
-        .header("User-Agent", "Actix-web")
+        .insert_header(("User-Agent", "Actix-web"))
         .send()
         .await?;
     assert_eq!(response.status(), StatusCode::OK);
@@ -47,6 +50,26 @@ async fn test_web_client() -> BIOSResult<()> {
         "body": "json"
     });
     let mut response = client
+        .post("http://httpbin.org/post")
+        .send_json(&request)
+        .await?;
+    assert!(BIOSWebClient::body_as_str(&mut response)
+        .await?
+        .contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
+
+    // Default test
+    BIOSFuns::init(&FrameworkConfig {
+        app: Default::default(),
+        web: Default::default(),
+        cache: Default::default(),
+        db: Default::default(),
+        mq: Default::default(),
+        adv: Default::default(),
+    })
+    .await?;
+
+    let mut response = BIOSFuns::web_client()
+        .raw()
         .post("http://httpbin.org/post")
         .send_json(&request)
         .await?;

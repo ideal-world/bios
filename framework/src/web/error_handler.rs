@@ -17,11 +17,11 @@
 use std::task::{Context, Poll};
 
 use actix_service::{Service, Transform};
-use actix_web::body::{Body, ResponseBody};
-use actix_web::dev::{HttpResponseBuilder, ServiceRequest, ServiceResponse};
+use actix_web::dev::{AnyBody, ServiceRequest, ServiceResponse};
 use actix_web::error::{Error, Result};
 use actix_web::http::{HeaderValue, StatusCode};
-use actix_web::{http, HttpResponse, ResponseError};
+use actix_web::web::Bytes;
+use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
 use futures_util::future::{ok, FutureExt, LocalBoxFuture, Ready};
 use log::{trace, warn};
 
@@ -30,17 +30,15 @@ use crate::web::resp_handler::BIOSRespHelper;
 
 pub struct WebErrorHandler;
 
-impl<S, B> Transform<S> for WebErrorHandler
+impl<S> Transform<S, ServiceRequest> for WebErrorHandler
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
     S::Future: 'static,
-    B: 'static,
 {
-    type Request = ServiceRequest;
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse;
     type Error = Error;
-    type InitError = ();
     type Transform = WebErrorMiddleware<S>;
+    type InitError = ();
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
@@ -52,22 +50,20 @@ pub struct WebErrorMiddleware<S> {
     service: S,
 }
 
-impl<S, B> Service for WebErrorMiddleware<S>
+impl<S> Service<ServiceRequest> for WebErrorMiddleware<S>
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error>,
     S::Future: 'static,
-    B: 'static,
 {
-    type Request = ServiceRequest;
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.service.poll_ready(cx)
     }
 
-    fn call(&mut self, req: ServiceRequest) -> Self::Future {
+    fn call(&self, req: ServiceRequest) -> Self::Future {
         let fut = self.service.call(req);
         async move {
             let mut res = fut.await?;
@@ -105,15 +101,12 @@ where
                     )
                 }
                 let res = res.map_body(|_, _| {
-                    ResponseBody::Body(Body::from(
-                        serde_json::json!(BIOSRespHelper::<()> {
+                    AnyBody::Bytes(Bytes::from(serde_json::json!(BIOSRespHelper::<()> {
                             code: bus_code,
                             msg: msg,
                             body: None,
-                        })
-                        .to_string(),
-                    ))
-                    .into_body()
+                        }).to_string())
+                    )
                 });
                 Ok(res)
             } else {
@@ -127,7 +120,7 @@ where
 impl ResponseError for BIOSError {
     fn status_code(&self) -> StatusCode {
         match *self {
-            BIOSError::E(_, _) => StatusCode::BAD_REQUEST,
+            BIOSError::Custom(_, _) => StatusCode::BAD_REQUEST,
             BIOSError::BadRequest(_) => StatusCode::BAD_REQUEST,
             BIOSError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
             BIOSError::NotFound(_) => StatusCode::NOT_FOUND,

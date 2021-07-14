@@ -21,16 +21,28 @@ use std::time::Duration;
 
 use tokio::time::sleep;
 
+use bios_framework::basic::config::{FrameworkConfig, MQConfig};
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::mq::mq_client::BIOSMQClient;
 use bios_framework::test::test_container::BIOSTestContainer;
+use bios_framework::BIOSFuns;
 
 #[tokio::test]
 async fn test_mq_client() -> BIOSResult<()> {
     BIOSLogger::init("").unwrap();
     BIOSTestContainer::rabbit(|url| async move {
-        let mut client = BIOSMQClient::init(&url).await?;
+        // Default test
+        BIOSFuns::init(&FrameworkConfig {
+            app: Default::default(),
+            web: Default::default(),
+            cache: Default::default(),
+            db: Default::default(),
+            mq: MQConfig { url },
+            adv: Default::default(),
+        })
+        .await?;
+
+        let client = BIOSFuns::mq();
 
         let mut header = HashMap::new();
         header.insert("k1".to_string(), "v1".to_string());

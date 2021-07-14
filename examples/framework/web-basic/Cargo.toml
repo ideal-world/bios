@@ -8,12 +8,11 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-derive_more = "0.99"
-log = "0.4"
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+derive_more = "^0"
+log = "^0"
 
 bios-framework = { path = "../../../framework" }
-actix-web = { version = "3", default-features = false, features = ["compress"] }
-validator = { version = "0.12", features = ["derive"] }
-actix-web-validator = "2"
+actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"] }
+validator = { version = "^0", features = ["derive"] }

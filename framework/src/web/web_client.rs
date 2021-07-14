@@ -24,23 +24,29 @@ use awc::Connector;
 use awc::{Client, ClientResponse};
 use log::info;
 
+use crate::basic::config::FrameworkConfig;
 use crate::basic::error::{BIOSError, BIOSResult};
 
-pub struct BIOSWebClient;
+pub struct BIOSWebClient {
+    client: Client,
+}
 
 impl BIOSWebClient {
-    pub fn init(connect_timeout_sec: u64, request_timeout_sec: u64) -> Client {
+    pub fn init_by_conf(conf: &FrameworkConfig) -> BIOSResult<BIOSWebClient> {
+        BIOSWebClient::init(
+            conf.web.client.connect_timeout_sec,
+            conf.web.client.request_timeout_sec,
+        )
+    }
+
+    pub fn init(connect_timeout_sec: u64, request_timeout_sec: u64) -> BIOSResult<BIOSWebClient> {
         info!(
             "[BIOS.Framework.WebClient] Initializing, connect_timeout_sec:{}, request_timeout_sec:{}",
             connect_timeout_sec,
             request_timeout_sec
         );
         let client = Client::builder()
-            .connector(
-                Connector::new()
-                    .timeout(Duration::from_secs(connect_timeout_sec))
-                    .finish(),
-            )
+            .connector(Connector::new().timeout(Duration::from_secs(connect_timeout_sec)))
             .timeout(Duration::from_secs(request_timeout_sec))
             .finish();
         info!(
@@ -48,7 +54,11 @@ impl BIOSWebClient {
             connect_timeout_sec,
             request_timeout_sec
         );
-        client
+        BIOSResult::Ok(BIOSWebClient { client })
+    }
+
+    pub fn raw(&self) -> &Client {
+        &self.client
     }
 
     pub async fn body_as_str(
@@ -68,7 +78,7 @@ impl From<SendRequestError> for BIOSError {
     fn from(error: SendRequestError) -> Self {
         match error {
             SendRequestError::Url(e) => BIOSError::Box(Box::new(e)),
-            SendRequestError::Connect(e) => BIOSError::Box(Box::new(e)),
+            SendRequestError::Connect(e) => BIOSError::IOError(e.to_string()),
             SendRequestError::Send(e) => BIOSError::Box(Box::new(e)),
             SendRequestError::Response(e) => BIOSError::FormatError(e.to_string()),
             SendRequestError::Http(e) => BIOSError::Box(Box::new(e)),
@@ -76,6 +86,8 @@ impl From<SendRequestError> for BIOSError {
             SendRequestError::Timeout => BIOSError::Timeout(error.to_string()),
             SendRequestError::TunnelNotSupported => BIOSError::Timeout(error.to_string()),
             SendRequestError::Body(e) => BIOSError::IOError(e.to_string()),
+            SendRequestError::Custom(e, _) => BIOSError::Custom("-1".to_string(), e.to_string()),
+            e => BIOSError::Custom("-1".to_string(), e.to_string()),
         }
     }
 }

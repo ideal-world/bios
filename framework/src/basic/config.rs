@@ -85,6 +85,14 @@ pub struct WebConfig {
     pub host: String,
     pub port: u16,
     pub allowed_origin: String,
+    pub client: WebClientConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct WebClientConfig {
+    pub connect_timeout_sec: u64,
+    pub request_timeout_sec: u64,
 }
 
 impl Default for WebConfig {
@@ -93,6 +101,16 @@ impl Default for WebConfig {
             host: "0.0.0.0".to_owned(),
             port: 8080,
             allowed_origin: "*".to_owned(),
+            client: WebClientConfig::default(),
+        }
+    }
+}
+
+impl Default for WebClientConfig {
+    fn default() -> Self {
+        WebClientConfig {
+            connect_timeout_sec: 60,
+            request_timeout_sec: 60,
         }
     }
 }
@@ -207,7 +225,7 @@ impl From<ConfigError> for BIOSError {
             ConfigError::PathParse(_) => BIOSError::IOError(error.to_string()),
             ConfigError::FileParse { .. } => BIOSError::IOError(error.to_string()),
             ConfigError::Type { .. } => BIOSError::FormatError(error.to_string()),
-            ConfigError::Message(s) => BIOSError::E(ERROR_DEFAULT_CODE.to_string(), s),
+            ConfigError::Message(s) => BIOSError::Custom(ERROR_DEFAULT_CODE.to_string(), s),
             ConfigError::Foreign(err) => BIOSError::Box(err),
         }
     }

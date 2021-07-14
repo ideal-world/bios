@@ -13,18 +13,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#[cfg(test)]
-mod tests {
-   /* use framework;
-    #[test]
-    fn it_works() {
-        let num = 10;
-        println!(
-            "Hello, world! {} plus one is {}!",
-            num,
-            framework::add_one(num)
-        );
-        assert_eq!(2 + 2, 4);
-    }*/
-}

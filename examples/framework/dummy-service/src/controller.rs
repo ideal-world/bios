@@ -17,13 +17,13 @@
 use std::str::FromStr;
 use std::sync::Mutex;
 
-use actix_web::client::Client;
 use actix_web::http::Uri;
 use actix_web::{post, put, web, HttpRequest, HttpResponse};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios_framework::BIOSFuns;
 
 pub struct AppStateContainer {
     pub err_rate: Mutex<u8>,
@@ -51,18 +51,18 @@ pub async fn normal(
     body: web::Bytes,
     data: web::Data<AppStateContainer>,
     req: HttpRequest,
-    client: web::Data<Client>,
 ) -> BIOSResp {
     /*   req.headers().into_iter().for_each(|(k, v)| {
         println!("Header:{}-{:?}", k, v)
     });*/
 
     if !query.forward.is_empty() {
-        let forwarded_req = client
+        let forwarded_req = BIOSFuns::web_client()
+            .raw()
             .request_from(Uri::from_str(&query.forward).unwrap(), req.head())
             .no_decompress();
         let forwarded_req = if let Some(addr) = req.head().peer_addr {
-            forwarded_req.header("x-forwarded-for", format!("{}", addr.ip()))
+            forwarded_req.insert_header(("x-forwarded-for", format!("{}", addr.ip())))
         } else {
             forwarded_req
         };
@@ -74,7 +74,7 @@ pub async fn normal(
             .iter()
             .filter(|(h, _)| *h != "connection")
         {
-            resp.header(header_name.clone(), header_value.clone());
+            resp.insert_header((header_name.clone(), header_value.clone()));
         }
         Ok(resp.body(forwarded_resp.body().await.unwrap()))
     } else {
@@ -108,11 +108,8 @@ pub async fn fallback() -> BIOSResp {
 }
 
 #[put("/conf/err_rate/{err_rate}")]
-pub async fn conf_err_rate(
-    web::Path(err_rate): web::Path<u8>,
-    data: web::Data<AppStateContainer>,
-) -> BIOSResp {
+pub async fn conf_err_rate(path: web::Path<u8>, data: web::Data<AppStateContainer>) -> BIOSResp {
     let mut err_rate_conf = data.err_rate.lock().unwrap();
-    *err_rate_conf = err_rate;
+    *err_rate_conf = path.into_inner();
     BIOSRespHelper::ok("")
 }
