@@ -1,3 +1,16 @@
+# Gateway
+/gateway/apisix/**
+/gateway/etcd/**
+/gateway/default.etcd
+
+!/gateway/apisix/apisix/plugins/auth-dew/**
+!/gateway/apisix/apisix/plugins/auth-dew.lua
+!/gateway/conf/config-default.yaml
+!/gateway/t/plugin/auth-dew/**
+!/gateway/t/certs/**
+!/gateway/t/error_page/**
+!/gateway/t/APISIX.pm
+
 # CI
 /.github/deploy_key
 out
