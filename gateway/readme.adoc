@@ -1,0 +1,120 @@
+=== Gateway
+
+==== 目录说明
+
+----
+|apisix
+|-- apisix
+|---- plugins
+|------ auth-dew.lua               # auth-dew插件
+|------ auth-dew                   # auth-dew插件
+|-- conf
+|---- config-default.yaml          # 添加auth-dew到插件
+|-- t
+|---- plugin
+|------ auth-dew                   # auth-dew插件测试
+|---- certs                        # 测试使用
+|---- error_page                   # 测试使用
+|---- APISIX.pm                    # 测试使用
+|utils
+|-- linux-install-luarocks.sh      # luarocks安装脚本
+|Dockerfile                        # Dockerfile
+|init-ubuntu.sh                    # 开发初始化脚本
+----
+
+==== 开发配置
+
+===== 环境准备
+
+执行 ``init-init-ubuntu.sh`` 完成开发环境初始化。
+
+===== 常用操作
+
+[source,sh]
+----
+# initialize NGINX config file and etcd
+make init
+
+# start Apache APISIX server
+make run
+
+# stop Apache APISIX server gracefully
+make quit
+
+# stop Apache APISIX server immediately
+make stop
+----
+
+===== 单元测试
+
+[source,sh]
+----
+export PERL5LIB=.:$PERL5LIB
+
+TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-dew/utils.t
+
+TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-dew/redis.t
+
+...
+----
+
+===== 集成测试
+
+[source,sh]
+----
+# 添加upstream
+curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "type": "roundrobin",
+  "nodes": {
+    "httpbin.org:80": 1
+  }
+}'
+
+# 添加route
+curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "uri": "/cache/**",
+  "upstream_id": "1"
+}'
+
+# 测试成功
+curl -i -X GET "http://127.0.0.1:9080/cache/1"
+
+# 添加全局插件（需要开启Redis）
+curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "plugins": {
+    "auth-dew": {
+      "redis_host": "127.0.0.1",
+      "redis_password": "123456",
+      "redis_database": 1
+    }
+  }
+}'
+
+# 获取全局插件列表
+curl http://127.0.0.1:9080/apisix/admin/global_rules -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1'
+
+# 测试失败，缺少 Dew-Host
+curl -i -X GET "http://127.0.0.1:9080/cache/1"
+# 测试成功
+curl -i -X GET "http://127.0.0.1:9080/cache/1" -H 'Dew-Host: app1.tenant1'
+
+# 测试失败，Token错误
+curl -i -X GET "http://127.0.0.1:9080/cache/1" -H 'Dew-Host: app1.tenant1' -H 'Dew-Token: token001'
+# 测试成功（先执行单元测试）
+curl -i -X GET "http://127.0.0.1:9080/cache/1" -H 'Dew-Host: app1.tenant1' -H 'Dew-Token: tokenxxx'
+----
+
+==== 手工发布镜像
+
+[source,sh]
+----
+# 打包镜像
+docker build -t dewms/gateway:0.1 .
+# 发布镜像
+docker push dewms/gateway:0.1
+# 测试运行
+docker run --name bios-gateway -d -p 9080:9080 -d dewms/gateway:0.1
+----
