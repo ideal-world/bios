@@ -1,0 +1,11 @@
+/apixsix/**
+/etcd/**
+/default.etcd
+
+!/apisix/apisix/plugins/auth-dew/**
+!/apisix/apisix/plugins/auth-dew.lua
+!/conf/config-default.yaml
+!/t/plugin/auth-dew/**
+!/t/certs/**
+!/t/error_page/**
+!/t/APISIX.pm
