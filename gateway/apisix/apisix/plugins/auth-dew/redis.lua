@@ -9,7 +9,12 @@ local function init(host, port, database, timeout, password)
     redis_client:set_timeouts(timeout, timeout, timeout)
     local _, conn_err = redis_client:connect(host, port)
     if conn_err then
-        error("Redis connection failure:" .. conn_err)
+        if conn_err == "already connected" then
+            redis_client:close()
+            init(host, port, database, timeout, password)
+        else
+            error("Redis connection failure:" .. conn_err)
+        end
     end
     if password and password ~= '' then
         local _, err = redis_client:auth(password)
