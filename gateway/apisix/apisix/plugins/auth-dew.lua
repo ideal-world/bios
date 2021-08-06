@@ -21,6 +21,8 @@ local schema = {
         host_flag = { type = "string", default = "Dew-Host" },
         request_date_offset_ms = { type = "integer", default = 5000 },
 
+        ident_flag = { type = "string", default = "Dew-Ident" },
+
         cache_resources = { type = "string", default = "dew:iam:resources" },
         cache_change_resources = { type = "string", default = "dew:iam:change_resources" },
         cache_change_resources_timer_sec = { type = "integer", default = 30 },
@@ -48,16 +50,14 @@ function _M.check_schema(conf)
     end
     local _, redis_err = m_redis.init(conf.redis_host, conf.redis_port, conf.redis_database, conf.redis_timeout, conf.redis_password)
     if redis_err then
+        core.log.error("Connect redis error", redis_err)
         return false, redis_err
     end
-    m_init.init(conf.cache_resources,conf.cache_change_resources,conf.cache_change_resources_timer_sec)
+    m_init.init(conf.cache_resources, conf.cache_change_resources, conf.cache_change_resources_timer_sec)
     return true
 end
 
 function _M.rewrite(conf, ctx)
-    core.log.error("====="..conf.date_flag)
-    core.log.error("====="..conf.host_flag)
-
     local ident_code, ident_message = m_ident.ident(conf, ctx)
     if ident_code ~= 200 then
         return ident_code, ident_message
@@ -66,6 +66,7 @@ function _M.rewrite(conf, ctx)
     if auth_code ~= 200 then
         return auth_code, auth_message
     end
+    core.request.set_header(ctx, conf.ident_flag, ctx.ident_info)
 end
 
 return _M
