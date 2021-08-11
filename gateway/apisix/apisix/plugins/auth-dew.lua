@@ -3,6 +3,8 @@ local m_redis = require("apisix.plugins.auth-dew.redis")
 local m_init = require("apisix.plugins.auth-dew.init")
 local m_ident = require("apisix.plugins.auth-dew.ident")
 local m_auth = require("apisix.plugins.auth-dew.auth")
+local json = require("cjson")
+local ngx_encode_base64 = ngx.encode_base64
 
 local plugin_name = "auth-dew"
 
@@ -66,7 +68,16 @@ function _M.rewrite(conf, ctx)
     if auth_code ~= 200 then
         return auth_code, auth_message
     end
-    core.request.set_header(ctx, conf.ident_flag, ctx.ident_info)
+    core.request.set_header(ctx, conf.ident_flag, ngx_encode_base64(json.decode({
+        appCode = ctx.ident_info.app_code,
+        tenantCode = ctx.ident_info.tenant_code,
+        accountCode = ctx.ident_info.account_code,
+        token = ctx.ident_info.token,
+        tokenKind = ctx.ident_info.token_kind,
+        ak = ctx.ident_info.ak,
+        roles = ctx.ident_info.roles,
+        groups = ctx.ident_info.groups,
+    })))
 end
 
 return _M
