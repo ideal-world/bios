@@ -24,7 +24,7 @@ function _M.ident(conf, ctx)
     local host = core.request.header(ctx, host_flag)
     local req_method = ngx.var.request_method
 
-    -- Check
+    -- check
     if host == nil or host == "" then
         return 400, { message = "Request is not legal, missing [" .. host_flag .. "] in Header" }
     end
@@ -40,7 +40,7 @@ function _M.ident(conf, ctx)
     local resource_action = string.lower(req_method)
     resource_uri = string.sub(resource_uri, 2, i) .. "://" .. host .. string.sub(resource_uri, i + 1)
 
-    -- Ident
+    -- ident
     local token = core.request.header(ctx, token_flag)
     local authorization = core.request.header(ctx, auth_flag)
 
@@ -52,8 +52,9 @@ function _M.ident(conf, ctx)
             app_code = nil,
             tenant_code = nil,
             account_code = nil,
-            account_name = nil,
+            token = nil,
             token_kind = nil,
+            ak = nil,
             roles = nil,
             groups = nil,
         }
@@ -75,8 +76,9 @@ function _M.ident(conf, ctx)
             app_code = opt_info.app_code,
             tenant_code = opt_info.tenant_code,
             account_code = opt_info.account_code,
-            account_name = opt_info.account_name,
+            token = token,
             token_kind = opt_info.token_kind,
+            ak = nil,
             roles = opt_info.roles,
             groups = opt_info.groups,
         }
@@ -125,8 +127,9 @@ function _M.ident(conf, ctx)
         app_code = app_code,
         tenant_code = tenant_code,
         account_code = nil,
-        account_name = nil,
+        token = nil,
         token_kind = nil,
+        ak = req_ak,
         roles = nil,
         groups = nil,
     }
