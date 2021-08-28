@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: java-app
+
+server:
+  port: 7000
+
+dew:
+  security:
+    ident-info-enabled: false
+
