@@ -1,0 +1,196 @@
+=== 服务治理方案 TBD
+
+==== 方案介绍 TBD
+
+==== 组件部署
+
+TIP: 本方案需要Kubernetes环境及Helm工具，测试环境推荐K3s，环境及工具安装见官方文档。
+
+NOTE: 需要替换成实际IP
+
+WARNING: 本章节操作仅用于开发、测试，生产环境需要统一规划部署。
+
+[source,bash]
+.Skywalking安装配置
+----
+docker run -d \
+  -p 12800:12800 \
+  -p 11800:11800 \
+  --name=oap \
+  apache/skywalking-oap-server:8.7.0-es6
+
+docker run -d \
+  -p 12888:8080 \
+  --name=oap-ui \
+  --env 'SW_OAP_ADDRESS=http://x.x.x.x:12800' \
+  apache/skywalking-ui:8.7.0
+----
+
+[source,bash]
+.Nacos安装配置
+----
+docker run -d \
+  -p 8848:8848 \
+  --name nacos \
+  --env 'MODE=standalone' \
+  nacos/nacos-server:2.0.2
+
+# http://127.0.0.1:8848/nacos/
+# 用户名密码 nacos/nacos
+----
+
+[source,bash]
+.gateway安装配置
+----
+helm repo add apisix https://charts.apiseven.com
+helm repo update
+
+kubectl create ns ingress-apisix
+
+# Gateway安装
+helm install apisix apisix/apisix \
+  --namespace ingress-apisix \
+  --kubeconfig /etc/rancher/k3s/k3s.yaml \
+  --set apisix.image.repository=dewms/gateway \
+  --set apisix.image.tag=0.3 \
+  --set admin.allow.ipList="{0.0.0.0/0}"
+
+export NODE_PORT=$(kubectl get --namespace ingress-apisix -o jsonpath="{.spec.ports[0].nodePort}" services apisix-gateway)
+export NODE_IP=$(kubectl get nodes --namespace ingress-apisix -o jsonpath="{.items[0].status.addresses[0].address}")
+# 输出网关实际地址，重要，后文要用到
+echo "gateway http://$NODE_IP:$NODE_PORT"
+
+# Dashboard安装
+helm install apisix-dashboard apisix/apisix-dashboard \
+  --namespace ingress-apisix \
+  --kubeconfig /etc/rancher/k3s/k3s.yaml
+
+export POD_NAME=$(kubectl get pods --namespace ingress-apisix -l "app.kubernetes.io/name=apisix-dashboard,app.kubernetes.io/instance=apisix-dashboard" -o jsonpath="{.items[0].metadata.name}")
+export CONTAINER_PORT=$(kubectl get pod --namespace ingress-apisix $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+echo "Dashboard Visit http://127.0.0.1:9000 to use your application"
+kubectl --namespace ingress-apisix port-forward $POD_NAME 9000:$CONTAINER_PORT
+
+# 用户名/密码：admin/admin
+
+# Ingress安装
+helm install apisix-ingress-controller apisix/apisix-ingress-controller \
+  --namespace ingress-apisix \
+  --kubeconfig /etc/rancher/k3s/k3s.yaml
+
+export POD_NAME=$(kubectl get pods --namespace ingress-apisix -l "app.kubernetes.io/name=apisix-ingress-controller,app.kubernetes.io/instance=apisix-ingress-controller" -o jsonpath="{.items[0].metadata.name}")
+export CONTAINER_PORT=$(kubectl get pod --namespace ingress-apisix $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+echo "Visit http://127.0.0.1:8080 to use your application"
+kubectl --namespace ingress-apisix port-forward $POD_NAME 8080:$CONTAINER_PORT
+
+# 测试
+kubectl run httpbin --image kennethreitz/httpbin --port 80
+kubectl expose pod httpbin --port 80
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apisix.apache.org/v1
+kind: ApisixRoute
+metadata:
+  name: httpserver-route
+spec:
+  http:
+  - name: rule1
+    match:
+      hosts:
+      - local.httpbin.org
+      paths:
+      - /*
+    backend:
+        serviceName: httpbin
+        servicePort: 80
+EOF
+
+kubectl --namespace ingress-apisix exec -it $(kubectl get pods --namespace ingress-apisix -l "app.kubernetes.io/name=apisix,app.kubernetes.io/instance=apisix" -o jsonpath="{.items[0].metadata.name}") -- curl http://127.0.0.1:9080/headers -H 'Host: local.httpbin.org'
+
+# 返回类似如下信息即为成功
+
+#{
+#  "headers": {
+#    "Accept": "*/*",
+#    "Host": "httpbin.org",
+#    "User-Agent": "curl/7.64.1",
+#    "X-Amzn-Trace-Id": "Root=1-5ffc3273-2928e0844e19c9810d1bbd8a"
+#  }
+#}
+----
+
+[source,bash]
+.gateway配置skywalking
+----
+# 修改configmap,添加skywalking配置
+kubectl -n ingress-apisix edit configmap apisix
+
+>plugins:
+>  - skywalking
+>plugin_attr:
+>  skywalking:
+>    service_name: APISIX
+>    service_instance_name: $hostname
+>    endpoint_addr: http://x.x.x.x:12800 # 此处填写skywalking采集地址
+
+# 更新pod
+kubectl --namespace ingress-apisix patch deploy apisix --patch '{"spec": {"template": {"metadata": {"annotations": {"version/config": "1" }}}}}'
+
+# 启用skywalking
+kubectl --namespace ingress-apisix exec -it $(kubectl get pods --namespace ingress-apisix -l "app.kubernetes.io/name=apisix,app.kubernetes.io/instance=apisix" -o jsonpath="{.items[0].metadata.name}") -- curl "http://127.0.0.1:9180/apisix/admin/global_rules/2" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "plugins": {
+      "skywalking": {
+            "sample_ratio": 1
+      }
+  }
+}'
+
+----
+
+
+==== 组件配置
+
+
+
+===== Fluentd
+
+TIP: https://github.com/kiwigrid/helm-charts/tree/master/charts/fluentd-elasticsearch +
+https://kiwigrid.github.io/
+
+.安装配置
+[source,bash]
+----
+helm repo add kiwigrid https://kiwigrid.github.io
+
+# 安装
+# · 不使用代理要加上 --set image.tag=v2.4.0 --set image.repository=registry.cn-hangzhou.aliyuncs.com/google_containers/fluentd-elasticsearch
+#    如需使用最新版本镜像，可自行下载镜像源文件制作镜像
+#    地址：https://github.com/kubernetes/kubernetes/tree/master/cluster/addons/fluentd-elasticsearch/fluentd-es-image
+# · 镜像版本建议使用v2.5.2以上，避免一些bug。
+# · 请根据需要进行节点亲和性相关设置，但请保证需要收集日志的节点有Fluentd部署。
+#    e.g. 若只需收集部署了应用的节点的日志，设置 --set nodeSelector.group=app
+# · 通过启用configMaps.useDefaults各类型的日志配置文件，来实现各类日志的收集，默认为全部启用。
+#    更多的日志收集配置，请见：https://docs.fluentd.org
+# · 若要启用Prometheus进行监控Fluentd，
+#    需要先将Fluentd通过设置service暴露出来，然后设置prometheusRule和serviceMonitor。
+#    此配置需结合Prometheus-operator使用。
+helm install kiwigrid/fluentd-elasticsearch --name dew-fluentd-es --namespace devops --version=3.0.0 \
+    --set elasticsearch.host=dew-elasticsearch-master \
+    --set elasticsearch.port=9200 \
+    --set elasticsearch.logstash_prefix=logstash \
+    --set service.type=ClusterIP \
+    --set service.ports[0].name="monitor-agent" \
+    --set service.ports[0].port=24231 \
+    --set prometheusRule.enabled=true \
+    --set prometheusRule.prometheusNamespace=devops \
+    --set prometheusRule.labels.app=prometheus-operator \
+    --set prometheusRule.labels.release=dew-prometheus-operator \
+    --set serviceMonitor.enabled=true \
+    --set serviceMonitor.labels.release=dew-prometheus-operator \
+    --set configMaps.useDefaults.outputConf=true \
+    --set configMaps.useDefaults.containersInputConf=true \
+    --set configMaps.useDefaults.systemConf=false \
+    --set configMaps.useDefaults.systemInputConf=false \
+    --set configMaps.useDefaults.forwardInputConf=false \
+    --set configMaps.useDefaults.monitoringConf=false
+----
