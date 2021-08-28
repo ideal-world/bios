@@ -4,6 +4,8 @@ In a word: BIOS is a new form of ``low-intrusive``, ``high-adaptation``, and ``f
 
 TIP: For the Chinese description see: http://www.idealworld.group/2021/06/09/bios/
 
+TIP: For a generic version of the service framework see: https://github.com/gudaoxuri/dew/
+
 == Introduction
 
 BIOS can serve the digital transformation of enterprises independently or be integrated with the mainstream middle platform. As the core capability of the middle platform, it can realize higher-level R&D collaboration and capability reuse by pulling through the organizational structure of the middle platform.
