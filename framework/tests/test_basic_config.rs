@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use bios_framework::basic::config::BIOSConfig;
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::basic::logger::BIOSLogger;
+use bios_framework::BIOSFuns;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -75,6 +76,14 @@ async fn test_basic_config() -> BIOSResult<()> {
     config = BIOSConfig::<TestConfig>::init("tests/config")?;
     assert_eq!(config.fw.db.url, "test");
     assert_eq!(config.fw.app.name, "BIOS Application");
+
+    BIOSFuns::init(config).await;
+
+    assert_eq!(
+        BIOSFuns::config::<TestConfig>().ws.db_proj.url,
+        "postgres://postgres@prod.proj"
+    );
+    assert_eq!(BIOSFuns::config::<TestConfig>().fw.db.url, "test");
 
     Ok(())
 }

@@ -27,16 +27,17 @@ mod controller;
 async fn main() -> std::io::Result<()> {
     BIOSLogger::init("").unwrap();
     let conf = BIOSConfig::<NoneConfig>::init("").unwrap();
-    let fw_conf = conf.fw.clone();
-    BIOSFuns::init(&fw_conf).await.unwrap();
+    BIOSFuns::init(conf).await.unwrap();
     HttpServer::new(move || {
         App::new()
-            .wrap(BIOSWebServer::init_cors(&fw_conf))
+            .wrap(BIOSWebServer::init_cors(
+                &BIOSFuns::config::<NoneConfig>().fw,
+            ))
             .wrap(BIOSWebServer::init_error_handlers())
             .wrap(BIOSWebServer::init_logger())
             .service(controller::hello)
     })
-    .init(&conf.fw)
+    .init(&BIOSFuns::config::<NoneConfig>().fw)
     .unwrap()
     .await
 }

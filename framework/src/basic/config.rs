@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use crate::basic::error::{BIOSError, BIOSResult, ERROR_DEFAULT_CODE};
 use crate::basic::fetch_profile;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BIOSConfig<T> {
     pub ws: T,
     pub fw: FrameworkConfig,
