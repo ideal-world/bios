@@ -19,7 +19,7 @@
 use redis::AsyncCommands;
 use tokio::time::{sleep, Duration};
 
-use bios_framework::basic::config::{CacheConfig, FrameworkConfig};
+use bios_framework::basic::config::{BIOSConfig, CacheConfig, FrameworkConfig, NoneConfig};
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::basic::logger::BIOSLogger;
 use bios_framework::cache::cache_client::BIOSCacheClient;
@@ -124,13 +124,16 @@ async fn test_cache_client() -> BIOSResult<()> {
         assert!(!mem.contains(&"m3".to_string()));
 
         // Default test
-        BIOSFuns::init(&FrameworkConfig {
-            app: Default::default(),
-            web: Default::default(),
-            cache: CacheConfig { url },
-            db: Default::default(),
-            mq: Default::default(),
-            adv: Default::default(),
+        BIOSFuns::init(BIOSConfig {
+            ws: NoneConfig {},
+            fw: FrameworkConfig {
+                app: Default::default(),
+                web: Default::default(),
+                cache: CacheConfig { url },
+                db: Default::default(),
+                mq: Default::default(),
+                adv: Default::default(),
+            },
         })
         .await?;
 

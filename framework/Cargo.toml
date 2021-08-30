@@ -60,7 +60,6 @@ url = "^2"
 lazy_static = "^1"
 futures = "^0"
 futures-util = "^0"
-uuid = "^0"
 
 # Web
 actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"], optional = true }
@@ -78,8 +77,7 @@ serde_urlencoded = { version = "^0", optional = true }
 paperclip = { version = "^0", features = ["actix"], optional = true }
 
 # RelDB
-# sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono","with-rust_decimal"], optional = true }
-sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono"], optional = true }
+sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono","with-rust_decimal"], optional = true }
 sqlx = { version = "^0", default-features = false, features = ["macros", "mysql", "chrono", "decimal", "runtime-tokio-native-tls"], optional = true }
 
 # Redis

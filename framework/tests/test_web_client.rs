@@ -18,7 +18,7 @@
 
 use awc::http::StatusCode;
 
-use bios_framework::basic::config::FrameworkConfig;
+use bios_framework::basic::config::{BIOSConfig, NoneConfig};
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::basic::logger::BIOSLogger;
 use bios_framework::web::web_client::BIOSWebClient;
@@ -58,13 +58,9 @@ async fn test_web_client() -> BIOSResult<()> {
         .contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
 
     // Default test
-    BIOSFuns::init(&FrameworkConfig {
-        app: Default::default(),
-        web: Default::default(),
-        cache: Default::default(),
-        db: Default::default(),
-        mq: Default::default(),
-        adv: Default::default(),
+    BIOSFuns::init(BIOSConfig {
+        ws: NoneConfig {},
+        fw: Default::default(),
     })
     .await?;
 

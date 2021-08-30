@@ -17,9 +17,10 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::any::Any;
 use std::ptr::replace;
 
-use crate::basic::config::FrameworkConfig;
+use crate::basic::config::BIOSConfig;
 use crate::basic::error::BIOSResult;
 #[cfg(feature = "cache")]
 use crate::cache::cache_client::BIOSCacheClient;
@@ -31,6 +32,7 @@ use crate::mq::mq_client::BIOSMQClient;
 use crate::web::web_client::BIOSWebClient;
 
 static mut BIOS_INST: BIOSFuns = BIOSFuns {
+    config: None,
     #[cfg(feature = "reldb")]
     reldb: None,
     #[cfg(feature = "cache")]
@@ -42,6 +44,7 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
 };
 
 pub struct BIOSFuns {
+    pub config: Option<Box<dyn Any>>,
     #[cfg(feature = "reldb")]
     pub reldb: Option<BIOSRelDBClient>,
     #[cfg(feature = "cache")]
@@ -53,28 +56,41 @@ pub struct BIOSFuns {
 }
 
 impl BIOSFuns {
-    pub async fn init(conf: &FrameworkConfig) -> BIOSResult<()> {
+    pub async fn init<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
+        unsafe { replace(&mut BIOS_INST.config, Some(Box::new(conf))) };
         #[cfg(feature = "reldb")]
         {
-            let reldb_client = BIOSRelDBClient::init_by_conf(conf).await?;
+            let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
             unsafe { replace(&mut BIOS_INST.reldb, Some(reldb_client)) };
         }
         #[cfg(feature = "cache")]
         {
-            let cache_client = BIOSCacheClient::init_by_conf(conf).await?;
+            let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
             unsafe { replace(&mut BIOS_INST.cache, Some(cache_client)) };
         }
         #[cfg(feature = "mq")]
         {
-            let mq_client = BIOSMQClient::init_by_conf(conf).await?;
+            let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
             unsafe { replace(&mut BIOS_INST.mq, Some(mq_client)) };
         }
         #[cfg(feature = "web-client")]
         {
-            let web_client = BIOSWebClient::init_by_conf(conf)?;
+            let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::config::<T>().fw)?;
             unsafe { replace(&mut BIOS_INST.web_client, Some(web_client)) };
         }
         BIOSResult::Ok(())
+    }
+
+    pub fn config<T>() -> &'static BIOSConfig<T> {
+        unsafe {
+            match &BIOS_INST.config {
+                None => panic!("Config not exist"),
+                Some(conf) => match conf.downcast_ref::<BIOSConfig<T>>() {
+                    None => panic!("Config not exist"),
+                    Some(t) => t,
+                },
+            }
+        }
     }
 
     #[cfg(feature = "reldb")]

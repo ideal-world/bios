@@ -20,7 +20,7 @@ use chrono::{Local, NaiveDateTime};
 use sea_query::{ColumnDef, Expr, Iden, Order, Query, Table};
 use sqlx::Connection;
 
-use bios_framework::basic::config::{DBConfig, FrameworkConfig};
+use bios_framework::basic::config::{BIOSConfig, DBConfig, FrameworkConfig, NoneConfig};
 use bios_framework::basic::error::BIOSResult;
 use bios_framework::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
 use bios_framework::test::test_container::BIOSTestContainer;
@@ -189,16 +189,19 @@ async fn test_reldb_client() -> BIOSResult<()> {
         assert_eq!(result.rows_affected(), 1);
 
         // Default test
-        BIOSFuns::init(&FrameworkConfig {
-            app: Default::default(),
-            web: Default::default(),
-            cache: Default::default(),
-            db: DBConfig {
-                url,
-                max_connections: 20,
+        BIOSFuns::init(BIOSConfig {
+            ws: NoneConfig {},
+            fw: FrameworkConfig {
+                app: Default::default(),
+                web: Default::default(),
+                cache: Default::default(),
+                db: DBConfig {
+                    url,
+                    max_connections: 20,
+                },
+                mq: Default::default(),
+                adv: Default::default(),
             },
-            mq: Default::default(),
-            adv: Default::default(),
         })
         .await?;
 

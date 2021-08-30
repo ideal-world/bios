@@ -30,12 +30,13 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "DEBUG");
     BIOSLogger::init("").unwrap();
     let conf = BIOSConfig::<NoneConfig>::init("./examples/framework/todo-list/conf").unwrap();
-    let fw_conf = conf.fw.clone();
-    BIOSFuns::init(&fw_conf).await.unwrap();
+    BIOSFuns::init(conf).await.unwrap();
     initializer::init().await.unwrap();
     HttpServer::new(move || {
         App::new()
-            .wrap(BIOSWebServer::init_cors(&fw_conf))
+            .wrap(BIOSWebServer::init_cors(
+                &BIOSFuns::config::<NoneConfig>().fw,
+            ))
             .wrap(BIOSWebServer::init_error_handlers())
             .wrap(BIOSWebServer::init_logger())
             .service(controller::list_categories)
@@ -47,7 +48,7 @@ async fn main() -> std::io::Result<()> {
             .service(controller::modify_item)
             .service(controller::delete_item)
     })
-    .init(&conf.fw)
+    .init(&BIOSFuns::config::<NoneConfig>().fw)
     .unwrap()
     .await
 }

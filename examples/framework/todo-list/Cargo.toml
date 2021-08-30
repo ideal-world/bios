@@ -19,7 +19,7 @@ actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["c
 validator = { version = "^0", features = ["derive"] }
 actix-web-validator = "^2"
 
-sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono"] }
+sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono", "with-rust_decimal"] }
 sqlx = { version = "^0", default-features = false, features = ["macros", "mysql", "chrono", "decimal", "runtime-tokio-native-tls"] }
 
 [dev-dependencies]
