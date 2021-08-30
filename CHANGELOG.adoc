@@ -4,7 +4,7 @@
 
 [IMPORTANT]
 ====
-``Dew-Serviceless``有多个版本通道，使用时请谨慎选择：
+``BIOS-Serviceless``有多个版本通道，使用时请谨慎选择：
 
 . `GA` General Availability，正式版本，通过内部测试没有已知错误并且经过生产验证，生产环境首选！
 . `RC` Release Candidate，发行候选版本，通过内部测试没有已知错误，可用于生产环境。

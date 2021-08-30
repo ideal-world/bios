@@ -73,7 +73,7 @@ init_dev_env(){
     export PERL5LIB=.:$PERL5LIB
     echo "[10/10] test"
     echo ""
-    TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-dew/utils.t
+    TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-bios/utils.t
     echo "------------------"
     echo "Initialization completed"
     echo "------------------"

@@ -3,10 +3,10 @@
 /gateway/etcd/**
 /gateway/default.etcd
 
-!/gateway/apisix/apisix/plugins/auth-dew/**
-!/gateway/apisix/apisix/plugins/auth-dew.lua
+!/gateway/apisix/apisix/plugins/auth-bios/**
+!/gateway/apisix/apisix/plugins/auth-bios.lua
 !/gateway/conf/config-default.yaml
-!/gateway/t/plugin/auth-dew/**
+!/gateway/t/plugin/auth-bios/**
 !/gateway/t/certs/**
 !/gateway/t/error_page/**
 !/gateway/t/APISIX.pm
