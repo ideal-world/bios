@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::info;
@@ -22,6 +21,7 @@ use sea_query::{
     DeleteStatement, InsertStatement, MysqlQueryBuilder, SelectStatement, TableCreateStatement,
     UpdateStatement, Values,
 };
+use serde::{Deserialize, Serialize};
 use sqlx::mysql::{MySqlPoolOptions, MySqlQueryResult, MySqlRow};
 use sqlx::pool::PoolConnection;
 use sqlx::{FromRow, MySql, Pool, Row, Transaction};
@@ -167,6 +167,17 @@ impl BIOSRelDBClient {
                 records: rows,
             }),
             Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
+        }
+    }
+
+    pub async fn exists<'c>(
+        &self,
+        sql_builder: &BIOSSqlBuilder,
+        tx: Option<&mut Transaction<'c, MySql>>,
+    ) -> BIOSResult<bool> {
+        match self.count(sql_builder, tx).await {
+            Ok(count) => Ok(count != 0),
+            Err(e) => Err(e),
         }
     }
 

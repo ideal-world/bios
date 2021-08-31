@@ -44,15 +44,15 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
 };
 
 pub struct BIOSFuns {
-    pub config: Option<Box<dyn Any>>,
+    config: Option<Box<dyn Any>>,
     #[cfg(feature = "reldb")]
-    pub reldb: Option<BIOSRelDBClient>,
+    reldb: Option<BIOSRelDBClient>,
     #[cfg(feature = "cache")]
-    pub cache: Option<BIOSCacheClient>,
+    cache: Option<BIOSCacheClient>,
     #[cfg(feature = "mq")]
-    pub mq: Option<BIOSMQClient>,
+    mq: Option<BIOSMQClient>,
     #[cfg(feature = "web-client")]
-    pub web_client: Option<BIOSWebClient>,
+    web_client: Option<BIOSWebClient>,
 }
 
 impl BIOSFuns {

@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-use std::env;
+pub mod digest {
 
-pub mod config;
-pub mod error;
-pub mod field;
-pub mod json;
-pub mod logger;
-pub mod security;
-pub mod uri;
+    pub mod base64 {
+        use crate::basic::error::{BIOSError, BIOSResult};
 
-pub fn fetch_profile() -> String {
-    env::var("PROFILE").unwrap_or("test".to_string())
+        pub fn decode(str: &str) -> BIOSResult<String> {
+            match base64::decode(str) {
+                Ok(result) => Ok(String::from_utf8(result).expect("Vec[] to String error")),
+                Err(e) => Err(BIOSError::FormatError(e.to_string())),
+            }
+        }
+
+        pub fn encode(str: &str) -> String {
+            base64::encode(str)
+        }
+    }
 }

@@ -16,10 +16,10 @@
 
 use actix_web::{App, HttpServer};
 
-use bios_framework::basic::config::{BIOSConfig, NoneConfig};
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::web::web_server::{BIOSWebServer, Init};
-use bios_framework::BIOSFuns;
+use bios::basic::config::{BIOSConfig, NoneConfig};
+use bios::basic::logger::BIOSLogger;
+use bios::web::web_server::{BIOSWebServer, Init};
+use bios::BIOSFuns;
 
 mod controller;
 

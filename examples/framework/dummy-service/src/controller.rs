@@ -22,8 +22,8 @@ use actix_web::{post, put, web, HttpRequest, HttpResponse};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
-use bios_framework::BIOSFuns;
+use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::BIOSFuns;
 
 pub struct AppStateContainer {
     pub err_rate: Mutex<u8>,

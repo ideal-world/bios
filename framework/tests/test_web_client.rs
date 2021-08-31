@@ -18,11 +18,11 @@
 
 use awc::http::StatusCode;
 
-use bios_framework::basic::config::{BIOSConfig, NoneConfig};
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::web::web_client::BIOSWebClient;
-use bios_framework::BIOSFuns;
+use bios::basic::config::{BIOSConfig, NoneConfig};
+use bios::basic::error::BIOSResult;
+use bios::basic::logger::BIOSLogger;
+use bios::web::web_client::BIOSWebClient;
+use bios::BIOSFuns;
 
 #[actix_rt::test]
 async fn test_web_client() -> BIOSResult<()> {

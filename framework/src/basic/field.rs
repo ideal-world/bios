@@ -23,3 +23,7 @@ lazy_static! {
 pub fn is_phone(phone: &str) -> bool {
     R_PHONE.is_match(phone)
 }
+
+pub fn uuid() -> String {
+    uuid::Uuid::new_v4().to_simple().to_string()
+}

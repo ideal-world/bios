@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::web::web_client::BIOSWebClient;
+use bios::basic::error::BIOSResult;
+use bios::basic::logger::BIOSLogger;
+use bios::web::web_client::BIOSWebClient;
 
 #[actix_rt::main]
 async fn main() -> BIOSResult<()> {

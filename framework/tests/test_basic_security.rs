@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-use std::env;
+use bios::basic::error::BIOSResult;
 
-pub mod config;
-pub mod error;
-pub mod field;
-pub mod json;
-pub mod logger;
-pub mod security;
-pub mod uri;
-
-pub fn fetch_profile() -> String {
-    env::var("PROFILE").unwrap_or("test".to_string())
+#[tokio::test]
+async fn test_basic_security() -> BIOSResult<()> {
+    let b64_str = bios::basic::security::digest::base64::encode("测试");
+    let str = bios::basic::security::digest::base64::decode(&b64_str).unwrap();
+    assert_eq!(str, "测试");
+    Ok(())
 }

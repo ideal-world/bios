@@ -20,11 +20,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::Connection;
 use validator::Validate;
 
-use bios_framework::db::reldb_client::SqlBuilderProcess;
-use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
-use bios_framework::web::validate::json::Json;
-use bios_framework::web::validate::query::Query as VQuery;
-use bios_framework::BIOSFuns;
+use bios::db::reldb_client::SqlBuilderProcess;
+use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::validate::json::Json;
+use bios::web::validate::query::Query as VQuery;
+use bios::BIOSFuns;
 
 use crate::domain::{Category, Item};
 use sqlx::types::chrono::{DateTime, Utc};

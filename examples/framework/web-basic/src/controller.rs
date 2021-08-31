@@ -18,8 +18,8 @@ use actix_web::get;
 use serde::Deserialize;
 use validator::Validate;
 
-use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
-use bios_framework::web::validate::query::Query;
+use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::validate::query::Query;
 
 #[derive(Deserialize, Validate)]
 pub struct Hi {

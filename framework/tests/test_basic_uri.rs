@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-use std::env;
+use bios::basic::error::BIOSResult;
 
-pub mod config;
-pub mod error;
-pub mod field;
-pub mod json;
-pub mod logger;
-pub mod security;
-pub mod uri;
-
-pub fn fetch_profile() -> String {
-    env::var("PROFILE").unwrap_or("test".to_string())
+#[tokio::test]
+async fn test_basic_uri() -> BIOSResult<()> {
+    assert_eq!(
+        bios::basic::uri::format("http://idealwrold.group").unwrap(),
+        "http://idealwrold.group"
+    );
+    assert_eq!(
+        bios::basic::uri::format("jdbc:h2:men:iam").unwrap(),
+        "jdbc:h2:men:iam"
+    );
+    assert_eq!(
+        bios::basic::uri::format("api://a1.t1/e1?q2=2&q1=1&q3=3").unwrap(),
+        "api://a1.t1/e1?q1=1&q2=2&q3=3"
+    );
+    Ok(())
 }
