@@ -20,10 +20,10 @@ use std::env;
 
 use serde::{Deserialize, Serialize};
 
-use bios_framework::basic::config::BIOSConfig;
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::BIOSFuns;
+use bios::basic::config::BIOSConfig;
+use bios::basic::error::BIOSResult;
+use bios::basic::logger::BIOSLogger;
+use bios::BIOSFuns;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]

@@ -21,8 +21,8 @@ use std::env;
 
 use log::info;
 
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
+use bios::basic::error::BIOSResult;
+use bios::basic::logger::BIOSLogger;
 
 use crate::app::req::test_req;
 

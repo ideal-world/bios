@@ -16,9 +16,9 @@
 use sea_query::{ColumnDef, Query, Table};
 use sqlx::Connection;
 
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::db::reldb_client::SqlBuilderProcess;
-use bios_framework::BIOSFuns;
+use bios::basic::error::BIOSResult;
+use bios::db::reldb_client::SqlBuilderProcess;
+use bios::BIOSFuns;
 
 use crate::domain::{Category, Item};
 

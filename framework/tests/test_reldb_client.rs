@@ -20,11 +20,22 @@ use chrono::{Local, NaiveDateTime};
 use sea_query::{ColumnDef, Expr, Iden, Order, Query, Table};
 use sqlx::Connection;
 
-use bios_framework::basic::config::{BIOSConfig, DBConfig, FrameworkConfig, NoneConfig};
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
-use bios_framework::test::test_container::BIOSTestContainer;
-use bios_framework::BIOSFuns;
+use bios::basic::config::{BIOSConfig, DBConfig, FrameworkConfig, NoneConfig};
+use bios::basic::error::BIOSResult;
+use bios::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
+use bios::test::test_container::BIOSTestContainer;
+use bios::BIOSFuns;
+
+#[derive(Iden)]
+enum Employees {
+    Table,
+    Name,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+struct EmployeesStruct {
+    name: String,
+}
 
 #[derive(Iden)]
 enum BizActivity {
@@ -49,8 +60,22 @@ struct BizActivityStruct {
 
 #[tokio::test]
 async fn test_reldb_client() -> BIOSResult<()> {
-    BIOSTestContainer::mysql(|url| async move {
+    BIOSTestContainer::mysql(Some("tests/sql/"), |url| async move {
         let client = BIOSRelDBClient::init(&url, 10).await?;
+
+        // Test init script
+
+        let sql_builder = Query::select()
+            .columns(vec![Employees::Name])
+            .from(Employees::Table)
+            .limit(1)
+            .done();
+        let result = client
+            .fetch_all::<EmployeesStruct>(&sql_builder, None)
+            .await?;
+        assert_eq!(result[0].name, "gudaoxuri");
+
+        // DDL
 
         let sql_builder = Table::create()
             .table(BizActivity::Table)
@@ -219,7 +244,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
 
 #[tokio::test]
 async fn test_reldb_client_with_tx() -> BIOSResult<()> {
-    BIOSTestContainer::mysql(|url| async move {
+    BIOSTestContainer::mysql(None, |url| async move {
         let client = BIOSRelDBClient::init(&url, 10).await?;
 
         let mut conn = client.conn().await;

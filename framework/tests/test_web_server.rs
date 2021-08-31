@@ -25,13 +25,13 @@ use actix_web::{test, App};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use bios_framework::basic::config::FrameworkConfig;
-use bios_framework::basic::error::{BIOSError, BIOSResult};
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::web::resp_handler::{BIOSResp, BIOSRespHelper};
-use bios_framework::web::validate::json::Json;
-use bios_framework::web::validate::query::Query;
-use bios_framework::web::web_server::BIOSWebServer;
+use bios::basic::config::FrameworkConfig;
+use bios::basic::error::{BIOSError, BIOSResult};
+use bios::basic::logger::BIOSLogger;
+use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::validate::json::Json;
+use bios::web::validate::query::Query;
+use bios::web::web_server::BIOSWebServer;
 
 mod basic;
 
@@ -357,7 +357,7 @@ struct ItemBody {
     url: String,
     #[validate(email)]
     mail: String,
-    #[validate(custom = "bios_framework::web::validate::handler::validate_phone")]
+    #[validate(custom = "bios::web::validate::handler::validate_phone")]
     phone: String,
     #[validate(contains = "gmail")]
     cont: String,

@@ -19,12 +19,12 @@
 use redis::AsyncCommands;
 use tokio::time::{sleep, Duration};
 
-use bios_framework::basic::config::{BIOSConfig, CacheConfig, FrameworkConfig, NoneConfig};
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::cache::cache_client::BIOSCacheClient;
-use bios_framework::test::test_container::BIOSTestContainer;
-use bios_framework::BIOSFuns;
+use bios::basic::config::{BIOSConfig, CacheConfig, FrameworkConfig, NoneConfig};
+use bios::basic::error::BIOSResult;
+use bios::basic::logger::BIOSLogger;
+use bios::cache::cache_client::BIOSCacheClient;
+use bios::test::test_container::BIOSTestContainer;
+use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_cache_client() -> BIOSResult<()> {

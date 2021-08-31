@@ -21,11 +21,11 @@ use std::time::Duration;
 
 use tokio::time::sleep;
 
-use bios_framework::basic::config::{BIOSConfig, FrameworkConfig, MQConfig, NoneConfig};
-use bios_framework::basic::error::BIOSResult;
-use bios_framework::basic::logger::BIOSLogger;
-use bios_framework::test::test_container::BIOSTestContainer;
-use bios_framework::BIOSFuns;
+use bios::basic::config::{BIOSConfig, FrameworkConfig, MQConfig, NoneConfig};
+use bios::basic::error::BIOSResult;
+use bios::basic::logger::BIOSLogger;
+use bios::test::test_container::BIOSTestContainer;
+use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_mq_client() -> BIOSResult<()> {
