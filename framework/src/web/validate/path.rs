@@ -16,10 +16,7 @@ pub struct Path<T> {
     inner: T,
 }
 
-#[deprecated(
-    note = "Please, use actix_web_validator::Path instead.",
-    since = "2.0.0"
-)]
+#[deprecated(note = "Please, use actix_web_validator::Path instead.", since = "2.0.0")]
 pub type ValidatedPath<T> = Path<T>;
 
 impl<T> Path<T> {
@@ -65,19 +62,11 @@ where
 
     #[inline]
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let error_handler = req
-            .app_data::<Self::Config>()
-            .map(|c| c.ehandler.clone())
-            .unwrap_or(None);
+        let error_handler = req.app_data::<Self::Config>().map(|c| c.ehandler.clone()).unwrap_or(None);
         ready(
             Deserialize::deserialize(PathDeserializer::new(req.match_info()))
                 .map_err(|error| Error::Deserialize(DeserializeErrors::DeserializePath(error)))
-                .and_then(|value: T| {
-                    value
-                        .validate()
-                        .map(move |_| value)
-                        .map_err(Error::Validate)
-                })
+                .and_then(|value: T| value.validate().map(move |_| value).map_err(Error::Validate))
                 .map(|inner| Path { inner })
                 .map_err(move |e| {
                     log::debug!(

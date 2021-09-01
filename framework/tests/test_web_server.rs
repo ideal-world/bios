@@ -54,37 +54,25 @@ async fn test_web_server() -> BIOSResult<()> {
     let req = test::TestRequest::post().uri("/normal/11").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(
-        read_body(resp).await,
-        Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#)
-    );
+    assert_eq!(read_body(resp).await, Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#));
 
     // Business Error
     let req = test::TestRequest::post().uri("/bus_error").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(
-        read_body(resp).await,
-        Bytes::from(r#"{"code":"xxx01","msg":"business error","body":null}"#),
-    );
+    assert_eq!(read_body(resp).await, Bytes::from(r#"{"code":"xxx01","msg":"business error","body":null}"#),);
 
     // Not Found
     let req = test::TestRequest::post().uri("/not_found").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
-    assert_eq!(
-        read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"404","msg":"method:POST, url:/not_found"}"#),
-    );
+    assert_eq!(read_body(resp).await, Bytes::from(r#"{"body":null,"code":"404","msg":"method:POST, url:/not_found"}"#),);
 
     // System Error
     let req = test::TestRequest::post().uri("/sys_error").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(
-        read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"500","msg":"没事，莫慌"}"#),
-    );
+    assert_eq!(read_body(resp).await, Bytes::from(r#"{"body":null,"code":"500","msg":"没事，莫慌"}"#),);
 
     // Validation
     let req = test::TestRequest::post().uri("/validation").to_request();
@@ -92,42 +80,28 @@ async fn test_web_server() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `id`"}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `id`"}"#),
     );
 
-    let req = test::TestRequest::post()
-        .uri("/validation?id=111")
-        .to_request();
+    let req = test::TestRequest::post().uri("/validation?id=111").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `response_type`"}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `response_type`"}"#),
     );
 
-    let req = test::TestRequest::post()
-        .uri("/validation?id=-1")
-        .to_request();
+    let req = test::TestRequest::post().uri("/validation?id=-1").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400","msg":"Query deserialize error: invalid digit found in string"}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: invalid digit found in string"}"#),
     );
 
-    let req = test::TestRequest::post()
-        .uri("/validation?id=111&response_type=XX")
-        .to_request();
+    let req = test::TestRequest::post().uri("/validation?id=111&response_type=XX").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400","msg":"Query deserialize error: unknown variant `XX`, expected `Token` or `Code`"}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: unknown variant `XX`, expected `Token` or `Code`"}"#),
     );
 
     let req = test::TestRequest::post()
@@ -144,10 +118,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(
-        read_body(resp).await,
-        Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#),
-    );
+    assert_eq!(read_body(resp).await, Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#),);
 
     let req = test::TestRequest::post()
         .uri("/validation?id=100&response_type=Code")
@@ -163,9 +134,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"id\\\""));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("ValidationErrors({\\\"id\\\""));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -182,7 +151,8 @@ async fn test_web_server() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap().contains("ValidationErrors({\\\"req\\\": Field([ValidationError { code: \\\"required\\\", message: None, params: {\\\"value\\\": Null} }])})\"}"));
+        .unwrap()
+        .contains("ValidationErrors({\\\"req\\\": Field([ValidationError { code: \\\"required\\\", message: None, params: {\\\"value\\\": Null} }])})\"}"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -199,7 +169,8 @@ async fn test_web_server() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap().contains("ValidationErrors({\\\"len\\\": Field([ValidationError { code: \\\"length\\\", message: Some(\\\"custom msg\\\")"));
+        .unwrap()
+        .contains("ValidationErrors({\\\"len\\\": Field([ValidationError { code: \\\"length\\\", message: Some(\\\"custom msg\\\")"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -236,9 +207,7 @@ async fn test_web_server() -> BIOSResult<()> {
 
     assert!(String::from_utf8(read_body(resp).await.to_vec())
         .unwrap()
-        .contains(
-            "ValidationErrors({\\\"range\\\": Field([ValidationError { code: \\\"range\\\","
-        ));
+        .contains("ValidationErrors({\\\"range\\\": Field([ValidationError { code: \\\"range\\\","));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -273,7 +242,8 @@ async fn test_web_server() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap().contains("ValidationErrors({\\\"mail\\\": Field([ValidationError { code: \\\"email\\\", message: None, params: {\\\"value\\\": String(\\\"sunisle.org\\\")} }])})\"}"));
+        .unwrap()
+        .contains("ValidationErrors({\\\"mail\\\": Field([ValidationError { code: \\\"email\\\", message: None, params: {\\\"value\\\": String(\\\"sunisle.org\\\")} }])})\"}"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")

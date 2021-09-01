@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use actix_web::{http::StatusCode, HttpResponse};
+use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 
 use crate::basic::error::{BIOSError, BIOSResult};
@@ -24,8 +24,8 @@ pub type BIOSResp = BIOSResult<HttpResponse>;
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct BIOSRespHelper<T>
-where
-    T: Serialize,
+    where
+        T: Serialize,
 {
     pub code: String,
     pub msg: String,
@@ -33,8 +33,8 @@ where
 }
 
 impl<T> Default for BIOSRespHelper<T>
-where
-    T: Serialize,
+    where
+        T: Serialize,
 {
     fn default() -> Self {
         BIOSRespHelper {
@@ -67,6 +67,14 @@ impl BIOSRespHelper<()> {
         Ok(HttpResponse::Ok().json(BIOSRespHelper::<()> {
             code: bus_code.to_owned(),
             msg: message.to_owned(),
+            body: None,
+        }))
+    }
+
+    pub fn bus_error(error: BIOSError) -> BIOSResp {
+        Ok(HttpResponse::Ok().json(BIOSRespHelper::<()> {
+            code: error.status_code().to_string(),
+            msg: error.to_string(),
             body: None,
         }))
     }

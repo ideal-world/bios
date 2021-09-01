@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use std::convert::Infallible;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
@@ -88,6 +89,12 @@ impl From<url::ParseError> for BIOSError {
 
 impl From<ParseIntError> for BIOSError {
     fn from(error: ParseIntError) -> Self {
+        BIOSError::FormatError(error.to_string())
+    }
+}
+
+impl From<Infallible> for BIOSError {
+    fn from(error: Infallible) -> Self {
         BIOSError::FormatError(error.to_string())
     }
 }

@@ -15,7 +15,6 @@
  */
 
 pub mod digest {
-
     pub mod base64 {
         use crate::basic::error::{BIOSError, BIOSResult};
 

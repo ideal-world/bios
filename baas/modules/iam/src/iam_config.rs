@@ -13,8 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pub mod constant;
-pub mod domain;
-pub mod helper;
-pub mod iam_config;
-pub mod process;
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct WorkSpaceConfig {
+    pub iam: IamConfig,
+}
+
+impl Default for WorkSpaceConfig {
+    fn default() -> Self {
+        WorkSpaceConfig {
+            iam: IamConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct IamConfig {
+    pub ident_info_flag: String,
+}
+
+impl Default for IamConfig {
+    fn default() -> Self {
+        IamConfig {
+            ident_info_flag: "BIOS-Ident".to_owned(),
+        }
+    }
+}

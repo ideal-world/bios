@@ -39,11 +39,7 @@ impl BIOSCacheClient {
             "[BIOS.Framework.CacheClient] Initializing, host:{}, port:{}, db:{}",
             url.host_str().unwrap_or(""),
             url.port().unwrap_or(0),
-            if url.path().is_empty() {
-                ""
-            } else {
-                &url.path()[1..]
-            },
+            if url.path().is_empty() { "" } else { &url.path()[1..] },
         );
         let client = redis::Client::open(str_url)?;
         let con = client.get_tokio_connection().await?;
@@ -51,11 +47,7 @@ impl BIOSCacheClient {
             "[BIOS.Framework.CacheClient] Initialized, host:{}, port:{}, db:{}",
             url.host_str().unwrap_or(""),
             url.port().unwrap_or(0),
-            if url.path().is_empty() {
-                ""
-            } else {
-                &url.path()[1..]
-            },
+            if url.path().is_empty() { "" } else { &url.path()[1..] },
         );
         Ok(BIOSCacheClient { con })
     }

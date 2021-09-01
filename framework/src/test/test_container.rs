@@ -17,10 +17,10 @@
 use std::env;
 use std::future::Future;
 
+use testcontainers::{clients, Container, Docker, images};
 use testcontainers::clients::Cli;
 use testcontainers::images::generic::{GenericImage, WaitFor};
 use testcontainers::images::redis::Redis;
-use testcontainers::{clients, images, Container, Docker};
 
 use crate::basic::error::BIOSResult;
 
@@ -28,9 +28,9 @@ pub struct BIOSTestContainer;
 
 impl BIOSTestContainer {
     pub async fn redis<F, T>(fun: F) -> BIOSResult<()>
-    where
-        F: Fn(String) -> T + Send + Sync + 'static,
-        T: Future<Output = BIOSResult<()>> + Send + 'static,
+        where
+            F: Fn(String) -> T + Send + Sync + 'static,
+            T: Future<Output=BIOSResult<()>> + Send + 'static,
     {
         let docker = clients::Cli::default();
         let node = BIOSTestContainer::redis_custom(&docker);
@@ -45,9 +45,9 @@ impl BIOSTestContainer {
     }
 
     pub async fn rabbit<F, T>(fun: F) -> BIOSResult<()>
-    where
-        F: Fn(String) -> T + Send + Sync + 'static,
-        T: Future<Output = BIOSResult<()>> + Send + 'static,
+        where
+            F: Fn(String) -> T + Send + Sync + 'static,
+            T: Future<Output=BIOSResult<()>> + Send + 'static,
     {
         let docker = clients::Cli::default();
         let node = BIOSTestContainer::rabbit_custom(&docker);
@@ -65,9 +65,9 @@ impl BIOSTestContainer {
     }
 
     pub async fn mysql<F, T>(init_script_path: Option<&str>, fun: F) -> BIOSResult<()>
-    where
-        F: Fn(String) -> T + Send + Sync + 'static,
-        T: Future<Output = BIOSResult<()>> + Send + 'static,
+        where
+            F: Fn(String) -> T + Send + Sync + 'static,
+            T: Future<Output=BIOSResult<()>> + Send + 'static,
     {
         let docker = clients::Cli::default();
         let node = BIOSTestContainer::mysql_custom(init_script_path, &docker);

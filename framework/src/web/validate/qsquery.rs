@@ -1,13 +1,14 @@
+use std::{fmt, ops};
 use std::ops::Deref;
 use std::sync::Arc;
-use std::{fmt, ops};
 
-use crate::web::validate::error::Error;
 use actix_web::{FromRequest, HttpRequest};
 use futures::future::{err, ok, Ready};
 use serde::de;
 use serde_qs::Config as QsConfig;
 use validator::Validate;
+
+use crate::web::validate::error::Error;
 
 pub struct QsQueryConfig {
     ehandler: Option<Arc<dyn Fn(Error, &HttpRequest) -> actix_web::Error + Send + Sync>>,
@@ -17,8 +18,8 @@ pub struct QsQueryConfig {
 impl QsQueryConfig {
     /// Set custom error handler
     pub fn error_handler<F>(mut self, f: F) -> Self
-    where
-        F: Fn(Error, &HttpRequest) -> actix_web::Error + Send + Sync + 'static,
+        where
+            F: Fn(Error, &HttpRequest) -> actix_web::Error + Send + Sync + 'static,
     {
         self.ehandler = Some(Arc::new(f));
         self
@@ -76,8 +77,8 @@ impl<T: fmt::Display> fmt::Display for QsQuery<T> {
 }
 
 impl<T> QsQuery<T>
-where
-    T: Validate,
+    where
+        T: Validate,
 {
     /// Deconstruct to an inner value.
     pub fn into_inner(self) -> T {
@@ -86,8 +87,8 @@ where
 }
 
 impl<T> FromRequest for QsQuery<T>
-where
-    T: de::DeserializeOwned + Validate,
+    where
+        T: de::DeserializeOwned + Validate,
 {
     type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;

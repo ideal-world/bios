@@ -16,3 +16,5 @@
 
 #[cfg(feature = "reldb")]
 pub mod reldb_client;
+#[cfg(feature = "reldb")]
+pub mod domain;

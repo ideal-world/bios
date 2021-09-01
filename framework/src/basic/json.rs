@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use crate::basic::error::{BIOSError, BIOSResult};
