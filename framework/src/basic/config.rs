@@ -171,8 +171,8 @@ impl Default for AdvConfig {
 pub struct NoneConfig {}
 
 impl<'a, T> BIOSConfig<T>
-where
-    T: Deserialize<'a>,
+    where
+        T: Deserialize<'a>,
 {
     pub fn init(root_path: &str) -> BIOSResult<BIOSConfig<T>> {
         let profile = fetch_profile();

@@ -16,12 +16,12 @@
 
 use std::time::Duration;
 
+use actix_http::{Payload, PayloadStream};
 use actix_http::client::SendRequestError;
 use actix_http::encoding::Decoder;
 use actix_http::error::PayloadError;
-use actix_http::{Payload, PayloadStream};
-use awc::Connector;
 use awc::{Client, ClientResponse};
+use awc::Connector;
 use log::info;
 
 use crate::basic::config::FrameworkConfig;

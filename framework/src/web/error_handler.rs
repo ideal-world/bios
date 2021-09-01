@@ -17,12 +17,12 @@
 use std::task::{Context, Poll};
 
 use actix_service::{Service, Transform};
+use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
 use actix_web::dev::{AnyBody, ServiceRequest, ServiceResponse};
 use actix_web::error::{Error, Result};
 use actix_web::http::{HeaderValue, StatusCode};
 use actix_web::web::Bytes;
-use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
-use futures_util::future::{ok, FutureExt, LocalBoxFuture, Ready};
+use futures_util::future::{FutureExt, LocalBoxFuture, ok, Ready};
 use log::{trace, warn};
 
 use crate::basic::error::BIOSError;
@@ -31,9 +31,9 @@ use crate::web::resp_handler::BIOSRespHelper;
 pub struct WebErrorHandler;
 
 impl<S> Transform<S, ServiceRequest> for WebErrorHandler
-where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error> + 'static,
-    S::Future: 'static,
+    where
+        S: Service<ServiceRequest, Response=ServiceResponse, Error=Error> + 'static,
+        S::Future: 'static,
 {
     type Response = ServiceResponse;
     type Error = Error;
@@ -51,9 +51,9 @@ pub struct WebErrorMiddleware<S> {
 }
 
 impl<S> Service<ServiceRequest> for WebErrorMiddleware<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse, Error = Error>,
-    S::Future: 'static,
+    where
+        S: Service<ServiceRequest, Response=ServiceResponse, Error=Error>,
+        S::Future: 'static,
 {
     type Response = ServiceResponse;
     type Error = Error;
@@ -85,14 +85,14 @@ where
                         _ => "unknown error".to_string(),
                     },
                 };
-                if http_code>= 500 {
+                if http_code >= 500 {
                     warn!("[BIOS.Framework.WebServer] process error,request method:{}, url:{}, response code:{}, message:{}",
                           res.request().method().to_string(),
                           res.request().uri().to_string(),
                           bus_code,
                           msg
                     )
-                }else{
+                } else {
                     trace!("[BIOS.Framework.WebServer] process error,request method:{}, url:{}, response code:{}, message:{}",
                           res.request().method().to_string(),
                           res.request().uri().to_string(),
@@ -113,7 +113,7 @@ where
                 Ok(res)
             }
         }
-        .boxed_local()
+            .boxed_local()
     }
 }
 

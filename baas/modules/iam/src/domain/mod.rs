@@ -13,8 +13,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pub mod constant;
-pub mod domain;
-pub mod helper;
-pub mod iam_config;
-pub mod process;
+pub mod auth_domain;

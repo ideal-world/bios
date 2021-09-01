@@ -29,30 +29,18 @@ async fn test_web_client() -> BIOSResult<()> {
     BIOSLogger::init("")?;
     let client = BIOSWebClient::init(60, 60)?;
     let client = client.raw();
-    let response = client
-        .get("https://www.baidu.com")
-        .insert_header(("User-Agent", "Actix-web"))
-        .send()
-        .await?;
+    let response = client.get("https://www.baidu.com").insert_header(("User-Agent", "Actix-web")).send().await?;
     assert_eq!(response.status(), StatusCode::OK);
 
-    let mut response = client
-        .post("http://httpbin.org/post")
-        .send_body("Raw body contents")
-        .await?;
+    let mut response = client.post("http://httpbin.org/post").send_body("Raw body contents").await?;
 
-    assert!(BIOSWebClient::body_as_str(&mut response)
-        .await?
-        .contains(r#"data": "Raw body contents"#));
+    assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "Raw body contents"#));
 
     let request = serde_json::json!({
         "lang": "rust",
         "body": "json"
     });
-    let mut response = client
-        .post("http://httpbin.org/post")
-        .send_json(&request)
-        .await?;
+    let mut response = client.post("http://httpbin.org/post").send_json(&request).await?;
     assert!(BIOSWebClient::body_as_str(&mut response)
         .await?
         .contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
@@ -64,11 +52,7 @@ async fn test_web_client() -> BIOSResult<()> {
     })
     .await?;
 
-    let mut response = BIOSFuns::web_client()
-        .raw()
-        .post("http://httpbin.org/post")
-        .send_json(&request)
-        .await?;
+    let mut response = BIOSFuns::web_client().raw().post("http://httpbin.org/post").send_json(&request).await?;
     assert!(BIOSWebClient::body_as_str(&mut response)
         .await?
         .contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));

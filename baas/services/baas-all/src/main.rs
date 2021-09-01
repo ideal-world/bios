@@ -16,10 +16,10 @@
 
 use actix_web::{App, HttpServer};
 
-use bios_framework::basic::config::NoneConfig;
-use bios_framework::basic::{config, logger};
-use bios_framework::web::web_server;
-use bios_framework::web::web_server::Init;
+use bios::basic::{config, logger};
+use bios::basic::config::NoneConfig;
+use bios::web::web_server;
+use bios::web::web_server::Init;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

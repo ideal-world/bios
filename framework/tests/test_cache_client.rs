@@ -17,14 +17,14 @@
 // https://github.com/mitsuhiko/redis-rs
 
 use redis::AsyncCommands;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 use bios::basic::config::{BIOSConfig, CacheConfig, FrameworkConfig, NoneConfig};
 use bios::basic::error::BIOSResult;
 use bios::basic::logger::BIOSLogger;
+use bios::BIOSFuns;
 use bios::cache::cache_client::BIOSCacheClient;
 use bios::test::test_container::BIOSTestContainer;
-use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_cache_client() -> BIOSResult<()> {
@@ -135,7 +135,7 @@ async fn test_cache_client() -> BIOSResult<()> {
                 adv: Default::default(),
             },
         })
-        .await?;
+            .await?;
 
         let map_result = BIOSFuns::cache().hgetall("h").await?;
         assert_eq!(map_result.len(), 3);
@@ -145,5 +145,5 @@ async fn test_cache_client() -> BIOSResult<()> {
 
         Ok(())
     })
-    .await
+        .await
 }

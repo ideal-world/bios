@@ -20,8 +20,8 @@ use std::future::Future;
 use amq_protocol_types::{AMQPValue, LongString, ShortString};
 use futures_util::stream::StreamExt;
 use lapin::{
-    options::*, types::FieldTable, BasicProperties, Channel, Connection, ConnectionProperties,
-    Consumer, ExchangeKind,
+    BasicProperties, Channel, Connection, ConnectionProperties, Consumer, ExchangeKind,
+    options::*, types::FieldTable,
 };
 use log::{error, info, trace};
 use url::Url;
@@ -51,7 +51,7 @@ impl BIOSMQClient {
             str_url,
             ConnectionProperties::default().with_connection_name("bios".into()),
         )
-        .await?;
+            .await?;
         info!(
             "[BIOS.Framework.MQClient] Initialized, host:{}, port:{}",
             url.host_str().unwrap_or(""),
@@ -104,9 +104,9 @@ impl BIOSMQClient {
     }
 
     pub async fn response<F, T>(&mut self, address: &str, fun: F) -> BIOSResult<()>
-    where
-        F: FnMut((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
-        T: Future<Output = BIOSResult<()>> + Send + 'static,
+        where
+            F: FnMut((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
+            T: Future<Output=BIOSResult<()>> + Send + 'static,
     {
         info!("[BIOS.Framework.MQClient] Response, queue:{}", address);
         let channel = self.con.create_channel().await?;
@@ -184,9 +184,9 @@ impl BIOSMQClient {
     }
 
     pub async fn subscribe<F, T>(&mut self, topic: &str, fun: F) -> BIOSResult<()>
-    where
-        F: FnMut((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
-        T: Future<Output = BIOSResult<()>> + Send + 'static,
+        where
+            F: FnMut((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
+            T: Future<Output=BIOSResult<()>> + Send + 'static,
     {
         info!("[BIOS.Framework.MQClient] Subscribe, queue:{}", topic);
         let channel = self.con.create_channel().await?;
@@ -256,15 +256,15 @@ impl BIOSMQClient {
         mut consumer: Consumer,
         mut fun: F,
     ) -> BIOSResult<()>
-    where
-        F: FnMut((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
-        T: Future<Output = BIOSResult<()>> + Send + 'static,
+        where
+            F: FnMut((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
+            T: Future<Output=BIOSResult<()>> + Send + 'static,
     {
         async_global_executor::spawn(async move {
             while let Some(delivery) = consumer.next().await {
-                match delivery{
-                    Ok((_,info)) => {
-                        match std::str::from_utf8(&info.data){
+                match delivery {
+                    Ok((_, info)) => {
+                        match std::str::from_utf8(&info.data) {
                             Ok(msg) => {
                                 trace!(
                                     "[BIOS.Framework.MQClient] Receive, queue:{}, message:{}",
@@ -290,9 +290,9 @@ impl BIOSMQClient {
                                         resp_header.insert(k.to_string(), value);
                                     }
                                 });
-                                match fun((resp_header, msg.to_string())).await{
+                                match fun((resp_header, msg.to_string())).await {
                                     Ok(_) => {
-                                        match info.ack(BasicAckOptions::default()).await{
+                                        match info.ack(BasicAckOptions::default()).await {
                                             Ok(_) => {
                                                 ()
                                             }
@@ -302,7 +302,7 @@ impl BIOSMQClient {
                                                 );
                                             }
                                         }
-                                    },
+                                    }
                                     Err(e) => {
                                         error!(
                                             "[BIOS.Framework.MQClient] Receive, queue:{}, message:{} | {}",topic_or_address,msg,e.to_string()
@@ -325,7 +325,7 @@ impl BIOSMQClient {
                 }
             }
         })
-        .detach();
+            .detach();
         Ok(())
     }
 }

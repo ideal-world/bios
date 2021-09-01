@@ -15,16 +15,26 @@ lto = true
 codegen-units = 1
 
 [lib]
-name = "bios_framework"
+name = "bios_baas_iam"
 path = "src/lib.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-derive_more = "0.99"
-log = "0.4"
+derive_more = "^0"
+log = "^0"
+chrono = { version = "^0", features = ["serde"] }
 
-bios-framework = { path = "../../../framework" }
-actix-web = { version = "3", default-features = false, features = ["compress"] }
-validator = { version = "0.12", features = ["derive"] }
-actix-web-validator = "2"
+bios-framework = { path = "../../../framework", features = ["web-client", "openapi", "reldb", "cache", "test"] }
+actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"] }
+validator = { version = "^0", features = ["derive"] }
+actix-web-validator = "^2"
+
+sea-query = { version = "^0", default-features = false, features = ["derive", "backend-mysql", "sqlx-mysql", "with-chrono"] }
+sqlx = { version = "^0", default-features = false, features = ["macros", "mysql", "chrono", "runtime-tokio-native-tls"] }
+
+[dev-dependencies]
+awc = { version = "3.0.0-beta.7", features = ["rustls"] }
+actix-rt = "^2"
+testcontainers = "^0"
+

@@ -59,25 +59,25 @@ impl BIOSFuns {
     pub async fn init<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
         unsafe { replace(&mut BIOS_INST.config, Some(Box::new(conf))) };
         #[cfg(feature = "reldb")]
-        {
-            let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
-            unsafe { replace(&mut BIOS_INST.reldb, Some(reldb_client)) };
-        }
+            {
+                let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
+                unsafe { replace(&mut BIOS_INST.reldb, Some(reldb_client)) };
+            }
         #[cfg(feature = "cache")]
-        {
-            let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
-            unsafe { replace(&mut BIOS_INST.cache, Some(cache_client)) };
-        }
+            {
+                let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
+                unsafe { replace(&mut BIOS_INST.cache, Some(cache_client)) };
+            }
         #[cfg(feature = "mq")]
-        {
-            let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
-            unsafe { replace(&mut BIOS_INST.mq, Some(mq_client)) };
-        }
+            {
+                let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
+                unsafe { replace(&mut BIOS_INST.mq, Some(mq_client)) };
+            }
         #[cfg(feature = "web-client")]
-        {
-            let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::config::<T>().fw)?;
-            unsafe { replace(&mut BIOS_INST.web_client, Some(web_client)) };
-        }
+            {
+                let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::config::<T>().fw)?;
+                unsafe { replace(&mut BIOS_INST.web_client, Some(web_client)) };
+            }
         BIOSResult::Ok(())
     }
 

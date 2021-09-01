@@ -22,9 +22,9 @@ use sea_query::{
     UpdateStatement, Values,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, MySql, Pool, Row, Transaction};
 use sqlx::mysql::{MySqlPoolOptions, MySqlQueryResult, MySqlRow};
 use sqlx::pool::PoolConnection;
-use sqlx::{FromRow, MySql, Pool, Row, Transaction};
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;
@@ -89,10 +89,10 @@ impl BIOSRelDBClient {
         sql_builder: &BIOSSqlBuilder,
         tx: Option<&mut Transaction<'c, MySql>>,
     ) -> BIOSResult<Vec<E>>
-    where
-        E: for<'r> FromRow<'r, MySqlRow>,
-        E: std::marker::Send,
-        E: Unpin,
+        where
+            E: for<'r> FromRow<'r, MySqlRow>,
+            E: std::marker::Send,
+            E: Unpin,
     {
         let result = bind_query_as(
             sqlx::query_as::<_, E>(&sql_builder.sql),
@@ -113,10 +113,10 @@ impl BIOSRelDBClient {
         sql_builder: &BIOSSqlBuilder,
         tx: Option<&mut Transaction<'c, MySql>>,
     ) -> BIOSResult<E>
-    where
-        E: for<'r> FromRow<'r, MySqlRow>,
-        E: std::marker::Send,
-        E: Unpin,
+        where
+            E: for<'r> FromRow<'r, MySqlRow>,
+            E: std::marker::Send,
+            E: Unpin,
     {
         let fetch_one_sql = format!("{} LIMIT 1", sql_builder.sql);
         let result = bind_query_as(sqlx::query_as::<_, E>(&fetch_one_sql), &sql_builder.values);
@@ -137,10 +137,10 @@ impl BIOSRelDBClient {
         page_size: u64,
         tx: Option<&mut Transaction<'c, MySql>>,
     ) -> BIOSResult<BIOSPage<E>>
-    where
-        E: for<'r> FromRow<'r, MySqlRow>,
-        E: std::marker::Send,
-        E: Unpin,
+        where
+            E: for<'r> FromRow<'r, MySqlRow>,
+            E: std::marker::Send,
+            E: Unpin,
     {
         let page_sql = format!(
             "{} LIMIT {} , {}",
@@ -269,10 +269,10 @@ pub struct BIOSSqlBuilder {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BIOSPage<E>
-where
-    E: for<'r> FromRow<'r, MySqlRow>,
-    E: std::marker::Send,
-    E: Unpin,
+    where
+        E: for<'r> FromRow<'r, MySqlRow>,
+        E: std::marker::Send,
+        E: Unpin,
 {
     pub page_size: u64,
     pub page_number: u64,

@@ -65,14 +65,8 @@ async fn test_reldb_client() -> BIOSResult<()> {
 
         // Test init script
 
-        let sql_builder = Query::select()
-            .columns(vec![Employees::Name])
-            .from(Employees::Table)
-            .limit(1)
-            .done();
-        let result = client
-            .fetch_all::<EmployeesStruct>(&sql_builder, None)
-            .await?;
+        let sql_builder = Query::select().columns(vec![Employees::Name]).from(Employees::Table).limit(1).done();
+        let result = client.fetch_all::<EmployeesStruct>(&sql_builder, None).await?;
         assert_eq!(result[0].name, "gudaoxuri");
 
         // DDL
@@ -80,19 +74,9 @@ async fn test_reldb_client() -> BIOSResult<()> {
         let sql_builder = Table::create()
             .table(BizActivity::Table)
             .if_not_exists()
-            .col(
-                ColumnDef::new(BizActivity::Id)
-                    .integer()
-                    .not_null()
-                    .auto_increment()
-                    .primary_key(),
-            )
+            .col(ColumnDef::new(BizActivity::Id).integer().not_null().auto_increment().primary_key())
             .col(ColumnDef::new(BizActivity::Name).not_null().string())
-            .col(
-                ColumnDef::new(BizActivity::Status)
-                    .not_null()
-                    .tiny_integer(),
-            )
+            .col(ColumnDef::new(BizActivity::Status).not_null().tiny_integer())
             .col(ColumnDef::new(BizActivity::Remark).text())
             .col(ColumnDef::new(BizActivity::CreateTime).date_time())
             .col(ColumnDef::new(BizActivity::Version).not_null().double())
@@ -138,9 +122,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
             .order_by(BizActivity::Id, Order::Desc)
             .limit(1)
             .done();
-        let result = client
-            .fetch_all::<BizActivityStruct>(&sql_builder, None)
-            .await?;
+        let result = client.fetch_all::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result[0].name, "测试");
         assert_eq!(result[0].version, 1.0);
 
@@ -168,9 +150,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
             .from(BizActivity::Table)
             .order_by(BizActivity::Id, Order::Desc)
             .done();
-        let result = client
-            .fetch_one::<BizActivityStruct>(&sql_builder, None)
-            .await?;
+        let result = client.fetch_one::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result.status, 2);
 
         // Pagination
@@ -187,9 +167,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
             .from(BizActivity::Table)
             .order_by(BizActivity::Id, Order::Desc)
             .done();
-        let result = client
-            .pagination::<BizActivityStruct>(&sql_builder, 1, 10, None)
-            .await?;
+        let result = client.pagination::<BizActivityStruct>(&sql_builder, 1, 10, None).await?;
         assert_eq!(result.page_number, 1);
         assert_eq!(result.page_size, 10);
         assert_eq!(result.total_size, 1);
@@ -197,19 +175,13 @@ async fn test_reldb_client() -> BIOSResult<()> {
 
         // Count
 
-        let sql_builder = Query::select()
-            .columns(vec![BizActivity::Id])
-            .from(BizActivity::Table)
-            .done();
+        let sql_builder = Query::select().columns(vec![BizActivity::Id]).from(BizActivity::Table).done();
         let result = client.count(&sql_builder, None).await?;
         assert_eq!(result, 1);
 
         // Delete
 
-        let sql_builder = Query::delete()
-            .from_table(BizActivity::Table)
-            .and_where(Expr::col(BizActivity::Id).eq(id))
-            .done();
+        let sql_builder = Query::delete().from_table(BizActivity::Table).and_where(Expr::col(BizActivity::Id).eq(id)).done();
         let result = client.exec(&sql_builder, None).await?;
         assert_eq!(result.rows_affected(), 1);
 
@@ -220,20 +192,14 @@ async fn test_reldb_client() -> BIOSResult<()> {
                 app: Default::default(),
                 web: Default::default(),
                 cache: Default::default(),
-                db: DBConfig {
-                    url,
-                    max_connections: 20,
-                },
+                db: DBConfig { url, max_connections: 20 },
                 mq: Default::default(),
                 adv: Default::default(),
             },
         })
         .await?;
 
-        let sql_builder = Query::select()
-            .columns(vec![BizActivity::Id])
-            .from(BizActivity::Table)
-            .done();
+        let sql_builder = Query::select().columns(vec![BizActivity::Id]).from(BizActivity::Table).done();
         let result = BIOSFuns::reldb().count(&sql_builder, None).await?;
         assert_eq!(result, 0);
 
@@ -253,19 +219,9 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
         let sql_builder = Table::create()
             .table(BizActivity::Table)
             .if_not_exists()
-            .col(
-                ColumnDef::new(BizActivity::Id)
-                    .integer()
-                    .not_null()
-                    .auto_increment()
-                    .primary_key(),
-            )
+            .col(ColumnDef::new(BizActivity::Id).integer().not_null().auto_increment().primary_key())
             .col(ColumnDef::new(BizActivity::Name).not_null().string())
-            .col(
-                ColumnDef::new(BizActivity::Status)
-                    .not_null()
-                    .tiny_integer(),
-            )
+            .col(ColumnDef::new(BizActivity::Status).not_null().tiny_integer())
             .col(ColumnDef::new(BizActivity::Remark).text())
             .col(ColumnDef::new(BizActivity::CreateTime).date_time())
             .col(ColumnDef::new(BizActivity::Version).not_null().double())
@@ -315,9 +271,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
             .order_by(BizActivity::Id, Order::Desc)
             .limit(1)
             .done();
-        let result = client
-            .fetch_all::<BizActivityStruct>(&sql_builder, None)
-            .await?;
+        let result = client.fetch_all::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result.len(), 0);
 
         // Again
@@ -362,9 +316,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
             .order_by(BizActivity::Id, Order::Desc)
             .limit(1)
             .done();
-        let result = client
-            .fetch_all::<BizActivityStruct>(&sql_builder, Some(&mut tx))
-            .await?;
+        let result = client.fetch_all::<BizActivityStruct>(&sql_builder, Some(&mut tx)).await?;
         assert_eq!(result[0].name, "测试");
         assert_eq!(result[0].version, 1.0);
 
@@ -383,9 +335,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
             .order_by(BizActivity::Id, Order::Desc)
             .limit(1)
             .done();
-        let result = client
-            .fetch_all::<BizActivityStruct>(&sql_builder, None)
-            .await?;
+        let result = client.fetch_all::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result.len(), 0);
 
         // Commit
@@ -407,9 +357,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
             .order_by(BizActivity::Id, Order::Desc)
             .limit(1)
             .done();
-        let result = client
-            .fetch_all::<BizActivityStruct>(&sql_builder, None)
-            .await?;
+        let result = client.fetch_all::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result[0].name, "测试");
         assert_eq!(result[0].version, 1.0);
 
