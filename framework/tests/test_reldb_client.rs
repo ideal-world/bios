@@ -18,15 +18,19 @@
 
 use chrono::{Local, NaiveDateTime};
 use sea_query::{ColumnDef, Expr, Iden, Order, Query, Table};
+use serde::Serialize;
 use sqlx::Connection;
+use strum::EnumIter;
+use strum::IntoEnumIterator;
 
 use bios::basic::config::{BIOSConfig, DBConfig, FrameworkConfig, NoneConfig};
 use bios::basic::error::BIOSResult;
+use bios::db::domain::BiosDelRecord;
 use bios::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
 use bios::test::test_container::BIOSTestContainer;
 use bios::BIOSFuns;
 
-#[derive(Iden)]
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 enum Employees {
     Table,
     Name,
@@ -37,7 +41,7 @@ struct EmployeesStruct {
     name: String,
 }
 
-#[derive(Iden)]
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 enum BizActivity {
     Table,
     Id,
@@ -48,7 +52,7 @@ enum BizActivity {
     Version,
 }
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(sqlx::FromRow, Debug, Serialize)]
 struct BizActivityStruct {
     id: i32,
     name: String,
@@ -360,6 +364,31 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
         let result = client.fetch_all::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result[0].name, "测试");
         assert_eq!(result[0].version, 1.0);
+
+        // Soft Delete
+
+        let mut conn = client.conn().await;
+        let mut tx = conn.begin().await?;
+
+        let sql_builder = Query::select()
+            .columns(BizActivity::iter().filter(|i| *i != BizActivity::Table))
+            .from(BizActivity::Table)
+            .and_where(Expr::col(BizActivity::Id).eq(id))
+            .done();
+        let result = client
+            .soft_del::<BizActivityStruct, _, _>(BizActivity::Table, BizActivity::Id, "gdxr", &sql_builder, &mut tx)
+            .await?;
+        assert_eq!(result, true);
+
+        let sql_builder = Query::select().columns(vec![BizActivity::Id]).from(BizActivity::Table).done();
+        let result = client.count(&sql_builder, Some(&mut tx)).await?;
+        assert_eq!(result, 0);
+
+        let sql_builder = Query::select().columns(vec![BiosDelRecord::Id]).from(BiosDelRecord::Table).done();
+        let result = client.count(&sql_builder, Some(&mut tx)).await?;
+        assert_eq!(result, 1);
+
+        tx.commit().await?;
 
         Ok(())
     })

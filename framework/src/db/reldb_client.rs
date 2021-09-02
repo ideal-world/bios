@@ -18,18 +18,20 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::info;
 use sea_query::{
-    DeleteStatement, InsertStatement, MysqlQueryBuilder, SelectStatement, TableCreateStatement,
-    UpdateStatement, Values,
+    ColumnDef, DeleteStatement, Expr, InsertStatement, IntoColumnRef, IntoTableRef, MysqlQueryBuilder, Query, SelectStatement, Table, TableCreateStatement, UpdateStatement, Values,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, MySql, Pool, Row, Transaction};
 use sqlx::mysql::{MySqlPoolOptions, MySqlQueryResult, MySqlRow};
 use sqlx::pool::PoolConnection;
+use sqlx::{FromRow, MySql, Pool, Row, Transaction};
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;
 use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::json::{obj_to_json, obj_to_string};
+use crate::db::domain::{BiosConfig, BiosDelRecord};
 use crate::db::reldb_client::sea_query_driver_mysql::{bind_query, bind_query_as};
+use rust_decimal::prelude::ToPrimitive;
 
 sea_query::sea_query_driver_mysql!();
 
@@ -50,17 +52,45 @@ impl BIOSRelDBClient {
             url.port().unwrap_or(0),
             conn_max
         );
-        let pool = MySqlPoolOptions::new()
-            .max_connections(conn_max)
-            .connect(str_url)
-            .await
-            .unwrap();
+        let pool = MySqlPoolOptions::new().max_connections(conn_max).connect(str_url).await.unwrap();
         info!(
             "[BIOS.Framework.RelDBClient] Initialized, host:{}, port:{}, max_connections:{}",
             url.host_str().unwrap_or(""),
             url.port().unwrap_or(0),
             conn_max
         );
+
+        let sql_builder = Table::create()
+            .table(BiosConfig::Table)
+            .if_not_exists()
+            .col(ColumnDef::new(BiosConfig::Id).integer().not_null().auto_increment().primary_key())
+            .col(ColumnDef::new(BiosConfig::K).not_null().string())
+            .col(ColumnDef::new(BiosConfig::V).not_null().string())
+            .col(ColumnDef::new(BiosConfig::CreateUser).not_null().string())
+            .col(ColumnDef::new(BiosConfig::UpdateUser).not_null().string())
+            .col(ColumnDef::new(BiosConfig::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
+            .col(
+                ColumnDef::new(BiosConfig::UpdateTime)
+                    .extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string())
+                    .timestamp(),
+            )
+            .done();
+        let result = bind_query(sqlx::query(&sql_builder.sql), &sql_builder.values);
+        result.execute(&pool).await?;
+
+        let sql_builder = Table::create()
+            .table(BiosDelRecord::Table)
+            .if_not_exists()
+            .col(ColumnDef::new(BiosDelRecord::Id).integer().not_null().auto_increment().primary_key())
+            .col(ColumnDef::new(BiosDelRecord::EntityName).not_null().string())
+            .col(ColumnDef::new(BiosDelRecord::RecordId).not_null().string())
+            .col(ColumnDef::new(BiosDelRecord::Content).not_null().text())
+            .col(ColumnDef::new(BiosDelRecord::CreateUser).not_null().string())
+            .col(ColumnDef::new(BiosDelRecord::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
+            .done();
+        let result = bind_query(sqlx::query(&sql_builder.sql), &sql_builder.values);
+        result.execute(&pool).await?;
+
         Ok(BIOSRelDBClient { pool })
     }
 
@@ -68,11 +98,7 @@ impl BIOSRelDBClient {
         self.pool.acquire().await.unwrap()
     }
 
-    pub async fn exec<'c>(
-        &self,
-        sql_builder: &BIOSSqlBuilder,
-        tx: Option<&mut Transaction<'c, MySql>>,
-    ) -> BIOSResult<MySqlQueryResult> {
+    pub async fn exec<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<MySqlQueryResult> {
         let result = bind_query(sqlx::query(&sql_builder.sql), &sql_builder.values);
         let result = match tx {
             Some(t) => result.execute(t).await,
@@ -84,20 +110,13 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_all<'c, E>(
-        &self,
-        sql_builder: &BIOSSqlBuilder,
-        tx: Option<&mut Transaction<'c, MySql>>,
-    ) -> BIOSResult<Vec<E>>
-        where
-            E: for<'r> FromRow<'r, MySqlRow>,
-            E: std::marker::Send,
-            E: Unpin,
+    pub async fn fetch_all<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Vec<E>>
+    where
+        E: for<'r> FromRow<'r, MySqlRow>,
+        E: std::marker::Send,
+        E: Unpin,
     {
-        let result = bind_query_as(
-            sqlx::query_as::<_, E>(&sql_builder.sql),
-            &sql_builder.values,
-        );
+        let result = bind_query_as(sqlx::query_as::<_, E>(&sql_builder.sql), &sql_builder.values);
         let result = match tx {
             Some(t) => result.fetch_all(t).await,
             None => result.fetch_all(&self.pool).await,
@@ -108,15 +127,11 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_one<'c, E>(
-        &self,
-        sql_builder: &BIOSSqlBuilder,
-        tx: Option<&mut Transaction<'c, MySql>>,
-    ) -> BIOSResult<E>
-        where
-            E: for<'r> FromRow<'r, MySqlRow>,
-            E: std::marker::Send,
-            E: Unpin,
+    pub async fn fetch_one<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<E>
+    where
+        E: for<'r> FromRow<'r, MySqlRow>,
+        E: std::marker::Send,
+        E: Unpin,
     {
         let fetch_one_sql = format!("{} LIMIT 1", sql_builder.sql);
         let result = bind_query_as(sqlx::query_as::<_, E>(&fetch_one_sql), &sql_builder.values);
@@ -130,34 +145,17 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn pagination<'c, E>(
-        &self,
-        sql_builder: &BIOSSqlBuilder,
-        page_number: u64,
-        page_size: u64,
-        tx: Option<&mut Transaction<'c, MySql>>,
-    ) -> BIOSResult<BIOSPage<E>>
-        where
-            E: for<'r> FromRow<'r, MySqlRow>,
-            E: std::marker::Send,
-            E: Unpin,
+    pub async fn pagination<'c, E>(&self, sql_builder: &BIOSSqlBuilder, page_number: u64, page_size: u64, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<BIOSPage<E>>
+    where
+        E: for<'r> FromRow<'r, MySqlRow>,
+        E: std::marker::Send,
+        E: Unpin,
     {
-        let page_sql = format!(
-            "{} LIMIT {} , {}",
-            sql_builder.sql,
-            (page_number - 1) * page_size,
-            page_size
-        );
+        let page_sql = format!("{} LIMIT {} , {}", sql_builder.sql, (page_number - 1) * page_size, page_size);
         let result = bind_query_as(sqlx::query_as::<_, E>(&page_sql), &sql_builder.values);
         let (total_size, result) = match tx {
-            Some(t) => (
-                self.count(sql_builder, Some(t)).await?,
-                result.fetch_all(t).await,
-            ),
-            None => (
-                self.count(sql_builder, None).await?,
-                result.fetch_all(&self.pool).await,
-            ),
+            Some(t) => (self.count(sql_builder, Some(t)).await?, result.fetch_all(t).await),
+            None => (self.count(sql_builder, None).await?, result.fetch_all(&self.pool).await),
         };
         match result {
             Ok(rows) => BIOSResult::Ok(BIOSPage {
@@ -170,29 +168,66 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn exists<'c>(
-        &self,
-        sql_builder: &BIOSSqlBuilder,
-        tx: Option<&mut Transaction<'c, MySql>>,
-    ) -> BIOSResult<bool> {
+    pub async fn exists<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<bool> {
         match self.count(sql_builder, tx).await {
             Ok(count) => Ok(count != 0),
             Err(e) => Err(e),
         }
     }
 
-    pub async fn count<'c>(
-        &self,
-        sql_builder: &BIOSSqlBuilder,
-        tx: Option<&mut Transaction<'c, MySql>>,
-    ) -> BIOSResult<u64> {
+    pub async fn soft_del<'c, E, R, T>(&self, table: R, id_column: T, create_user: &str, sql_builder: &BIOSSqlBuilder, tx: &mut Transaction<'c, MySql>) -> BIOSResult<bool>
+    where
+        R: IntoTableRef + Copy,
+        T: IntoColumnRef + Copy,
+        E: for<'r> FromRow<'r, MySqlRow>,
+        E: std::marker::Send,
+        E: Unpin,
+        E: Serialize,
+    {
+        let table_name = format!("{:?}", &table.into_table_ref().clone());
+        let table_name = table_name.as_str()[table_name.find("(").unwrap() + 1..table_name.len() - 1].to_string();
+        let id_name = format!("{:?}", &id_column.into_column_ref().clone());
+        let id_name = id_name.as_str()[id_name.find("(").unwrap() + 1..id_name.len() - 1].to_string();
+        let mut str_ids = Vec::new();
+        let mut num_ids = Vec::new();
+
+        let rows: Vec<E> = self.fetch_all::<E>(sql_builder, Some(tx)).await?;
+        for row in rows {
+            let json = obj_to_json(&row).unwrap();
+            let id = json[id_name.clone()].clone();
+            let json = obj_to_string(&json).unwrap();
+            if id.is_string() {
+                str_ids.push(id.as_str().as_ref().unwrap().to_string());
+            } else {
+                num_ids.push(id.as_i64().as_ref().unwrap().to_i64());
+            }
+            let sql_builder = Query::insert()
+                .into_table(BiosDelRecord::Table)
+                .columns(vec![BiosDelRecord::EntityName, BiosDelRecord::RecordId, BiosDelRecord::Content, BiosDelRecord::CreateUser])
+                .values_panic(vec![
+                    table_name.clone().into(),
+                    if id.is_string() { id.as_str().unwrap().into() } else { id.as_i64().unwrap().into() },
+                    json.into(),
+                    create_user.clone().into(),
+                ])
+                .done();
+            self.exec(&sql_builder, Some(tx)).await?;
+        }
+        if str_ids.len() > 0 {
+            let sql_builder = Query::delete().from_table(table).and_where(Expr::col(id_column).is_in(str_ids)).done();
+            self.exec(&sql_builder, Some(tx)).await?;
+        } else if num_ids.len() > 0 {
+            let sql_builder = Query::delete().from_table(table).and_where(Expr::col(id_column).is_in(num_ids)).done();
+            self.exec(&sql_builder, Some(tx)).await?;
+        }
+        BIOSResult::Ok(true)
+    }
+
+    pub async fn count<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<u64> {
         let count_sql = format!(
             "SELECT COUNT(1) AS _COUNT FROM ( {} ) _{}",
             sql_builder.sql,
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis()
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
         );
         let result = bind_query(sqlx::query(&count_sql), &sql_builder.values);
         let result = match tx {
@@ -269,10 +304,10 @@ pub struct BIOSSqlBuilder {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BIOSPage<E>
-    where
-        E: for<'r> FromRow<'r, MySqlRow>,
-        E: std::marker::Send,
-        E: Unpin,
+where
+    E: for<'r> FromRow<'r, MySqlRow>,
+    E: std::marker::Send,
+    E: Unpin,
 {
     pub page_size: u64,
     pub page_number: u64,

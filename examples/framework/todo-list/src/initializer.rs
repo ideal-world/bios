@@ -31,13 +31,7 @@ pub async fn init() -> BIOSResult<()> {
             &Table::create()
                 .table(Category::Table)
                 .if_not_exists()
-                .col(
-                    ColumnDef::new(Category::Id)
-                        .big_integer()
-                        .not_null()
-                        .auto_increment()
-                        .primary_key(),
-                )
+                .col(ColumnDef::new(Category::Id).big_integer().not_null().auto_increment().primary_key())
                 .col(ColumnDef::new(Category::Name).not_null().string())
                 .done(),
             Some(&mut tx),
@@ -49,20 +43,10 @@ pub async fn init() -> BIOSResult<()> {
             &Table::create()
                 .table(Item::Table)
                 .if_not_exists()
-                .col(
-                    ColumnDef::new(Item::Id)
-                        .big_integer()
-                        .not_null()
-                        .auto_increment()
-                        .primary_key(),
-                )
+                .col(ColumnDef::new(Item::Id).big_integer().not_null().auto_increment().primary_key())
                 .col(ColumnDef::new(Item::Content).not_null().string())
                 .col(ColumnDef::new(Item::Creator).not_null().string())
-                .col(
-                    ColumnDef::new(Item::CreateTime)
-                        .extra("DEFAULT CURRENT_TIMESTAMP".to_string())
-                        .timestamp(),
-                )
+                .col(ColumnDef::new(Item::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
                 .col(
                     ColumnDef::new(Item::UpdateTime)
                         .extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string())
@@ -74,13 +58,7 @@ pub async fn init() -> BIOSResult<()> {
         )
         .await?;
     if BIOSFuns::reldb()
-        .count(
-            &Query::select()
-                .columns(vec![Category::Id])
-                .from(Category::Table)
-                .done(),
-            Some(&mut tx),
-        )
+        .count(&Query::select().columns(vec![Category::Id]).from(Category::Table).done(), Some(&mut tx))
         .await?
         != 0
     {
