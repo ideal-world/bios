@@ -17,12 +17,14 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::process::basic_dto::{ExposeKind, ResourceKind};
+use crate::process::basic_dto::ResourceKind;
 
 #[derive(Deserialize, Validate)]
 pub struct ResourceSubjectQueryReq {
     #[validate(length(min = 2, max = 10))]
     pub name: Option<String>,
+    pub page_number: u64,
+    pub page_size: u64,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -94,14 +96,11 @@ pub struct ResourceSubjectDetailResp {
     // 资源主体编码
     #[validate(length(min = 2, max = 255))]
     pub code: String,
-    // 资源主体编码后缀
-    #[validate(length(min = 2, max = 255))]
-    pub code_postfix: String,
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]
     pub name: String,
     // 资源主体显示排序，asc
-    pub sort: u32,
+    pub sort: i32,
     // 资源类型
     pub kind: String,
     // 资源主体连接URI
@@ -120,13 +119,11 @@ pub struct ResourceSubjectDetailResp {
     #[validate(length(max = 1000))]
     pub platform_project_id: String,
     // 执行超时
-    pub timeout_ms: u32,
+    pub timeout_ms: i32,
     // 所属应用Id
     #[validate(length(max = 32))]
     pub rel_app_id: String,
     // 所属租户Id
     #[validate(length(max = 32))]
     pub rel_tenant_id: String,
-    // 开放等级类型
-    pub expose_kind: String,
 }
