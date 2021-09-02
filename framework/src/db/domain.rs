@@ -15,43 +15,10 @@
  */
 
 use sea_query::Iden;
-
-#[derive(Iden)]
-pub enum IamResourceSubject {
-    Table,
-    Id,
-    CreateUser,
-    UpdateUser,
-    CreateTime,
-    UpdateTime,
-    // 资源主体编码
-    Code,
-    // 资源类型名称
-    Kind,
-    // 资源主体连接URI
-    Uri,
-    // 资源主体名称
-    Name,
-    // 资源主体显示排序，asc
-    Sort,
-    // AK，部分类型支持写到URI中
-    Ak,
-    // SK，部分类型支持写到URI中
-    Sk,
-    // 第三方平台账号名
-    PlatformAccount,
-    // 第三方平台项目名，如华为云的ProjectId
-    PlatformProjectId,
-    // 执行超时
-    TimeoutMs,
-    // 关联应用Id
-    RelAppId,
-    // 关联租户Id
-    RelTenantId,
-}
+use strum::EnumIter;
 
 // 通用配置信息
-#[derive(Iden)]
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum BiosConfig {
     Table,
     Id,
@@ -64,7 +31,7 @@ pub enum BiosConfig {
 }
 
 // 记录删除信息
-#[derive(Iden)]
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum BiosDelRecord {
     Table,
     Id,
@@ -73,7 +40,7 @@ pub enum BiosDelRecord {
     // 对象名称
     EntityName,
     // 记录Id
-    Content,
-    // 删除内容，Json格式
     RecordId,
+    // 删除内容，Json格式
+    Content,
 }
