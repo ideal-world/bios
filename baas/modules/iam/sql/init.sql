@@ -18,35 +18,6 @@ create schema if not exists iam collate utf8mb4_0900_ai_ci;
 
 use iam;
 
-create table if not exists bios_config
-(
-    id          varchar(64)
-        primary key,
-    k           varchar(255)                        not null comment 'Key',
-    v           varchar(3000)                       not null comment 'Value',
-    create_time timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user varchar(64)                              not null comment '创建者Id',
-    update_time timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user varchar(64)                              not null comment '最后一次修改者Id',
-    constraint u_k
-        unique (k)
-)
-    comment '通用配置信息';
-
-create table if not exists bios_del_record
-(
-    id          varchar(64)
-        primary key,
-    entity_name varchar(255)                        not null comment '对象名称',
-    record_id   varchar(255)                        not null comment '记录Id',
-    content     longtext                            not null comment '删除内容，Json格式',
-    create_time timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user varchar(64)                              not null comment '创建者Id',
-    constraint u_entity_record
-        unique (entity_name, record_id)
-)
-    comment '记录删除信息';
-
 create table if not exists iam_account
 (
     id          varchar(64)

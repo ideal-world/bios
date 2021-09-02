@@ -16,19 +16,20 @@
 
 use actix_web::{delete, get, post, put, HttpRequest};
 use sea_query::{Expr, Query};
+use sqlx::Connection;
+use strum::IntoEnumIterator;
 
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
 use bios::web::validate::json::Json;
+use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
 use crate::constant::RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT;
 use crate::domain::auth_domain::{IamResource, IamResourceSubject};
-use crate::process::app_console::ac_resource_dto::{ResourceSubjectAddReq, ResourceSubjectDetailResp, ResourceSubjectModifyReq};
+use crate::process::app_console::ac_resource_dto::{ResourceSubjectAddReq, ResourceSubjectDetailResp, ResourceSubjectModifyReq, ResourceSubjectQueryReq};
 use crate::process::basic_processor::get_ident_info_by_account;
-use bios::db::domain::BiosDelRecord;
-use sqlx::Connection;
 
 #[post("/console/app/resource/subject")]
 pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubjectAddReq>, req: HttpRequest) -> BIOSResp {
@@ -200,7 +201,31 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
     BIOSRespHelper::ok("")
 }
 
-/*#[delete("/console/app/resource/subject/{id}")]
+#[get("/console/app/resource/subject")]
+pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: HttpRequest) -> BIOSResp {
+    let ident_info_result = get_ident_info_by_account(&req);
+    if ident_info_result.is_err() {
+        return BIOSRespHelper::bus_error(ident_info_result.err().unwrap());
+    }
+    let ident_info = ident_info_result.unwrap();
+
+    let sql_builder = Query::select()
+        .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
+        .from(IamResourceSubject::Table)
+        .and_where_option(if query.name.as_ref().is_some() {
+            Some(Expr::col(IamResourceSubject::Name).like(format!("%{}%", query.name.as_ref().unwrap()).as_str()))
+        } else {
+            None
+        })
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
+        .done();
+    let items = BIOSFuns::reldb()
+        .pagination::<ResourceSubjectDetailResp>(&sql_builder, query.page_number, query.page_size, None)
+        .await?;
+    BIOSRespHelper::ok(items)
+}
+
+#[delete("/console/app/resource/subject/{id}")]
 pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
     let ident_info_result = get_ident_info_by_account(&req);
     if ident_info_result.is_err() {
@@ -215,7 +240,7 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
-                .and_where(Expr::col(IamResource::RelResourceSubjectId).ne(id.clone()))
+                .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(id.clone()))
                 .done(),
             None,
         )
@@ -227,22 +252,21 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
     let mut tx = conn.begin().await?;
 
     let sql_builder = Query::select()
+        .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
         .from(IamResourceSubject::Table)
-        .and_where(Expr::col(IamResourceSubject::Id).ne(id.clone()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).ne(ident_info.app_id.as_ref().unwrap().to_string()))
+        .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
         .done();
-    let resource_subject_result = BIOSFuns::reldb().fetch_one::<ResourceSubjectDetailResp>(&sql_builder, Some(&mut tx)).await;
-    if resource_subject_result.is_err() {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Can't find the resourceSubject record".to_owned()));
-    }
-    let resource_subject = resource_subject_result.unwrap();
-    let resource_subject_json = bios::basic::json::obj_to_string(&resource_subject)?;
-    let sql_builder = Query::insert()
-        .into_table(BiosDelRecord::Table)
-        .columns(vec![BiosDelRecord::EntityName, BiosDelRecord::RecordId, BiosDelRecord::Content, BiosDelRecord::CreateUser])
-        .values_panic(vec![IamResourceSubject::Table.to_string().into(), resource_subject.id.into(), category.name.clone().into()])
-        .done();
-    let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
+    BIOSFuns::reldb()
+        .soft_del::<ResourceSubjectDetailResp, _, _>(
+            IamResourceSubject::Table,
+            IamResourceSubject::Id,
+            ident_info.account_id.as_ref().unwrap(),
+            &sql_builder,
+            &mut tx,
+        )
+        .await?;
 
+    tx.commit().await?;
     BIOSRespHelper::ok("")
-}*/
+}

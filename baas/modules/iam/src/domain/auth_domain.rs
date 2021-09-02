@@ -16,7 +16,9 @@
 
 use sea_query::Iden;
 
-#[derive(Iden)]
+use strum::EnumIter;
+
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum IamResourceSubject {
     Table,
     Id,
@@ -50,7 +52,7 @@ pub enum IamResourceSubject {
     RelTenantId,
 }
 
-#[derive(Iden)]
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum IamResource {
     Table,
     Id,
