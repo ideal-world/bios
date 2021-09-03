@@ -53,12 +53,12 @@ init_dev_env(){
     cd ..
     echo "[6/10] download apisix"
     echo ""
-    wget https://mirrors.bfsu.edu.cn/apache/apisix/2.8/apache-apisix-2.8-src.tgz
+    wget https://mirrors.bfsu.edu.cn/apache/apisix/2.9/apache-apisix-2.9-src.tgz
     tar -cvf apisix.tar apisix
-    tar -xf apache-apisix-2.8-src.tgz -C apisix
+    tar -xf apache-apisix-2.9-src.tgz -C apisix
     tar -xf apisix.tar
     rm apisix.tar
-    rm apache-apisix-2.8-src.tgz
+    rm apache-apisix-2.9-src.tgz
     echo "[7/10] make deps"
     echo ""
     cd apisix
