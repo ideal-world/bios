@@ -15,4 +15,3 @@
  */
 pub mod app_console;
 pub mod basic_dto;
-pub mod basic_processor;

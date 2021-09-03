@@ -21,6 +21,7 @@ use strum::IntoEnumIterator;
 
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
+use bios::web::basic_processor::get_ident_account_info;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
@@ -29,16 +30,10 @@ use bios::BIOSFuns;
 use crate::constant::RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT;
 use crate::domain::auth_domain::{IamResource, IamResourceSubject};
 use crate::process::app_console::ac_resource_dto::{ResourceSubjectAddReq, ResourceSubjectDetailResp, ResourceSubjectModifyReq, ResourceSubjectQueryReq};
-use crate::process::basic_processor::get_ident_info_by_account;
 
 #[post("/console/app/resource/subject")]
 pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubjectAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info_result = get_ident_info_by_account(&req);
-    if ident_info_result.is_err() {
-        return BIOSRespHelper::bus_error(ident_info_result.err().unwrap());
-    }
-    let ident_info = ident_info_result.unwrap();
-
+    let ident_info = get_ident_account_info(&req)?;
     if resource_subject_add_req.code_postfix.contains(&RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT) {
         return BIOSRespHelper::bus_error(BIOSError::BadRequest(
             format!("ResourceSubject [code_postfix] can't contain [{}]", &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT).to_owned(),
@@ -46,7 +41,7 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
     }
     let resource_subject_code = format!(
         "{}{}{}{}{}",
-        ident_info.app_id.as_ref().unwrap(),
+        &ident_info.app_id,
         &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
         &resource_subject_add_req.kind.to_string().to_lowercase(),
         &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
@@ -59,7 +54,7 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Code).eq(resource_subject_code.clone()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -89,8 +84,8 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
         ])
         .values_panic(vec![
             id.clone().into(),
-            ident_info.account_id.as_ref().unwrap().to_string().into(),
-            ident_info.account_id.as_ref().unwrap().to_string().into(),
+            ident_info.account_id.clone().into(),
+            ident_info.account_id.clone().into(),
             resource_subject_code.clone().into(),
             resource_subject_add_req.kind.to_string().to_lowercase().into(),
             bios::basic::uri::format(&resource_subject_add_req.uri).expect("Uri parse error").into(),
@@ -101,8 +96,8 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
             resource_subject_add_req.platform_account.as_ref().unwrap_or(&"".to_string()).to_string().into(),
             resource_subject_add_req.platform_project_id.as_ref().unwrap_or(&"".to_string()).to_string().into(),
             resource_subject_add_req.timeout_ms.unwrap_or(0).into(),
-            ident_info.app_id.as_ref().unwrap().to_string().into(),
-            ident_info.tenant_id.as_ref().unwrap().to_string().into(),
+            ident_info.app_id.clone().into(),
+            ident_info.tenant_id.clone().into(),
         ])
         .done();
     BIOSFuns::reldb().exec(&sql_builder, None).await?;
@@ -111,11 +106,7 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
 
 #[put("/console/app/resource/subject/{id}")]
 pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceSubjectModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info_result = get_ident_info_by_account(&req);
-    if ident_info_result.is_err() {
-        return BIOSRespHelper::bus_error(ident_info_result.err().unwrap());
-    }
-    let ident_info = ident_info_result.unwrap();
+    let ident_info = get_ident_account_info(&req)?;
 
     let id: String = req.match_info().get("id").unwrap().parse()?;
     if resource_subject_modify_req.code_postfix.is_some() && resource_subject_modify_req.kind.is_none() {
@@ -130,7 +121,7 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
         }
         let resource_subject_code = format!(
             "{}{}{}{}{}",
-            ident_info.app_id.as_ref().unwrap(),
+            &ident_info.app_id,
             &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
             &resource_subject_modify_req.kind.as_ref().unwrap().to_string().to_lowercase(),
             &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
@@ -144,7 +135,7 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
                     .from(IamResourceSubject::Table)
                     .and_where(Expr::col(IamResourceSubject::Id).ne(id.clone()))
                     .and_where(Expr::col(IamResourceSubject::Code).eq(resource_subject_code.clone()))
-                    .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
+                    .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
                     .done(),
                 None,
             )
@@ -190,12 +181,12 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
     if resource_subject_modify_req.timeout_ms.is_some() {
         values.push((IamResourceSubject::TimeoutMs, resource_subject_modify_req.timeout_ms.unwrap().into()));
     }
-    values.push((IamResourceSubject::UpdateUser, ident_info.account_id.as_ref().unwrap().to_string().into()));
+    values.push((IamResourceSubject::UpdateUser, ident_info.account_id.clone().into()));
     let sql_builder = Query::update()
         .table(IamResourceSubject::Table)
         .values(values)
         .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb().exec(&sql_builder, None).await?;
     BIOSRespHelper::ok("")
@@ -203,11 +194,7 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
 
 #[get("/console/app/resource/subject")]
 pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info_result = get_ident_info_by_account(&req);
-    if ident_info_result.is_err() {
-        return BIOSRespHelper::bus_error(ident_info_result.err().unwrap());
-    }
-    let ident_info = ident_info_result.unwrap();
+    let ident_info = get_ident_account_info(&req)?;
 
     let sql_builder = Query::select()
         .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
@@ -217,7 +204,7 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
         } else {
             None
         })
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     let items = BIOSFuns::reldb()
         .pagination::<ResourceSubjectDetailResp>(&sql_builder, query.page_number, query.page_size, None)
@@ -227,11 +214,7 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
 
 #[delete("/console/app/resource/subject/{id}")]
 pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
-    let ident_info_result = get_ident_info_by_account(&req);
-    if ident_info_result.is_err() {
-        return BIOSRespHelper::bus_error(ident_info_result.err().unwrap());
-    }
-    let ident_info = ident_info_result.unwrap();
+    let ident_info = get_ident_account_info(&req)?;
 
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
@@ -255,16 +238,10 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
         .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
         .from(IamResourceSubject::Table)
         .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_ref().unwrap().to_string()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb()
-        .soft_del::<ResourceSubjectDetailResp, _, _>(
-            IamResourceSubject::Table,
-            IamResourceSubject::Id,
-            ident_info.account_id.as_ref().unwrap(),
-            &sql_builder,
-            &mut tx,
-        )
+        .soft_del::<ResourceSubjectDetailResp, _, _>(IamResourceSubject::Table, IamResourceSubject::Id, &ident_info.account_id, &sql_builder, &mut tx)
         .await?;
 
     tx.commit().await?;

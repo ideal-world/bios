@@ -17,46 +17,125 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
-pub struct IdentInfo {
-    pub app_id: Option<String>,
-    pub tenant_id: Option<String>,
-    pub account_id: Option<String>,
-    pub token: Option<String>,
-    pub token_kind: Option<String>,
-    pub ak: Option<String>,
-    pub roles: Option<Vec<String>>,
-    pub groups: Option<Vec<String>>,
+/// 公共状态枚举
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum CommonStatus {
+    // 禁用
+    Disabled,
+    // 启用
+    Enabled,
 }
 
+/// 账号认证类型枚举
+///
+/// 编码属性URI的Host部分，不能带下划线
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum AccountIdentKind {
+    // 用户名 + 密码
+    UserName,
+    // 租户间授权认证
+    AuthIdent,
+    // 手机号 + 验证码
+    Phone,
+    // 邮箱 + 密码
+    Email,
+    // 微信小程序OAuth
+    WechatXcx,
+}
+
+/// 资源类型枚举
 #[derive(Display, Debug, Deserialize, Serialize)]
 pub enum ResourceKind {
     // API
-    API,
+    Api,
     // 菜单
-    MENU,
+    Menu,
     // 页面元素
-    ELEMENT,
+    Element,
     // OAuth
-    OAUTH,
+    Oauth,
     // 关系数据库
-    RELDB,
+    Reldb,
     // 缓存
-    CACHE,
+    Cache,
     // MQ
-    MQ,
+    Mq,
     // 对象存储
-    OBJECT,
+    Object,
     // Task
-    TASK,
+    Task,
 }
 
+/// 群组类型枚举
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum GroupKind {
+    // 行政
+    Administration,
+    // 虚拟
+    Virtual,
+}
+
+/// 开放级别枚举
 #[derive(Display, Debug, Deserialize, Serialize)]
 pub enum ExposeKind {
-    // 应用级
-    APP,
     // 租户级
-    TENANT,
+    Tenant,
+    // 应用级
+    App,
     // 系统级
-    GLOBAL,
+    Global,
+}
+
+/// 权限主体类型枚举
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum AuthSubjectKind {
+    // 租户
+    Tenant,
+    // 应用
+    App,
+    // 角色
+    Role,
+    // 群组节点
+    GroupNode,
+    // 账户
+    Account,
+}
+
+/// 权限主体运算类型枚举
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum AuthSubjectOperatorKind {
+    // 等于
+    Eq,
+    // 不等于
+    Neq,
+    // 包含，可用于群组当前及祖父节点
+    Include,
+    // LIKE，用于群组当前及子孙节点
+    Like,
+}
+
+/// 操作类型枚举
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum OptActionKind {
+    // 是否存在
+    Exists,
+    // 获取
+    Fetch,
+    // 创建
+    Create,
+    // 更新
+    Modify,
+    // 局部更新
+    Patch,
+    // 删除
+    Delete,
+}
+
+/// 权限结果类型枚举
+#[derive(Display, Debug, Deserialize, Serialize)]
+pub enum AuthResultKind {
+    // 接受
+    Accept,
+    // 拒绝
+    Reject,
 }

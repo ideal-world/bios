@@ -26,7 +26,6 @@ use bios::db::reldb_client::BIOSPage;
 use bios::web::resp_handler::BIOSRespHelper;
 use bios::web::web_server::BIOSWebServer;
 use bios::BIOSFuns;
-use bios_baas_iam::iam_config::WorkSpaceConfig;
 use bios_baas_iam::process::app_console;
 use bios_baas_iam::process::app_console::ac_resource_dto::{ResourceSubjectAddReq, ResourceSubjectDetailResp, ResourceSubjectModifyReq};
 use bios_baas_iam::process::basic_dto::ResourceKind;
@@ -51,15 +50,15 @@ async fn test_resources() -> BIOSResult<()> {
     // Add resourceSubject
     let req = test::TestRequest::post()
         .insert_header((
-            BIOSFuns::config::<WorkSpaceConfig>().ws.iam.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1"}"#),
+            BIOSFuns::fw_config().web.ident_info_flag.clone(),
+            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1","ak":"ak1","token":"t01"}"#),
         ))
         .uri("/console/app/resource/subject")
         .set_json(&ResourceSubjectAddReq {
             code_postfix: "httpbin".to_string(),
             name: "测试Http请求".to_string(),
             sort: 0,
-            kind: ResourceKind::API,
+            kind: ResourceKind::Api,
             uri: "http://httpbin.org".to_string(),
             ak: None,
             sk: None,
@@ -76,15 +75,15 @@ async fn test_resources() -> BIOSResult<()> {
 
     let req = test::TestRequest::put()
         .insert_header((
-            BIOSFuns::config::<WorkSpaceConfig>().ws.iam.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1"}"#),
+            BIOSFuns::fw_config().web.ident_info_flag.clone(),
+            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1","ak":"ak1","token":"t01"}"#),
         ))
         .uri(format!("/console/app/resource/subject/{}", id.clone()).as_str())
         .set_json(&ResourceSubjectModifyReq {
             code_postfix: Some("httpbin_test".to_string()),
             name: Some("测试Http请求1".to_string()),
             sort: None,
-            kind: Some(ResourceKind::API),
+            kind: Some(ResourceKind::Api),
             uri: Some("https://httpbin.org".to_string()),
             ak: None,
             sk: None,
@@ -100,8 +99,8 @@ async fn test_resources() -> BIOSResult<()> {
 
     let req = test::TestRequest::get()
         .insert_header((
-            BIOSFuns::config::<WorkSpaceConfig>().ws.iam.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1"}"#),
+            BIOSFuns::fw_config().web.ident_info_flag.clone(),
+            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1","ak":"ak1","token":"t01"}"#),
         ))
         .uri("/console/app/resource/subject?page_number=1&page_size=10&name=Http")
         .to_request();
@@ -116,8 +115,8 @@ async fn test_resources() -> BIOSResult<()> {
 
     let req = test::TestRequest::delete()
         .insert_header((
-            BIOSFuns::config::<WorkSpaceConfig>().ws.iam.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1"}"#),
+            BIOSFuns::fw_config().web.ident_info_flag.clone(),
+            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"acc1","ak":"ak1","token":"t01"}"#),
         ))
         .uri(format!("/console/app/resource/subject/{}", id.clone()).as_str())
         .to_request();

@@ -14,3 +14,4 @@
  * limitations under the License.
  */
 pub mod auth_domain;
+pub mod ident_domain;

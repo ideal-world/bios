@@ -24,22 +24,16 @@ pub struct WorkSpaceConfig {
 
 impl Default for WorkSpaceConfig {
     fn default() -> Self {
-        WorkSpaceConfig {
-            iam: IamConfig::default(),
-        }
+        WorkSpaceConfig { iam: IamConfig::default() }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
-pub struct IamConfig {
-    pub ident_info_flag: String,
-}
+pub struct IamConfig {}
 
 impl Default for IamConfig {
     fn default() -> Self {
-        IamConfig {
-            ident_info_flag: "BIOS-Ident".to_owned(),
-        }
+        IamConfig {}
     }
 }
