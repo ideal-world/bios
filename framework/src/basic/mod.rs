@@ -23,6 +23,7 @@ pub mod json;
 pub mod logger;
 pub mod security;
 pub mod uri;
+pub mod dto;
 
 pub fn fetch_profile() -> String {
     env::var("PROFILE").unwrap_or("test".to_string())

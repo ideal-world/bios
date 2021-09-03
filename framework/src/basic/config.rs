@@ -86,6 +86,7 @@ pub struct WebConfig {
     pub port: u16,
     pub allowed_origin: String,
     pub client: WebClientConfig,
+    pub ident_info_flag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -102,6 +103,7 @@ impl Default for WebConfig {
             port: 8080,
             allowed_origin: "*".to_owned(),
             client: WebClientConfig::default(),
+            ident_info_flag: "BIOS-Ident".to_owned(),
         }
     }
 }
@@ -171,44 +173,26 @@ impl Default for AdvConfig {
 pub struct NoneConfig {}
 
 impl<'a, T> BIOSConfig<T>
-    where
-        T: Deserialize<'a>,
+where
+    T: Deserialize<'a>,
 {
     pub fn init(root_path: &str) -> BIOSResult<BIOSConfig<T>> {
         let profile = fetch_profile();
         let path = Path::new(root_path);
 
-        info!(
-            "[BIOS.Framework.Config] Initializing, root path:{:?}, profile:{}",
-            root_path, profile
-        );
+        info!("[BIOS.Framework.Config] Initializing, root path:{:?}, profile:{}", root_path, profile);
         let mut conf = Config::default();
         conf.merge(File::from(path.join("conf-default")).required(false))?;
 
-        conf.merge(
-            File::from(Path::new(root_path).join(&format!("conf-{}", profile))).required(false),
-        )?;
+        conf.merge(File::from(Path::new(root_path).join(&format!("conf-{}", profile))).required(false))?;
         conf.merge(Environment::with_prefix("BIOS"))?;
         let workspace_config = conf.clone().try_into::<T>()?;
         let framework_config = conf.try_into::<FrameworkConfig>()?;
 
-        env::set_var(
-            "RUST_BACKTRACE",
-            if framework_config.adv.backtrace {
-                "1"
-            } else {
-                "0"
-            },
-        );
+        env::set_var("RUST_BACKTRACE", if framework_config.adv.backtrace { "1" } else { "0" });
 
-        info!(
-            "[BIOS.Framework.Config] Initialized, root path:{}, profile:{}",
-            root_path, profile
-        );
-        debug!(
-            "=====[BIOS.Framework.Config] Content=====\n{:#?}\n=====",
-            framework_config
-        );
+        info!("[BIOS.Framework.Config] Initialized, root path:{}, profile:{}", root_path, profile);
+        debug!("=====[BIOS.Framework.Config] Content=====\n{:#?}\n=====", framework_config);
 
         Ok(BIOSConfig {
             ws: workspace_config,

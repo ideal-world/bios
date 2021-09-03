@@ -20,7 +20,7 @@ extern crate lazy_static;
 use std::any::Any;
 use std::ptr::replace;
 
-use crate::basic::config::BIOSConfig;
+use crate::basic::config::{BIOSConfig, FrameworkConfig};
 use crate::basic::error::BIOSResult;
 #[cfg(feature = "cache")]
 use crate::cache::cache_client::BIOSCacheClient;
@@ -32,7 +32,8 @@ use crate::mq::mq_client::BIOSMQClient;
 use crate::web::web_client::BIOSWebClient;
 
 static mut BIOS_INST: BIOSFuns = BIOSFuns {
-    config: None,
+    workspace_config: None,
+    framework_config: None,
     #[cfg(feature = "reldb")]
     reldb: None,
     #[cfg(feature = "cache")]
@@ -44,7 +45,8 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
 };
 
 pub struct BIOSFuns {
-    config: Option<Box<dyn Any>>,
+    workspace_config: Option<Box<dyn Any>>,
+    framework_config: Option<FrameworkConfig>,
     #[cfg(feature = "reldb")]
     reldb: Option<BIOSRelDBClient>,
     #[cfg(feature = "cache")]
@@ -57,38 +59,58 @@ pub struct BIOSFuns {
 
 impl BIOSFuns {
     pub async fn init<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
-        unsafe { replace(&mut BIOS_INST.config, Some(Box::new(conf))) };
+        unsafe {
+            replace(&mut BIOS_INST.workspace_config, Some(Box::new(conf.ws)));
+            replace(&mut BIOS_INST.framework_config, Some(conf.fw));
+        };
         #[cfg(feature = "reldb")]
-            {
-                let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
-                unsafe { replace(&mut BIOS_INST.reldb, Some(reldb_client)) };
-            }
+        {
+            let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+            unsafe {
+                replace(&mut BIOS_INST.reldb, Some(reldb_client));
+            };
+        }
         #[cfg(feature = "cache")]
-            {
-                let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
-                unsafe { replace(&mut BIOS_INST.cache, Some(cache_client)) };
-            }
+        {
+            let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+            unsafe {
+                replace(&mut BIOS_INST.cache, Some(cache_client));
+            };
+        }
         #[cfg(feature = "mq")]
-            {
-                let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::config::<T>().fw).await?;
-                unsafe { replace(&mut BIOS_INST.mq, Some(mq_client)) };
-            }
+        {
+            let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+            unsafe {
+                replace(&mut BIOS_INST.mq, Some(mq_client));
+            };
+        }
         #[cfg(feature = "web-client")]
-            {
-                let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::config::<T>().fw)?;
-                unsafe { replace(&mut BIOS_INST.web_client, Some(web_client)) };
-            }
+        {
+            let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::fw_config())?;
+            unsafe {
+                replace(&mut BIOS_INST.web_client, Some(web_client));
+            };
+        }
         BIOSResult::Ok(())
     }
 
-    pub fn config<T>() -> &'static BIOSConfig<T> {
+    pub fn ws_config<T>() -> &'static T {
         unsafe {
-            match &BIOS_INST.config {
-                None => panic!("Config not exist"),
-                Some(conf) => match conf.downcast_ref::<BIOSConfig<T>>() {
-                    None => panic!("Config not exist"),
+            match &BIOS_INST.workspace_config {
+                None => panic!("Raw Workspace Config not exist"),
+                Some(conf) => match conf.downcast_ref::<T>() {
+                    None => panic!("Workspace Config not exist"),
                     Some(t) => t,
                 },
+            }
+        }
+    }
+
+    pub fn fw_config() -> &'static FrameworkConfig {
+        unsafe {
+            match &BIOS_INST.framework_config {
+                None => panic!("Framework Config not exist"),
+                Some(t) => t,
             }
         }
     }

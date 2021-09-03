@@ -24,3 +24,5 @@ pub mod validate;
 pub mod web_client;
 #[cfg(feature = "web-server")]
 pub mod web_server;
+#[cfg(feature = "web-server")]
+pub mod basic_processor;

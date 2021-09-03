@@ -57,24 +57,20 @@ PUT http://{host}:{port}/conf/err_rate/<err_rate>
 
     info!("{}", output_info);
 
-    let app_conf = web::Data::new(controller::AppStateContainer {
-        err_rate: Mutex::new(0),
-    });
+    let app_conf = web::Data::new(controller::AppStateContainer { err_rate: Mutex::new(0) });
 
     BIOSFuns::init(conf).await.unwrap();
     HttpServer::new(move || {
         App::new()
             .app_data(app_conf.clone())
-            .wrap(BIOSWebServer::init_cors(
-                &BIOSFuns::config::<NoneConfig>().fw,
-            ))
+            .wrap(BIOSWebServer::init_cors(&BIOSFuns::fw_config()))
             .wrap(BIOSWebServer::init_error_handlers())
             .wrap(BIOSWebServer::init_logger())
             .service(controller::normal)
             .service(controller::fallback)
             .service(controller::conf_err_rate)
     })
-    .init(&BIOSFuns::config::<NoneConfig>().fw)
+    .init(&BIOSFuns::fw_config())
     .unwrap()
     .await
 }
