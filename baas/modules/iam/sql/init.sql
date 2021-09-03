@@ -108,8 +108,8 @@ create table if not exists iam_account_ident
     kind             varchar(100)                        not null comment '账号认证类型名称',
     ak               varchar(255)                        not null comment '账号认证名称',
     sk               varchar(255)                        not null comment '账号认证密钥',
-    valid_end_time   bigint                              not null comment '账号认证有效结束时间',
-    valid_start_time bigint                              not null comment '账号认证有效开始时间',
+    valid_end_time_sec   bigint                              not null comment '账号认证有效结束时间',
+    valid_start_time_sec bigint                              not null comment '账号认证有效开始时间',
     rel_account_id   varchar(64)                              not null comment '关联账号Id',
     rel_tenant_id    varchar(64)                              not null comment '关联租户Id',
     create_time      timestamp default CURRENT_TIMESTAMP null comment '创建时间',
@@ -175,7 +175,7 @@ create table if not exists iam_app_ident
         primary key,
     ak          varchar(255)                        not null comment '应用认证名称（Access Key Id）',
     sk          varchar(1000)                       not null comment '应用认证密钥（Secret Access Key）',
-    valid_time  bigint                              not null comment '应用认证有效时间',
+    valid_time_sec  bigint                              not null comment '应用认证有效时间',
     note        varchar(1000)                       not null comment '应用认证用途',
     rel_app_id  varchar(64)                              not null comment '关联应用Id',
     create_time timestamp default CURRENT_TIMESTAMP null comment '创建时间',
@@ -200,9 +200,9 @@ create table if not exists iam_auth_policy
     action_kind      varchar(100)                        not null comment '操作类型名称',
     rel_resource_id  varchar(64)                              not null comment '关联资源Id',
     result_kind      varchar(100)                        not null comment '操作结果名称',
-    effective_time   bigint                              not null comment '生效时间',
+    effective_time_sec   bigint                              not null comment '生效时间',
     exclusive        tinyint(1)                          not null comment '是否排他',
-    expired_time     bigint                              not null comment '失效时间',
+    expired_time_sec     bigint                              not null comment '失效时间',
     rel_app_id       varchar(64)                              not null comment '关联应用Id',
     rel_tenant_id    varchar(64)                              not null comment '关联租户Id',
     create_time      timestamp default CURRENT_TIMESTAMP null comment '创建时间',
@@ -315,33 +315,10 @@ create index i_tenant_app_kind
 
 create table if not exists iam_role
 (
-    id                varchar(64)
-        primary key,
-    name              varchar(255)                        not null comment '角色名称',
-    expose_kind       varchar(100)                        not null comment '开放等级类型名称',
-    rel_group_node_id varchar(64)                              not null comment '关联群组节点Id',
-    rel_role_def_id   varchar(64)                              not null comment '关联角色定义Id',
-    sort              int                                 not null comment '显示排序，asc',
-    rel_app_id        varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id     varchar(64)                              not null comment '关联租户Id',
-    create_time       timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user       varchar(64)                              not null comment '创建者Id',
-    update_time       timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user       varchar(64)                              not null comment '最后一次修改者Id',
-    constraint u_role_group
-        unique (rel_role_def_id, rel_group_node_id)
-)
-    comment '角色';
-
-create index i_expose
-    on iam_role (expose_kind);
-
-create table if not exists iam_role_def
-(
     id          varchar(64)
         primary key,
-    code          varchar(255)                        not null comment '角色定义编码',
-    name          varchar(255)                        not null comment '角色定义名称',
+    code          varchar(255)                        not null comment '角色编码',
+    name          varchar(255)                        not null comment '角色名称',
     sort          int                                 not null comment '显示排序，asc',
     rel_app_id    varchar(64)                              not null comment '关联应用Id',
     rel_tenant_id varchar(64)                              not null comment '关联租户Id',
@@ -352,7 +329,7 @@ create table if not exists iam_role_def
     constraint u_tenant_app_id
         unique (rel_tenant_id, rel_app_id, code)
 )
-    comment '角色定义';
+    comment '角色';
 
 create table if not exists iam_tenant
 (
