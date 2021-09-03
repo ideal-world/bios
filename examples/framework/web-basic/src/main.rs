@@ -30,14 +30,12 @@ async fn main() -> std::io::Result<()> {
     BIOSFuns::init(conf).await.unwrap();
     HttpServer::new(move || {
         App::new()
-            .wrap(BIOSWebServer::init_cors(
-                &BIOSFuns::config::<NoneConfig>().fw,
-            ))
+            .wrap(BIOSWebServer::init_cors(&BIOSFuns::fw_config()))
             .wrap(BIOSWebServer::init_error_handlers())
             .wrap(BIOSWebServer::init_logger())
             .service(controller::hello)
     })
-    .init(&BIOSFuns::config::<NoneConfig>().fw)
+    .init(&BIOSFuns::fw_config())
     .unwrap()
     .await
 }
