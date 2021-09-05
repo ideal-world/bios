@@ -31,7 +31,7 @@ pub enum IamTenant {
     UpdateTime,
     // 租户名称
     Name,
-    // 租户图标（路径）
+    // 租户图标
     Icon,
     // 是否开放账号注册
     AllowAccountRegister,
@@ -86,7 +86,7 @@ pub enum IamTenantIdent {
     // 认证SK校验正则规则
     ValidSkRule,
     // 认证有效时间（秒）
-    ValidTimeSec,
+    ValidTime,
     // 关联租户Id
     RelTenantId,
 }
@@ -104,7 +104,7 @@ pub enum IamApp {
     UpdateTime,
     // 应用名称
     Name,
-    // 应用图标（路径）
+    // 应用图标
     Icon,
     // 应用扩展信息，Json格式
     Parameters,
@@ -134,7 +134,7 @@ pub enum IamAppIdent {
     // 应用认证密钥（Secret Access Key）
     Sk,
     // 认证有效时间（秒）
-    ValidTimeSec,
+    ValidTime,
     // 关联应用Id
     RelAppId,
 }
@@ -155,7 +155,7 @@ pub enum IamAccount {
     OpenId,
     // 账号名称
     Name,
-    // 账号头像（路径）
+    // 账号头像
     Avatar,
     // 账号扩展信息，Json格式
     Parameters,
@@ -184,9 +184,9 @@ pub enum IamAccountIdent {
     // 账号认证密钥
     Sk,
     // 账号认证有效开始时间
-    ValidStartTimeSec,
+    ValidStartTime,
     // 账号认证有效结束时间
-    ValidEndTimeSec,
+    ValidEndTime,
     // 关联账号Id
     RelAccountId,
     // 关联租户Id

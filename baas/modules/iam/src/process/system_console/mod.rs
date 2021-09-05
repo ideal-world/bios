@@ -13,8 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pub mod app_console;
-pub mod basic_dto;
-pub mod common;
-pub mod system_console;
-pub mod tenant_console;
+
+pub mod sc_tenant_dto;

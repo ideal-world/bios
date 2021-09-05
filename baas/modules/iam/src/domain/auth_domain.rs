@@ -259,7 +259,7 @@ pub enum IamResource {
     Uri,
     // 资源名称
     Name,
-    // 资源图标（路径）
+    // 资源图标
     Icon,
     // 资源显示排序，asc
     Sort,
@@ -286,9 +286,9 @@ pub enum IamResource {
 #[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum IamAuthPolicy {
     // 生效时间
-    EffectiveTimeSec,
+    EffectiveTime,
     // 失效时间
-    ExpiredTimeSec,
+    ExpiredTime,
     // 关联权限主体类型名称
     RelSubjectKind,
     // 关联权限主体Ids,有多个时逗号分隔,注意必须存在最后一个逗号

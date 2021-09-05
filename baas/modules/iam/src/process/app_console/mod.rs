@@ -13,5 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+pub mod ac_account_dto;
+pub mod ac_app_dto;
+pub mod ac_auth_policy_dto;
+pub mod ac_group_dto;
 pub mod ac_resource_dto;
 pub mod ac_resource_processor;
+pub mod ac_role_dto;
