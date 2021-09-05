@@ -1,0 +1,116 @@
+/*
+ * Copyright 2021. gudaoxuri
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+use serde::{Deserialize, Serialize};
+use validator::Validate;
+
+use crate::process::basic_dto::{AuthResultKind, AuthSubjectKind, AuthSubjectOperatorKind, OptActionKind};
+
+#[derive(Deserialize, Validate)]
+pub struct AuthPolicyQueryReq {
+    pub valid_start_time: Option<u64>,
+    pub valid_end_time: Option<u64>,
+    pub rel_subject_kind: Option<AuthSubjectKind>,
+    #[validate(length(max = 32))]
+    pub rel_subject_id: Option<String>,
+    #[validate(length(max = 32))]
+    pub rel_resource_id: Option<String>,
+    pub page_number: u64,
+    pub page_size: u64,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AuthPolicyAddReq {
+    // 有效开始时间
+    pub valid_start_time: u64,
+    // 有效结束时间
+    pub valid_end_time: u64,
+    // 关联权限主体类型
+    pub rel_subject_kind: AuthSubjectKind,
+    // 关联权限主体Ids,有多个时逗号分隔
+    #[validate(length(min = 2, max = 5000))]
+    pub rel_subject_ids: String,
+    // 关联权限主体运算类型
+    pub subject_operator: AuthSubjectOperatorKind,
+    // 关联资源Id
+    #[validate(length(max = 32))]
+    pub rel_resource_id: String,
+    // 操作类型
+    pub action_kind: OptActionKind,
+    // 操作结果
+    pub result_kind: AuthResultKind,
+    // 是否排他
+    pub exclusive: Option<bool>,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AuthPolicyModifyReq {
+    // 有效开始时间
+    pub valid_start_time: Option<u64>,
+    // 有效结束时间
+    pub valid_end_time: Option<u64>,
+    // 关联权限主体类型
+    pub rel_subject_kind: Option<AuthSubjectKind>,
+    // 关联权限主体Ids,有多个时逗号分隔
+    #[validate(length(min = 2, max = 5000))]
+    pub rel_subject_ids: Option<String>,
+    // 关联权限主体运算类型
+    pub subject_operator: Option<AuthSubjectOperatorKind>,
+    // 关联资源Id
+    #[validate(length(max = 32))]
+    pub rel_resource_id: Option<String>,
+    // 操作类型
+    pub action_kind: Option<OptActionKind>,
+    // 操作结果
+    pub result_kind: Option<AuthResultKind>,
+    // 是否排他
+    pub exclusive: Option<bool>,
+}
+
+#[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
+pub struct AuthPolicyDetailResp {
+    #[validate(length(max = 32))]
+    pub id: String,
+    // 有效开始时间
+    pub valid_start_time: i64,
+    // 有效结束时间
+    pub valid_end_time: i64,
+    // 关联权限主体类型
+    pub rel_subject_kind: AuthSubjectKind,
+    // 关联权限主体Ids,有多个时逗号分隔
+    #[validate(length(max = 5000))]
+    pub rel_subject_ids: String,
+    // 关联权限主体运算类型
+    #[validate(length(max = 32))]
+    pub subject_operator: String,
+    // 关联资源Id
+    #[validate(length(max = 32))]
+    pub rel_resource_id: String,
+    // 操作类型
+    #[validate(length(max = 32))]
+    pub action_kind: String,
+    // 操作结果
+    #[validate(length(max = 32))]
+    pub result_kind: String,
+    // 是否排他
+    pub exclusive: bool,
+    // 所属应用Id
+    #[validate(length(max = 32))]
+    pub rel_app_id: String,
+    // 所属租户Id
+    #[validate(length(max = 32))]
+    pub rel_tenant_id: String,
+}

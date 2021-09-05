@@ -13,8 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pub mod app_console;
-pub mod basic_dto;
-pub mod common;
-pub mod system_console;
-pub mod tenant_console;
+
+use serde::{Deserialize, Serialize};
+use validator::Validate;
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AppRegisterReq {
+    // 应用名称
+    #[validate(length(min = 2, max = 255))]
+    pub name: String,
+}

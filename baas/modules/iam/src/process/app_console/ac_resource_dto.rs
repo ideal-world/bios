@@ -21,7 +21,7 @@ use crate::process::basic_dto::{ExposeKind, ResourceKind};
 
 #[derive(Deserialize, Validate)]
 pub struct ResourceSubjectQueryReq {
-    #[validate(length(min = 2, max = 10))]
+    #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
     pub page_number: u64,
     pub page_size: u64,
@@ -91,18 +91,18 @@ pub struct ResourceSubjectModifyReq {
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
 pub struct ResourceSubjectDetailResp {
-    #[validate(length(max = 64))]
+    #[validate(length(max = 32))]
     pub id: String,
     // 资源主体编码
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(max = 255))]
     pub code: String,
     // 资源主体名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(max = 255))]
     pub name: String,
     // 资源主体显示排序，asc
     pub sort: i32,
     // 资源类型
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(max = 255))]
     pub kind: String,
     // 资源主体连接URI
     #[validate(url)]
@@ -131,7 +131,7 @@ pub struct ResourceSubjectDetailResp {
 
 #[derive(Deserialize, Validate)]
 pub struct ResourceQueryReq {
-    #[validate(length(min = 2, max = 10))]
+    #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
     pub page_number: u64,
     pub page_size: u64,
@@ -145,7 +145,7 @@ pub struct ResourceAddReq {
     // 资源路径
     #[validate(length(max = 5000))]
     pub path_and_query: String,
-    // 资源图标（路径）
+    // 资源图标
     #[validate(length(max = 1000))]
     pub icon: String,
     // 触发后的操作，多用于菜单链接
@@ -173,7 +173,7 @@ pub struct ResourceModifyReq {
     // 资源路径
     #[validate(length(max = 5000))]
     pub path_and_query: Option<String>,
-    // 资源图标（路径）
+    // 资源图标
     #[validate(length(max = 1000))]
     pub icon: Option<String>,
     // 触发后的操作，多用于菜单链接
@@ -192,15 +192,15 @@ pub struct ResourceModifyReq {
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
 pub struct ResourceDetailResp {
-    #[validate(length(max = 64))]
+    #[validate(length(max = 32))]
     pub id: String,
     // 资源名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(max = 255))]
     pub name: String,
     // 资源路径
     #[validate(length(max = 5000))]
     pub path_and_query: String,
-    // 资源图标（路径）
+    // 资源图标
     #[validate(length(max = 1000))]
     pub icon: String,
     // 触发后的操作，多用于菜单链接

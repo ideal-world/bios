@@ -13,8 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-pub mod app_console;
-pub mod basic_dto;
-pub mod common;
-pub mod system_console;
-pub mod tenant_console;
+
+use serde::{Deserialize, Serialize};
+use validator::Validate;
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AccountGroupAddReq {
+    // 关联账号Id
+    #[validate(length(max = 32))]
+    pub rel_account_id: String,
+    // 关联群组节点Id
+    #[validate(length(max = 32))]
+    pub rel_group_node_id: String,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AccountRoleAddReq {
+    // 关联账号Id
+    #[validate(length(max = 32))]
+    pub rel_account_id: String,
+    // 关联角色Id
+    #[validate(length(max = 32))]
+    pub rel_role_id: String,
+}
