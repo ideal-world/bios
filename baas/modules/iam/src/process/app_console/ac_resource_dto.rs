@@ -127,12 +127,19 @@ pub struct ResourceSubjectDetailResp {
     // 所属租户Id
     #[validate(length(max = 32))]
     pub rel_tenant_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
 
 #[derive(Deserialize, Validate)]
 pub struct ResourceQueryReq {
     #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
+    #[validate(length(min = 2, max = 5000))]
+    pub path_and_query: Option<String>,
+    pub expose: bool,
     pub page_number: u64,
     pub page_size: u64,
 }
@@ -150,7 +157,7 @@ pub struct ResourceAddReq {
     pub icon: String,
     // 触发后的操作，多用于菜单链接
     #[validate(length(max = 5000))]
-    pub action: String,
+    pub action: Option<String>,
     // 资源显示排序，asc
     pub sort: u32,
     // 是否是资源组
@@ -225,4 +232,8 @@ pub struct ResourceDetailResp {
     // 所属租户Id
     #[validate(length(max = 32))]
     pub rel_tenant_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }

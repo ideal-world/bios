@@ -200,53 +200,53 @@ pub enum IamResourceSubject {
 ///
 /// URI格式： resource kind://resource subject code/path?property-key=property-value
 ///
-/// path 为空时 表示为（整个）该资源主体
+/// path_and_query 为空时 表示为（整个）该资源主体
 ///
 /// ResourceKind#API:
-/// path = API路径
+/// path_and_query = API路径
 /// e.g.
-/// path = admin/**
-/// path = admin/user
+/// path_and_query = admin/**
+/// path_and_query = admin/user
 /// 当 ResourceSubject 的 ResourceSubject#Uri = http://10.20.0.10:8080/iam 时
 /// 则 资源的真正URI = http://10.20.0.10:8080/iam/admin/user
 ///
 /// ResourceKind#MENU:
-/// path = 菜单树节点Id
+/// path_and_query = 菜单树节点Id
 /// e.g.
-/// path = userMgr/batchImport ，表示 用户管理（userMgr）/批量导入（batchImport）
+/// path_and_query = userMgr/batchImport ，表示 用户管理（userMgr）/批量导入（batchImport）
 ///
 /// ResourceKind#ELEMENT:
-/// path = 页面路径/元素Id
-/// 或 path = 页面路径?属性名=属性值
+/// path_and_query = 页面路径/元素Id
+/// 或 path_and_query = 页面路径?属性名=属性值
 /// e.g.
-/// path = userMgr/userDelete ，表示 用户管理页面（userMgr）的删除按钮（id  = 'userDelete'）
-/// path = userMgr?class=userDelete ，表示 用户管理页面（userMgr）的删除按钮（class = 'userDelete'）
+/// path_and_query = userMgr/userDelete ，表示 用户管理页面（userMgr）的删除按钮（id  = 'userDelete'）
+/// path_and_query = userMgr?class=userDelete ，表示 用户管理页面（userMgr）的删除按钮（class = 'userDelete'）
 ///
 /// ResourceKind#RELDB:
-/// path = 表名
-/// 或 path = 表名/fields/字段名
-/// 或 path = 表名/rows/主键值
-/// 或 path = 表名/rows?字段名=字段值
+/// path_and_query = 表名
+/// 或 path_and_query = 表名/fields/字段名
+/// 或 path_and_query = 表名/rows/主键值
+/// 或 path_and_query = 表名/rows?字段名=字段值
 /// e.g.
-/// path = user ，表示 user表
-/// path = user/fields/idcard ，表示 user表idcard字段
-/// path = user/rows/100 ，表示 user表主键为100
-/// path = user/rows?idcard=331xxx ，user表身份证为331xxx
+/// path_and_query = user ，表示 user表
+/// path_and_query = user/fields/idcard ，表示 user表idcard字段
+/// path_and_query = user/rows/100 ，表示 user表主键为100
+/// path_and_query = user/rows?idcard=331xxx ，user表身份证为331xxx
 ///
 /// ResourceKind#CACHE:
-/// path = Key名称
+/// path_and_query = Key名称
 /// e.g.
-/// path = user:ids ，表示 user:ids 的Key
+/// path_and_query = user:ids ，表示 user:ids 的Key
 ///
 /// ResourceKind#MQ:
-/// path = Topic名称
+/// path_and_query = Topic名称
 /// e.g.
-/// path = addUser ，表示 addUser 主题
+/// path_and_query = addUser ，表示 addUser 主题
 ///
 /// ResourceKind#OBJECT:
-/// path = Key名称
+/// path_and_query = Key名称
 /// e.g.
-/// path = user/100 ，表示 user/100 的key
+/// path_and_query = user/100 ，表示 user/100 的key
 #[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum IamResource {
     Table,
@@ -255,8 +255,8 @@ pub enum IamResource {
     UpdateUser,
     CreateTime,
     UpdateTime,
-    // URI
-    Uri,
+    // path and query
+    PathAndQuery,
     // 资源名称
     Name,
     // 资源图标
@@ -285,6 +285,12 @@ pub enum IamResource {
 /// 仅资源所有者可以分配自己的资源权限
 #[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum IamAuthPolicy {
+    Table,
+    Id,
+    CreateUser,
+    UpdateUser,
+    CreateTime,
+    UpdateTime,
     // 生效时间
     EffectiveTime,
     // 失效时间

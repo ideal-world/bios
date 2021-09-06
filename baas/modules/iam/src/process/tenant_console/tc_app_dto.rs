@@ -70,4 +70,8 @@ pub struct AppDetailResp {
     // 应用状态
     #[validate(length(max = 255))]
     pub status: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }

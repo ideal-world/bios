@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
+use sea_query::Query;
 use testcontainers::clients::Cli;
-use testcontainers::Container;
 use testcontainers::images::generic::GenericImage;
 use testcontainers::images::redis::Redis;
+use testcontainers::Container;
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig};
 use bios::basic::logger::BIOSLogger;
-use bios::BIOSFuns;
+use bios::db::reldb_client::SqlBuilderProcess;
 use bios::test::test_container::BIOSTestContainer;
+use bios::BIOSFuns;
+use bios_baas_iam::domain::ident_domain::IamAccount;
 use bios_baas_iam::iam_config::WorkSpaceConfig;
 
-pub async fn init<'a>(
-    docker: &'a Cli,
-) -> (Container<'a, Cli, GenericImage>, Container<'a, Cli, Redis>) {
+pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Container<'a, Cli, Redis>) {
     BIOSLogger::init("").unwrap();
     let mysql_container = BIOSTestContainer::mysql_custom(Some("sql/"), &docker);
     let redis_container = BIOSTestContainer::redis_custom(&docker);
@@ -37,19 +38,12 @@ pub async fn init<'a>(
             app: Default::default(),
             web: Default::default(),
             cache: CacheConfig {
-                url: format!(
-                    "redis://127.0.0.1:{}/0",
-                    redis_container
-                        .get_host_port(6379)
-                        .expect("Test port acquisition error")
-                ),
+                url: format!("redis://127.0.0.1:{}/0", redis_container.get_host_port(6379).expect("Test port acquisition error")),
             },
             db: DBConfig {
                 url: format!(
                     "mysql://root:123456@localhost:{}/iam",
-                    mysql_container
-                        .get_host_port(3306)
-                        .expect("Test port acquisition error")
+                    mysql_container.get_host_port(3306).expect("Test port acquisition error")
                 ),
                 max_connections: 20,
             },
@@ -57,7 +51,37 @@ pub async fn init<'a>(
             adv: Default::default(),
         },
     })
-        .await
-        .unwrap();
+    .await
+    .unwrap();
+
+    let sql_builder = Query::insert()
+        .into_table(IamAccount::Table)
+        .columns(vec![
+            IamAccount::Id,
+            IamAccount::CreateUser,
+            IamAccount::UpdateUser,
+            IamAccount::OpenId,
+            IamAccount::Name,
+            IamAccount::Avatar,
+            IamAccount::Parameters,
+            IamAccount::ParentId,
+            IamAccount::RelTenantId,
+            IamAccount::Status,
+        ])
+        .values_panic(vec![
+            "admin001".into(),
+            "admin001".into(),
+            "admin001".into(),
+            "open_id_xx".into(),
+            "平台管理员".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "enabled".into(),
+        ])
+        .done();
+    BIOSFuns::reldb().exec(&sql_builder, None).await.unwrap();
+
     (mysql_container, redis_container)
 }

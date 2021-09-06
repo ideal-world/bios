@@ -52,6 +52,10 @@ pub struct TenantDetailResp {
     // 租户状态
     #[validate(length(max = 255))]
     pub status: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -81,6 +85,10 @@ pub struct TenantCertDetailResp {
     pub category: String,
     // 凭证保留的版本数量
     pub version: u32,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -144,4 +152,8 @@ pub struct TenantIdentDetailResp {
     pub valid_sk_rule: String,
     // 认证有效时间（秒）
     pub valid_time: i32,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }

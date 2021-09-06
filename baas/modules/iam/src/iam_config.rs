@@ -30,10 +30,20 @@ impl Default for WorkSpaceConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
-pub struct IamConfig {}
+pub struct IamConfig {
+    pub cache_token: String,
+    pub cache_aksk: String,
+    pub cache_resources: String,
+    pub cache_change_resources: String,
+}
 
 impl Default for IamConfig {
     fn default() -> Self {
-        IamConfig {}
+        IamConfig {
+            cache_token: "bios:iam:token:info:".to_string(),
+            cache_aksk: "bios:iam:app:aksk:".to_string(),
+            cache_resources: "bios:iam:resources".to_string(),
+            cache_change_resources: "bios:iam:change_resources".to_string(),
+        }
     }
 }
