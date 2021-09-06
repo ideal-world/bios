@@ -159,6 +159,7 @@ impl BIOSFuns {
 pub mod basic;
 #[cfg(feature = "cache")]
 pub mod cache;
+#[cfg(feature = "reldb")]
 pub mod db;
 #[cfg(feature = "mq")]
 pub mod mq;

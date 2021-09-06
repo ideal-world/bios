@@ -63,6 +63,7 @@ futures-util = "^0"
 base64 = "^0"
 uuid = { version = "^0", features = ["serde", "v4"] }
 strum = { version = "^0", features = ["derive"] }
+rust-crypto = "^0"
 
 # Web
 actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"], optional = true }

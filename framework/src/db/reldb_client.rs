@@ -17,6 +17,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::info;
+use rust_decimal::prelude::ToPrimitive;
 use sea_query::{
     ColumnDef, DeleteStatement, Expr, InsertStatement, IntoColumnRef, IntoTableRef, MysqlQueryBuilder, Query, SelectStatement, Table, TableCreateStatement, UpdateStatement, Values,
 };
@@ -31,7 +32,6 @@ use crate::basic::error::{BIOSError, BIOSResult};
 use crate::basic::json::{obj_to_json, obj_to_string};
 use crate::db::domain::{BiosConfig, BiosDelRecord};
 use crate::db::reldb_client::sea_query_driver_mysql::{bind_query, bind_query_as};
-use rust_decimal::prelude::ToPrimitive;
 
 sea_query::sea_query_driver_mysql!();
 
@@ -133,14 +133,26 @@ impl BIOSRelDBClient {
         E: std::marker::Send,
         E: Unpin,
     {
+        match self.fetch_optional::<E>(sql_builder, tx).await? {
+            Some(row) => BIOSResult::Ok(row),
+            None => BIOSResult::Err(BIOSError::NotFound("Record not exists".to_string())),
+        }
+    }
+
+    pub async fn fetch_optional<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Option<E>>
+    where
+        E: for<'r> FromRow<'r, MySqlRow>,
+        E: std::marker::Send,
+        E: Unpin,
+    {
         let fetch_one_sql = format!("{} LIMIT 1", sql_builder.sql);
         let result = bind_query_as(sqlx::query_as::<_, E>(&fetch_one_sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.fetch_one(t).await,
-            None => result.fetch_one(&self.pool).await,
+            Some(t) => result.fetch_optional(t).await,
+            None => result.fetch_optional(&self.pool).await,
         };
         match result {
-            Ok(row) => BIOSResult::Ok(row),
+            Ok(row_opt) => BIOSResult::Ok(row_opt),
             Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
         }
     }
