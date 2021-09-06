@@ -81,6 +81,10 @@ pub struct AccountDetailResp {
     // 账号状态
     #[validate(length(max = 255))]
     pub status: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -130,6 +134,10 @@ pub struct AccountIdentDetailResp {
     // 关联账号Id
     #[validate(length(max = 32))]
     pub rel_account_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -169,4 +177,8 @@ pub struct AccountBindDetailResp {
     // 绑定使用的账号认证类型名称
     #[validate(length(max = 255))]
     pub kind: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }

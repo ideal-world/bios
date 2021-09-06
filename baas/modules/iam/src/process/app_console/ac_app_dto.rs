@@ -23,7 +23,7 @@ pub struct AppIdentAddReq {
     #[validate(length(min = 2, max = 1000))]
     pub note: String,
     // 应用认证有效时间
-    pub valid_time: u64,
+    pub valid_time: i64,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -32,7 +32,7 @@ pub struct AppIdentModifyReq {
     #[validate(length(min = 2, max = 1000))]
     pub note: Option<String>,
     // 应用认证有效时间
-    pub valid_time: Option<u64>,
+    pub valid_time: Option<i64>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -47,4 +47,14 @@ pub struct AppIdentDetailResp {
     pub ak: String,
     // 应用认证有效时间
     pub valid_time: i64,
+    // 所属应用Id
+    #[validate(length(max = 32))]
+    pub rel_app_id: String,
+    // 所属租户Id
+    #[validate(length(max = 32))]
+    pub rel_tenant_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }

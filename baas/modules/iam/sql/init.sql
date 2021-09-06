@@ -178,6 +178,7 @@ create table if not exists iam_app_ident
     valid_time  bigint                              not null comment '应用认证有效时间',
     note        varchar(1000)                       not null comment '应用认证用途',
     rel_app_id  varchar(64)                              not null comment '关联应用Id',
+    rel_tenant_id     varchar(64)                              not null comment '关联租户Id',
     create_time timestamp default CURRENT_TIMESTAMP null comment '创建时间',
     create_user varchar(64)                              not null comment '创建者Id',
     update_time timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
@@ -261,7 +262,7 @@ create table if not exists iam_resource
 (
     id                      varchar(64)
         primary key,
-    uri                     varchar(5000)                       not null comment 'URI',
+    path_and_query          varchar(5000)                       not null comment 'Path and Query',
     name                    varchar(255)                        not null comment '资源名称',
     icon                    varchar(1000)                       not null comment '资源图标',
     expose_kind             varchar(100)                        not null comment '开放等级类型名称',

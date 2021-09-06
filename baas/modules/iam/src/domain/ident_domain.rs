@@ -137,6 +137,8 @@ pub enum IamAppIdent {
     ValidTime,
     // 关联应用Id
     RelAppId,
+    // 关联租户Id
+    RelTenantId,
 }
 
 /// 账号

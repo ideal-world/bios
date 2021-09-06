@@ -112,6 +112,10 @@ pub struct GroupDetailResp {
     // 所属租户Id
     #[validate(length(max = 32))]
     pub rel_tenant_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -174,4 +178,8 @@ pub struct GroupNodeDetailResp {
     // 关联群组Id
     #[validate(length(max = 32))]
     pub rel_group_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
 }
