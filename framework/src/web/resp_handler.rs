@@ -24,8 +24,8 @@ pub type BIOSResp = BIOSResult<HttpResponse>;
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct BIOSRespHelper<T>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
     pub code: String,
     pub msg: String,
@@ -33,8 +33,8 @@ pub struct BIOSRespHelper<T>
 }
 
 impl<T> Default for BIOSRespHelper<T>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
     fn default() -> Self {
         BIOSRespHelper {
@@ -73,7 +73,7 @@ impl BIOSRespHelper<()> {
 
     pub fn bus_error(error: BIOSError) -> BIOSResp {
         Ok(HttpResponse::Ok().json(BIOSRespHelper::<()> {
-            code: error.status_code().to_string(),
+            code: format!("{}", error.status_code().as_u16()),
             msg: error.to_string(),
             body: None,
         }))

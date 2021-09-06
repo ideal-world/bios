@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use serde::Deserialize;
 
-pub mod reldb_client;
-pub mod domain;
-pub mod basic_dto;
+#[derive(sqlx::FromRow, Deserialize)]
+pub struct IdResp {
+    pub id: String,
+}
