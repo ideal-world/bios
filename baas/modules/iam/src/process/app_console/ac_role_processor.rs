@@ -15,7 +15,7 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use sea_query::{Alias, Expr, JoinType, Query};
+use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
@@ -27,7 +27,7 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicy, IamRole};
+use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicySubject, IamRole};
 use crate::domain::ident_domain::IamAccount;
 use crate::process::app_console::ac_role_dto::{RoleAddReq, RoleDetailResp, RoleModifyReq, RoleQueryReq};
 use crate::process::basic_dto::AuthSubjectKind;
@@ -35,6 +35,7 @@ use crate::process::basic_dto::AuthSubjectKind;
 #[post("/console/app/role")]
 pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
+
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
@@ -171,6 +172,7 @@ pub async fn list_role(query: VQuery<RoleQueryReq>, req: HttpRequest) -> BIOSRes
             None
         })
         .and_where(Expr::tbl(IamRole::Table, IamRole::RelAppId).eq(ident_info.app_id.clone()))
+        .order_by(IamRole::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb()
         .pagination::<RoleDetailResp>(&sql_builder, query.page_number, query.page_size, None)
@@ -186,16 +188,16 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
-                .columns(vec![IamAuthPolicy::Id])
-                .from(IamAuthPolicy::Table)
-                .and_where(Expr::col(IamAuthPolicy::RelSubjectKind).eq(AuthSubjectKind::Role.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicy::RelSubjectIds).like(format!("%{},%", id.clone()).as_str()))
+                .columns(vec![IamAuthPolicySubject::Id])
+                .from(IamAuthPolicySubject::Table)
+                .and_where(Expr::col(IamAuthPolicySubject::SubjectKind).eq(AuthSubjectKind::Role.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicySubject::SubjectId).eq(id.clone()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()));
+        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [auth_policy_subject] data first".to_owned()));
     }
     if BIOSFuns::reldb()
         .exists(

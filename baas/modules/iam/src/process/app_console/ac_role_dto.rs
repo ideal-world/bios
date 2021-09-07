@@ -36,7 +36,7 @@ pub struct RoleAddReq {
     #[validate(length(min = 2, max = 255))]
     pub name: String,
     // 角色显示排序，asc
-    pub sort: u32,
+    pub sort: i32,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -48,7 +48,7 @@ pub struct RoleModifyReq {
     #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
     // 资源主体显示排序，asc
-    pub sort: Option<u32>,
+    pub sort: Option<i32>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]

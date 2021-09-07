@@ -98,9 +98,9 @@ pub struct AccountIdentAddReq {
     #[validate(length(min = 2, max = 255))]
     pub sk: Option<String>,
     // 账号认证有效开始时间
-    pub valid_start_time: u64,
+    pub valid_start_time: i64,
     // 账号认证有效结束时间
-    pub valid_end_time: u64,
+    pub valid_end_time: i64,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -112,9 +112,9 @@ pub struct AccountIdentModifyReq {
     #[validate(length(min = 2, max = 255))]
     pub sk: Option<String>,
     // 账号认证有效开始时间
-    pub valid_start_time: Option<u64>,
+    pub valid_start_time: Option<i64>,
     // 账号认证有效结束时间
-    pub valid_end_time: Option<u64>,
+    pub valid_end_time: Option<i64>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]

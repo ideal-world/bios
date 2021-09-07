@@ -64,7 +64,7 @@ pub struct TenantCertAddReq {
     #[validate(length(min = 2, max = 255))]
     pub category: String,
     // 凭证保留的版本数量
-    pub version: u32,
+    pub version: i32,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -73,7 +73,7 @@ pub struct TenantCertModifyReq {
     #[validate(length(min = 2, max = 255))]
     pub category: Option<String>,
     // 凭证保留的版本数量
-    pub version: Option<u32>,
+    pub version: Option<i32>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -84,7 +84,7 @@ pub struct TenantCertDetailResp {
     #[validate(length(max = 255))]
     pub category: String,
     // 凭证保留的版本数量
-    pub version: u32,
+    pub version: i32,
     #[validate(length(max = 255))]
     pub create_user: String,
     #[validate(length(max = 255))]
@@ -108,7 +108,7 @@ pub struct TenantIdentAddReq {
     #[validate(length(min = 2, max = 2000))]
     pub valid_sk_rule: String,
     // 认证有效时间（秒）
-    pub valid_time: u32,
+    pub valid_time: i32,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -128,7 +128,7 @@ pub struct TenantIdentModifyReq {
     #[validate(length(min = 2, max = 2000))]
     pub valid_sk_rule: Option<String>,
     // 认证有效时间（秒）
-    pub valid_time: Option<u32>,
+    pub valid_time: Option<i32>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]

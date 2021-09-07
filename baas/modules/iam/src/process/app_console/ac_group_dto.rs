@@ -25,6 +25,7 @@ pub struct GroupQueryReq {
     pub code: Option<String>,
     #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
+    pub expose: bool,
     pub page_number: u64,
     pub page_size: u64,
 }
@@ -40,10 +41,10 @@ pub struct GroupAddReq {
     // 群组类型
     pub kind: GroupKind,
     // 群组显示排序，asc
-    pub sort: u32,
+    pub sort: i32,
     // 群组图标
     #[validate(length(max = 1000))]
-    pub icon: String,
+    pub icon: Option<String>,
     // 关联群组Id，用于多树合成
     #[validate(length(max = 32))]
     pub rel_group_id: Option<String>,
@@ -56,16 +57,13 @@ pub struct GroupAddReq {
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct GroupModifyReq {
-    // 群组编码
-    #[validate(length(min = 2, max = 255))]
-    pub code: Option<String>,
     // 群组名称
     #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
     // 群组类型
     pub kind: Option<GroupKind>,
     // 群组显示排序，asc
-    pub sort: Option<u32>,
+    pub sort: Option<i32>,
     // 群组图标
     #[validate(length(max = 1000))]
     pub icon: Option<String>,
@@ -122,19 +120,18 @@ pub struct GroupDetailResp {
 pub struct GroupNodeAddReq {
     // 业务编码
     #[validate(length(min = 2, max = 1000))]
-    pub bus_code: String,
+    pub bus_code: Option<String>,
     // 节点名称
     #[validate(length(min = 2, max = 255))]
     pub name: String,
     // 节点扩展信息，Json格式
     #[validate(length(max = 2000))]
-    pub parameters: String,
-    // 上级节点Id
-    #[validate(length(max = 32))]
-    pub parent_id: Option<String>,
-    // 同级上一个节点Id
-    #[validate(length(max = 32))]
-    pub sibling_id: Option<String>,
+    pub parameters: Option<String>,
+    // 父节点编码
+    #[validate(length(max = 255))]
+    pub parent_code: String,
+    // 群组节点显示排序，asc
+    pub sort: i32,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -148,18 +145,17 @@ pub struct GroupNodeModifyReq {
     // 节点扩展信息，Json格式
     #[validate(length(max = 2000))]
     pub parameters: Option<String>,
-    // 上级节点Id
-    #[validate(length(max = 32))]
-    pub parent_id: Option<String>,
-    // 同级上一个节点Id
-    #[validate(length(max = 32))]
-    pub sibling_id: Option<String>,
+    // 群组节点显示排序，asc
+    pub sort: Option<i32>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
 pub struct GroupNodeDetailResp {
     #[validate(length(max = 32))]
     pub id: String,
+    // 群组节点编码
+    #[validate(length(max = 1000))]
+    pub code: String,
     // 业务编码
     #[validate(length(max = 1000))]
     pub bus_code: String,
@@ -169,12 +165,8 @@ pub struct GroupNodeDetailResp {
     // 节点扩展信息，Json格式
     #[validate(length(max = 2000))]
     pub parameters: String,
-    // 上级节点Id
-    #[validate(length(max = 32))]
-    pub parent_id: String,
-    // 同级上一个节点Id
-    #[validate(length(max = 32))]
-    pub sibling_id: String,
+    // 群组节点显示排序，asc
+    pub sort: i32,
     // 关联群组Id
     #[validate(length(max = 32))]
     pub rel_group_id: String,
@@ -182,4 +174,13 @@ pub struct GroupNodeDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+}
+
+#[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
+pub struct GroupNodeOverviewResp {
+    #[validate(length(max = 32))]
+    pub id: String,
+    // 群组节点编码
+    #[validate(length(max = 1000))]
+    pub code: String,
 }

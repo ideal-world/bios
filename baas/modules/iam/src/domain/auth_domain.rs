@@ -57,8 +57,10 @@ pub enum IamGroupNode {
     UpdateUser,
     CreateTime,
     UpdateTime,
-    // 节点编码
+    //群组节点编码
     Code,
+    // 显示排序，asc
+    Sort,
     // 业务编码
     BusCode,
     // 节点名称
@@ -291,26 +293,39 @@ pub enum IamAuthPolicy {
     UpdateUser,
     CreateTime,
     UpdateTime,
+    // 权限策略名称
+    Name,
     // 生效时间
-    EffectiveTime,
+    ValidStartTime,
     // 失效时间
-    ExpiredTime,
-    // 关联权限主体类型名称
-    RelSubjectKind,
-    // 关联权限主体Ids,有多个时逗号分隔,注意必须存在最后一个逗号
-    RelSubjectIds,
-    // 关联权限主体运算类型名称
-    SubjectOperator,
+    ValidEndTime,
     // 关联资源Id
     RelResourceId,
     // 操作类型名称
     ActionKind,
     // 操作结果名称
     ResultKind,
-    // 是否排他
-    Exclusive,
     // 关联应用Id
     RelAppId,
     // 关联租户Id
     RelTenantId,
+}
+
+/// 权限策略关联主体
+#[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
+pub enum IamAuthPolicySubject {
+    Table,
+    Id,
+    CreateUser,
+    UpdateUser,
+    CreateTime,
+    UpdateTime,
+    // 关联权限主体类型名称
+    SubjectKind,
+    // 关联权限主体Id
+    SubjectId,
+    // 关联权限主体运算类型名称
+    SubjectOperator,
+    // 关联权限策略
+    RelAuthPolicyId,
 }
