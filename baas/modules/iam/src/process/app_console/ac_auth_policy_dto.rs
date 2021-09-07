@@ -21,11 +21,10 @@ use crate::process::basic_dto::{AuthResultKind, AuthSubjectKind, AuthSubjectOper
 
 #[derive(Deserialize, Validate)]
 pub struct AuthPolicyQueryReq {
-    pub valid_start_time: Option<u64>,
-    pub valid_end_time: Option<u64>,
-    pub rel_subject_kind: Option<AuthSubjectKind>,
-    #[validate(length(max = 32))]
-    pub rel_subject_id: Option<String>,
+    #[validate(length(min = 2, max = 255))]
+    pub name: Option<String>,
+    pub valid_start_time: Option<i64>,
+    pub valid_end_time: Option<i64>,
     #[validate(length(max = 32))]
     pub rel_resource_id: Option<String>,
     pub page_number: u64,
@@ -34,17 +33,13 @@ pub struct AuthPolicyQueryReq {
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct AuthPolicyAddReq {
+    // 权限策略名称
+    #[validate(length(min = 2, max = 255))]
+    pub name: String,
     // 有效开始时间
-    pub valid_start_time: u64,
+    pub valid_start_time: i64,
     // 有效结束时间
-    pub valid_end_time: u64,
-    // 关联权限主体类型
-    pub rel_subject_kind: AuthSubjectKind,
-    // 关联权限主体Ids,有多个时逗号分隔
-    #[validate(length(min = 2, max = 5000))]
-    pub rel_subject_ids: String,
-    // 关联权限主体运算类型
-    pub subject_operator: AuthSubjectOperatorKind,
+    pub valid_end_time: i64,
     // 关联资源Id
     #[validate(length(max = 32))]
     pub rel_resource_id: String,
@@ -52,23 +47,17 @@ pub struct AuthPolicyAddReq {
     pub action_kind: OptActionKind,
     // 操作结果
     pub result_kind: AuthResultKind,
-    // 是否排他
-    pub exclusive: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct AuthPolicyModifyReq {
+    // 权限策略名称
+    #[validate(length(min = 2, max = 255))]
+    pub name: Option<String>,
     // 有效开始时间
-    pub valid_start_time: Option<u64>,
+    pub valid_start_time: Option<i64>,
     // 有效结束时间
-    pub valid_end_time: Option<u64>,
-    // 关联权限主体类型
-    pub rel_subject_kind: Option<AuthSubjectKind>,
-    // 关联权限主体Ids,有多个时逗号分隔
-    #[validate(length(min = 2, max = 5000))]
-    pub rel_subject_ids: Option<String>,
-    // 关联权限主体运算类型
-    pub subject_operator: Option<AuthSubjectOperatorKind>,
+    pub valid_end_time: Option<i64>,
     // 关联资源Id
     #[validate(length(max = 32))]
     pub rel_resource_id: Option<String>,
@@ -76,26 +65,19 @@ pub struct AuthPolicyModifyReq {
     pub action_kind: Option<OptActionKind>,
     // 操作结果
     pub result_kind: Option<AuthResultKind>,
-    // 是否排他
-    pub exclusive: Option<bool>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
 pub struct AuthPolicyDetailResp {
     #[validate(length(max = 32))]
     pub id: String,
+    // 权限策略名称
+    #[validate(length(max = 255))]
+    pub name: String,
     // 有效开始时间
     pub valid_start_time: i64,
     // 有效结束时间
     pub valid_end_time: i64,
-    // 关联权限主体类型
-    pub rel_subject_kind: AuthSubjectKind,
-    // 关联权限主体Ids,有多个时逗号分隔
-    #[validate(length(max = 5000))]
-    pub rel_subject_ids: String,
-    // 关联权限主体运算类型
-    #[validate(length(max = 32))]
-    pub subject_operator: String,
     // 关联资源Id
     #[validate(length(max = 32))]
     pub rel_resource_id: String,
@@ -105,14 +87,47 @@ pub struct AuthPolicyDetailResp {
     // 操作结果
     #[validate(length(max = 32))]
     pub result_kind: String,
-    // 是否排他
-    pub exclusive: bool,
     // 所属应用Id
     #[validate(length(max = 32))]
     pub rel_app_id: String,
     // 所属租户Id
     #[validate(length(max = 32))]
     pub rel_tenant_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AuthPolicySubjectAddReq {
+    // 关联权限主体类型
+    pub rel_subject_kind: AuthSubjectKind,
+    // 关联权限主体Id
+    #[validate(length(min = 2, max = 255))]
+    pub rel_subject_id: String,
+    // 关联权限主体运算类型
+    pub subject_operator: AuthSubjectOperatorKind,
+    // 关联权限策略Id
+    #[validate(length(max = 32))]
+    pub rel_auth_policy_id: String,
+}
+
+#[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
+pub struct AuthPolicySubjectDetailResp {
+    #[validate(length(max = 32))]
+    pub id: String,
+    // 关联权限主体类型
+    pub rel_subject_kind: AuthSubjectKind,
+    // 关联权限主体Ids
+    #[validate(length(max = 255))]
+    pub rel_subject_ids: String,
+    // 关联权限主体运算类型
+    #[validate(length(max = 32))]
+    pub subject_operator: String,
+    // 关联权限策略Id
+    #[validate(length(max = 32))]
+    pub rel_auth_policy_id: String,
     #[validate(length(max = 255))]
     pub create_user: String,
     #[validate(length(max = 255))]

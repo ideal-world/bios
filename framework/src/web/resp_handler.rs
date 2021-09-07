@@ -21,7 +21,7 @@ use crate::basic::error::{BIOSError, BIOSResult};
 
 pub type BIOSResp = BIOSResult<HttpResponse>;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
 pub struct BIOSRespHelper<T>
 where

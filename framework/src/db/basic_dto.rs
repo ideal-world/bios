@@ -16,6 +16,6 @@
 use serde::Deserialize;
 
 #[derive(sqlx::FromRow, Deserialize)]
-pub struct IdResp {
-    pub id: String,
+pub struct KeyResp {
+    pub key: String,
 }

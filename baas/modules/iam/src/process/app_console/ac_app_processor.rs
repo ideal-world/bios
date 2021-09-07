@@ -16,7 +16,7 @@
 
 use actix_web::{delete, get, post, put, HttpRequest};
 use chrono::Utc;
-use sea_query::{Alias, Expr, JoinType, Query};
+use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
@@ -161,6 +161,7 @@ pub async fn list_app_ident(req: HttpRequest) -> BIOSResp {
             Expr::tbl(update_user_table, IamAccount::Id).equals(IamAppIdent::Table, IamAppIdent::UpdateUser),
         )
         .and_where(Expr::tbl(IamAppIdent::Table, IamAppIdent::RelAppId).eq(ident_info.app_id.clone()))
+        .order_by(IamAppIdent::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AppIdentDetailResp>(&sql_builder, None).await?;
     BIOSRespHelper::ok(items)

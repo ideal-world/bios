@@ -14,5 +14,7 @@
  * limitations under the License.
  */
 mod test_app;
+mod test_group;
 mod test_resource;
 mod test_role;
+mod test_auth_policy;

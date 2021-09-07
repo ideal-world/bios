@@ -15,12 +15,12 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use sea_query::{Alias, Cond, Expr, JoinType, Query};
+use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::error::BIOSError;
-use bios::db::basic_dto::IdResp;
+use bios::db::basic_dto::KeyResp;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::get_ident_account_info;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
@@ -64,7 +64,7 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::BadRequest("ResourceSubject [code] already exists".to_owned()));
+        return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject [code] already exists".to_owned()));
     }
     let id = bios::basic::field::uuid();
     let sql_builder = Query::insert()
@@ -145,7 +145,7 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::BadRequest("ResourceSubject [code] already exists".to_owned()));
+            return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject [code] already exists".to_owned()));
         }
         values.push((IamResourceSubject::Code, resource_subject_code.into()));
     }
@@ -235,6 +235,7 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
             None
         })
         .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+        .order_by(IamResourceSubject::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb()
         .pagination::<ResourceSubjectDetailResp>(&sql_builder, query.page_number, query.page_size, None)
@@ -367,9 +368,9 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
 
     if let Some(path_and_query) = &resource_modify_req.path_and_query {
         let resource_subject_id_info = BIOSFuns::reldb()
-            .fetch_one::<IdResp>(
+            .fetch_one::<KeyResp>(
                 &Query::select()
-                    .columns(vec![(IamResourceSubject::Table, IamResourceSubject::Id)])
+                    .expr_as(Expr::col((IamResourceSubject::Table, IamResourceSubject::Id)), Alias::new("key"))
                     .from(IamResource::Table)
                     .inner_join(
                         IamResourceSubject::Table,
@@ -389,7 +390,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                     .from(IamResource::Table)
                     .and_where(Expr::col(IamResource::Id).ne(id.clone()))
                     .and_where(Expr::col(IamResource::PathAndQuery).eq(path_and_query.to_string().to_lowercase()))
-                    .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_subject_id_info.id))
+                    .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_subject_id_info.key))
                     .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
                     .done(),
                 None,
@@ -520,6 +521,7 @@ pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) ->
                 );
             },
         )
+        .order_by(IamResource::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb()
         .pagination::<ResourceDetailResp>(&sql_builder, query.page_number, query.page_size, None)

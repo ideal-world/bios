@@ -46,12 +46,7 @@ impl Default for NormalQuery {
 }
 
 #[post("/normal/{id}")]
-pub async fn normal(
-    query: web::Query<NormalQuery>,
-    body: web::Bytes,
-    data: web::Data<AppStateContainer>,
-    req: HttpRequest,
-) -> BIOSResp {
+pub async fn normal(query: web::Query<NormalQuery>, body: web::Bytes, data: web::Data<AppStateContainer>, req: HttpRequest) -> BIOSResp {
     /*   req.headers().into_iter().for_each(|(k, v)| {
         println!("Header:{}-{:?}", k, v)
     });*/
@@ -69,11 +64,7 @@ pub async fn normal(
 
         let mut forwarded_resp = forwarded_req.send_body(body).await.unwrap();
         let mut resp = HttpResponse::build(forwarded_resp.status());
-        for (header_name, header_value) in forwarded_resp
-            .headers()
-            .iter()
-            .filter(|(h, _)| *h != "connection")
-        {
+        for (header_name, header_value) in forwarded_resp.headers().iter().filter(|(h, _)| *h != "connection") {
             resp.insert_header((header_name.clone(), header_value.clone()));
         }
         Ok(resp.body(forwarded_resp.body().await.unwrap()))

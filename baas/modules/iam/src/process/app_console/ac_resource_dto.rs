@@ -36,7 +36,7 @@ pub struct ResourceSubjectAddReq {
     #[validate(length(min = 2, max = 255))]
     pub name: String,
     // 资源主体显示排序，asc
-    pub sort: u32,
+    pub sort: i32,
     // 资源类型
     pub kind: ResourceKind,
     // 资源主体连接URI
@@ -55,7 +55,7 @@ pub struct ResourceSubjectAddReq {
     #[validate(length(min = 2, max = 1000))]
     pub platform_project_id: Option<String>,
     // 执行超时
-    pub timeout_ms: Option<u32>,
+    pub timeout_ms: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -67,7 +67,7 @@ pub struct ResourceSubjectModifyReq {
     #[validate(length(min = 2, max = 255))]
     pub name: Option<String>,
     // 资源主体显示排序，asc
-    pub sort: Option<u32>,
+    pub sort: Option<i32>,
     // 资源类型
     pub kind: Option<ResourceKind>,
     // 资源主体连接URI
@@ -86,7 +86,7 @@ pub struct ResourceSubjectModifyReq {
     #[validate(length(max = 1000))]
     pub platform_project_id: Option<String>,
     // 执行超时
-    pub timeout_ms: Option<u32>,
+    pub timeout_ms: Option<i32>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -159,7 +159,7 @@ pub struct ResourceAddReq {
     #[validate(length(max = 5000))]
     pub action: Option<String>,
     // 资源显示排序，asc
-    pub sort: u32,
+    pub sort: i32,
     // 是否是资源组
     pub res_group: bool,
     // 资源所属组Id
@@ -187,7 +187,7 @@ pub struct ResourceModifyReq {
     #[validate(length(max = 5000))]
     pub action: Option<String>,
     // 资源显示排序，asc
-    pub sort: Option<u32>,
+    pub sort: Option<i32>,
     // 是否是资源组
     pub res_group: Option<bool>,
     // 资源所属组Id

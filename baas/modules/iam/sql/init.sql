@@ -20,22 +20,22 @@ use iam;
 
 create table if not exists iam_account
 (
-    id          varchar(64)
-        primary key,
+    id            varchar(64)
+    primary key,
     open_id       varchar(100)                        not null comment 'Open Id',
     name          varchar(255)                        not null comment '账号名称',
     avatar        varchar(1000)                       not null comment '账号头像',
     parameters    varchar(2000)                       not null comment '账号扩展信息，Json格式',
-    parent_id     varchar(64)                              not null comment '父账号Id，不存在时为空',
+    parent_id     varchar(64)                         not null comment '父账号Id，不存在时为空',
     status        varchar(50)                         not null comment '账号状态',
-    rel_tenant_id varchar(64)                              not null comment '关联租户Id',
+    rel_tenant_id varchar(64)                         not null comment '关联租户Id',
     create_time   timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user   varchar(64)                              not null comment '创建者Id',
+    create_user   varchar(64)                         not null comment '创建者Id',
     update_time   timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user   varchar(64)                              not null comment '最后一次修改者Id',
+    update_user   varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_open_id_parent_id
-        unique (open_id, parent_id)
-)
+    unique (open_id, parent_id)
+    )
     comment '账号';
 
 create index i_tenant_status
@@ -43,17 +43,17 @@ create index i_tenant_status
 
 create table if not exists iam_account_app
 (
-    id          varchar(64)
-        primary key,
-    rel_account_id varchar(64)                              not null comment '关联账号Id',
-    rel_app_id     varchar(64)                              not null comment '关联应用Id',
+    id             varchar(64)
+    primary key,
+    rel_account_id varchar(64)                         not null comment '关联账号Id',
+    rel_app_id     varchar(64)                         not null comment '关联应用Id',
     create_time    timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user    varchar(64)                              not null comment '创建者Id',
+    create_user    varchar(64)                         not null comment '创建者Id',
     update_time    timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user    varchar(64)                              not null comment '最后一次修改者Id',
+    update_user    varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_account_app
-        unique (rel_app_id, rel_account_id)
-)
+    unique (rel_app_id, rel_account_id)
+    )
     comment '账号应用关联';
 
 create index i_app
@@ -62,19 +62,19 @@ create index i_app
 create table if not exists iam_account_bind
 (
     id              varchar(64)
-        primary key,
-    from_account_id varchar(64)                              not null comment '源租户账号Id',
-    from_tenant_id  varchar(64)                              not null comment '源租户Id',
+    primary key,
+    from_account_id varchar(64)                         not null comment '源租户账号Id',
+    from_tenant_id  varchar(64)                         not null comment '源租户Id',
     ident_kind      varchar(255)                        not null comment '绑定使用的账号认证类型名称',
-    to_account_id   varchar(64)                              not null comment '目标户账号Id',
-    to_tenant_id    varchar(64)                              not null comment '目标租户Id',
+    to_account_id   varchar(64)                         not null comment '目标户账号Id',
+    to_tenant_id    varchar(64)                         not null comment '目标租户Id',
     create_time     timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user     varchar(64)                              not null comment '创建者Id',
+    create_user     varchar(64)                         not null comment '创建者Id',
     update_time     timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user     varchar(64)                              not null comment '最后一次修改者Id',
+    update_user     varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_from_to_account
-        unique (from_account_id, to_account_id)
-)
+    unique (from_account_id, to_account_id)
+    )
     comment '账号绑定';
 
 create index i_to_tenant
@@ -86,16 +86,16 @@ create index i_from_tenant
 create table if not exists iam_account_group
 (
     id                varchar(64)
-        primary key,
-    rel_account_id    varchar(64)                              not null comment '关联账号Id',
-    rel_group_node_id varchar(64)                              not null comment '关联群组节点Id',
+    primary key,
+    rel_account_id    varchar(64)                         not null comment '关联账号Id',
+    rel_group_node_id varchar(64)                         not null comment '关联群组节点Id',
     create_time       timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user       varchar(64)                              not null comment '创建者Id',
+    create_user       varchar(64)                         not null comment '创建者Id',
     update_time       timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user       varchar(64)                              not null comment '最后一次修改者Id',
+    update_user       varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_account_group
-        unique (rel_account_id, rel_group_node_id)
-)
+    unique (rel_account_id, rel_group_node_id)
+    )
     comment '账号群组关联';
 
 create index i_group
@@ -104,21 +104,21 @@ create index i_group
 create table if not exists iam_account_ident
 (
     id               varchar(64)
-        primary key,
+    primary key,
     kind             varchar(100)                        not null comment '账号认证类型名称',
     ak               varchar(255)                        not null comment '账号认证名称',
     sk               varchar(255)                        not null comment '账号认证密钥',
     valid_end_time   bigint                              not null comment '账号认证有效结束时间',
     valid_start_time bigint                              not null comment '账号认证有效开始时间',
-    rel_account_id   varchar(64)                              not null comment '关联账号Id',
-    rel_tenant_id    varchar(64)                              not null comment '关联租户Id',
+    rel_account_id   varchar(64)                         not null comment '关联账号Id',
+    rel_tenant_id    varchar(64)                         not null comment '关联租户Id',
     create_time      timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user      varchar(64)                              not null comment '创建者Id',
+    create_user      varchar(64)                         not null comment '创建者Id',
     update_time      timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user      varchar(64)                              not null comment '最后一次修改者Id',
+    update_user      varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_tenant_kind_ak
-        unique (rel_tenant_id, kind, ak)
-)
+    unique (rel_tenant_id, kind, ak)
+    )
     comment '账号认证';
 
 create index i_valid1
@@ -129,17 +129,17 @@ create index i_valid2
 
 create table if not exists iam_account_role
 (
-    id          varchar(64)
-        primary key,
-    rel_account_id varchar(64)                              not null comment '关联账号Id',
-    rel_role_id    varchar(64)                              not null comment '关联角色Id',
+    id             varchar(64)
+    primary key,
+    rel_account_id varchar(64)                         not null comment '关联账号Id',
+    rel_role_id    varchar(64)                         not null comment '关联角色Id',
     create_time    timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user    varchar(64)                              not null comment '创建者Id',
+    create_user    varchar(64)                         not null comment '创建者Id',
     update_time    timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user    varchar(64)                              not null comment '最后一次修改者Id',
+    update_user    varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_account_role
-        unique (rel_account_id, rel_role_id)
-)
+    unique (rel_account_id, rel_role_id)
+    )
     comment '账号角色关联';
 
 create index i_role
@@ -147,8 +147,8 @@ create index i_role
 
 create table if not exists iam_app
 (
-    id          varchar(64)
-        primary key,
+    id            varchar(64)
+    primary key,
     open_id       varchar(100)                        not null comment 'Open Id',
     name          varchar(255)                        not null comment '应用名称',
     icon          varchar(1000)                       not null comment '应用图标',
@@ -156,14 +156,14 @@ create table if not exists iam_app
     pri_key       varchar(1000)                       not null comment '私钥',
     pub_key       varchar(255)                        not null comment '公钥',
     status        varchar(50)                         not null comment '应用状态',
-    rel_tenant_id varchar(64)                              not null comment '关联租户Id',
+    rel_tenant_id varchar(64)                         not null comment '关联租户Id',
     create_time   timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user   varchar(64)                              not null comment '创建者Id',
+    create_user   varchar(64)                         not null comment '创建者Id',
     update_time   timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user   varchar(64)                              not null comment '最后一次修改者Id',
+    update_user   varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_tenant_name
-        unique (rel_tenant_id, name)
-)
+    unique (rel_tenant_id, name)
+    )
     comment '应用';
 
 create index i_status
@@ -171,21 +171,21 @@ create index i_status
 
 create table if not exists iam_app_ident
 (
-    id          varchar(64)
-        primary key,
-    ak          varchar(255)                        not null comment '应用认证名称（Access Key Id）',
-    sk          varchar(1000)                       not null comment '应用认证密钥（Secret Access Key）',
-    valid_time  bigint                              not null comment '应用认证有效时间',
-    note        varchar(1000)                       not null comment '应用认证用途',
-    rel_app_id  varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id     varchar(64)                              not null comment '关联租户Id',
-    create_time timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user varchar(64)                              not null comment '创建者Id',
-    update_time timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user varchar(64)                              not null comment '最后一次修改者Id',
+    id            varchar(64)
+    primary key,
+    ak            varchar(255)                        not null comment '应用认证名称（Access Key Id）',
+    sk            varchar(1000)                       not null comment '应用认证密钥（Secret Access Key）',
+    valid_time    bigint                              not null comment '应用认证有效时间',
+    note          varchar(1000)                       not null comment '应用认证用途',
+    rel_app_id    varchar(64)                         not null comment '关联应用Id',
+    rel_tenant_id varchar(64)                         not null comment '关联租户Id',
+    create_time   timestamp default CURRENT_TIMESTAMP null comment '创建时间',
+    create_user   varchar(64)                         not null comment '创建者Id',
+    update_time   timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
+    update_user   varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_ak
-        unique (ak)
-)
+    unique (ak)
+    )
     comment '应用认证';
 
 create index i_app_valid
@@ -193,47 +193,59 @@ create index i_app_valid
 
 create table if not exists iam_auth_policy
 (
-    id               varchar(64)
-        primary key,
-    rel_subject_kind varchar(20)                         not null comment '关联权限主体类型名称',
-    rel_subject_ids  varchar(10000)                      not null comment '关联权限主体Ids,有多个时逗号分隔,注意必须存在最后一个逗号',
-    subject_operator varchar(20)                         not null comment '关联权限主体运算类型名称',
-    action_kind      varchar(100)                        not null comment '操作类型名称',
-    rel_resource_id  varchar(64)                              not null comment '关联资源Id',
-    result_kind      varchar(100)                        not null comment '操作结果名称',
-    valid_start_time   bigint                              not null comment '生效时间',
-    exclusive        tinyint(1)                          not null comment '是否排他',
-    valid_end_time     bigint                              not null comment '失效时间',
-    rel_app_id       varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id    varchar(64)                              not null comment '关联租户Id',
-    create_time      timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user      varchar(64)                              not null comment '创建者Id',
-    update_time      timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user      varchar(64)                              not null comment '最后一次修改者Id'
-)
+    id                           varchar(64)
+    primary key,
+    name                         varchar(255)                        not null comment '权限策略名称',
+    action_kind                  varchar(100)                        not null comment '操作类型名称',
+    rel_resource_id              varchar(64)                         not null comment '关联资源Id',
+    result_kind                  varchar(100)                        not null comment '操作结果名称',
+    valid_start_time             bigint                              not null comment '生效时间',
+    valid_end_time               bigint                              not null comment '失效时间',
+    rel_app_id                   varchar(64)                         not null comment '关联应用Id',
+    rel_tenant_id                varchar(64)                         not null comment '关联租户Id',
+    create_time                  timestamp default CURRENT_TIMESTAMP null comment '创建时间',
+    create_user                  varchar(64)                         not null comment '创建者Id',
+    update_time                  timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
+    update_user                  varchar(64)                         not null comment '最后一次修改者Id'
+    )
     comment '权限策略';
+
+create table if not exists iam_auth_policy_subject
+(
+    id                  varchar(64)
+    primary key,
+    subject_kind        varchar(20)                         not null comment '关联权限主体类型名称',
+    subject_id          varchar(255)                        not null comment '关联权限主体Id',
+    subject_operator    varchar(20)                         not null comment '关联权限主体运算类型名称',
+    rel_auth_policy_id  varchar(64)                         not null comment '关联权限策略Id',
+    create_time         timestamp default CURRENT_TIMESTAMP null comment '创建时间',
+    create_user         varchar(64)                         not null comment '创建者Id',
+    update_time         timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
+    update_user         varchar(64)                         not null comment '最后一次修改者Id'
+    )
+    comment '权限策略关联主体';
 
 create table if not exists iam_group
 (
     id                varchar(64)
-        primary key,
+    primary key,
     kind              varchar(100)                        not null comment '群组类型名称',
     code              varchar(255)                        not null comment '群组编码',
     name              varchar(255)                        not null comment '群组名称',
     icon              varchar(1000)                       not null comment '群组图标',
     expose_kind       varchar(100)                        not null comment '开放等级类型名称',
-    rel_group_id      varchar(64)                              not null comment '关联群组Id，用于多树合成',
-    rel_group_node_id varchar(64)                              not null comment '关联群起始组节点Id，用于多树合成',
+    rel_group_id      varchar(64)                         not null comment '关联群组Id，用于多树合成',
+    rel_group_node_id varchar(64)                         not null comment '关联群起始组节点Id，用于多树合成',
     sort              int                                 not null comment '显示排序，asc',
-    rel_app_id        varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id     varchar(64)                              not null comment '关联租户Id',
+    rel_app_id        varchar(64)                         not null comment '关联应用Id',
+    rel_tenant_id     varchar(64)                         not null comment '关联租户Id',
     create_time       timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user       varchar(64)                              not null comment '创建者Id',
+    create_user       varchar(64)                         not null comment '创建者Id',
     update_time       timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user       varchar(64)                              not null comment '最后一次修改者Id',
+    update_user       varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_tenant_app_id
-        unique (rel_tenant_id, rel_app_id, code)
-)
+    unique (rel_tenant_id, rel_app_id, code)
+    )
     comment '群组';
 
 create index i_expose
@@ -242,42 +254,40 @@ create index i_expose
 create table if not exists iam_group_node
 (
     id           varchar(64)
-        primary key,
+    primary key,
     code         varchar(1000)                       not null comment '节点编码',
-    bus_code     varchar(500)                       not null comment '业务编码',
+    sort         int                                 not null comment '显示排序，asc',
+    bus_code     varchar(500)                        not null comment '业务编码',
     name         varchar(255)                        not null comment '节点名称',
     parameters   varchar(2000)                       not null comment '节点扩展信息，Json格式',
-    rel_group_id varchar(64)                              not null comment '关联群组Id',
+    rel_group_id varchar(64)                         not null comment '关联群组Id',
     create_time  timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user  varchar(64)                              not null comment '创建者Id',
+    create_user  varchar(64)                         not null comment '创建者Id',
     update_time  timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user  varchar(64)                              not null comment '最后一次修改者Id'
-)
+    update_user  varchar(64)                         not null comment '最后一次修改者Id'
+    )
     comment '群组节点';
-
-create index i_code
-    on iam_group (code, rel_group_id);
 
 create table if not exists iam_resource
 (
     id                      varchar(64)
-        primary key,
+    primary key,
     path_and_query          varchar(5000)                       not null comment 'Path and Query',
     name                    varchar(255)                        not null comment '资源名称',
     icon                    varchar(1000)                       not null comment '资源图标',
     expose_kind             varchar(100)                        not null comment '开放等级类型名称',
-    parent_id               varchar(64)                              not null comment '资源所属组Id',
+    parent_id               varchar(64)                         not null comment '资源所属组Id',
     res_group               tinyint(1)                          not null comment '是否是资源组',
     action                  varchar(1000)                       not null comment '触发后的操作，多用于菜单链接',
     sort                    int                                 not null comment '资源显示排序，asc',
-    rel_resource_subject_id varchar(64)                              not null comment '关联资源主体Id',
-    rel_app_id              varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id           varchar(64)                              not null comment '关联租户Id',
+    rel_resource_subject_id varchar(64)                         not null comment '关联资源主体Id',
+    rel_app_id              varchar(64)                         not null comment '关联应用Id',
+    rel_tenant_id           varchar(64)                         not null comment '关联租户Id',
     create_time             timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user             varchar(64)                              not null comment '创建者Id',
+    create_user             varchar(64)                         not null comment '创建者Id',
     update_time             timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user             varchar(64)                              not null comment '最后一次修改者Id'
-)
+    update_user             varchar(64)                         not null comment '最后一次修改者Id'
+    )
     comment '资源';
 
 create index i_expose
@@ -289,7 +299,7 @@ create index i_parent
 create table if not exists iam_resource_subject
 (
     id                  varchar(64)
-        primary key,
+    primary key,
     kind                varchar(100)                        not null comment '资源类型名称',
     code                varchar(255)                        not null comment '资源主体编码',
     uri                 varchar(5000)                       not null comment '资源主体连接URI',
@@ -300,15 +310,15 @@ create table if not exists iam_resource_subject
     platform_project_id varchar(1000)                       not null comment '第三方平台项目名，如华为云的ProjectId',
     sort                int                                 not null comment '资源主体显示排序，asc',
     timeout_ms          int                                 not null comment '执行超时',
-    rel_app_id          varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id       varchar(64)                              not null comment '关联租户Id',
+    rel_app_id          varchar(64)                         not null comment '关联应用Id',
+    rel_tenant_id       varchar(64)                         not null comment '关联租户Id',
     create_time         timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user         varchar(64)                              not null comment '创建者Id',
+    create_user         varchar(64)                         not null comment '创建者Id',
     update_time         timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user         varchar(64)                              not null comment '最后一次修改者Id',
+    update_user         varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_code
-        unique (code)
-)
+    unique (code)
+    )
     comment '资源主体';
 
 create index i_tenant_app_kind
@@ -316,36 +326,36 @@ create index i_tenant_app_kind
 
 create table if not exists iam_role
 (
-    id          varchar(64)
-        primary key,
+    id            varchar(64)
+    primary key,
     code          varchar(255)                        not null comment '角色编码',
     name          varchar(255)                        not null comment '角色名称',
     sort          int                                 not null comment '显示排序，asc',
-    rel_app_id    varchar(64)                              not null comment '关联应用Id',
-    rel_tenant_id varchar(64)                              not null comment '关联租户Id',
+    rel_app_id    varchar(64)                         not null comment '关联应用Id',
+    rel_tenant_id varchar(64)                         not null comment '关联租户Id',
     create_time   timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user   varchar(64)                              not null comment '创建者Id',
+    create_user   varchar(64)                         not null comment '创建者Id',
     update_time   timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user   varchar(64)                              not null comment '最后一次修改者Id',
+    update_user   varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_tenant_app_id
-        unique (rel_tenant_id, rel_app_id, code)
-)
+    unique (rel_tenant_id, rel_app_id, code)
+    )
     comment '角色';
 
 create table if not exists iam_tenant
 (
     id                     varchar(64)
-        primary key,
+    primary key,
     name                   varchar(255)                        not null comment '租户名称',
     icon                   varchar(1000)                       not null comment '租户图标',
     parameters             varchar(5000)                       not null comment '租户扩展信息，Json格式',
     allow_account_register tinyint(1)                          not null comment '是否开放账号注册',
     status                 varchar(50)                         not null comment '租户状态',
     create_time            timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user            varchar(64)                              not null comment '创建者Id',
+    create_user            varchar(64)                         not null comment '创建者Id',
     update_time            timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user            varchar(64)                              not null comment '最后一次修改者Id'
-)
+    update_user            varchar(64)                         not null comment '最后一次修改者Id'
+    )
     comment '租户';
 
 create index u_status
@@ -354,37 +364,37 @@ create index u_status
 create table if not exists iam_tenant_ident
 (
     id                 varchar(64)
-        primary key,
+    primary key,
     kind               varchar(100)                        not null comment '租户认证类型名称',
     valid_ak_rule      varchar(2000)                       not null comment '认证AK校验正则规则',
     valid_ak_rule_note varchar(2000)                       not null comment '认证AK校验正则规则说明',
     valid_sk_rule      varchar(2000)                       not null comment '认证SK校验正则规则',
     valid_sk_rule_note varchar(2000)                       not null comment '认证SK校验正则规则说明',
     valid_time         bigint                              not null comment '认证有效时间（秒）',
-    rel_tenant_id      varchar(64)                              not null comment '关联租户Id',
+    rel_tenant_id      varchar(64)                         not null comment '关联租户Id',
     create_time        timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user        varchar(64)                              not null comment '创建者Id',
+    create_user        varchar(64)                         not null comment '创建者Id',
     update_time        timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user        varchar(64)                              not null comment '最后一次修改者Id',
+    update_user        varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_tenant_kind
-        unique (rel_tenant_id, kind)
-)
+    unique (rel_tenant_id, kind)
+    )
     comment '租户认证配置';
 
 create table if not exists iam_tenant_cert
 (
-    id          varchar(64)
-        primary key,
+    id            varchar(64)
+    primary key,
     category      varchar(255)                        not null comment '凭证类型名称',
     version       tinyint                             not null comment '凭证保留的版本数量',
-    rel_tenant_id varchar(64)                              not null comment '关联租户Id',
+    rel_tenant_id varchar(64)                         not null comment '关联租户Id',
     create_time   timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    create_user   varchar(64)                              not null comment '创建者Id',
+    create_user   varchar(64)                         not null comment '创建者Id',
     update_time   timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user   varchar(64)                              not null comment '最后一次修改者Id',
+    update_user   varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_tenant_category
-        unique (rel_tenant_id, category)
-)
+    unique (rel_tenant_id, category)
+    )
     comment '租户凭证配置';
 
 
