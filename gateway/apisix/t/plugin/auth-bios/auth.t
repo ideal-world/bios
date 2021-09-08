@@ -16,8 +16,8 @@ __DATA__
             local m_utils = require("apisix.plugins.auth-bios.utils")
             local m_resource = require("apisix.plugins.auth-bios.resource")
             local m_auth = require("apisix.plugins.auth-bios.auth")
-            m_resource.add_res("FETCH","api://app1.tenant1/p1/**",{tenant_ids="#tenant1#",app_ids="#app1#",account_ids="#account1#"})
-            m_resource.add_res("FETCH","api://app1.tenant1/p1/p2",{app_ids="#app2#",role_id="#role1#",account_ids="",role_id="#group1#"})
+            m_resource.add_res("FETCH","api://app1.tenant1/p1/**",{_start=ngx.time(),_end=ngx.time()+3600,tenant="#tenant1#",app="#app1#",account="#account1#"})
+            m_resource.add_res("FETCH","api://app1.tenant1/p1/p2",{_start=ngx.time(),_end=ngx.time()+3600,app="#app2#",role="#role1#",account="",group_node="#group1#"})
             local matched_res = m_resource.match_res("FETCH","api://app1.tenant1/p1/p2")
 
             local result = m_auth.auth({

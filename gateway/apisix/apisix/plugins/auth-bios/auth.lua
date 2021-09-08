@@ -25,34 +25,34 @@ function _M.auth(ident_info)
             end
         end
     end
-    if auth_info["tenant_ids"] ~= nil and string.len(auth_info["tenant_ids"]) ~= 0
-            and (tenant_id == nil or m_utils.contain(auth_info["tenant_ids"], "#" .. tenant_id .. "#") == false) then
+    if auth_info["tenant"] ~= nil and string.len(auth_info["tenant"]) ~= 0
+            and (tenant_id == nil or m_utils.contain(auth_info["tenant"], "#" .. tenant_id .. "#") == false) then
         return 401, { message = "Permission denied" }
     end
-    if auth_info["app_ids"] ~= nil and string.len(auth_info["app_ids"]) ~= 0
-            and (app_id == nil or m_utils.contain(auth_info["app_ids"], "#" .. app_id .. "#") == false) then
+    if auth_info["app"] ~= nil and string.len(auth_info["app"]) ~= 0
+            and (app_id == nil or m_utils.contain(auth_info["app"], "#" .. app_id .. "#") == false) then
         return 401, { message = "Permission denied" }
     end
-    if auth_info["account_ids"] ~= nil and string.len(auth_info["account_ids"]) ~= 0
-            and (account_id == nil or m_utils.contain(auth_info["account_ids"], "#" .. account_id .. "#") == false) then
+    if auth_info["account"] ~= nil and string.len(auth_info["account"]) ~= 0
+            and (account_id == nil or m_utils.contain(auth_info["account"], "#" .. account_id .. "#") == false) then
         return 401, { message = "Permission denied" }
     end
-    if auth_info["role_ids"] ~= nil and string.len(auth_info["role_ids"]) ~= 0 then
+    if auth_info["role"] ~= nil and string.len(auth_info["role"]) ~= 0 then
         if roles == nil then
             return 401, { message = "Permission denied" }
         end
         for i = 1, m_utils.table_length(roles) do
-            if m_utils.contain(auth_info["role_ids"], "#" .. roles[i] .. "#") == false then
+            if m_utils.contain(auth_info["role"], "#" .. roles[i] .. "#") == false then
                 return 401, { message = "Permission denied" }
             end
         end
     end
-    if auth_info["group_ids"] ~= nil and string.len(auth_info["group_ids"]) ~= 0 then
+    if auth_info["group_node"] ~= nil and string.len(auth_info["group_node"]) ~= 0 then
         if groups == nil then
             return 401, { message = "Permission denied" }
         end
         for i = 1, m_utils.table_length(groups) do
-            if m_utils.contain(auth_info["group_ids"], "#" .. groups[i] .. "#") == false then
+            if m_utils.contain(auth_info["group_node"], "#" .. groups[i] .. "#") == false then
                 return 401, { message = "Permission denied" }
             end
         end

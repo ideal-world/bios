@@ -4,7 +4,7 @@ local redis_new = require("resty.redis").new
 local redis_client = redis_new()
 local CACHES = {}
 
-local function init(host, port, database, timeout, password)
+local function init(host, port, database, timeout, password, max_size, max_idle_time)
     core.log.info("Init redis connection, host:", host, " port: ", port, " db: ", database)
     redis_client:set_timeouts(timeout, timeout, timeout)
     local _, conn_err = redis_client:connect(host, port)
@@ -28,6 +28,9 @@ local function init(host, port, database, timeout, password)
             error("Redis change db failure:" .. err)
         end
     end
+    if max_size and max_size ~= '' and max_idle_time and max_idle_time ~= '' then
+        redis_client:set_keepalive(max_idle_time, max_size)
+    end
     return true
 end
 
@@ -40,6 +43,21 @@ end
 
 local function hset(key, field, value)
     redis_client:hset(key, field, value)
+end
+
+local function hdel(key, field)
+    redis_client:hdel(key, field)
+end
+
+local function hget(key, field)
+    local value, err = redis_client:hget(key, field)
+    if err then
+        error("Redis operation failure [hget]:" .. err)
+    end
+    if value == ngx.null then
+        return nil
+    end
+    return value
 end
 
 local function get(key, cache_sec)
@@ -70,7 +88,7 @@ local function hscan(key, field, max_number, func)
         local data
         cursor, data = unpack(value)
         if next(data) then
-            local key = nil
+            local key
             for _, v in pairs(data) do
                 if key == nil then
                     key = v
@@ -83,10 +101,30 @@ local function hscan(key, field, max_number, func)
     until cursor == "0"
 end
 
+local function scan(key, max_number, func)
+    local cursor = "0"
+    repeat
+        local value, err = redis_client:scan(cursor, "match", key .. "*", "count", max_number)
+        if err then
+            error("Redis operation failure [scan]:" .. err)
+        end
+        local data
+        cursor, data = unpack(value)
+        if next(data) then
+            for _, k in pairs(data) do
+                func(k, redis_client:get(k))
+            end
+        end
+    until cursor == "0"
+end
+
 return {
     init = init,
     set = set,
     get = get,
     hset = hset,
+    hdel = hdel,
+    hget = hget,
     hscan = hscan,
+    scan = scan,
 }

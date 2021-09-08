@@ -29,6 +29,7 @@ use bios::BIOSFuns;
 use crate::domain::ident_domain::{IamAccount, IamAppIdent};
 use crate::iam_config::WorkSpaceConfig;
 use crate::process::app_console::ac_app_dto::{AppIdentAddReq, AppIdentDetailResp, AppIdentModifyReq};
+use bios::basic::error::BIOSError;
 
 #[post("/console/app/app/ident")]
 pub async fn add_app_ident(app_ident_add_req: Json<AppIdentAddReq>, req: HttpRequest) -> BIOSResp {
@@ -86,6 +87,21 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamAppIdent::Id])
+                .from(IamAppIdent::Table)
+                .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("AppIdent not exists".to_string()));
+    }
+    
     let mut values = Vec::new();
     if let Some(note) = &app_ident_modify_req.note {
         values.push((IamAppIdent::Note, note.to_string().into()));
@@ -172,15 +188,30 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
-    let mut conn = BIOSFuns::reldb().conn().await;
-    let mut tx = conn.begin().await?;
-
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamAppIdent::Id])
+                .from(IamAppIdent::Table)
+                .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("AppIdent not exists".to_string()));
+    }
+    
     let sql_builder = Query::select()
         .columns(vec![IamAppIdent::Ak, IamAppIdent::Sk])
         .from(IamAppIdent::Table)
         .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
         .done();
-    let aksk_resp = BIOSFuns::reldb().fetch_one::<AkSkResp>(&sql_builder, Some(&mut tx)).await?;
+    let aksk_resp = BIOSFuns::reldb().fetch_one::<AkSkResp>(&sql_builder, None).await?;
+   
+    let mut conn = BIOSFuns::reldb().conn().await;
+    let mut tx = conn.begin().await?;
 
     let sql_builder = Query::select()
         .columns(IamAppIdent::iter().filter(|i| *i != IamAppIdent::Table))

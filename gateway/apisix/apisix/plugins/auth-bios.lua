@@ -26,7 +26,7 @@ local schema = {
         ident_flag = { type = "string", default = "BIOS-Ident" },
 
         cache_resources = { type = "string", default = "bios:iam:resources" },
-        cache_change_resources = { type = "string", default = "bios:iam:change_resources" },
+        cache_change_resources = { type = "string", default = "bios:iam:change_resources:" },
         cache_change_resources_timer_sec = { type = "integer", default = 30 },
         cache_token = { type = "string", default = "bios:iam:token:info:" },
         cache_token_exp_sec = { type = "integer", default = 60 },
@@ -50,7 +50,7 @@ function _M.check_schema(conf)
         core.log.error("Configuration parameter error")
         return false, check_err
     end
-    local _, redis_err = m_redis.init(conf.redis_host, conf.redis_port, conf.redis_database, conf.redis_timeout, conf.redis_password)
+    local _, redis_err = m_redis.init(conf.redis_host, conf.redis_port, conf.redis_database, conf.redis_timeout, conf.redis_password, nil, nil)
     if redis_err then
         core.log.error("Connect redis error", redis_err)
         return false, redis_err

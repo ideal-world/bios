@@ -25,7 +25,7 @@ use bios::basic::logger::BIOSLogger;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::test::test_container::BIOSTestContainer;
 use bios::BIOSFuns;
-use bios_baas_iam::domain::ident_domain::IamAccount;
+use bios_baas_iam::domain::ident_domain::{IamAccount, IamAccountApp, IamApp, IamTenant};
 use bios_baas_iam::iam_config::WorkSpaceConfig;
 
 pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Container<'a, Cli, Redis>) {
@@ -54,6 +54,57 @@ pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Con
     .await
     .unwrap();
 
+    // Init Tenant
+    let sql_builder = Query::insert()
+        .into_table(IamTenant::Table)
+        .columns(vec![
+            IamTenant::Id,
+            IamTenant::CreateUser,
+            IamTenant::UpdateUser,
+            IamTenant::Name,
+            IamTenant::Icon,
+            IamTenant::Parameters,
+            IamTenant::AllowAccountRegister,
+            IamTenant::Status,
+        ])
+        .values_panic(vec![
+            "tenant1".into(),
+            "admin001".into(),
+            "admin001".into(),
+            "理想世界".into(),
+            "".into(),
+            "".into(),
+            true.into(),
+            "enabled".into(),
+        ])
+        .done();
+    BIOSFuns::reldb().exec(&sql_builder, None).await.unwrap();
+    // Init App
+    let sql_builder = Query::insert()
+        .into_table(IamApp::Table)
+        .columns(vec![
+            IamApp::Id,
+            IamApp::CreateUser,
+            IamApp::UpdateUser,
+            IamApp::Name,
+            IamApp::Icon,
+            IamApp::Parameters,
+            IamApp::RelTenantId,
+            IamApp::Status,
+        ])
+        .values_panic(vec![
+            "app1".into(),
+            "admin001".into(),
+            "admin001".into(),
+            "IAM".into(),
+            "".into(),
+            "".into(),
+            "tenant1".into(),
+            "enabled".into(),
+        ])
+        .done();
+    BIOSFuns::reldb().exec(&sql_builder, None).await.unwrap();
+    // Init Account
     let sql_builder = Query::insert()
         .into_table(IamAccount::Table)
         .columns(vec![
@@ -80,6 +131,19 @@ pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Con
             "".into(),
             "enabled".into(),
         ])
+        .done();
+    BIOSFuns::reldb().exec(&sql_builder, None).await.unwrap();
+    // Init AccountApp
+    let sql_builder = Query::insert()
+        .into_table(IamAccountApp::Table)
+        .columns(vec![
+            IamAccountApp::Id,
+            IamAccountApp::CreateUser,
+            IamAccountApp::UpdateUser,
+            IamAccountApp::RelAppId,
+            IamAccountApp::RelAccountId,
+        ])
+        .values_panic(vec!["admin001".into(), "admin001".into(), "admin001".into(), "app1".into(), "admin001".into()])
         .done();
     BIOSFuns::reldb().exec(&sql_builder, None).await.unwrap();
 

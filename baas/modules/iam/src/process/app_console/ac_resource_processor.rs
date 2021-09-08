@@ -113,6 +113,20 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamResourceSubject::Id])
+                .from(IamResourceSubject::Table)
+                .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("ResourceSubject not exists".to_string()));
+    }
     if resource_subject_modify_req.code_postfix.is_some() && resource_subject_modify_req.kind.is_none() {
         return BIOSRespHelper::bus_error(BIOSError::BadRequest("ResourceSubject [code_postfix] and [kind] must both exist".to_owned()));
     }
@@ -248,6 +262,20 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamResourceSubject::Id])
+                .from(IamResourceSubject::Table)
+                .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("ResourceSubject not exists".to_string()));
+    }
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
@@ -366,6 +394,20 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamResource::Id])
+                .from(IamResource::Table)
+                .and_where(Expr::col(IamResource::Id).eq(id.clone()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("Resource not exists".to_string()));
+    }
     if let Some(path_and_query) = &resource_modify_req.path_and_query {
         let resource_subject_id_info = BIOSFuns::reldb()
             .fetch_one::<KeyResp>(
@@ -534,6 +576,20 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamResource::Id])
+                .from(IamResource::Table)
+                .and_where(Expr::col(IamResource::Id).eq(id.clone()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("Resource not exists".to_string()));
+    }
     if BIOSFuns::reldb()
         .exists(
             &Query::select()

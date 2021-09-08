@@ -149,12 +149,9 @@ create table if not exists iam_app
 (
     id            varchar(64)
     primary key,
-    open_id       varchar(100)                        not null comment 'Open Id',
     name          varchar(255)                        not null comment '应用名称',
     icon          varchar(1000)                       not null comment '应用图标',
     parameters    varchar(2000)                       not null comment '应用扩展信息，Json格式',
-    pri_key       varchar(1000)                       not null comment '私钥',
-    pub_key       varchar(255)                        not null comment '公钥',
     status        varchar(50)                         not null comment '应用状态',
     rel_tenant_id varchar(64)                         not null comment '关联租户Id',
     create_time   timestamp default CURRENT_TIMESTAMP null comment '创建时间',
