@@ -115,7 +115,7 @@ Token [token123] is not legal
             local m_redis = require("apisix.plugins.auth-bios.redis")
             m_redis.init("127.0.0.1", 6379, 1, 1000, "123456")
             m_redis.set("bios:iam:token:info:tokenxxx",
-               "{\"app_id\":\"app1\",\"tenant_id\":\"tenant1\",\"account_id\":\"account1\",\"account_name\":\"用户1\",\"token_kind\":\"default\",\"roles\":[{\"role_id\":\"r001\",\"role_name\":\"角色1\"}],\"groups\":[{\"group_id\":\"g001\",\"group_name\":\"群组1\",\"node_code\":\"n001\",\"bus_code\":\"b001\",\"node_name\":\"群组节点1\"}]}",0)
+               "{\"app_id\":\"app1\",\"tenant_id\":\"tenant1\",\"account_id\":\"account1\",\"token_kind\":\"default\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
             local ctx ={
                 headers={
                     ["BIOS-Host"]="app1.tenant1",
@@ -135,9 +135,9 @@ Token [token123] is not legal
            },ctx)
            ngx.say(result)
            ngx.say(ctx.ident_info.tenant_id)
-           ngx.say(ctx.ident_info.account_name)
-           ngx.say(ctx.ident_info.roles[1].role_name)
-           ngx.say(ctx.ident_info.groups[1].group_name)
+           ngx.say(ctx.ident_info.account_id)
+           ngx.say(ctx.ident_info.roles[1])
+           ngx.say(ctx.ident_info.groups[1])
         }
     }
 --- request
@@ -145,9 +145,9 @@ GET /api/p1?bb=y&aa=x
 --- response_body
 200
 tenant1
-用户1
-角色1
-群组1
+account1
+r001
+g001
 --- no_error_log
 [error]
 

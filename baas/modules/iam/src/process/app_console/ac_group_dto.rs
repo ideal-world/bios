@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::process::basic_dto::{ExposeKind, GroupKind};
+use sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(Deserialize, Validate)]
 pub struct GroupQueryReq {
@@ -114,6 +115,8 @@ pub struct GroupDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -174,6 +177,8 @@ pub struct GroupNodeDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]

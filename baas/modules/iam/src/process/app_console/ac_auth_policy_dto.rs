@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::process::basic_dto::{AuthResultKind, AuthSubjectKind, AuthSubjectOperatorKind, OptActionKind};
+use sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(Deserialize, Validate)]
 pub struct AuthPolicyQueryReq {
@@ -58,13 +59,6 @@ pub struct AuthPolicyModifyReq {
     pub valid_start_time: Option<i64>,
     // 有效结束时间
     pub valid_end_time: Option<i64>,
-    // 关联资源Id
-    #[validate(length(max = 32))]
-    pub rel_resource_id: Option<String>,
-    // 操作类型
-    pub action_kind: Option<OptActionKind>,
-    // 操作结果
-    pub result_kind: Option<AuthResultKind>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -97,20 +91,19 @@ pub struct AuthPolicyDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct AuthPolicySubjectAddReq {
     // 关联权限主体类型
-    pub rel_subject_kind: AuthSubjectKind,
+    pub subject_kind: AuthSubjectKind,
     // 关联权限主体Id
     #[validate(length(min = 2, max = 255))]
-    pub rel_subject_id: String,
+    pub subject_id: String,
     // 关联权限主体运算类型
     pub subject_operator: AuthSubjectOperatorKind,
-    // 关联权限策略Id
-    #[validate(length(max = 32))]
-    pub rel_auth_policy_id: String,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -118,10 +111,10 @@ pub struct AuthPolicySubjectDetailResp {
     #[validate(length(max = 32))]
     pub id: String,
     // 关联权限主体类型
-    pub rel_subject_kind: AuthSubjectKind,
-    // 关联权限主体Ids
+    pub subject_kind: String,
+    // 关联权限主体Id
     #[validate(length(max = 255))]
-    pub rel_subject_ids: String,
+    pub subject_id: String,
     // 关联权限主体运算类型
     #[validate(length(max = 32))]
     pub subject_operator: String,
@@ -132,4 +125,6 @@ pub struct AuthPolicySubjectDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }

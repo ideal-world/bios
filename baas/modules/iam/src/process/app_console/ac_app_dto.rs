@@ -15,6 +15,7 @@
  */
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
 use validator::Validate;
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -57,4 +58,6 @@ pub struct AppIdentDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }

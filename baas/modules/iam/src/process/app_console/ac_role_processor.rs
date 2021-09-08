@@ -87,6 +87,20 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamRole::Id])
+                .from(IamRole::Table)
+                .and_where(Expr::col(IamRole::Id).eq(id.clone()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("Role not exists".to_string()));
+    }
     if let Some(code) = &role_modify_req.code {
         if BIOSFuns::reldb()
             .exists(
@@ -185,6 +199,20 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamRole::Id])
+                .from(IamRole::Table)
+                .and_where(Expr::col(IamRole::Id).eq(id.clone()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("Role not exists".to_string()));
+    }
     if BIOSFuns::reldb()
         .exists(
             &Query::select()

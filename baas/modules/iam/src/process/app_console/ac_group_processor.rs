@@ -107,6 +107,20 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamGroup::Id])
+                .from(IamGroup::Table)
+                .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("IamGroup not exists".to_string()));
+    }
     let mut values = Vec::new();
     if let Some(name) = &group_modify_req.name {
         values.push((IamGroup::Name, name.to_string().into()));
@@ -222,6 +236,20 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamGroup::Id])
+                .from(IamGroup::Table)
+                .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("IamGroup not exists".to_string()));
+    }
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
@@ -301,9 +329,9 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
                 bios::basic::field::incr_by_base36(node.key.as_str()).expect("Group node code exceeds maximum limit")
             } else {
                 let code = node.key;
-                let last_split = code.clone().rfind(".").unwrap();
-                let parent_code = &code.as_str()[..last_split];
-                let current_code = &code.as_str()[last_split + 1..];
+                let last_split_idx = code.clone().rfind(".").unwrap();
+                let parent_code = &code.as_str()[..last_split_idx];
+                let current_code = &code.as_str()[last_split_idx + 1..];
                 format!(
                     "{}.{}",
                     parent_code,
@@ -371,7 +399,21 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()));
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("Group not exists".to_string()));
+    }
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamGroupNode::Id])
+                .from(IamGroupNode::Table)
+                .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
+                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.clone()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
     }
 
     let mut values = Vec::new();
@@ -475,7 +517,21 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()));
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("Group not exists".to_string()));
+    }
+    if !BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamGroupNode::Id])
+                .from(IamGroupNode::Table)
+                .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
+                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.clone()))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
     }
 
     let code = BIOSFuns::reldb()

@@ -25,6 +25,7 @@ derive_more = "^0"
 log = "^0"
 chrono = { version = "^0", features = ["serde"] }
 strum = { version = "^0", features = ["derive"] }
+itertools = "^0"
 
 bios-framework = { path = "../../../framework", features = ["web-client", "openapi", "reldb", "cache", "test"] }
 actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"] }

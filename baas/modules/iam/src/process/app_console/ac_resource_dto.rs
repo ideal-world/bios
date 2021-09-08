@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::process::basic_dto::{ExposeKind, ResourceKind};
+use sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(Deserialize, Validate)]
 pub struct ResourceSubjectQueryReq {
@@ -131,6 +132,8 @@ pub struct ResourceSubjectDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Validate)]
@@ -236,4 +239,6 @@ pub struct ResourceDetailResp {
     pub create_user: String,
     #[validate(length(max = 255))]
     pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }

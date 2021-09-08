@@ -108,10 +108,6 @@ pub enum IamApp {
     Icon,
     // 应用扩展信息，Json格式
     Parameters,
-    // 公钥
-    PubKey,
-    // 私钥
-    PriKey,
     // 关联租户Id
     RelTenantId,
     // 应用状态

@@ -35,6 +35,7 @@ pub struct IamConfig {
     pub cache_aksk: String,
     pub cache_resources: String,
     pub cache_change_resources: String,
+    pub cache_change_resources_exp: usize,
 }
 
 impl Default for IamConfig {
@@ -43,7 +44,8 @@ impl Default for IamConfig {
             cache_token: "bios:iam:token:info:".to_string(),
             cache_aksk: "bios:iam:app:aksk:".to_string(),
             cache_resources: "bios:iam:resources".to_string(),
-            cache_change_resources: "bios:iam:change_resources".to_string(),
+            cache_change_resources: "bios:iam:change_resources:".to_string(),
+            cache_change_resources_exp: 30,
         }
     }
 }

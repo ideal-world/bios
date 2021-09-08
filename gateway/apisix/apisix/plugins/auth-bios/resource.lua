@@ -71,7 +71,10 @@ end
 function do_match_res(res_action, res, items, matched_uris, multi_wildcard)
     if res["$"] ~= nil and (m_utils.table_length(items) == 0 or multi_wildcard) then
         -- matched
-        table.insert(matched_uris, res["$"][res_action])
+        local match_info = res["$"][res_action]
+        if match_info.auth["_start"] <= ngx.time() and match_info.auth["_end"] >= ngx.time() then
+            table.insert(matched_uris, match_info)
+        end
         return
     end
     if (m_utils.table_length(items) == 0) then
