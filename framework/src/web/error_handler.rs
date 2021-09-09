@@ -85,7 +85,7 @@ where
                         res.request().uri().to_string(),
                         bus_code,
                         msg
-                    )
+                    );
                 } else {
                     trace!(
                         "[BIOS.Framework.WebServer] process error,request method:{}, url:{}, response code:{}, message:{}",
@@ -93,7 +93,10 @@ where
                         res.request().uri().to_string(),
                         bus_code,
                         msg
-                    )
+                    );
+                    // 4xx error: Http status modified to 200, by bus_code to provide a unified error code
+                    // 5xx error: Considering that all kinds of degradation components only provide processing of http status, so the 5xx error isn’t modified
+                    *res.response_mut().status_mut() = StatusCode::from_u16(200).unwrap();
                 }
                 let res = res.map_body(|_, _| {
                     AnyBody::Bytes(Bytes::from(
