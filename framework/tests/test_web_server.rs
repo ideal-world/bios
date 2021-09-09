@@ -65,7 +65,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // Not Found
     let req = test::TestRequest::post().uri("/not_found").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(read_body(resp).await, Bytes::from(r#"{"body":null,"code":"404","msg":"method:POST, url:/not_found"}"#),);
 
     // System Error
@@ -77,7 +77,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // Validation
     let req = test::TestRequest::post().uri("/validation").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
         Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `id`"}"#),
