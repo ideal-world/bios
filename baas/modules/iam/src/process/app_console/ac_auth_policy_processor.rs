@@ -306,7 +306,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb()
-        .soft_del::<AuthPolicyDetailResp, _, _>(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx)
+        .soft_del(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx)
         .await?;
     delete_cache(&id, &mut tx).await?;
     tx.commit().await?;
@@ -559,7 +559,7 @@ pub async fn delete_auth_policy_subject(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAuthPolicySubject::Id).eq(id.clone()))
         .done();
     BIOSFuns::reldb()
-        .soft_del::<AuthPolicySubjectDetailResp, _, _>(IamAuthPolicySubject::Table, IamAuthPolicySubject::Id, &ident_info.account_id, &sql_builder, &mut tx)
+        .soft_del(IamAuthPolicySubject::Table, IamAuthPolicySubject::Id, &ident_info.account_id, &sql_builder, &mut tx)
         .await?;
     rebuild_cache(&auth_policy_id, &mut tx).await?;
     tx.commit().await?;

@@ -20,7 +20,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::error::BIOSError;
-use bios::db::basic_dto::KeyResp;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::get_ident_account_info;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
@@ -87,13 +86,7 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
                     group_add_req.rel_group_node_id.clone().unwrap_or_default().into(),
                     ident_info.app_id.clone().into(),
                     ident_info.tenant_id.clone().into(),
-                    group_add_req
-                        .expose_kind
-                        .as_ref()
-                        .unwrap_or(&crate::process::basic_dto::ExposeKind::App)
-                        .to_string()
-                        .to_lowercase()
-                        .into(),
+                    group_add_req.expose_kind.as_ref().unwrap_or(&crate::process::basic_dto::ExposeKind::App).to_string().to_lowercase().into(),
                 ])
                 .done(),
             None,
@@ -212,22 +205,18 @@ pub async fn list_group(query: VQuery<GroupQueryReq>, req: HttpRequest) -> BIOSR
             },
             |x| {
                 x.cond_where(
-                    Cond::any()
-                        .add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase()))
-                        .add(
-                            Cond::all()
-                                .add(Expr::tbl(IamGroup::Table, IamGroup::RelTenantId).eq(ident_info.tenant_id.clone()))
-                                .add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
-                        ),
+                    Cond::any().add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
+                        Cond::all()
+                            .add(Expr::tbl(IamGroup::Table, IamGroup::RelTenantId).eq(ident_info.tenant_id.clone()))
+                            .add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
+                    ),
                 );
             },
         )
         .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.clone()))
         .order_by(IamGroup::UpdateTime, Order::Desc)
         .done();
-    let items = BIOSFuns::reldb()
-        .pagination::<GroupDetailResp>(&sql_builder, query.page_number, query.page_size, None)
-        .await?;
+    let items = BIOSFuns::reldb().pagination::<GroupDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
     BIOSRespHelper::ok(items)
 }
 
@@ -252,11 +241,7 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select()
-                .columns(vec![IamGroupNode::Id])
-                .from(IamGroupNode::Table)
-                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(id.clone()))
-                .done(),
+            &Query::select().columns(vec![IamGroupNode::Id]).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::RelGroupId).eq(id.clone())).done(),
             None,
         )
         .await?
@@ -273,9 +258,7 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
         .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
         .done();
-    BIOSFuns::reldb()
-        .soft_del::<GroupDetailResp, _, _>(IamGroup::Table, IamGroup::Id, &ident_info.account_id, &sql_builder, &mut tx)
-        .await?;
+    BIOSFuns::reldb().soft_del(IamGroup::Table, IamGroup::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
@@ -304,9 +287,9 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
     }
 
     let last_group_node = BIOSFuns::reldb()
-        .fetch_optional::<KeyResp>(
+        .fetch_optional_json(
             &Query::select()
-                .expr_as(Expr::col(IamGroupNode::Code), Alias::new("key"))
+                .column(IamGroupNode::Code)
                 .from(IamGroupNode::Table)
                 .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.clone()))
                 .and_where(Expr::col(IamGroupNode::Code).like(format!("{}%", group_node_add_req.parent_code.clone()).as_str()))
@@ -326,9 +309,9 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
     let code = match last_group_node {
         Some(node) => {
             if group_node_add_req.parent_code.is_empty() {
-                bios::basic::field::incr_by_base36(node.key.as_str()).expect("Group node code exceeds maximum limit")
+                bios::basic::field::incr_by_base36(node["code"].as_str().unwrap()).expect("Group node code exceeds maximum limit")
             } else {
-                let code = node.key;
+                let code = node["code"].as_str().unwrap().to_string();
                 let last_split_idx = code.clone().rfind(".").unwrap();
                 let parent_code = &code.as_str()[..last_split_idx];
                 let current_code = &code.as_str()[last_split_idx + 1..];
@@ -534,17 +517,13 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
     }
 
-    let code = BIOSFuns::reldb()
-        .fetch_one::<KeyResp>(
-            &Query::select()
-                .expr_as(Expr::col(IamGroupNode::Code), Alias::new("key"))
-                .from(IamGroupNode::Table)
-                .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
-                .done(),
+    let result = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select().column(IamGroupNode::Code).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::Id).eq(id.clone())).done(),
             None,
         )
-        .await?
-        .key;
+        .await?;
+    let code = result["code"].as_str().unwrap();
 
     if BIOSFuns::reldb()
         .exists(
@@ -562,11 +541,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select()
-                .columns(vec![IamAccountGroup::Id])
-                .from(IamAccountGroup::Table)
-                .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(id.clone()))
-                .done(),
+            &Query::select().columns(vec![IamAccountGroup::Id]).from(IamAccountGroup::Table).and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(id.clone())).done(),
             None,
         )
         .await?
@@ -583,9 +558,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
         .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id))
         .done();
-    BIOSFuns::reldb()
-        .soft_del::<GroupNodeDetailResp, _, _>(IamGroupNode::Table, IamGroupNode::Id, &ident_info.account_id, &sql_builder, &mut tx)
-        .await?;
+    BIOSFuns::reldb().soft_del(IamGroupNode::Table, IamGroupNode::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
