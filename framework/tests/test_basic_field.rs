@@ -32,5 +32,12 @@ async fn test_basic_field() -> BIOSResult<()> {
     assert_eq!(bios::basic::field::incr_by_base36("a9999").unwrap(), "baaaa");
     assert!(bios::basic::field::incr_by_base36("999").is_none());
 
+    assert_eq!(bios::basic::field::R_CODE_CS.is_match("Adw834_dfds"), true);
+    assert_eq!(bios::basic::field::R_CODE_CS.is_match(" Adw834_dfds"), false);
+    assert_eq!(bios::basic::field::R_CODE_CS.is_match("Adw834_d-fds"), false);
+    assert_eq!(bios::basic::field::R_CODE_NCS.is_match("adon2_43323tr"), true);
+    assert_eq!(bios::basic::field::R_CODE_NCS.is_match("adon2_43323tr "), false);
+    assert_eq!(bios::basic::field::R_CODE_NCS.is_match("Adw834_dfds"), false);
+
     Ok(())
 }

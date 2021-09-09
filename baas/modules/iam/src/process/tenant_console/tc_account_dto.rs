@@ -95,7 +95,7 @@ pub struct AccountIdentAddReq {
     // 账号认证类型
     pub kind: AccountIdentKind,
     // 账号认证名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub ak: String,
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]
@@ -109,7 +109,7 @@ pub struct AccountIdentAddReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct AccountIdentModifyReq {
     // 账号认证名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub ak: Option<String>,
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]

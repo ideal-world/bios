@@ -34,7 +34,7 @@ pub struct GroupQueryReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct GroupAddReq {
     // 群组编码
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub code: String,
     // 群组名称
     #[validate(length(min = 2, max = 255))]

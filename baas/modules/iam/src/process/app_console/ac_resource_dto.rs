@@ -31,7 +31,7 @@ pub struct ResourceSubjectQueryReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct ResourceSubjectAddReq {
     // 资源主体编码后缀
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub code_postfix: String,
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]
@@ -62,7 +62,7 @@ pub struct ResourceSubjectAddReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct ResourceSubjectModifyReq {
     // 资源主体编码后缀
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub code_postfix: Option<String>,
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]

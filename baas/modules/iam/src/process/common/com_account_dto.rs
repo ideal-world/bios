@@ -37,7 +37,7 @@ pub struct AccountIdentChangeReq {
     // 账号认证类型
     pub kind: Option<AccountIdentKind>,
     // 账号认证名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub ak: Option<String>,
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]
@@ -49,7 +49,7 @@ pub struct AccountLoginReq {
     // 账号认证类型
     pub kind: AccountIdentKind,
     // 账号认证名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub ak: String,
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]
@@ -85,7 +85,7 @@ pub struct AccountRegisterReq {
     // 账号认证类型
     pub kind: AccountIdentKind,
     // 账号认证名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub ak: String,
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]
