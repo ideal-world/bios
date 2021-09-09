@@ -31,7 +31,7 @@ pub struct RoleQueryReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct RoleAddReq {
     // 角色编码
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub code: String,
     // 角色名称
     #[validate(length(min = 2, max = 255))]
@@ -43,7 +43,7 @@ pub struct RoleAddReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct RoleModifyReq {
     // 角色编码
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub code: Option<String>,
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]

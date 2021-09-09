@@ -64,7 +64,7 @@ pub struct TenantDetailResp {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct TenantCertAddReq {
     // 凭证类型名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub category: String,
     // 凭证保留的版本数量
     pub version: i32,
@@ -73,7 +73,7 @@ pub struct TenantCertAddReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct TenantCertModifyReq {
     // 凭证类型名称
-    #[validate(length(min = 2, max = 255))]
+    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
     pub category: Option<String>,
     // 凭证保留的版本数量
     pub version: Option<i32>,
