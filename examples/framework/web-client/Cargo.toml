@@ -14,5 +14,5 @@ derive_more = "^0"
 log = "^0"
 
 bios-framework = { path = "../../../framework", default-features = false, features = ["rslog", "web-client"] }
-awc = { version = "3.0.0-beta.7", features = ["rustls"] }
+awc = { version = "3.0.0-beta.8", features = ["rustls"] }
 actix-rt = "^2"

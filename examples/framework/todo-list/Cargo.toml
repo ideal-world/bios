@@ -15,7 +15,7 @@ log = "^0"
 chrono = { version = "^0", features = ["serde"] }
 
 bios-framework = { path = "../../../framework", features = ["web-client", "reldb"] }
-actix-web = { version = "4.0.0-beta.8", default-features = false, features = ["compress-gzip", "rustls"] }
+actix-web = { version = "4.0.0-beta.9", default-features = false, features = ["compress-gzip", "rustls"] }
 validator = { version = "^0", features = ["derive"] }
 actix-web-validator = "^2"
 
@@ -23,5 +23,5 @@ sea-query = { version = "^0", default-features = false, features = ["derive", "b
 sqlx = { version = "^0", default-features = false, features = ["macros", "mysql", "chrono", "decimal", "runtime-tokio-native-tls"] }
 
 [dev-dependencies]
-awc = { version = "3.0.0-beta.7", features = ["rustls"] }
+awc = { version = "3.0.0-beta.8", features = ["rustls"] }
 actix-rt = "^2"
