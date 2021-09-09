@@ -14,6 +14,5 @@
  * limitations under the License.
  */
 
-pub mod reldb_client;
 pub mod domain;
-pub mod basic_dto;
+pub mod reldb_client;

@@ -220,7 +220,7 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb()
-        .soft_del::<AppIdentDetailResp, _, _>(IamAppIdent::Table, IamAppIdent::Id, &ident_info.account_id, &sql_builder, &mut tx)
+        .soft_del(IamAppIdent::Table, IamAppIdent::Id, &ident_info.account_id, &sql_builder, &mut tx)
         .await?;
     BIOSFuns::cache()
         .del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str())

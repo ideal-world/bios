@@ -251,7 +251,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb()
-        .soft_del::<RoleDetailResp, _, _>(IamRole::Table, IamRole::Id, &ident_info.account_id, &sql_builder, &mut tx)
+        .soft_del(IamRole::Table, IamRole::Id, &ident_info.account_id, &sql_builder, &mut tx)
         .await?;
 
     tx.commit().await?;

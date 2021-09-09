@@ -99,13 +99,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
                 BizActivity::CreateTime,
                 BizActivity::Version,
             ])
-            .values_panic(vec![
-                "测试".into(),
-                1.into(),
-                "".into(),
-                Local::now().naive_local().into(),
-                1.0.into(), // Decimal::from(1).into(),
-            ])
+            .values_panic(vec!["测试".into(), 1.into(), "".into(), Local::now().naive_local().into(), 1.0.into()])
             .done();
         let result = client.exec(&sql_builder, None).await?;
         let id = result.last_insert_id();
@@ -132,11 +126,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
 
         // Update
 
-        let sql_builder = Query::update()
-            .table(BizActivity::Table)
-            .values(vec![(BizActivity::Status, 2.into())])
-            .and_where(Expr::col(BizActivity::Id).eq(id))
-            .done();
+        let sql_builder = Query::update().table(BizActivity::Table).values(vec![(BizActivity::Status, 2.into())]).and_where(Expr::col(BizActivity::Id).eq(id)).done();
         let result = client.exec(&sql_builder, None).await?;
         assert_eq!(result.rows_affected(), 1);
 
@@ -157,6 +147,10 @@ async fn test_reldb_client() -> BIOSResult<()> {
         let result = client.fetch_one::<BizActivityStruct>(&sql_builder, None).await?;
         assert_eq!(result.status, 2);
 
+        let result = client.fetch_one_json(&sql_builder, None).await?;
+        assert_eq!(result["name"], "测试");
+        assert_eq!(result["version"], 1.0);
+
         // Pagination
 
         let sql_builder = Query::select()
@@ -176,6 +170,13 @@ async fn test_reldb_client() -> BIOSResult<()> {
         assert_eq!(result.page_size, 10);
         assert_eq!(result.total_size, 1);
         assert_eq!(result.records[0].status, 2);
+
+        let result = client.pagination_json(&sql_builder, 1, 10, None).await?;
+        assert_eq!(result.page_number, 1);
+        assert_eq!(result.page_size, 10);
+        assert_eq!(result.total_size, 1);
+        assert_eq!(result.records[0]["name"], "测试");
+        assert_eq!(result.records[0]["status"], 2);
 
         // Count
 
@@ -244,13 +245,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
                 BizActivity::CreateTime,
                 BizActivity::Version,
             ])
-            .values_panic(vec![
-                "测试".into(),
-                1.into(),
-                "".into(),
-                Local::now().naive_local().into(),
-                1.0.into(), // Decimal::from(1).into(),
-            ])
+            .values_panic(vec!["测试".into(), 1.into(), "".into(), Local::now().naive_local().into(), 1.0.into()])
             .done();
 
         let result = client.exec(&sql_builder, Some(&mut tx)).await?;
@@ -292,13 +287,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
                 BizActivity::CreateTime,
                 BizActivity::Version,
             ])
-            .values_panic(vec![
-                "测试".into(),
-                1.into(),
-                "".into(),
-                Local::now().naive_local().into(),
-                1.0.into(), // Decimal::from(1).into(),
-            ])
+            .values_panic(vec!["测试".into(), 1.into(), "".into(), Local::now().naive_local().into(), 1.0.into()])
             .done();
 
         let result = client.exec(&sql_builder, Some(&mut tx)).await?;
@@ -370,14 +359,9 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
         let mut conn = client.conn().await;
         let mut tx = conn.begin().await?;
 
-        let sql_builder = Query::select()
-            .columns(BizActivity::iter().filter(|i| *i != BizActivity::Table))
-            .from(BizActivity::Table)
-            .and_where(Expr::col(BizActivity::Id).eq(id))
-            .done();
-        let result = client
-            .soft_del::<BizActivityStruct, _, _>(BizActivity::Table, BizActivity::Id, "gdxr", &sql_builder, &mut tx)
-            .await?;
+        let sql_builder =
+            Query::select().columns(BizActivity::iter().filter(|i| *i != BizActivity::Table)).from(BizActivity::Table).and_where(Expr::col(BizActivity::Id).eq(id)).done();
+        let result = client.soft_del(BizActivity::Table, BizActivity::Id, "gdxr", &sql_builder, &mut tx).await?;
         assert_eq!(result, true);
 
         let sql_builder = Query::select().columns(vec![BizActivity::Id]).from(BizActivity::Table).done();

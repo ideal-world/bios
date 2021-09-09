@@ -202,7 +202,7 @@ pub async fn delete_tenant(req: HttpRequest) -> BIOSResp {
 
     let sql_builder =
         Query::select().columns(IamTenant::iter().filter(|i| *i != IamTenant::Table)).from(IamTenant::Table).and_where(Expr::col(IamTenant::Id).eq(id.clone())).done();
-    BIOSFuns::reldb().soft_del::<TenantDetailResp, _, _>(IamTenant::Table, IamTenant::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamTenant::Table, IamTenant::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
     BIOSRespHelper::ok("")

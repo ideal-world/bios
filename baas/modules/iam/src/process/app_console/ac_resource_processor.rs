@@ -20,7 +20,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::error::BIOSError;
-use bios::db::basic_dto::KeyResp;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::get_ident_account_info;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
@@ -292,7 +291,7 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
         .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
         .done();
-    BIOSFuns::reldb().soft_del::<ResourceSubjectDetailResp, _, _>(IamResourceSubject::Table, IamResourceSubject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamResourceSubject::Table, IamResourceSubject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
     BIOSRespHelper::ok("")
@@ -396,9 +395,9 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
     }
     if let Some(path_and_query) = &resource_modify_req.path_and_query {
         let resource_subject_id_info = BIOSFuns::reldb()
-            .fetch_one::<KeyResp>(
+            .fetch_one_json(
                 &Query::select()
-                    .expr_as(Expr::col((IamResourceSubject::Table, IamResourceSubject::Id)), Alias::new("key"))
+                    .column((IamResourceSubject::Table, IamResourceSubject::Id))
                     .from(IamResource::Table)
                     .inner_join(
                         IamResourceSubject::Table,
@@ -418,7 +417,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                     .from(IamResource::Table)
                     .and_where(Expr::col(IamResource::Id).ne(id.clone()))
                     .and_where(Expr::col(IamResource::PathAndQuery).eq(path_and_query.to_string().to_lowercase()))
-                    .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_subject_id_info.key))
+                    .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_subject_id_info["id"].as_str().unwrap()))
                     .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
                     .done(),
                 None,
@@ -601,7 +600,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamResource::Id).eq(id.clone()))
         .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
         .done();
-    BIOSFuns::reldb().soft_del::<ResourceDetailResp, _, _>(IamResource::Table, IamResource::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamResource::Table, IamResource::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
     BIOSRespHelper::ok("")
