@@ -74,7 +74,7 @@ pub mod digest {
                 hmac.input(str.as_bytes());
                 String::from_utf8(hmac.result().code().to_vec()).expect("Abstract algorithm conversion error")
             }
-            _ => panic!(format!("Digest algorithm [{}] doesn't support", algorithm)),
+            _ => panic!("Digest algorithm [{}] doesn't support", algorithm),
         }
     }
 }

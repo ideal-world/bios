@@ -15,4 +15,5 @@
  */
 
 mod app_console;
+mod system_console;
 pub mod test_basic;

@@ -13,6 +13,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-pub mod sc_tenant_dto;
-pub mod sc_tenant_processor;
+mod test_tenant;
