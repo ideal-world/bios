@@ -308,7 +308,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
     BIOSFuns::reldb()
         .soft_del::<AuthPolicyDetailResp, _, _>(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx)
         .await?;
-    delete_cache(&id, &mut tx);
+    delete_cache(&id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }

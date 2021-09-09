@@ -55,6 +55,28 @@ async fn test_group() -> BIOSResult<()> {
         ))
         .uri("/console/app/group")
         .set_json(&GroupAddReq {
+            code: " g001".to_string(),
+            name: "测试群组".to_string(),
+            kind: GroupKind::Administration,
+            sort: 0,
+            icon: None,
+            rel_group_id: None,
+            rel_group_node_id: None,
+            expose_kind: None,
+        })
+        .to_request();
+    let resp = call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    assert_eq!(result.code, "400");
+
+    let req = test::TestRequest::post()
+        .insert_header((
+            BIOSFuns::fw_config().web.ident_info_flag.clone(),
+            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
+        ))
+        .uri("/console/app/group")
+        .set_json(&GroupAddReq {
             code: "g001".to_string(),
             name: "测试群组".to_string(),
             kind: GroupKind::Administration,
