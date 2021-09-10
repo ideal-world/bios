@@ -15,10 +15,10 @@
  */
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
 use validator::Validate;
 
 use crate::process::basic_dto::AccountIdentKind;
-use sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct TenantModifyReq {
@@ -72,9 +72,6 @@ pub struct TenantCertAddReq {
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct TenantCertModifyReq {
-    // 凭证类型名称
-    #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
-    pub category: Option<String>,
     // 凭证保留的版本数量
     pub version: Option<i32>,
 }
@@ -102,33 +99,31 @@ pub struct TenantIdentAddReq {
     pub kind: AccountIdentKind,
     // 认证AK校验正则规则说明
     #[validate(length(min = 2, max = 2000))]
-    pub valid_ak_rule_node: String,
+    pub valid_ak_rule_note: Option<String>,
     // 认证AK校验正则规则
     #[validate(length(min = 2, max = 2000))]
-    pub valid_ak_rule: String,
+    pub valid_ak_rule: Option<String>,
     // 认证SK校验正则规则说明
     #[validate(length(min = 2, max = 2000))]
-    pub valid_sk_rule_node: String,
+    pub valid_sk_rule_note: Option<String>,
     // 认证SK校验正则规则
     #[validate(length(min = 2, max = 2000))]
-    pub valid_sk_rule: String,
+    pub valid_sk_rule: Option<String>,
     // 认证有效时间（秒）
     pub valid_time: i32,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct TenantIdentModifyReq {
-    // 租户认证类型名称
-    pub kind: Option<AccountIdentKind>,
     // 认证AK校验正则规则说明
     #[validate(length(min = 2, max = 2000))]
-    pub valid_ak_rule_node: Option<String>,
+    pub valid_ak_rule_note: Option<String>,
     // 认证AK校验正则规则
     #[validate(length(min = 2, max = 2000))]
     pub valid_ak_rule: Option<String>,
     // 认证SK校验正则规则说明
     #[validate(length(min = 2, max = 2000))]
-    pub valid_sk_rule_node: Option<String>,
+    pub valid_sk_rule_note: Option<String>,
     // 认证SK校验正则规则
     #[validate(length(min = 2, max = 2000))]
     pub valid_sk_rule: Option<String>,
@@ -145,13 +140,13 @@ pub struct TenantIdentDetailResp {
     pub kind: String,
     // 认证AK校验正则规则说明
     #[validate(length(max = 2000))]
-    pub valid_ak_rule_node: String,
+    pub valid_ak_rule_note: String,
     // 认证AK校验正则规则
     #[validate(length(max = 2000))]
     pub valid_ak_rule: String,
     // 认证SK校验正则规则说明
     #[validate(length(max = 2000))]
-    pub valid_sk_rule_node: String,
+    pub valid_sk_rule_note: String,
     // 认证SK校验正则规则
     #[validate(length(max = 2000))]
     pub valid_sk_rule: String,

@@ -48,13 +48,11 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
                 .cond_where(
-                    Cond::any()
-                        .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase()))
-                        .add(
-                            Cond::all()
-                                .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(ident_info.tenant_id.clone()))
-                                .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
-                        ),
+                    Cond::any().add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
+                        Cond::all()
+                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(ident_info.tenant_id.clone()))
+                            .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
+                    ),
                 )
                 .and_where(Expr::col(IamResource::Id).eq(auth_policy_add_req.rel_resource_id.clone()))
                 .done(),
@@ -143,7 +141,7 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -257,9 +255,7 @@ pub async fn list_auth_policy(query: VQuery<AuthPolicyQueryReq>, req: HttpReques
         .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
         .order_by(IamAuthPolicy::UpdateTime, Order::Desc)
         .done();
-    let items = BIOSFuns::reldb()
-        .pagination::<AuthPolicyDetailResp>(&sql_builder, query.page_number, query.page_size, None)
-        .await?;
+    let items = BIOSFuns::reldb().pagination::<AuthPolicyDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
     BIOSRespHelper::ok(items)
 }
 
@@ -274,7 +270,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -305,9 +301,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAuthPolicy::Id).eq(id.clone()))
         .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
         .done();
-    BIOSFuns::reldb()
-        .soft_del(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx)
-        .await?;
+    BIOSFuns::reldb().soft_del(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     delete_cache(&id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
@@ -508,7 +502,7 @@ pub async fn delete_auth_policy_subject(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(auth_policy_id.clone()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -558,9 +552,7 @@ pub async fn delete_auth_policy_subject(req: HttpRequest) -> BIOSResp {
         .from(IamAuthPolicySubject::Table)
         .and_where(Expr::col(IamAuthPolicySubject::Id).eq(id.clone()))
         .done();
-    BIOSFuns::reldb()
-        .soft_del(IamAuthPolicySubject::Table, IamAuthPolicySubject::Id, &ident_info.account_id, &sql_builder, &mut tx)
-        .await?;
+    BIOSFuns::reldb().soft_del(IamAuthPolicySubject::Table, IamAuthPolicySubject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     rebuild_cache(&auth_policy_id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok(id)

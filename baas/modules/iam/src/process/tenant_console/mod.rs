@@ -15,4 +15,7 @@
  */
 pub mod tc_account_dto;
 pub mod tc_app_dto;
+pub mod tc_app_processor;
+pub mod tc_group_dto;
 pub mod tc_tenant_dto;
+pub mod tc_tenant_processor;

@@ -59,7 +59,7 @@ pub enum IamTenantCert {
     // 凭证保留的版本数量
     Version,
     // 关联租户Id
-    RelTenant,
+    RelTenantId,
 }
 
 /// 租户认证配置

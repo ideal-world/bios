@@ -93,7 +93,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
                 .columns(vec![IamAppIdent::Id])
                 .from(IamAppIdent::Table)
                 .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -101,7 +101,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
     {
         return BIOSRespHelper::bus_error(BIOSError::NotFound("AppIdent not exists".to_string()));
     }
-    
+
     let mut values = Vec::new();
     if let Some(note) = &app_ident_modify_req.note {
         values.push((IamAppIdent::Note, note.to_string().into()));
@@ -126,11 +126,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
         )
         .await?;
     if let Some(valid_time) = app_ident_modify_req.valid_time {
-        let sql_builder = Query::select()
-            .columns(vec![IamAppIdent::Ak, IamAppIdent::Sk])
-            .from(IamAppIdent::Table)
-            .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
-            .done();
+        let sql_builder = Query::select().columns(vec![IamAppIdent::Ak, IamAppIdent::Sk]).from(IamAppIdent::Table).and_where(Expr::col(IamAppIdent::Id).eq(id.clone())).done();
         let aksk_resp = BIOSFuns::reldb().fetch_one::<AkSkResp>(&sql_builder, Some(&mut tx)).await?;
         BIOSFuns::cache()
             .set_ex(
@@ -194,7 +190,7 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAppIdent::Id])
                 .from(IamAppIdent::Table)
                 .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -202,14 +198,10 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResp {
     {
         return BIOSRespHelper::bus_error(BIOSError::NotFound("AppIdent not exists".to_string()));
     }
-    
-    let sql_builder = Query::select()
-        .columns(vec![IamAppIdent::Ak, IamAppIdent::Sk])
-        .from(IamAppIdent::Table)
-        .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
-        .done();
+
+    let sql_builder = Query::select().columns(vec![IamAppIdent::Ak, IamAppIdent::Sk]).from(IamAppIdent::Table).and_where(Expr::col(IamAppIdent::Id).eq(id.clone())).done();
     let aksk_resp = BIOSFuns::reldb().fetch_one::<AkSkResp>(&sql_builder, None).await?;
-   
+
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
 
@@ -219,12 +211,8 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAppIdent::Id).eq(id.clone()))
         .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone()))
         .done();
-    BIOSFuns::reldb()
-        .soft_del(IamAppIdent::Table, IamAppIdent::Id, &ident_info.account_id, &sql_builder, &mut tx)
-        .await?;
-    BIOSFuns::cache()
-        .del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str())
-        .await?;
+    BIOSFuns::reldb().soft_del(IamAppIdent::Table, IamAppIdent::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str()).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
