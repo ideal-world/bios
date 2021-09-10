@@ -106,7 +106,7 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -231,7 +231,7 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )

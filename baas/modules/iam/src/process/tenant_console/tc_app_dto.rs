@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use crate::process::basic_dto::CommonStatus;
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 use validator::Validate;
@@ -51,8 +52,7 @@ pub struct AppModifyReq {
     #[validate(length(min = 2, max = 2000))]
     pub parameters: Option<String>,
     // 应用状态
-    #[validate(length(min = 2, max = 255))]
-    pub status: Option<String>,
+    pub status: Option<CommonStatus>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]

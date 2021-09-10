@@ -93,7 +93,7 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Id).eq(id.clone()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -109,7 +109,7 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
                     .from(IamRole::Table)
                     .and_where(Expr::col(IamRole::Id).ne(id.clone()))
                     .and_where(Expr::col(IamRole::Code).eq(code.to_string().to_lowercase()))
-                    .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                    .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
                     .done(),
                 None,
             )
@@ -188,9 +188,7 @@ pub async fn list_role(query: VQuery<RoleQueryReq>, req: HttpRequest) -> BIOSRes
         .and_where(Expr::tbl(IamRole::Table, IamRole::RelAppId).eq(ident_info.app_id.clone()))
         .order_by(IamRole::UpdateTime, Order::Desc)
         .done();
-    let items = BIOSFuns::reldb()
-        .pagination::<RoleDetailResp>(&sql_builder, query.page_number, query.page_size, None)
-        .await?;
+    let items = BIOSFuns::reldb().pagination::<RoleDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
     BIOSRespHelper::ok(items)
 }
 
@@ -205,7 +203,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Id).eq(id.clone()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -229,11 +227,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select()
-                .columns(vec![IamAccountRole::Id])
-                .from(IamAccountRole::Table)
-                .and_where(Expr::col(IamAccountRole::RelRoleId).eq(id.clone()))
-                .done(),
+            &Query::select().columns(vec![IamAccountRole::Id]).from(IamAccountRole::Table).and_where(Expr::col(IamAccountRole::RelRoleId).eq(id.clone())).done(),
             None,
         )
         .await?
@@ -250,9 +244,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamRole::Id).eq(id.clone()))
         .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
         .done();
-    BIOSFuns::reldb()
-        .soft_del(IamRole::Table, IamRole::Id, &ident_info.account_id, &sql_builder, &mut tx)
-        .await?;
+    BIOSFuns::reldb().soft_del(IamRole::Table, IamRole::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
     BIOSRespHelper::ok("")

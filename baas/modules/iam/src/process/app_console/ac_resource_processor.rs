@@ -118,7 +118,7 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -265,7 +265,7 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -385,7 +385,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
                 .and_where(Expr::col(IamResource::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
@@ -563,7 +563,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
                 .and_where(Expr::col(IamResource::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone().to_lowercase()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )

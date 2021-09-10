@@ -13,8 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-mod app_console;
-mod system_console;
-mod tenant_console;
-pub mod test_basic;
+mod test_tenant;
+mod test_app;
