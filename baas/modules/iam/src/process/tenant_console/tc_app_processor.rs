@@ -15,6 +15,7 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
+use chrono::Utc;
 use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
@@ -27,11 +28,11 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::ident_domain::{IamAccount, IamApp, IamAppIdent};
+use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicySubject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
+use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamApp, IamAppIdent};
 use crate::iam_config::WorkSpaceConfig;
 use crate::process::basic_dto::CommonStatus;
 use crate::process::tenant_console::tc_app_dto::{AppAddReq, AppDetailResp, AppModifyReq, AppQueryReq};
-use chrono::Utc;
 
 #[post("/console/tenant/app")]
 pub async fn add_app(app_add_req: Json<AppAddReq>, req: HttpRequest) -> BIOSResp {
@@ -220,11 +221,205 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
 
-    // TODO 级联删除 IamAppIdent IamAccountApp IamGroup IamGroupNode  IamAccountGroup  IamRole  IamAccountRole  IamResourceSubject  IamResource  IamAuthPolicy  IamAuthPolicySubject
-
+    let aksks = BIOSFuns::reldb()
+        .fetch_all::<AkSkInfoResp>(
+            &Query::select()
+                .columns(vec![IamAppIdent::Ak, IamAppIdent::Sk, IamAppIdent::ValidTime])
+                .from(IamAppIdent::Table)
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.clone()))
+                .done(),
+            Some(&mut tx),
+        )
+        .await?;
+    // Delete IamAppIdent
+    BIOSFuns::reldb()
+        .soft_del(
+            IamAppIdent::Table,
+            IamAppIdent::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamAppIdent::iter().filter(|i| *i != IamAppIdent::Table))
+                .from(IamAppIdent::Table)
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamAccountApp
+    BIOSFuns::reldb()
+        .soft_del(
+            IamAccountApp::Table,
+            IamAccountApp::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamAccountApp::iter().filter(|i| *i != IamAccountApp::Table))
+                .from(IamAccountApp::Table)
+                .and_where(Expr::col(IamAccountApp::RelAppId).eq(id.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamGroup
+    let group_ids = BIOSFuns::reldb()
+        .fetch_all::<IdResp>(
+            &Query::select().columns(vec![IamGroup::Id]).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.clone())).done(),
+            Some(&mut tx),
+        )
+        .await?
+        .iter()
+        .map(|record| record.id.to_string())
+        .collect::<Vec<String>>();
+    BIOSFuns::reldb()
+        .soft_del(
+            IamGroup::Table,
+            IamGroup::Id,
+            &ident_info.account_id,
+            &Query::select().columns(IamGroup::iter().filter(|i| *i != IamGroup::Table)).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.clone())).done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamGroupNode
+    let group_node_ids = BIOSFuns::reldb()
+        .fetch_all::<IdResp>(
+            &Query::select().columns(vec![IamGroupNode::Id]).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::RelGroupId).is_in(group_ids.clone())).done(),
+            Some(&mut tx),
+        )
+        .await?
+        .iter()
+        .map(|record| record.id.to_string())
+        .collect::<Vec<String>>();
+    BIOSFuns::reldb()
+        .soft_del(
+            IamGroupNode::Table,
+            IamGroupNode::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamGroupNode::iter().filter(|i| *i != IamGroupNode::Table))
+                .from(IamGroupNode::Table)
+                .and_where(Expr::col(IamGroupNode::RelGroupId).is_in(group_ids.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamAccountGroup
+    BIOSFuns::reldb()
+        .soft_del(
+            IamAccountGroup::Table,
+            IamAccountGroup::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamAccountGroup::iter().filter(|i| *i != IamAccountGroup::Table))
+                .from(IamAccountGroup::Table)
+                .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).is_in(group_node_ids.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamRole
+    let role_ids = BIOSFuns::reldb()
+        .fetch_all::<IdResp>(
+            &Query::select().columns(vec![IamRole::Id]).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.clone())).done(),
+            Some(&mut tx),
+        )
+        .await?
+        .iter()
+        .map(|record| record.id.to_string())
+        .collect::<Vec<String>>();
+    BIOSFuns::reldb()
+        .soft_del(
+            IamRole::Table,
+            IamRole::Id,
+            &ident_info.account_id,
+            &Query::select().columns(IamRole::iter().filter(|i| *i != IamRole::Table)).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.clone())).done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamAccountRole
+    BIOSFuns::reldb()
+        .soft_del(
+            IamAccountRole::Table,
+            IamAccountRole::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamAccountRole::iter().filter(|i| *i != IamAccountRole::Table))
+                .from(IamAccountRole::Table)
+                .and_where(Expr::col(IamAccountRole::RelRoleId).is_in(role_ids.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamResourceSubject
+    BIOSFuns::reldb()
+        .soft_del(
+            IamResourceSubject::Table,
+            IamResourceSubject::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
+                .from(IamResourceSubject::Table)
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(id.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamResource
+    BIOSFuns::reldb()
+        .soft_del(
+            IamResource::Table,
+            IamResource::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamResource::iter().filter(|i| *i != IamResource::Table))
+                .from(IamResource::Table)
+                .and_where(Expr::col(IamResource::RelAppId).eq(id.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamAuthPolicy
+    let auth_policy_ids = BIOSFuns::reldb()
+        .fetch_all::<IdResp>(
+            &Query::select().columns(vec![IamAuthPolicy::Id]).from(IamAuthPolicy::Table).and_where(Expr::col(IamAuthPolicy::RelAppId).eq(id.clone())).done(),
+            Some(&mut tx),
+        )
+        .await?
+        .iter()
+        .map(|record| record.id.to_string())
+        .collect::<Vec<String>>();
+    BIOSFuns::reldb()
+        .soft_del(
+            IamAuthPolicy::Table,
+            IamAuthPolicy::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamAuthPolicy::iter().filter(|i| *i != IamAuthPolicy::Table))
+                .from(IamAuthPolicy::Table)
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(id.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamAuthPolicySubject
+    BIOSFuns::reldb()
+        .soft_del(
+            IamAuthPolicySubject::Table,
+            IamAuthPolicySubject::Id,
+            &ident_info.account_id,
+            &Query::select()
+                .columns(IamAuthPolicySubject::iter().filter(|i| *i != IamAuthPolicySubject::Table))
+                .from(IamAuthPolicySubject::Table)
+                .and_where(Expr::col(IamAuthPolicySubject::RelAuthPolicyId).is_in(auth_policy_ids.clone()))
+                .done(),
+            &mut tx,
+        )
+        .await?;
+    // Delete IamApp
     let sql_builder = Query::select().columns(IamApp::iter().filter(|i| *i != IamApp::Table)).from(IamApp::Table).and_where(Expr::col(IamApp::Id).eq(id.clone())).done();
     BIOSFuns::reldb().soft_del(IamApp::Table, IamApp::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
-
+    // Remove aksk info at redis cache
+    for aksk_resp in aksks {
+        BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str()).await?;
+    }
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
@@ -234,4 +429,9 @@ pub struct AkSkInfoResp {
     pub ak: String,
     pub sk: String,
     pub valid_time: i64,
+}
+
+#[derive(sqlx::FromRow, serde::Deserialize)]
+pub struct IdResp {
+    pub id: String,
 }
