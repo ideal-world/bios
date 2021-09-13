@@ -21,7 +21,7 @@ use std::time::Duration;
 
 use tokio::time::sleep;
 
-use bios::basic::config::{BIOSConfig, FrameworkConfig, MQConfig, NoneConfig};
+use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
 use bios::basic::error::BIOSResult;
 use bios::basic::logger::BIOSLogger;
 use bios::test::test_container::BIOSTestContainer;
@@ -37,9 +37,15 @@ async fn test_mq_client() -> BIOSResult<()> {
             fw: FrameworkConfig {
                 app: Default::default(),
                 web: Default::default(),
-                cache: Default::default(),
-                db: Default::default(),
-                mq: MQConfig { url },
+                cache: CacheConfig {
+                    enabled: false,
+                    ..Default::default()
+                },
+                db: DBConfig {
+                    enabled: false,
+                    ..Default::default()
+                },
+                mq: MQConfig { enabled: true, url },
                 adv: Default::default(),
             },
         })

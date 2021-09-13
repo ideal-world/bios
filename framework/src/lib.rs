@@ -65,24 +65,30 @@ impl BIOSFuns {
         };
         #[cfg(feature = "reldb")]
         {
-            let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::fw_config()).await?;
-            unsafe {
-                replace(&mut BIOS_INST.reldb, Some(reldb_client));
-            };
+            if BIOSFuns::fw_config().db.enabled {
+                let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+                unsafe {
+                    replace(&mut BIOS_INST.reldb, Some(reldb_client));
+                };
+            }
         }
         #[cfg(feature = "cache")]
         {
-            let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::fw_config()).await?;
-            unsafe {
-                replace(&mut BIOS_INST.cache, Some(cache_client));
-            };
+            if BIOSFuns::fw_config().cache.enabled {
+                let cache_client = BIOSCacheClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+                unsafe {
+                    replace(&mut BIOS_INST.cache, Some(cache_client));
+                };
+            }
         }
         #[cfg(feature = "mq")]
         {
-            let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::fw_config()).await?;
-            unsafe {
-                replace(&mut BIOS_INST.mq, Some(mq_client));
-            };
+            if BIOSFuns::fw_config().mq.enabled {
+                let mq_client = BIOSMQClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+                unsafe {
+                    replace(&mut BIOS_INST.mq, Some(mq_client));
+                };
+            }
         }
         #[cfg(feature = "web-client")]
         {
