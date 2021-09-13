@@ -134,7 +134,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("ValidationErrors({\\\"id\\\""));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("id: Validation error: range"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -150,9 +150,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"req\\\": Field([ValidationError { code: \\\"required\\\", message: None, params: {\\\"value\\\": Null} }])})\"}"));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("req: Validation error: required"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -168,9 +166,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"len\\\": Field([ValidationError { code: \\\"length\\\", message: Some(\\\"custom msg\\\")"));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("len: custom msg"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -186,9 +182,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"eq\\\": Field([ValidationError { code: \\\"length\\\","));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("eq: Validation error: length"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -204,10 +198,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"range\\\": Field([ValidationError { code: \\\"range\\\","));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("range: Validation error: range"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -223,9 +214,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"url\\\": Field([ValidationError {"));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("url: Validation error: url"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -241,9 +230,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"mail\\\": Field([ValidationError { code: \\\"email\\\", message: None, params: {\\\"value\\\": String(\\\"sunisle.org\\\")} }])})\"}"));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("mail: Validation error: email"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -259,9 +246,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("ValidationErrors({\\\"cont\\\": Field([ValidationError"));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("cont: Validation error: contains"));
 
     let req = test::TestRequest::post()
         .uri("/validation?id=1001&response_type=Code")
@@ -277,9 +262,7 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert!(String::from_utf8(read_body(resp).await.to_vec())
-        .unwrap()
-        .contains("Validation error: ValidationErrors({\\\"phone\\\""));
+    assert!(String::from_utf8(read_body(resp).await.to_vec()).unwrap().contains("phone: Validation error: Not a valid mobile phone number"));
 
     Ok(())
 }
