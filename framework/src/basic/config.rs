@@ -120,18 +120,23 @@ impl Default for WebClientConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct CacheConfig {
+    pub enabled: bool,
     pub url: String,
 }
 
 impl Default for CacheConfig {
     fn default() -> Self {
-        CacheConfig { url: "".to_owned() }
+        CacheConfig {
+            enabled: true,
+            url: "".to_owned(),
+        }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct DBConfig {
+    pub enabled: bool,
     pub url: String,
     pub max_connections: u32,
 }
@@ -139,6 +144,7 @@ pub struct DBConfig {
 impl Default for DBConfig {
     fn default() -> Self {
         DBConfig {
+            enabled: true,
             url: "".to_owned(),
             max_connections: 20,
         }
@@ -148,12 +154,16 @@ impl Default for DBConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct MQConfig {
+    pub enabled: bool,
     pub url: String,
 }
 
 impl Default for MQConfig {
     fn default() -> Self {
-        MQConfig { url: "".to_owned() }
+        MQConfig {
+            enabled: true,
+            url: "".to_owned(),
+        }
     }
 }
 

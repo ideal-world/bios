@@ -23,7 +23,7 @@ use sqlx::Connection;
 use strum::EnumIter;
 use strum::IntoEnumIterator;
 
-use bios::basic::config::{BIOSConfig, DBConfig, FrameworkConfig, NoneConfig};
+use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
 use bios::basic::error::BIOSResult;
 use bios::db::domain::BiosDelRecord;
 use bios::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
@@ -196,9 +196,19 @@ async fn test_reldb_client() -> BIOSResult<()> {
             fw: FrameworkConfig {
                 app: Default::default(),
                 web: Default::default(),
-                cache: Default::default(),
-                db: DBConfig { url, max_connections: 20 },
-                mq: Default::default(),
+                cache: CacheConfig {
+                    enabled: false,
+                    ..Default::default()
+                },
+                db: DBConfig {
+                    enabled: true,
+                    url,
+                    max_connections: 20,
+                },
+                mq: MQConfig {
+                    enabled: false,
+                    ..Default::default()
+                },
                 adv: Default::default(),
             },
         })

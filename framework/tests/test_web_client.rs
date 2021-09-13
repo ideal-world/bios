@@ -18,7 +18,7 @@
 
 use awc::http::StatusCode;
 
-use bios::basic::config::{BIOSConfig, NoneConfig};
+use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
 use bios::basic::error::BIOSResult;
 use bios::basic::logger::BIOSLogger;
 use bios::web::web_client::BIOSWebClient;
@@ -41,21 +41,33 @@ async fn test_web_client() -> BIOSResult<()> {
         "body": "json"
     });
     let mut response = client.post("http://httpbin.org/post").send_json(&request).await?;
-    assert!(BIOSWebClient::body_as_str(&mut response)
-        .await?
-        .contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
+    assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
 
     // Default test
     BIOSFuns::init(BIOSConfig {
         ws: NoneConfig {},
-        fw: Default::default(),
+        fw: FrameworkConfig {
+            app: Default::default(),
+            web: Default::default(),
+            cache: CacheConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            db: DBConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            mq: MQConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            adv: Default::default(),
+        },
     })
     .await?;
 
     let mut response = BIOSFuns::web_client().raw().post("http://httpbin.org/post").send_json(&request).await?;
-    assert!(BIOSWebClient::body_as_str(&mut response)
-        .await?
-        .contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
+    assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
 
     Ok(())
 }
