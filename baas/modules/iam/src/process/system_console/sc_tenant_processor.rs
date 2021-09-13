@@ -15,7 +15,6 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use chrono::Utc;
 use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
@@ -29,8 +28,8 @@ use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
 use crate::domain::ident_domain::{IamAccount, IamApp, IamAppIdent, IamTenant};
-use crate::iam_config::WorkSpaceConfig;
 use crate::process::basic_dto::CommonStatus;
+use crate::process::common::cache_processor;
 use crate::process::system_console::sc_tenant_dto::{TenantAddReq, TenantDetailResp, TenantModifyReq, TenantQueryReq};
 
 #[post("/console/system/tenant")]
@@ -120,18 +119,12 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
         match status {
             CommonStatus::Enabled => {
                 for aksk_resp in enabled_aksks {
-                    BIOSFuns::cache()
-                        .set_ex(
-                            format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str(),
-                            format!("{}:{}:{}", aksk_resp.sk, id.clone(), aksk_resp.app_id).as_str(),
-                            (aksk_resp.valid_time - Utc::now().timestamp()) as usize,
-                        )
-                        .await?;
+                    cache_processor::set_aksk(&id, &aksk_resp.app_id, &aksk_resp.ak, &aksk_resp.sk, aksk_resp.valid_time).await?;
                 }
             }
             CommonStatus::Disabled => {
                 for aksk_resp in enabled_aksks {
-                    BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str()).await?;
+                    cache_processor::remove_aksk(&aksk_resp.ak).await?;
                 }
             }
         }

@@ -15,13 +15,11 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use chrono::Utc;
-use itertools::Itertools;
 use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
-use sqlx::{Connection, MySql, Transaction};
+use sqlx::Connection;
 use strum::IntoEnumIterator;
 
-use bios::basic::error::{BIOSError, BIOSResult};
+use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::get_ident_account_info;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
@@ -29,13 +27,13 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAuthPolicy, IamAuthPolicySubject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
+use crate::domain::auth_domain::{IamAuthPolicy, IamAuthPolicySubject, IamGroup, IamGroupNode, IamResource, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp};
-use crate::iam_config::WorkSpaceConfig;
 use crate::process::app_console::ac_auth_policy_dto::{
     AuthPolicyAddReq, AuthPolicyDetailResp, AuthPolicyModifyReq, AuthPolicyQueryReq, AuthPolicySubjectAddReq, AuthPolicySubjectDetailResp,
 };
 use crate::process::basic_dto::AuthSubjectKind;
+use crate::process::common::cache_processor;
 
 #[post("/console/app/auth-policy")]
 pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: HttpRequest) -> BIOSResp {
@@ -118,7 +116,7 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
             Some(&mut tx),
         )
         .await?;
-    rebuild_cache(&id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok(id)
 }
@@ -192,7 +190,7 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
             Some(&mut tx),
         )
         .await?;
-    rebuild_cache(&id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
@@ -302,7 +300,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb().soft_del(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
-    delete_cache(&id, &mut tx).await?;
+    cache_processor::remove_auth_policy(&id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }
@@ -431,7 +429,7 @@ pub async fn add_auth_policy_subject(auth_policy_subject_add_req: Json<AuthPolic
             Some(&mut tx),
         )
         .await?;
-    rebuild_cache(&auth_policy_id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&auth_policy_id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok(id)
 }
@@ -553,168 +551,7 @@ pub async fn delete_auth_policy_subject(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAuthPolicySubject::Id).eq(id.clone()))
         .done();
     BIOSFuns::reldb().soft_del(IamAuthPolicySubject::Table, IamAuthPolicySubject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
-    rebuild_cache(&auth_policy_id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&auth_policy_id, &mut tx).await?;
     tx.commit().await?;
     BIOSRespHelper::ok(id)
-}
-
-// ------------------------------------
-
-async fn delete_cache<'c>(auth_policy_id: &str, tx: &mut Transaction<'c, MySql>) -> BIOSResult<()> {
-    let key_info = BIOSFuns::reldb()
-        .fetch_one::<RebuildKeyInfoResp>(
-            &Query::select()
-                .column((IamAuthPolicy::Table, IamAuthPolicy::ActionKind))
-                .column((IamResourceSubject::Table, IamResourceSubject::Uri))
-                .column((IamResource::Table, IamResource::PathAndQuery))
-                .column((IamAuthPolicy::Table, IamAuthPolicy::ValidStartTime))
-                .column((IamAuthPolicy::Table, IamAuthPolicy::ValidEndTime))
-                .from(IamAuthPolicy::Table)
-                .inner_join(
-                    IamResource::Table,
-                    Expr::tbl(IamResource::Table, IamResource::Id).equals(IamAuthPolicy::Table, IamAuthPolicy::RelResourceId),
-                )
-                .inner_join(
-                    IamResourceSubject::Table,
-                    Expr::tbl(IamResourceSubject::Table, IamResourceSubject::Id).equals(IamResource::Table, IamResource::RelResourceSubjectId),
-                )
-                .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::Id).eq(auth_policy_id))
-                .done(),
-            Some(tx),
-        )
-        .await?;
-
-    let field = format!(
-        "{}##{}",
-        &key_info.action_kind,
-        bios::basic::uri::format_with_item(&key_info.uri, &key_info.path_and_query).unwrap()
-    );
-    BIOSFuns::cache().hdel(&BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_resources, &field).await?;
-    BIOSFuns::cache()
-        .set_ex(
-            format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_change_resources, Utc::now().timestamp_nanos()).as_str(),
-            &field,
-            BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_change_resources_exp,
-        )
-        .await?;
-    Ok(())
-}
-
-// api://app1.tenant1/p1?a=1##get","{\"account_ids\":\"#acc1#\"}
-async fn rebuild_cache<'c>(auth_policy_id: &str, tx: &mut Transaction<'c, MySql>) -> BIOSResult<()> {
-    let key_info = BIOSFuns::reldb()
-        .fetch_one::<RebuildKeyInfoResp>(
-            &Query::select()
-                .column((IamAuthPolicy::Table, IamAuthPolicy::ActionKind))
-                .column((IamResourceSubject::Table, IamResourceSubject::Uri))
-                .column((IamResource::Table, IamResource::PathAndQuery))
-                .column((IamAuthPolicy::Table, IamAuthPolicy::ValidStartTime))
-                .column((IamAuthPolicy::Table, IamAuthPolicy::ValidEndTime))
-                .from(IamAuthPolicy::Table)
-                .inner_join(
-                    IamResource::Table,
-                    Expr::tbl(IamResource::Table, IamResource::Id).equals(IamAuthPolicy::Table, IamAuthPolicy::RelResourceId),
-                )
-                .inner_join(
-                    IamResourceSubject::Table,
-                    Expr::tbl(IamResourceSubject::Table, IamResourceSubject::Id).equals(IamResource::Table, IamResource::RelResourceSubjectId),
-                )
-                .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::Id).eq(auth_policy_id))
-                .done(),
-            Some(tx),
-        )
-        .await?;
-    let mut value_info = BIOSFuns::reldb()
-        .fetch_all::<RebuildValueInfoResp>(
-            &Query::select()
-                .column(IamAuthPolicySubject::SubjectKind)
-                .column(IamAuthPolicySubject::SubjectId)
-                .from(IamAuthPolicySubject::Table)
-                .and_where(Expr::col(IamAuthPolicySubject::RelAuthPolicyId).eq(auth_policy_id))
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectKind).ne(AuthSubjectKind::GroupNode.to_string().to_lowercase()))
-                .done(),
-            Some(tx),
-        )
-        .await?;
-    let value_info_by_group_node = BIOSFuns::reldb()
-        .fetch_all::<RebuildValueByGroupNodeInfoResp>(
-            &Query::select()
-                .column((IamGroupNode::Table, IamGroupNode::Id))
-                .column((IamGroupNode::Table, IamGroupNode::Code))
-                .from(IamAuthPolicySubject::Table)
-                .inner_join(
-                    IamGroupNode::Table,
-                    Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).equals(IamAuthPolicySubject::Table, IamAuthPolicySubject::SubjectId),
-                )
-                .and_where(Expr::tbl(IamAuthPolicySubject::Table, IamAuthPolicySubject::RelAuthPolicyId).eq(auth_policy_id))
-                .and_where(Expr::tbl(IamAuthPolicySubject::Table, IamAuthPolicySubject::SubjectKind).eq(AuthSubjectKind::GroupNode.to_string().to_lowercase()))
-                .done(),
-            Some(tx),
-        )
-        .await?;
-    for group_node in value_info_by_group_node {
-        value_info.push(RebuildValueInfoResp {
-            subject_kind: AuthSubjectKind::GroupNode.to_string().to_lowercase(),
-            subject_id: format!("{}.{}", group_node.id, group_node.code),
-        })
-    }
-    let value_info_json = serde_json::json!({
-        "_start":key_info.valid_start_time,
-        "_end":key_info.valid_end_time,
-        AuthSubjectKind::Tenant.to_string().to_lowercase():value_info.iter().filter(|x|x.subject_kind==AuthSubjectKind::Tenant.to_string().to_lowercase()).map(|x|format!("#{}#",x.subject_id.clone())).join(""),
-        AuthSubjectKind::App.to_string().to_lowercase():value_info.iter().filter(|x|x.subject_kind==AuthSubjectKind::App.to_string().to_lowercase()).map(|x|format!("#{}#",x.subject_id.clone())).join(""),
-        AuthSubjectKind::Account.to_string().to_lowercase():value_info.iter().filter(|x|x.subject_kind==AuthSubjectKind::Account.to_string().to_lowercase()).map(|x|format!("#{}#",x.subject_id.clone())).join(""),
-        AuthSubjectKind::Role.to_string().to_lowercase():value_info.iter().filter(|x|x.subject_kind==AuthSubjectKind::Role.to_string().to_lowercase()).map(|x|format!("#{}#",x.subject_id.clone())).join(""),
-        AuthSubjectKind::GroupNode.to_string().to_lowercase():value_info.iter().filter(|x|x.subject_kind==AuthSubjectKind::GroupNode.to_string().to_lowercase()).map(|x|format!("#{}#",x.subject_id.clone())).join(""),
-    });
-
-    // TODO
-    /* let value_info_json = value_info
-    .into_iter()
-    .group_by(|x| x.subject_kind)
-    .into_iter()
-    .map(|(group, records)| (group, records.into_iter().map(|record| format!("#{}#", record.subject_id)).join("")))
-    .collect();*/
-
-    let field = format!(
-        "{}##{}",
-        &key_info.action_kind,
-        bios::basic::uri::format_with_item(&key_info.uri, &key_info.path_and_query).unwrap()
-    );
-    BIOSFuns::cache()
-        .hset(
-            &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_resources,
-            &field,
-            bios::basic::json::obj_to_string(&value_info_json)?.as_str(),
-        )
-        .await?;
-    BIOSFuns::cache()
-        .set_ex(
-            format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_change_resources, Utc::now().timestamp_nanos()).as_str(),
-            &field,
-            BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_change_resources_exp,
-        )
-        .await?;
-    Ok(())
-}
-
-#[derive(sqlx::FromRow, serde::Deserialize)]
-pub struct RebuildKeyInfoResp {
-    pub action_kind: String,
-    pub uri: String,
-    pub path_and_query: String,
-    pub valid_start_time: i64,
-    pub valid_end_time: i64,
-}
-
-#[derive(sqlx::FromRow, serde::Deserialize)]
-pub struct RebuildValueInfoResp {
-    pub subject_kind: String,
-    pub subject_id: String,
-}
-
-#[derive(sqlx::FromRow, serde::Deserialize)]
-pub struct RebuildValueByGroupNodeInfoResp {
-    pub id: String,
-    pub code: String,
 }

@@ -13,6 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#[macro_use]
+extern crate lazy_static;
+
 pub mod constant;
 pub mod domain;
 pub mod helper;

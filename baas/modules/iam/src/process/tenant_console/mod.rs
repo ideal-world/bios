@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 pub mod tc_account_dto;
+pub mod tc_account_processor;
 pub mod tc_app_dto;
 pub mod tc_app_processor;
 pub mod tc_group_dto;

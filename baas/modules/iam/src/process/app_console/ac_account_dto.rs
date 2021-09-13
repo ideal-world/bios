@@ -15,24 +15,41 @@
  */
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
 use validator::Validate;
 
-#[derive(Deserialize, Serialize, Validate)]
-pub struct AccountGroupAddReq {
+#[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
+pub struct AccountGroupDetailResp {
+    #[validate(length(max = 32))]
+    pub id: String,
     // 关联账号Id
     #[validate(length(max = 32))]
     pub rel_account_id: String,
     // 关联群组节点Id
     #[validate(length(max = 32))]
     pub rel_group_node_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }
 
-#[derive(Deserialize, Serialize, Validate)]
-pub struct AccountRoleAddReq {
+#[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
+pub struct AccountRoleDetailResp {
+    #[validate(length(max = 32))]
+    pub id: String,
     // 关联账号Id
     #[validate(length(max = 32))]
     pub rel_account_id: String,
     // 关联角色Id
     #[validate(length(max = 32))]
     pub rel_role_id: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
 }
