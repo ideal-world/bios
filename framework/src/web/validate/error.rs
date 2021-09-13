@@ -1,16 +1,16 @@
-use actix_web::{HttpResponse, ResponseError};
 use actix_web::http::StatusCode;
+use actix_web::{HttpResponse, ResponseError};
 use derive_more::Display;
 
 #[derive(Display, Debug)]
 pub enum Error {
-    #[display(fmt = "Validation error: {}", _0)]
+    #[display(fmt = "{}", _0)]
     Validate(validator::ValidationErrors),
     #[display(fmt = "{}", _0)]
     Deserialize(DeserializeErrors),
-    #[display(fmt = "Payload error: {}", _0)]
+    #[display(fmt = "{}", _0)]
     JsonPayloadError(actix_web::error::JsonPayloadError),
-    #[display(fmt = "Query error: {}", _0)]
+    #[display(fmt = "{}", _0)]
     QsError(serde_qs::Error),
 }
 
