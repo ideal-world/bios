@@ -38,9 +38,11 @@ pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Con
             app: Default::default(),
             web: Default::default(),
             cache: CacheConfig {
+                enabled: true,
                 url: format!("redis://127.0.0.1:{}/0", redis_container.get_host_port(6379).expect("Test port acquisition error")),
             },
             db: DBConfig {
+                enabled: true,
                 url: format!(
                     "mysql://root:123456@localhost:{}/iam",
                     mysql_container.get_host_port(3306).expect("Test port acquisition error")

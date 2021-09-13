@@ -26,6 +26,8 @@ log = "^0"
 chrono = { version = "^0", features = ["serde"] }
 strum = { version = "^0", features = ["derive"] }
 itertools = "^0"
+regex = "^1"
+lazy_static = "^1"
 
 bios-framework = { path = "../../../framework", features = ["web-client", "openapi", "reldb", "cache", "test"] }
 actix-web = { version = "4.0.0-beta.9", default-features = false, features = ["compress-gzip", "rustls"] }

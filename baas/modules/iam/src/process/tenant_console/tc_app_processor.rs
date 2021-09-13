@@ -15,7 +15,6 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use chrono::Utc;
 use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
@@ -30,8 +29,8 @@ use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicySubject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamApp, IamAppIdent};
-use crate::iam_config::WorkSpaceConfig;
 use crate::process::basic_dto::CommonStatus;
+use crate::process::common::cache_processor;
 use crate::process::tenant_console::tc_app_dto::{AppAddReq, AppDetailResp, AppModifyReq, AppQueryReq};
 
 #[post("/console/tenant/app")]
@@ -133,24 +132,17 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
         match status {
             CommonStatus::Enabled => {
                 for aksk_resp in aksks {
-                    BIOSFuns::cache()
-                        .set_ex(
-                            format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str(),
-                            format!("{}:{}:{}", aksk_resp.sk, ident_info.tenant_id.clone(), id.clone()).as_str(),
-                            (aksk_resp.valid_time - Utc::now().timestamp()) as usize,
-                        )
-                        .await?;
+                    cache_processor::set_aksk(&ident_info.tenant_id, &id, &aksk_resp.ak, &aksk_resp.sk, aksk_resp.valid_time).await?;
                 }
             }
             CommonStatus::Disabled => {
                 for aksk_resp in aksks {
-                    BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str()).await?;
+                    cache_processor::remove_aksk(&aksk_resp.ak).await?;
                 }
             }
         }
     }
     tx.commit().await?;
-
     BIOSRespHelper::ok("")
 }
 
@@ -418,7 +410,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
     BIOSFuns::reldb().soft_del(IamApp::Table, IamApp::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     // Remove aksk info at redis cache
     for aksk_resp in aksks {
-        BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str()).await?;
+        cache_processor::remove_aksk(&aksk_resp.ak).await?;
     }
     tx.commit().await?;
     BIOSRespHelper::ok("")

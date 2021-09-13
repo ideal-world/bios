@@ -15,10 +15,10 @@
  */
 
 use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
 use validator::Validate;
 
-use crate::process::basic_dto::AccountIdentKind;
-use sqlx::types::chrono::{DateTime, Utc};
+use crate::process::basic_dto::{AccountIdentKind, CommonStatus};
 
 #[derive(Deserialize, Validate)]
 pub struct AccountQueryReq {
@@ -39,6 +39,9 @@ pub struct AccountAddReq {
     // 账号扩展信息（Json格式）
     #[validate(length(min = 2, max = 2000))]
     pub parameters: Option<String>,
+    // 父账号Id
+    #[validate(length(max = 32))]
+    pub parent_id: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -56,8 +59,7 @@ pub struct AccountModifyReq {
     #[validate(length(max = 32))]
     pub parent_id: Option<String>,
     // 账号状态
-    #[validate(length(min = 2, max = 255))]
-    pub status: String,
+    pub status: Option<CommonStatus>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -182,6 +184,24 @@ pub struct AccountBindDetailResp {
     // 绑定使用的账号认证类型名称
     #[validate(length(max = 255))]
     pub kind: String,
+    #[validate(length(max = 255))]
+    pub create_user: String,
+    #[validate(length(max = 255))]
+    pub update_user: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
+#[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
+pub struct AccountAppDetailResp {
+    #[validate(length(max = 32))]
+    pub id: String,
+    // 关联账号Id
+    #[validate(length(max = 32))]
+    pub rel_account_id: String,
+    // 关联应用Id
+    #[validate(length(max = 32))]
+    pub rel_app_id: String,
     #[validate(length(max = 255))]
     pub create_user: String,
     #[validate(length(max = 255))]

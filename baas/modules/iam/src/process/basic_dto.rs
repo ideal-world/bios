@@ -32,7 +32,7 @@ pub enum CommonStatus {
 #[derive(Display, Debug, Deserialize, Serialize)]
 pub enum AccountIdentKind {
     // 用户名 + 密码
-    UserName,
+    Username,
     // 租户间授权认证
     AuthIdent,
     // 手机号 + 验证码

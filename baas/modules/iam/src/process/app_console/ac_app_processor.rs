@@ -15,7 +15,6 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use chrono::Utc;
 use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
@@ -27,8 +26,8 @@ use bios::web::validate::json::Json;
 use bios::BIOSFuns;
 
 use crate::domain::ident_domain::{IamAccount, IamAppIdent};
-use crate::iam_config::WorkSpaceConfig;
 use crate::process::app_console::ac_app_dto::{AppIdentAddReq, AppIdentDetailResp, AppIdentModifyReq};
+use crate::process::common::cache_processor;
 use bios::basic::error::BIOSError;
 
 #[post("/console/app/app/ident")]
@@ -71,13 +70,7 @@ pub async fn add_app_ident(app_ident_add_req: Json<AppIdentAddReq>, req: HttpReq
             Some(&mut tx),
         )
         .await?;
-    BIOSFuns::cache()
-        .set_ex(
-            format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, ak).as_str(),
-            format!("{}:{}:{}", sk, ident_info.tenant_id, ident_info.app_id).as_str(),
-            (app_ident_add_req.valid_time - Utc::now().timestamp()) as usize,
-        )
-        .await?;
+    cache_processor::set_aksk(&ident_info.tenant_id, &ident_info.app_id, &ak, &sk, app_ident_add_req.valid_time).await?;
     tx.commit().await?;
     BIOSRespHelper::ok(id)
 }
@@ -128,13 +121,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
     if let Some(valid_time) = app_ident_modify_req.valid_time {
         let sql_builder = Query::select().columns(vec![IamAppIdent::Ak, IamAppIdent::Sk]).from(IamAppIdent::Table).and_where(Expr::col(IamAppIdent::Id).eq(id.clone())).done();
         let aksk_resp = BIOSFuns::reldb().fetch_one::<AkSkResp>(&sql_builder, Some(&mut tx)).await?;
-        BIOSFuns::cache()
-            .set_ex(
-                format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str(),
-                format!("{}:{}:{}", aksk_resp.sk, ident_info.tenant_id, ident_info.app_id).as_str(),
-                (valid_time - Utc::now().timestamp()) as usize,
-            )
-            .await?;
+        cache_processor::set_aksk(&ident_info.tenant_id, &ident_info.app_id, &aksk_resp.ak, &aksk_resp.sk, valid_time).await?;
     }
     tx.commit().await?;
     BIOSRespHelper::ok("")
@@ -212,7 +199,7 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAppIdent::RelAppId).eq(ident_info.app_id.clone()))
         .done();
     BIOSFuns::reldb().soft_del(IamAppIdent::Table, IamAppIdent::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
-    BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_aksk, aksk_resp.ak).as_str()).await?;
+    cache_processor::remove_aksk(&aksk_resp.ak).await?;
     tx.commit().await?;
     BIOSRespHelper::ok("")
 }

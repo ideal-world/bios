@@ -24,3 +24,4 @@ pub mod ac_resource_dto;
 pub mod ac_resource_processor;
 pub mod ac_role_dto;
 pub mod ac_role_processor;
+pub mod ac_account_processor;

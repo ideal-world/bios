@@ -18,3 +18,4 @@ mod test_group;
 mod test_resource;
 mod test_role;
 mod test_auth_policy;
+mod test_account;

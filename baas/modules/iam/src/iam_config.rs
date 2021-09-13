@@ -32,9 +32,13 @@ impl Default for WorkSpaceConfig {
 #[serde(default)]
 pub struct IamConfig {
     pub cache_token: String,
+    pub cache_token_rel: String,
     pub cache_aksk: String,
     pub cache_resources: String,
     pub cache_change_resources: String,
+    pub cache_access_token: String,
+    pub cache_account_vcode_tmp_rel: String,
+    pub cache_account_vcode_error_times: String,
     pub cache_change_resources_exp: usize,
 }
 
@@ -42,9 +46,13 @@ impl Default for IamConfig {
     fn default() -> Self {
         IamConfig {
             cache_token: "bios:iam:token:info:".to_string(),
+            cache_token_rel: "bios:iam:token:rel:".to_string(),
             cache_aksk: "bios:iam:app:aksk:".to_string(),
             cache_resources: "bios:iam:resources".to_string(),
             cache_change_resources: "bios:iam:change_resources:".to_string(),
+            cache_access_token: "bios:iam:oauth:access-token:".to_string(),
+            cache_account_vcode_tmp_rel: "bios:iam:account:vocde:tmprel:".to_string(),
+            cache_account_vcode_error_times: "bios:iam:account:vocde:errortimes:".to_string(),
             cache_change_resources_exp: 30,
         }
     }
