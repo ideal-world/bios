@@ -15,6 +15,7 @@
  */
 
 mod app_console;
+mod common;
 mod system_console;
 mod tenant_console;
 pub mod test_basic;

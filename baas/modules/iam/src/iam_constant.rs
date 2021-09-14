@@ -14,4 +14,3 @@
  * limitations under the License.
  */
 
-pub static RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT: &str = ".";

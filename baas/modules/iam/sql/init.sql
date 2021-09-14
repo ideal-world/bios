@@ -207,20 +207,20 @@ create table if not exists iam_auth_policy
     )
     comment '权限策略';
 
-create table if not exists iam_auth_policy_subject
+create table if not exists iam_auth_policy_object
 (
     id                  varchar(64)
     primary key,
-    subject_kind        varchar(20)                         not null comment '关联权限主体类型名称',
-    subject_id          varchar(255)                        not null comment '关联权限主体Id',
-    subject_operator    varchar(20)                         not null comment '关联权限主体运算类型名称',
+    object_kind         varchar(20)                         not null comment '关联权限对象类型名称',
+    object_id           varchar(255)                        not null comment '关联权限对象Id',
+    object_operator     varchar(20)                         not null comment '关联权限对象运算类型名称',
     rel_auth_policy_id  varchar(64)                         not null comment '关联权限策略Id',
     create_time         timestamp default CURRENT_TIMESTAMP null comment '创建时间',
     create_user         varchar(64)                         not null comment '创建者Id',
     update_time         timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
     update_user         varchar(64)                         not null comment '最后一次修改者Id'
     )
-    comment '权限策略关联主体';
+    comment '权限策略关联对象';
 
 create table if not exists iam_group
 (
@@ -298,7 +298,6 @@ create table if not exists iam_resource_subject
     id                  varchar(64)
     primary key,
     kind                varchar(100)                        not null comment '资源类型名称',
-    code                varchar(255)                        not null comment '资源主体编码',
     uri                 varchar(5000)                       not null comment '资源主体连接URI',
     name                varchar(255)                        not null comment '资源主体名称',
     ak                  varchar(1000)                       not null comment 'AK，部分类型支持写到URI中',
@@ -312,9 +311,7 @@ create table if not exists iam_resource_subject
     create_time         timestamp default CURRENT_TIMESTAMP null comment '创建时间',
     create_user         varchar(64)                         not null comment '创建者Id',
     update_time         timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
-    update_user         varchar(64)                         not null comment '最后一次修改者Id',
-    constraint u_code
-    unique (code)
+    update_user         varchar(64)                         not null comment '最后一次修改者Id'
     )
     comment '资源主体';
 

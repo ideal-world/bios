@@ -14,9 +14,4 @@
  * limitations under the License.
  */
 
-pub mod auth_processor;
-pub mod cache_processor;
-pub mod com_account_dto;
-pub mod com_app_dto;
-pub mod com_tenant_dto;
-pub mod common_processor;
+mod test_init;

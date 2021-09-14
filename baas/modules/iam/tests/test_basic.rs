@@ -151,3 +151,33 @@ pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Con
 
     (mysql_container, redis_container)
 }
+
+pub async fn init_without_data<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Container<'a, Cli, Redis>) {
+    BIOSLogger::init("").unwrap();
+    let mysql_container = BIOSTestContainer::mysql_custom(Some("sql/"), &docker);
+    let redis_container = BIOSTestContainer::redis_custom(&docker);
+    BIOSFuns::init(BIOSConfig {
+        ws: WorkSpaceConfig::default(),
+        fw: FrameworkConfig {
+            app: Default::default(),
+            web: Default::default(),
+            cache: CacheConfig {
+                enabled: true,
+                url: format!("redis://127.0.0.1:{}/0", redis_container.get_host_port(6379).expect("Test port acquisition error")),
+            },
+            db: DBConfig {
+                enabled: true,
+                url: format!(
+                    "mysql://root:123456@localhost:{}/iam",
+                    mysql_container.get_host_port(3306).expect("Test port acquisition error")
+                ),
+                max_connections: 20,
+            },
+            mq: Default::default(),
+            adv: Default::default(),
+        },
+    })
+    .await
+    .unwrap();
+    (mysql_container, redis_container)
+}

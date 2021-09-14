@@ -126,8 +126,6 @@ pub enum IamAccountRole {
 ///
 /// 所有三方调用都视为资源，需要配置资源主体，比如微信公众号、华为云等
 ///
-/// code = appCode.kind.code | default
-///
 /// ResourceKind#MENU:
 /// uri = MENU路径
 /// e.g.
@@ -172,8 +170,6 @@ pub enum IamResourceSubject {
     UpdateUser,
     CreateTime,
     UpdateTime,
-    // 资源主体编码
-    Code,
     // 资源类型名称
     Kind,
     // 资源主体连接URI
@@ -311,21 +307,21 @@ pub enum IamAuthPolicy {
     RelTenantId,
 }
 
-/// 权限策略关联主体
+/// 权限策略关联对象
 #[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
-pub enum IamAuthPolicySubject {
+pub enum IamAuthPolicyObject {
     Table,
     Id,
     CreateUser,
     UpdateUser,
     CreateTime,
     UpdateTime,
-    // 关联权限主体类型名称
-    SubjectKind,
-    // 关联权限主体Id
-    SubjectId,
-    // 关联权限主体运算类型名称
-    SubjectOperator,
+    // 关联权限对象类型名称
+    ObjectKind,
+    // 关联权限对象Id
+    ObjectId,
+    // 关联权限对象运算类型名称
+    ObjectOperator,
     // 关联权限策略
     RelAuthPolicyId,
 }

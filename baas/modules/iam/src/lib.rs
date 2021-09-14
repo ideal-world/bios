@@ -17,8 +17,9 @@
 #[macro_use]
 extern crate lazy_static;
 
-pub mod constant;
 pub mod domain;
 pub mod helper;
 pub mod iam_config;
+pub mod iam_constant;
+pub mod iam_initializer;
 pub mod process;

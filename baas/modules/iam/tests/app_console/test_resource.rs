@@ -55,7 +55,6 @@ async fn test_resource_subject() -> BIOSResult<()> {
         ))
         .uri("/console/app/resource/subject")
         .set_json(&ResourceSubjectAddReq {
-            code_postfix: "httpbin".to_string(),
             name: "测试Http请求".to_string(),
             sort: 0,
             kind: ResourceKind::Api,
@@ -79,7 +78,6 @@ async fn test_resource_subject() -> BIOSResult<()> {
         ))
         .uri(format!("/console/app/resource/subject/{}", id.clone()).as_str())
         .set_json(&ResourceSubjectModifyReq {
-            code_postfix: Some("httpbin_test".to_string()),
             name: Some("测试Http请求1".to_string()),
             sort: None,
             kind: Some(ResourceKind::Api),
@@ -109,7 +107,6 @@ async fn test_resource_subject() -> BIOSResult<()> {
     let body = read_body_json::<BIOSRespHelper<BIOSPage<ResourceSubjectDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(body.total_size, 1);
     assert_eq!(body.records[0].name, "测试Http请求1");
-    assert_eq!(body.records[0].code, "app1.api.httpbin_test");
     assert_eq!(body.records[0].create_user, "平台管理员");
     assert_eq!(body.records[0].update_user, "平台管理员");
 
@@ -178,7 +175,6 @@ async fn test_resource() -> BIOSResult<()> {
         ))
         .uri("/console/app/resource/subject")
         .set_json(&ResourceSubjectAddReq {
-            code_postfix: "httpbin".to_string(),
             name: "测试Http请求".to_string(),
             sort: 0,
             kind: ResourceKind::Api,

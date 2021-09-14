@@ -86,9 +86,9 @@ pub enum ExposeKind {
     Global,
 }
 
-/// 权限主体类型枚举
+/// 权限对象类型枚举
 #[derive(Display, Debug, Deserialize, Serialize)]
-pub enum AuthSubjectKind {
+pub enum AuthObjectKind {
     // 租户
     Tenant,
     // 应用
@@ -101,9 +101,9 @@ pub enum AuthSubjectKind {
     Account,
 }
 
-/// 权限主体运算类型枚举
+/// 权限对象运算类型枚举
 #[derive(Display, Debug, Deserialize, Serialize)]
-pub enum AuthSubjectOperatorKind {
+pub enum AuthObjectOperatorKind {
     // 等于
     Eq,
     // 不等于
@@ -115,16 +115,16 @@ pub enum AuthSubjectOperatorKind {
 }
 
 /// 操作类型枚举
+///
+/// 借用HTTP Method，但不严格与其语义对等
 #[derive(Display, Debug, Deserialize, Serialize)]
 pub enum OptActionKind {
-    // 是否存在
-    Exists,
     // 获取
-    Fetch,
+    Get,
     // 创建
-    Create,
+    Post,
     // 更新
-    Modify,
+    Put,
     // 局部更新
     Patch,
     // 删除

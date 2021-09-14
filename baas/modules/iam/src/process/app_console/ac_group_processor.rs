@@ -27,12 +27,12 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAccountGroup, IamAuthPolicySubject, IamGroup, IamGroupNode};
+use crate::domain::auth_domain::{IamAccountGroup, IamAuthPolicyObject, IamGroup, IamGroupNode};
 use crate::domain::ident_domain::IamAccount;
 use crate::process::app_console::ac_group_dto::{
     GroupAddReq, GroupDetailResp, GroupModifyReq, GroupNodeAddReq, GroupNodeDetailResp, GroupNodeModifyReq, GroupNodeOverviewResp, GroupQueryReq,
 };
-use crate::process::basic_dto::AuthSubjectKind;
+use crate::process::basic_dto::AuthObjectKind;
 
 #[post("/console/app/group")]
 pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BIOSResp {
@@ -528,10 +528,10 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
-                .columns(vec![IamAuthPolicySubject::Id])
-                .from(IamAuthPolicySubject::Table)
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectKind).eq(AuthSubjectKind::GroupNode.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectId).like(format!("{}-{}", id.clone(), code).as_str()))
+                .columns(vec![IamAuthPolicyObject::Id])
+                .from(IamAuthPolicyObject::Table)
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::GroupNode.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).like(format!("{}-{}", id.clone(), code).as_str()))
                 .done(),
             None,
         )
