@@ -43,8 +43,8 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Kind).eq(resource_subject_add_req.kind.to_string().to_lowercase()))
-                .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.clone()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.as_str()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -74,20 +74,20 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                     IamResourceSubject::RelTenantId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     resource_subject_add_req.kind.to_string().to_lowercase().into(),
                     uri.into(),
-                    resource_subject_add_req.name.clone().into(),
+                    resource_subject_add_req.name.as_str().into(),
                     resource_subject_add_req.sort.into(),
-                    resource_subject_add_req.ak.clone().unwrap_or_default().into(),
-                    resource_subject_add_req.sk.clone().unwrap_or_default().into(),
-                    resource_subject_add_req.platform_account.clone().unwrap_or_default().into(),
-                    resource_subject_add_req.platform_project_id.clone().unwrap_or_default().into(),
+                    resource_subject_add_req.ak.as_deref().unwrap_or(&"").into(),
+                    resource_subject_add_req.sk.as_deref().unwrap_or(&"").into(),
+                    resource_subject_add_req.platform_account.as_deref().unwrap_or(&"").into(),
+                    resource_subject_add_req.platform_project_id.as_deref().unwrap_or(&"").into(),
                     resource_subject_add_req.timeout_ms.unwrap_or_default().into(),
-                    ident_info.app_id.clone().into(),
-                    ident_info.tenant_id.clone().into(),
+                    ident_info.app_id.as_str().into(),
+                    ident_info.tenant_id.as_str().into(),
                 ])
                 .done(),
             None,
@@ -106,8 +106,8 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
             &Query::select()
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
-                .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -131,9 +131,9 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
                 &Query::select()
                     .columns(vec![IamResourceSubject::Id])
                     .from(IamResourceSubject::Table)
-                    .and_where(Expr::col(IamResourceSubject::Kind).eq(kind.clone()))
-                    .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.clone()))
-                    .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+                    .and_where(Expr::col(IamResourceSubject::Kind).eq(kind.as_str()))
+                    .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.as_str()))
+                    .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
                     .done(),
                 None,
             )
@@ -145,35 +145,35 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
         values.push((IamResourceSubject::Uri, uri.into()));
     }
     if let Some(name) = &resource_subject_modify_req.name {
-        values.push((IamResourceSubject::Name, name.to_string().into()));
+        values.push((IamResourceSubject::Name, name.as_str().into()));
     }
     if let Some(sort) = resource_subject_modify_req.sort {
         values.push((IamResourceSubject::Sort, sort.into()));
     }
     if let Some(ak) = &resource_subject_modify_req.ak {
-        values.push((IamResourceSubject::Ak, ak.to_string().into()));
+        values.push((IamResourceSubject::Ak, ak.as_str().into()));
     }
     if let Some(sk) = &resource_subject_modify_req.sk {
-        values.push((IamResourceSubject::Sk, sk.to_string().into()));
+        values.push((IamResourceSubject::Sk, sk.as_str().into()));
     }
     if let Some(platform_project_id) = &resource_subject_modify_req.platform_project_id {
-        values.push((IamResourceSubject::PlatformProjectId, platform_project_id.to_string().into()));
+        values.push((IamResourceSubject::PlatformProjectId, platform_project_id.as_str().into()));
     }
     if let Some(platform_account) = &resource_subject_modify_req.platform_account {
-        values.push((IamResourceSubject::PlatformAccount, platform_account.to_string().into()));
+        values.push((IamResourceSubject::PlatformAccount, platform_account.as_str().into()));
     }
     if let Some(platform_project_id) = &resource_subject_modify_req.platform_project_id {
-        values.push((IamResourceSubject::PlatformProjectId, platform_project_id.to_string().into()));
+        values.push((IamResourceSubject::PlatformProjectId, platform_project_id.as_str().into()));
     }
-    if let Some(timeout_ms) = &resource_subject_modify_req.timeout_ms {
-        values.push((IamResourceSubject::TimeoutMs, timeout_ms.to_string().into()));
+    if let Some(timeout_ms) = resource_subject_modify_req.timeout_ms {
+        values.push((IamResourceSubject::TimeoutMs, timeout_ms.into()));
     }
-    values.push((IamResourceSubject::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamResourceSubject::UpdateUser, ident_info.account_id.as_str().into()));
     let sql_builder = Query::update()
         .table(IamResourceSubject::Table)
         .values(values)
-        .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+        .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
         .done();
     BIOSFuns::reldb().exec(&sql_builder, None).await?;
     BIOSRespHelper::ok("")
@@ -222,7 +222,7 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
         } else {
             None
         })
-        .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+        .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
         .order_by(IamResourceSubject::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<ResourceSubjectDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
@@ -239,8 +239,8 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
-                .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -250,7 +250,7 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select().columns(vec![IamResource::Id]).from(IamResource::Table).and_where(Expr::col(IamResource::RelResourceSubjectId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamResource::Id]).from(IamResource::Table).and_where(Expr::col(IamResource::RelResourceSubjectId).eq(id.as_str())).done(),
             None,
         )
         .await?
@@ -263,8 +263,8 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
         .from(IamResourceSubject::Table)
-        .and_where(Expr::col(IamResourceSubject::Id).eq(id.clone()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
+        .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
         .done();
     BIOSFuns::reldb().soft_del(IamResourceSubject::Table, IamResourceSubject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
@@ -282,7 +282,7 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
             &Query::select()
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
-                .and_where(Expr::col(IamResourceSubject::Id).eq(resource_add_req.rel_resource_subject_id.clone()))
+                .and_where(Expr::col(IamResourceSubject::Id).eq(resource_add_req.rel_resource_subject_id.as_str()))
                 .done(),
             None,
         )
@@ -295,9 +295,9 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
             &Query::select()
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
-                .and_where(Expr::col(IamResource::PathAndQuery).eq(resource_add_req.path_and_query.clone()))
-                .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_add_req.rel_resource_subject_id.clone()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResource::PathAndQuery).eq(resource_add_req.path_and_query.as_str()))
+                .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_add_req.rel_resource_subject_id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -327,19 +327,19 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
                     IamResource::ExposeKind,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    resource_add_req.path_and_query.clone().to_lowercase().into(),
-                    resource_add_req.name.clone().into(),
-                    resource_add_req.icon.clone().into(),
-                    resource_add_req.sort.clone().into(),
-                    resource_add_req.action.clone().unwrap_or_default().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    resource_add_req.path_and_query.as_str().to_lowercase().into(),
+                    resource_add_req.name.as_str().into(),
+                    resource_add_req.icon.as_str().into(),
+                    resource_add_req.sort.into(),
+                    resource_add_req.action.as_deref().unwrap_or(&"").into(),
                     resource_add_req.res_group.into(),
-                    resource_add_req.parent_id.clone().unwrap_or_default().into(),
-                    resource_add_req.rel_resource_subject_id.clone().into(),
-                    ident_info.app_id.clone().into(),
-                    ident_info.tenant_id.clone().into(),
+                    resource_add_req.parent_id.as_deref().unwrap_or(&"").into(),
+                    resource_add_req.rel_resource_subject_id.as_str().into(),
+                    ident_info.app_id.as_str().into(),
+                    ident_info.tenant_id.as_str().into(),
                     resource_add_req.expose_kind.as_ref().unwrap_or(&crate::process::basic_dto::ExposeKind::App).to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -359,8 +359,8 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
             &Query::select()
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
-                .and_where(Expr::col(IamResource::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -378,9 +378,9 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                         IamResourceSubject::Table,
                         Expr::tbl(IamResourceSubject::Table, IamResourceSubject::Id).equals(IamResource::Table, IamResource::RelResourceSubjectId),
                     )
-                    .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
-                    .and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(ident_info.app_id.clone()))
-                    .and_where(Expr::tbl(IamResource::Table, IamResource::Id).eq(id.clone()))
+                    .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::tbl(IamResource::Table, IamResource::Id).eq(id.as_str()))
                     .done(),
                 None,
             )
@@ -390,10 +390,10 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                 &Query::select()
                     .columns(vec![IamResource::Id])
                     .from(IamResource::Table)
-                    .and_where(Expr::col(IamResource::Id).ne(id.clone()))
+                    .and_where(Expr::col(IamResource::Id).ne(id.as_str()))
                     .and_where(Expr::col(IamResource::PathAndQuery).eq(path_and_query.to_string().to_lowercase()))
                     .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_subject_id_info["id"].as_str().unwrap()))
-                    .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+                    .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
                     .done(),
                 None,
             )
@@ -408,8 +408,8 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                 &Query::select()
                     .columns(vec![IamResource::Id])
                     .from(IamResource::Table)
-                    .and_where(Expr::col(IamResource::Id).ne(parent_id.to_string().clone()))
-                    .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+                    .and_where(Expr::col(IamResource::Id).ne(parent_id.to_string().as_str()))
+                    .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
                     .done(),
                 None,
             )
@@ -443,14 +443,14 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
     if let Some(expose_kind) = &resource_modify_req.expose_kind {
         values.push((IamResource::ExposeKind, expose_kind.to_string().to_lowercase().into()));
     }
-    values.push((IamResource::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamResource::UpdateUser, ident_info.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamResource::Table)
                 .values(values)
-                .and_where(Expr::col(IamResource::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -509,13 +509,13 @@ pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) ->
         .conditions(
             !query.expose,
             |x| {
-                x.and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(ident_info.app_id.clone()));
+                x.and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(ident_info.app_id.as_str()));
             },
             |x| {
                 x.cond_where(
                     Cond::any().add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
                         Cond::all()
-                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(ident_info.tenant_id.clone()))
+                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(ident_info.tenant_id.as_str()))
                             .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
                     ),
                 );
@@ -537,8 +537,8 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
-                .and_where(Expr::col(IamResource::Id).eq(id.clone()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -548,7 +548,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select().columns(vec![IamAuthPolicy::Id]).from(IamAuthPolicy::Table).and_where(Expr::col(IamAuthPolicy::RelResourceId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamAuthPolicy::Id]).from(IamAuthPolicy::Table).and_where(Expr::col(IamAuthPolicy::RelResourceId).eq(id.as_str())).done(),
             None,
         )
         .await?
@@ -558,7 +558,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
 
     if BIOSFuns::reldb()
         .exists(
-            &Query::select().columns(vec![IamResource::Id]).from(IamResource::Table).and_where(Expr::col(IamResource::ParentId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamResource::Id]).from(IamResource::Table).and_where(Expr::col(IamResource::ParentId).eq(id.as_str())).done(),
             None,
         )
         .await?
@@ -572,8 +572,8 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamResource::iter().filter(|i| *i != IamResource::Table))
         .from(IamResource::Table)
-        .and_where(Expr::col(IamResource::Id).eq(id.clone()))
-        .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.clone()))
+        .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
+        .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
         .done();
     BIOSFuns::reldb().soft_del(IamResource::Table, IamResource::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 

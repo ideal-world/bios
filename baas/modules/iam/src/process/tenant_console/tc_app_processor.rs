@@ -53,12 +53,12 @@ pub async fn add_app(app_add_req: Json<AppAddReq>, req: HttpRequest) -> BIOSResp
                     IamApp::RelTenantId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    app_add_req.name.clone().into(),
-                    app_add_req.icon.clone().unwrap_or_default().into(),
-                    app_add_req.parameters.clone().unwrap_or_default().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    app_add_req.name.as_str().into(),
+                    app_add_req.icon.as_deref().unwrap_or(&"").into(),
+                    app_add_req.parameters.as_deref().unwrap_or(&"").into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                     ident_info.tenant_id.into(),
                 ])
@@ -79,8 +79,8 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
             &Query::select()
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
-                .and_where(Expr::col(IamApp::Id).eq(id.clone()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamApp::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -102,7 +102,7 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
     if let Some(status) = &app_modify_req.status {
         values.push((IamApp::Status, status.to_string().to_lowercase().into()));
     }
-    values.push((IamApp::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamApp::UpdateUser, ident_info.account_id.as_str().into()));
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -112,8 +112,8 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
             &Query::update()
                 .table(IamApp::Table)
                 .values(values)
-                .and_where(Expr::col(IamApp::Id).eq(id.clone()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamApp::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             Some(&mut tx),
         )
@@ -124,7 +124,7 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
                 &Query::select()
                     .columns(vec![IamAppIdent::Ak, IamAppIdent::Sk, IamAppIdent::ValidTime])
                     .from(IamAppIdent::Table)
-                    .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.clone()))
+                    .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.as_str()))
                     .done(),
                 None,
             )
@@ -200,8 +200,8 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
-                .and_where(Expr::col(IamApp::Id).eq(id.clone()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamApp::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -218,7 +218,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAppIdent::Ak, IamAppIdent::Sk, IamAppIdent::ValidTime])
                 .from(IamAppIdent::Table)
-                .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.clone()))
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.as_str()))
                 .done(),
             Some(&mut tx),
         )
@@ -232,7 +232,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAppIdent::iter().filter(|i| *i != IamAppIdent::Table))
                 .from(IamAppIdent::Table)
-                .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.clone()))
+                .and_where(Expr::col(IamAppIdent::RelAppId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -246,7 +246,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountApp::iter().filter(|i| *i != IamAccountApp::Table))
                 .from(IamAccountApp::Table)
-                .and_where(Expr::col(IamAccountApp::RelAppId).eq(id.clone()))
+                .and_where(Expr::col(IamAccountApp::RelAppId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -254,7 +254,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
     // Delete IamGroup
     let group_ids = BIOSFuns::reldb()
         .fetch_all::<IdResp>(
-            &Query::select().columns(vec![IamGroup::Id]).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamGroup::Id]).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.as_str())).done(),
             Some(&mut tx),
         )
         .await?
@@ -266,7 +266,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             IamGroup::Table,
             IamGroup::Id,
             &ident_info.account_id,
-            &Query::select().columns(IamGroup::iter().filter(|i| *i != IamGroup::Table)).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.clone())).done(),
+            &Query::select().columns(IamGroup::iter().filter(|i| *i != IamGroup::Table)).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.as_str())).done(),
             &mut tx,
         )
         .await?;
@@ -288,7 +288,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamGroupNode::iter().filter(|i| *i != IamGroupNode::Table))
                 .from(IamGroupNode::Table)
-                .and_where(Expr::col(IamGroupNode::RelGroupId).is_in(group_ids.clone()))
+                .and_where(Expr::col(IamGroupNode::RelGroupId).is_in(group_ids))
                 .done(),
             &mut tx,
         )
@@ -302,7 +302,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountGroup::iter().filter(|i| *i != IamAccountGroup::Table))
                 .from(IamAccountGroup::Table)
-                .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).is_in(group_node_ids.clone()))
+                .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).is_in(group_node_ids))
                 .done(),
             &mut tx,
         )
@@ -310,7 +310,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
     // Delete IamRole
     let role_ids = BIOSFuns::reldb()
         .fetch_all::<IdResp>(
-            &Query::select().columns(vec![IamRole::Id]).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamRole::Id]).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.as_str())).done(),
             Some(&mut tx),
         )
         .await?
@@ -322,7 +322,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             IamRole::Table,
             IamRole::Id,
             &ident_info.account_id,
-            &Query::select().columns(IamRole::iter().filter(|i| *i != IamRole::Table)).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.clone())).done(),
+            &Query::select().columns(IamRole::iter().filter(|i| *i != IamRole::Table)).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.as_str())).done(),
             &mut tx,
         )
         .await?;
@@ -335,7 +335,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountRole::iter().filter(|i| *i != IamAccountRole::Table))
                 .from(IamAccountRole::Table)
-                .and_where(Expr::col(IamAccountRole::RelRoleId).is_in(role_ids.clone()))
+                .and_where(Expr::col(IamAccountRole::RelRoleId).is_in(role_ids))
                 .done(),
             &mut tx,
         )
@@ -349,7 +349,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
                 .from(IamResourceSubject::Table)
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(id.clone()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -363,7 +363,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamResource::iter().filter(|i| *i != IamResource::Table))
                 .from(IamResource::Table)
-                .and_where(Expr::col(IamResource::RelAppId).eq(id.clone()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -371,7 +371,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
     // Delete IamAuthPolicy
     let auth_policy_ids = BIOSFuns::reldb()
         .fetch_all::<IdResp>(
-            &Query::select().columns(vec![IamAuthPolicy::Id]).from(IamAuthPolicy::Table).and_where(Expr::col(IamAuthPolicy::RelAppId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamAuthPolicy::Id]).from(IamAuthPolicy::Table).and_where(Expr::col(IamAuthPolicy::RelAppId).eq(id.as_str())).done(),
             Some(&mut tx),
         )
         .await?
@@ -386,7 +386,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAuthPolicy::iter().filter(|i| *i != IamAuthPolicy::Table))
                 .from(IamAuthPolicy::Table)
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(id.clone()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -400,13 +400,13 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAuthPolicyObject::iter().filter(|i| *i != IamAuthPolicyObject::Table))
                 .from(IamAuthPolicyObject::Table)
-                .and_where(Expr::col(IamAuthPolicyObject::RelAuthPolicyId).is_in(auth_policy_ids.clone()))
+                .and_where(Expr::col(IamAuthPolicyObject::RelAuthPolicyId).is_in(auth_policy_ids))
                 .done(),
             &mut tx,
         )
         .await?;
     // Delete IamApp
-    let sql_builder = Query::select().columns(IamApp::iter().filter(|i| *i != IamApp::Table)).from(IamApp::Table).and_where(Expr::col(IamApp::Id).eq(id.clone())).done();
+    let sql_builder = Query::select().columns(IamApp::iter().filter(|i| *i != IamApp::Table)).from(IamApp::Table).and_where(Expr::col(IamApp::Id).eq(id.as_str())).done();
     BIOSFuns::reldb().soft_del(IamApp::Table, IamApp::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     // Remove aksk info at redis cache
     for aksk_resp in aksks {

@@ -340,7 +340,7 @@ async fn test_auth_policy_object() -> BIOSResult<()> {
     assert_eq!(body[0].create_user, "平台管理员");
     assert_eq!(body[0].update_user, "平台管理员");
 
-    let cache = BIOSFuns::cache().hget(&BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.resources, "fetch##http://httpbin.org/get").await?.unwrap();
+    let cache = BIOSFuns::cache().hget(&BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.resources, "http://httpbin.org/get##get").await?.unwrap();
     assert_eq!(bios::basic::json::str_to_json(&cache).unwrap()["account"], "#admin001#");
 
     // Delete AuthPolicyObject

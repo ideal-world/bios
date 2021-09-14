@@ -53,10 +53,10 @@ pub async fn init() -> BIOSResult<()> {
                     IamTenant::Status,
                 ])
                 .values_panic(vec![
-                    tenant_id.clone().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    iam_config.app.tenant_name.clone().into(),
+                    tenant_id.as_str().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    iam_config.app.tenant_name.as_str().into(),
                     "".into(),
                     false.into(),
                     "".into(),
@@ -85,15 +85,15 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
                     AccountIdentKind::Username.to_string().to_lowercase().into(),
                     iam_config.security.default_valid_ak_rule_note.to_string().into(),
                     iam_config.security.default_valid_ak_rule.to_string().into(),
                     iam_config.security.default_valid_sk_rule_note.to_string().into(),
                     iam_config.security.default_valid_sk_rule.to_string().into(),
                     iam_config.security.default_valid_time_sec.into(),
-                    tenant_id.clone().into(),
+                    tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -114,11 +114,11 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    "".clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    "".into(),
                     0.into(),
-                    tenant_id.clone().into(),
+                    tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -140,14 +140,14 @@ pub async fn init() -> BIOSResult<()> {
                     IamApp::RelTenantId,
                 ])
                 .values_panic(vec![
-                    app_id.clone().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    iam_config.app.app_name.clone().into(),
+                    app_id.as_str().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    iam_config.app.app_name.as_str().into(),
                     "".into(),
                     "".into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
-                    tenant_id.clone().into(),
+                    tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -173,14 +173,14 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    "".clone().into(),
-                    ak.clone().into(),
-                    sk.clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    "".into(),
+                    ak.as_str().into(),
+                    sk.as_str().into(),
                     i64::MAX.into(),
-                    app_id.clone().into(),
-                    tenant_id.clone().into(),
+                    app_id.as_str().into(),
+                    tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -204,15 +204,15 @@ pub async fn init() -> BIOSResult<()> {
                     IamAccount::Status,
                 ])
                 .values_panic(vec![
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
                     format!("ao_{}", bios::basic::field::uuid()).into(),
-                    iam_config.app.admin_name.clone().into(),
+                    iam_config.app.admin_name.as_str().into(),
                     "".into(),
                     "".into(),
                     "".into(),
-                    tenant_id.clone().into(),
+                    tenant_id.as_str().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -254,15 +254,15 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
                     AccountIdentKind::Username.to_string().to_lowercase().into(),
-                    iam_config.app.admin_name.clone().into(),
+                    iam_config.app.admin_name.as_str().into(),
                     processed_sk.into(),
                     Utc::now().timestamp().into(),
                     valid_end_time.into(),
-                    account_id.clone().into(),
-                    tenant_id.clone().into(),
+                    account_id.as_str().into(),
+                    tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -282,10 +282,10 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    app_id.clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    app_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -309,7 +309,7 @@ pub async fn init() -> BIOSResult<()> {
                         IamRole::RelTenantId,
                     ])
                     .values_panic(vec![
-                        role_id.clone().into(),
+                        role_id.as_str().into(),
                         account_id.into(),
                         account_id.into(),
                         role_code.into(),
@@ -338,7 +338,7 @@ pub async fn init() -> BIOSResult<()> {
                         account_id.into(),
                         account_id.into(),
                         account_id.into(),
-                        role_id.clone().into(),
+                        role_id.as_str().into(),
                     ])
                     .done(),
                 Some(tx),
@@ -347,8 +347,8 @@ pub async fn init() -> BIOSResult<()> {
         Ok(role_id)
     }
     let system_role_id = init_account_role(
-        &iam_config.security.system_admin_role_code.clone(),
-        &iam_config.security.system_admin_role_name.clone(),
+        &iam_config.security.system_admin_role_code.as_str(),
+        &iam_config.security.system_admin_role_name.as_str(),
         &account_id,
         &app_id,
         &tenant_id,
@@ -356,8 +356,8 @@ pub async fn init() -> BIOSResult<()> {
     )
     .await?;
     let tenant_role_id = init_account_role(
-        &iam_config.security.tenant_admin_role_code.clone(),
-        &iam_config.security.tenant_admin_role_name.clone(),
+        &iam_config.security.tenant_admin_role_code.as_str(),
+        &iam_config.security.tenant_admin_role_name.as_str(),
         &account_id,
         &app_id,
         &tenant_id,
@@ -365,8 +365,8 @@ pub async fn init() -> BIOSResult<()> {
     )
     .await?;
     let app_role_id = init_account_role(
-        &iam_config.security.app_admin_role_code.clone(),
-        &iam_config.security.app_admin_role_name.clone(),
+        &iam_config.security.app_admin_role_code.as_str(),
+        &iam_config.security.app_admin_role_name.as_str(),
         &account_id,
         &app_id,
         &tenant_id,
@@ -405,7 +405,7 @@ pub async fn init() -> BIOSResult<()> {
                         IamResourceSubject::RelTenantId,
                     ])
                     .values_panic(vec![
-                        resource_subject_id.clone().into(),
+                        resource_subject_id.as_str().into(),
                         account_id.into(),
                         account_id.into(),
                         kind.to_string().to_lowercase().into(),
@@ -480,7 +480,7 @@ pub async fn init() -> BIOSResult<()> {
                             IamResource::ExposeKind,
                         ])
                         .values_panic(vec![
-                            resource_id.clone().into(),
+                            resource_id.as_str().into(),
                             account_id.into(),
                             account_id.into(),
                             path_and_query.into(),
@@ -533,7 +533,7 @@ pub async fn init() -> BIOSResult<()> {
                             IamAuthPolicy::RelTenantId,
                         ])
                         .values_panic(vec![
-                            auth_policy_id.clone().into(),
+                            auth_policy_id.as_str().into(),
                             account_id.into(),
                             account_id.into(),
                             name.into(),

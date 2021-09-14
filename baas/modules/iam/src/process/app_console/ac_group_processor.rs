@@ -44,8 +44,8 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Code).eq(group_add_req.code.clone().to_lowercase()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Code).eq(group_add_req.code.as_str().to_lowercase()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -74,18 +74,18 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
                     IamGroup::ExposeKind,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    group_add_req.code.clone().to_lowercase().into(),
-                    group_add_req.name.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    group_add_req.code.as_str().to_lowercase().into(),
+                    group_add_req.name.as_str().into(),
                     group_add_req.kind.to_string().to_lowercase().into(),
-                    group_add_req.icon.clone().unwrap_or_default().into(),
+                    group_add_req.icon.as_deref().unwrap_or(&"").into(),
                     group_add_req.sort.into(),
-                    group_add_req.rel_group_id.clone().unwrap_or_default().into(),
-                    group_add_req.rel_group_node_id.clone().unwrap_or_default().into(),
-                    ident_info.app_id.clone().into(),
-                    ident_info.tenant_id.clone().into(),
+                    group_add_req.rel_group_id.as_deref().unwrap_or(&"").into(),
+                    group_add_req.rel_group_node_id.as_deref().unwrap_or(&"").into(),
+                    ident_info.app_id.as_str().into(),
+                    ident_info.tenant_id.as_str().into(),
                     group_add_req.expose_kind.as_ref().unwrap_or(&crate::process::basic_dto::ExposeKind::App).to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -105,8 +105,8 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -136,14 +136,14 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
     if let Some(expose_kind) = &group_modify_req.expose_kind {
         values.push((IamGroup::ExposeKind, expose_kind.to_string().to_lowercase().into()));
     }
-    values.push((IamGroup::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamGroup::UpdateUser, ident_info.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamGroup::Table)
                 .values(values)
-                .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -201,19 +201,19 @@ pub async fn list_group(query: VQuery<GroupQueryReq>, req: HttpRequest) -> BIOSR
         .conditions(
             !query.expose,
             |x| {
-                x.and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.clone()));
+                x.and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()));
             },
             |x| {
                 x.cond_where(
                     Cond::any().add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
                         Cond::all()
-                            .add(Expr::tbl(IamGroup::Table, IamGroup::RelTenantId).eq(ident_info.tenant_id.clone()))
+                            .add(Expr::tbl(IamGroup::Table, IamGroup::RelTenantId).eq(ident_info.tenant_id.as_str()))
                             .add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
                     ),
                 );
             },
         )
-        .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+        .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
         .order_by(IamGroup::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<GroupDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
@@ -230,8 +230,8 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -241,7 +241,7 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select().columns(vec![IamGroupNode::Id]).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::RelGroupId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamGroupNode::Id]).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::RelGroupId).eq(id.as_str())).done(),
             None,
         )
         .await?
@@ -255,8 +255,8 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamGroup::iter().filter(|i| *i != IamGroup::Table))
         .from(IamGroup::Table)
-        .and_where(Expr::col(IamGroup::Id).eq(id.clone()))
-        .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+        .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
+        .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
         .done();
     BIOSFuns::reldb().soft_del(IamGroup::Table, IamGroup::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
     tx.commit().await?;
@@ -276,8 +276,8 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Id).eq(group_id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -291,8 +291,8 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
             &Query::select()
                 .column(IamGroupNode::Code)
                 .from(IamGroupNode::Table)
-                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.clone()))
-                .and_where(Expr::col(IamGroupNode::Code).like(format!("{}%", group_node_add_req.parent_code.clone()).as_str()))
+                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.as_str()))
+                .and_where(Expr::col(IamGroupNode::Code).like(format!("{}%", group_node_add_req.parent_code.as_str()).as_str()))
                 .and_where(
                     Expr::expr(Func::char_length(Expr::col(IamGroupNode::Code))).eq(if group_node_add_req.parent_code.is_empty() {
                         4
@@ -312,7 +312,7 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
                 bios::basic::field::incr_by_base36(node["code"].as_str().unwrap()).expect("Group node code exceeds maximum limit")
             } else {
                 let code = node["code"].as_str().unwrap().to_string();
-                let last_split_idx = code.clone().rfind(".").unwrap();
+                let last_split_idx = code.as_str().rfind(".").unwrap();
                 let parent_code = &code.as_str()[..last_split_idx];
                 let current_code = &code.as_str()[last_split_idx + 1..];
                 format!(
@@ -347,14 +347,14 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
                     IamGroupNode::RelGroupId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    code.clone().into(),
-                    group_node_add_req.bus_code.clone().unwrap_or_default().into(),
-                    group_node_add_req.name.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    code.as_str().into(),
+                    group_node_add_req.bus_code.as_deref().unwrap_or(&"").into(),
+                    group_node_add_req.name.as_str().into(),
                     group_node_add_req.sort.into(),
-                    group_node_add_req.parameters.clone().unwrap_or_default().into(),
+                    group_node_add_req.parameters.as_deref().unwrap_or(&"").into(),
                     group_id.into(),
                 ])
                 .done(),
@@ -375,8 +375,8 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Id).eq(group_id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -389,8 +389,8 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
             &Query::select()
                 .columns(vec![IamGroupNode::Id])
                 .from(IamGroupNode::Table)
-                .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.clone()))
+                .and_where(Expr::col(IamGroupNode::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.as_str()))
                 .done(),
             None,
         )
@@ -417,7 +417,7 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
             &Query::update()
                 .table(IamGroupNode::Table)
                 .values(values)
-                .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
+                .and_where(Expr::col(IamGroupNode::Id).eq(id.as_str()))
                 .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id))
                 .done(),
             None,
@@ -436,8 +436,8 @@ pub async fn list_group_node(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Id).eq(group_id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -493,8 +493,8 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
-                .and_where(Expr::col(IamGroup::Id).eq(group_id.clone()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -507,8 +507,8 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamGroupNode::Id])
                 .from(IamGroupNode::Table)
-                .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
-                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.clone()))
+                .and_where(Expr::col(IamGroupNode::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id.as_str()))
                 .done(),
             None,
         )
@@ -519,7 +519,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
 
     let result = BIOSFuns::reldb()
         .fetch_one_json(
-            &Query::select().column(IamGroupNode::Code).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::Id).eq(id.clone())).done(),
+            &Query::select().column(IamGroupNode::Code).from(IamGroupNode::Table).and_where(Expr::col(IamGroupNode::Id).eq(id.as_str())).done(),
             None,
         )
         .await?;
@@ -531,7 +531,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicyObject::Id])
                 .from(IamAuthPolicyObject::Table)
                 .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::GroupNode.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).like(format!("{}-{}", id.clone(), code).as_str()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).like(format!("{}-{}", id.as_str(), code).as_str()))
                 .done(),
             None,
         )
@@ -541,7 +541,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
     }
     if BIOSFuns::reldb()
         .exists(
-            &Query::select().columns(vec![IamAccountGroup::Id]).from(IamAccountGroup::Table).and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamAccountGroup::Id]).from(IamAccountGroup::Table).and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(id.as_str())).done(),
             None,
         )
         .await?
@@ -555,7 +555,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamGroupNode::iter().filter(|i| *i != IamGroupNode::Table))
         .from(IamGroupNode::Table)
-        .and_where(Expr::col(IamGroupNode::Id).eq(id.clone()))
+        .and_where(Expr::col(IamGroupNode::Id).eq(id.as_str()))
         .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id))
         .done();
     BIOSFuns::reldb().soft_del(IamGroupNode::Table, IamGroupNode::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
