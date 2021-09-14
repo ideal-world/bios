@@ -65,9 +65,9 @@ pub async fn registerTenant(tenant_register_req: Json<TenantRegisterReq>, req: H
                     account_id.clone().into(),
                     account_id.clone().into(),
                     tenant_register_req.name.clone().into(),
-                    tenant_register_req.icon.clone().unwrap_or_default().into(),
+                    tenant_register_req.icon.as_deref().unwrap_or(&"").into(),
                     tenant_register_req.allow_account_register.into(),
-                    tenant_register_req.parameters.clone().unwrap_or_default().into(),
+                    tenant_register_req.parameters.as_deref().unwrap_or(&"").into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -213,15 +213,15 @@ pub async fn registerTenant(tenant_register_req: Json<TenantRegisterReq>, req: H
                     IamAccount::Status,
                 ])
                 .values_panic(vec![
-                    account_id.clone().into(),
-                    account_id.clone().into(),
-                    account_id.clone().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
+                    account_id.as_str().into(),
                     open_id.into(),
                     format!("{} 管理员", tenant_register_req.name).into(),
                     "".into(),
                     "".into(),
                     "".into(),
-                    tenant_id.clone().into(),
+                    tenant_id.as_str().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),

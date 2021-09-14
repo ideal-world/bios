@@ -42,8 +42,8 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -56,8 +56,8 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
-                .and_where(Expr::col(IamRole::Id).eq(role_id.clone()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamRole::Id).eq(role_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -71,8 +71,8 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccountRole::Id])
                 .from(IamAccountRole::Table)
-                .and_where(Expr::col(IamAccountRole::RelRoleId).eq(role_id.clone()))
-                .and_where(Expr::col(IamAccountRole::RelAccountId).eq(account_id.clone()))
+                .and_where(Expr::col(IamAccountRole::RelRoleId).eq(role_id.as_str()))
+                .and_where(Expr::col(IamAccountRole::RelAccountId).eq(account_id.as_str()))
                 .done(),
             None,
         )
@@ -93,9 +93,9 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
                     IamAccountRole::RelRoleId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     account_id.into(),
                     role_id.into(),
                 ])
@@ -116,8 +116,8 @@ pub async fn list_account_role(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -169,8 +169,8 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone().clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -183,8 +183,8 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
-                .and_where(Expr::col(IamRole::Id).eq(role_id.clone()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::col(IamRole::Id).eq(role_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -199,7 +199,7 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamAccountRole::iter().filter(|i| *i != IamAccountRole::Table))
         .from(IamAccountRole::Table)
-        .and_where(Expr::col(IamAccountRole::RelAccountId).eq(account_id.clone()))
+        .and_where(Expr::col(IamAccountRole::RelAccountId).eq(account_id.as_str()))
         .and_where(Expr::col(IamAccountRole::RelRoleId).eq(role_id))
         .done();
     BIOSFuns::reldb().soft_del(IamAccountRole::Table, IamAccountRole::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
@@ -223,8 +223,8 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -241,8 +241,8 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
                     IamGroup::Table,
                     Expr::tbl(IamGroup::Table, IamGroup::Id).equals(IamGroupNode::Table, IamGroupNode::RelGroupId),
                 )
-                .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).eq(group_node_id.clone()))
-                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).eq(group_node_id.as_str()))
+                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -256,8 +256,8 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccountGroup::Id])
                 .from(IamAccountGroup::Table)
-                .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(group_node_id.clone()))
-                .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(account_id.clone()))
+                .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(group_node_id.as_str()))
+                .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(account_id.as_str()))
                 .done(),
             None,
         )
@@ -278,9 +278,9 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
                     IamAccountGroup::RelGroupNodeId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     account_id.into(),
                     group_node_id.into(),
                 ])
@@ -301,8 +301,8 @@ pub async fn list_account_group(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -354,8 +354,8 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone().clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -372,8 +372,8 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
                     IamGroup::Table,
                     Expr::tbl(IamGroup::Table, IamGroup::Id).equals(IamGroupNode::Table, IamGroupNode::RelGroupId),
                 )
-                .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).eq(group_node_id.clone()))
-                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.clone()))
+                .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).eq(group_node_id.as_str()))
+                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
                 .done(),
             None,
         )
@@ -388,7 +388,7 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamAccountGroup::iter().filter(|i| *i != IamAccountGroup::Table))
         .from(IamAccountGroup::Table)
-        .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(account_id.clone()))
+        .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(account_id.as_str()))
         .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(group_node_id))
         .done();
     BIOSFuns::reldb().soft_del(IamAccountGroup::Table, IamAccountGroup::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;

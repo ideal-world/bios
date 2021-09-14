@@ -60,15 +60,15 @@ pub async fn add_account(account_add_req: Json<AccountAddReq>, req: HttpRequest)
                     IamAccount::Status,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     open_id.into(),
-                    account_add_req.name.clone().into(),
-                    account_add_req.avatar.clone().unwrap_or_default().into(),
-                    account_add_req.parameters.clone().unwrap_or_default().into(),
-                    account_add_req.parent_id.clone().unwrap_or_default().into(),
-                    ident_info.tenant_id.clone().into(),
+                    account_add_req.name.as_str().into(),
+                    account_add_req.avatar.as_deref().unwrap_or(&"").into(),
+                    account_add_req.parameters.as_deref().unwrap_or(&"").into(),
+                    account_add_req.parent_id.as_deref().unwrap_or(&"").into(),
+                    ident_info.tenant_id.as_str().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -88,8 +88,8 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -114,7 +114,7 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
     if let Some(status) = &account_modify_req.status {
         values.push((IamAccount::Status, status.to_string().to_lowercase().into()));
     }
-    values.push((IamAccount::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamAccount::UpdateUser, ident_info.account_id.as_str().into()));
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -124,7 +124,7 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
             &Query::update()
                 .table(IamAccount::Table)
                 .values(values)
-                .and_where(Expr::col(IamAccount::Id).eq(id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
                 .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id))
                 .done(),
             Some(&mut tx),
@@ -196,8 +196,8 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -218,7 +218,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountIdent::iter().filter(|i| *i != IamAccountIdent::Table))
                 .from(IamAccountIdent::Table)
-                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(id.clone()))
+                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -232,7 +232,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountBind::iter().filter(|i| *i != IamAccountBind::Table))
                 .from(IamAccountBind::Table)
-                .cond_where(Cond::any().add(Expr::col(IamAccountBind::FromAccountId).eq(id.clone())).add(Expr::col(IamAccountBind::ToAccountId).eq(id.clone())))
+                .cond_where(Cond::any().add(Expr::col(IamAccountBind::FromAccountId).eq(id.as_str())).add(Expr::col(IamAccountBind::ToAccountId).eq(id.as_str())))
                 .done(),
             &mut tx,
         )
@@ -246,7 +246,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountApp::iter().filter(|i| *i != IamAccountApp::Table))
                 .from(IamAccountApp::Table)
-                .and_where(Expr::col(IamAccountApp::RelAccountId).eq(id.clone()))
+                .and_where(Expr::col(IamAccountApp::RelAccountId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -260,7 +260,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountGroup::iter().filter(|i| *i != IamAccountGroup::Table))
                 .from(IamAccountGroup::Table)
-                .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(id.clone()))
+                .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -274,7 +274,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(IamAccountRole::iter().filter(|i| *i != IamAccountRole::Table))
                 .from(IamAccountRole::Table)
-                .and_where(Expr::col(IamAccountRole::RelAccountId).eq(id.clone()))
+                .and_where(Expr::col(IamAccountRole::RelAccountId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -286,7 +286,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicyObject::RelAuthPolicyId])
                 .from(IamAuthPolicyObject::Table)
                 .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Account.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.clone()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.as_str()))
                 .done(),
             Some(&mut tx),
         )
@@ -303,7 +303,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
                 .columns(IamAuthPolicyObject::iter().filter(|i| *i != IamAuthPolicyObject::Table))
                 .from(IamAuthPolicyObject::Table)
                 .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Account.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.clone()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.as_str()))
                 .done(),
             &mut tx,
         )
@@ -312,8 +312,8 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamAccount::iter().filter(|i| *i != IamAccount::Table))
         .from(IamAccount::Table)
-        .and_where(Expr::col(IamAccount::Id).eq(id.clone()))
-        .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+        .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
+        .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
         .done();
     BIOSFuns::reldb().soft_del(IamAccount::Table, IamAccount::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
@@ -340,8 +340,8 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -355,8 +355,8 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
                 .columns(vec![IamAccountIdent::Id])
                 .from(IamAccountIdent::Table)
                 .and_where(Expr::col(IamAccountIdent::Kind).eq(account_ident_add_req.kind.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAccountIdent::Ak).eq(account_ident_add_req.ak.clone()))
-                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id.clone()))
+                .and_where(Expr::col(IamAccountIdent::Ak).eq(account_ident_add_req.ak.as_str()))
+                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id.as_str()))
                 .done(),
             None,
         )
@@ -368,7 +368,7 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
     auth_processor::valid_account_ident(
         &account_ident_add_req.kind.to_string().to_lowercase(),
         &account_ident_add_req.ak,
-        &account_ident_add_req.sk.clone().unwrap_or_default(),
+        &account_ident_add_req.sk.as_deref().unwrap_or(&""),
         &ident_info.tenant_id,
         None,
     )
@@ -376,7 +376,7 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
     let processed_sk = auth_processor::process_sk(
         &account_ident_add_req.kind.to_string().to_lowercase(),
         &account_ident_add_req.ak,
-        &account_ident_add_req.sk.clone().unwrap_or_default(),
+        &account_ident_add_req.sk.as_deref().unwrap_or(&""),
         &ident_info.tenant_id,
         &ident_info.app_id,
     )
@@ -399,11 +399,11 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
                     IamAccountIdent::RelTenantId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     account_ident_add_req.kind.to_string().to_lowercase().into(),
-                    account_ident_add_req.ak.clone().into(),
+                    account_ident_add_req.ak.as_str().into(),
                     processed_sk.into(),
                     account_ident_add_req.valid_start_time.into(),
                     account_ident_add_req.valid_end_time.into(),
@@ -432,8 +432,8 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -447,8 +447,8 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
             &Query::select()
                 .columns(vec![IamAccountIdent::Kind])
                 .from(IamAccountIdent::Table)
-                .and_where(Expr::col(IamAccountIdent::Id).eq(id.clone()))
-                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id.clone()))
+                .and_where(Expr::col(IamAccountIdent::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id.as_str()))
                 .done(),
             None,
         )
@@ -457,40 +457,33 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
 
     auth_processor::valid_account_ident(
         kind,
-        account_ident_modify_req.ak.clone().unwrap_or_default().as_str(),
-        account_ident_modify_req.sk.clone().unwrap_or_default().as_str(),
+        account_ident_modify_req.ak.as_deref().unwrap_or(&""),
+        account_ident_modify_req.sk.as_deref().unwrap_or(&""),
         &ident_info.tenant_id,
         None,
     )
     .await?;
     let mut values = Vec::new();
     if let Some(ak) = &account_ident_modify_req.ak {
-        values.push((IamAccountIdent::Ak, ak.to_string().clone().into()));
+        values.push((IamAccountIdent::Ak, ak.to_string().as_str().into()));
     }
     if let Some(sk) = &account_ident_modify_req.sk {
-        let processed_sk = auth_processor::process_sk(
-            kind,
-            account_ident_modify_req.ak.clone().unwrap_or_default().as_str(),
-            sk,
-            &ident_info.tenant_id,
-            &ident_info.app_id,
-        )
-        .await?;
+        let processed_sk = auth_processor::process_sk(kind, account_ident_modify_req.ak.as_deref().unwrap_or(&""), sk, &ident_info.tenant_id, &ident_info.app_id).await?;
         values.push((IamAccountIdent::Sk, processed_sk.into()));
     }
     if let Some(valid_start_time) = account_ident_modify_req.valid_start_time {
-        values.push((IamAccountIdent::ValidStartTime, valid_start_time.to_string().clone().into()));
+        values.push((IamAccountIdent::ValidStartTime, valid_start_time.to_string().as_str().into()));
     }
     if let Some(valid_end_time) = account_ident_modify_req.valid_end_time {
-        values.push((IamAccountIdent::ValidEndTime, valid_end_time.to_string().clone().into()));
+        values.push((IamAccountIdent::ValidEndTime, valid_end_time.to_string().as_str().into()));
     }
-    values.push((IamAccountIdent::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamAccountIdent::UpdateUser, ident_info.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamAccountIdent::Table)
                 .values(values)
-                .and_where(Expr::col(IamAccountIdent::Id).eq(id.clone()))
+                .and_where(Expr::col(IamAccountIdent::Id).eq(id.as_str()))
                 .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id))
                 .done(),
             None,
@@ -509,8 +502,8 @@ pub async fn list_account_ident(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -565,8 +558,8 @@ pub async fn delete_account_ident(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -581,7 +574,7 @@ pub async fn delete_account_ident(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamAccountIdent::iter().filter(|i| *i != IamAccountIdent::Table))
         .from(IamAccountIdent::Table)
-        .and_where(Expr::col(IamAccountIdent::Id).eq(id.clone()))
+        .and_where(Expr::col(IamAccountIdent::Id).eq(id.as_str()))
         .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id))
         .done();
     BIOSFuns::reldb().soft_del(IamAccountIdent::Table, IamAccountIdent::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
@@ -603,8 +596,8 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -617,8 +610,8 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
-                .and_where(Expr::col(IamApp::Id).eq(app_id.clone()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamApp::Id).eq(app_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -632,8 +625,8 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccountApp::Id])
                 .from(IamAccountApp::Table)
-                .and_where(Expr::col(IamAccountApp::RelAppId).eq(app_id.clone()))
-                .and_where(Expr::col(IamAccountApp::RelAccountId).eq(account_id.clone()))
+                .and_where(Expr::col(IamAccountApp::RelAppId).eq(app_id.as_str()))
+                .and_where(Expr::col(IamAccountApp::RelAccountId).eq(account_id.as_str()))
                 .done(),
             None,
         )
@@ -654,9 +647,9 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
                     IamAccountApp::RelAppId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     account_id.into(),
                     app_id.into(),
                 ])
@@ -677,8 +670,8 @@ pub async fn list_account_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -730,8 +723,8 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
-                .and_where(Expr::col(IamAccount::Id).eq(account_id.clone()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.clone().clone()))
+                .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -744,8 +737,8 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
-                .and_where(Expr::col(IamApp::Id).eq(app_id.clone()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.clone().clone()))
+                .and_where(Expr::col(IamApp::Id).eq(app_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -760,7 +753,7 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamAccountApp::iter().filter(|i| *i != IamAccountApp::Table))
         .from(IamAccountApp::Table)
-        .and_where(Expr::col(IamAccountApp::RelAccountId).eq(account_id.clone()))
+        .and_where(Expr::col(IamAccountApp::RelAccountId).eq(account_id.as_str()))
         .and_where(Expr::col(IamAccountApp::RelAppId).eq(app_id))
         .done();
     BIOSFuns::reldb().soft_del(IamAccountApp::Table, IamAccountApp::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;

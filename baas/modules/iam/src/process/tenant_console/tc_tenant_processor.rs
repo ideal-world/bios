@@ -48,7 +48,7 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
     if let Some(parameters) = &tenant_modify_req.parameters {
         values.push((IamTenant::Parameters, parameters.to_string().into()));
     }
-    values.push((IamTenant::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamTenant::UpdateUser, ident_info.account_id.as_str().into()));
 
     BIOSFuns::reldb()
         .exec(
@@ -109,8 +109,8 @@ pub async fn add_tenant_cert(tenant_cert_add_req: Json<TenantCertAddReq>, req: H
             &Query::select()
                 .columns(vec![IamTenantCert::Id])
                 .from(IamTenantCert::Table)
-                .and_where(Expr::col(IamTenantCert::Category).eq(tenant_cert_add_req.category.clone()))
-                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantCert::Category).eq(tenant_cert_add_req.category.as_str()))
+                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -132,12 +132,12 @@ pub async fn add_tenant_cert(tenant_cert_add_req: Json<TenantCertAddReq>, req: H
                     IamTenantCert::RelTenantId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    tenant_cert_add_req.category.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    tenant_cert_add_req.category.as_str().into(),
                     tenant_cert_add_req.version.into(),
-                    ident_info.tenant_id.clone().into(),
+                    ident_info.tenant_id.as_str().into(),
                 ])
                 .done(),
             None,
@@ -156,8 +156,8 @@ pub async fn modify_tenant_cert(tenant_cert_modify_req: Json<TenantCertModifyReq
             &Query::select()
                 .columns(vec![IamTenantCert::Id])
                 .from(IamTenantCert::Table)
-                .and_where(Expr::col(IamTenantCert::Id).eq(id.clone()))
-                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantCert::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -170,15 +170,15 @@ pub async fn modify_tenant_cert(tenant_cert_modify_req: Json<TenantCertModifyReq
     if let Some(version) = tenant_cert_modify_req.version {
         values.push((IamTenantCert::Version, version.into()));
     }
-    values.push((IamTenantCert::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamTenantCert::UpdateUser, ident_info.account_id.as_str().into()));
 
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamTenantCert::Table)
                 .values(values)
-                .and_where(Expr::col(IamTenantCert::Id).eq(id.clone()))
-                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantCert::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -233,8 +233,8 @@ pub async fn delete_tenant_cert(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamTenantCert::Id])
                 .from(IamTenantCert::Table)
-                .and_where(Expr::col(IamTenantCert::Id).eq(id.clone()))
-                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantCert::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -249,7 +249,7 @@ pub async fn delete_tenant_cert(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamTenantCert::iter().filter(|i| *i != IamTenantCert::Table))
         .from(IamTenantCert::Table)
-        .and_where(Expr::col(IamTenantCert::Id).eq(id.clone()))
+        .and_where(Expr::col(IamTenantCert::Id).eq(id.as_str()))
         .and_where(Expr::col(IamTenantCert::RelTenantId).eq(ident_info.tenant_id))
         .done();
     BIOSFuns::reldb().soft_del(IamTenantCert::Table, IamTenantCert::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
@@ -270,7 +270,7 @@ pub async fn add_tenant_ident(tenant_ident_add_req: Json<TenantIdentAddReq>, req
                 .columns(vec![IamTenantIdent::Id])
                 .from(IamTenantIdent::Table)
                 .and_where(Expr::col(IamTenantIdent::Kind).eq(tenant_ident_add_req.kind.to_string().to_lowercase()))
-                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -296,14 +296,14 @@ pub async fn add_tenant_ident(tenant_ident_add_req: Json<TenantIdentAddReq>, req
                     IamTenantIdent::RelTenantId,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
                     tenant_ident_add_req.kind.to_string().to_lowercase().into(),
-                    tenant_ident_add_req.valid_ak_rule_note.clone().unwrap_or_default().into(),
-                    tenant_ident_add_req.valid_ak_rule.clone().unwrap_or_default().into(),
-                    tenant_ident_add_req.valid_sk_rule_note.clone().unwrap_or_default().into(),
-                    tenant_ident_add_req.valid_sk_rule.clone().unwrap_or_default().into(),
+                    tenant_ident_add_req.valid_ak_rule_note.as_deref().unwrap_or(&"").into(),
+                    tenant_ident_add_req.valid_ak_rule.as_deref().unwrap_or(&"").into(),
+                    tenant_ident_add_req.valid_sk_rule_note.as_deref().unwrap_or(&"").into(),
+                    tenant_ident_add_req.valid_sk_rule.as_deref().unwrap_or(&"").into(),
                     tenant_ident_add_req.valid_time.into(),
                     ident_info.tenant_id.into(),
                 ])
@@ -324,8 +324,8 @@ pub async fn modify_tenant_ident(tenant_ident_modify_req: Json<TenantIdentModify
             &Query::select()
                 .columns(vec![IamTenantIdent::Id])
                 .from(IamTenantIdent::Table)
-                .and_where(Expr::col(IamTenantIdent::Id).eq(id.clone()))
-                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantIdent::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -336,28 +336,28 @@ pub async fn modify_tenant_ident(tenant_ident_modify_req: Json<TenantIdentModify
 
     let mut values = Vec::new();
     if let Some(valid_ak_rule_note) = &tenant_ident_modify_req.valid_ak_rule_note {
-        values.push((IamTenantIdent::ValidAkRuleNote, valid_ak_rule_note.to_string().clone().into()));
+        values.push((IamTenantIdent::ValidAkRuleNote, valid_ak_rule_note.to_string().as_str().into()));
     }
     if let Some(valid_ak_rule) = &tenant_ident_modify_req.valid_ak_rule {
-        values.push((IamTenantIdent::ValidAkRule, valid_ak_rule.to_string().clone().into()));
+        values.push((IamTenantIdent::ValidAkRule, valid_ak_rule.to_string().as_str().into()));
     }
     if let Some(valid_sk_rule_note) = &tenant_ident_modify_req.valid_sk_rule_note {
-        values.push((IamTenantIdent::ValidSkRuleNote, valid_sk_rule_note.to_string().clone().into()));
+        values.push((IamTenantIdent::ValidSkRuleNote, valid_sk_rule_note.to_string().as_str().into()));
     }
     if let Some(valid_sk_rule) = &tenant_ident_modify_req.valid_sk_rule {
-        values.push((IamTenantIdent::ValidSkRule, valid_sk_rule.to_string().clone().into()));
+        values.push((IamTenantIdent::ValidSkRule, valid_sk_rule.to_string().as_str().into()));
     }
     if let Some(valid_time) = tenant_ident_modify_req.valid_time {
         values.push((IamTenantIdent::ValidTime, valid_time.into()));
     }
-    values.push((IamTenantIdent::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamTenantIdent::UpdateUser, ident_info.account_id.as_str().into()));
 
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamTenantIdent::Table)
                 .values(values)
-                .and_where(Expr::col(IamTenantIdent::Id).eq(id.clone()))
+                .and_where(Expr::col(IamTenantIdent::Id).eq(id.as_str()))
                 .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id))
                 .done(),
             None,
@@ -417,8 +417,8 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResp {
             &Query::select()
                 .columns(vec![IamTenantIdent::Id])
                 .from(IamTenantIdent::Table)
-                .and_where(Expr::col(IamTenantIdent::Id).eq(id.clone()))
-                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::col(IamTenantIdent::Id).eq(id.as_str()))
+                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -435,8 +435,8 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResp {
                     IamTenantIdent::Table,
                     Expr::tbl(IamTenantIdent::Table, IamTenantIdent::Kind).equals(IamAccountIdent::Table, IamAccountIdent::Kind),
                 )
-                .and_where(Expr::tbl(IamTenantIdent::Table, IamTenantIdent::Id).eq(id.clone()))
-                .and_where(Expr::tbl(IamTenantIdent::Table, IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.clone()))
+                .and_where(Expr::tbl(IamTenantIdent::Table, IamTenantIdent::Id).eq(id.as_str()))
+                .and_where(Expr::tbl(IamTenantIdent::Table, IamTenantIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -451,7 +451,7 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResp {
     let sql_builder = Query::select()
         .columns(IamTenantIdent::iter().filter(|i| *i != IamTenantIdent::Table))
         .from(IamTenantIdent::Table)
-        .and_where(Expr::col(IamTenantIdent::Id).eq(id.clone()))
+        .and_where(Expr::col(IamTenantIdent::Id).eq(id.as_str()))
         .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(ident_info.tenant_id))
         .done();
     BIOSFuns::reldb().soft_del(IamTenantIdent::Table, IamTenantIdent::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;

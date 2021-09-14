@@ -52,13 +52,13 @@ pub async fn add_tenant(tenant_add_req: Json<TenantAddReq>, req: HttpRequest) ->
                     IamTenant::Status,
                 ])
                 .values_panic(vec![
-                    id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    ident_info.account_id.clone().into(),
-                    tenant_add_req.name.clone().into(),
-                    tenant_add_req.icon.clone().unwrap_or_default().into(),
+                    id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    ident_info.account_id.as_str().into(),
+                    tenant_add_req.name.as_str().into(),
+                    tenant_add_req.icon.as_deref().unwrap_or(&"").into(),
                     tenant_add_req.allow_account_register.into(),
-                    tenant_add_req.parameters.clone().unwrap_or_default().into(),
+                    tenant_add_req.parameters.as_deref().unwrap_or(&"").into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -89,14 +89,14 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
     if let Some(status) = &tenant_modify_req.status {
         values.push((IamTenant::Status, status.to_string().to_lowercase().into()));
     }
-    values.push((IamTenant::UpdateUser, ident_info.account_id.clone().into()));
+    values.push((IamTenant::UpdateUser, ident_info.account_id.as_str().into()));
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
 
     BIOSFuns::reldb()
         .exec(
-            &Query::update().table(IamTenant::Table).values(values).and_where(Expr::col(IamTenant::Id).eq(id.clone())).done(),
+            &Query::update().table(IamTenant::Table).values(values).and_where(Expr::col(IamTenant::Id).eq(id.as_str())).done(),
             Some(&mut tx),
         )
         .await?;
@@ -111,7 +111,7 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
                     .from(IamApp::Table)
                     .inner_join(IamAppIdent::Table, Expr::tbl(IamAppIdent::Table, IamAppIdent::RelAppId).equals(IamApp::Table, IamApp::Id))
                     .and_where(Expr::tbl(IamApp::Table, IamApp::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
-                    .and_where(Expr::tbl(IamApp::Table, IamApp::RelTenantId).eq(id.clone()))
+                    .and_where(Expr::tbl(IamApp::Table, IamApp::RelTenantId).eq(id.as_str()))
                     .done(),
                 None,
             )
@@ -182,7 +182,7 @@ pub async fn delete_tenant(req: HttpRequest) -> BIOSResp {
 
     if BIOSFuns::reldb()
         .exists(
-            &Query::select().columns(vec![IamApp::Id]).from(IamApp::Table).and_where(Expr::col(IamApp::RelTenantId).eq(id.clone())).done(),
+            &Query::select().columns(vec![IamApp::Id]).from(IamApp::Table).and_where(Expr::col(IamApp::RelTenantId).eq(id.as_str())).done(),
             None,
         )
         .await?
@@ -194,7 +194,7 @@ pub async fn delete_tenant(req: HttpRequest) -> BIOSResp {
     let mut tx = conn.begin().await?;
 
     let sql_builder =
-        Query::select().columns(IamTenant::iter().filter(|i| *i != IamTenant::Table)).from(IamTenant::Table).and_where(Expr::col(IamTenant::Id).eq(id.clone())).done();
+        Query::select().columns(IamTenant::iter().filter(|i| *i != IamTenant::Table)).from(IamTenant::Table).and_where(Expr::col(IamTenant::Id).eq(id.as_str())).done();
     BIOSFuns::reldb().soft_del(IamTenant::Table, IamTenant::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
