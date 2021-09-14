@@ -71,7 +71,7 @@ impl Default for AppConfig {
         AppConfig {
             name: "BIOS Application".to_owned(),
             desc: "This is a BIOS Application".to_owned(),
-            id: "default_id".to_owned(),
+            id: "".to_owned(),
             version: "0.0.1".to_owned(),
             url: "".to_owned(),
             email: "".to_owned(),

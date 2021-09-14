@@ -71,6 +71,7 @@ impl BIOSRespHelper<()> {
         }))
     }
 
+    // fixme remove this function
     pub fn bus_error(error: BIOSError) -> BIOSResp {
         Ok(HttpResponse::Ok().json(BIOSRespHelper::<()> {
             code: format!("{}", error.status_code().as_u16()),

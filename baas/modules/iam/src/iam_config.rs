@@ -31,29 +31,109 @@ impl Default for WorkSpaceConfig {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct IamConfig {
-    pub cache_token: String,
-    pub cache_token_rel: String,
-    pub cache_aksk: String,
-    pub cache_resources: String,
-    pub cache_change_resources: String,
-    pub cache_access_token: String,
-    pub cache_account_vcode_tmp_rel: String,
-    pub cache_account_vcode_error_times: String,
-    pub cache_change_resources_exp: usize,
+    pub service_name: String,
+    pub allow_tenant_register: bool,
+    pub cache: IamCacheConfig,
+    pub app: IamAppConfig,
+    pub security: IamSecurityConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct IamCacheConfig {
+    pub token: String,
+    pub token_rel: String,
+    pub aksk: String,
+    pub resources: String,
+    pub change_resources: String,
+    pub access_token: String,
+    pub account_vcode_tmp_rel: String,
+    pub account_vcode_error_times: String,
+    pub change_resources_expire_sec: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct IamSecurityConfig {
+    pub system_admin_role_code: String,
+    pub system_admin_role_name: String,
+    pub tenant_admin_role_code: String,
+    pub tenant_admin_role_name: String,
+    pub app_admin_role_code: String,
+    pub app_admin_role_name: String,
+    pub default_valid_ak_rule_note: String,
+    pub default_valid_ak_rule: String,
+    pub default_valid_sk_rule_note: String,
+    pub default_valid_sk_rule: String,
+    pub default_valid_time_sec: i64,
+    pub account_vcode_expire_sec: i64,
+    pub account_vcode_max_error_times: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct IamAppConfig {
+    pub tenant_name: String,
+    pub app_name: String,
+    pub admin_name: String,
+    pub admin_password: String,
 }
 
 impl Default for IamConfig {
     fn default() -> Self {
         IamConfig {
-            cache_token: "bios:iam:token:info:".to_string(),
-            cache_token_rel: "bios:iam:token:rel:".to_string(),
-            cache_aksk: "bios:iam:app:aksk:".to_string(),
-            cache_resources: "bios:iam:resources".to_string(),
-            cache_change_resources: "bios:iam:change_resources:".to_string(),
-            cache_access_token: "bios:iam:oauth:access-token:".to_string(),
-            cache_account_vcode_tmp_rel: "bios:iam:account:vocde:tmprel:".to_string(),
-            cache_account_vcode_error_times: "bios:iam:account:vocde:errortimes:".to_string(),
-            cache_change_resources_exp: 30,
+            service_name: "iam".to_string(),
+            allow_tenant_register: true,
+            cache: Default::default(),
+            app: Default::default(),
+            security: Default::default(),
+        }
+    }
+}
+
+impl Default for IamCacheConfig {
+    fn default() -> Self {
+        IamCacheConfig {
+            token: "bios:iam:token:info:".to_string(),
+            token_rel: "bios:iam:token:rel:".to_string(),
+            aksk: "bios:iam:app:aksk:".to_string(),
+            resources: "bios:iam:resources".to_string(),
+            change_resources: "bios:iam:change_resources:".to_string(),
+            access_token: "bios:iam:oauth:access-token:".to_string(),
+            account_vcode_tmp_rel: "bios:iam:account:vocde:tmprel:".to_string(),
+            account_vcode_error_times: "bios:iam:account:vocde:errortimes:".to_string(),
+            change_resources_expire_sec: 30,
+        }
+    }
+}
+
+impl Default for IamAppConfig {
+    fn default() -> Self {
+        IamAppConfig {
+            tenant_name: "平台租户".to_string(),
+            app_name: "用户权限应用".to_string(),
+            admin_name: "bios_admin".to_string(),
+            admin_password: bios::basic::field::uuid(),
+        }
+    }
+}
+
+impl Default for IamSecurityConfig {
+    fn default() -> Self {
+        IamSecurityConfig {
+            system_admin_role_code: "SYSTEM_ADMIN".to_string(),
+            system_admin_role_name: "系统管理员".to_string(),
+            tenant_admin_role_code: "TENANT_ADMIN".to_string(),
+            tenant_admin_role_name: "租户管理员".to_string(),
+            app_admin_role_code: "APP_ADMIN".to_string(),
+            app_admin_role_name: "应用管理员".to_string(),
+            default_valid_ak_rule_note: "用户名校验规则".to_string(),
+            default_valid_ak_rule: "^[a-zA-Z\\d\\.]{3,20}$".to_string(),
+            default_valid_sk_rule_note: "密码校验规则，8-20位字母+数字".to_string(),
+            default_valid_sk_rule: "^(?![0-9]+$)(?![a-zA-Z]+$)\\S{8,20}$".to_string(),
+            default_valid_time_sec: 60 * 60 * 24 * 30,
+            account_vcode_expire_sec: 60 * 5,
+            account_vcode_max_error_times: 5,
         }
     }
 }

@@ -27,7 +27,6 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::constant::RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT;
 use crate::domain::auth_domain::{IamAuthPolicy, IamResource, IamResourceSubject};
 use crate::domain::ident_domain::IamAccount;
 use crate::process::app_console::ac_resource_dto::{
@@ -37,73 +36,63 @@ use crate::process::app_console::ac_resource_dto::{
 #[post("/console/app/resource/subject")]
 pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubjectAddReq>, req: HttpRequest) -> BIOSResp {
     let ident_info = get_ident_account_info(&req)?;
-    if resource_subject_add_req.code_postfix.contains(&RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT) {
-        return BIOSRespHelper::bus_error(BIOSError::BadRequest(
-            format!("ResourceSubject [code_postfix] can't contain [{}]", &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT).to_owned(),
-        ));
-    }
-    let resource_subject_code = format!(
-        "{}{}{}{}{}",
-        &ident_info.app_id,
-        &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
-        &resource_subject_add_req.kind.to_string().to_lowercase(),
-        &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
-        &resource_subject_add_req.code_postfix
-    )
-    .to_lowercase();
+    let uri = bios::basic::uri::format(&resource_subject_add_req.uri).expect("Uri parse error");
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
-                .and_where(Expr::col(IamResourceSubject::Code).eq(resource_subject_code.clone()))
+                .and_where(Expr::col(IamResourceSubject::Kind).eq(resource_subject_add_req.kind.to_string().to_lowercase()))
+                .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.clone()))
                 .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject [code] already exists".to_owned()));
+        return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject already exists".to_owned()));
     }
     let id = bios::basic::field::uuid();
-    let sql_builder = Query::insert()
-        .into_table(IamResourceSubject::Table)
-        .columns(vec![
-            IamResourceSubject::Id,
-            IamResourceSubject::CreateUser,
-            IamResourceSubject::UpdateUser,
-            IamResourceSubject::Code,
-            IamResourceSubject::Kind,
-            IamResourceSubject::Uri,
-            IamResourceSubject::Name,
-            IamResourceSubject::Sort,
-            IamResourceSubject::Ak,
-            IamResourceSubject::Sk,
-            IamResourceSubject::PlatformAccount,
-            IamResourceSubject::PlatformProjectId,
-            IamResourceSubject::TimeoutMs,
-            IamResourceSubject::RelAppId,
-            IamResourceSubject::RelTenantId,
-        ])
-        .values_panic(vec![
-            id.clone().into(),
-            ident_info.account_id.clone().into(),
-            ident_info.account_id.clone().into(),
-            resource_subject_code.clone().into(),
-            resource_subject_add_req.kind.to_string().to_lowercase().into(),
-            bios::basic::uri::format(&resource_subject_add_req.uri).expect("Uri parse error").into(),
-            resource_subject_add_req.name.clone().into(),
-            resource_subject_add_req.sort.into(),
-            resource_subject_add_req.ak.clone().unwrap_or_default().into(),
-            resource_subject_add_req.sk.clone().unwrap_or_default().into(),
-            resource_subject_add_req.platform_account.clone().unwrap_or_default().into(),
-            resource_subject_add_req.platform_project_id.clone().unwrap_or_default().into(),
-            resource_subject_add_req.timeout_ms.unwrap_or(0).into(),
-            ident_info.app_id.clone().into(),
-            ident_info.tenant_id.clone().into(),
-        ])
-        .done();
-    BIOSFuns::reldb().exec(&sql_builder, None).await?;
+    BIOSFuns::reldb()
+        .exec(
+            &Query::insert()
+                .into_table(IamResourceSubject::Table)
+                .columns(vec![
+                    IamResourceSubject::Id,
+                    IamResourceSubject::CreateUser,
+                    IamResourceSubject::UpdateUser,
+                    IamResourceSubject::Kind,
+                    IamResourceSubject::Uri,
+                    IamResourceSubject::Name,
+                    IamResourceSubject::Sort,
+                    IamResourceSubject::Ak,
+                    IamResourceSubject::Sk,
+                    IamResourceSubject::PlatformAccount,
+                    IamResourceSubject::PlatformProjectId,
+                    IamResourceSubject::TimeoutMs,
+                    IamResourceSubject::RelAppId,
+                    IamResourceSubject::RelTenantId,
+                ])
+                .values_panic(vec![
+                    id.clone().into(),
+                    ident_info.account_id.clone().into(),
+                    ident_info.account_id.clone().into(),
+                    resource_subject_add_req.kind.to_string().to_lowercase().into(),
+                    uri.into(),
+                    resource_subject_add_req.name.clone().into(),
+                    resource_subject_add_req.sort.into(),
+                    resource_subject_add_req.ak.clone().unwrap_or_default().into(),
+                    resource_subject_add_req.sk.clone().unwrap_or_default().into(),
+                    resource_subject_add_req.platform_account.clone().unwrap_or_default().into(),
+                    resource_subject_add_req.platform_project_id.clone().unwrap_or_default().into(),
+                    resource_subject_add_req.timeout_ms.unwrap_or_default().into(),
+                    ident_info.app_id.clone().into(),
+                    ident_info.tenant_id.clone().into(),
+                ])
+                .done(),
+            None,
+        )
+        .await?;
     BIOSRespHelper::ok(id)
 }
 
@@ -126,47 +115,34 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
     {
         return BIOSRespHelper::bus_error(BIOSError::NotFound("ResourceSubject not exists".to_string()));
     }
-    if resource_subject_modify_req.code_postfix.is_some() && resource_subject_modify_req.kind.is_none() {
-        return BIOSRespHelper::bus_error(BIOSError::BadRequest("ResourceSubject [code_postfix] and [kind] must both exist".to_owned()));
+
+    if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.uri.is_none()
+        || resource_subject_modify_req.kind.is_none() && resource_subject_modify_req.uri.is_some()
+    {
+        return BIOSRespHelper::bus_error(BIOSError::BadRequest("ResourceSubject [kin] and [uri] must both exist".to_owned()));
     }
+
     let mut values = Vec::new();
-    if let Some(code_postfix) = &resource_subject_modify_req.code_postfix {
-        if resource_subject_modify_req.code_postfix.as_ref().unwrap().contains(&RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT) {
-            return BIOSRespHelper::bus_error(BIOSError::BadRequest(
-                format!("ResourceSubject [code_postfix] can't contain [{}]", &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT).to_owned(),
-            ));
-        }
-        let resource_subject_code = format!(
-            "{}{}{}{}{}",
-            &ident_info.app_id,
-            &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
-            &resource_subject_modify_req.kind.as_ref().unwrap().to_string().to_lowercase(),
-            &RESOURCE_SUBJECT_DEFAULT_CODE_SPLIT,
-            code_postfix
-        )
-        .to_lowercase();
+    if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.uri.is_some() {
+        let kind = resource_subject_modify_req.kind.as_ref().unwrap().to_string().to_lowercase();
+        let uri = bios::basic::uri::format(resource_subject_modify_req.uri.as_ref().unwrap()).expect("Uri parse error");
         if BIOSFuns::reldb()
             .exists(
                 &Query::select()
                     .columns(vec![IamResourceSubject::Id])
                     .from(IamResourceSubject::Table)
-                    .and_where(Expr::col(IamResourceSubject::Id).ne(id.clone()))
-                    .and_where(Expr::col(IamResourceSubject::Code).eq(resource_subject_code.clone()))
+                    .and_where(Expr::col(IamResourceSubject::Kind).eq(kind.clone()))
+                    .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.clone()))
                     .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.clone()))
                     .done(),
                 None,
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject [code] already exists".to_owned()));
+            return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject already exists".to_owned()));
         }
-        values.push((IamResourceSubject::Code, resource_subject_code.into()));
-    }
-    if let Some(kind) = &resource_subject_modify_req.kind {
-        values.push((IamResourceSubject::Kind, kind.to_string().to_lowercase().into()));
-    }
-    if let Some(uri) = &resource_subject_modify_req.uri {
-        values.push((IamResourceSubject::Uri, bios::basic::uri::format(uri)?.into()));
+        values.push((IamResourceSubject::Kind, kind.into()));
+        values.push((IamResourceSubject::Uri, uri.into()));
     }
     if let Some(name) = &resource_subject_modify_req.name {
         values.push((IamResourceSubject::Name, name.to_string().into()));
@@ -214,7 +190,6 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
             (IamResourceSubject::Table, IamResourceSubject::Id),
             (IamResourceSubject::Table, IamResourceSubject::CreateTime),
             (IamResourceSubject::Table, IamResourceSubject::UpdateTime),
-            (IamResourceSubject::Table, IamResourceSubject::Code),
             (IamResourceSubject::Table, IamResourceSubject::Kind),
             (IamResourceSubject::Table, IamResourceSubject::Uri),
             (IamResourceSubject::Table, IamResourceSubject::Name),

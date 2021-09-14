@@ -27,7 +27,7 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicySubject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
+use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamApp, IamAppIdent};
 use crate::process::basic_dto::CommonStatus;
 use crate::process::common::cache_processor;
@@ -394,13 +394,13 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
     // Delete IamAuthPolicySubject
     BIOSFuns::reldb()
         .soft_del(
-            IamAuthPolicySubject::Table,
-            IamAuthPolicySubject::Id,
+            IamAuthPolicyObject::Table,
+            IamAuthPolicyObject::Id,
             &ident_info.account_id,
             &Query::select()
-                .columns(IamAuthPolicySubject::iter().filter(|i| *i != IamAuthPolicySubject::Table))
-                .from(IamAuthPolicySubject::Table)
-                .and_where(Expr::col(IamAuthPolicySubject::RelAuthPolicyId).is_in(auth_policy_ids.clone()))
+                .columns(IamAuthPolicyObject::iter().filter(|i| *i != IamAuthPolicyObject::Table))
+                .from(IamAuthPolicyObject::Table)
+                .and_where(Expr::col(IamAuthPolicyObject::RelAuthPolicyId).is_in(auth_policy_ids.clone()))
                 .done(),
             &mut tx,
         )

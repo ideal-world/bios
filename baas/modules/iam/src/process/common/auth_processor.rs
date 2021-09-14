@@ -27,12 +27,13 @@ use bios::BIOSFuns;
 
 use crate::domain::ident_domain::IamTenantIdent;
 use crate::process::common::cache_processor;
+use sqlx::{MySql, Transaction};
 
 lazy_static! {
     static ref AK_SK_CONTAINER: Mutex<HashMap<String, Regex>> = Mutex::new(HashMap::new());
 }
 
-pub async fn valid_account_ident(kind: &str, ak: &str, sk: &str, rel_tenant_id: &str) -> BIOSResult<i64> {
+pub async fn valid_account_ident<'c>(kind: &str, ak: &str, sk: &str, rel_tenant_id: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<i64> {
     if let Some(tenant_ident_info) = BIOSFuns::reldb()
         .fetch_optional::<TenantIdentInfoResp>(
             &Query::select()
@@ -41,7 +42,7 @@ pub async fn valid_account_ident(kind: &str, ak: &str, sk: &str, rel_tenant_id: 
                 .and_where(Expr::col(IamTenantIdent::Kind).eq(kind.to_string()))
                 .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(rel_tenant_id.to_string()))
                 .done(),
-            None,
+            tx,
         )
         .await?
     {

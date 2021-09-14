@@ -29,9 +29,9 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicySubject};
+use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicyObject};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamAccountBind, IamAccountIdent, IamApp};
-use crate::process::basic_dto::{AuthSubjectKind, CommonStatus};
+use crate::process::basic_dto::{AuthObjectKind, CommonStatus};
 use crate::process::common::{auth_processor, cache_processor};
 use crate::process::tenant_console::tc_account_dto::{
     AccountAddReq, AccountAppDetailResp, AccountDetailResp, AccountIdentAddReq, AccountIdentDetailResp, AccountIdentModifyReq, AccountModifyReq, AccountQueryReq,
@@ -283,10 +283,10 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
     let auth_policy_ids = BIOSFuns::reldb()
         .fetch_all::<IdResp>(
             &Query::select()
-                .columns(vec![IamAuthPolicySubject::RelAuthPolicyId])
-                .from(IamAuthPolicySubject::Table)
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectKind).eq(AuthSubjectKind::Account.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectId).eq(id.clone()))
+                .columns(vec![IamAuthPolicyObject::RelAuthPolicyId])
+                .from(IamAuthPolicyObject::Table)
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Account.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.clone()))
                 .done(),
             Some(&mut tx),
         )
@@ -296,14 +296,14 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .collect::<HashSet<String>>();
     BIOSFuns::reldb()
         .soft_del(
-            IamAuthPolicySubject::Table,
-            IamAuthPolicySubject::Id,
+            IamAuthPolicyObject::Table,
+            IamAuthPolicyObject::Id,
             &ident_info.account_id,
             &Query::select()
-                .columns(IamAuthPolicySubject::iter().filter(|i| *i != IamAuthPolicySubject::Table))
-                .from(IamAuthPolicySubject::Table)
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectKind).eq(AuthSubjectKind::Account.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectId).eq(id.clone()))
+                .columns(IamAuthPolicyObject::iter().filter(|i| *i != IamAuthPolicyObject::Table))
+                .from(IamAuthPolicyObject::Table)
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Account.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.clone()))
                 .done(),
             &mut tx,
         )
@@ -370,6 +370,7 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
         &account_ident_add_req.ak,
         &account_ident_add_req.sk.clone().unwrap_or_default(),
         &ident_info.tenant_id,
+        None,
     )
     .await?;
     let processed_sk = auth_processor::process_sk(
@@ -459,6 +460,7 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
         account_ident_modify_req.ak.clone().unwrap_or_default().as_str(),
         account_ident_modify_req.sk.clone().unwrap_or_default().as_str(),
         &ident_info.tenant_id,
+        None,
     )
     .await?;
     let mut values = Vec::new();

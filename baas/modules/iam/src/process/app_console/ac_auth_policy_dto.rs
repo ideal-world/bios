@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::process::basic_dto::{AuthResultKind, AuthSubjectKind, AuthSubjectOperatorKind, OptActionKind};
+use crate::process::basic_dto::{AuthObjectKind, AuthObjectOperatorKind, AuthResultKind, OptActionKind};
 use sqlx::types::chrono::{DateTime, Utc};
 
 #[derive(Deserialize, Validate)]
@@ -96,28 +96,28 @@ pub struct AuthPolicyDetailResp {
 }
 
 #[derive(Deserialize, Serialize, Validate)]
-pub struct AuthPolicySubjectAddReq {
-    // 关联权限主体类型
-    pub subject_kind: AuthSubjectKind,
-    // 关联权限主体Id
+pub struct AuthPolicyObjectAddReq {
+    // 关联权限对象类型
+    pub object_kind: AuthObjectKind,
+    // 关联权限对象Id
     #[validate(length(min = 2, max = 255))]
-    pub subject_id: String,
-    // 关联权限主体运算类型
-    pub subject_operator: AuthSubjectOperatorKind,
+    pub object_id: String,
+    // 关联权限对象运算类型
+    pub object_operator: AuthObjectOperatorKind,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
-pub struct AuthPolicySubjectDetailResp {
+pub struct AuthPolicyObjectDetailResp {
     #[validate(length(max = 32))]
     pub id: String,
-    // 关联权限主体类型
-    pub subject_kind: String,
-    // 关联权限主体Id
+    // 关联权限对象类型
+    pub object_kind: String,
+    // 关联权限对象Id
     #[validate(length(max = 255))]
-    pub subject_id: String,
-    // 关联权限主体运算类型
+    pub object_id: String,
+    // 关联权限对象运算类型
     #[validate(length(max = 32))]
-    pub subject_operator: String,
+    pub object_operator: String,
     // 关联权限策略Id
     #[validate(length(max = 32))]
     pub rel_auth_policy_id: String,

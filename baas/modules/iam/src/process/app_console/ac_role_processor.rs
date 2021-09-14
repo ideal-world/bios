@@ -27,10 +27,10 @@ use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicySubject, IamRole};
+use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicyObject, IamRole};
 use crate::domain::ident_domain::IamAccount;
 use crate::process::app_console::ac_role_dto::{RoleAddReq, RoleDetailResp, RoleModifyReq, RoleQueryReq};
-use crate::process::basic_dto::AuthSubjectKind;
+use crate::process::basic_dto::AuthObjectKind;
 
 #[post("/console/app/role")]
 pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSResp {
@@ -214,10 +214,10 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
-                .columns(vec![IamAuthPolicySubject::Id])
-                .from(IamAuthPolicySubject::Table)
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectKind).eq(AuthSubjectKind::Role.to_string().to_lowercase()))
-                .and_where(Expr::col(IamAuthPolicySubject::SubjectId).eq(id.clone()))
+                .columns(vec![IamAuthPolicyObject::Id])
+                .from(IamAuthPolicyObject::Table)
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Role.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAuthPolicyObject::ObjectId).eq(id.clone()))
                 .done(),
             None,
         )

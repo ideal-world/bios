@@ -29,9 +29,9 @@ use bios::web::web_server::BIOSWebServer;
 use bios::BIOSFuns;
 use bios_baas_iam::iam_config::WorkSpaceConfig;
 use bios_baas_iam::process::app_console;
-use bios_baas_iam::process::app_console::ac_auth_policy_dto::{AuthPolicyAddReq, AuthPolicyDetailResp, AuthPolicyModifyReq, AuthPolicySubjectAddReq, AuthPolicySubjectDetailResp};
+use bios_baas_iam::process::app_console::ac_auth_policy_dto::{AuthPolicyAddReq, AuthPolicyDetailResp, AuthPolicyModifyReq, AuthPolicyObjectAddReq, AuthPolicyObjectDetailResp};
 use bios_baas_iam::process::app_console::ac_resource_dto::{ResourceAddReq, ResourceSubjectAddReq};
-use bios_baas_iam::process::basic_dto::{AuthResultKind, AuthSubjectKind, AuthSubjectOperatorKind, OptActionKind, ResourceKind};
+use bios_baas_iam::process::basic_dto::{AuthObjectKind, AuthObjectOperatorKind, AuthResultKind, OptActionKind, ResourceKind};
 
 #[actix_rt::test]
 async fn test_auth_policy() -> BIOSResult<()> {
@@ -62,7 +62,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
             valid_start_time: 0,
             valid_end_time: 0,
             rel_resource_id: "ddddd".to_string(),
-            action_kind: OptActionKind::Fetch,
+            action_kind: OptActionKind::Get,
             result_kind: AuthResultKind::Accept,
         })
         .to_request();
@@ -79,7 +79,6 @@ async fn test_auth_policy() -> BIOSResult<()> {
         ))
         .uri("/console/app/resource/subject")
         .set_json(&ResourceSubjectAddReq {
-            code_postfix: "httpbin".to_string(),
             name: "测试Http请求".to_string(),
             sort: 0,
             kind: ResourceKind::Api,
@@ -93,7 +92,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let subject_id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let object_id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
 
     // Add Resource
     let req = test::TestRequest::post()
@@ -110,7 +109,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
             sort: 1,
             res_group: false,
             parent_id: None,
-            rel_resource_subject_id: subject_id.clone(),
+            rel_resource_subject_id: object_id.clone(),
             expose_kind: None,
         })
         .to_request();
@@ -129,7 +128,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
             valid_start_time: Utc::now().timestamp(),
             valid_end_time: Utc::now().timestamp() + 3600,
             rel_resource_id: resource_id.clone(),
-            action_kind: OptActionKind::Fetch,
+            action_kind: OptActionKind::Get,
             result_kind: AuthResultKind::Accept,
         })
         .to_request();
@@ -148,7 +147,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
             valid_start_time: Utc::now().timestamp() + 100,
             valid_end_time: Utc::now().timestamp() + 1000,
             rel_resource_id: resource_id.clone(),
-            action_kind: OptActionKind::Fetch,
+            action_kind: OptActionKind::Get,
             result_kind: AuthResultKind::Accept,
         })
         .to_request();
@@ -208,7 +207,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
 }
 
 #[actix_rt::test]
-async fn test_auth_policy_subject() -> BIOSResult<()> {
+async fn test_auth_policy_object() -> BIOSResult<()> {
     let docker = clients::Cli::default();
     let _c = crate::test_basic::init(&docker).await;
     let app = test::init_service(
@@ -218,9 +217,9 @@ async fn test_auth_policy_subject() -> BIOSResult<()> {
             .service(app_console::ac_resource_processor::add_resource_subject)
             .service(app_console::ac_resource_processor::add_resource)
             .service(app_console::ac_auth_policy_processor::add_auth_policy)
-            .service(app_console::ac_auth_policy_processor::add_auth_policy_subject)
-            .service(app_console::ac_auth_policy_processor::list_auth_policy_subject)
-            .service(app_console::ac_auth_policy_processor::delete_auth_policy_subject),
+            .service(app_console::ac_auth_policy_processor::add_auth_policy_object)
+            .service(app_console::ac_auth_policy_processor::list_auth_policy_object)
+            .service(app_console::ac_auth_policy_processor::delete_auth_policy_object),
     )
     .await;
 
@@ -232,7 +231,6 @@ async fn test_auth_policy_subject() -> BIOSResult<()> {
         ))
         .uri("/console/app/resource/subject")
         .set_json(&ResourceSubjectAddReq {
-            code_postfix: "httpbin".to_string(),
             name: "测试Http请求".to_string(),
             sort: 0,
             kind: ResourceKind::Api,
@@ -283,7 +281,7 @@ async fn test_auth_policy_subject() -> BIOSResult<()> {
             valid_start_time: Utc::now().timestamp(),
             valid_end_time: Utc::now().timestamp() + 3600,
             rel_resource_id: resource_id.clone(),
-            action_kind: OptActionKind::Fetch,
+            action_kind: OptActionKind::Get,
             result_kind: AuthResultKind::Accept,
         })
         .to_request();
@@ -291,17 +289,17 @@ async fn test_auth_policy_subject() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
     let auth_policy_id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
 
-    // Add AuthPolicySubject
+    // Add AuthPolicyObject
     let req = test::TestRequest::post()
         .insert_header((
             BIOSFuns::fw_config().web.ident_info_flag.clone(),
             bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
         ))
-        .uri(format!("/console/app/auth-policy/{}/subject", auth_policy_id.clone()).as_str())
-        .set_json(&AuthPolicySubjectAddReq {
-            subject_kind: AuthSubjectKind::Tenant,
-            subject_id: "t001".to_string(),
-            subject_operator: AuthSubjectOperatorKind::Eq,
+        .uri(format!("/console/app/auth-policy/{}/object", auth_policy_id.clone()).as_str())
+        .set_json(&AuthPolicyObjectAddReq {
+            object_kind: AuthObjectKind::Tenant,
+            object_id: "t001".to_string(),
+            object_operator: AuthObjectOperatorKind::Eq,
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -314,47 +312,44 @@ async fn test_auth_policy_subject() -> BIOSResult<()> {
             BIOSFuns::fw_config().web.ident_info_flag.clone(),
             bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
         ))
-        .uri(format!("/console/app/auth-policy/{}/subject", auth_policy_id.clone()).as_str())
-        .set_json(&AuthPolicySubjectAddReq {
-            subject_kind: AuthSubjectKind::Account,
-            subject_id: "admin001".to_string(),
-            subject_operator: AuthSubjectOperatorKind::Eq,
+        .uri(format!("/console/app/auth-policy/{}/object", auth_policy_id.clone()).as_str())
+        .set_json(&AuthPolicyObjectAddReq {
+            object_kind: AuthObjectKind::Account,
+            object_id: "admin001".to_string(),
+            object_operator: AuthObjectOperatorKind::Eq,
         })
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
 
-    // List AuthPolicySubject
+    // List AuthPolicyObject
     let req = test::TestRequest::get()
         .insert_header((
             BIOSFuns::fw_config().web.ident_info_flag.clone(),
             bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
         ))
-        .uri(format!("/console/app/auth-policy/{}/subject", auth_policy_id.clone()).as_str())
+        .uri(format!("/console/app/auth-policy/{}/object", auth_policy_id.clone()).as_str())
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = read_body_json::<BIOSRespHelper<Vec<AuthPolicySubjectDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let body = read_body_json::<BIOSRespHelper<Vec<AuthPolicyObjectDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(body.len(), 1);
-    assert_eq!(body[0].subject_kind, "account");
-    assert_eq!(body[0].subject_id, "admin001");
+    assert_eq!(body[0].object_kind, "account");
+    assert_eq!(body[0].object_id, "admin001");
     assert_eq!(body[0].create_user, "平台管理员");
     assert_eq!(body[0].update_user, "平台管理员");
 
-    let cache = BIOSFuns::cache()
-        .hget(&BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache_resources, "fetch##http://httpbin.org/get")
-        .await?
-        .unwrap();
+    let cache = BIOSFuns::cache().hget(&BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.resources, "fetch##http://httpbin.org/get").await?.unwrap();
     assert_eq!(bios::basic::json::str_to_json(&cache).unwrap()["account"], "#admin001#");
 
-    // Delete AuthPolicySubject
+    // Delete AuthPolicyObject
     let req = test::TestRequest::delete()
         .insert_header((
             BIOSFuns::fw_config().web.ident_info_flag.clone(),
             bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
         ))
-        .uri(format!("/console/app/auth-policy/{}/subject/{}", auth_policy_id.clone().as_str(), id.clone()).as_str())
+        .uri(format!("/console/app/auth-policy/{}/object/{}", auth_policy_id.clone().as_str(), id.clone()).as_str())
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
