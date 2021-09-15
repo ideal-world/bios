@@ -88,10 +88,10 @@ pub async fn init() -> BIOSResult<()> {
                     account_id.as_str().into(),
                     account_id.as_str().into(),
                     AccountIdentKind::Username.to_string().to_lowercase().into(),
-                    iam_config.security.default_valid_ak_rule_note.to_string().into(),
-                    iam_config.security.default_valid_ak_rule.to_string().into(),
-                    iam_config.security.default_valid_sk_rule_note.to_string().into(),
-                    iam_config.security.default_valid_sk_rule.to_string().into(),
+                    iam_config.security.default_valid_ak_rule_note.as_str().into(),
+                    iam_config.security.default_valid_ak_rule.as_str().into(),
+                    iam_config.security.default_valid_sk_rule_note.as_str().into(),
+                    iam_config.security.default_valid_sk_rule.as_str().into(),
                     iam_config.security.default_valid_time_sec.into(),
                     tenant_id.as_str().into(),
                 ])
@@ -117,7 +117,7 @@ pub async fn init() -> BIOSResult<()> {
                     account_id.as_str().into(),
                     account_id.as_str().into(),
                     "".into(),
-                    0.into(),
+                    1.into(),
                     tenant_id.as_str().into(),
                 ])
                 .done(),
@@ -221,21 +221,14 @@ pub async fn init() -> BIOSResult<()> {
         .await?;
     // Init AccountIdent
     let valid_end_time = auth_processor::valid_account_ident(
-        &AccountIdentKind::Username.to_string().to_lowercase(),
+        &AccountIdentKind::Username,
         &iam_config.app.admin_name,
         &iam_config.app.admin_password,
         &tenant_id,
         Some(&mut tx),
     )
     .await?;
-    let processed_sk = auth_processor::process_sk(
-        &AccountIdentKind::Username.to_string().to_lowercase(),
-        &iam_config.app.admin_name,
-        &iam_config.app.admin_password,
-        &tenant_id,
-        &app_id,
-    )
-    .await?;
+    let processed_sk = auth_processor::process_sk(&AccountIdentKind::Username, &iam_config.app.admin_name, &iam_config.app.admin_password, &tenant_id, &app_id).await?;
     BIOSFuns::reldb()
         .exec(
             &Query::insert()

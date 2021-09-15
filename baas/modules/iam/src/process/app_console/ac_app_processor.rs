@@ -97,7 +97,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
 
     let mut values = Vec::new();
     if let Some(note) = &app_ident_modify_req.note {
-        values.push((IamAppIdent::Note, note.to_string().into()));
+        values.push((IamAppIdent::Note, note.as_str().into()));
     }
     if let Some(valid_time) = app_ident_modify_req.valid_time {
         values.push((IamAppIdent::ValidTime, valid_time.into()));

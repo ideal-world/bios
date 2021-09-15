@@ -80,6 +80,11 @@ pub mod digest {
 }
 
 pub mod key {
+
+    pub fn generate_token() -> String {
+        format!("tk{}", crate::basic::field::uuid())
+    }
+
     pub fn generate_ak() -> String {
         format!("ak{}", crate::basic::field::uuid())
     }

@@ -80,10 +80,10 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
                     group_add_req.code.as_str().to_lowercase().into(),
                     group_add_req.name.as_str().into(),
                     group_add_req.kind.to_string().to_lowercase().into(),
-                    group_add_req.icon.as_deref().unwrap_or(&"").into(),
+                    group_add_req.icon.as_deref().unwrap_or_default().into(),
                     group_add_req.sort.into(),
-                    group_add_req.rel_group_id.as_deref().unwrap_or(&"").into(),
-                    group_add_req.rel_group_node_id.as_deref().unwrap_or(&"").into(),
+                    group_add_req.rel_group_id.as_deref().unwrap_or_default().into(),
+                    group_add_req.rel_group_node_id.as_deref().unwrap_or_default().into(),
                     ident_info.app_id.as_str().into(),
                     ident_info.tenant_id.as_str().into(),
                     group_add_req.expose_kind.as_ref().unwrap_or(&crate::process::basic_dto::ExposeKind::App).to_string().to_lowercase().into(),
@@ -116,7 +116,7 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
     }
     let mut values = Vec::new();
     if let Some(name) = &group_modify_req.name {
-        values.push((IamGroup::Name, name.to_string().into()));
+        values.push((IamGroup::Name, name.as_str().into()));
     }
     if let Some(kind) = &group_modify_req.kind {
         values.push((IamGroup::Kind, kind.to_string().to_lowercase().into()));
@@ -125,13 +125,13 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
         values.push((IamGroup::Sort, sort.into()));
     }
     if let Some(icon) = &group_modify_req.icon {
-        values.push((IamGroup::Icon, icon.to_string().into()));
+        values.push((IamGroup::Icon, icon.as_str().into()));
     }
     if let Some(rel_group_id) = &group_modify_req.rel_group_id {
-        values.push((IamGroup::RelGroupId, rel_group_id.to_string().into()));
+        values.push((IamGroup::RelGroupId, rel_group_id.as_str().into()));
     }
     if let Some(rel_group_node_id) = &group_modify_req.rel_group_node_id {
-        values.push((IamGroup::RelGroupNodeId, rel_group_node_id.to_string().into()));
+        values.push((IamGroup::RelGroupNodeId, rel_group_node_id.as_str().into()));
     }
     if let Some(expose_kind) = &group_modify_req.expose_kind {
         values.push((IamGroup::ExposeKind, expose_kind.to_string().to_lowercase().into()));
@@ -351,10 +351,10 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
                     ident_info.account_id.as_str().into(),
                     ident_info.account_id.as_str().into(),
                     code.as_str().into(),
-                    group_node_add_req.bus_code.as_deref().unwrap_or(&"").into(),
+                    group_node_add_req.bus_code.as_deref().unwrap_or_default().into(),
                     group_node_add_req.name.as_str().into(),
                     group_node_add_req.sort.into(),
-                    group_node_add_req.parameters.as_deref().unwrap_or(&"").into(),
+                    group_node_add_req.parameters.as_deref().unwrap_or_default().into(),
                     group_id.into(),
                 ])
                 .done(),
@@ -401,16 +401,16 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
 
     let mut values = Vec::new();
     if let Some(bus_code) = &group_node_modify_req.bus_code {
-        values.push((IamGroupNode::BusCode, bus_code.to_string().into()));
+        values.push((IamGroupNode::BusCode, bus_code.as_str().into()));
     }
     if let Some(name) = &group_node_modify_req.name {
-        values.push((IamGroupNode::Name, name.to_string().into()));
+        values.push((IamGroupNode::Name, name.as_str().into()));
     }
     if let Some(sort) = group_node_modify_req.sort {
-        values.push((IamGroupNode::Sort, sort.to_string().into()));
+        values.push((IamGroupNode::Sort, sort.into()));
     }
     if let Some(parameters) = &group_node_modify_req.parameters {
-        values.push((IamGroupNode::Parameters, parameters.to_string().into()));
+        values.push((IamGroupNode::Parameters, parameters.as_str().into()));
     }
     BIOSFuns::reldb()
         .exec(

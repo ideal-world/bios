@@ -57,8 +57,8 @@ pub async fn add_app(app_add_req: Json<AppAddReq>, req: HttpRequest) -> BIOSResp
                     ident_info.account_id.as_str().into(),
                     ident_info.account_id.as_str().into(),
                     app_add_req.name.as_str().into(),
-                    app_add_req.icon.as_deref().unwrap_or(&"").into(),
-                    app_add_req.parameters.as_deref().unwrap_or(&"").into(),
+                    app_add_req.icon.as_deref().unwrap_or_default().into(),
+                    app_add_req.parameters.as_deref().unwrap_or_default().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                     ident_info.tenant_id.into(),
                 ])
@@ -91,13 +91,13 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
 
     let mut values = Vec::new();
     if let Some(name) = &app_modify_req.name {
-        values.push((IamApp::Name, name.to_string().into()));
+        values.push((IamApp::Name, name.as_str().into()));
     }
     if let Some(parameters) = &app_modify_req.parameters {
-        values.push((IamApp::Parameters, parameters.to_string().into()));
+        values.push((IamApp::Parameters, parameters.as_str().into()));
     }
     if let Some(icon) = &app_modify_req.icon {
-        values.push((IamApp::Icon, icon.to_string().into()));
+        values.push((IamApp::Icon, icon.as_str().into()));
     }
     if let Some(status) = &app_modify_req.status {
         values.push((IamApp::Status, status.to_string().to_lowercase().into()));

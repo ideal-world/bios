@@ -56,9 +56,9 @@ pub async fn add_tenant(tenant_add_req: Json<TenantAddReq>, req: HttpRequest) ->
                     ident_info.account_id.as_str().into(),
                     ident_info.account_id.as_str().into(),
                     tenant_add_req.name.as_str().into(),
-                    tenant_add_req.icon.as_deref().unwrap_or(&"").into(),
+                    tenant_add_req.icon.as_deref().unwrap_or_default().into(),
                     tenant_add_req.allow_account_register.into(),
-                    tenant_add_req.parameters.as_deref().unwrap_or(&"").into(),
+                    tenant_add_req.parameters.as_deref().unwrap_or_default().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -75,16 +75,16 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
 
     let mut values = Vec::new();
     if let Some(name) = &tenant_modify_req.name {
-        values.push((IamTenant::Name, name.to_string().into()));
+        values.push((IamTenant::Name, name.as_str().into()));
     }
     if let Some(icon) = &tenant_modify_req.icon {
-        values.push((IamTenant::Icon, icon.to_string().into()));
+        values.push((IamTenant::Icon, icon.as_str().into()));
     }
     if let Some(allow_account_register) = tenant_modify_req.allow_account_register {
         values.push((IamTenant::AllowAccountRegister, allow_account_register.into()));
     }
     if let Some(parameters) = &tenant_modify_req.parameters {
-        values.push((IamTenant::Parameters, parameters.to_string().into()));
+        values.push((IamTenant::Parameters, parameters.as_str().into()));
     }
     if let Some(status) = &tenant_modify_req.status {
         values.push((IamTenant::Status, status.to_string().to_lowercase().into()));

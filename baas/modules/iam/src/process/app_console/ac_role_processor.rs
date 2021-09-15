@@ -123,7 +123,7 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
         values.push((IamRole::Code, code.to_string().to_lowercase().into()));
     }
     if let Some(name) = &role_modify_req.name {
-        values.push((IamRole::Name, name.to_string().into()));
+        values.push((IamRole::Name, name.as_str().into()));
     }
     if let Some(sort) = role_modify_req.sort {
         values.push((IamRole::Sort, sort.into()));

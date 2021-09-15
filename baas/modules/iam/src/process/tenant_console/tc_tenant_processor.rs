@@ -37,16 +37,16 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
 
     let mut values = Vec::new();
     if let Some(name) = &tenant_modify_req.name {
-        values.push((IamTenant::Name, name.to_string().into()));
+        values.push((IamTenant::Name, name.as_str().into()));
     }
     if let Some(icon) = &tenant_modify_req.icon {
-        values.push((IamTenant::Icon, icon.to_string().into()));
+        values.push((IamTenant::Icon, icon.as_str().into()));
     }
     if let Some(allow_account_register) = tenant_modify_req.allow_account_register {
         values.push((IamTenant::AllowAccountRegister, allow_account_register.into()));
     }
     if let Some(parameters) = &tenant_modify_req.parameters {
-        values.push((IamTenant::Parameters, parameters.to_string().into()));
+        values.push((IamTenant::Parameters, parameters.as_str().into()));
     }
     values.push((IamTenant::UpdateUser, ident_info.account_id.as_str().into()));
 
@@ -300,10 +300,10 @@ pub async fn add_tenant_ident(tenant_ident_add_req: Json<TenantIdentAddReq>, req
                     ident_info.account_id.as_str().into(),
                     ident_info.account_id.as_str().into(),
                     tenant_ident_add_req.kind.to_string().to_lowercase().into(),
-                    tenant_ident_add_req.valid_ak_rule_note.as_deref().unwrap_or(&"").into(),
-                    tenant_ident_add_req.valid_ak_rule.as_deref().unwrap_or(&"").into(),
-                    tenant_ident_add_req.valid_sk_rule_note.as_deref().unwrap_or(&"").into(),
-                    tenant_ident_add_req.valid_sk_rule.as_deref().unwrap_or(&"").into(),
+                    tenant_ident_add_req.valid_ak_rule_note.as_deref().unwrap_or_default().into(),
+                    tenant_ident_add_req.valid_ak_rule.as_deref().unwrap_or_default().into(),
+                    tenant_ident_add_req.valid_sk_rule_note.as_deref().unwrap_or_default().into(),
+                    tenant_ident_add_req.valid_sk_rule.as_deref().unwrap_or_default().into(),
                     tenant_ident_add_req.valid_time.into(),
                     ident_info.tenant_id.into(),
                 ])
