@@ -81,10 +81,10 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                     uri.into(),
                     resource_subject_add_req.name.as_str().into(),
                     resource_subject_add_req.sort.into(),
-                    resource_subject_add_req.ak.as_deref().unwrap_or(&"").into(),
-                    resource_subject_add_req.sk.as_deref().unwrap_or(&"").into(),
-                    resource_subject_add_req.platform_account.as_deref().unwrap_or(&"").into(),
-                    resource_subject_add_req.platform_project_id.as_deref().unwrap_or(&"").into(),
+                    resource_subject_add_req.ak.as_deref().unwrap_or_default().into(),
+                    resource_subject_add_req.sk.as_deref().unwrap_or_default().into(),
+                    resource_subject_add_req.platform_account.as_deref().unwrap_or_default().into(),
+                    resource_subject_add_req.platform_project_id.as_deref().unwrap_or_default().into(),
                     resource_subject_add_req.timeout_ms.unwrap_or_default().into(),
                     ident_info.app_id.as_str().into(),
                     ident_info.tenant_id.as_str().into(),
@@ -334,9 +334,9 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
                     resource_add_req.name.as_str().into(),
                     resource_add_req.icon.as_str().into(),
                     resource_add_req.sort.into(),
-                    resource_add_req.action.as_deref().unwrap_or(&"").into(),
+                    resource_add_req.action.as_deref().unwrap_or_default().into(),
                     resource_add_req.res_group.into(),
-                    resource_add_req.parent_id.as_deref().unwrap_or(&"").into(),
+                    resource_add_req.parent_id.as_deref().unwrap_or_default().into(),
                     resource_add_req.rel_resource_subject_id.as_str().into(),
                     ident_info.app_id.as_str().into(),
                     ident_info.tenant_id.as_str().into(),
@@ -423,13 +423,13 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
         values.push((IamResource::PathAndQuery, path_and_query.to_string().to_lowercase().into()));
     }
     if let Some(name) = &resource_modify_req.name {
-        values.push((IamResource::Name, name.to_string().into()));
+        values.push((IamResource::Name, name.as_str().into()));
     }
     if let Some(icon) = &resource_modify_req.icon {
-        values.push((IamResource::Icon, icon.to_string().into()));
+        values.push((IamResource::Icon, icon.as_str().into()));
     }
     if let Some(action) = &resource_modify_req.action {
-        values.push((IamResource::Action, action.to_string().into()));
+        values.push((IamResource::Action, action.as_str().into()));
     }
     if let Some(sort) = resource_modify_req.sort {
         values.push((IamResource::Sort, sort.into()));
@@ -438,7 +438,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
         values.push((IamResource::ResGroup, res_group.into()));
     }
     if let Some(parent_id) = &resource_modify_req.parent_id {
-        values.push((IamResource::ParentId, parent_id.to_string().into()));
+        values.push((IamResource::ParentId, parent_id.as_str().into()));
     }
     if let Some(expose_kind) = &resource_modify_req.expose_kind {
         values.push((IamResource::ExposeKind, expose_kind.to_string().to_lowercase().into()));

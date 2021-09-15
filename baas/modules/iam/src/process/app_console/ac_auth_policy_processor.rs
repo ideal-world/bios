@@ -170,7 +170,7 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
 
     let mut values = Vec::new();
     if let Some(name) = &auth_policy_modify_req.name {
-        values.push((IamAuthPolicy::Name, name.to_string().into()));
+        values.push((IamAuthPolicy::Name, name.as_str().into()));
     }
     if let Some(valid_start_time) = auth_policy_modify_req.valid_start_time {
         values.push((IamAuthPolicy::ValidStartTime, valid_start_time.into()));

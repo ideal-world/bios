@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IdentInfo {
     pub app_id: Option<String>,
     pub tenant_id: Option<String>,
@@ -28,17 +28,17 @@ pub struct IdentInfo {
     pub groups: Option<Vec<String>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IdentPubInfo {}
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IdentAppInfo {
     pub app_id: String,
     pub tenant_id: String,
     pub ak: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IdentAccountInfo {
     pub app_id: String,
     pub tenant_id: String,

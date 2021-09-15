@@ -19,13 +19,80 @@ use itertools::Itertools;
 use sea_query::{Expr, Query};
 use sqlx::{MySql, Transaction};
 
-use bios::basic::error::BIOSResult;
+use bios::basic::dto::IdentAccountInfo;
+use bios::basic::error::{BIOSError, BIOSResult};
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAuthPolicy, IamAuthPolicyObject, IamGroupNode, IamResource, IamResourceSubject};
+use crate::domain::ident_domain::IamTenantCert;
 use crate::iam_config::WorkSpaceConfig;
 use crate::process::basic_dto::AuthObjectKind;
+
+pub async fn set_token<'c>(ident_info: &IdentAccountInfo, valid_end_time: i64, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<()> {
+    let cache_token_key = format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token, ident_info.token);
+    let ident_info_str = bios::basic::json::obj_to_string(ident_info)?;
+    if valid_end_time == i64::MAX {
+        BIOSFuns::cache().set(&cache_token_key, &ident_info_str).await?;
+    } else {
+        BIOSFuns::cache().set_ex(&cache_token_key, &ident_info_str, valid_end_time as usize).await?;
+    };
+    BIOSFuns::cache()
+        .hset(
+            format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token_rel, ident_info.account_id).as_str(),
+            ident_info.token.as_str(),
+            format!("{}##{}", ident_info.token_kind, Utc::now().timestamp()).as_str(),
+        )
+        .await?;
+    remove_old_token(&ident_info.account_id, &ident_info.tenant_id, &ident_info.token_kind, tx).await?;
+    Ok(())
+}
+
+pub async fn remove_token<'c>(token: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<()> {
+    let cache_token_key = format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token, token);
+    let ident_info = BIOSFuns::cache().get(&cache_token_key).await?;
+    if ident_info.is_none() {
+        return Err(BIOSError::NotFound(format!("Token [{}] not found", token)));
+    }
+    let ident_info = bios::basic::json::str_to_obj::<IdentAccountInfo>(ident_info.unwrap().as_str())?;
+    BIOSFuns::cache().del(&cache_token_key).await?;
+    remove_old_token(&ident_info.account_id, &ident_info.tenant_id, &ident_info.token_kind, tx).await?;
+    Ok(())
+}
+
+async fn remove_old_token<'c>(account_id: &str, tenant_id: &str, token_kind: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<()> {
+    let revision_history_limit = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select()
+                .column(IamTenantCert::Version)
+                .from(IamTenantCert::Table)
+                .and_where(Expr::col(IamTenantCert::RelTenantId).eq(tenant_id))
+                .and_where(Expr::col(IamTenantCert::Category).eq(token_kind))
+                .done(),
+            tx,
+        )
+        .await?;
+    let revision_history_limit = revision_history_limit["version"].as_i64().unwrap();
+    let token_rels = BIOSFuns::cache().hgetall(format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token_rel, account_id).as_str()).await?;
+    let remove_tokens = token_rels
+        .iter()
+        .map(|(k, v)| (k, v.split("##").collect_vec()))
+        .filter(|(_, v)| v[0] == token_kind)
+        .sorted_by(|(_, v1), (_, v2)| Ord::cmp(&v2[1].parse::<i64>().unwrap(), &v1[1].parse::<i64>().unwrap()))
+        .skip((revision_history_limit + 1) as usize)
+        .map(|(k, _)| k)
+        .collect_vec();
+    for remove_token in remove_tokens {
+        BIOSFuns::cache().del(format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token, remove_token).as_str()).await?;
+        BIOSFuns::cache()
+            .hdel(
+                format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token_rel, account_id).as_str(),
+                remove_token.as_str(),
+            )
+            .await?;
+    }
+    Ok(())
+}
 
 pub async fn remove_token_by_account(account_id: &str) -> BIOSResult<()> {
     let tokens = BIOSFuns::cache().hgetall(format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token_rel, account_id).as_str()).await?;
@@ -39,13 +106,13 @@ pub async fn remove_token_by_account(account_id: &str) -> BIOSResult<()> {
 // ------------------------------------
 
 pub async fn set_aksk(tenant_id: &str, app_id: &str, ak: &str, sk: &str, valid_time: i64) -> BIOSResult<()> {
-    let result = if valid_time == i64::MAX {
+    if valid_time == i64::MAX {
         BIOSFuns::cache()
             .set(
                 format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.aksk, ak).as_str(),
                 format!("{}:{}:{}", sk, tenant_id, app_id).as_str(),
             )
-            .await
+            .await?;
     } else {
         BIOSFuns::cache()
             .set_ex(
@@ -53,35 +120,46 @@ pub async fn set_aksk(tenant_id: &str, app_id: &str, ak: &str, sk: &str, valid_t
                 format!("{}:{}:{}", sk, tenant_id, app_id).as_str(),
                 (valid_time - Utc::now().timestamp()) as usize,
             )
-            .await
+            .await?;
     };
-    match result {
-        Ok(result) => Ok(result),
-        Err(e) => Err(e.into()),
-    }
+    Ok(())
 }
 
 pub async fn remove_aksk(ak: &str) -> BIOSResult<()> {
-    match BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.aksk, ak).as_str()).await {
-        Ok(result) => Ok(result),
-        Err(e) => Err(e.into()),
-    }
+    BIOSFuns::cache().del(format!("{}{}", &BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.aksk, ak).as_str()).await?;
+    Ok(())
 }
 
 // ------------------------------------
 
 pub async fn get_vcode(tenant_id: &str, ak: &str) -> BIOSResult<Option<String>> {
-    match BIOSFuns::cache().get(format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.account_vcode_tmp_rel, tenant_id, ak).as_str()).await {
-        Ok(result) => Ok(result),
-        Err(e) => Err(e.into()),
-    }
+    let result = BIOSFuns::cache().get(format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.account_vcode_tmp_rel, tenant_id, ak).as_str()).await?;
+    Ok(result)
 }
 
-pub async fn get_account_token(rel_app_id: &str, kind: &str) -> BIOSResult<Option<String>> {
-    match BIOSFuns::cache().get(format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.access_token, rel_app_id, kind).as_str()).await {
-        Ok(result) => Ok(result),
-        Err(e) => Err(e.into()),
-    }
+pub async fn incr_vcode_error_times(tenant_id: &str, ak: &str) -> BIOSResult<usize> {
+    let result = BIOSFuns::cache()
+        .incr(
+            format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.account_vcode_error_times, tenant_id, ak).as_str(),
+            1,
+        )
+        .await?;
+    Ok(result)
+}
+
+pub async fn remove_vcode(tenant_id: &str, ak: &str) -> BIOSResult<()> {
+    BIOSFuns::cache().del(format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.account_vcode_tmp_rel, tenant_id, ak).as_str()).await?;
+    Ok(())
+}
+
+pub async fn remove_vcode_error_times(tenant_id: &str, ak: &str) -> BIOSResult<()> {
+    BIOSFuns::cache().del(format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.account_vcode_error_times, tenant_id, ak).as_str()).await?;
+    Ok(())
+}
+
+pub async fn get_account_token(app_id: &str, kind: &str) -> BIOSResult<Option<String>> {
+    let result = BIOSFuns::cache().get(format!("{}{}:{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.access_token, app_id, kind).as_str()).await?;
+    Ok(result)
 }
 
 // ------------------------------------

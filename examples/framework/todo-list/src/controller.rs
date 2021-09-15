@@ -40,19 +40,13 @@ pub async fn list_categories(query: VQuery<CategoryListReq>) -> BIOSResp {
             None
         })
         .done();
-    let categories = BIOSFuns::reldb()
-        .fetch_all::<CategoryResp>(&sql_builder, None)
-        .await?;
+    let categories = BIOSFuns::reldb().fetch_all::<CategoryResp>(&sql_builder, None).await?;
     BIOSRespHelper::ok(categories)
 }
 
 #[post("/category")]
 pub async fn add_category(category: Json<CategoryAddOrModifyReq>) -> BIOSResp {
-    let sql_builder = Query::insert()
-        .into_table(Category::Table)
-        .columns(vec![Category::Name])
-        .values_panic(vec![category.name.clone().into()])
-        .done();
+    let sql_builder = Query::insert().into_table(Category::Table).columns(vec![Category::Name]).values_panic(vec![category.name.clone().into()]).done();
     let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
     let id = result.last_insert_id();
     BIOSRespHelper::ok(id)
@@ -61,11 +55,7 @@ pub async fn add_category(category: Json<CategoryAddOrModifyReq>) -> BIOSResp {
 #[put("/category/{id}")]
 pub async fn modify_category(req: HttpRequest, category: Json<CategoryAddOrModifyReq>) -> BIOSResp {
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
-    let sql_builder = Query::update()
-        .table(Category::Table)
-        .values(vec![(Category::Name, category.name.clone().into())])
-        .and_where(Expr::col(Category::Id).eq(id))
-        .done();
+    let sql_builder = Query::update().table(Category::Table).values(vec![(Category::Name, category.name.clone().into())]).and_where(Expr::col(Category::Id).eq(id)).done();
     BIOSFuns::reldb().exec(&sql_builder, None).await?;
     BIOSRespHelper::ok("")
 }
@@ -76,24 +66,8 @@ pub async fn delete_category(req: HttpRequest) -> BIOSResp {
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
 
-    BIOSFuns::reldb()
-        .exec(
-            &Query::delete()
-                .from_table(Category::Table)
-                .and_where(Expr::col(Category::Id).eq(id))
-                .done(),
-            Some(&mut tx),
-        )
-        .await?;
-    BIOSFuns::reldb()
-        .exec(
-            &Query::delete()
-                .from_table(Item::Table)
-                .and_where(Expr::col(Item::CategoryId).eq(id))
-                .done(),
-            Some(&mut tx),
-        )
-        .await?;
+    BIOSFuns::reldb().exec(&Query::delete().from_table(Category::Table).and_where(Expr::col(Category::Id).eq(id)).done(), Some(&mut tx)).await?;
+    BIOSFuns::reldb().exec(&Query::delete().from_table(Item::Table).and_where(Expr::col(Item::CategoryId).eq(id)).done(), Some(&mut tx)).await?;
 
     tx.commit().await?;
     BIOSRespHelper::ok("")
@@ -129,15 +103,9 @@ pub async fn page_items(query: VQuery<ItemPageReq>) -> BIOSResp {
             (Item::Table, Item::CreateTime),
             (Item::Table, Item::UpdateTime),
         ])
-        .expr_as(
-            Expr::col((Category::Table, Category::Name)),
-            Alias::new("category_name"),
-        )
+        .expr_as(Expr::col((Category::Table, Category::Name)), Alias::new("category_name"))
         .from(Item::Table)
-        .left_join(
-            Category::Table,
-            Expr::tbl(Category::Table, Category::Id).equals(Item::Table, Item::CategoryId),
-        )
+        .left_join(Category::Table, Expr::tbl(Category::Table, Category::Id).equals(Item::Table, Item::CategoryId))
         .and_where_option(if query.content.as_ref().is_some() {
             Some(Expr::col(Item::Content).like(query.content.as_ref().unwrap().as_str()))
         } else {
@@ -149,9 +117,7 @@ pub async fn page_items(query: VQuery<ItemPageReq>) -> BIOSResp {
             None
         })
         .done();
-    let items = BIOSFuns::reldb()
-        .pagination::<ItemResp>(&sql_builder, query.page_number, query.page_size, None)
-        .await?;
+    let items = BIOSFuns::reldb().pagination::<ItemResp>(&sql_builder, query.page_number, query.page_size, None).await?;
     BIOSRespHelper::ok(items)
 }
 
@@ -160,11 +126,7 @@ pub async fn add_item(item: Json<ItemAddReq>) -> BIOSResp {
     let sql_builder = Query::insert()
         .into_table(Item::Table)
         .columns(vec![Item::Content, Item::Creator, Item::CategoryId])
-        .values_panic(vec![
-            item.content.clone().into(),
-            item.creator.clone().into(),
-            item.category_id.into(),
-        ])
+        .values_panic(vec![item.content.clone().into(), item.creator.clone().into(), item.category_id.into()])
         .done();
     let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
     let id = result.last_insert_id();
@@ -176,22 +138,12 @@ pub async fn modify_item(req: HttpRequest, item: Json<ItemModifyReq>) -> BIOSRes
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
     let mut values = Vec::new();
     if item.content.as_ref().is_some() {
-        values.push((
-            Item::Content,
-            item.content.as_ref().unwrap().to_string().into(),
-        ));
+        values.push((Item::Content, item.content.as_ref().unwrap().as_str().into()));
     }
     if item.creator.as_ref().is_some() {
-        values.push((
-            Item::Creator,
-            item.creator.as_ref().unwrap().to_string().into(),
-        ));
+        values.push((Item::Creator, item.creator.as_ref().unwrap().as_str().into()));
     }
-    let sql_builder = Query::update()
-        .table(Item::Table)
-        .values(values)
-        .and_where(Expr::col(Item::Id).eq(id))
-        .done();
+    let sql_builder = Query::update().table(Item::Table).values(values).and_where(Expr::col(Item::Id).eq(id)).done();
     let result = BIOSFuns::reldb().exec(&sql_builder, None).await?;
     if result.rows_affected() != 0 {
         BIOSRespHelper::ok("")
@@ -203,15 +155,7 @@ pub async fn modify_item(req: HttpRequest, item: Json<ItemModifyReq>) -> BIOSRes
 #[delete("/item/{id}")]
 pub async fn delete_item(req: HttpRequest) -> BIOSResp {
     let id: i64 = req.match_info().get("id").unwrap().parse()?;
-    BIOSFuns::reldb()
-        .exec(
-            &Query::delete()
-                .from_table(Item::Table)
-                .and_where(Expr::col(Item::Id).eq(id))
-                .done(),
-            None,
-        )
-        .await?;
+    BIOSFuns::reldb().exec(&Query::delete().from_table(Item::Table).and_where(Expr::col(Item::Id).eq(id)).done(), None).await?;
     BIOSRespHelper::ok("")
 }
 

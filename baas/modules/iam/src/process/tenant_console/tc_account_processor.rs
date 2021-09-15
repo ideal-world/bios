@@ -15,6 +15,7 @@
  */
 
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use actix_web::{delete, get, post, put, HttpRequest};
 use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
@@ -31,7 +32,7 @@ use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicyObject};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamAccountBind, IamAccountIdent, IamApp};
-use crate::process::basic_dto::{AuthObjectKind, CommonStatus};
+use crate::process::basic_dto::{AccountIdentKind, AuthObjectKind, CommonStatus};
 use crate::process::common::{auth_processor, cache_processor};
 use crate::process::tenant_console::tc_account_dto::{
     AccountAddReq, AccountAppDetailResp, AccountDetailResp, AccountIdentAddReq, AccountIdentDetailResp, AccountIdentModifyReq, AccountModifyReq, AccountQueryReq,
@@ -65,9 +66,9 @@ pub async fn add_account(account_add_req: Json<AccountAddReq>, req: HttpRequest)
                     ident_info.account_id.as_str().into(),
                     open_id.into(),
                     account_add_req.name.as_str().into(),
-                    account_add_req.avatar.as_deref().unwrap_or(&"").into(),
-                    account_add_req.parameters.as_deref().unwrap_or(&"").into(),
-                    account_add_req.parent_id.as_deref().unwrap_or(&"").into(),
+                    account_add_req.avatar.as_deref().unwrap_or_default().into(),
+                    account_add_req.parameters.as_deref().unwrap_or_default().into(),
+                    account_add_req.parent_id.as_deref().unwrap_or_default().into(),
                     ident_info.tenant_id.as_str().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
@@ -100,16 +101,16 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
 
     let mut values = Vec::new();
     if let Some(name) = &account_modify_req.name {
-        values.push((IamAccount::Name, name.to_string().into()));
+        values.push((IamAccount::Name, name.as_str().into()));
     }
     if let Some(avatar) = &account_modify_req.avatar {
-        values.push((IamAccount::Avatar, avatar.to_string().into()));
+        values.push((IamAccount::Avatar, avatar.as_str().into()));
     }
     if let Some(parameters) = &account_modify_req.parameters {
-        values.push((IamAccount::Parameters, parameters.to_string().into()));
+        values.push((IamAccount::Parameters, parameters.as_str().into()));
     }
     if let Some(parent_id) = &account_modify_req.parent_id {
-        values.push((IamAccount::ParentId, parent_id.to_string().into()));
+        values.push((IamAccount::ParentId, parent_id.as_str().into()));
     }
     if let Some(status) = &account_modify_req.status {
         values.push((IamAccount::Status, status.to_string().to_lowercase().into()));
@@ -356,7 +357,7 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
                 .from(IamAccountIdent::Table)
                 .and_where(Expr::col(IamAccountIdent::Kind).eq(account_ident_add_req.kind.to_string().to_lowercase()))
                 .and_where(Expr::col(IamAccountIdent::Ak).eq(account_ident_add_req.ak.as_str()))
-                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id.as_str()))
+                .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
                 .done(),
             None,
         )
@@ -366,17 +367,17 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
     }
 
     auth_processor::valid_account_ident(
-        &account_ident_add_req.kind.to_string().to_lowercase(),
+        &account_ident_add_req.kind,
         &account_ident_add_req.ak,
-        &account_ident_add_req.sk.as_deref().unwrap_or(&""),
+        &account_ident_add_req.sk.as_deref().unwrap_or_default(),
         &ident_info.tenant_id,
         None,
     )
     .await?;
     let processed_sk = auth_processor::process_sk(
-        &account_ident_add_req.kind.to_string().to_lowercase(),
+        &account_ident_add_req.kind,
         &account_ident_add_req.ak,
-        &account_ident_add_req.sk.as_deref().unwrap_or(&""),
+        &account_ident_add_req.sk.as_deref().unwrap_or_default(),
         &ident_info.tenant_id,
         &ident_info.app_id,
     )
@@ -456,19 +457,42 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
     let kind = kind["kind"].as_str().unwrap_or_default();
 
     auth_processor::valid_account_ident(
-        kind,
-        account_ident_modify_req.ak.as_deref().unwrap_or(&""),
-        account_ident_modify_req.sk.as_deref().unwrap_or(&""),
+        &AccountIdentKind::from_str(kind).unwrap(),
+        account_ident_modify_req.ak.as_deref().unwrap_or_default(),
+        account_ident_modify_req.sk.as_deref().unwrap_or_default(),
         &ident_info.tenant_id,
         None,
     )
     .await?;
     let mut values = Vec::new();
     if let Some(ak) = &account_ident_modify_req.ak {
+        if BIOSFuns::reldb()
+            .exists(
+                &Query::select()
+                    .columns(vec![IamAccountIdent::Id])
+                    .from(IamAccountIdent::Table)
+                    .and_where(Expr::col(IamAccountIdent::Kind).eq(kind))
+                    .and_where(Expr::col(IamAccountIdent::Ak).eq(ak.as_str()))
+                    .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                    .and_where(Expr::col(IamAccountIdent::RelAccountId).ne(id.as_str()))
+                    .done(),
+                None,
+            )
+            .await?
+        {
+            return Err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()));
+        }
         values.push((IamAccountIdent::Ak, ak.to_string().as_str().into()));
     }
     if let Some(sk) = &account_ident_modify_req.sk {
-        let processed_sk = auth_processor::process_sk(kind, account_ident_modify_req.ak.as_deref().unwrap_or(&""), sk, &ident_info.tenant_id, &ident_info.app_id).await?;
+        let processed_sk = auth_processor::process_sk(
+            &AccountIdentKind::from_str(kind).unwrap(),
+            account_ident_modify_req.ak.as_deref().unwrap_or_default(),
+            sk,
+            &ident_info.tenant_id,
+            &ident_info.app_id,
+        )
+        .await?;
         values.push((IamAccountIdent::Sk, processed_sk.into()));
     }
     if let Some(valid_start_time) = account_ident_modify_req.valid_start_time {

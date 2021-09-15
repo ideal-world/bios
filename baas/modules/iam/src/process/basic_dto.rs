@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+use std::str::FromStr;
+
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
@@ -41,6 +43,20 @@ pub enum AccountIdentKind {
     Email,
     // 微信小程序OAuth
     WechatXcx,
+}
+
+impl FromStr for AccountIdentKind {
+    type Err = ();
+    fn from_str(input: &str) -> Result<AccountIdentKind, Self::Err> {
+        match input {
+            "username" => Ok(AccountIdentKind::Username),
+            "auth_ident" => Ok(AccountIdentKind::AuthIdent),
+            "phone" => Ok(AccountIdentKind::Phone),
+            "email" => Ok(AccountIdentKind::Email),
+            "wechat_xcx" => Ok(AccountIdentKind::WechatXcx),
+            _ => Err(()),
+        }
+    }
 }
 
 /// 资源类型枚举
