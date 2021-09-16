@@ -24,7 +24,7 @@ pub fn get_ident_app_info(req: &HttpRequest) -> BIOSResult<IdentAppInfo> {
     match get_ident_info(req) {
         Ok(ident_info) => {
             if ident_info.tenant_id.is_none() || ident_info.app_id.is_none() || ident_info.ak.is_none() {
-                Err(BIOSError::Unauthorized("Ident Info [tenant_id] or [app_id] or [ak] doesn't exist".to_owned()))
+                Err(BIOSError::Unauthorized("Ident Info [tenant_id] or [app_id] or [ak] doesn't exists".to_owned()))
             } else {
                 Ok(IdentAppInfo {
                     app_id: ident_info.app_id.unwrap(),
@@ -42,7 +42,7 @@ pub fn get_ident_account_info(req: &HttpRequest) -> BIOSResult<IdentAccountInfo>
         Ok(ident_info) => {
             if ident_info.tenant_id.is_none() || ident_info.app_id.is_none() || ident_info.ak.is_none() || ident_info.account_id.is_none() {
                 Err(BIOSError::Unauthorized(
-                    "Ident Info [tenant_id] or [app_id] or [ak] or [account_id] doesn't exist".to_owned(),
+                    "Ident Info [tenant_id] or [app_id] or [ak] or [account_id] doesn't exists".to_owned(),
                 ))
             } else {
                 Ok(IdentAccountInfo {
@@ -71,7 +71,7 @@ pub fn get_ident_pub_info(req: &HttpRequest) -> BIOSResult<IdentPubInfo> {
 pub fn get_ident_info(req: &HttpRequest) -> BIOSResult<IdentInfo> {
     match extract_ident_info(req) {
         Some(ident_info) => Ok(ident_info),
-        None => Err(BIOSError::Unauthorized("Ident Info doesn't exist".to_owned())),
+        None => Err(BIOSError::Unauthorized("Ident Info doesn't exists".to_owned())),
     }
 }
 

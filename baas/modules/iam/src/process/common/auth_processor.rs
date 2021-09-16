@@ -26,23 +26,24 @@ use bios::basic::error::{BIOSError, BIOSResult};
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::BIOSFuns;
 
+use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::IamTenantIdent;
 use crate::iam_config::WorkSpaceConfig;
-use crate::process::basic_dto::AccountIdentKind;
+use crate::process::basic_dto::{AccountIdentKind, AuthObjectKind, AuthObjectOperatorKind, AuthResultKind, ExposeKind, OptActionKind, ResourceKind};
 use crate::process::common::cache_processor;
 
 lazy_static! {
     static ref AK_SK_CONTAINER: Mutex<HashMap<String, Regex>> = Mutex::new(HashMap::new());
 }
 
-pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str, rel_tenant_id: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<i64> {
+pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str, tenant_id: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<i64> {
     if let Some(tenant_ident_info) = BIOSFuns::reldb()
         .fetch_optional::<TenantIdentInfoResp>(
             &Query::select()
                 .columns(vec![IamTenantIdent::ValidAkRule, IamTenantIdent::ValidSkRule, IamTenantIdent::ValidTime])
                 .from(IamTenantIdent::Table)
                 .and_where(Expr::col(IamTenantIdent::Kind).eq(kind.to_string().to_lowercase()))
-                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(rel_tenant_id.to_string()))
+                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(tenant_id.to_string()))
                 .done(),
             tx,
         )
@@ -162,6 +163,278 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, tenant_id: 
             Ok("".to_string())
         }
     }
+}
+
+pub async fn init_account_role<'c>(role_code: &str, role_name: &str, account_id: &str, app_id: &str, tenant_id: &str, tx: &mut Transaction<'c, MySql>) -> BIOSResult<String> {
+    let role_id = bios::basic::field::uuid();
+    BIOSFuns::reldb()
+        .exec(
+            &Query::insert()
+                .into_table(IamRole::Table)
+                .columns(vec![
+                    IamRole::Id,
+                    IamRole::CreateUser,
+                    IamRole::UpdateUser,
+                    IamRole::Code,
+                    IamRole::Name,
+                    IamRole::Sort,
+                    IamRole::RelAppId,
+                    IamRole::RelTenantId,
+                ])
+                .values_panic(vec![
+                    role_id.as_str().into(),
+                    account_id.into(),
+                    account_id.into(),
+                    role_code.into(),
+                    role_name.into(),
+                    0.into(),
+                    app_id.into(),
+                    tenant_id.into(),
+                ])
+                .done(),
+            Some(tx),
+        )
+        .await?;
+    BIOSFuns::reldb()
+        .exec(
+            &Query::insert()
+                .into_table(IamAccountRole::Table)
+                .columns(vec![
+                    IamAccountRole::Id,
+                    IamAccountRole::CreateUser,
+                    IamAccountRole::UpdateUser,
+                    IamAccountRole::RelAccountId,
+                    IamAccountRole::RelRoleId,
+                ])
+                .values_panic(vec![
+                    bios::basic::field::uuid().into(),
+                    account_id.into(),
+                    account_id.into(),
+                    account_id.into(),
+                    role_id.as_str().into(),
+                ])
+                .done(),
+            Some(tx),
+        )
+        .await?;
+    Ok(role_id)
+}
+
+pub async fn init_resource_subject<'c>(
+    kind: &ResourceKind,
+    uri: &str,
+    name: &str,
+    account_id: &str,
+    app_id: &str,
+    tenant_id: &str,
+    tx: &mut Transaction<'c, MySql>,
+) -> BIOSResult<String> {
+    let resource_subject_id = bios::basic::field::uuid();
+    BIOSFuns::reldb()
+        .exec(
+            &Query::insert()
+                .into_table(IamResourceSubject::Table)
+                .columns(vec![
+                    IamResourceSubject::Id,
+                    IamResourceSubject::CreateUser,
+                    IamResourceSubject::UpdateUser,
+                    IamResourceSubject::Kind,
+                    IamResourceSubject::Uri,
+                    IamResourceSubject::Name,
+                    IamResourceSubject::Sort,
+                    IamResourceSubject::Ak,
+                    IamResourceSubject::Sk,
+                    IamResourceSubject::PlatformAccount,
+                    IamResourceSubject::PlatformProjectId,
+                    IamResourceSubject::TimeoutMs,
+                    IamResourceSubject::RelAppId,
+                    IamResourceSubject::RelTenantId,
+                ])
+                .values_panic(vec![
+                    resource_subject_id.as_str().into(),
+                    account_id.into(),
+                    account_id.into(),
+                    kind.to_string().to_lowercase().into(),
+                    uri.into(),
+                    name.into(),
+                    0.into(),
+                    "".into(),
+                    "".into(),
+                    "".into(),
+                    "".into(),
+                    0.into(),
+                    app_id.into(),
+                    tenant_id.into(),
+                ])
+                .done(),
+            Some(tx),
+        )
+        .await?;
+    Ok(resource_subject_id)
+}
+
+pub async fn init_resource<'c>(
+    path_and_query: &str,
+    name: &str,
+    resource_subject_id: &str,
+    resource_expose_kind: &ExposeKind,
+    account_id: &str,
+    app_id: &str,
+    tenant_id: &str,
+    tx: &mut Transaction<'c, MySql>,
+) -> BIOSResult<String> {
+    let resource_id = bios::basic::field::uuid();
+    BIOSFuns::reldb()
+        .exec(
+            &Query::insert()
+                .into_table(IamResource::Table)
+                .columns(vec![
+                    IamResource::Id,
+                    IamResource::CreateUser,
+                    IamResource::UpdateUser,
+                    IamResource::PathAndQuery,
+                    IamResource::Name,
+                    IamResource::Icon,
+                    IamResource::Sort,
+                    IamResource::Action,
+                    IamResource::ResGroup,
+                    IamResource::ParentId,
+                    IamResource::RelResourceSubjectId,
+                    IamResource::RelAppId,
+                    IamResource::RelTenantId,
+                    IamResource::ExposeKind,
+                ])
+                .values_panic(vec![
+                    resource_id.as_str().into(),
+                    account_id.into(),
+                    account_id.into(),
+                    path_and_query.into(),
+                    name.into(),
+                    "".into(),
+                    0.into(),
+                    "".into(),
+                    false.into(),
+                    "".into(),
+                    resource_subject_id.into(),
+                    app_id.into(),
+                    tenant_id.into(),
+                    resource_expose_kind.to_string().to_lowercase().into(),
+                ])
+                .done(),
+            Some(tx),
+        )
+        .await?;
+    Ok(resource_id)
+}
+
+pub async fn init_auth<'c>(
+    auth_info: Vec<(&str, Vec<&OptActionKind>)>,
+    name: &str,
+    object_kind: &AuthObjectKind,
+    object_id: &str,
+    account_id: &str,
+    app_id: &str,
+    tenant_id: &str,
+    tx: &mut Transaction<'c, MySql>,
+) -> BIOSResult<()> {
+    // Init AuthPolicy
+    async fn init_auth_policy<'c>(
+        name: &str,
+        action: &OptActionKind,
+        resource_id: &str,
+        result: &AuthResultKind,
+        account_id: &str,
+        app_id: &str,
+        tenant_id: &str,
+        tx: &mut Transaction<'c, MySql>,
+    ) -> BIOSResult<String> {
+        let auth_policy_id = bios::basic::field::uuid();
+        let valid_start_time = Utc::now().timestamp();
+        let valid_end_time = i64::MAX;
+        BIOSFuns::reldb()
+            .exec(
+                &Query::insert()
+                    .into_table(IamAuthPolicy::Table)
+                    .columns(vec![
+                        IamAuthPolicy::Id,
+                        IamAuthPolicy::CreateUser,
+                        IamAuthPolicy::UpdateUser,
+                        IamAuthPolicy::Name,
+                        IamAuthPolicy::ValidStartTime,
+                        IamAuthPolicy::ValidEndTime,
+                        IamAuthPolicy::ActionKind,
+                        IamAuthPolicy::RelResourceId,
+                        IamAuthPolicy::ResultKind,
+                        IamAuthPolicy::RelAppId,
+                        IamAuthPolicy::RelTenantId,
+                    ])
+                    .values_panic(vec![
+                        auth_policy_id.as_str().into(),
+                        account_id.into(),
+                        account_id.into(),
+                        name.into(),
+                        valid_start_time.into(),
+                        valid_end_time.into(),
+                        action.to_string().to_lowercase().into(),
+                        resource_id.into(),
+                        result.to_string().to_lowercase().into(),
+                        app_id.into(),
+                        tenant_id.into(),
+                    ])
+                    .done(),
+                Some(tx),
+            )
+            .await?;
+        Ok(auth_policy_id)
+    }
+    // Init AuthPolicyObject
+    async fn init_auth_policy_object<'c>(object_kind: &AuthObjectKind, object_id: &str, auth_policy_id: &str, account_id: &str, tx: &mut Transaction<'c, MySql>) -> BIOSResult<()> {
+        BIOSFuns::reldb()
+            .exec(
+                &Query::insert()
+                    .into_table(IamAuthPolicyObject::Table)
+                    .columns(vec![
+                        IamAuthPolicyObject::Id,
+                        IamAuthPolicyObject::CreateUser,
+                        IamAuthPolicyObject::UpdateUser,
+                        IamAuthPolicyObject::ObjectKind,
+                        IamAuthPolicyObject::ObjectId,
+                        IamAuthPolicyObject::ObjectOperator,
+                        IamAuthPolicyObject::RelAuthPolicyId,
+                    ])
+                    .values_panic(vec![
+                        bios::basic::field::uuid().into(),
+                        account_id.into(),
+                        account_id.into(),
+                        object_kind.to_string().to_lowercase().into(),
+                        object_id.into(),
+                        AuthObjectOperatorKind::Eq.to_string().to_lowercase().into(),
+                        auth_policy_id.into(),
+                    ])
+                    .done(),
+                Some(tx),
+            )
+            .await?;
+        Ok(())
+    }
+    let auth_info = auth_info.iter().cloned().collect::<HashMap<&str, Vec<&OptActionKind>>>();
+    for (resource_id, actions) in auth_info {
+        for action in actions {
+            let auth_policy_id = init_auth_policy(
+                format!("{}权限", name).as_str(),
+                action,
+                &resource_id,
+                &AuthResultKind::Accept,
+                account_id,
+                app_id,
+                tenant_id,
+                tx,
+            )
+            .await?;
+            init_auth_policy_object(object_kind, object_id, &auth_policy_id, account_id, tx).await?;
+        }
+    }
+    Ok(())
 }
 
 #[derive(sqlx::FromRow, serde::Deserialize)]

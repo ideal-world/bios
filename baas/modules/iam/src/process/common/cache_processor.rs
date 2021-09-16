@@ -29,7 +29,7 @@ use crate::domain::ident_domain::IamTenantCert;
 use crate::iam_config::WorkSpaceConfig;
 use crate::process::basic_dto::AuthObjectKind;
 
-pub async fn set_token<'c>(ident_info: &IdentAccountInfo, valid_end_time: i64, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<()> {
+pub async fn set_token<'c>(ident_info: &IdentAccountInfo, valid_end_time: i64) -> BIOSResult<()> {
     let cache_token_key = format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token, ident_info.token);
     let ident_info_str = bios::basic::json::obj_to_string(ident_info)?;
     if valid_end_time == i64::MAX {
@@ -41,14 +41,14 @@ pub async fn set_token<'c>(ident_info: &IdentAccountInfo, valid_end_time: i64, t
         .hset(
             format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token_rel, ident_info.account_id).as_str(),
             ident_info.token.as_str(),
-            format!("{}##{}", ident_info.token_kind, Utc::now().timestamp()).as_str(),
+            format!("{}##{}", ident_info.token_kind, Utc::now().timestamp_millis()).as_str(),
         )
         .await?;
-    remove_old_token(&ident_info.account_id, &ident_info.tenant_id, &ident_info.token_kind, tx).await?;
+    remove_old_token(&ident_info.account_id, &ident_info.tenant_id, &ident_info.token_kind).await?;
     Ok(())
 }
 
-pub async fn remove_token<'c>(token: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<()> {
+pub async fn remove_token<'c>(token: &str) -> BIOSResult<()> {
     let cache_token_key = format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token, token);
     let ident_info = BIOSFuns::cache().get(&cache_token_key).await?;
     if ident_info.is_none() {
@@ -56,11 +56,11 @@ pub async fn remove_token<'c>(token: &str, tx: Option<&mut Transaction<'c, MySql
     }
     let ident_info = bios::basic::json::str_to_obj::<IdentAccountInfo>(ident_info.unwrap().as_str())?;
     BIOSFuns::cache().del(&cache_token_key).await?;
-    remove_old_token(&ident_info.account_id, &ident_info.tenant_id, &ident_info.token_kind, tx).await?;
+    remove_old_token(&ident_info.account_id, &ident_info.tenant_id, &ident_info.token_kind).await?;
     Ok(())
 }
 
-async fn remove_old_token<'c>(account_id: &str, tenant_id: &str, token_kind: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<()> {
+async fn remove_old_token<'c>(account_id: &str, tenant_id: &str, token_kind: &str) -> BIOSResult<()> {
     let revision_history_limit = BIOSFuns::reldb()
         .fetch_one_json(
             &Query::select()
@@ -69,7 +69,7 @@ async fn remove_old_token<'c>(account_id: &str, tenant_id: &str, token_kind: &st
                 .and_where(Expr::col(IamTenantCert::RelTenantId).eq(tenant_id))
                 .and_where(Expr::col(IamTenantCert::Category).eq(token_kind))
                 .done(),
-            tx,
+            None,
         )
         .await?;
     let revision_history_limit = revision_history_limit["version"].as_i64().unwrap();
@@ -79,7 +79,7 @@ async fn remove_old_token<'c>(account_id: &str, tenant_id: &str, token_kind: &st
         .map(|(k, v)| (k, v.split("##").collect_vec()))
         .filter(|(_, v)| v[0] == token_kind)
         .sorted_by(|(_, v1), (_, v2)| Ord::cmp(&v2[1].parse::<i64>().unwrap(), &v1[1].parse::<i64>().unwrap()))
-        .skip((revision_history_limit + 1) as usize)
+        .skip(revision_history_limit as usize)
         .map(|(k, _)| k)
         .collect_vec();
     for remove_token in remove_tokens {

@@ -69,7 +69,7 @@ async fn test_init() -> BIOSResult<()> {
         )
         .await?;
     assert_eq!(records.len(), 1);
-    assert_eq!(records[0].version, 0);
+    assert_eq!(records[0].version, 1);
     assert_eq!(records[0].category, "");
 
     let records = BIOSFuns::reldb().fetch_all::<AppDetailResp>(&Query::select().columns(IamApp::iter().filter(|i| *i != IamApp::Table)).from(IamApp::Table).done(), None).await?;
@@ -132,7 +132,7 @@ async fn test_init() -> BIOSResult<()> {
             None,
         )
         .await?;
-    assert_eq!(records.len(), 1);
+    assert_eq!(records.len(), 3);
     assert!(records.iter().find(|x| x.uri == format!("api://{}", iam_config.service_name)).is_some());
     assert!(records.iter().find(|x| x.name == format!("{} APIs", iam_config.app.app_name)).is_some());
 
@@ -151,7 +151,7 @@ async fn test_init() -> BIOSResult<()> {
             None,
         )
         .await?;
-    assert_eq!(records.len(), 12);
+    assert_eq!(records.len(), 15);
 
     let records = BIOSFuns::reldb()
         .fetch_all::<AuthPolicyObjectDetailResp>(
@@ -159,14 +159,14 @@ async fn test_init() -> BIOSResult<()> {
             None,
         )
         .await?;
-    assert_eq!(records.len(), 12);
+    assert_eq!(records.len(), 15);
 
     let aksk = BIOSFuns::cache().get(format!("{}{}", iam_config.cache.aksk, ak).as_str()).await?.unwrap();
     assert!(aksk.contains(&tenant_id));
     assert!(aksk.contains(&app_id));
 
     let auth_policies = BIOSFuns::cache().hgetall(&iam_config.cache.resources).await?;
-    assert_eq!(auth_policies.len(), 12);
+    assert_eq!(auth_policies.len(), 15);
 
     Ok(())
 }
