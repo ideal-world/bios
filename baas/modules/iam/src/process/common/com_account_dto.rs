@@ -35,13 +35,13 @@ pub struct AccountChangeReq {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct AccountIdentChangeReq {
     // 账号认证类型
-    pub kind: Option<AccountIdentKind>,
+    pub kind: AccountIdentKind,
     // 账号认证名称
     #[validate(length(min = 2, max = 255), regex = "bios::basic::field::R_CODE_CS")]
-    pub ak: Option<String>,
+    pub ak: String,
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]
-    pub sk: Option<String>,
+    pub sk: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -54,6 +54,9 @@ pub struct AccountLoginReq {
     // 账号认证密钥
     #[validate(length(min = 2, max = 255))]
     pub sk: String,
+    // 凭证分类
+    #[validate(length(min = 2, max = 255))]
+    pub cert_category: Option<String>,
     // 关联应用Id
     #[validate(length(max = 32))]
     pub rel_app_id: String,
@@ -93,4 +96,26 @@ pub struct AccountRegisterReq {
     // 关联应用Id
     #[validate(length(max = 32))]
     pub rel_app_id: String,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct AccountInfoDetailResp {
+    #[validate(length(max = 32))]
+    pub app_id: String,
+    #[validate(length(max = 255))]
+    pub app_name: String,
+    #[validate(length(max = 32))]
+    pub tenant_id: String,
+    #[validate(length(max = 255))]
+    pub tenant_name: String,
+    #[validate(length(max = 32))]
+    pub account_id: String,
+    #[validate(length(max = 255))]
+    pub account_name: String,
+    #[validate(length(max = 255))]
+    pub token: String,
+    #[validate(length(max = 255))]
+    pub token_kind: String,
+    pub roles: Vec<(String, String)>,
+    pub groups: Vec<(String, String)>,
 }

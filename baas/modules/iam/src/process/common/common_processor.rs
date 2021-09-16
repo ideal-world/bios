@@ -14,23 +14,26 @@
  * limitations under the License.
  */
 
-use actix_web::post;
+use actix_web::{delete, get, post, put, HttpRequest};
 use chrono::Utc;
-use sea_query::{Alias, Expr, Query};
-use sqlx::{Connection, MySql, Transaction};
+use itertools::Itertools;
+use sea_query::{Alias, Cond, Expr, Order, Query};
+use sqlx::Connection;
 
 use bios::basic::dto::IdentAccountInfo;
 use bios::basic::error::{BIOSError, BIOSResult};
 use bios::db::reldb_client::SqlBuilderProcess;
+use bios::web::basic_processor::get_ident_account_info;
 use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
 use bios::web::validate::json::Json;
 use bios::BIOSFuns;
 
-use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamRole};
+use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamAccountIdent, IamApp, IamAppIdent, IamTenant, IamTenantCert, IamTenantIdent};
 use crate::iam_config::WorkSpaceConfig;
-use crate::process::basic_dto::{AccountIdentKind, CommonStatus};
-use crate::process::common::com_account_dto::{AccountLoginReq, AccountRegisterReq};
+use crate::process::basic_dto::{AccountIdentKind, AuthObjectKind, AuthObjectOperatorKind, CommonStatus, ExposeKind, OptActionKind, ResourceKind};
+use crate::process::common::com_account_dto::{AccountChangeReq, AccountIdentChangeReq, AccountInfoDetailResp, AccountLoginReq, AccountRegisterReq};
+use crate::process::common::com_resource_dto::ResourceDetailResp;
 use crate::process::common::com_tenant_dto::TenantRegisterReq;
 use crate::process::common::{auth_processor, cache_processor};
 
@@ -75,6 +78,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init TenantIdent
     BIOSFuns::reldb()
         .exec(
@@ -108,6 +112,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init TenantCert
     BIOSFuns::reldb()
         .exec(
@@ -133,6 +138,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init App
     BIOSFuns::reldb()
         .exec(
@@ -162,6 +168,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init AppIdent
     let ak = bios::basic::security::key::generate_ak();
     let sk = bios::basic::security::key::generate_sk(&ak);
@@ -195,6 +202,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init Account
     BIOSFuns::reldb()
         .exec(
@@ -217,7 +225,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
                     account_id.as_str().into(),
                     account_id.as_str().into(),
                     format!("ao_{}", bios::basic::field::uuid()).into(),
-                    format!("{} 管理员", tenant_register_req.name).into(),
+                    format!("{}管理员", tenant_register_req.name).into(),
                     "".into(),
                     "".into(),
                     "".into(),
@@ -228,6 +236,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init AccountIdent
     let valid_end_time = auth_processor::valid_account_ident(
         &AccountIdentKind::Username,
@@ -277,6 +286,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
+
     // Init AccountApp
     BIOSFuns::reldb()
         .exec(
@@ -300,80 +310,213 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>) -> BI
             Some(&mut tx),
         )
         .await?;
-    // Init AccountRole
-    let role_id = BIOSFuns::reldb()
-        .fetch_one_json(
-            &Query::select().column(IamRole::Id).from(IamRole::Table).and_where(Expr::col(IamRole::Code).eq(iam_config.security.tenant_admin_role_code.as_str())).done(),
-            Some(&mut tx),
-        )
-        .await?;
-    let role_id = role_id["id"].as_str().unwrap();
-    BIOSFuns::reldb()
-        .exec(
-            &Query::insert()
-                .into_table(IamAccountRole::Table)
-                .columns(vec![
-                    IamAccountRole::Id,
-                    IamAccountRole::CreateUser,
-                    IamAccountRole::UpdateUser,
-                    IamAccountRole::RelAccountId,
-                    IamAccountRole::RelRoleId,
-                ])
-                .values_panic(vec![
-                    bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    role_id.into(),
-                ])
-                .done(),
-            Some(&mut tx),
-        )
-        .await?;
-    let role_id = BIOSFuns::reldb()
-        .fetch_one_json(
-            &Query::select().column(IamRole::Id).from(IamRole::Table).and_where(Expr::col(IamRole::Code).eq(iam_config.security.app_admin_role_code.as_str())).done(),
-            Some(&mut tx),
-        )
-        .await?;
-    let role_id = role_id["id"].as_str().unwrap();
-    BIOSFuns::reldb()
-        .exec(
-            &Query::insert()
-                .into_table(IamAccountRole::Table)
-                .columns(vec![
-                    IamAccountRole::Id,
-                    IamAccountRole::CreateUser,
-                    IamAccountRole::UpdateUser,
-                    IamAccountRole::RelAccountId,
-                    IamAccountRole::RelRoleId,
-                ])
-                .values_panic(vec![
-                    bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    role_id.into(),
-                ])
-                .done(),
-            Some(&mut tx),
-        )
-        .await?;
 
+    // Init Role And AccountRole
+    let tenant_role_id = auth_processor::init_account_role(
+        &iam_config.security.tenant_admin_role_code.as_str(),
+        &iam_config.security.tenant_admin_role_name.as_str(),
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    let app_role_id = auth_processor::init_account_role(
+        &iam_config.security.app_admin_role_code.as_str(),
+        &iam_config.security.app_admin_role_name.as_str(),
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+
+    // Init ResourceSubject
+    let resource_subject_api_id = auth_processor::init_resource_subject(
+        &ResourceKind::Api,
+        format!("api://{}", app_id).as_str(),
+        format!("{}接口", tenant_register_req.app_name).as_str(),
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    let resource_subject_menu_id = auth_processor::init_resource_subject(
+        &ResourceKind::Menu,
+        format!("menu://{}", app_id).as_str(),
+        format!("{}菜单", tenant_register_req.app_name).as_str(),
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    let resource_subject_element_id = auth_processor::init_resource_subject(
+        &ResourceKind::Element,
+        format!("element://{}", app_id).as_str(),
+        format!("{}元素", tenant_register_req.app_name).as_str(),
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+
+    // Init Resource
+    let resource_pub_api_id = auth_processor::init_resource(
+        "/pub/**",
+        "租户共享接口",
+        &resource_subject_api_id,
+        &ExposeKind::Tenant,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    let resource_pub_menu_id = auth_processor::init_resource(
+        "/pub/**",
+        "租户共享菜单",
+        &resource_subject_menu_id,
+        &ExposeKind::Tenant,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    let resource_pub_element_id = auth_processor::init_resource(
+        "/pub/**",
+        "租户共享元素",
+        &resource_subject_element_id,
+        &ExposeKind::Tenant,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+
+    // Fetch IAM console resources
+    let resource_console_tenant_id = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select()
+                .column(IamResource::Id)
+                .from(IamResource::Table)
+                .and_where(Expr::col(IamResource::PathAndQuery).eq("/console/tenant/**"))
+                .order_by(IamResource::CreateTime, Order::Asc)
+                .done(),
+            Some(&mut tx),
+        )
+        .await?;
+    let resource_console_tenant_id = resource_console_tenant_id["id"].as_str().unwrap();
+
+    let resource_console_app_id = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select()
+                .column(IamResource::Id)
+                .from(IamResource::Table)
+                .and_where(Expr::col(IamResource::PathAndQuery).eq("/console/app/**"))
+                .order_by(IamResource::CreateTime, Order::Asc)
+                .done(),
+            Some(&mut tx),
+        )
+        .await?;
+    let resource_console_app_id = resource_console_app_id["id"].as_str().unwrap();
+
+    // Init Auth
+    auth_processor::init_auth(
+        vec![(
+            resource_console_tenant_id,
+            vec![
+                &OptActionKind::Get,
+                &OptActionKind::Post,
+                &OptActionKind::Put,
+                &OptActionKind::Delete,
+                &OptActionKind::Patch,
+            ],
+        )],
+        "租户控制台",
+        &AuthObjectKind::Role,
+        &tenant_role_id,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    auth_processor::init_auth(
+        vec![(
+            resource_console_app_id,
+            vec![
+                &OptActionKind::Get,
+                &OptActionKind::Post,
+                &OptActionKind::Put,
+                &OptActionKind::Delete,
+                &OptActionKind::Patch,
+            ],
+        )],
+        "应用控制台",
+        &AuthObjectKind::Role,
+        &app_role_id,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+
+    auth_processor::init_auth(
+        vec![(&resource_pub_api_id, vec![&OptActionKind::Get])],
+        "租户共享接口",
+        &AuthObjectKind::Tenant,
+        &tenant_id,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    auth_processor::init_auth(
+        vec![(&resource_pub_menu_id, vec![&OptActionKind::Get])],
+        "租户共享菜单",
+        &AuthObjectKind::Tenant,
+        &tenant_id,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    auth_processor::init_auth(
+        vec![(&resource_pub_element_id, vec![&OptActionKind::Get])],
+        "租户共享元素",
+        &AuthObjectKind::Tenant,
+        &tenant_id,
+        &account_id,
+        &app_id,
+        &tenant_id,
+        &mut tx,
+    )
+    .await?;
+    let auth_policy_ids = BIOSFuns::reldb().fetch_all_json(&Query::select().column(IamAuthPolicy::Id).from(IamAuthPolicy::Table).done(), Some(&mut tx)).await?;
+    for id in auth_policy_ids {
+        cache_processor::rebuild_auth_policy(id["id"].as_str().unwrap(), &mut tx).await?;
+    }
     cache_processor::set_aksk(&tenant_id, &app_id, &ak, &sk, i64::MAX).await?;
+    tx.commit().await?;
+
     // Login
     let ident_info = do_login(
         account_id.as_str(),
         tenant_register_req.account_username.as_str(),
         valid_end_time,
+        "",
         tenant_id.as_str(),
         app_id.as_str(),
-        Some(&mut tx),
     )
     .await?;
-
-    tx.commit().await?;
-
     BIOSRespHelper::ok(ident_info)
 }
 
@@ -482,7 +625,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>) ->
                     account_id.as_str().into(),
                     account_id.as_str().into(),
                     AccountIdentKind::Username.to_string().to_lowercase().into(),
-                    account_register_req.name.as_str().into(),
+                    account_register_req.ak.as_str().into(),
                     processed_sk.into(),
                     Utc::now().timestamp().into(),
                     valid_end_time.into(),
@@ -516,17 +659,18 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>) ->
             Some(&mut tx),
         )
         .await?;
+    tx.commit().await?;
     // Login
     let ident_info = do_login(
         account_id.as_str(),
         account_register_req.ak.as_str(),
         valid_end_time,
+        "",
         tenant_id,
         account_register_req.rel_app_id.as_str(),
-        Some(&mut tx),
     )
     .await?;
-    tx.commit().await?;
+
     BIOSRespHelper::ok(ident_info)
 }
 
@@ -558,11 +702,17 @@ pub async fn login(account_login_req: Json<AccountLoginReq>) -> BIOSResp {
                 )
                 .inner_join(IamApp::Table, Expr::tbl(IamApp::Table, IamApp::Id).equals(IamAccountApp::Table, IamAccountApp::RelAppId))
                 .inner_join(IamTenant::Table, Expr::tbl(IamTenant::Table, IamTenant::Id).equals(IamApp::Table, IamApp::RelTenantId))
+                .inner_join(
+                    IamTenantCert::Table,
+                    Expr::tbl(IamTenantCert::Table, IamTenantCert::RelTenantId).equals(IamTenant::Table, IamTenant::Id),
+                )
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::Kind).eq(account_login_req.kind.to_string().to_lowercase()))
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::Ak).eq(account_login_req.ak.as_str()))
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::ValidStartTime).lte(now))
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::ValidEndTime).gte(now))
                 .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_login_req.rel_app_id.as_str()))
+                .and_where(Expr::tbl(IamTenantCert::Table, IamTenantCert::Category).eq(account_login_req.cert_category.as_deref().unwrap_or_default()))
+                .and_where(Expr::tbl(IamAccount::Table, IamAccount::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .and_where(Expr::tbl(IamApp::Table, IamApp::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .and_where(Expr::tbl(IamTenant::Table, IamTenant::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .done(),
@@ -594,11 +744,19 @@ pub async fn login(account_login_req: Json<AccountLoginReq>) -> BIOSResp {
     )
     .await?;
     log::info!("Login Success:  [{}-{}] ak {}", tenant_id, app_id, account_login_req.ak.as_str());
-    let ident_info = do_login(account_id, account_login_req.ak.as_str(), valid_end_time, tenant_id, app_id, None).await?;
+    let ident_info = do_login(
+        account_id,
+        account_login_req.ak.as_str(),
+        valid_end_time,
+        account_login_req.cert_category.as_deref().unwrap_or_default(),
+        tenant_id,
+        app_id,
+    )
+    .await?;
     BIOSRespHelper::ok(ident_info)
 }
 
-async fn do_login<'c>(account_id: &str, ak: &str, valid_end_time: i64, tenant_id: &str, app_id: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<IdentAccountInfo> {
+async fn do_login<'c>(account_id: &str, ak: &str, valid_end_time: i64, cert_category: &str, tenant_id: &str, app_id: &str) -> BIOSResult<IdentAccountInfo> {
     let role_info = BIOSFuns::reldb()
         .fetch_all_json(
             &Query::select().column(IamAccountRole::RelRoleId).from(IamAccountRole::Table).and_where(Expr::col(IamAccountRole::RelAccountId).eq(account_id)).done(),
@@ -620,12 +778,297 @@ async fn do_login<'c>(account_id: &str, ak: &str, valid_end_time: i64, tenant_id
         tenant_id: tenant_id.to_string(),
         account_id: account_id.to_string(),
         token,
-        // TODO
-        token_kind: "".to_string(),
+        token_kind: cert_category.to_string(),
         ak: ak.to_string(),
         roles: role_info,
         groups: group_node_info,
     };
-    cache_processor::set_token(&ident_info, valid_end_time, tx).await?;
+    cache_processor::set_token(&ident_info, valid_end_time).await?;
     Ok(ident_info)
+}
+
+#[get("/common/login")]
+pub async fn fetch_login_info(req: HttpRequest) -> BIOSResp {
+    let ident_info = get_ident_account_info(&req)?;
+
+    let account_name = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select().column(IamAccount::Name).from(IamAccount::Table).and_where(Expr::col(IamAccount::Id).eq(ident_info.account_id.as_str())).done(),
+            None,
+        )
+        .await?;
+    let account_name = account_name["name"].as_str().unwrap();
+
+    let app_name = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select().column(IamApp::Name).from(IamApp::Table).and_where(Expr::col(IamApp::Id).eq(ident_info.app_id.as_str())).done(),
+            None,
+        )
+        .await?;
+    let app_name = app_name["name"].as_str().unwrap();
+
+    let tenant_name = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select().column(IamTenant::Name).from(IamTenant::Table).and_where(Expr::col(IamTenant::Id).eq(ident_info.tenant_id.as_str())).done(),
+            None,
+        )
+        .await?;
+    let tenant_name = tenant_name["name"].as_str().unwrap();
+
+    let role_info = BIOSFuns::reldb()
+        .fetch_all_json(
+            &Query::select().columns(vec![IamRole::Id, IamRole::Name]).from(IamRole::Table).and_where(Expr::col(IamRole::Id).is_in(ident_info.roles.clone())).done(),
+            None,
+        )
+        .await?;
+    let role_info = role_info.into_iter().map(|x| (x["id"].as_str().unwrap().to_string(), x["name"].as_str().unwrap().to_string())).collect::<Vec<(String, String)>>();
+
+    let group_node_info = BIOSFuns::reldb()
+        .fetch_all_json(
+            &Query::select()
+                .column((IamGroupNode::Table, IamGroupNode::Id))
+                .column((IamGroupNode::Table, IamGroupNode::Name))
+                .expr_as(Expr::col((IamGroup::Table, IamGroup::Name)), Alias::new("group_name"))
+                .from(IamGroupNode::Table)
+                .inner_join(
+                    IamGroup::Table,
+                    Expr::tbl(IamGroup::Table, IamGroup::Id).equals(IamGroupNode::Table, IamGroupNode::RelGroupId),
+                )
+                .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).is_in(ident_info.groups.clone()))
+                .done(),
+            None,
+        )
+        .await?;
+    let group_node_info = group_node_info
+        .into_iter()
+        .map(|x| {
+            (
+                x["id"].as_str().unwrap().to_string(),
+                format!("{} - {}", x["group_name"].as_str().unwrap().to_string(), x["name"].as_str().unwrap().to_string()),
+            )
+        })
+        .collect::<Vec<(String, String)>>();
+
+    BIOSRespHelper::ok(AccountInfoDetailResp {
+        app_id: ident_info.app_id.to_string(),
+        app_name: app_name.to_string(),
+        tenant_id: ident_info.tenant_id.to_string(),
+        tenant_name: tenant_name.to_string(),
+        account_id: ident_info.account_id.to_string(),
+        account_name: account_name.to_string(),
+        token: ident_info.token.to_string(),
+        token_kind: ident_info.token_kind.to_string(),
+        roles: role_info,
+        groups: group_node_info,
+    })
+}
+
+#[delete("/common/logout")]
+pub async fn logout(req: HttpRequest) -> BIOSResp {
+    let ident_info = get_ident_account_info(&req)?;
+    cache_processor::remove_token(&ident_info.token).await?;
+    BIOSRespHelper::ok("")
+}
+
+#[put("/common/account")]
+pub async fn change_account(account_change_req: Json<AccountChangeReq>, req: HttpRequest) -> BIOSResp {
+    let ident_info = get_ident_account_info(&req)?;
+
+    let mut values = Vec::new();
+    if let Some(name) = &account_change_req.name {
+        values.push((IamAccount::Name, name.as_str().into()));
+    }
+    if let Some(avatar) = &account_change_req.avatar {
+        values.push((IamAccount::Avatar, avatar.as_str().into()));
+    }
+    if let Some(parameters) = &account_change_req.parameters {
+        values.push((IamAccount::Parameters, parameters.as_str().into()));
+    }
+    values.push((IamAccount::UpdateUser, ident_info.account_id.as_str().into()));
+
+    BIOSFuns::reldb()
+        .exec(
+            &Query::update()
+                .table(IamAccount::Table)
+                .values(values)
+                .and_where(Expr::col(IamAccount::Id).eq(ident_info.account_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .done(),
+            None,
+        )
+        .await?;
+
+    BIOSRespHelper::ok("")
+}
+
+#[put("/common/account/ident")]
+pub async fn change_account_ident(account_ident_change_req: Json<AccountIdentChangeReq>, req: HttpRequest) -> BIOSResp {
+    let ident_info = get_ident_account_info(&req)?;
+
+    let id = BIOSFuns::reldb()
+        .fetch_one_json(
+            &Query::select()
+                .columns(vec![IamAccountIdent::Id])
+                .from(IamAccountIdent::Table)
+                .and_where(Expr::col(IamAccountIdent::Kind).eq(account_ident_change_req.kind.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(ident_info.account_id.as_str()))
+                .done(),
+            None,
+        )
+        .await?;
+    let id = id["id"].as_str().unwrap();
+
+    if BIOSFuns::reldb()
+        .exists(
+            &Query::select()
+                .columns(vec![IamAccountIdent::Id])
+                .from(IamAccountIdent::Table)
+                .and_where(Expr::col(IamAccountIdent::Kind).eq(account_ident_change_req.kind.to_string().to_lowercase()))
+                .and_where(Expr::col(IamAccountIdent::Ak).eq(account_ident_change_req.ak.as_str()))
+                .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccountIdent::Id).ne(id))
+                .done(),
+            None,
+        )
+        .await?
+    {
+        return Err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()));
+    }
+
+    auth_processor::valid_account_ident(
+        &account_ident_change_req.kind,
+        &account_ident_change_req.ak,
+        &account_ident_change_req.sk,
+        &ident_info.tenant_id,
+        None,
+    )
+    .await?;
+
+    let processed_sk = auth_processor::process_sk(
+        &account_ident_change_req.kind,
+        &account_ident_change_req.ak,
+        &account_ident_change_req.sk,
+        &ident_info.tenant_id,
+        &ident_info.app_id,
+    )
+    .await?;
+
+    let mut values = Vec::new();
+    values.push((IamAccountIdent::Ak, account_ident_change_req.ak.as_str().into()));
+    values.push((IamAccountIdent::Sk, processed_sk.into()));
+    values.push((IamAccountIdent::UpdateUser, ident_info.account_id.as_str().into()));
+    BIOSFuns::reldb()
+        .exec(
+            &Query::update()
+                .table(IamAccountIdent::Table)
+                .values(values)
+                .and_where(Expr::col(IamAccountIdent::Id).eq(id))
+                .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(ident_info.account_id.as_str()))
+                .done(),
+            None,
+        )
+        .await?;
+    cache_processor::remove_token(&ident_info.token).await?;
+    BIOSRespHelper::ok("")
+}
+
+#[get("/common/resource/menu")]
+pub async fn fetch_menu_resources(req: HttpRequest) -> BIOSResp {
+    BIOSRespHelper::ok(fetch_resources(ResourceKind::Menu.to_string().to_lowercase(), get_ident_account_info(&req)?).await?)
+}
+
+#[get("/common/resource/element")]
+pub async fn fetch_element_resources(req: HttpRequest) -> BIOSResp {
+    BIOSRespHelper::ok(fetch_resources(ResourceKind::Element.to_string().to_lowercase(), get_ident_account_info(&req)?).await?)
+}
+
+async fn fetch_resources(kind: String, ident_info: IdentAccountInfo) -> BIOSResult<Vec<ResourceDetailResp>> {
+    let resource_info = BIOSFuns::reldb()
+        .fetch_all_json(
+            &Query::select()
+                .column((IamResource::Table, IamResource::Name))
+                .column((IamResource::Table, IamResource::PathAndQuery))
+                .column((IamResource::Table, IamResource::Icon))
+                .column((IamResource::Table, IamResource::Action))
+                .column((IamResource::Table, IamResource::Sort))
+                .column((IamResource::Table, IamResource::ResGroup))
+                .column((IamResource::Table, IamResource::ParentId))
+                .column((IamResourceSubject::Table, IamResourceSubject::Uri))
+                .expr_as(Expr::col((IamResourceSubject::Table, IamResourceSubject::Name)), Alias::new("subject_name"))
+                .from(IamAuthPolicyObject::Table)
+                .inner_join(
+                    IamAuthPolicy::Table,
+                    Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::Id).equals(IamAuthPolicyObject::Table, IamAuthPolicyObject::RelAuthPolicyId),
+                )
+                .inner_join(
+                    IamResource::Table,
+                    Expr::tbl(IamResource::Table, IamResource::Id).equals(IamAuthPolicy::Table, IamAuthPolicy::RelResourceId),
+                )
+                .inner_join(
+                    IamResourceSubject::Table,
+                    Expr::tbl(IamResourceSubject::Table, IamResourceSubject::Id).equals(IamResource::Table, IamResource::RelResourceSubjectId),
+                )
+                .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::Kind).eq(kind.as_str()))
+                .cond_where(
+                    // TODO support more operators
+                    Cond::any()
+                        .add(
+                            Cond::all()
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Account.to_string().to_lowercase()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectId).eq(ident_info.account_id.as_str()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectOperator).eq(AuthObjectOperatorKind::Eq.to_string().to_lowercase())),
+                        )
+                        .add(
+                            Cond::all()
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::App.to_string().to_lowercase()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectId).eq(ident_info.app_id.as_str()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectOperator).eq(AuthObjectOperatorKind::Eq.to_string().to_lowercase())),
+                        )
+                        .add(
+                            Cond::all()
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Tenant.to_string().to_lowercase()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectId).eq(ident_info.tenant_id.as_str()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectOperator).eq(AuthObjectOperatorKind::Eq.to_string().to_lowercase())),
+                        )
+                        .add(
+                            Cond::all()
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::Role.to_string().to_lowercase()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectId).is_in(ident_info.roles.clone()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectOperator).eq(AuthObjectOperatorKind::Eq.to_string().to_lowercase())),
+                        )
+                        .add(
+                            Cond::all()
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectKind).eq(AuthObjectKind::GroupNode.to_string().to_lowercase()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectId).is_in(ident_info.groups.clone()))
+                                .add(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::ObjectOperator).eq(AuthObjectOperatorKind::Eq.to_string().to_lowercase())),
+                        ),
+                )
+                .done(),
+            None,
+        )
+        .await?;
+    let result = resource_info
+        .iter()
+        .map(|item| {
+            let res_name = item["name"].as_str().unwrap();
+            let path_and_query = item["path_and_query"].as_str().unwrap();
+            let icon = item["icon"].as_str().unwrap();
+            let action = item["action"].as_str().unwrap();
+            let sort = item["sort"].as_i64().unwrap();
+            let res_group = item["res_group"].as_bool().unwrap();
+            let parent_id = item["parent_id"].as_str().unwrap();
+            let uri = item["uri"].as_str().unwrap();
+            let subject_name = item["subject_name"].as_str().unwrap();
+            ResourceDetailResp {
+                name: format!("{}-{}", subject_name, res_name),
+                uri: bios::basic::uri::format_with_item(uri, path_and_query).unwrap(),
+                icon: icon.to_string(),
+                action: action.to_string(),
+                sort: sort as i32,
+                res_group,
+                parent_id: parent_id.to_string(),
+            }
+        })
+        .collect_vec();
+    Ok(result)
 }
