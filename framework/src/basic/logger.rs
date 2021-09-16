@@ -20,46 +20,42 @@ use std::str::FromStr;
 use log::{LevelFilter, SetLoggerError};
 use log4rs;
 use log4rs::append::console::ConsoleAppender;
-use log4rs::config::{Appender, Root};
 use log4rs::config::runtime::ConfigErrors;
+use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 
 use crate::basic::error::{BIOSError, BIOSResult, ERROR_DEFAULT_CODE};
 use crate::basic::fetch_profile;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref INITIALIZED: Mutex<bool> = Mutex::new(false);
+}
 
 pub struct BIOSLogger;
 
 impl BIOSLogger {
     pub fn init(root_path: &str) -> BIOSResult<()> {
+        let mut initialized = INITIALIZED.lock().unwrap();
+        if *initialized == true {
+            return Ok(());
+        }
+        *initialized = true;
         let profile = fetch_profile();
         let conf_file = Path::new(root_path).join(&format!("log-{}.yaml", profile));
-
-        let root_level =
-            match LevelFilter::from_str(&env::var("RUST_LOG").unwrap_or("INFO".to_string())) {
-                Ok(l) => l,
-                Err(_) => LevelFilter::Info,
-            };
-
+        let root_level = match LevelFilter::from_str(&env::var("RUST_LOG").unwrap_or("INFO".to_string())) {
+            Ok(l) => l,
+            Err(_) => LevelFilter::Info,
+        };
         if conf_file.is_file() {
-            match log4rs::init_file(
-                Path::new(root_path).join(&format!("log-{}.yaml", profile)),
-                Default::default(),
-            ) {
+            match log4rs::init_file(Path::new(root_path).join(&format!("log-{}.yaml", profile)), Default::default()) {
                 Ok(_) => Ok(()),
-                Err(e) => Err(BIOSError::Custom(
-                    ERROR_DEFAULT_CODE.to_string(),
-                    e.to_string(),
-                )),
+                Err(e) => Err(BIOSError::Custom(ERROR_DEFAULT_CODE.to_string(), e.to_string())),
             }
         } else {
-            let stdout = ConsoleAppender::builder()
-                .encoder(Box::new(PatternEncoder::new(
-                    "[{l}] {d} {T} [{t}] {X(requestId, user_id)} - {m}{n}",
-                )))
-                .build();
-            let conf_default = log4rs::config::Config::builder()
-                .appender(Appender::builder().build("stdout", Box::new(stdout)))
-                .build(Root::builder().appender("stdout").build(root_level))?;
+            let stdout = ConsoleAppender::builder().encoder(Box::new(PatternEncoder::new("[{l}] {d} {T} [{t}] {X(requestId, user_id)} - {m}{n}"))).build();
+            let conf_default =
+                log4rs::config::Config::builder().appender(Appender::builder().build("stdout", Box::new(stdout))).build(Root::builder().appender("stdout").build(root_level))?;
             log4rs::init_config(conf_default)?;
             Ok(())
         }
