@@ -77,7 +77,10 @@ async fn test_basic_config() -> BIOSResult<()> {
     assert_eq!(config.fw.db.url, "test");
     assert_eq!(config.fw.app.name, "BIOS Application");
 
-    BIOSFuns::init(config).await;
+    config.fw.cache.enabled = false;
+    config.fw.db.enabled = false;
+    config.fw.mq.enabled = false;
+    BIOSFuns::init(config).await?;
 
     assert_eq!(BIOSFuns::ws_config::<TestConfig>().db_proj.url, "postgres://postgres@prod.proj");
     assert_eq!(BIOSFuns::fw_config().db.url, "test");
