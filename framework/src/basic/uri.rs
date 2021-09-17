@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
 
 pub fn format_with_item(host: &str, path_and_query: &str) -> BIOSResult<String> {
     if path_and_query.is_empty() {

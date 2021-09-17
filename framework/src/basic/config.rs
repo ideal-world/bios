@@ -22,8 +22,9 @@ use config::{Config, ConfigError, Environment, File};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
-use crate::basic::error::{BIOSError, BIOSResult, ERROR_DEFAULT_CODE};
+use crate::basic::error::{BIOSError, ERROR_DEFAULT_CODE};
 use crate::basic::fetch_profile;
+use crate::basic::result::BIOSResult;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BIOSConfig<T> {
@@ -58,23 +59,25 @@ impl Default for FrameworkConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct AppConfig {
+    pub id: String,
     pub name: String,
     pub desc: String,
-    pub id: String,
     pub version: String,
     pub url: String,
     pub email: String,
+    pub inst: String,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         AppConfig {
+            id: "".to_owned(),
             name: "BIOS Application".to_owned(),
             desc: "This is a BIOS Application".to_owned(),
-            id: "".to_owned(),
             version: "0.0.1".to_owned(),
             url: "".to_owned(),
             email: "".to_owned(),
+            inst: format!("inst_{}", crate::basic::field::uuid()),
         }
     }
 }
@@ -86,7 +89,8 @@ pub struct WebConfig {
     pub port: u16,
     pub allowed_origin: String,
     pub client: WebClientConfig,
-    pub ident_info_flag: String,
+    pub context_flag: String,
+    pub lang_flag: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -103,7 +107,8 @@ impl Default for WebConfig {
             port: 8080,
             allowed_origin: "*".to_owned(),
             client: WebClientConfig::default(),
-            ident_info_flag: "BIOS-Ident".to_owned(),
+            context_flag: "BIOS-Context".to_owned(),
+            lang_flag: "Accept-Language".to_string(),
         }
     }
 }

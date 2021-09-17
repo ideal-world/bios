@@ -22,7 +22,7 @@ use testcontainers::clients::Cli;
 use testcontainers::images::generic::{GenericImage, WaitFor};
 use testcontainers::images::redis::Redis;
 
-use crate::basic::error::BIOSResult;
+use crate::basic::result::BIOSResult;
 
 pub struct BIOSTestContainer;
 

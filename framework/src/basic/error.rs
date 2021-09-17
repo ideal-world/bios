@@ -14,53 +14,41 @@
  * limitations under the License.
  */
 
+use derive_more::Display;
 use std::convert::Infallible;
 use std::error::Error;
-use std::fmt;
-use std::fmt::Display;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
 pub static ERROR_DEFAULT_CODE: &str = "-1";
 
-pub type BIOSResult<T> = Result<T, BIOSError>;
-
-#[derive(Debug)]
+#[derive(Display, Debug)]
 pub enum BIOSError {
+    #[display(fmt = "{}##{}", _0, _1)]
     Custom(String, String),
+    #[display(fmt = "000000000##{:?}", _0)]
     Box(Box<dyn Error + Send + Sync>),
+    #[display(fmt = "500000000##Internal error: {}", _0)]
     InternalError(String),
-    IOError(String),
-    FormatError(String),
-    BadRequest(String),
-    Unauthorized(String),
-    NotFound(String),
-    Conflict(String),
+    #[display(fmt = "501000000##Not implemented error: {}", _0)]
     NotImplemented(String),
+    #[display(fmt = "503000000##IO error: {}", _0)]
+    IOError(String),
+    #[display(fmt = "400000000##Bad Request error: {}", _0)]
+    BadRequest(String),
+    #[display(fmt = "401000000##Unauthorized error: {}", _0)]
+    Unauthorized(String),
+    #[display(fmt = "404000000##Not Found error: {}", _0)]
+    NotFound(String),
+    #[display(fmt = "406000000##Format error: {}", _0)]
+    FormatError(String),
+    #[display(fmt = "408000000##Timeout error: {}", _0)]
     Timeout(String),
-    ValidationError(String),
-}
-
-impl Error for BIOSError {}
-
-impl Display for BIOSError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BIOSError::Box(e) => write!(f, "{:?}", e),
-            BIOSError::Custom(code, msg) => write!(f, "{}:{}", code, msg),
-            BIOSError::InternalError(s) => write!(f, "{}", s),
-            BIOSError::IOError(s) => write!(f, "{}", s),
-            BIOSError::FormatError(s) => write!(f, "{}", s),
-            BIOSError::BadRequest(s) => write!(f, "{}", s),
-            BIOSError::Unauthorized(s) => write!(f, "{}", s),
-            BIOSError::NotFound(s) => write!(f, "{}", s),
-            BIOSError::Conflict(s) => write!(f, "{}", s),
-            BIOSError::NotImplemented(s) => write!(f, "{}", s),
-            BIOSError::Timeout(s) => write!(f, "{}", s),
-            BIOSError::ValidationError(s) => write!(f, "{}", s),
-        }
-    }
+    #[display(fmt = "409000000##Conflict error: {}", _0)]
+    Conflict(String),
+    #[display(fmt = "{}", _0)]
+    _Inner(String),
 }
 
 impl From<std::io::Error> for BIOSError {

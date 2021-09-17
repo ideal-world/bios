@@ -21,7 +21,6 @@ use std::any::Any;
 use std::ptr::replace;
 
 use crate::basic::config::{BIOSConfig, FrameworkConfig};
-use crate::basic::error::BIOSResult;
 #[cfg(feature = "cache")]
 use crate::cache::cache_client::BIOSCacheClient;
 #[cfg(feature = "reldb")]
@@ -30,6 +29,7 @@ use crate::db::reldb_client::BIOSRelDBClient;
 use crate::mq::mq_client::BIOSMQClient;
 #[cfg(feature = "web-client")]
 use crate::web::web_client::BIOSWebClient;
+use basic::result::BIOSResult;
 
 static mut BIOS_INST: BIOSFuns = BIOSFuns {
     workspace_config: None,

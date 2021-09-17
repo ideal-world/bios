@@ -15,7 +15,7 @@
  */
 use serde::{Deserialize, Serialize};
 
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]

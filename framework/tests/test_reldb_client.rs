@@ -24,7 +24,7 @@ use strum::EnumIter;
 use strum::IntoEnumIterator;
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 use bios::db::domain::BiosDelRecord;
 use bios::db::reldb_client::{BIOSRelDBClient, SqlBuilderProcess};
 use bios::test::test_container::BIOSTestContainer;

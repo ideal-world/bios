@@ -16,6 +16,7 @@
 use std::env;
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::Mutex;
 
 use log::{LevelFilter, SetLoggerError};
 use log4rs;
@@ -24,9 +25,9 @@ use log4rs::config::runtime::ConfigErrors;
 use log4rs::config::{Appender, Root};
 use log4rs::encode::pattern::PatternEncoder;
 
-use crate::basic::error::{BIOSError, BIOSResult, ERROR_DEFAULT_CODE};
+use crate::basic::error::{BIOSError, ERROR_DEFAULT_CODE};
 use crate::basic::fetch_profile;
-use std::sync::Mutex;
+use crate::basic::result::BIOSResult;
 
 lazy_static! {
     static ref INITIALIZED: Mutex<bool> = Mutex::new(false);

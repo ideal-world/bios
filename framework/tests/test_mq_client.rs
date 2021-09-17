@@ -22,7 +22,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 use bios::basic::logger::BIOSLogger;
 use bios::test::test_container::BIOSTestContainer;
 use bios::BIOSFuns;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 use bios::basic::logger::BIOSLogger;
 use bios::web::web_client::BIOSWebClient;
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 
 #[tokio::test]
 async fn test_basic_field() -> BIOSResult<()> {

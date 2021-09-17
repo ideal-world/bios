@@ -27,7 +27,8 @@ use log::{error, info, trace};
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;
-use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
 
 // TODO Elegant closure
 

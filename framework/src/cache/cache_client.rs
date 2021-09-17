@@ -17,12 +17,13 @@
 use std::collections::HashMap;
 
 use log::info;
-use redis::aio::Connection;
 use redis::{AsyncCommands, RedisError, RedisResult};
+use redis::aio::Connection;
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;
-use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
 
 pub struct BIOSCacheClient {
     con: Connection,

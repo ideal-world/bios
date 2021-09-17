@@ -21,7 +21,7 @@ use std::env;
 use serde::{Deserialize, Serialize};
 
 use bios::basic::config::BIOSConfig;
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 use bios::basic::logger::BIOSLogger;
 use bios::BIOSFuns;
 
