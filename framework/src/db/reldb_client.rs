@@ -19,22 +19,23 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, NaiveDate, NaiveTime, SecondsFormat};
 use log::info;
-use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use sea_query::{
     ColumnDef, DeleteStatement, Expr, InsertStatement, IntoColumnRef, IntoTableRef, MysqlQueryBuilder, Query, SelectStatement, Table, TableCreateStatement, UpdateStatement, Values,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::{Column, FromRow, MySql, Pool, Row, Transaction, TypeInfo};
 use sqlx::mysql::{MySqlPoolOptions, MySqlQueryResult, MySqlRow};
 use sqlx::pool::PoolConnection;
 use sqlx::types::chrono::Utc;
-use sqlx::{Column, FromRow, MySql, Pool, Row, Transaction, TypeInfo};
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;
-use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::error::BIOSError;
 use crate::basic::json::obj_to_string;
+use crate::basic::result::BIOSResult;
 use crate::db::domain::{BiosConfig, BiosDelRecord};
 use crate::db::reldb_client::sea_query_driver_mysql::{bind_query, bind_query_as};
 

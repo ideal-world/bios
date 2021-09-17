@@ -18,7 +18,7 @@ use actix_web::get;
 use serde::Deserialize;
 use validator::Validate;
 
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::resp_handler::{BIOSResp, BIOSResponse};
 use bios::web::validate::query::Query;
 
 #[derive(Deserialize, Validate)]
@@ -27,6 +27,6 @@ pub struct Hi {
 }
 
 #[get("/")]
-pub async fn hello(query: Query<Hi>) -> BIOSResp {
-    BIOSRespHelper::ok(format!("Hello {}", query.name))
+pub async fn hello(query: Query<Hi>) -> BIOSResponse {
+    BIOSResp::ok(format!("Hello {}", query.name), None)
 }

@@ -25,8 +25,8 @@ use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
 use futures_util::future::{ok, FutureExt, LocalBoxFuture, Ready};
 use log::{trace, warn};
 
+use crate::basic::dto::BIOSResp;
 use crate::basic::error::BIOSError;
-use crate::web::resp_handler::BIOSRespHelper;
 
 pub struct WebErrorHandler;
 
@@ -68,9 +68,7 @@ where
         async move {
             let mut res = fut.await?;
             let http_code = res.status().as_u16();
-            let bus_code = http_code.to_string();
             if http_code >= 400 {
-                res.headers_mut().insert(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 let msg = match res.response().error() {
                     Some(e) => e.to_string(),
                     None => match http_code {
@@ -78,36 +76,39 @@ where
                         _ => "unknown error".to_string(),
                     },
                 };
+                let bios_resp = if msg.contains("code") && msg.contains("msg") && msg.contains("body") {
+                    let try_convert_resp = crate::basic::json::str_to_obj::<BIOSResp<()>>(&msg);
+                    if try_convert_resp.is_ok() {
+                        try_convert_resp.unwrap()
+                    } else {
+                        convert_resp(http_code, msg)
+                    }
+                } else {
+                    convert_resp(http_code, msg)
+                };
+
+                res.headers_mut().insert(http::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 if http_code >= 500 {
                     warn!(
                         "[BIOS.Framework.WebServer] process error,request method:{}, url:{}, response code:{}, message:{}",
                         res.request().method().to_string(),
                         res.request().uri().to_string(),
-                        bus_code,
-                        msg
+                        bios_resp.code,
+                        bios_resp.msg
                     );
                 } else {
                     trace!(
                         "[BIOS.Framework.WebServer] process error,request method:{}, url:{}, response code:{}, message:{}",
                         res.request().method().to_string(),
                         res.request().uri().to_string(),
-                        bus_code,
-                        msg
+                        bios_resp.code,
+                        bios_resp.msg
                     );
                     // 4xx error: Http status modified to 200, by bus_code to provide a unified error code
                     // 5xx error: Considering that all kinds of degradation components only provide processing of http status, so the 5xx error isn’t modified
                     *res.response_mut().status_mut() = StatusCode::from_u16(200).unwrap();
                 }
-                let res = res.map_body(|_, _| {
-                    AnyBody::Bytes(Bytes::from(
-                        serde_json::json!(BIOSRespHelper::<()> {
-                            code: bus_code,
-                            msg: msg,
-                            body: None,
-                        })
-                        .to_string(),
-                    ))
-                });
+                let res = res.map_body(|_, _| AnyBody::Bytes(Bytes::from(serde_json::json!(bios_resp).to_string())));
                 Ok(res)
             } else {
                 Ok(res)
@@ -117,24 +118,37 @@ where
     }
 }
 
+fn convert_resp(http_status_code: u16, msg: String) -> BIOSResp<()> {
+    let error = match http_status_code {
+        500 => BIOSError::InternalError(msg),
+        501 => BIOSError::NotImplemented(msg),
+        503 => BIOSError::IOError(msg),
+        400 => BIOSError::BadRequest(msg),
+        401 => BIOSError::Unauthorized(msg),
+        404 => BIOSError::NotFound(msg),
+        406 => BIOSError::FormatError(msg),
+        408 => BIOSError::Timeout(msg),
+        409 => BIOSError::Conflict(msg),
+        c if c > 500 => BIOSError::InternalError(msg),
+        _ => BIOSError::BadRequest(msg),
+    };
+    let (code, msg) = crate::basic::result::parse(error);
+    BIOSResp::<()> {
+        code,
+        msg,
+        body: None,
+        trace_id: None,
+        trace_app: None,
+        trace_inst: None,
+    }
+}
+
 impl ResponseError for BIOSError {
     fn status_code(&self) -> StatusCode {
-        match *self {
-            BIOSError::Custom(_, _) => StatusCode::BAD_REQUEST,
-            BIOSError::BadRequest(_) => StatusCode::BAD_REQUEST,
-            BIOSError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
-            BIOSError::NotFound(_) => StatusCode::NOT_FOUND,
-            BIOSError::Conflict(_) => StatusCode::CONFLICT,
-            BIOSError::ValidationError(_) => StatusCode::BAD_REQUEST,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 
     fn error_response(&self) -> HttpResponse {
-        HttpResponseBuilder::new(self.status_code()).json(BIOSRespHelper::<()> {
-            code: self.status_code().to_string(),
-            msg: self.to_string(),
-            body: None,
-        })
+        HttpResponseBuilder::new(self.status_code()).body(self.to_string())
     }
 }

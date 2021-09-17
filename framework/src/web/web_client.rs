@@ -16,16 +16,17 @@
 
 use std::time::Duration;
 
-use actix_http::{Payload, PayloadStream};
 use actix_http::client::SendRequestError;
 use actix_http::encoding::Decoder;
 use actix_http::error::PayloadError;
-use awc::{Client, ClientResponse};
+use actix_http::{Payload, PayloadStream};
 use awc::Connector;
+use awc::{Client, ClientResponse};
 use log::info;
 
 use crate::basic::config::FrameworkConfig;
-use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
 
 pub struct BIOSWebClient {
     client: Client,
@@ -33,26 +34,18 @@ pub struct BIOSWebClient {
 
 impl BIOSWebClient {
     pub fn init_by_conf(conf: &FrameworkConfig) -> BIOSResult<BIOSWebClient> {
-        BIOSWebClient::init(
-            conf.web.client.connect_timeout_sec,
-            conf.web.client.request_timeout_sec,
-        )
+        BIOSWebClient::init(conf.web.client.connect_timeout_sec, conf.web.client.request_timeout_sec)
     }
 
     pub fn init(connect_timeout_sec: u64, request_timeout_sec: u64) -> BIOSResult<BIOSWebClient> {
         info!(
             "[BIOS.Framework.WebClient] Initializing, connect_timeout_sec:{}, request_timeout_sec:{}",
-            connect_timeout_sec,
-            request_timeout_sec
+            connect_timeout_sec, request_timeout_sec
         );
-        let client = Client::builder()
-            .connector(Connector::new().timeout(Duration::from_secs(connect_timeout_sec)))
-            .timeout(Duration::from_secs(request_timeout_sec))
-            .finish();
+        let client = Client::builder().connector(Connector::new().timeout(Duration::from_secs(connect_timeout_sec))).timeout(Duration::from_secs(request_timeout_sec)).finish();
         info!(
             "[BIOS.Framework.WebClient] Initialized, connect_timeout_sec:{}, request_timeout_sec:{}",
-            connect_timeout_sec,
-            request_timeout_sec
+            connect_timeout_sec, request_timeout_sec
         );
         BIOSResult::Ok(BIOSWebClient { client })
     }
@@ -61,9 +54,7 @@ impl BIOSWebClient {
         &self.client
     }
 
-    pub async fn body_as_str(
-        response: &mut ClientResponse<Decoder<Payload<PayloadStream>>>,
-    ) -> BIOSResult<String> {
+    pub async fn body_as_str(response: &mut ClientResponse<Decoder<Payload<PayloadStream>>>) -> BIOSResult<String> {
         Ok(String::from_utf8(response.body().await?.to_vec())?)
     }
 }

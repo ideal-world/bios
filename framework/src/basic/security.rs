@@ -23,7 +23,8 @@ pub mod digest {
     use crypto::sha2::{Sha256, Sha512};
 
     pub mod base64 {
-        use crate::basic::error::{BIOSError, BIOSResult};
+        use crate::basic::error::BIOSError;
+        use crate::basic::result::BIOSResult;
 
         pub fn decode(str: &str) -> BIOSResult<String> {
             match base64::decode(str) {

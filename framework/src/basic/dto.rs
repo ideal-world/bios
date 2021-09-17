@@ -17,29 +17,44 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
+pub struct BIOSContext {
+    pub ident: IdentInfo,
+    pub trace: Trace,
+    pub lang: String,
+}
+
+impl Default for BIOSContext {
+    fn default() -> Self {
+        BIOSContext {
+            ident: Default::default(),
+            trace: Default::default(),
+            lang: "en_US".to_string(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(default)]
+pub struct Trace {
+    pub id: String,
+    pub app: String,
+    pub inst: String,
+}
+
+impl Default for Trace {
+    fn default() -> Self {
+        Trace {
+            id: "".to_string(),
+            app: "".to_string(),
+            inst: "".to_string(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct IdentInfo {
-    pub app_id: Option<String>,
-    pub tenant_id: Option<String>,
-    pub account_id: Option<String>,
-    pub token: Option<String>,
-    pub token_kind: Option<String>,
-    pub ak: Option<String>,
-    pub roles: Option<Vec<String>>,
-    pub groups: Option<Vec<String>>,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct IdentPubInfo {}
-
-#[derive(Deserialize, Serialize)]
-pub struct IdentAppInfo {
-    pub app_id: String,
-    pub tenant_id: String,
-    pub ak: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct IdentAccountInfo {
     pub app_id: String,
     pub tenant_id: String,
     pub ak: String,
@@ -48,4 +63,49 @@ pub struct IdentAccountInfo {
     pub token_kind: String,
     pub roles: Vec<String>,
     pub groups: Vec<String>,
+}
+
+impl Default for IdentInfo {
+    fn default() -> Self {
+        IdentInfo {
+            app_id: "".to_string(),
+            tenant_id: "".to_string(),
+            ak: "".to_string(),
+            account_id: "".to_string(),
+            token: "".to_string(),
+            token_kind: "".to_string(),
+            roles: vec![],
+            groups: vec![],
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(default)]
+pub struct BIOSResp<T>
+where
+    T: Serialize,
+{
+    pub code: String,
+    pub msg: String,
+    pub body: Option<T>,
+    pub trace_id: Option<String>,
+    pub trace_app: Option<String>,
+    pub trace_inst: Option<String>,
+}
+
+impl<T> Default for BIOSResp<T>
+where
+    T: Serialize,
+{
+    fn default() -> Self {
+        BIOSResp {
+            code: "".to_owned(),
+            msg: "".to_owned(),
+            body: None,
+            trace_id: None,
+            trace_app: None,
+            trace_inst: None,
+        }
+    }
 }

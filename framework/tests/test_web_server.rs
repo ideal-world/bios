@@ -26,9 +26,11 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use bios::basic::config::FrameworkConfig;
-use bios::basic::error::{BIOSError, BIOSResult};
+use bios::basic::dto::BIOSResp;
+use bios::basic::error::BIOSError;
 use bios::basic::logger::BIOSLogger;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::basic::result::BIOSResult;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query;
 use bios::web::web_server::BIOSWebServer;
@@ -54,25 +56,37 @@ async fn test_web_server() -> BIOSResult<()> {
     let req = test::TestRequest::post().uri("/normal/11").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(read_body(resp).await, Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#));
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"code":"200","msg":"","body":"successful","trace_id":null,"trace_app":null,"trace_inst":null}"#)
+    );
 
     // Business Error
     let req = test::TestRequest::post().uri("/bus_error").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(read_body(resp).await, Bytes::from(r#"{"code":"xxx01","msg":"business error","body":null}"#),);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"code":"xxx01","msg":"business error","body":null,"trace_id":null,"trace_app":null,"trace_inst":null}"#),
+    );
 
     // Not Found
     let req = test::TestRequest::post().uri("/not_found").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(read_body(resp).await, Bytes::from(r#"{"body":null,"code":"404","msg":"method:POST, url:/not_found"}"#),);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"body":null,"code":"404000000","msg":"Not Found error: method:POST, url:/not_found","trace_app":null,"trace_id":null,"trace_inst":null}"#),
+    );
 
     // System Error
     let req = test::TestRequest::post().uri("/sys_error").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(read_body(resp).await, Bytes::from(r#"{"body":null,"code":"500","msg":"没事，莫慌"}"#),);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"body":null,"code":"500000000","msg":"Internal error: system error","trace_app":null,"trace_id":null,"trace_inst":null}"#),
+    );
 
     // Validation
     let req = test::TestRequest::post().uri("/validation").to_request();
@@ -80,28 +94,36 @@ async fn test_web_server() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `id`"}"#),
+        Bytes::from(
+            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: missing field `id`","trace_app":null,"trace_id":null,"trace_inst":null}"#
+        ),
     );
 
     let req = test::TestRequest::post().uri("/validation?id=111").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: missing field `response_type`"}"#),
+        Bytes::from(
+            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: missing field `response_type`","trace_app":null,"trace_id":null,"trace_inst":null}"#
+        ),
     );
 
     let req = test::TestRequest::post().uri("/validation?id=-1").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: invalid digit found in string"}"#),
+        Bytes::from(
+            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: invalid digit found in string","trace_app":null,"trace_id":null,"trace_inst":null}"#
+        ),
     );
 
     let req = test::TestRequest::post().uri("/validation?id=111&response_type=XX").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"400","msg":"Query deserialize error: unknown variant `XX`, expected `Token` or `Code`"}"#),
+        Bytes::from(
+            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: unknown variant `XX`, expected `Token` or `Code`","trace_app":null,"trace_id":null,"trace_inst":null}"#
+        ),
     );
 
     let req = test::TestRequest::post()
@@ -118,7 +140,10 @@ async fn test_web_server() -> BIOSResult<()> {
         })
         .to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(read_body(resp).await, Bytes::from(r#"{"code":"200","msg":"","body":"successful"}"#),);
+    assert_eq!(
+        read_body(resp).await,
+        Bytes::from(r#"{"code":"200","msg":"","body":"successful","trace_id":null,"trace_app":null,"trace_inst":null}"#),
+    );
 
     let req = test::TestRequest::post()
         .uri("/validation?id=100&response_type=Code")
@@ -268,19 +293,18 @@ async fn test_web_server() -> BIOSResult<()> {
 }
 
 #[post("/normal/{id}")]
-async fn normal() -> BIOSResp {
-    BIOSRespHelper::ok("successful".to_owned())
+async fn normal() -> BIOSResponse {
+    BIOSResp::ok("successful".to_owned(), None)
 }
 
 #[post("/bus_error")]
-async fn bus_error() -> BIOSResp {
-    BIOSRespHelper::bus_err("xxx01", "business error")
+async fn bus_error() -> BIOSResponse {
+    BIOSResp::error("xxx01", "business error", None)
 }
 
 #[post("/sys_error")]
-async fn sys_error() -> BIOSResp {
-    BIOSRespHelper::err(BIOSError::InternalError("没事，莫慌".to_owned()))
-    //Err(BIOSError::InternalError("没事，莫慌".to_owned()))
+async fn sys_error() -> BIOSResponse {
+    BIOSResp::panic(BIOSError::InternalError("system error".to_string()), None)
 }
 
 #[derive(Debug, Deserialize)]
@@ -317,6 +341,6 @@ struct ItemBody {
 }
 
 #[post("/validation")]
-async fn validation(_query: Query<AuthRequest>, _body: Json<ItemBody>) -> BIOSResp {
-    BIOSRespHelper::ok("successful".to_owned())
+async fn validation(_query: Query<AuthRequest>, _body: Json<ItemBody>) -> BIOSResponse {
+    BIOSResp::ok("successful".to_owned(), None)
 }

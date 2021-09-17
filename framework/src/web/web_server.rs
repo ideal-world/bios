@@ -26,7 +26,7 @@ use actix_web::middleware::Logger;
 use log::info;
 
 use crate::basic::config::FrameworkConfig;
-use crate::basic::error::BIOSResult;
+use crate::basic::result::BIOSResult;
 use crate::web::error_handler::WebErrorHandler;
 
 pub struct BIOSWebServer;

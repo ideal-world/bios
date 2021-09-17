@@ -23,7 +23,7 @@ local schema = {
         host_flag = { type = "string", default = "BIOS-Host" },
         request_date_offset_ms = { type = "integer", default = 5000 },
 
-        ident_flag = { type = "string", default = "BIOS-Ident" },
+        context_flag = { type = "string", default = "BIOS-Context" },
 
         cache_resources = { type = "string", default = "bios:iam:resources" },
         cache_change_resources = { type = "string", default = "bios:iam:change_resources:" },
@@ -68,17 +68,22 @@ function _M.rewrite(conf, ctx)
     if auth_code ~= 200 then
         return auth_code, auth_message
     end
-    core.request.set_header(ctx, conf.ident_flag, ngx_encode_base64(json.decode({
-        res_action = ctx.ident_info.resource_action,
-        res_uri = ctx.ident_info.resource_uri,
-        app_id = ctx.ident_info.app_id,
-        tenant_id = ctx.ident_info.tenant_id,
-        account_id = ctx.ident_info.account_id,
-        token = ctx.ident_info.token,
-        token_kind = ctx.ident_info.token_kind,
-        ak = ctx.ident_info.ak,
-        roles = ctx.ident_info.roles,
-        groups = ctx.ident_info.groups,
+    core.request.set_header(ctx, conf.context_flag, ngx_encode_base64(json.decode({
+        trace = {
+            id=ngx.now() .. math.random(10000,99999),
+        },
+        ident = {
+            res_action = ctx.ident_info.resource_action,
+            res_uri = ctx.ident_info.resource_uri,
+            app_id = ctx.ident_info.app_id,
+            tenant_id = ctx.ident_info.tenant_id,
+            account_id = ctx.ident_info.account_id,
+            token = ctx.ident_info.token,
+            token_kind = ctx.ident_info.token_kind,
+            ak = ctx.ident_info.ak,
+            roles = ctx.ident_info.roles,
+            groups = ctx.ident_info.groups,
+        }
     })))
 end
 

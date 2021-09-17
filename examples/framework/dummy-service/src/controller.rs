@@ -22,7 +22,7 @@ use actix_web::{post, put, web, HttpRequest, HttpResponse};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::resp_handler::{BIOSResp, BIOSResponse};
 use bios::BIOSFuns;
 
 pub struct AppStateContainer {
@@ -46,16 +46,13 @@ impl Default for NormalQuery {
 }
 
 #[post("/normal/{id}")]
-pub async fn normal(query: web::Query<NormalQuery>, body: web::Bytes, data: web::Data<AppStateContainer>, req: HttpRequest) -> BIOSResp {
+pub async fn normal(query: web::Query<NormalQuery>, body: web::Bytes, data: web::Data<AppStateContainer>, req: HttpRequest) -> BIOSResponse {
     /*   req.headers().into_iter().for_each(|(k, v)| {
         println!("Header:{}-{:?}", k, v)
     });*/
 
     if !query.forward.is_empty() {
-        let forwarded_req = BIOSFuns::web_client()
-            .raw()
-            .request_from(Uri::from_str(&query.forward).unwrap(), req.head())
-            .no_decompress();
+        let forwarded_req = BIOSFuns::web_client().raw().request_from(Uri::from_str(&query.forward).unwrap(), req.head()).no_decompress();
         let forwarded_req = if let Some(addr) = req.head().peer_addr {
             forwarded_req.insert_header(("x-forwarded-for", format!("{}", addr.ip())))
         } else {
@@ -84,23 +81,23 @@ pub async fn normal(query: web::Query<NormalQuery>, body: web::Bytes, data: web:
             String::from_utf8(vec![b'X'; query.size as usize]).unwrap()
         };
 
-        let resp = BIOSRespHelper::<String> {
+        let resp = BIOSResp::<String> {
             code: code.to_string(),
             msg: String::from(""),
             body: Some(body),
         };
-        BIOSRespHelper::resp(code, &resp)?
+        BIOSResp::resp(code, &resp)?
     }
 }
 
 #[post("/fallback/{id}")]
-pub async fn fallback() -> BIOSResp {
-    BIOSRespHelper::ok("This is a fallback result")
+pub async fn fallback() -> BIOSResponse {
+    BIOSResp::ok("This is a fallback result", None)
 }
 
 #[put("/conf/err_rate/{err_rate}")]
-pub async fn conf_err_rate(path: web::Path<u8>, data: web::Data<AppStateContainer>) -> BIOSResp {
+pub async fn conf_err_rate(path: web::Path<u8>, data: web::Data<AppStateContainer>) -> BIOSResponse {
     let mut err_rate_conf = data.err_rate.lock().unwrap();
     *err_rate_conf = path.into_inner();
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", None)
 }

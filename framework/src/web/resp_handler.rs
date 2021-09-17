@@ -14,47 +14,41 @@
  * limitations under the License.
  */
 
-use actix_web::{http::StatusCode, HttpResponse, ResponseError};
-use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
-use crate::basic::error::{BIOSError, BIOSResult};
+use actix_web::error::{Error, InternalError};
+use actix_web::{http::StatusCode, HttpResponse};
+use serde::Serialize;
 
-pub type BIOSResp = BIOSResult<HttpResponse>;
+use crate::basic::dto::{BIOSContext, BIOSResp};
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(default)]
-pub struct BIOSRespHelper<T>
-where
-    T: Serialize,
-{
-    pub code: String,
-    pub msg: String,
-    pub body: Option<T>,
-}
+pub type BIOSResponse = BIOSResult<HttpResponse>;
 
-impl<T> Default for BIOSRespHelper<T>
-where
-    T: Serialize,
-{
-    fn default() -> Self {
-        BIOSRespHelper {
-            code: "".to_owned(),
-            msg: "".to_owned(),
-            body: None,
+impl<T: Serialize> BIOSResp<T> {
+    pub fn ok(body: T, context: Option<&BIOSContext>) -> BIOSResponse {
+        match context {
+            Some(ctx) => Ok(HttpResponse::Ok().json(BIOSResp {
+                code: "200".to_owned(),
+                msg: "".to_owned(),
+                body: Some(body),
+                trace_id: Some(ctx.trace.id.to_string()),
+                trace_app: Some(ctx.trace.app.to_string()),
+                trace_inst: Some(ctx.trace.inst.to_string()),
+            })),
+            None => Ok(HttpResponse::Ok().json(BIOSResp {
+                code: "200".to_owned(),
+                msg: "".to_owned(),
+                body: Some(body),
+                trace_id: None,
+                trace_app: None,
+                trace_inst: None,
+            })),
         }
     }
-}
 
-impl<T: Serialize> BIOSRespHelper<T> {
-    pub fn ok(body: T) -> BIOSResp {
-        Ok(HttpResponse::Ok().json(BIOSRespHelper {
-            code: "200".to_owned(),
-            msg: "".to_owned(),
-            body: Some(body),
-        }))
-    }
-
-    pub fn resp(http_code: u16, resp: &BIOSRespHelper<T>) -> BIOSResult<BIOSResp> {
+    pub fn resp(http_code: u16, resp: &BIOSResp<T>) -> BIOSResult<BIOSResponse> {
         match StatusCode::from_u16(http_code) {
             Ok(code) => Ok(Ok(HttpResponse::build(code).json(resp))),
             Err(e) => Err(BIOSError::Box(Box::new(e))),
@@ -62,25 +56,71 @@ impl<T: Serialize> BIOSRespHelper<T> {
     }
 }
 
-impl BIOSRespHelper<()> {
-    pub fn bus_err(bus_code: &str, message: &str) -> BIOSResp {
-        Ok(HttpResponse::Ok().json(BIOSRespHelper::<()> {
-            code: bus_code.to_owned(),
-            msg: message.to_owned(),
-            body: None,
-        }))
+impl BIOSResp<()> {
+    pub fn error(bus_code: &str, message: &str, context: Option<&BIOSContext>) -> BIOSResponse {
+        match context {
+            Some(ctx) => Ok(HttpResponse::Ok().json(BIOSResp::<()> {
+                code: bus_code.to_owned(),
+                msg: message.to_owned(),
+                body: None,
+                trace_id: Some(ctx.trace.id.to_string()),
+                trace_app: Some(ctx.trace.app.to_string()),
+                trace_inst: Some(ctx.trace.inst.to_string()),
+            })),
+            None => Ok(HttpResponse::Ok().json(BIOSResp::<()> {
+                code: bus_code.to_owned(),
+                msg: message.to_owned(),
+                body: None,
+                trace_id: None,
+                trace_app: None,
+                trace_inst: None,
+            })),
+        }
     }
 
-    // fixme remove this function
-    pub fn bus_error(error: BIOSError) -> BIOSResp {
-        Ok(HttpResponse::Ok().json(BIOSRespHelper::<()> {
-            code: format!("{}", error.status_code().as_u16()),
-            msg: error.to_string(),
-            body: None,
-        }))
+    pub fn err<E: Display>(error: E, context: Option<&BIOSContext>) -> BIOSResponse {
+        match context {
+            Some(ctx) => Ok(HttpResponse::Ok().json(crate::basic::result::output(error, ctx))),
+            None => {
+                let (code, msg) = crate::basic::result::parse(error);
+                Ok(HttpResponse::Ok().json(BIOSResp::<()> {
+                    code,
+                    msg,
+                    body: None,
+                    trace_id: None,
+                    trace_app: None,
+                    trace_inst: None,
+                }))
+            }
+        }
     }
 
-    pub fn err(error: BIOSError) -> BIOSResp {
-        Err(error)
+    pub fn panic<E: Display>(error: E, context: Option<&BIOSContext>) -> BIOSResponse {
+        let resp = match context {
+            Some(ctx) => crate::basic::result::output(error, ctx),
+            None => {
+                let (code, msg) = crate::basic::result::parse(error);
+                BIOSResp::<()> {
+                    code,
+                    msg,
+                    body: None,
+                    trace_id: None,
+                    trace_app: None,
+                    trace_inst: None,
+                }
+            }
+        };
+        Err(BIOSError::_Inner(crate::basic::json::obj_to_string(&resp).unwrap()))
+    }
+
+    pub fn to_log(self) -> String {
+        format!(
+            "{}|{}|{}[{}]{}",
+            self.trace_app.unwrap_or_default(),
+            self.trace_id.unwrap_or_default(),
+            self.trace_inst.unwrap_or_default(),
+            self.code,
+            self.msg
+        )
     }
 }

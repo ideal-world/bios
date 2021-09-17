@@ -21,6 +21,8 @@ lazy_static! {
     pub static ref R_CODE_CS: Regex = Regex::new(r"^[A-Za-z0-9_]+$").unwrap();
 }
 
+pub static GENERAL_SPLIT: &str = "##";
+
 static BASE62: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 static BASE36: &str = "abcdefghijklmnopqrstuvwxyz0123456789";
 

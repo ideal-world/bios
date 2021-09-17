@@ -20,7 +20,7 @@ use redis::AsyncCommands;
 use tokio::time::{Duration, sleep};
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 use bios::basic::logger::BIOSLogger;
 use bios::BIOSFuns;
 use bios::cache::cache_client::BIOSCacheClient;

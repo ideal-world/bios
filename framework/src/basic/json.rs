@@ -18,7 +18,8 @@ use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::basic::error::{BIOSError, BIOSResult};
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
 
 pub fn str_to_obj<'a, T: Deserialize<'a>>(str: &'a str) -> BIOSResult<T> {
     let result = serde_json::from_str::<'a, T>(str);
