@@ -19,10 +19,11 @@ use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
@@ -34,8 +35,8 @@ use crate::process::common::cache_processor;
 use crate::process::tenant_console::tc_app_dto::{AppAddReq, AppDetailResp, AppModifyReq, AppQueryReq};
 
 #[post("/console/tenant/app")]
-pub async fn add_app(app_add_req: Json<AppAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_app(app_add_req: Json<AppAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id = bios::basic::field::uuid();
 
     BIOSFuns::reldb()
@@ -54,24 +55,24 @@ pub async fn add_app(app_add_req: Json<AppAddReq>, req: HttpRequest) -> BIOSResp
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     app_add_req.name.as_str().into(),
                     app_add_req.icon.as_deref().unwrap_or_default().into(),
                     app_add_req.parameters.as_deref().unwrap_or_default().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
-                    ident_info.tenant_id.into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/tenant/app/{id}")]
-pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -80,13 +81,13 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
                 .and_where(Expr::col(IamApp::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("App not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -102,7 +103,7 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
     if let Some(status) = &app_modify_req.status {
         values.push((IamApp::Status, status.to_string().to_lowercase().into()));
     }
-    values.push((IamApp::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamApp::UpdateUser, context.ident.account_id.as_str().into()));
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -113,7 +114,7 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
                 .table(IamApp::Table)
                 .values(values)
                 .and_where(Expr::col(IamApp::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             Some(&mut tx),
         )
@@ -132,23 +133,23 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
         match status {
             CommonStatus::Enabled => {
                 for aksk_resp in aksks {
-                    cache_processor::set_aksk(&ident_info.tenant_id, &id, &aksk_resp.ak, &aksk_resp.sk, aksk_resp.valid_time).await?;
+                    cache_processor::set_aksk(&context.ident.tenant_id, &id, &aksk_resp.ak, &aksk_resp.sk, aksk_resp.valid_time, &context).await?;
                 }
             }
             CommonStatus::Disabled => {
                 for aksk_resp in aksks {
-                    cache_processor::remove_aksk(&aksk_resp.ak).await?;
+                    cache_processor::remove_aksk(&aksk_resp.ak, &context).await?;
                 }
             }
         }
     }
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/tenant/app")]
-pub async fn list_app(query: VQuery<AppQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_app(query: VQuery<AppQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -183,16 +184,16 @@ pub async fn list_app(query: VQuery<AppQueryReq>, req: HttpRequest) -> BIOSResp 
         } else {
             None
         })
-        .and_where(Expr::tbl(IamApp::Table, IamApp::RelTenantId).eq(ident_info.tenant_id))
+        .and_where(Expr::tbl(IamApp::Table, IamApp::RelTenantId).eq(context.ident.tenant_id.as_str()))
         .order_by(IamApp::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<AppDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/tenant/app/{id}")]
-pub async fn delete_app(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_app(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -201,13 +202,13 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
                 .and_where(Expr::col(IamApp::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("App not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -228,7 +229,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAppIdent::Table,
             IamAppIdent::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAppIdent::iter().filter(|i| *i != IamAppIdent::Table))
                 .from(IamAppIdent::Table)
@@ -242,7 +243,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountApp::Table,
             IamAccountApp::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountApp::iter().filter(|i| *i != IamAccountApp::Table))
                 .from(IamAccountApp::Table)
@@ -265,7 +266,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamGroup::Table,
             IamGroup::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select().columns(IamGroup::iter().filter(|i| *i != IamGroup::Table)).from(IamGroup::Table).and_where(Expr::col(IamGroup::RelAppId).eq(id.as_str())).done(),
             &mut tx,
         )
@@ -284,7 +285,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamGroupNode::Table,
             IamGroupNode::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamGroupNode::iter().filter(|i| *i != IamGroupNode::Table))
                 .from(IamGroupNode::Table)
@@ -298,7 +299,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountGroup::Table,
             IamAccountGroup::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountGroup::iter().filter(|i| *i != IamAccountGroup::Table))
                 .from(IamAccountGroup::Table)
@@ -321,7 +322,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamRole::Table,
             IamRole::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select().columns(IamRole::iter().filter(|i| *i != IamRole::Table)).from(IamRole::Table).and_where(Expr::col(IamRole::RelAppId).eq(id.as_str())).done(),
             &mut tx,
         )
@@ -331,7 +332,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountRole::Table,
             IamAccountRole::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountRole::iter().filter(|i| *i != IamAccountRole::Table))
                 .from(IamAccountRole::Table)
@@ -345,7 +346,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamResourceSubject::Table,
             IamResourceSubject::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
                 .from(IamResourceSubject::Table)
@@ -359,7 +360,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamResource::Table,
             IamResource::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamResource::iter().filter(|i| *i != IamResource::Table))
                 .from(IamResource::Table)
@@ -382,7 +383,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAuthPolicy::Table,
             IamAuthPolicy::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAuthPolicy::iter().filter(|i| *i != IamAuthPolicy::Table))
                 .from(IamAuthPolicy::Table)
@@ -396,7 +397,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAuthPolicyObject::Table,
             IamAuthPolicyObject::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAuthPolicyObject::iter().filter(|i| *i != IamAuthPolicyObject::Table))
                 .from(IamAuthPolicyObject::Table)
@@ -407,13 +408,13 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResp {
         .await?;
     // Delete IamApp
     let sql_builder = Query::select().columns(IamApp::iter().filter(|i| *i != IamApp::Table)).from(IamApp::Table).and_where(Expr::col(IamApp::Id).eq(id.as_str())).done();
-    BIOSFuns::reldb().soft_del(IamApp::Table, IamApp::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamApp::Table, IamApp::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     // Remove aksk info at redis cache
     for aksk_resp in aksks {
-        cache_processor::remove_aksk(&aksk_resp.ak).await?;
+        cache_processor::remove_aksk(&aksk_resp.ak, &context).await?;
     }
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[derive(sqlx::FromRow, serde::Deserialize)]

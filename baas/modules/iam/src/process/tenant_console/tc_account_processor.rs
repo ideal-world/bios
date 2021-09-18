@@ -22,10 +22,11 @@ use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
@@ -39,8 +40,8 @@ use crate::process::tenant_console::tc_account_dto::{
 };
 
 #[post("/console/tenant/account")]
-pub async fn add_account(account_add_req: Json<AccountAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_account(account_add_req: Json<AccountAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id = bios::basic::field::uuid();
     let open_id = format!("ao_{}", bios::basic::field::uuid());
 
@@ -62,26 +63,26 @@ pub async fn add_account(account_add_req: Json<AccountAddReq>, req: HttpRequest)
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     open_id.into(),
                     account_add_req.name.as_str().into(),
                     account_add_req.avatar.as_deref().unwrap_or_default().into(),
                     account_add_req.parameters.as_deref().unwrap_or_default().into(),
                     account_add_req.parent_id.as_deref().unwrap_or_default().into(),
-                    ident_info.tenant_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/tenant/account/{id}")]
-pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -90,13 +91,13 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -115,7 +116,7 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
     if let Some(status) = &account_modify_req.status {
         values.push((IamAccount::Status, status.to_string().to_lowercase().into()));
     }
-    values.push((IamAccount::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamAccount::UpdateUser, context.ident.account_id.as_str().into()));
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -126,7 +127,7 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
                 .table(IamAccount::Table)
                 .values(values)
                 .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             Some(&mut tx),
         )
@@ -134,16 +135,16 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
     if let Some(status) = &account_modify_req.status {
         if status.to_string().to_lowercase() == CommonStatus::Disabled.to_string().to_lowercase() {
             // Remove token
-            cache_processor::remove_token_by_account(&id).await?;
+            cache_processor::remove_token_by_account(&id, &context).await?;
         }
     }
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/tenant/account")]
-pub async fn list_account(query: VQuery<AccountQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_account(query: VQuery<AccountQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -180,16 +181,16 @@ pub async fn list_account(query: VQuery<AccountQueryReq>, req: HttpRequest) -> B
         } else {
             None
         })
-        .and_where(Expr::tbl(IamAccount::Table, IamAccount::RelTenantId).eq(ident_info.tenant_id))
+        .and_where(Expr::tbl(IamAccount::Table, IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
         .order_by(IamAccount::UpdateTime, Order::Desc)
         .done();
     let item = BIOSFuns::reldb().pagination::<AccountDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(item)
+    BIOSResp::ok(item, Some(&context))
 }
 
 #[delete("/console/tenant/account/{id}")]
-pub async fn delete_account(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_account(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -198,13 +199,13 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -215,7 +216,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountIdent::Table,
             IamAccountIdent::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountIdent::iter().filter(|i| *i != IamAccountIdent::Table))
                 .from(IamAccountIdent::Table)
@@ -229,7 +230,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountBind::Table,
             IamAccountBind::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountBind::iter().filter(|i| *i != IamAccountBind::Table))
                 .from(IamAccountBind::Table)
@@ -243,7 +244,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountApp::Table,
             IamAccountApp::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountApp::iter().filter(|i| *i != IamAccountApp::Table))
                 .from(IamAccountApp::Table)
@@ -257,7 +258,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountGroup::Table,
             IamAccountGroup::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountGroup::iter().filter(|i| *i != IamAccountGroup::Table))
                 .from(IamAccountGroup::Table)
@@ -271,7 +272,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAccountRole::Table,
             IamAccountRole::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAccountRole::iter().filter(|i| *i != IamAccountRole::Table))
                 .from(IamAccountRole::Table)
@@ -299,7 +300,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .soft_del(
             IamAuthPolicyObject::Table,
             IamAuthPolicyObject::Id,
-            &ident_info.account_id,
+            &context.ident.account_id,
             &Query::select()
                 .columns(IamAuthPolicyObject::iter().filter(|i| *i != IamAuthPolicyObject::Table))
                 .from(IamAuthPolicyObject::Table)
@@ -314,25 +315,25 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResp {
         .columns(IamAccount::iter().filter(|i| *i != IamAccount::Table))
         .from(IamAccount::Table)
         .and_where(Expr::col(IamAccount::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+        .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamAccount::Table, IamAccount::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAccount::Table, IamAccount::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
 
     // Remove auth policy cache
     for auth_policy_id in auth_policy_ids.iter() {
-        cache_processor::remove_auth_policy(&auth_policy_id, &mut tx).await?;
+        cache_processor::remove_auth_policy(&auth_policy_id, &mut tx, &context).await?;
     }
     // Remove token
-    cache_processor::remove_token_by_account(&id).await?;
+    cache_processor::remove_token_by_account(&id, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 // ------------------------------------
 
 #[post("/console/tenant/account/{account_id}/ident")]
-pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
 
@@ -342,13 +343,13 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -357,29 +358,28 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
                 .from(IamAccountIdent::Table)
                 .and_where(Expr::col(IamAccountIdent::Kind).eq(account_ident_add_req.kind.to_string().to_lowercase()))
                 .and_where(Expr::col(IamAccountIdent::Ak).eq(account_ident_add_req.ak.as_str()))
-                .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return Err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()));
+        return BIOSResp::err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()), Some(&context));
     }
 
     auth_processor::valid_account_ident(
         &account_ident_add_req.kind,
         &account_ident_add_req.ak,
         &account_ident_add_req.sk.as_deref().unwrap_or_default(),
-        &ident_info.tenant_id,
         None,
+        &context,
     )
     .await?;
     let processed_sk = auth_processor::process_sk(
         &account_ident_add_req.kind,
         &account_ident_add_req.ak,
         &account_ident_add_req.sk.as_deref().unwrap_or_default(),
-        &ident_info.tenant_id,
-        &ident_info.app_id,
+        &context,
     )
     .await?;
 
@@ -401,31 +401,31 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     account_ident_add_req.kind.to_string().to_lowercase().into(),
                     account_ident_add_req.ak.as_str().into(),
                     processed_sk.into(),
                     account_ident_add_req.valid_start_time.into(),
                     account_ident_add_req.valid_end_time.into(),
                     account_id.into(),
-                    ident_info.tenant_id.into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/tenant/account/{account_id}/ident/{id}")]
-pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if account_ident_modify_req.ak.is_some() && account_ident_modify_req.ak.is_none() || account_ident_modify_req.sk.is_none() && account_ident_modify_req.sk.is_some() {
-        return BIOSRespHelper::bus_error(BIOSError::BadRequest("AccountIdent [ak] and [sk] must exist at the same time".to_string()));
+        return BIOSResp::err(BIOSError::BadRequest("AccountIdent [ak] and [sk] must exist at the same time".to_string()), Some(&context));
     }
 
     if !BIOSFuns::reldb()
@@ -434,13 +434,13 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let kind = BIOSFuns::reldb()
@@ -460,8 +460,8 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
         &AccountIdentKind::from_str(kind).unwrap(),
         account_ident_modify_req.ak.as_deref().unwrap_or_default(),
         account_ident_modify_req.sk.as_deref().unwrap_or_default(),
-        &ident_info.tenant_id,
         None,
+        &context,
     )
     .await?;
     let mut values = Vec::new();
@@ -473,14 +473,14 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
                     .from(IamAccountIdent::Table)
                     .and_where(Expr::col(IamAccountIdent::Kind).eq(kind))
                     .and_where(Expr::col(IamAccountIdent::Ak).eq(ak.as_str()))
-                    .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                    .and_where(Expr::col(IamAccountIdent::RelTenantId).eq(context.ident.tenant_id.as_str()))
                     .and_where(Expr::col(IamAccountIdent::RelAccountId).ne(id.as_str()))
                     .done(),
                 None,
             )
             .await?
         {
-            return Err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()));
+            return BIOSResp::err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()), Some(&context));
         }
         values.push((IamAccountIdent::Ak, ak.to_string().as_str().into()));
     }
@@ -489,8 +489,7 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
             &AccountIdentKind::from_str(kind).unwrap(),
             account_ident_modify_req.ak.as_deref().unwrap_or_default(),
             sk,
-            &ident_info.tenant_id,
-            &ident_info.app_id,
+            &context,
         )
         .await?;
         values.push((IamAccountIdent::Sk, processed_sk.into()));
@@ -501,7 +500,7 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
     if let Some(valid_end_time) = account_ident_modify_req.valid_end_time {
         values.push((IamAccountIdent::ValidEndTime, valid_end_time.to_string().as_str().into()));
     }
-    values.push((IamAccountIdent::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamAccountIdent::UpdateUser, context.ident.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
@@ -513,12 +512,12 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
             None,
         )
         .await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/tenant/account/{account_id}/ident")]
-pub async fn list_account_ident(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_account_ident(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -527,13 +526,13 @@ pub async fn list_account_ident(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -568,12 +567,12 @@ pub async fn list_account_ident(req: HttpRequest) -> BIOSResp {
         .order_by(IamAccountIdent::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AccountIdentDetailResp>(&sql_builder, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/tenant/account/{account_id}/ident/{id}")]
-pub async fn delete_account_ident(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_account_ident(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
@@ -583,13 +582,13 @@ pub async fn delete_account_ident(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -601,16 +600,16 @@ pub async fn delete_account_ident(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAccountIdent::Id).eq(id.as_str()))
         .and_where(Expr::col(IamAccountIdent::RelAccountId).eq(account_id))
         .done();
-    BIOSFuns::reldb().soft_del(IamAccountIdent::Table, IamAccountIdent::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAccountIdent::Table, IamAccountIdent::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 // ------------------------------------
 
 #[post("/console/tenant/account/{account_id}/app/{app_id}")]
-pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_account_app(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let app_id: String = req.match_info().get("app_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
@@ -621,13 +620,13 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -635,13 +634,13 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
                 .and_where(Expr::col(IamApp::Id).eq(app_id.as_str()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("App not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -656,7 +655,10 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return Err(BIOSError::Conflict("IamAccountApp [rel_app_id] and [rel_account_id] already exists".to_string()));
+        return BIOSResp::err(
+            BIOSError::Conflict("IamAccountApp [rel_app_id] and [rel_account_id] already exists".to_string()),
+            Some(&context),
+        );
     }
 
     BIOSFuns::reldb()
@@ -672,8 +674,8 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     account_id.into(),
                     app_id.into(),
                 ])
@@ -681,12 +683,12 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResp {
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[get("/console/tenant/account/{account_id}/app")]
-pub async fn list_account_app(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_account_app(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -695,13 +697,13 @@ pub async fn list_account_app(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -733,12 +735,12 @@ pub async fn list_account_app(req: HttpRequest) -> BIOSResp {
         .order_by(IamAccountApp::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AccountAppDetailResp>(&sql_builder, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/tenant/account/{account_id}/app/{app_id}")]
-pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_account_app(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let app_id: String = req.match_info().get("app_id").unwrap().parse()?;
 
@@ -748,13 +750,13 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -762,13 +764,13 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamApp::Id])
                 .from(IamApp::Table)
                 .and_where(Expr::col(IamApp::Id).eq(app_id.as_str()))
-                .and_where(Expr::col(IamApp::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamApp::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("App not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -780,11 +782,11 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAccountApp::RelAccountId).eq(account_id.as_str()))
         .and_where(Expr::col(IamAccountApp::RelAppId).eq(app_id))
         .done();
-    BIOSFuns::reldb().soft_del(IamAccountApp::Table, IamAccountApp::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAccountApp::Table, IamAccountApp::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     // Remove token
-    cache_processor::remove_token_by_account(&account_id).await?;
+    cache_processor::remove_token_by_account(&account_id, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[derive(sqlx::FromRow, serde::Deserialize)]

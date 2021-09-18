@@ -19,10 +19,11 @@ use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
@@ -33,8 +34,8 @@ use crate::process::common::cache_processor;
 use crate::process::system_console::sc_tenant_dto::{TenantAddReq, TenantDetailResp, TenantModifyReq, TenantQueryReq};
 
 #[post("/console/system/tenant")]
-pub async fn add_tenant(tenant_add_req: Json<TenantAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_tenant(tenant_add_req: Json<TenantAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id = bios::basic::field::uuid();
 
     BIOSFuns::reldb()
@@ -53,8 +54,8 @@ pub async fn add_tenant(tenant_add_req: Json<TenantAddReq>, req: HttpRequest) ->
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     tenant_add_req.name.as_str().into(),
                     tenant_add_req.icon.as_deref().unwrap_or_default().into(),
                     tenant_add_req.allow_account_register.into(),
@@ -65,12 +66,12 @@ pub async fn add_tenant(tenant_add_req: Json<TenantAddReq>, req: HttpRequest) ->
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/system/tenant/{id}")]
-pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     let mut values = Vec::new();
@@ -89,7 +90,7 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
     if let Some(status) = &tenant_modify_req.status {
         values.push((IamTenant::Status, status.to_string().to_lowercase().into()));
     }
-    values.push((IamTenant::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamTenant::UpdateUser, context.ident.account_id.as_str().into()));
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -119,23 +120,25 @@ pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRe
         match status {
             CommonStatus::Enabled => {
                 for aksk_resp in enabled_aksks {
-                    cache_processor::set_aksk(&id, &aksk_resp.app_id, &aksk_resp.ak, &aksk_resp.sk, aksk_resp.valid_time).await?;
+                    cache_processor::set_aksk(&id, &aksk_resp.app_id, &aksk_resp.ak, &aksk_resp.sk, aksk_resp.valid_time, &context).await?;
                 }
             }
             CommonStatus::Disabled => {
                 for aksk_resp in enabled_aksks {
-                    cache_processor::remove_aksk(&aksk_resp.ak).await?;
+                    cache_processor::remove_aksk(&aksk_resp.ak, &context).await?;
                 }
             }
         }
     }
     tx.commit().await?;
 
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/system/tenant")]
-pub async fn list_tenant(query: VQuery<TenantQueryReq>) -> BIOSResp {
+pub async fn list_tenant(query: VQuery<TenantQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
+
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
     let sql_builder = Query::select()
@@ -172,12 +175,12 @@ pub async fn list_tenant(query: VQuery<TenantQueryReq>) -> BIOSResp {
         .order_by(IamTenant::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<TenantDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/system/tenant/{id}")]
-pub async fn delete_tenant(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_tenant(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if BIOSFuns::reldb()
@@ -187,7 +190,7 @@ pub async fn delete_tenant(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [app] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [app] data first".to_owned()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -195,10 +198,10 @@ pub async fn delete_tenant(req: HttpRequest) -> BIOSResp {
 
     let sql_builder =
         Query::select().columns(IamTenant::iter().filter(|i| *i != IamTenant::Table)).from(IamTenant::Table).and_where(Expr::col(IamTenant::Id).eq(id.as_str())).done();
-    BIOSFuns::reldb().soft_del(IamTenant::Table, IamTenant::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamTenant::Table, IamTenant::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[derive(sqlx::FromRow, serde::Deserialize)]

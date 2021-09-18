@@ -14,3 +14,11 @@
  * limitations under the License.
  */
 
+use derive_more::Display;
+
+#[derive(Display, Debug)]
+enum TestOutput {
+    #[display(fmt = "ox1122##Not found : {}", _0)]
+    NotFound(&'static str),
+}
+

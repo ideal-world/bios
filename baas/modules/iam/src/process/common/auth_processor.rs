@@ -22,9 +22,11 @@ use regex::Regex;
 use sea_query::{Expr, Query};
 use sqlx::{MySql, Transaction};
 
-use bios::basic::error::{BIOSError, BIOSResult};
-use bios::db::reldb_client::SqlBuilderProcess;
+use bios::basic::dto::BIOSContext;
+use bios::basic::error::BIOSError;
+use bios::basic::result::BIOSResult;
 use bios::BIOSFuns;
+use bios::db::reldb_client::SqlBuilderProcess;
 
 use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::IamTenantIdent;
@@ -36,14 +38,14 @@ lazy_static! {
     static ref AK_SK_CONTAINER: Mutex<HashMap<String, Regex>> = Mutex::new(HashMap::new());
 }
 
-pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str, tenant_id: &str, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<i64> {
+pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str, tx: Option<&mut Transaction<'c, MySql>>, context: &BIOSContext) -> BIOSResult<i64> {
     if let Some(tenant_ident_info) = BIOSFuns::reldb()
         .fetch_optional::<TenantIdentInfoResp>(
             &Query::select()
                 .columns(vec![IamTenantIdent::ValidAkRule, IamTenantIdent::ValidSkRule, IamTenantIdent::ValidTime])
                 .from(IamTenantIdent::Table)
                 .and_where(Expr::col(IamTenantIdent::Kind).eq(kind.to_string().to_lowercase()))
-                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(tenant_id.to_string()))
+                .and_where(Expr::col(IamTenantIdent::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             tx,
         )
@@ -73,28 +75,28 @@ pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str
     }
 }
 
-pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, stored_sk: &str, tenant_id: &str, app_id: &str) -> BIOSResult<()> {
+pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, stored_sk: &str, context: &BIOSContext) -> BIOSResult<()> {
     match kind {
         AccountIdentKind::Phone | AccountIdentKind::Email => {
-            if let Some(tmp_sk) = cache_processor::get_vcode(tenant_id, ak).await? {
+            if let Some(tmp_sk) = cache_processor::get_vcode(ak, &context).await? {
                 if tmp_sk == request_sk {
-                    cache_processor::remove_vcode(tenant_id, ak).await?;
-                    cache_processor::remove_vcode_error_times(tenant_id, ak).await?;
+                    cache_processor::remove_vcode(ak, &context).await?;
+                    cache_processor::remove_vcode_error_times(ak, &context).await?;
                     Ok(())
                 } else {
-                    let error_times = cache_processor::incr_vcode_error_times(tenant_id, ak).await?;
+                    let error_times = cache_processor::incr_vcode_error_times(ak, &context).await?;
                     if error_times >= BIOSFuns::ws_config::<WorkSpaceConfig>().iam.security.account_vcode_max_error_times as usize {
-                        cache_processor::remove_vcode(tenant_id, ak).await?;
-                        cache_processor::remove_vcode_error_times(tenant_id, ak).await?;
-                        log::warn!("Verification code [{}] in tenant [{}] over the maximum times", ak, tenant_id);
+                        cache_processor::remove_vcode(ak, &context).await?;
+                        cache_processor::remove_vcode_error_times(ak, &context).await?;
+                        log::warn!("Verification code [{}] in tenant [{}] over the maximum times", ak, context.ident.tenant_id);
                         Err(BIOSError::Conflict("Verification code over the maximum times".to_string()))
                     } else {
-                        log::warn!("Verification code [{}] in tenant [{}] doesn't match", ak, tenant_id);
+                        log::warn!("Verification code [{}] in tenant [{}] doesn't match", ak, context.ident.tenant_id);
                         Err(BIOSError::Conflict("Verification code doesn't exist or has expired".to_string()))
                     }
                 }
             } else {
-                log::warn!("Verification code [{}] in tenant [{}] doesn't exist or has expired", ak, tenant_id);
+                log::warn!("Verification code [{}] in tenant [{}] doesn't exist or has expired", ak, context.ident.tenant_id);
                 Err(BIOSError::Conflict("Verification code doesn't exist or has expired".to_string()))
             }
         }
@@ -103,7 +105,7 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                 if bios::basic::security::digest::digest(format!("{}{}", ak, request_sk).as_str(), None, "SHA512") == stored_sk {
                     Ok(())
                 } else {
-                    log::warn!("Username [{}] or Password [{}] in tenant [{}] error", ak, request_sk, tenant_id);
+                    log::warn!("Username [{}] or Password [{}] in tenant [{}] error", ak, request_sk, context.ident.tenant_id);
                     Err(BIOSError::Conflict("Username or Password error".to_string()))
                 }
             } else {
@@ -111,15 +113,15 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
             }
         }
         AccountIdentKind::WechatXcx => {
-            if let Some(account_token) = cache_processor::get_account_token(app_id, kind.to_string().to_lowercase().as_str()).await? {
+            if let Some(account_token) = cache_processor::get_account_token(kind.to_string().to_lowercase().as_str(), &context).await? {
                 if account_token == request_sk {
                     Ok(())
                 } else {
-                    log::warn!("Account token [{}] in tenant [{}] doesn't match", account_token, tenant_id);
+                    log::warn!("Account token [{}] in tenant [{}] doesn't match", account_token, context.ident.tenant_id);
                     Err(BIOSError::Conflict("Account Token doesn't exist or has expired".to_string()))
                 }
             } else {
-                log::warn!("Account token in tenant [{}] doesn't exist or has expired", tenant_id);
+                log::warn!("Account token in tenant [{}] doesn't exist or has expired", context.ident.tenant_id);
                 Err(BIOSError::Conflict("Account Token doesn't exist or has expired".to_string()))
             }
         }
@@ -127,10 +129,10 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
     }
 }
 
-pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, tenant_id: &str, app_id: &str) -> BIOSResult<String> {
+pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, context: &BIOSContext) -> BIOSResult<String> {
     match kind {
         AccountIdentKind::Phone | AccountIdentKind::Email => {
-            if let Some(tmp_sk) = cache_processor::get_vcode(tenant_id, ak).await? {
+            if let Some(tmp_sk) = cache_processor::get_vcode(ak, &context).await? {
                 if tmp_sk == sk {
                     Ok(sk.to_string())
                 } else {
@@ -148,7 +150,7 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, tenant_id: 
             }
         }
         AccountIdentKind::WechatXcx => {
-            if let Some(account_token) = cache_processor::get_account_token(app_id, kind.to_string().to_lowercase().as_str()).await? {
+            if let Some(account_token) = cache_processor::get_account_token(kind.to_string().to_lowercase().as_str(), &context).await? {
                 if account_token == sk {
                     Ok("".to_string())
                 } else {
@@ -165,7 +167,7 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, tenant_id: 
     }
 }
 
-pub async fn init_account_role<'c>(role_code: &str, role_name: &str, account_id: &str, app_id: &str, tenant_id: &str, tx: &mut Transaction<'c, MySql>) -> BIOSResult<String> {
+pub async fn init_account_role<'c>(role_code: &str, role_name: &str, tx: &mut Transaction<'c, MySql>, context: &BIOSContext) -> BIOSResult<String> {
     let role_id = bios::basic::field::uuid();
     BIOSFuns::reldb()
         .exec(
@@ -183,13 +185,13 @@ pub async fn init_account_role<'c>(role_code: &str, role_name: &str, account_id:
                 ])
                 .values_panic(vec![
                     role_id.as_str().into(),
-                    account_id.into(),
-                    account_id.into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     role_code.into(),
                     role_name.into(),
                     0.into(),
-                    app_id.into(),
-                    tenant_id.into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(tx),
@@ -208,9 +210,9 @@ pub async fn init_account_role<'c>(role_code: &str, role_name: &str, account_id:
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.into(),
-                    account_id.into(),
-                    account_id.into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     role_id.as_str().into(),
                 ])
                 .done(),
@@ -220,15 +222,7 @@ pub async fn init_account_role<'c>(role_code: &str, role_name: &str, account_id:
     Ok(role_id)
 }
 
-pub async fn init_resource_subject<'c>(
-    kind: &ResourceKind,
-    uri: &str,
-    name: &str,
-    account_id: &str,
-    app_id: &str,
-    tenant_id: &str,
-    tx: &mut Transaction<'c, MySql>,
-) -> BIOSResult<String> {
+pub async fn init_resource_subject<'c>(kind: &ResourceKind, uri: &str, name: &str, tx: &mut Transaction<'c, MySql>, context: &BIOSContext) -> BIOSResult<String> {
     let resource_subject_id = bios::basic::field::uuid();
     BIOSFuns::reldb()
         .exec(
@@ -252,8 +246,8 @@ pub async fn init_resource_subject<'c>(
                 ])
                 .values_panic(vec![
                     resource_subject_id.as_str().into(),
-                    account_id.into(),
-                    account_id.into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     kind.to_string().to_lowercase().into(),
                     uri.into(),
                     name.into(),
@@ -263,8 +257,8 @@ pub async fn init_resource_subject<'c>(
                     "".into(),
                     "".into(),
                     0.into(),
-                    app_id.into(),
-                    tenant_id.into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(tx),
@@ -278,10 +272,8 @@ pub async fn init_resource<'c>(
     name: &str,
     resource_subject_id: &str,
     resource_expose_kind: &ExposeKind,
-    account_id: &str,
-    app_id: &str,
-    tenant_id: &str,
     tx: &mut Transaction<'c, MySql>,
+    context: &BIOSContext,
 ) -> BIOSResult<String> {
     let resource_id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -306,8 +298,8 @@ pub async fn init_resource<'c>(
                 ])
                 .values_panic(vec![
                     resource_id.as_str().into(),
-                    account_id.into(),
-                    account_id.into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     path_and_query.into(),
                     name.into(),
                     "".into(),
@@ -316,8 +308,8 @@ pub async fn init_resource<'c>(
                     false.into(),
                     "".into(),
                     resource_subject_id.into(),
-                    app_id.into(),
-                    tenant_id.into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                     resource_expose_kind.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -332,10 +324,8 @@ pub async fn init_auth<'c>(
     name: &str,
     object_kind: &AuthObjectKind,
     object_id: &str,
-    account_id: &str,
-    app_id: &str,
-    tenant_id: &str,
     tx: &mut Transaction<'c, MySql>,
+    context: &BIOSContext,
 ) -> BIOSResult<()> {
     // Init AuthPolicy
     async fn init_auth_policy<'c>(
@@ -343,10 +333,8 @@ pub async fn init_auth<'c>(
         action: &OptActionKind,
         resource_id: &str,
         result: &AuthResultKind,
-        account_id: &str,
-        app_id: &str,
-        tenant_id: &str,
         tx: &mut Transaction<'c, MySql>,
+        context: &BIOSContext,
     ) -> BIOSResult<String> {
         let auth_policy_id = bios::basic::field::uuid();
         let valid_start_time = Utc::now().timestamp();
@@ -370,16 +358,16 @@ pub async fn init_auth<'c>(
                     ])
                     .values_panic(vec![
                         auth_policy_id.as_str().into(),
-                        account_id.into(),
-                        account_id.into(),
+                        context.ident.account_id.as_str().into(),
+                        context.ident.account_id.as_str().into(),
                         name.into(),
                         valid_start_time.into(),
                         valid_end_time.into(),
                         action.to_string().to_lowercase().into(),
                         resource_id.into(),
                         result.to_string().to_lowercase().into(),
-                        app_id.into(),
-                        tenant_id.into(),
+                        context.ident.app_id.as_str().into(),
+                        context.ident.tenant_id.as_str().into(),
                     ])
                     .done(),
                 Some(tx),
@@ -388,7 +376,13 @@ pub async fn init_auth<'c>(
         Ok(auth_policy_id)
     }
     // Init AuthPolicyObject
-    async fn init_auth_policy_object<'c>(object_kind: &AuthObjectKind, object_id: &str, auth_policy_id: &str, account_id: &str, tx: &mut Transaction<'c, MySql>) -> BIOSResult<()> {
+    async fn init_auth_policy_object<'c>(
+        object_kind: &AuthObjectKind,
+        object_id: &str,
+        auth_policy_id: &str,
+        tx: &mut Transaction<'c, MySql>,
+        context: &BIOSContext,
+    ) -> BIOSResult<()> {
         BIOSFuns::reldb()
             .exec(
                 &Query::insert()
@@ -404,8 +398,8 @@ pub async fn init_auth<'c>(
                     ])
                     .values_panic(vec![
                         bios::basic::field::uuid().into(),
-                        account_id.into(),
-                        account_id.into(),
+                        context.ident.account_id.as_str().into(),
+                        context.ident.account_id.as_str().into(),
                         object_kind.to_string().to_lowercase().into(),
                         object_id.into(),
                         AuthObjectOperatorKind::Eq.to_string().to_lowercase().into(),
@@ -420,18 +414,8 @@ pub async fn init_auth<'c>(
     let auth_info = auth_info.iter().cloned().collect::<HashMap<&str, Vec<&OptActionKind>>>();
     for (resource_id, actions) in auth_info {
         for action in actions {
-            let auth_policy_id = init_auth_policy(
-                format!("{}权限", name).as_str(),
-                action,
-                &resource_id,
-                &AuthResultKind::Accept,
-                account_id,
-                app_id,
-                tenant_id,
-                tx,
-            )
-            .await?;
-            init_auth_policy_object(object_kind, object_id, &auth_policy_id, account_id, tx).await?;
+            let auth_policy_id = init_auth_policy(format!("{}权限", name).as_str(), action, &resource_id, &AuthResultKind::Accept, tx, context).await?;
+            init_auth_policy_object(object_kind, object_id, &auth_policy_id, tx, context).await?;
         }
     }
     Ok(())

@@ -19,10 +19,11 @@ use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
@@ -34,8 +35,8 @@ use crate::process::app_console::ac_resource_dto::{
 };
 
 #[post("/console/app/resource/subject")]
-pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubjectAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubjectAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let uri = bios::basic::uri::format(&resource_subject_add_req.uri).expect("Uri parse error");
     if BIOSFuns::reldb()
         .exists(
@@ -44,13 +45,13 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Kind).eq(resource_subject_add_req.kind.to_string().to_lowercase()))
                 .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.as_str()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject already exists".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("ResourceSubject already exists".to_owned()),Some(&context));
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -75,8 +76,8 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     resource_subject_add_req.kind.to_string().to_lowercase().into(),
                     uri.into(),
                     resource_subject_add_req.name.as_str().into(),
@@ -86,19 +87,19 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                     resource_subject_add_req.platform_account.as_deref().unwrap_or_default().into(),
                     resource_subject_add_req.platform_project_id.as_deref().unwrap_or_default().into(),
                     resource_subject_add_req.timeout_ms.unwrap_or_default().into(),
-                    ident_info.app_id.as_str().into(),
-                    ident_info.tenant_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/app/resource/subject/{id}")]
-pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceSubjectModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceSubjectModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -107,19 +108,19 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("ResourceSubject not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("ResourceSubject not exists".to_string()), Some(&context));
     }
 
     if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.uri.is_none()
         || resource_subject_modify_req.kind.is_none() && resource_subject_modify_req.uri.is_some()
     {
-        return BIOSRespHelper::bus_error(BIOSError::BadRequest("ResourceSubject [kin] and [uri] must both exist".to_owned()));
+        return BIOSResp::err(BIOSError::BadRequest("ResourceSubject [kin] and [uri] must both exist".to_owned()),Some(&context));
     }
 
     let mut values = Vec::new();
@@ -133,13 +134,13 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
                     .from(IamResourceSubject::Table)
                     .and_where(Expr::col(IamResourceSubject::Kind).eq(kind.as_str()))
                     .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.as_str()))
-                    .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
                     .done(),
                 None,
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::Conflict("ResourceSubject already exists".to_owned()));
+            return BIOSResp::err(BIOSError::Conflict("ResourceSubject already exists".to_owned()),Some(&context));
         }
         values.push((IamResourceSubject::Kind, kind.into()));
         values.push((IamResourceSubject::Uri, uri.into()));
@@ -168,20 +169,20 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
     if let Some(timeout_ms) = resource_subject_modify_req.timeout_ms {
         values.push((IamResourceSubject::TimeoutMs, timeout_ms.into()));
     }
-    values.push((IamResourceSubject::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamResourceSubject::UpdateUser, context.ident.account_id.as_str().into()));
     let sql_builder = Query::update()
         .table(IamResourceSubject::Table)
         .values(values)
         .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
     BIOSFuns::reldb().exec(&sql_builder, None).await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/app/resource/subject")]
-pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -222,16 +223,16 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
         } else {
             None
         })
-        .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
         .order_by(IamResourceSubject::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<ResourceSubjectDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items,Some(&context))
 }
 
 #[delete("/console/app/resource/subject/{id}")]
-pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -240,13 +241,13 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("ResourceSubject not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("ResourceSubject not exists".to_string()),Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -255,7 +256,7 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [resource] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [resource] data first".to_owned()),Some(&context));
     }
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -264,19 +265,19 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResp {
         .columns(IamResourceSubject::iter().filter(|i| *i != IamResourceSubject::Table))
         .from(IamResourceSubject::Table)
         .and_where(Expr::col(IamResourceSubject::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamResourceSubject::Table, IamResourceSubject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamResourceSubject::Table, IamResourceSubject::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 // ------------------------------------
 
 #[post("/console/app/resource")]
-pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     if !BIOSFuns::reldb()
         .exists(
             &Query::select()
@@ -288,7 +289,7 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Resource [rel_resource_subject_id] not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Resource [rel_resource_subject_id] not exists".to_string()),Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -297,13 +298,13 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
                 .from(IamResource::Table)
                 .and_where(Expr::col(IamResource::PathAndQuery).eq(resource_add_req.path_and_query.as_str()))
                 .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_add_req.rel_resource_subject_id.as_str()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Resource [path_and_query] already exists".to_string()));
+        return BIOSResp::err(BIOSError::Conflict("Resource [path_and_query] already exists".to_string()),Some(&context));
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -328,8 +329,8 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     resource_add_req.path_and_query.as_str().to_lowercase().into(),
                     resource_add_req.name.as_str().into(),
                     resource_add_req.icon.as_str().into(),
@@ -338,20 +339,20 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
                     resource_add_req.res_group.into(),
                     resource_add_req.parent_id.as_deref().unwrap_or_default().into(),
                     resource_add_req.rel_resource_subject_id.as_str().into(),
-                    ident_info.app_id.as_str().into(),
-                    ident_info.tenant_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                     resource_add_req.expose_kind.as_ref().unwrap_or(&crate::process::basic_dto::ExposeKind::App).to_string().to_lowercase().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/app/resource/{id}")]
-pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -360,13 +361,13 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
                 .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Resource not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Resource not exists".to_string()),Some(&context));
     }
     if let Some(path_and_query) = &resource_modify_req.path_and_query {
         let resource_subject_id_info = BIOSFuns::reldb()
@@ -378,8 +379,8 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                         IamResourceSubject::Table,
                         Expr::tbl(IamResourceSubject::Table, IamResourceSubject::Id).equals(IamResource::Table, IamResource::RelResourceSubjectId),
                     )
-                    .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(ident_info.app_id.as_str()))
-                    .and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::tbl(IamResourceSubject::Table, IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
+                    .and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                     .and_where(Expr::tbl(IamResource::Table, IamResource::Id).eq(id.as_str()))
                     .done(),
                 None,
@@ -393,13 +394,13 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                     .and_where(Expr::col(IamResource::Id).ne(id.as_str()))
                     .and_where(Expr::col(IamResource::PathAndQuery).eq(path_and_query.to_string().to_lowercase()))
                     .and_where(Expr::col(IamResource::RelResourceSubjectId).eq(resource_subject_id_info["id"].as_str().unwrap()))
-                    .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                     .done(),
                 None,
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::Conflict("Resource [path_and_query] already exists".to_string()));
+            return BIOSResp::err(BIOSError::Conflict("Resource [path_and_query] already exists".to_string()),Some(&context));
         }
     }
     if let Some(parent_id) = &resource_modify_req.parent_id {
@@ -409,13 +410,13 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
                     .columns(vec![IamResource::Id])
                     .from(IamResource::Table)
                     .and_where(Expr::col(IamResource::Id).ne(parent_id.to_string().as_str()))
-                    .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                     .done(),
                 None,
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::Conflict("Resource [parent_id] not found".to_string()));
+            return BIOSResp::err(BIOSError::Conflict("Resource [parent_id] not found".to_string()),Some(&context));
         }
     }
     let mut values = Vec::new();
@@ -443,24 +444,24 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
     if let Some(expose_kind) = &resource_modify_req.expose_kind {
         values.push((IamResource::ExposeKind, expose_kind.to_string().to_lowercase().into()));
     }
-    values.push((IamResource::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamResource::UpdateUser, context.ident.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamResource::Table)
                 .values(values)
                 .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/app/resource")]
-pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -509,13 +510,13 @@ pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) ->
         .conditions(
             !query.expose,
             |x| {
-                x.and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(ident_info.app_id.as_str()));
+                x.and_where(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(context.ident.app_id.as_str()));
             },
             |x| {
                 x.cond_where(
                     Cond::any().add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
                         Cond::all()
-                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(context.ident.tenant_id.as_str()))
                             .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
                     ),
                 );
@@ -524,12 +525,12 @@ pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) ->
         .order_by(IamResource::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<ResourceDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items,Some(&context))
 }
 
 #[delete("/console/app/resource/{id}")]
-pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_resource(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -538,13 +539,13 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamResource::Id])
                 .from(IamResource::Table)
                 .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Resource not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Resource not exists".to_string()),Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -553,7 +554,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()),Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -563,7 +564,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [resource] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [resource] data first".to_owned()),Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -573,10 +574,10 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResp {
         .columns(IamResource::iter().filter(|i| *i != IamResource::Table))
         .from(IamResource::Table)
         .and_where(Expr::col(IamResource::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamResource::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::col(IamResource::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamResource::Table, IamResource::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamResource::Table, IamResource::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }

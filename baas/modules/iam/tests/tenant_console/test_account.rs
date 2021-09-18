@@ -22,11 +22,10 @@ use chrono::Utc;
 use testcontainers::clients;
 
 use bios::basic::config::FrameworkConfig;
-use bios::basic::error::BIOSResult;
+use bios::basic::dto::BIOSResp;
+use bios::basic::result::BIOSResult;
 use bios::db::reldb_client::BIOSPage;
-use bios::web::resp_handler::BIOSRespHelper;
 use bios::web::web_server::BIOSWebServer;
-use bios::BIOSFuns;
 use bios_baas_iam::process::basic_dto::{AccountIdentKind, CommonStatus};
 use bios_baas_iam::process::tenant_console;
 use bios_baas_iam::process::tenant_console::tc_account_dto::{
@@ -34,10 +33,12 @@ use bios_baas_iam::process::tenant_console::tc_account_dto::{
 };
 use bios_baas_iam::process::tenant_console::tc_tenant_dto::TenantIdentAddReq;
 
+use crate::test_basic;
+
 #[actix_rt::test]
 async fn test_account() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init(&docker).await;
+    let _c = test_basic::init(&docker).await;
     let app = test::init_service(
         App::new()
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
@@ -51,10 +52,7 @@ async fn test_account() -> BIOSResult<()> {
 
     // Add Account
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/tenant/account")
         .set_json(&AccountAddReq {
             name: "孤岛旭日".to_string(),
@@ -65,14 +63,11 @@ async fn test_account() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let id = read_body_json::<BIOSResp<String>, AnyBody>(resp).await.body.unwrap();
 
     // Modify Account
     let req = test::TestRequest::put()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/tenant/account/{}", id.clone()).as_str())
         .set_json(&AccountModifyReq {
             name: Some("gudaoxuri".to_string()),
@@ -84,36 +79,24 @@ async fn test_account() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // List Account
-    let req = test::TestRequest::get()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri("/console/tenant/account?name=gudaoxuri&page_number=1&page_size=10")
-        .to_request();
+    let req = test::TestRequest::get().insert_header(test_basic::context_account()).uri("/console/tenant/account?name=gudaoxuri&page_number=1&page_size=10").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = read_body_json::<BIOSRespHelper<BIOSPage<AccountDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let body = read_body_json::<BIOSResp<BIOSPage<AccountDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(body.total_size, 1);
     assert_eq!(body.records[0].name, "gudaoxuri");
     assert_eq!(body.records[0].create_user, "平台管理员");
     assert_eq!(body.records[0].update_user, "平台管理员");
 
     // Delete Account
-    let req = test::TestRequest::delete()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri(format!("/console/tenant/account/{}", id.clone()).as_str())
-        .to_request();
+    let req = test::TestRequest::delete().insert_header(test_basic::context_account()).uri(format!("/console/tenant/account/{}", id.clone()).as_str()).to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     Ok(())
@@ -122,7 +105,7 @@ async fn test_account() -> BIOSResult<()> {
 #[actix_rt::test]
 async fn test_account_ident() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init(&docker).await;
+    let _c = test_basic::init(&docker).await;
     let app = test::init_service(
         App::new()
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
@@ -138,10 +121,7 @@ async fn test_account_ident() -> BIOSResult<()> {
 
     // Add TenantIdent
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/tenant/tenant/ident")
         .set_json(&TenantIdentAddReq {
             kind: AccountIdentKind::Username,
@@ -157,10 +137,7 @@ async fn test_account_ident() -> BIOSResult<()> {
 
     // Add Account
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/tenant/account")
         .set_json(&AccountAddReq {
             name: "孤岛旭日".to_string(),
@@ -171,14 +148,11 @@ async fn test_account_ident() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let account_id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let account_id = read_body_json::<BIOSResp<String>, AnyBody>(resp).await.body.unwrap();
 
     // Add AccountIdent
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/tenant/account/{}/ident", account_id.clone()).as_str())
         .set_json(&AccountIdentAddReq {
             kind: AccountIdentKind::Username,
@@ -190,14 +164,11 @@ async fn test_account_ident() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let id = read_body_json::<BIOSResp<String>, AnyBody>(resp).await.body.unwrap();
 
     // Modify AccountIdent
     let req = test::TestRequest::put()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/tenant/account/{}/ident/{}", account_id.clone(), id.clone()).as_str())
         .set_json(&AccountIdentModifyReq {
             ak: Some("gdxr2".to_string()),
@@ -208,35 +179,26 @@ async fn test_account_ident() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // List AccountIdent
-    let req = test::TestRequest::get()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri(format!("/console/tenant/account/{}/ident", account_id.clone()).as_str())
-        .to_request();
+    let req = test::TestRequest::get().insert_header(test_basic::context_account()).uri(format!("/console/tenant/account/{}/ident", account_id.clone()).as_str()).to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = read_body_json::<BIOSRespHelper<Vec<AccountIdentDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let body = read_body_json::<BIOSResp<Vec<AccountIdentDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(body[0].ak, "gdxr2");
     assert_eq!(body[0].create_user, "平台管理员");
     assert_eq!(body[0].update_user, "平台管理员");
 
     // Delete AccountIdent
     let req = test::TestRequest::delete()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/tenant/account/{}/ident/{}", account_id.clone(), id.clone()).as_str())
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     Ok(())
@@ -245,7 +207,7 @@ async fn test_account_ident() -> BIOSResult<()> {
 #[actix_rt::test]
 async fn test_account_app() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init(&docker).await;
+    let _c = test_basic::init(&docker).await;
     let app = test::init_service(
         App::new()
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
@@ -259,10 +221,7 @@ async fn test_account_app() -> BIOSResult<()> {
 
     // Add Account
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/tenant/account")
         .set_json(&AccountAddReq {
             name: "孤岛旭日".to_string(),
@@ -273,30 +232,19 @@ async fn test_account_app() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let account_id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let account_id = read_body_json::<BIOSResp<String>, AnyBody>(resp).await.body.unwrap();
 
     // Add AccountApp
-    let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri(format!("/console/tenant/account/{}/app/{}", account_id.clone(), "app1").as_str())
-        .to_request();
+    let req =
+        test::TestRequest::post().insert_header(test_basic::context_account()).uri(format!("/console/tenant/account/{}/app/{}", account_id.clone(), "app1").as_str()).to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
 
     // List AccountApp
-    let req = test::TestRequest::get()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri(format!("/console/tenant/account/{}/app", account_id.clone()).as_str())
-        .to_request();
+    let req = test::TestRequest::get().insert_header(test_basic::context_account()).uri(format!("/console/tenant/account/{}/app", account_id.clone()).as_str()).to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = read_body_json::<BIOSRespHelper<Vec<AccountAppDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let body = read_body_json::<BIOSResp<Vec<AccountAppDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(body[0].rel_app_id, "app1");
     assert_eq!(body[0].rel_account_id, account_id);
     assert_eq!(body[0].create_user, "平台管理员");
@@ -304,15 +252,12 @@ async fn test_account_app() -> BIOSResult<()> {
 
     // Delete AccountApp
     let req = test::TestRequest::delete()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/tenant/account/{}/app/{}", account_id.clone(), "app1").as_str())
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     Ok(())

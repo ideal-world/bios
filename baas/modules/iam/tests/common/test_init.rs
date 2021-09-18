@@ -18,7 +18,7 @@ use sea_query::Query;
 use strum::IntoEnumIterator;
 use testcontainers::clients;
 
-use bios::basic::error::BIOSResult;
+use bios::basic::result::BIOSResult;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::BIOSFuns;
 use bios_baas_iam::domain::auth_domain::{IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamResource, IamResourceSubject, IamRole};
@@ -34,10 +34,12 @@ use bios_baas_iam::process::tenant_console::tc_account_dto::{AccountAppDetailRes
 use bios_baas_iam::process::tenant_console::tc_app_dto::AppDetailResp;
 use bios_baas_iam::process::tenant_console::tc_tenant_dto::{TenantCertDetailResp, TenantDetailResp, TenantIdentDetailResp};
 
+use crate::test_basic;
+
 #[actix_rt::test]
 async fn test_init() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init_without_data(&docker).await;
+    let _c = test_basic::init_without_data(&docker).await;
     let iam_config = &BIOSFuns::ws_config::<WorkSpaceConfig>().iam;
 
     iam_initializer::init().await?;
