@@ -16,7 +16,6 @@
 
 use std::fmt::Display;
 
-use actix_web::error::{Error, InternalError};
 use actix_web::{http::StatusCode, HttpResponse};
 use serde::Serialize;
 
