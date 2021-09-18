@@ -28,6 +28,22 @@ use bios::BIOSFuns;
 use bios_baas_iam::domain::ident_domain::{IamAccount, IamAccountApp, IamApp, IamTenant};
 use bios_baas_iam::iam_config::WorkSpaceConfig;
 
+pub fn context_account() -> (&'static str, String) {
+    (
+        &BIOSFuns::fw_config().web.context_flag,
+        bios::basic::security::digest::base64::encode(
+            r#"{"trace":{"id":"111111"},"ident":{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}}"#,
+        ),
+    )
+}
+
+pub fn context_pub() -> (&'static str, String) {
+    (
+        &BIOSFuns::fw_config().web.context_flag,
+        bios::basic::security::digest::base64::encode(r#"{"trace":{"id":"111111"},"ident":{}}"#),
+    )
+}
+
 pub async fn init<'a>(docker: &'a Cli) -> (Container<'a, Cli, GenericImage>, Container<'a, Cli, Redis>) {
     BIOSLogger::init("").unwrap();
     let mysql_container = BIOSTestContainer::mysql_custom(Some("sql/"), &docker);

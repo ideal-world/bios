@@ -18,9 +18,10 @@ use chrono::Utc;
 use sea_query::Query;
 use sqlx::Connection;
 
-use bios::basic::error::BIOSResult;
-use bios::db::reldb_client::SqlBuilderProcess;
+use bios::basic::dto::{BIOSContext, IdentInfo};
+use bios::basic::result::BIOSResult;
 use bios::BIOSFuns;
+use bios::db::reldb_client::SqlBuilderProcess;
 
 use crate::domain::auth_domain::IamAuthPolicy;
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamAccountIdent, IamApp, IamAppIdent, IamTenant, IamTenantCert, IamTenantIdent};
@@ -34,9 +35,20 @@ pub async fn init() -> BIOSResult<()> {
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
 
-    let tenant_id = bios::basic::field::uuid();
-    let app_id = bios::basic::field::uuid();
-    let account_id = bios::basic::field::uuid();
+    let context = BIOSContext {
+        ident: IdentInfo {
+            account_id: bios::basic::field::uuid(),
+            token: "".to_string(),
+            token_kind: "".to_string(),
+            roles: vec![],
+            app_id: bios::basic::field::uuid(),
+            tenant_id: bios::basic::field::uuid(),
+            ak: "".to_string(),
+            groups: vec![],
+        },
+        trace: Default::default(),
+        lang: "en_US".to_string()
+    };
 
     // Init Tenant
     BIOSFuns::reldb()
@@ -54,9 +66,9 @@ pub async fn init() -> BIOSResult<()> {
                     IamTenant::Status,
                 ])
                 .values_panic(vec![
-                    tenant_id.as_str().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     iam_config.app.tenant_name.as_str().into(),
                     "".into(),
                     false.into(),
@@ -87,15 +99,15 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     AccountIdentKind::Username.to_string().to_lowercase().into(),
                     iam_config.security.default_valid_ak_rule_note.as_str().into(),
                     iam_config.security.default_valid_ak_rule.as_str().into(),
                     iam_config.security.default_valid_sk_rule_note.as_str().into(),
                     iam_config.security.default_valid_sk_rule.as_str().into(),
                     iam_config.security.default_valid_time_sec.into(),
-                    tenant_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -117,11 +129,11 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     "".into(),
                     1.into(),
-                    tenant_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -144,14 +156,14 @@ pub async fn init() -> BIOSResult<()> {
                     IamApp::RelTenantId,
                 ])
                 .values_panic(vec![
-                    app_id.as_str().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     iam_config.app.app_name.as_str().into(),
                     "".into(),
                     "".into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
-                    tenant_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -178,14 +190,14 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     "".into(),
                     ak.as_str().into(),
                     sk.as_str().into(),
                     i64::MAX.into(),
-                    app_id.as_str().into(),
-                    tenant_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -210,15 +222,15 @@ pub async fn init() -> BIOSResult<()> {
                     IamAccount::Status,
                 ])
                 .values_panic(vec![
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     format!("ao_{}", bios::basic::field::uuid()).into(),
                     iam_config.app.admin_name.as_str().into(),
                     "".into(),
                     "".into(),
                     "".into(),
-                    tenant_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                     CommonStatus::Enabled.to_string().to_lowercase().into(),
                 ])
                 .done(),
@@ -231,11 +243,11 @@ pub async fn init() -> BIOSResult<()> {
         &AccountIdentKind::Username,
         &iam_config.app.admin_name,
         &iam_config.app.admin_password,
-        &tenant_id,
         Some(&mut tx),
+        &context,
     )
     .await?;
-    let processed_sk = auth_processor::process_sk(&AccountIdentKind::Username, &iam_config.app.admin_name, &iam_config.app.admin_password, &tenant_id, &app_id).await?;
+    let processed_sk = auth_processor::process_sk(&AccountIdentKind::Username, &iam_config.app.admin_name, &iam_config.app.admin_password, &context).await?;
     BIOSFuns::reldb()
         .exec(
             &Query::insert()
@@ -254,15 +266,15 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     AccountIdentKind::Username.to_string().to_lowercase().into(),
                     iam_config.app.admin_name.as_str().into(),
                     processed_sk.into(),
                     Utc::now().timestamp().into(),
                     valid_end_time.into(),
-                    account_id.as_str().into(),
-                    tenant_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -283,10 +295,10 @@ pub async fn init() -> BIOSResult<()> {
                 ])
                 .values_panic(vec![
                     bios::basic::field::uuid().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    account_id.as_str().into(),
-                    app_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
@@ -297,28 +309,22 @@ pub async fn init() -> BIOSResult<()> {
     let system_role_id = auth_processor::init_account_role(
         &iam_config.security.system_admin_role_code.as_str(),
         &iam_config.security.system_admin_role_name.as_str(),
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
     let tenant_role_id = auth_processor::init_account_role(
         &iam_config.security.tenant_admin_role_code.as_str(),
         &iam_config.security.tenant_admin_role_name.as_str(),
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
     let app_role_id = auth_processor::init_account_role(
         &iam_config.security.app_admin_role_code.as_str(),
         &iam_config.security.app_admin_role_name.as_str(),
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
 
@@ -327,67 +333,31 @@ pub async fn init() -> BIOSResult<()> {
         &ResourceKind::Api,
         format!("api://{}", iam_config.service_name).as_str(),
         format!("{}接口", iam_config.app.app_name).as_str(),
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
     auth_processor::init_resource_subject(
         &ResourceKind::Menu,
         format!("menu://{}", iam_config.service_name).as_str(),
         format!("{}菜单", iam_config.app.app_name).as_str(),
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
     auth_processor::init_resource_subject(
         &ResourceKind::Element,
         format!("element://{}", iam_config.service_name).as_str(),
         format!("{}元素", iam_config.app.app_name).as_str(),
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
 
     // Init Resource
-    let resource_console_system_id = auth_processor::init_resource(
-        "/console/system/**",
-        "系统控制台",
-        &resource_subject_api_id,
-        &ExposeKind::App,
-        &account_id,
-        &app_id,
-        &tenant_id,
-        &mut tx,
-    )
-    .await?;
-    let resource_console_tenant_id = auth_processor::init_resource(
-        "/console/tenant/**",
-        "租户控制台",
-        &resource_subject_api_id,
-        &ExposeKind::Global,
-        &account_id,
-        &app_id,
-        &tenant_id,
-        &mut tx,
-    )
-    .await?;
-    let resource_console_app_id = auth_processor::init_resource(
-        "/console/app/**",
-        "应用控制台",
-        &resource_subject_api_id,
-        &ExposeKind::Global,
-        &account_id,
-        &app_id,
-        &tenant_id,
-        &mut tx,
-    )
-    .await?;
+    let resource_console_system_id = auth_processor::init_resource("/console/system/**", "系统控制台", &resource_subject_api_id, &ExposeKind::App, &mut tx, &context).await?;
+    let resource_console_tenant_id = auth_processor::init_resource("/console/tenant/**", "租户控制台", &resource_subject_api_id, &ExposeKind::Global, &mut tx, &context).await?;
+    let resource_console_app_id = auth_processor::init_resource("/console/app/**", "应用控制台", &resource_subject_api_id, &ExposeKind::Global, &mut tx, &context).await?;
 
     // Init Auth
     auth_processor::init_auth(
@@ -404,10 +374,8 @@ pub async fn init() -> BIOSResult<()> {
         "系统控制台",
         &AuthObjectKind::Role,
         &system_role_id,
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
     auth_processor::init_auth(
@@ -424,10 +392,8 @@ pub async fn init() -> BIOSResult<()> {
         "租户控制台",
         &AuthObjectKind::Role,
         &tenant_role_id,
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
     auth_processor::init_auth(
@@ -444,18 +410,16 @@ pub async fn init() -> BIOSResult<()> {
         "应用控制台",
         &AuthObjectKind::Role,
         &app_role_id,
-        &account_id,
-        &app_id,
-        &tenant_id,
         &mut tx,
+        &context,
     )
     .await?;
 
     let auth_policy_ids = BIOSFuns::reldb().fetch_all_json(&Query::select().column(IamAuthPolicy::Id).from(IamAuthPolicy::Table).done(), Some(&mut tx)).await?;
     for id in auth_policy_ids {
-        cache_processor::rebuild_auth_policy(id["id"].as_str().unwrap(), &mut tx).await?;
+        cache_processor::rebuild_auth_policy(id["id"].as_str().unwrap(), &mut tx, &context).await?;
     }
-    cache_processor::set_aksk(&tenant_id, &app_id, &ak, &sk, i64::MAX).await?;
+    cache_processor::set_aksk(&context.ident.tenant_id, &context.ident.app_id, &ak, &sk, i64::MAX, &context).await?;
     tx.commit().await?;
     Ok(())
 }

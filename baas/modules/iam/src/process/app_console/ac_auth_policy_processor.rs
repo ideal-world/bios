@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-use actix_web::{delete, get, post, put, HttpRequest};
+use actix_web::{delete, get, HttpRequest, post, put};
 use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
+use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
-use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAuthPolicy, IamAuthPolicyObject, IamGroup, IamGroupNode, IamResource, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp};
@@ -36,8 +37,8 @@ use crate::process::basic_dto::AuthObjectKind;
 use crate::process::common::cache_processor;
 
 #[post("/console/app/auth-policy")]
-pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id = bios::basic::field::uuid();
 
     if !BIOSFuns::reldb()
@@ -48,7 +49,7 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
                 .cond_where(
                     Cond::any().add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
                         Cond::all()
-                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(context.ident.tenant_id.as_str()))
                             .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
                     ),
                 )
@@ -58,7 +59,7 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicy [rel_resource_id] not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicy [rel_resource_id] not exists".to_string()), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -76,7 +77,7 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("AuthPolicy already exists".to_string()));
+        return BIOSResp::err(BIOSError::Conflict("AuthPolicy already exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -101,37 +102,38 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     auth_policy_add_req.name.as_str().into(),
                     auth_policy_add_req.valid_start_time.into(),
                     auth_policy_add_req.valid_end_time.into(),
                     auth_policy_add_req.action_kind.to_string().to_lowercase().into(),
                     auth_policy_add_req.rel_resource_id.as_str().into(),
                     auth_policy_add_req.result_kind.to_string().to_lowercase().into(),
-                    ident_info.app_id.as_str().into(),
-                    ident_info.tenant_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             Some(&mut tx),
         )
         .await?;
-    cache_processor::rebuild_auth_policy(&id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&id, &mut tx, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/app/auth-policy/{id}")]
-pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if auth_policy_modify_req.valid_start_time.is_some() && auth_policy_modify_req.valid_end_time.is_none()
         || auth_policy_modify_req.valid_start_time.is_none() && auth_policy_modify_req.valid_end_time.is_some()
     {
-        return BIOSRespHelper::bus_error(BIOSError::BadRequest(
-            "AuthPolicy [valid_start_time] and [valid_end_time] must exist at the same time".to_string(),
-        ));
+        return BIOSResp::err(
+            BIOSError::BadRequest("AuthPolicy [valid_start_time] and [valid_end_time] must exist at the same time".to_string()),
+            Some(&context),
+        );
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -139,13 +141,13 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicy not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicy not exists".to_string()), Some(&context));
     }
     if auth_policy_modify_req.valid_start_time.is_some() && auth_policy_modify_req.valid_end_time.is_some() {
         if BIOSFuns::reldb()
@@ -161,7 +163,7 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::Conflict("AuthPolicy already exists".to_string()));
+            return BIOSResp::err(BIOSError::Conflict("AuthPolicy already exists".to_string()), Some(&context));
         }
     }
 
@@ -178,26 +180,26 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
     if let Some(valid_end_time) = auth_policy_modify_req.valid_end_time {
         values.push((IamAuthPolicy::ValidEndTime, valid_end_time.into()));
     }
-    values.push((IamAuthPolicy::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamAuthPolicy::UpdateUser, context.ident.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamAuthPolicy::Table)
                 .values(values)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             Some(&mut tx),
         )
         .await?;
-    cache_processor::rebuild_auth_policy(&id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&id, &mut tx, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/app/auth-policy")]
-pub async fn list_auth_policy(query: VQuery<AuthPolicyQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_auth_policy(query: VQuery<AuthPolicyQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -250,16 +252,16 @@ pub async fn list_auth_policy(query: VQuery<AuthPolicyQueryReq>, req: HttpReques
         } else {
             None
         })
-        .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
         .order_by(IamAuthPolicy::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<AuthPolicyDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/auth-policy/{id}")]
-pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -268,13 +270,13 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicy not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicy not exists".to_string()), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -287,31 +289,34 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [auth_policy_object] data first".to_owned()));
+        return BIOSResp::err(
+            BIOSError::Conflict("Please delete the associated [auth_policy_object] data first".to_owned()),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
 
-    cache_processor::remove_auth_policy(&id, &mut tx).await?;
+    cache_processor::remove_auth_policy(&id, &mut tx, &context).await?;
 
     let sql_builder = Query::select()
         .columns(IamAuthPolicy::iter().filter(|i| *i != IamAuthPolicy::Table))
         .from(IamAuthPolicy::Table)
         .and_where(Expr::col(IamAuthPolicy::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamAuthPolicy::Table, IamAuthPolicy::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAuthPolicy::Table, IamAuthPolicy::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 // ------------------------------------
 
 #[post("/console/app/auth-policy/{auth_policy_id}/object")]
-pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyObjectAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyObjectAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let auth_policy_id: String = req.match_info().get("auth_policy_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
 
@@ -321,18 +326,18 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(auth_policy_id.as_str()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicyObject [rel_auth_policy_id] not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicyObject [rel_auth_policy_id] not exists".to_string()), Some(&context));
     }
 
     let allow = match auth_policy_object_add_req.object_kind {
-        AuthObjectKind::Tenant => auth_policy_object_add_req.object_id == ident_info.tenant_id,
-        AuthObjectKind::App => auth_policy_object_add_req.object_id == ident_info.app_id,
+        AuthObjectKind::Tenant => auth_policy_object_add_req.object_id == context.ident.tenant_id,
+        AuthObjectKind::App => auth_policy_object_add_req.object_id == context.ident.app_id,
         AuthObjectKind::Role => {
             BIOSFuns::reldb()
                 .exists(
@@ -340,7 +345,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
                         .columns(vec![IamRole::Id])
                         .from(IamRole::Table)
                         .and_where(Expr::col(IamRole::Id).eq(auth_policy_object_add_req.object_id.as_str()))
-                        .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                        .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                         .done(),
                     None,
                 )
@@ -361,7 +366,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
                         )
                         .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Code).eq(group_node_code))
                         .and_where(Expr::tbl(IamGroup::Table, IamGroup::Id).eq(group_id))
-                        .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                        .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                         .done(),
                     None,
                 )
@@ -374,7 +379,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
                         .columns(vec![IamAccountApp::Id])
                         .from(IamAccountApp::Table)
                         .and_where(Expr::col(IamAccountApp::RelAccountId).eq(auth_policy_object_add_req.object_id.as_str()))
-                        .and_where(Expr::col(IamAccountApp::RelAppId).eq(ident_info.app_id.as_str()))
+                        .and_where(Expr::col(IamAccountApp::RelAppId).eq(context.ident.app_id.as_str()))
                         .done(),
                     None,
                 )
@@ -383,7 +388,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
     };
     if !allow {
         {
-            return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicyObject [object_id] not exists".to_string()));
+            return BIOSResp::err(BIOSError::NotFound("AuthPolicyObject [object_id] not exists".to_string()), Some(&context));
         }
     }
     if BIOSFuns::reldb()
@@ -399,7 +404,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("AuthPolicyObject already exists".to_string()));
+        return BIOSResp::err(BIOSError::Conflict("AuthPolicyObject already exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -420,8 +425,8 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     auth_policy_object_add_req.object_kind.to_string().to_lowercase().into(),
                     auth_policy_object_add_req.object_id.as_str().into(),
                     auth_policy_object_add_req.object_operator.to_string().to_lowercase().into(),
@@ -431,14 +436,14 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
             Some(&mut tx),
         )
         .await?;
-    cache_processor::rebuild_auth_policy(&auth_policy_id, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&auth_policy_id, &mut tx, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[get("/console/app/auth-policy/{auth_policy_id}/object")]
-pub async fn list_auth_policy_object(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_auth_policy_object(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let auth_policy_id: String = req.match_info().get("auth_policy_id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -447,13 +452,13 @@ pub async fn list_auth_policy_object(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(auth_policy_id.as_str()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicyObject [rel_auth_policy_id] not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicyObject [rel_auth_policy_id] not exists".to_string()), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -487,12 +492,12 @@ pub async fn list_auth_policy_object(req: HttpRequest) -> BIOSResp {
         .order_by(IamAuthPolicyObject::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AuthPolicyObjectDetailResp>(&sql_builder, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/auth-policy/{auth_policy_id}/object/{id}")]
-pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let auth_policy_id: String = req.match_info().get("auth_policy_id").unwrap().parse()?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
@@ -502,13 +507,13 @@ pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAuthPolicy::Id])
                 .from(IamAuthPolicy::Table)
                 .and_where(Expr::col(IamAuthPolicy::Id).eq(auth_policy_id.as_str()))
-                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicy not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicy not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -522,7 +527,7 @@ pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicyObject not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicyObject not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -535,13 +540,13 @@ pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResp {
                 )
                 .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::Id).eq(auth_policy_id.as_str()))
                 .and_where(Expr::tbl(IamAuthPolicyObject::Table, IamAuthPolicyObject::Id).eq(id.as_str()))
-                .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::tbl(IamAuthPolicy::Table, IamAuthPolicy::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("AuthPolicyObject not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("AuthPolicyObject not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -552,8 +557,8 @@ pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResp {
         .from(IamAuthPolicyObject::Table)
         .and_where(Expr::col(IamAuthPolicyObject::Id).eq(id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamAuthPolicyObject::Table, IamAuthPolicyObject::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
-    cache_processor::rebuild_auth_policy(&auth_policy_id, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAuthPolicyObject::Table, IamAuthPolicyObject::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
+    cache_processor::rebuild_auth_policy(&auth_policy_id, &mut tx, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }

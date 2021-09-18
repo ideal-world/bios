@@ -19,10 +19,11 @@ use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamGroup, IamGroupNode, IamRole};
@@ -31,8 +32,8 @@ use crate::process::app_console::ac_account_dto::{AccountGroupDetailResp, Accoun
 use crate::process::common::cache_processor;
 
 #[post("/console/app/account/{account_id}/role/{role_id}")]
-pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_account_role(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let role_id: String = req.match_info().get("role_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
@@ -43,13 +44,13 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -57,13 +58,13 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Id).eq(role_id.as_str()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Role not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -78,7 +79,10 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return Err(BIOSError::Conflict("IamAccountRole [rel_role_id] and [rel_account_id] already exists".to_string()));
+        return BIOSResp::err(
+            BIOSError::Conflict("IamAccountRole [rel_role_id] and [rel_account_id] already exists".to_string()),
+            Some(&context),
+        );
     }
 
     BIOSFuns::reldb()
@@ -94,8 +98,8 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     account_id.into(),
                     role_id.into(),
                 ])
@@ -103,12 +107,12 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResp {
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[get("/console/app/account/{account_id}/role")]
-pub async fn list_account_role(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_account_role(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -117,13 +121,13 @@ pub async fn list_account_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -155,12 +159,12 @@ pub async fn list_account_role(req: HttpRequest) -> BIOSResp {
         .order_by(IamAccountRole::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AccountRoleDetailResp>(&sql_builder, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/account/{account_id}/role/{role_id}")]
-pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_account_role(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let role_id: String = req.match_info().get("role_id").unwrap().parse()?;
 
@@ -170,13 +174,13 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -184,13 +188,13 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Id).eq(role_id.as_str()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Role not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -202,18 +206,18 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAccountRole::RelAccountId).eq(account_id.as_str()))
         .and_where(Expr::col(IamAccountRole::RelRoleId).eq(role_id))
         .done();
-    BIOSFuns::reldb().soft_del(IamAccountRole::Table, IamAccountRole::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAccountRole::Table, IamAccountRole::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     // Remove token
-    cache_processor::remove_token_by_account(&account_id).await?;
+    cache_processor::remove_token_by_account(&account_id, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 // ------------------------------------
 
 #[post("/console/app/account/{account_id}/group/{group_node_id}")]
-pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_account_group(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let group_node_id: String = req.match_info().get("group_node_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
@@ -224,13 +228,13 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -242,13 +246,13 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
                     Expr::tbl(IamGroup::Table, IamGroup::Id).equals(IamGroupNode::Table, IamGroupNode::RelGroupId),
                 )
                 .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).eq(group_node_id.as_str()))
-                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -263,7 +267,10 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return Err(BIOSError::Conflict("IamAccountGroup [rel_group_node_id] and [rel_account_id] already exists".to_string()));
+        return BIOSResp::err(
+            BIOSError::Conflict("IamAccountGroup [rel_group_node_id] and [rel_account_id] already exists".to_string()),
+            Some(&context),
+        );
     }
 
     BIOSFuns::reldb()
@@ -279,8 +286,8 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     account_id.into(),
                     group_node_id.into(),
                 ])
@@ -288,12 +295,12 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResp {
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[get("/console/app/account/{account_id}/group")]
-pub async fn list_account_group(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_account_group(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -302,13 +309,13 @@ pub async fn list_account_group(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -340,12 +347,12 @@ pub async fn list_account_group(req: HttpRequest) -> BIOSResp {
         .order_by(IamAccountGroup::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AccountGroupDetailResp>(&sql_builder, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/account/{account_id}/group/{group_node_id}")]
-pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_account_group(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let account_id: String = req.match_info().get("account_id").unwrap().parse()?;
     let group_node_id: String = req.match_info().get("group_node_id").unwrap().parse()?;
 
@@ -355,13 +362,13 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamAccount::Id])
                 .from(IamAccount::Table)
                 .and_where(Expr::col(IamAccount::Id).eq(account_id.as_str()))
-                .and_where(Expr::col(IamAccount::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                .and_where(Expr::col(IamAccount::RelTenantId).eq(context.ident.tenant_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Account not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -373,13 +380,13 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
                     Expr::tbl(IamGroup::Table, IamGroup::Id).equals(IamGroupNode::Table, IamGroupNode::RelGroupId),
                 )
                 .and_where(Expr::tbl(IamGroupNode::Table, IamGroupNode::Id).eq(group_node_id.as_str()))
-                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -391,9 +398,9 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamAccountGroup::RelAccountId).eq(account_id.as_str()))
         .and_where(Expr::col(IamAccountGroup::RelGroupNodeId).eq(group_node_id))
         .done();
-    BIOSFuns::reldb().soft_del(IamAccountGroup::Table, IamAccountGroup::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamAccountGroup::Table, IamAccountGroup::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     // Remove token
-    cache_processor::remove_token_by_account(&account_id).await?;
+    cache_processor::remove_token_by_account(&account_id, &context).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }

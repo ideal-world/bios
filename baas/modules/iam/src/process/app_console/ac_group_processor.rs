@@ -21,8 +21,8 @@ use strum::IntoEnumIterator;
 
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
@@ -33,10 +33,11 @@ use crate::process::app_console::ac_group_dto::{
     GroupAddReq, GroupDetailResp, GroupModifyReq, GroupNodeAddReq, GroupNodeDetailResp, GroupNodeModifyReq, GroupNodeOverviewResp, GroupQueryReq,
 };
 use crate::process::basic_dto::AuthObjectKind;
+use bios::basic::dto::BIOSResp;
 
 #[post("/console/app/group")]
-pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id = bios::basic::field::uuid();
 
     if BIOSFuns::reldb()
@@ -45,13 +46,13 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Code).eq(group_add_req.code.as_str().to_lowercase()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Group [code] already exists".to_string()));
+        return BIOSResp::err(BIOSError::Conflict("Group [code] already exists".to_string()), Some(&context));
     }
 
     BIOSFuns::reldb()
@@ -75,8 +76,8 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     group_add_req.code.as_str().to_lowercase().into(),
                     group_add_req.name.as_str().into(),
                     group_add_req.kind.to_string().to_lowercase().into(),
@@ -84,20 +85,20 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
                     group_add_req.sort.into(),
                     group_add_req.rel_group_id.as_deref().unwrap_or_default().into(),
                     group_add_req.rel_group_node_id.as_deref().unwrap_or_default().into(),
-                    ident_info.app_id.as_str().into(),
-                    ident_info.tenant_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                     group_add_req.expose_kind.as_ref().unwrap_or(&crate::process::basic_dto::ExposeKind::App).to_string().to_lowercase().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/app/group/{id}")]
-pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -106,13 +107,13 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("IamGroup not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("IamGroup not exists".to_string()), Some(&context));
     }
     let mut values = Vec::new();
     if let Some(name) = &group_modify_req.name {
@@ -136,24 +137,24 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
     if let Some(expose_kind) = &group_modify_req.expose_kind {
         values.push((IamGroup::ExposeKind, expose_kind.to_string().to_lowercase().into()));
     }
-    values.push((IamGroup::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamGroup::UpdateUser, context.ident.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamGroup::Table)
                 .values(values)
                 .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/app/group")]
-pub async fn list_group(query: VQuery<GroupQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_group(query: VQuery<GroupQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -201,28 +202,28 @@ pub async fn list_group(query: VQuery<GroupQueryReq>, req: HttpRequest) -> BIOSR
         .conditions(
             !query.expose,
             |x| {
-                x.and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()));
+                x.and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(context.ident.app_id.as_str()));
             },
             |x| {
                 x.cond_where(
                     Cond::any().add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase())).add(
                         Cond::all()
-                            .add(Expr::tbl(IamGroup::Table, IamGroup::RelTenantId).eq(ident_info.tenant_id.as_str()))
+                            .add(Expr::tbl(IamGroup::Table, IamGroup::RelTenantId).eq(context.ident.tenant_id.as_str()))
                             .add(Expr::tbl(IamGroup::Table, IamGroup::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
                     ),
                 );
             },
         )
-        .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::tbl(IamGroup::Table, IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
         .order_by(IamGroup::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<GroupDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/group/{id}")]
-pub async fn delete_group(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_group(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -231,13 +232,13 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("IamGroup not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("IamGroup not exists".to_string()), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -246,7 +247,7 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [group_node] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [group_node] data first".to_owned()),Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -256,18 +257,18 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResp {
         .columns(IamGroup::iter().filter(|i| *i != IamGroup::Table))
         .from(IamGroup::Table)
         .and_where(Expr::col(IamGroup::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamGroup::Table, IamGroup::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamGroup::Table, IamGroup::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 // ------------------------------------
 
 #[post("/console/app/group/{group_id}/node")]
-pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let group_id: String = req.match_info().get("group_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
 
@@ -277,13 +278,13 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()), Some(&context));
     }
 
     let last_group_node = BIOSFuns::reldb()
@@ -348,8 +349,8 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     code.as_str().into(),
                     group_node_add_req.bus_code.as_deref().unwrap_or_default().into(),
                     group_node_add_req.name.as_str().into(),
@@ -361,12 +362,12 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
             None,
         )
         .await?;
-    BIOSRespHelper::ok(GroupNodeOverviewResp { id, code })
+    BIOSResp::ok(GroupNodeOverviewResp { id, code }, Some(&context))
 }
 
 #[put("/console/app/group/{group_id}/node/{id}")]
-pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let group_id: String = req.match_info().get("group_id").unwrap().parse()?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
@@ -376,13 +377,13 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Group not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Group not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -396,7 +397,7 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -423,12 +424,12 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
             None,
         )
         .await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/app/group/{group_id}/node")]
-pub async fn list_group_node(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_group_node(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let group_id: String = req.match_info().get("group_id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -437,13 +438,13 @@ pub async fn list_group_node(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -479,12 +480,12 @@ pub async fn list_group_node(req: HttpRequest) -> BIOSResp {
         .order_by(IamGroupNode::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<GroupNodeDetailResp>(&sql_builder, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/group/{group_id}/node/{id}")]
-pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_group_node(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let group_id: String = req.match_info().get("group_id").unwrap().parse()?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
@@ -494,13 +495,13 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamGroup::Id])
                 .from(IamGroup::Table)
                 .and_where(Expr::col(IamGroup::Id).eq(group_id.as_str()))
-                .and_where(Expr::col(IamGroup::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamGroup::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Group not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Group not exists".to_string()), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -514,7 +515,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("GroupNode not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
     }
 
     let result = BIOSFuns::reldb()
@@ -537,7 +538,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -546,7 +547,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [account_group] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [account_group] data first".to_owned()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -558,7 +559,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResp {
         .and_where(Expr::col(IamGroupNode::Id).eq(id.as_str()))
         .and_where(Expr::col(IamGroupNode::RelGroupId).eq(group_id))
         .done();
-    BIOSFuns::reldb().soft_del(IamGroupNode::Table, IamGroupNode::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamGroupNode::Table, IamGroupNode::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }

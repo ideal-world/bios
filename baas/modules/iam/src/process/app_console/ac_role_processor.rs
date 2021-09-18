@@ -15,17 +15,17 @@
  */
 
 use actix_web::{delete, get, post, put, HttpRequest};
-use sea_query::{Alias, Expr, JoinType, Order, Query};
-use sqlx::Connection;
-use strum::IntoEnumIterator;
-
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
-use bios::web::basic_processor::get_ident_account_info;
-use bios::web::resp_handler::{BIOSResp, BIOSRespHelper};
+use bios::web::basic_processor::extract_context_with_account;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
 use bios::BIOSFuns;
+use sea_query::{Alias, Expr, JoinType, Order, Query};
+use sqlx::Connection;
+use strum::IntoEnumIterator;
 
 use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicyObject, IamRole};
 use crate::domain::ident_domain::IamAccount;
@@ -33,8 +33,8 @@ use crate::process::app_console::ac_role_dto::{RoleAddReq, RoleDetailResp, RoleM
 use crate::process::basic_dto::AuthObjectKind;
 
 #[post("/console/app/role")]
-pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     if BIOSFuns::reldb()
         .exists(
@@ -42,13 +42,13 @@ pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSR
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Code).eq(role_add_req.code.as_str().to_lowercase()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Role [code] already exists".to_string()));
+        return BIOSResp::err(BIOSError::Conflict("Role [code] already exists".to_string()), Some(&context));
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -67,24 +67,24 @@ pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSR
                 ])
                 .values_panic(vec![
                     id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
-                    ident_info.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
+                    context.ident.account_id.as_str().into(),
                     role_add_req.code.as_str().to_lowercase().into(),
                     role_add_req.name.as_str().into(),
                     role_add_req.sort.into(),
-                    ident_info.app_id.as_str().into(),
-                    ident_info.tenant_id.as_str().into(),
+                    context.ident.app_id.as_str().into(),
+                    context.ident.tenant_id.as_str().into(),
                 ])
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok(id)
+    BIOSResp::ok(id, Some(&context))
 }
 
 #[put("/console/app/role/{id}")]
-pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -93,13 +93,13 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Role not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
     }
     if let Some(code) = &role_modify_req.code {
         if BIOSFuns::reldb()
@@ -109,13 +109,13 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
                     .from(IamRole::Table)
                     .and_where(Expr::col(IamRole::Id).ne(id.as_str()))
                     .and_where(Expr::col(IamRole::Code).eq(code.to_string().to_lowercase()))
-                    .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                    .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                     .done(),
                 None,
             )
             .await?
         {
-            return BIOSRespHelper::bus_error(BIOSError::Conflict("Role [code] already exists".to_string()));
+            return BIOSResp::err(BIOSError::Conflict("Role [code] already exists".to_string()), Some(&context));
         }
     }
     let mut values = Vec::new();
@@ -128,24 +128,24 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
     if let Some(sort) = role_modify_req.sort {
         values.push((IamRole::Sort, sort.into()));
     }
-    values.push((IamRole::UpdateUser, ident_info.account_id.as_str().into()));
+    values.push((IamRole::UpdateUser, context.ident.account_id.as_str().into()));
     BIOSFuns::reldb()
         .exec(
             &Query::update()
                 .table(IamRole::Table)
                 .values(values)
                 .and_where(Expr::col(IamRole::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }
 
 #[get("/console/app/role")]
-pub async fn list_role(query: VQuery<RoleQueryReq>, req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn list_role(query: VQuery<RoleQueryReq>, req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
 
     let create_user_table = Alias::new("create");
     let update_user_table = Alias::new("update");
@@ -185,16 +185,16 @@ pub async fn list_role(query: VQuery<RoleQueryReq>, req: HttpRequest) -> BIOSRes
         } else {
             None
         })
-        .and_where(Expr::tbl(IamRole::Table, IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::tbl(IamRole::Table, IamRole::RelAppId).eq(context.ident.app_id.as_str()))
         .order_by(IamRole::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<RoleDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSRespHelper::ok(items)
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/role/{id}")]
-pub async fn delete_role(req: HttpRequest) -> BIOSResp {
-    let ident_info = get_ident_account_info(&req)?;
+pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
+    let context = extract_context_with_account(&req)?;
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if !BIOSFuns::reldb()
@@ -203,13 +203,13 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
                 .columns(vec![IamRole::Id])
                 .from(IamRole::Table)
                 .and_where(Expr::col(IamRole::Id).eq(id.as_str()))
-                .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+                .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::NotFound("Role not exists".to_string()));
+        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -223,7 +223,10 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [auth_policy_subject] data first".to_owned()));
+        return BIOSResp::err(
+            BIOSError::Conflict("Please delete the associated [auth_policy_subject] data first".to_owned()),
+            Some(&context),
+        );
     }
     if BIOSFuns::reldb()
         .exists(
@@ -232,7 +235,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
         )
         .await?
     {
-        return BIOSRespHelper::bus_error(BIOSError::Conflict("Please delete the associated [account_role] data first".to_owned()));
+        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [account_role] data first".to_owned()), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -242,10 +245,10 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResp {
         .columns(IamRole::iter().filter(|i| *i != IamRole::Table))
         .from(IamRole::Table)
         .and_where(Expr::col(IamRole::Id).eq(id.as_str()))
-        .and_where(Expr::col(IamRole::RelAppId).eq(ident_info.app_id.as_str()))
+        .and_where(Expr::col(IamRole::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
-    BIOSFuns::reldb().soft_del(IamRole::Table, IamRole::Id, &ident_info.account_id, &sql_builder, &mut tx).await?;
+    BIOSFuns::reldb().soft_del(IamRole::Table, IamRole::Id, &context.ident.account_id, &sql_builder, &mut tx).await?;
 
     tx.commit().await?;
-    BIOSRespHelper::ok("")
+    BIOSResp::ok("", Some(&context))
 }

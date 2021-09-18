@@ -21,9 +21,9 @@ use actix_web::{test, App};
 use testcontainers::clients;
 
 use bios::basic::config::FrameworkConfig;
-use bios::basic::dto::IdentAccountInfo;
-use bios::basic::error::BIOSResult;
-use bios::web::resp_handler::BIOSRespHelper;
+use bios::basic::dto::BIOSResp;
+use bios::basic::dto::IdentInfo;
+use bios::basic::result::BIOSResult;
 use bios::web::web_server::BIOSWebServer;
 use bios::BIOSFuns;
 use bios_baas_iam::iam_config::WorkSpaceConfig;
@@ -34,10 +34,12 @@ use bios_baas_iam::process::common::com_account_dto::{AccountChangeReq, AccountI
 use bios_baas_iam::process::common::com_resource_dto::ResourceDetailResp;
 use bios_baas_iam::process::common::com_tenant_dto::TenantRegisterReq;
 
+use crate::test_basic;
+
 #[actix_rt::test]
 async fn test_flow() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init_without_data(&docker).await;
+    let _c = test_basic::init_without_data(&docker).await;
     iam_initializer::init().await?;
     let app = test::init_service(
         App::new()
@@ -70,7 +72,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "400");
     assert_eq!(result.msg, "AccountIdent [sk] invalid format");
 
@@ -88,7 +90,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let ident_info = read_body_json::<BIOSRespHelper<IdentAccountInfo>, AnyBody>(resp).await.body.unwrap();
+    let ident_info = read_body_json::<BIOSResp<IdentInfo>, AnyBody>(resp).await.body.unwrap();
     assert!(!ident_info.tenant_id.is_empty());
     assert!(!ident_info.app_id.is_empty());
     assert!(!ident_info.account_id.is_empty());
@@ -111,7 +113,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "409");
     assert_eq!(result.msg, "AccountIdent [kind] and [ak] already exists");
 
@@ -129,7 +131,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "400");
     assert_eq!(result.msg, "AccountIdent [sk] invalid format");
 
@@ -147,7 +149,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let ident_info = read_body_json::<BIOSRespHelper<IdentAccountInfo>, AnyBody>(resp).await.body.unwrap();
+    let ident_info = read_body_json::<BIOSResp<IdentInfo>, AnyBody>(resp).await.body.unwrap();
     assert!(!ident_info.tenant_id.is_empty());
     assert!(!ident_info.app_id.is_empty());
     assert!(!ident_info.account_id.is_empty());
@@ -168,7 +170,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "404");
     assert_eq!(result.msg, "Account not exists");
 
@@ -184,7 +186,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "409");
     assert_eq!(result.msg, "Username or Password error");
 
@@ -200,7 +202,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let ident_info = read_body_json::<BIOSRespHelper<IdentAccountInfo>, AnyBody>(resp).await.body.unwrap();
+    let ident_info = read_body_json::<BIOSResp<IdentInfo>, AnyBody>(resp).await.body.unwrap();
     assert!(!ident_info.tenant_id.is_empty());
     assert!(!ident_info.app_id.is_empty());
     assert!(!ident_info.account_id.is_empty());
@@ -225,7 +227,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let ident_info = read_body_json::<BIOSRespHelper<IdentAccountInfo>, AnyBody>(resp).await.body.unwrap();
+    let ident_info = read_body_json::<BIOSResp<IdentInfo>, AnyBody>(resp).await.body.unwrap();
     assert!(!ident_info.tenant_id.is_empty());
     assert!(!ident_info.app_id.is_empty());
     assert!(!ident_info.account_id.is_empty());
@@ -243,14 +245,14 @@ async fn test_flow() -> BIOSResult<()> {
     let req = test::TestRequest::get().uri("/common/login").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "401");
     assert_eq!(result.msg, "Ident Info doesn't exists");
 
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone())).uri("/common/login").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/login").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let ident_info = read_body_json::<BIOSRespHelper<AccountInfoDetailResp>, AnyBody>(resp).await.body.unwrap();
+    let ident_info = read_body_json::<BIOSResp<AccountInfoDetailResp>, AnyBody>(resp).await.body.unwrap();
     assert!(!ident_info.tenant_id.is_empty());
     assert_eq!(ident_info.tenant_name, "测试租户");
     assert!(!ident_info.app_id.is_empty());
@@ -264,7 +266,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Change Account
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
         .uri("/common/account")
         .set_json(&AccountChangeReq {
             name: Some("理想世界".to_string()),
@@ -274,12 +276,12 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // Change AccountIdent
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
         .uri("/common/account/ident")
         .set_json(&AccountIdentChangeReq {
             kind: AccountIdentKind::Username,
@@ -289,11 +291,11 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.msg, "AccountIdent [kind] and [ak] already exists");
 
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
         .uri("/common/account/ident")
         .set_json(&AccountIdentChangeReq {
             kind: AccountIdentKind::Username,
@@ -303,11 +305,11 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.msg, "AccountIdent [sk] invalid format");
 
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
         .uri("/common/account/ident")
         .set_json(&AccountIdentChangeReq {
             kind: AccountIdentKind::Username,
@@ -317,7 +319,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // Re-Login
@@ -333,7 +335,7 @@ async fn test_flow() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let ident_info = read_body_json::<BIOSRespHelper<IdentAccountInfo>, AnyBody>(resp).await.body.unwrap();
+    let ident_info = read_body_json::<BIOSResp<IdentInfo>, AnyBody>(resp).await.body.unwrap();
 
     let token_rels = BIOSFuns::cache().hgetall(format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token_rel, ident_info.account_id).as_str()).await?;
     assert_eq!(token_rels.len(), 1);
@@ -342,29 +344,28 @@ async fn test_flow() -> BIOSResult<()> {
     let ident_info_in_header = bios::basic::security::digest::base64::encode(&bios::basic::json::obj_to_string(&ident_info)?);
 
     // Fetch menu
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone())).uri("/common/resource/menu").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/resource/menu").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let result = read_body_json::<BIOSResp<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].name, "测试应用菜单-租户共享菜单");
     assert_eq!(result[0].uri, format!("menu://{}/pub/**", ident_info.app_id));
 
     // Fetch element
-    let req =
-        test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone())).uri("/common/resource/element").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/resource/element").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let result = read_body_json::<BIOSResp<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].name, "测试应用元素-租户共享元素");
     assert_eq!(result[0].uri, format!("element://{}/pub/**", ident_info.app_id));
 
     // Logout
-    let req = test::TestRequest::delete().insert_header((BIOSFuns::fw_config().web.ident_info_flag.clone(), ident_info_in_header.clone())).uri("/common/logout").to_request();
+    let req = test::TestRequest::delete().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/logout").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     Ok(())

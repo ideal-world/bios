@@ -20,12 +20,12 @@ use actix_web::test::{call_service, read_body_json};
 use actix_web::{test, App};
 use testcontainers::clients;
 
+use crate::test_basic;
 use bios::basic::config::FrameworkConfig;
-use bios::basic::error::BIOSResult;
+use bios::basic::dto::BIOSResp;
+use bios::basic::result::BIOSResult;
 use bios::db::reldb_client::BIOSPage;
-use bios::web::resp_handler::BIOSRespHelper;
 use bios::web::web_server::BIOSWebServer;
-use bios::BIOSFuns;
 use bios_baas_iam::process::app_console;
 use bios_baas_iam::process::app_console::ac_group_dto::{
     GroupAddReq, GroupDetailResp, GroupModifyReq, GroupNodeAddReq, GroupNodeDetailResp, GroupNodeModifyReq, GroupNodeOverviewResp,
@@ -35,7 +35,7 @@ use bios_baas_iam::process::basic_dto::GroupKind;
 #[actix_rt::test]
 async fn test_group() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init(&docker).await;
+    let _c = test_basic::init(&docker).await;
     let app = test::init_service(
         App::new()
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
@@ -49,10 +49,7 @@ async fn test_group() -> BIOSResult<()> {
 
     // Add Group
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/app/group")
         .set_json(&GroupAddReq {
             code: " g001".to_string(),
@@ -67,14 +64,11 @@ async fn test_group() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "400");
 
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/app/group")
         .set_json(&GroupAddReq {
             code: "g001".to_string(),
@@ -89,14 +83,11 @@ async fn test_group() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let id = read_body_json::<BIOSResp<String>, AnyBody>(resp).await.body.unwrap();
 
     // Modify Group
     let req = test::TestRequest::put()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}", id.clone()).as_str())
         .set_json(&GroupModifyReq {
             name: Some("测试行政树".to_string()),
@@ -110,20 +101,14 @@ async fn test_group() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // List Group
-    let req = test::TestRequest::get()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri("/console/app/group?expose=false&page_number=1&page_size=10")
-        .to_request();
+    let req = test::TestRequest::get().insert_header(test_basic::context_account()).uri("/console/app/group?expose=false&page_number=1&page_size=10").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = read_body_json::<BIOSRespHelper<BIOSPage<GroupDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let body = read_body_json::<BIOSResp<BIOSPage<GroupDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(body.total_size, 1);
     assert_eq!(body.records[0].code, "g001");
     assert_eq!(body.records[0].name, "测试行政树");
@@ -131,16 +116,10 @@ async fn test_group() -> BIOSResult<()> {
     assert_eq!(body.records[0].update_user, "平台管理员");
 
     // Delete Group
-    let req = test::TestRequest::delete()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri(format!("/console/app/group/{}", id.clone()).as_str())
-        .to_request();
+    let req = test::TestRequest::delete().insert_header(test_basic::context_account()).uri(format!("/console/app/group/{}", id.clone()).as_str()).to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     Ok(())
@@ -149,7 +128,7 @@ async fn test_group() -> BIOSResult<()> {
 #[actix_rt::test]
 async fn test_group_node() -> BIOSResult<()> {
     let docker = clients::Cli::default();
-    let _c = crate::test_basic::init(&docker).await;
+    let _c = test_basic::init(&docker).await;
     let app = test::init_service(
         App::new()
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
@@ -164,10 +143,7 @@ async fn test_group_node() -> BIOSResult<()> {
 
     // Add Group
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri("/console/app/group")
         .set_json(&GroupAddReq {
             code: "g001".to_string(),
@@ -182,14 +158,11 @@ async fn test_group_node() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let group_id = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await.body.unwrap();
+    let group_id = read_body_json::<BIOSResp<String>, AnyBody>(resp).await.body.unwrap();
 
     // Add GroupNode
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node", group_id.clone()).as_str())
         .set_json(&GroupNodeAddReq {
             bus_code: None,
@@ -203,10 +176,7 @@ async fn test_group_node() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
 
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node", group_id.clone()).as_str())
         .set_json(&GroupNodeAddReq {
             bus_code: None,
@@ -218,14 +188,11 @@ async fn test_group_node() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let id_yy = read_body_json::<BIOSRespHelper<GroupNodeOverviewResp>, AnyBody>(resp).await.body.unwrap().id;
+    let id_yy = read_body_json::<BIOSResp<GroupNodeOverviewResp>, AnyBody>(resp).await.body.unwrap().id;
 
     // Modify GroupNode
     let req = test::TestRequest::put()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node/{}", group_id.clone(), id_yy.clone()).as_str())
         .set_json(&GroupNodeModifyReq {
             bus_code: Some("b001".to_string()),
@@ -236,41 +203,29 @@ async fn test_group_node() -> BIOSResult<()> {
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // List GroupNode
-    let req = test::TestRequest::get()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
-        .uri(format!("/console/app/group/{}/node", group_id.clone()).as_str())
-        .to_request();
+    let req = test::TestRequest::get().insert_header(test_basic::context_account()).uri(format!("/console/app/group/{}/node", group_id.clone()).as_str()).to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = read_body_json::<BIOSRespHelper<Vec<GroupNodeDetailResp>>, AnyBody>(resp).await.body.unwrap();
+    let body = read_body_json::<BIOSResp<Vec<GroupNodeDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert!(body[0].code == "aaab" || body[1].code == "aaab");
 
     // Delete GroupNode
     let req = test::TestRequest::delete()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node/{}", group_id.clone(), id_yy.clone()).as_str())
         .to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
-    let result = read_body_json::<BIOSRespHelper<String>, AnyBody>(resp).await;
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
     assert_eq!(result.code, "200");
 
     // Test GroupNode Code
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node", group_id.clone()).as_str())
         .set_json(&GroupNodeAddReq {
             bus_code: None,
@@ -284,10 +239,7 @@ async fn test_group_node() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
 
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node", group_id.clone()).as_str())
         .set_json(&GroupNodeAddReq {
             bus_code: None,
@@ -301,10 +253,7 @@ async fn test_group_node() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
 
     let req = test::TestRequest::post()
-        .insert_header((
-            BIOSFuns::fw_config().web.ident_info_flag.clone(),
-            bios::basic::security::digest::base64::encode(r#"{"app_id":"app1","tenant_id":"tenant1","account_id":"admin001","ak":"ak1","token":"t01"}"#),
-        ))
+        .insert_header(test_basic::context_account())
         .uri(format!("/console/app/group/{}/node", group_id.clone()).as_str())
         .set_json(&GroupNodeAddReq {
             bus_code: None,
@@ -317,7 +266,7 @@ async fn test_group_node() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let code = read_body_json::<BIOSRespHelper<GroupNodeOverviewResp>, AnyBody>(resp).await.body.unwrap().code;
+    let code = read_body_json::<BIOSResp<GroupNodeOverviewResp>, AnyBody>(resp).await.body.unwrap().code;
     assert_eq!(code, "aaaa.aaab.aaaa");
 
     Ok(())
