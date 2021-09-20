@@ -31,6 +31,7 @@ use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicyObject, IamRole};
 use crate::domain::ident_domain::IamAccount;
 use crate::process::app_console::ac_role_dto::{RoleAddReq, RoleDetailResp, RoleModifyReq, RoleQueryReq};
 use crate::process::basic_dto::AuthObjectKind;
+use crate::iam_constant::{IamOutput, ObjectKind};
 
 #[post("/console/app/role")]
 pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSResponse {
@@ -48,7 +49,10 @@ pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSR
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Role [code] already exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::Role, ObjectKind::Role),
+            Some(&context),
+        );
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -99,7 +103,10 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::Role, ObjectKind::Role),
+            Some(&context),
+        );
     }
     if let Some(code) = &role_modify_req.code {
         if BIOSFuns::reldb()
@@ -115,7 +122,10 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
             )
             .await?
         {
-            return BIOSResp::err(BIOSError::Conflict("Role [code] already exists".to_string()), Some(&context));
+            return BIOSResp::err(
+                IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::Role, ObjectKind::Role),
+                Some(&context),
+            );
         }
     }
     let mut values = Vec::new();
@@ -209,7 +219,10 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::Role, ObjectKind::Role),
+            Some(&context),
+        );
     }
     if BIOSFuns::reldb()
         .exists(
@@ -224,7 +237,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            BIOSError::Conflict("Please delete the associated [auth_policy_subject] data first".to_owned()),
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Role, ObjectKind::AuthPolicyObject),
             Some(&context),
         );
     }
@@ -235,7 +248,10 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [account_role] data first".to_owned()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Role, ObjectKind::AccountRole),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

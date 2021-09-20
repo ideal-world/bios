@@ -20,8 +20,39 @@ use std::fmt::Display;
 use crate::basic::dto::{BIOSContext, BIOSResp};
 use crate::basic::error::BIOSError;
 use crate::basic::field::GENERAL_SPLIT;
+use derive_more::Display;
 
 pub type BIOSResult<T> = Result<T, BIOSError>;
+
+#[derive(Display, Debug)]
+pub enum StatusCodeKind {
+    #[display(fmt = "400")]
+    NotFound,
+    #[display(fmt = "404")]
+    BadRequest,
+    #[display(fmt = "419")]
+    ConflictExists,
+    #[display(fmt = "429")]
+    ConflictExistFieldsAtSomeTime,
+    #[display(fmt = "439")]
+    ConflictExistAssociatedData,
+}
+
+#[derive(Display, Debug)]
+pub enum ActionKind {
+    #[display(fmt = "01")]
+    Create,
+    #[display(fmt = "02")]
+    Modify,
+    #[display(fmt = "03")]
+    FetchOne,
+    #[display(fmt = "04")]
+    FetchList,
+    #[display(fmt = "05")]
+    Delete,
+    #[display(fmt = "06")]
+    Exists,
+}
 
 pub fn parse<E: Display>(content: E) -> (String, String) {
     let text = content.to_string();

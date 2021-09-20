@@ -30,6 +30,7 @@ use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamApp, IamAppIdent};
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::basic_dto::CommonStatus;
 use crate::process::common::cache_processor;
 use crate::process::tenant_console::tc_app_dto::{AppAddReq, AppDetailResp, AppModifyReq, AppQueryReq};
@@ -87,7 +88,7 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::App, ObjectKind::App), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -208,7 +209,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::App, ObjectKind::App), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

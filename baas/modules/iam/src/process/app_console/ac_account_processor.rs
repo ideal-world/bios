@@ -20,7 +20,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
@@ -28,6 +27,7 @@ use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamGroup, IamGroupNode, IamRole};
 use crate::domain::ident_domain::IamAccount;
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::app_console::ac_account_dto::{AccountGroupDetailResp, AccountRoleDetailResp};
 use crate::process::common::cache_processor;
 
@@ -38,7 +38,7 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResponse {
     let role_id: String = req.match_info().get("role_id").unwrap().parse()?;
     let id = bios::basic::field::uuid();
 
-    if !BIOSFuns::reldb()
+    if BIOSFuns::reldb()
         .exists(
             &Query::select()
                 .columns(vec![IamAccount::Id])
@@ -50,7 +50,7 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AccountRole, ObjectKind::Account), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -64,7 +64,7 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AccountRole, ObjectKind::Account), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -80,7 +80,7 @@ pub async fn add_account_role(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            BIOSError::Conflict("IamAccountRole [rel_role_id] and [rel_account_id] already exists".to_string()),
+            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::AccountRole, ObjectKind::AccountRole),
             Some(&context),
         );
     }
@@ -127,7 +127,10 @@ pub async fn list_account_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityFetchListCheckNotFound(ObjectKind::AccountRole, ObjectKind::Account),
+            Some(&context),
+        );
     }
 
     let create_user_table = Alias::new("create");
@@ -180,7 +183,7 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AccountRole, ObjectKind::Account), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -194,7 +197,7 @@ pub async fn delete_account_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Role not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AccountRole, ObjectKind::Role), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -234,7 +237,10 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AccountGroup, ObjectKind::Account),
+            Some(&context),
+        );
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -252,7 +258,10 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AccountGroup, ObjectKind::GroupNode),
+            Some(&context),
+        );
     }
 
     if BIOSFuns::reldb()
@@ -268,7 +277,7 @@ pub async fn add_account_group(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            BIOSError::Conflict("IamAccountGroup [rel_group_node_id] and [rel_account_id] already exists".to_string()),
+            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::AccountGroup, ObjectKind::AccountGroup),
             Some(&context),
         );
     }
@@ -315,7 +324,10 @@ pub async fn list_account_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityFetchListCheckNotFound(ObjectKind::AccountGroup, ObjectKind::Account),
+            Some(&context),
+        );
     }
 
     let create_user_table = Alias::new("create");
@@ -368,7 +380,10 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AccountGroup, ObjectKind::Account),
+            Some(&context),
+        );
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -386,7 +401,10 @@ pub async fn delete_account_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AccountGroup, ObjectKind::GroupNode),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
