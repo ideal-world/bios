@@ -30,6 +30,7 @@ use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAuthPolicy, IamResource, IamResourceSubject};
 use crate::domain::ident_domain::IamAccount;
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::app_console::ac_resource_dto::{
     ResourceAddReq, ResourceDetailResp, ResourceModifyReq, ResourceQueryReq, ResourceSubjectAddReq, ResourceSubjectDetailResp, ResourceSubjectModifyReq, ResourceSubjectQueryReq,
 };
@@ -51,7 +52,10 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("ResourceSubject already exists".to_owned()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::ResourceSubject, ObjectKind::ResourceSubject),
+            Some(&context),
+        );
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -114,13 +118,19 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("ResourceSubject not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::ResourceSubject, ObjectKind::ResourceSubject),
+            Some(&context),
+        );
     }
 
     if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.uri.is_none()
         || resource_subject_modify_req.kind.is_none() && resource_subject_modify_req.uri.is_some()
     {
-        return BIOSResp::err(BIOSError::BadRequest("ResourceSubject [kin] and [uri] must both exist".to_owned()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityModifyCheckExistFieldsAtSomeTime(ObjectKind::ResourceSubject, "[kin] and [uri]"),
+            Some(&context),
+        );
     }
 
     let mut values = Vec::new();
@@ -140,7 +150,10 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
             )
             .await?
         {
-            return BIOSResp::err(BIOSError::Conflict("ResourceSubject already exists".to_owned()),Some(&context));
+            return BIOSResp::err(
+                IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::ResourceSubject, ObjectKind::ResourceSubject),
+                Some(&context),
+            );
         }
         values.push((IamResourceSubject::Kind, kind.into()));
         values.push((IamResourceSubject::Uri, uri.into()));
@@ -227,7 +240,7 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
         .order_by(IamResourceSubject::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<ResourceSubjectDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSResp::ok(items,Some(&context))
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/resource/subject/{id}")]
@@ -247,7 +260,10 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("ResourceSubject not exists".to_string()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::ResourceSubject, ObjectKind::ResourceSubject),
+            Some(&context),
+        );
     }
     if BIOSFuns::reldb()
         .exists(
@@ -256,7 +272,10 @@ pub async fn delete_resource_subject(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [resource] data first".to_owned()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::ResourceSubject, ObjectKind::Resource),
+            Some(&context),
+        );
     }
     let mut conn = BIOSFuns::reldb().conn().await;
     let mut tx = conn.begin().await?;
@@ -289,7 +308,10 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Resource [rel_resource_subject_id] not exists".to_string()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::Resource, ObjectKind::ResourceSubject),
+            Some(&context),
+        );
     }
     if BIOSFuns::reldb()
         .exists(
@@ -304,7 +326,7 @@ pub async fn add_resource(resource_add_req: Json<ResourceAddReq>, req: HttpReque
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Resource [path_and_query] already exists".to_string()),Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::Resource, ObjectKind::Resource), Some(&context));
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -367,7 +389,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Resource not exists".to_string()),Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::Resource, ObjectKind::Resource), Some(&context));
     }
     if let Some(path_and_query) = &resource_modify_req.path_and_query {
         let resource_subject_id_info = BIOSFuns::reldb()
@@ -400,7 +422,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
             )
             .await?
         {
-            return BIOSResp::err(BIOSError::Conflict("Resource [path_and_query] already exists".to_string()),Some(&context));
+            return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::Resource, ObjectKind::Resource), Some(&context));
         }
     }
     if let Some(parent_id) = &resource_modify_req.parent_id {
@@ -416,7 +438,7 @@ pub async fn modify_resource(resource_modify_req: Json<ResourceModifyReq>, req: 
             )
             .await?
         {
-            return BIOSResp::err(BIOSError::Conflict("Resource [parent_id] not found".to_string()),Some(&context));
+            return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::Resource, ObjectKind::Resource), Some(&context));
         }
     }
     let mut values = Vec::new();
@@ -525,7 +547,7 @@ pub async fn list_resource(query: VQuery<ResourceQueryReq>, req: HttpRequest) ->
         .order_by(IamResource::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().pagination::<ResourceDetailResp>(&sql_builder, query.page_number, query.page_size, None).await?;
-    BIOSResp::ok(items,Some(&context))
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/resource/{id}")]
@@ -545,7 +567,7 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Resource not exists".to_string()),Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::Resource, ObjectKind::Resource), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -554,7 +576,10 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Resource, ObjectKind::AuthPolicyObject),
+            Some(&context),
+        );
     }
 
     if BIOSFuns::reldb()
@@ -564,7 +589,10 @@ pub async fn delete_resource(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [resource] data first".to_owned()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Resource, ObjectKind::Resource),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

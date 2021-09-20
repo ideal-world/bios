@@ -25,12 +25,13 @@ use sqlx::{MySql, Transaction};
 use bios::basic::dto::BIOSContext;
 use bios::basic::error::BIOSError;
 use bios::basic::result::BIOSResult;
-use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
+use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::IamTenantIdent;
 use crate::iam_config::WorkSpaceConfig;
+use crate::iam_constant::IamOutput;
 use crate::process::basic_dto::{AccountIdentKind, AuthObjectKind, AuthObjectOperatorKind, AuthResultKind, ExposeKind, OptActionKind, ResourceKind};
 use crate::process::common::cache_processor;
 
@@ -57,7 +58,7 @@ pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str
                 aksks.insert(tenant_ident_info.valid_ak_rule.clone(), Regex::new(&tenant_ident_info.valid_ak_rule).unwrap());
             }
             if !aksks.get(&tenant_ident_info.valid_ak_rule).unwrap().is_match(ak) {
-                return Err(BIOSError::BadRequest("AccountIdent [ak] invalid format".to_string()));
+                return BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidFormat("ak"));
             }
         }
         if !sk.is_empty() && !tenant_ident_info.valid_sk_rule.is_empty() {
@@ -66,12 +67,12 @@ pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str
                 aksks.insert(tenant_ident_info.valid_sk_rule.clone(), Regex::new(&tenant_ident_info.valid_sk_rule).unwrap());
             }
             if !aksks.get(&tenant_ident_info.valid_sk_rule).unwrap().is_match(sk) {
-                return Err(BIOSError::BadRequest("AccountIdent [sk] invalid format".to_string()));
+                return BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidFormat("sk"));
             }
         }
         Ok(Utc::now().timestamp() + tenant_ident_info.valid_time)
     } else {
-        Err(BIOSError::NotFound("AccountIdent [kind] not exists".to_string()))
+        return BIOSError::err(IamOutput::CommonAccountIdentValidCheckNotFound());
     }
 }
 

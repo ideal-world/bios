@@ -33,6 +33,7 @@ use bios::BIOSFuns;
 use crate::domain::auth_domain::{IamAccountGroup, IamAccountRole, IamAuthPolicy, IamAuthPolicyObject, IamGroup, IamGroupNode, IamResource, IamResourceSubject, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamAccountIdent, IamApp, IamAppIdent, IamTenant, IamTenantCert, IamTenantIdent};
 use crate::iam_config::WorkSpaceConfig;
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::basic_dto::{AccountIdentKind, AuthObjectKind, AuthObjectOperatorKind, CommonStatus, ExposeKind, OptActionKind, ResourceKind};
 use crate::process::common::com_account_dto::{AccountChangeReq, AccountIdentChangeReq, AccountInfoDetailResp, AccountLoginReq, AccountRegisterReq};
 use crate::process::common::com_resource_dto::ResourceDetailResp;
@@ -490,7 +491,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
         )
         .await?;
     if tenant_id.is_none() {
-        return BIOSResp::err(BIOSError::NotFound("App not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, ObjectKind::App), Some(&context));
     }
     let tenant_id = tenant_id.unwrap();
     let tenant_id = tenant_id["id"].as_str().unwrap();
@@ -520,7 +521,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()),Some(&context));
+        return BIOSResp::err(IamOutput::CommonEntityCreateCheckExists(ObjectKind::Account, ObjectKind::AccountIdent), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -621,7 +622,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
     // Login
     let ident_info = do_login(account_register_req.ak.as_str(), valid_end_time, "", &context).await?;
 
-    BIOSResp::ok(ident_info,Some(&context))
+    BIOSResp::ok(ident_info, Some(&context))
 }
 
 #[post("/common/login")]
@@ -677,7 +678,7 @@ pub async fn login(account_login_req: Json<AccountLoginReq>, req: HttpRequest) -
             account_login_req.kind.to_string().to_lowercase(),
             account_login_req.ak
         );
-        return BIOSResp::err(BIOSError::NotFound("Account not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::CommonLoginCheckNotFoundOrExpired(ObjectKind::Account), Some(&context));
     }
     let account_info = account_info.unwrap();
     let stored_sk = account_info["sk"].as_str().unwrap();
@@ -908,7 +909,7 @@ pub async fn change_account_ident(account_ident_change_req: Json<AccountIdentCha
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("AccountIdent [kind] and [ak] already exists".to_string()),Some(&context));
+        return BIOSResp::err(IamOutput::CommonEntityModifyCheckExists(ObjectKind::AccountIdent, ObjectKind::AccountIdent), Some(&context));
     }
 
     auth_processor::valid_account_ident(&account_ident_change_req.kind, &account_ident_change_req.ak, &account_ident_change_req.sk, None, &context).await?;

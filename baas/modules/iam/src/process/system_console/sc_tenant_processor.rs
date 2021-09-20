@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-use actix_web::{delete, get, post, put, HttpRequest};
+use actix_web::{delete, get, HttpRequest, post, put};
 use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
+use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
-use bios::BIOSFuns;
 
 use crate::domain::ident_domain::{IamAccount, IamApp, IamAppIdent, IamTenant};
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::basic_dto::CommonStatus;
 use crate::process::common::cache_processor;
 use crate::process::system_console::sc_tenant_dto::{TenantAddReq, TenantDetailResp, TenantModifyReq, TenantQueryReq};
@@ -190,7 +191,10 @@ pub async fn delete_tenant(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [app] data first".to_owned()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::SystemConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Tenant, ObjectKind::App),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-use actix_web::{delete, get, HttpRequest, post, put};
+use actix_web::{delete, get, post, put, HttpRequest};
 use sea_query::{Alias, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
-use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
+use bios::BIOSFuns;
 
 use crate::domain::ident_domain::{IamAccount, IamAppIdent};
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::app_console::ac_app_dto::{AppIdentAddReq, AppIdentDetailResp, AppIdentModifyReq};
 use crate::process::common::cache_processor;
 
@@ -93,7 +93,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("AppIdent not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::AppIdent, ObjectKind::AppIdent), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -164,7 +164,7 @@ pub async fn list_app_ident(req: HttpRequest) -> BIOSResponse {
         .order_by(IamAppIdent::UpdateTime, Order::Desc)
         .done();
     let items = BIOSFuns::reldb().fetch_all::<AppIdentDetailResp>(&sql_builder, None).await?;
-    BIOSResp::ok(items,Some(&context))
+    BIOSResp::ok(items, Some(&context))
 }
 
 #[delete("/console/app/app/ident/{id}")]
@@ -184,7 +184,7 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("AppIdent not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AppIdent, ObjectKind::AppIdent), Some(&context));
     }
 
     let sql_builder = Query::select().columns(vec![IamAppIdent::Ak, IamAppIdent::Sk]).from(IamAppIdent::Table).and_where(Expr::col(IamAppIdent::Id).eq(id.as_str())).done();
@@ -217,7 +217,7 @@ pub async fn get_app_ident_sk(req: HttpRequest) -> BIOSResponse {
         .and_where(Expr::col(IamAppIdent::RelAppId).eq(context.ident.app_id.as_str()))
         .done();
     let aksk_resp = BIOSFuns::reldb().fetch_one::<AkSkResp>(&sql_builder, None).await?;
-    BIOSResp::ok(aksk_resp.sk,Some(&context))
+    BIOSResp::ok(aksk_resp.sk, Some(&context))
 }
 
 #[derive(sqlx::FromRow, serde::Deserialize)]

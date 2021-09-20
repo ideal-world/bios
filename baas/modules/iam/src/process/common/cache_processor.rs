@@ -23,12 +23,13 @@ use bios::basic::dto::{BIOSContext, IdentInfo};
 use bios::basic::error::BIOSError;
 use bios::basic::field::GENERAL_SPLIT;
 use bios::basic::result::BIOSResult;
-use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
+use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAuthPolicy, IamAuthPolicyObject, IamGroupNode, IamResource, IamResourceSubject};
 use crate::domain::ident_domain::IamTenantCert;
 use crate::iam_config::WorkSpaceConfig;
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::basic_dto::AuthObjectKind;
 
 pub async fn set_token<'c>(valid_end_time: i64, context: &BIOSContext) -> BIOSResult<()> {
@@ -54,7 +55,7 @@ pub async fn remove_token<'c>(context: &BIOSContext) -> BIOSResult<()> {
     let cache_token_key = format!("{}{}", BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.token, context.ident.token);
     let ident_info = BIOSFuns::cache().get(&cache_token_key).await?;
     if ident_info.is_none() {
-        return Err(BIOSError::NotFound(format!("Token [{}] not found", context.ident.token)));
+        return BIOSError::err(IamOutput::CommonEntityDeleteCheckNotFound(ObjectKind::Token, ObjectKind::Token));
     }
     let ident_info = bios::basic::json::str_to_obj::<IdentInfo>(ident_info.unwrap().as_str())?;
     BIOSFuns::cache().del(&cache_token_key).await?;

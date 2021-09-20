@@ -19,6 +19,7 @@ use sea_query::{Alias, Cond, Expr, Func, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
+use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
@@ -29,11 +30,11 @@ use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAccountGroup, IamAuthPolicyObject, IamGroup, IamGroupNode};
 use crate::domain::ident_domain::IamAccount;
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::app_console::ac_group_dto::{
     GroupAddReq, GroupDetailResp, GroupModifyReq, GroupNodeAddReq, GroupNodeDetailResp, GroupNodeModifyReq, GroupNodeOverviewResp, GroupQueryReq,
 };
 use crate::process::basic_dto::AuthObjectKind;
-use bios::basic::dto::BIOSResp;
 
 #[post("/console/app/group")]
 pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BIOSResponse {
@@ -52,7 +53,7 @@ pub async fn add_group(group_add_req: Json<GroupAddReq>, req: HttpRequest) -> BI
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Group [code] already exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::Group, ObjectKind::Group), Some(&context));
     }
 
     BIOSFuns::reldb()
@@ -113,7 +114,7 @@ pub async fn modify_group(group_modify_req: Json<GroupModifyReq>, req: HttpReque
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("IamGroup not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::Group, ObjectKind::Group), Some(&context));
     }
     let mut values = Vec::new();
     if let Some(name) = &group_modify_req.name {
@@ -238,7 +239,7 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("IamGroup not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::Group, ObjectKind::Group), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -247,7 +248,10 @@ pub async fn delete_group(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [group_node] data first".to_owned()),Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Group, ObjectKind::GroupNode),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -284,7 +288,7 @@ pub async fn add_group_node(group_node_add_req: Json<GroupNodeAddReq>, req: Http
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::GroupNode, ObjectKind::Group), Some(&context));
     }
 
     let last_group_node = BIOSFuns::reldb()
@@ -383,7 +387,7 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Group not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::GroupNode, ObjectKind::Group), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -397,7 +401,7 @@ pub async fn modify_group_node(group_node_modify_req: Json<GroupNodeModifyReq>, 
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::GroupNode, ObjectKind::GroupNode), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -444,7 +448,7 @@ pub async fn list_group_node(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("GroupNode [rel_group_id] not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityFetchListCheckNotFound(ObjectKind::GroupNode, ObjectKind::Group), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -501,7 +505,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("Group not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::GroupNode, ObjectKind::Group), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -515,7 +519,7 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("GroupNode not exists".to_string()), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::GroupNode, ObjectKind::GroupNode), Some(&context));
     }
 
     let result = BIOSFuns::reldb()
@@ -538,7 +542,10 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [auth_policy] data first".to_owned()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::GroupNode, ObjectKind::AuthPolicyObject),
+            Some(&context),
+        );
     }
     if BIOSFuns::reldb()
         .exists(
@@ -547,7 +554,10 @@ pub async fn delete_group_node(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [account_group] data first".to_owned()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::GroupNode, ObjectKind::AccountGroup),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

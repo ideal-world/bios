@@ -31,6 +31,7 @@ use crate::domain::ident_domain::{IamAccount, IamAccountIdent, IamTenant, IamTen
 use crate::process::tenant_console::tc_tenant_dto::{
     TenantCertAddReq, TenantCertDetailResp, TenantCertModifyReq, TenantDetailResp, TenantIdentAddReq, TenantIdentDetailResp, TenantIdentModifyReq, TenantModifyReq,
 };
+use crate::iam_constant::{IamOutput, ObjectKind};
 
 #[put("/console/tenant/tenant")]
 pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRequest) -> BIOSResponse {
@@ -117,7 +118,10 @@ pub async fn add_tenant_cert(tenant_cert_add_req: Json<TenantCertAddReq>, req: H
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("TenantCert [category] already exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::TenantCert, ObjectKind::TenantCert),
+            Some(&context),
+        );
     }
 
     BIOSFuns::reldb()
@@ -164,7 +168,10 @@ pub async fn modify_tenant_cert(tenant_cert_modify_req: Json<TenantCertModifyReq
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("TenantCert not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::TenantCert, ObjectKind::TenantCert),
+            Some(&context),
+        );
     }
 
     let mut values = Vec::new();
@@ -241,7 +248,10 @@ pub async fn delete_tenant_cert(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("TenantCert not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::TenantCert, ObjectKind::TenantCert),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -277,7 +287,10 @@ pub async fn add_tenant_ident(tenant_ident_add_req: Json<TenantIdentAddReq>, req
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("TenantIdent [kind] already exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::TenantIdent, ObjectKind::TenantIdent),
+            Some(&context),
+        );
     }
 
     BIOSFuns::reldb()
@@ -332,7 +345,10 @@ pub async fn modify_tenant_ident(tenant_ident_modify_req: Json<TenantIdentModify
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("TenantIdent not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::TenantIdent, ObjectKind::TenantIdent),
+            Some(&context),
+        );
     }
 
     let mut values = Vec::new();
@@ -425,7 +441,10 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::NotFound("TenantIdent not exists".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::TenantIdent, ObjectKind::TenantIdent),
+            Some(&context),
+        );
     }
     if BIOSFuns::reldb()
         .exists(
@@ -443,7 +462,10 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(BIOSError::Conflict("Please delete the associated [account_ident] data first".to_owned()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::TenantIdent, ObjectKind::AccountIdent),
+            Some(&context),
+        );
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
