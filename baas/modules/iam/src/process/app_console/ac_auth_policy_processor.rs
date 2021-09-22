@@ -20,7 +20,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
@@ -60,10 +59,7 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AuthPolicy, ObjectKind::AuthPolicy),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AuthPolicy, "AuthPolicy"), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -81,7 +77,7 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::AuthPolicy, ObjectKind::AuthPolicy), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::AuthPolicy, "AuthPolicy"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -151,10 +147,7 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::AuthPolicy, ObjectKind::AuthPolicy),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::AuthPolicy, "AuthPolicy"), Some(&context));
     }
     if auth_policy_modify_req.valid_start_time.is_some() && auth_policy_modify_req.valid_end_time.is_some() {
         if BIOSFuns::reldb()
@@ -170,7 +163,7 @@ pub async fn modify_auth_policy(auth_policy_modify_req: Json<AuthPolicyModifyReq
             )
             .await?
         {
-            return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::AuthPolicy, ObjectKind::AuthPolicy), Some(&context));
+            return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::AuthPolicy, "AuthPolicy"), Some(&context));
         }
     }
 
@@ -283,10 +276,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AuthPolicy, ObjectKind::AuthPolicy),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AuthPolicy, "AuthPolicy"), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -300,7 +290,7 @@ pub async fn delete_auth_policy(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::AuthPolicy, ObjectKind::AuthPolicyObject),
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::AuthPolicy, "AuthPolicyObject"),
             Some(&context),
         );
     }
@@ -342,10 +332,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AuthPolicyObject, ObjectKind::AuthPolicy),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckNotFound(ObjectKind::AuthPolicyObject, "AuthPolicy"), Some(&context));
     }
 
     let allow = match auth_policy_object_add_req.object_kind {
@@ -421,7 +408,7 @@ pub async fn add_auth_policy_object(auth_policy_object_add_req: Json<AuthPolicyO
         .await?
     {
         return BIOSResp::err(
-            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::AuthPolicyObject, ObjectKind::AuthPolicyObject),
+            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::AuthPolicyObject, "AuthPolicyObject"),
             Some(&context),
         );
     }
@@ -478,7 +465,7 @@ pub async fn list_auth_policy_object(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            IamOutput::AppConsoleEntityFetchListCheckNotFound(ObjectKind::AuthPolicyObject, ObjectKind::AuthPolicy),
+            IamOutput::AppConsoleEntityFetchListCheckNotFound(ObjectKind::AuthPolicyObject, "AuthPolicy"),
             Some(&context),
         );
     }
@@ -535,10 +522,7 @@ pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AuthPolicyObject, ObjectKind::AuthPolicy),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AuthPolicyObject, "AuthPolicy"), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -558,7 +542,7 @@ pub async fn delete_auth_policy_object(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AuthPolicyObject, ObjectKind::AuthPolicyObject),
+            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AuthPolicyObject, "AuthPolicyObject"),
             Some(&context),
         );
     }

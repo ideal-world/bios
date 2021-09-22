@@ -69,7 +69,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "404");
+    assert_eq!(result.code, "404010201701");
 
     // Add ResourceSubject
     let req = test::TestRequest::post()
@@ -142,7 +142,7 @@ async fn test_auth_policy() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "409");
+    assert_eq!(result.code, "419010201701");
 
     // Modify AuthPolicy
     let req = test::TestRequest::put()
@@ -266,7 +266,7 @@ async fn test_auth_policy_object() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "404");
+    assert_eq!(result.code, "404010201801");
 
     let req = test::TestRequest::post()
         .insert_header(test_basic::context_account())

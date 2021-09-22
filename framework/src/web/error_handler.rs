@@ -27,6 +27,7 @@ use log::{trace, warn};
 
 use crate::basic::dto::BIOSResp;
 use crate::basic::error::BIOSError;
+use crate::basic::field::GENERAL_SPLIT;
 
 pub struct WebErrorHandler;
 
@@ -118,7 +119,7 @@ where
     }
 }
 
-fn convert_resp(http_status_code: u16, msg: String) -> BIOSResp<()> {
+fn convert_resp<'c>(http_status_code: u16, msg: String) -> BIOSResp<'c, ()> {
     let error = match http_status_code {
         500 => BIOSError::InternalError(msg),
         501 => BIOSError::NotImplemented(msg),
@@ -133,22 +134,35 @@ fn convert_resp(http_status_code: u16, msg: String) -> BIOSResp<()> {
         _ => BIOSError::BadRequest(msg),
     };
     let (code, msg) = crate::basic::result::parse(error);
-    BIOSResp::<()> {
+    BIOSResp::<'c, ()> {
         code,
         msg,
         body: None,
         trace_id: None,
         trace_app: None,
         trace_inst: None,
+        ctx: None,
     }
 }
 
 impl ResponseError for BIOSError {
-    fn status_code(&self) -> StatusCode {
-        StatusCode::INTERNAL_SERVER_ERROR
-    }
-
     fn error_response(&self) -> HttpResponse {
-        HttpResponseBuilder::new(self.status_code()).body(self.to_string())
+        let error_msg = &self.to_string();
+        let split_idx = error_msg.find(GENERAL_SPLIT);
+        if split_idx.is_some() {
+            let code = &error_msg[..split_idx.unwrap()];
+            let message = &error_msg[split_idx.unwrap() + 2..];
+            HttpResponse::Ok().json(BIOSResp::<'_, ()> {
+                code: code.to_string(),
+                msg: message.to_string(),
+                body: None,
+                trace_id: None,
+                trace_app: None,
+                trace_inst: None,
+                ctx: None,
+            })
+        } else {
+            HttpResponseBuilder::new(StatusCode::INTERNAL_SERVER_ERROR).body(self.to_string())
+        }
     }
 }

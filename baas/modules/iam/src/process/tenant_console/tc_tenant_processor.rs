@@ -20,7 +20,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
@@ -28,10 +27,10 @@ use bios::web::validate::json::Json;
 use bios::BIOSFuns;
 
 use crate::domain::ident_domain::{IamAccount, IamAccountIdent, IamTenant, IamTenantCert, IamTenantIdent};
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::tenant_console::tc_tenant_dto::{
     TenantCertAddReq, TenantCertDetailResp, TenantCertModifyReq, TenantDetailResp, TenantIdentAddReq, TenantIdentDetailResp, TenantIdentModifyReq, TenantModifyReq,
 };
-use crate::iam_constant::{IamOutput, ObjectKind};
 
 #[put("/console/tenant/tenant")]
 pub async fn modify_tenant(tenant_modify_req: Json<TenantModifyReq>, req: HttpRequest) -> BIOSResponse {
@@ -118,10 +117,7 @@ pub async fn add_tenant_cert(tenant_cert_add_req: Json<TenantCertAddReq>, req: H
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::TenantCert, ObjectKind::TenantCert),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::TenantCert, "TenantCert"), Some(&context));
     }
 
     BIOSFuns::reldb()
@@ -168,10 +164,7 @@ pub async fn modify_tenant_cert(tenant_cert_modify_req: Json<TenantCertModifyReq
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::TenantCert, ObjectKind::TenantCert),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::TenantCert, "TenantCert"), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -248,10 +241,7 @@ pub async fn delete_tenant_cert(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::TenantCert, ObjectKind::TenantCert),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::TenantCert, "TenantCert"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -287,10 +277,7 @@ pub async fn add_tenant_ident(tenant_ident_add_req: Json<TenantIdentAddReq>, req
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::TenantIdent, ObjectKind::TenantIdent),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::TenantIdent, "TenantIdent"), Some(&context));
     }
 
     BIOSFuns::reldb()
@@ -345,10 +332,7 @@ pub async fn modify_tenant_ident(tenant_ident_modify_req: Json<TenantIdentModify
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::TenantIdent, ObjectKind::TenantIdent),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::TenantIdent, "TenantIdent"), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -441,10 +425,7 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::TenantIdent, ObjectKind::TenantIdent),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::TenantIdent, "TenantIdent"), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -463,7 +444,7 @@ pub async fn delete_tenant_ident(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            IamOutput::TenantConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::TenantIdent, ObjectKind::AccountIdent),
+            IamOutput::TenantConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::TenantIdent, "AccountIdent"),
             Some(&context),
         );
     }

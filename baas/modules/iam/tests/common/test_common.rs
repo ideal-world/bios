@@ -21,8 +21,8 @@ use actix_web::{test, App};
 use testcontainers::clients;
 
 use bios::basic::config::FrameworkConfig;
-use bios::basic::dto::BIOSResp;
 use bios::basic::dto::IdentInfo;
+use bios::basic::dto::{BIOSContext, BIOSResp};
 use bios::basic::result::BIOSResult;
 use bios::web::web_server::BIOSWebServer;
 use bios::BIOSFuns;
@@ -73,10 +73,30 @@ async fn test_flow() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "400");
+    assert_eq!(result.code, "400000000000");
+    assert_eq!(result.msg, "BIOS Context doesn't exists");
+
+    let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
+        .uri("/common/tenant")
+        .set_json(&TenantRegisterReq {
+            name: "测试租户".to_string(),
+            icon: None,
+            allow_account_register: true,
+            parameters: None,
+            app_name: "测试应用".to_string(),
+            account_username: "gudaoxuri".to_string(),
+            account_password: "123456".to_string(),
+        })
+        .to_request();
+    let resp = call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
+    assert_eq!(result.code, "400010101052");
     assert_eq!(result.msg, "AccountIdent [sk] invalid format");
 
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/tenant")
         .set_json(&TenantRegisterReq {
             name: "测试租户".to_string(),
@@ -100,6 +120,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Register Account
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/account")
         .set_json(&AccountRegisterReq {
             name: "孤岛旭日".to_string(),
@@ -114,10 +135,11 @@ async fn test_flow() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "409");
-    assert_eq!(result.msg, "AccountIdent [kind] and [ak] already exists");
+    assert_eq!(result.code, "419010101001");
+    assert_eq!(result.msg, "[AccountIdent] already exists");
 
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/account")
         .set_json(&AccountRegisterReq {
             name: "孤岛旭日".to_string(),
@@ -132,10 +154,11 @@ async fn test_flow() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "400");
+    assert_eq!(result.code, "400010101052");
     assert_eq!(result.msg, "AccountIdent [sk] invalid format");
 
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/account")
         .set_json(&AccountRegisterReq {
             name: "孤岛旭日".to_string(),
@@ -159,6 +182,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Login
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/login")
         .set_json(&AccountLoginReq {
             kind: AccountIdentKind::Username,
@@ -171,10 +195,11 @@ async fn test_flow() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "404");
-    assert_eq!(result.msg, "Account not exists");
+    assert_eq!(result.code, "404010101050");
+    assert_eq!(result.msg, "AccountIdent [gudaoxuri2] doesn't exist or has expired");
 
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/login")
         .set_json(&AccountLoginReq {
             kind: AccountIdentKind::Username,
@@ -187,10 +212,11 @@ async fn test_flow() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "409");
-    assert_eq!(result.msg, "Username or Password error");
+    assert_eq!(result.code, "409010101055");
+    assert_eq!(result.msg, "Username [gudaoxuri] or Password error");
 
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/login")
         .set_json(&AccountLoginReq {
             kind: AccountIdentKind::Username,
@@ -216,6 +242,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Re-Login and check token version
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/login")
         .set_json(&AccountLoginReq {
             kind: AccountIdentKind::Username,
@@ -239,17 +266,21 @@ async fn test_flow() -> BIOSResult<()> {
     assert_eq!(token_rels.len(), 1);
     assert!(token_rels.contains_key(&ident_info.token));
 
-    let ident_info_in_header = bios::basic::security::digest::base64::encode(&bios::basic::json::obj_to_string(&ident_info)?);
+    let bios_context_in_header = bios::basic::security::digest::base64::encode(&bios::basic::json::obj_to_string(&BIOSContext {
+        ident: ident_info,
+        trace: Default::default(),
+        lang: "".to_string(),
+    })?);
 
     // Fetch login info
     let req = test::TestRequest::get().uri("/common/login").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "401");
-    assert_eq!(result.msg, "Ident Info doesn't exists");
+    assert_eq!(result.code, "400000000000");
+    assert_eq!(result.msg, "BIOS Context doesn't exists");
 
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/login").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/login").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let ident_info = read_body_json::<BIOSResp<AccountInfoDetailResp>, AnyBody>(resp).await.body.unwrap();
@@ -266,7 +297,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Change Account
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone()))
         .uri("/common/account")
         .set_json(&AccountChangeReq {
             name: Some("理想世界".to_string()),
@@ -281,7 +312,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Change AccountIdent
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone()))
         .uri("/common/account/ident")
         .set_json(&AccountIdentChangeReq {
             kind: AccountIdentKind::Username,
@@ -292,10 +323,10 @@ async fn test_flow() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.msg, "AccountIdent [kind] and [ak] already exists");
+    assert_eq!(result.msg, "[AccountIdent] already exists");
 
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone()))
         .uri("/common/account/ident")
         .set_json(&AccountIdentChangeReq {
             kind: AccountIdentKind::Username,
@@ -309,7 +340,7 @@ async fn test_flow() -> BIOSResult<()> {
     assert_eq!(result.msg, "AccountIdent [sk] invalid format");
 
     let req = test::TestRequest::put()
-        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone()))
+        .insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone()))
         .uri("/common/account/ident")
         .set_json(&AccountIdentChangeReq {
             kind: AccountIdentKind::Username,
@@ -324,6 +355,7 @@ async fn test_flow() -> BIOSResult<()> {
 
     // Re-Login
     let req = test::TestRequest::post()
+        .insert_header(test_basic::context_pub())
         .uri("/common/login")
         .set_json(&AccountLoginReq {
             kind: AccountIdentKind::Username,
@@ -341,10 +373,14 @@ async fn test_flow() -> BIOSResult<()> {
     assert_eq!(token_rels.len(), 1);
     assert!(token_rels.contains_key(&ident_info.token));
 
-    let ident_info_in_header = bios::basic::security::digest::base64::encode(&bios::basic::json::obj_to_string(&ident_info)?);
+    let bios_context_in_header = bios::basic::security::digest::base64::encode(&bios::basic::json::obj_to_string(&BIOSContext {
+        ident: ident_info.clone(),
+        trace: Default::default(),
+        lang: "".to_string(),
+    })?);
 
     // Fetch menu
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/resource/menu").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/resource/menu").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
@@ -353,7 +389,7 @@ async fn test_flow() -> BIOSResult<()> {
     assert_eq!(result[0].uri, format!("menu://{}/pub/**", ident_info.app_id));
 
     // Fetch element
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/resource/element").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/resource/element").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
@@ -362,7 +398,7 @@ async fn test_flow() -> BIOSResult<()> {
     assert_eq!(result[0].uri, format!("element://{}/pub/**", ident_info.app_id));
 
     // Logout
-    let req = test::TestRequest::delete().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), ident_info_in_header.clone())).uri("/common/logout").to_request();
+    let req = test::TestRequest::delete().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/logout").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;

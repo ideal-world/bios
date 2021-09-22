@@ -24,7 +24,7 @@ use sqlx::{MySql, Transaction};
 
 use bios::basic::dto::BIOSContext;
 use bios::basic::error::BIOSError;
-use bios::basic::result::BIOSResult;
+use bios::basic::result::{output, BIOSResult};
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::BIOSFuns;
 
@@ -89,16 +89,16 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                     if error_times >= BIOSFuns::ws_config::<WorkSpaceConfig>().iam.security.account_vcode_max_error_times as usize {
                         cache_processor::remove_vcode(ak, &context).await?;
                         cache_processor::remove_vcode_error_times(ak, &context).await?;
-                        log::warn!("Verification code [{}] in tenant [{}] over the maximum times", ak, context.ident.tenant_id);
-                        Err(BIOSError::Conflict("Verification code over the maximum times".to_string()))
+                        log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
+                        BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
                     } else {
-                        log::warn!("Verification code [{}] in tenant [{}] doesn't match", ak, context.ident.tenant_id);
-                        Err(BIOSError::Conflict("Verification code doesn't exist or has expired".to_string()))
+                        log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log());
+                        BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()))
                     }
                 }
             } else {
-                log::warn!("Verification code [{}] in tenant [{}] doesn't exist or has expired", ak, context.ident.tenant_id);
-                Err(BIOSError::Conflict("Verification code doesn't exist or has expired".to_string()))
+                log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log());
+                BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()))
             }
         }
         AccountIdentKind::Username => {
@@ -106,11 +106,12 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                 if bios::basic::security::digest::digest(format!("{}{}", ak, request_sk).as_str(), None, "SHA512") == stored_sk {
                     Ok(())
                 } else {
-                    log::warn!("Username [{}] or Password [{}] in tenant [{}] error", ak, request_sk, context.ident.tenant_id);
-                    Err(BIOSError::Conflict("Username or Password error".to_string()))
+                    log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()), &context).to_log());
+                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()))
                 }
             } else {
-                Err(BIOSError::BadRequest("Password can't be empty".to_string()))
+                log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty(), &context).to_log());
+                BIOSError::err(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty())
             }
         }
         AccountIdentKind::WechatXcx => {
@@ -118,15 +119,24 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                 if account_token == request_sk {
                     Ok(())
                 } else {
-                    log::warn!("Account token [{}] in tenant [{}] doesn't match", account_token, context.ident.tenant_id);
-                    Err(BIOSError::Conflict("Account Token doesn't exist or has expired".to_string()))
+                    log::warn!(
+                        "{}",
+                        output(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()), &context).to_log()
+                    );
+                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()))
                 }
             } else {
-                log::warn!("Account token in tenant [{}] doesn't exist or has expired", context.ident.tenant_id);
-                Err(BIOSError::Conflict("Account Token doesn't exist or has expired".to_string()))
+                log::warn!(
+                    "{}",
+                    output(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()), &context).to_log()
+                );
+                BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()))
             }
         }
-        _ => Err(BIOSError::BadRequest("Unsupported authentication kind".to_string())),
+        _ => {
+            log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUnsupportedAuthKind(ak.to_string()), &context).to_log());
+            BIOSError::err(IamOutput::CommonAccountIdentValidCheckUnsupportedAuthKind(ak.to_string()))
+        }
     }
 }
 
@@ -137,17 +147,20 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, context: &B
                 if tmp_sk == sk {
                     Ok(sk.to_string())
                 } else {
-                    Err(BIOSError::Conflict("Verification code doesn't exist or has expired".to_string()))
+                    log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
+                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
                 }
             } else {
-                Err(BIOSError::Conflict("Verification code doesn't exist or has expired".to_string()))
+                log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
+                BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
             }
         }
         AccountIdentKind::Username => {
             if !sk.trim().is_empty() {
                 Ok(bios::basic::security::digest::digest(format!("{}{}", ak, sk).as_str(), None, "SHA512"))
             } else {
-                Err(BIOSError::Conflict("Password can't be empty".to_string()))
+                log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty(), &context).to_log());
+                BIOSError::err(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty())
             }
         }
         AccountIdentKind::WechatXcx => {
@@ -155,10 +168,12 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, context: &B
                 if account_token == sk {
                     Ok("".to_string())
                 } else {
-                    Err(BIOSError::Conflict("Account Token doesn't exist or has expired".to_string()))
+                    log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()), &context).to_log());
+                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()))
                 }
             } else {
-                Err(BIOSError::Conflict("Account Token doesn't exist or has expired".to_string()))
+                log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()), &context).to_log());
+                BIOSError::err(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()))
             }
         }
         _ => {

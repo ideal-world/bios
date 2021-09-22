@@ -76,7 +76,7 @@ async fn test_web_server() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"404000000","msg":"Not Found error: method:POST, url:/not_found","trace_app":null,"trace_id":null,"trace_inst":null}"#),
+        Bytes::from(r#"{"body":null,"code":"404000000000","msg":"method:POST, url:/not_found","trace_app":null,"trace_id":null,"trace_inst":null}"#),
     );
 
     // System Error
@@ -85,7 +85,7 @@ async fn test_web_server() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(r#"{"body":null,"code":"500000000","msg":"Internal error: system error","trace_app":null,"trace_id":null,"trace_inst":null}"#),
+        Bytes::from(r#"{"body":null,"code":"500000000000","msg":"system error","trace_app":null,"trace_id":null,"trace_inst":null}"#),
     );
 
     // Validation
@@ -94,27 +94,21 @@ async fn test_web_server() -> BIOSResult<()> {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: missing field `id`","trace_app":null,"trace_id":null,"trace_inst":null}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400000000000","msg":"Query deserialize error: missing field `id`","trace_app":null,"trace_id":null,"trace_inst":null}"#),
     );
 
     let req = test::TestRequest::post().uri("/validation?id=111").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: missing field `response_type`","trace_app":null,"trace_id":null,"trace_inst":null}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400000000000","msg":"Query deserialize error: missing field `response_type`","trace_app":null,"trace_id":null,"trace_inst":null}"#),
     );
 
     let req = test::TestRequest::post().uri("/validation?id=-1").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(
         read_body(resp).await,
-        Bytes::from(
-            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: invalid digit found in string","trace_app":null,"trace_id":null,"trace_inst":null}"#
-        ),
+        Bytes::from(r#"{"body":null,"code":"400000000000","msg":"Query deserialize error: invalid digit found in string","trace_app":null,"trace_id":null,"trace_inst":null}"#),
     );
 
     let req = test::TestRequest::post().uri("/validation?id=111&response_type=XX").to_request();
@@ -122,7 +116,7 @@ async fn test_web_server() -> BIOSResult<()> {
     assert_eq!(
         read_body(resp).await,
         Bytes::from(
-            r#"{"body":null,"code":"400000000","msg":"Bad Request error: Query deserialize error: unknown variant `XX`, expected `Token` or `Code`","trace_app":null,"trace_id":null,"trace_inst":null}"#
+            r#"{"body":null,"code":"400000000000","msg":"Query deserialize error: unknown variant `XX`, expected `Token` or `Code`","trace_app":null,"trace_id":null,"trace_inst":null}"#
         ),
     );
 

@@ -25,7 +25,7 @@ use crate::basic::result::BIOSResult;
 
 pub type BIOSResponse = BIOSResult<HttpResponse>;
 
-impl<T: Serialize> BIOSResp<T> {
+impl<T: Serialize> BIOSResp<'_, T> {
     pub fn ok(body: T, context: Option<&BIOSContext>) -> BIOSResponse {
         match context {
             Some(ctx) => Ok(HttpResponse::Ok().json(BIOSResp {
@@ -35,6 +35,7 @@ impl<T: Serialize> BIOSResp<T> {
                 trace_id: Some(ctx.trace.id.to_string()),
                 trace_app: Some(ctx.trace.app.to_string()),
                 trace_inst: Some(ctx.trace.inst.to_string()),
+                ctx: Some(ctx),
             })),
             None => Ok(HttpResponse::Ok().json(BIOSResp {
                 code: "200".to_owned(),
@@ -43,6 +44,7 @@ impl<T: Serialize> BIOSResp<T> {
                 trace_id: None,
                 trace_app: None,
                 trace_inst: None,
+                ctx: None,
             })),
         }
     }
@@ -55,7 +57,7 @@ impl<T: Serialize> BIOSResp<T> {
     }
 }
 
-impl BIOSResp<()> {
+impl BIOSResp<'_, ()> {
     pub fn error(bus_code: &str, message: &str, context: Option<&BIOSContext>) -> BIOSResponse {
         match context {
             Some(ctx) => Ok(HttpResponse::Ok().json(BIOSResp::<()> {
@@ -65,6 +67,7 @@ impl BIOSResp<()> {
                 trace_id: Some(ctx.trace.id.to_string()),
                 trace_app: Some(ctx.trace.app.to_string()),
                 trace_inst: Some(ctx.trace.inst.to_string()),
+                ctx: Some(ctx),
             })),
             None => Ok(HttpResponse::Ok().json(BIOSResp::<()> {
                 code: bus_code.to_owned(),
@@ -73,6 +76,7 @@ impl BIOSResp<()> {
                 trace_id: None,
                 trace_app: None,
                 trace_inst: None,
+                ctx: None,
             })),
         }
     }
@@ -89,6 +93,7 @@ impl BIOSResp<()> {
                     trace_id: None,
                     trace_app: None,
                     trace_inst: None,
+                    ctx: None,
                 }))
             }
         }
@@ -106,6 +111,7 @@ impl BIOSResp<()> {
                     trace_id: None,
                     trace_app: None,
                     trace_inst: None,
+                    ctx: None,
                 }
             }
         };
@@ -113,13 +119,26 @@ impl BIOSResp<()> {
     }
 
     pub fn to_log(self) -> String {
-        format!(
-            "{}|{}|{}[{}]{}",
-            self.trace_app.unwrap_or_default(),
-            self.trace_id.unwrap_or_default(),
-            self.trace_inst.unwrap_or_default(),
-            self.code,
-            self.msg
-        )
+        match self.ctx {
+            Some(ctx) => format!(
+                "{}|{}|{}[{}]{}|I|{}|{}|{}",
+                self.trace_app.unwrap_or_default(),
+                self.trace_id.unwrap_or_default(),
+                self.trace_inst.unwrap_or_default(),
+                self.code,
+                self.msg,
+                ctx.ident.tenant_id,
+                ctx.ident.app_id,
+                ctx.ident.account_id
+            ),
+            None => format!(
+                "{}|{}|{}[{}]{}",
+                self.trace_app.unwrap_or_default(),
+                self.trace_id.unwrap_or_default(),
+                self.trace_inst.unwrap_or_default(),
+                self.code,
+                self.msg
+            ),
+        }
     }
 }

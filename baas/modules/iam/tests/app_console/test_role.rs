@@ -72,8 +72,8 @@ async fn test_role() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "409");
-    assert_eq!(result.msg, "Role [code] already exists");
+    assert_eq!(result.code, "419010200601");
+    assert_eq!(result.msg, "[Role] already exists");
 
     // Modify Role
     let req = test::TestRequest::put()

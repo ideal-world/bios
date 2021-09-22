@@ -27,9 +27,11 @@ pub type BIOSResult<T> = Result<T, BIOSError>;
 #[derive(Display, Debug)]
 pub enum StatusCodeKind {
     #[display(fmt = "400")]
-    NotFound,
-    #[display(fmt = "404")]
     BadRequest,
+    #[display(fmt = "404")]
+    NotFound,
+    #[display(fmt = "409")]
+    Conflict,
     #[display(fmt = "419")]
     ConflictExists,
     #[display(fmt = "429")]
@@ -56,7 +58,7 @@ pub enum ActionKind {
 
 pub fn parse<E: Display>(content: E) -> (String, String) {
     let text = content.to_string();
-    let split_idx = text.find(GENERAL_SPLIT).expect("The error description format is code##content");
+    let split_idx = text.find(GENERAL_SPLIT).expect("Illegal error description format");
     let code = &text[..split_idx];
     let message = &text[split_idx + 2..];
     (code.to_string(), message.to_string())
@@ -71,5 +73,6 @@ pub fn output<E: Display>(content: E, context: &BIOSContext) -> BIOSResp<()> {
         trace_id: Some(context.trace.id.to_string()),
         trace_app: Some(context.trace.app.to_string()),
         trace_inst: Some(context.trace.inst.to_string()),
+        ctx: Some(context),
     }
 }
