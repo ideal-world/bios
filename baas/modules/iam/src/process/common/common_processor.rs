@@ -491,7 +491,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
         )
         .await?;
     if tenant_id.is_none() {
-        return BIOSResp::err(IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, ObjectKind::App), Some(&context));
+        return BIOSResp::err(IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, "App"), Some(&context));
     }
     let tenant_id = tenant_id.unwrap();
     let tenant_id = tenant_id["id"].as_str().unwrap();
@@ -521,7 +521,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::CommonEntityCreateCheckExists(ObjectKind::Account, ObjectKind::AccountIdent), Some(&context));
+        return BIOSResp::err(IamOutput::CommonEntityCreateCheckExists(ObjectKind::AccountIdent, "AccountIdent"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -678,7 +678,7 @@ pub async fn login(account_login_req: Json<AccountLoginReq>, req: HttpRequest) -
             account_login_req.kind.to_string().to_lowercase(),
             account_login_req.ak
         );
-        return BIOSResp::err(IamOutput::CommonLoginCheckNotFoundOrExpired(ObjectKind::Account), Some(&context));
+        return BIOSResp::err(IamOutput::CommonLoginCheckAccountNotFoundOrExpired(account_login_req.ak.to_string()), Some(&context));
     }
     let account_info = account_info.unwrap();
     let stored_sk = account_info["sk"].as_str().unwrap();
@@ -909,7 +909,7 @@ pub async fn change_account_ident(account_ident_change_req: Json<AccountIdentCha
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::CommonEntityModifyCheckExists(ObjectKind::AccountIdent, ObjectKind::AccountIdent), Some(&context));
+        return BIOSResp::err(IamOutput::CommonEntityModifyCheckExists(ObjectKind::AccountIdent, "AccountIdent"), Some(&context));
     }
 
     auth_processor::valid_account_ident(&account_ident_change_req.kind, &account_ident_change_req.ak, &account_ident_change_req.sk, None, &context).await?;

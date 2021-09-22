@@ -20,7 +20,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
@@ -88,7 +87,7 @@ pub async fn modify_app(app_modify_req: Json<AppModifyReq>, req: HttpRequest) ->
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::App, ObjectKind::App), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::App, "App"), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -209,7 +208,7 @@ pub async fn delete_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::App, ObjectKind::App), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::App, "App"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

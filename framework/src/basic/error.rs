@@ -23,7 +23,6 @@ use std::string::FromUtf8Error;
 
 use derive_more::Display;
 
-use crate::basic::dto::BIOSContext;
 use crate::basic::result::BIOSResult;
 
 pub static ERROR_DEFAULT_CODE: &str = "-1";
@@ -32,25 +31,25 @@ pub static ERROR_DEFAULT_CODE: &str = "-1";
 pub enum BIOSError {
     #[display(fmt = "{}##{}", _0, _1)]
     Custom(String, String),
-    #[display(fmt = "000000000##{:?}", _0)]
+    #[display(fmt = "000000000000##{:?}", _0)]
     Box(Box<dyn Error + Send + Sync>),
-    #[display(fmt = "500000000##Internal error: {}", _0)]
+    #[display(fmt = "500000000000##{}", _0)]
     InternalError(String),
-    #[display(fmt = "501000000##Not implemented error: {}", _0)]
+    #[display(fmt = "501000000000##{}", _0)]
     NotImplemented(String),
-    #[display(fmt = "503000000##IO error: {}", _0)]
+    #[display(fmt = "503000000000##{}", _0)]
     IOError(String),
-    #[display(fmt = "400000000##Bad Request error: {}", _0)]
+    #[display(fmt = "400000000000##{}", _0)]
     BadRequest(String),
-    #[display(fmt = "401000000##Unauthorized error: {}", _0)]
+    #[display(fmt = "401000000000##{}", _0)]
     Unauthorized(String),
-    #[display(fmt = "404000000##Not Found error: {}", _0)]
+    #[display(fmt = "404000000000##{}", _0)]
     NotFound(String),
-    #[display(fmt = "406000000##Format error: {}", _0)]
+    #[display(fmt = "406000000000##{}", _0)]
     FormatError(String),
-    #[display(fmt = "408000000##Timeout error: {}", _0)]
+    #[display(fmt = "408000000000##{}", _0)]
     Timeout(String),
-    #[display(fmt = "409000000##Conflict error: {}", _0)]
+    #[display(fmt = "409000000000##{}", _0)]
     Conflict(String),
     #[display(fmt = "{}", _0)]
     _Inner(String),

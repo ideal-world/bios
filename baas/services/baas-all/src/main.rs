@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-use actix_web::{App, HttpServer};
-
-use bios::basic::{config, logger};
-use bios::basic::config::NoneConfig;
-use bios::web::web_server;
-use bios::web::web_server::Init;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     Ok(())

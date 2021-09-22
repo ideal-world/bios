@@ -144,8 +144,8 @@ async fn test_resource() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "404");
-    assert_eq!(result.msg, "Resource [rel_resource_subject_id] not exists");
+    assert_eq!(result.code, "404010201601");
+    assert_eq!(result.msg, "[ResourceSubject] not found");
 
     // Add ResourceSubject
     let req = test::TestRequest::post()
@@ -206,8 +206,8 @@ async fn test_resource() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "409");
-    assert_eq!(result.msg, "Resource [path_and_query] already exists");
+    assert_eq!(result.code, "419010201601");
+    assert_eq!(result.msg, "[Resource] already exists");
 
     // Modify Resource
     let req = test::TestRequest::put()

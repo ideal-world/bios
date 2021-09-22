@@ -93,7 +93,7 @@ pub async fn modify_app_ident(app_ident_modify_req: Json<AppIdentModifyReq>, req
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::AppIdent, ObjectKind::AppIdent), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::AppIdent, "AppIdent"), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -184,7 +184,7 @@ pub async fn delete_app_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AppIdent, ObjectKind::AppIdent), Some(&context));
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::AppIdent, "AppIdent"), Some(&context));
     }
 
     let sql_builder = Query::select().columns(vec![IamAppIdent::Ak, IamAppIdent::Sk]).from(IamAppIdent::Table).and_where(Expr::col(IamAppIdent::Id).eq(id.as_str())).done();

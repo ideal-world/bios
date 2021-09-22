@@ -18,7 +18,8 @@ use actix_web::get;
 use serde::Deserialize;
 use validator::Validate;
 
-use bios::web::resp_handler::{BIOSResp, BIOSResponse};
+use bios::basic::dto::BIOSResp;
+use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::query::Query;
 
 #[derive(Deserialize, Validate)]

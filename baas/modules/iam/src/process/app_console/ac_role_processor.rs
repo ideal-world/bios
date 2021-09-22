@@ -16,7 +16,6 @@
 
 use actix_web::{delete, get, post, put, HttpRequest};
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
@@ -29,9 +28,9 @@ use strum::IntoEnumIterator;
 
 use crate::domain::auth_domain::{IamAccountRole, IamAuthPolicyObject, IamRole};
 use crate::domain::ident_domain::IamAccount;
+use crate::iam_constant::{IamOutput, ObjectKind};
 use crate::process::app_console::ac_role_dto::{RoleAddReq, RoleDetailResp, RoleModifyReq, RoleQueryReq};
 use crate::process::basic_dto::AuthObjectKind;
-use crate::iam_constant::{IamOutput, ObjectKind};
 
 #[post("/console/app/role")]
 pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSResponse {
@@ -49,10 +48,7 @@ pub async fn add_role(role_add_req: Json<RoleAddReq>, req: HttpRequest) -> BIOSR
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::Role, ObjectKind::Role),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityCreateCheckExists(ObjectKind::Role, "Role"), Some(&context));
     }
     let id = bios::basic::field::uuid();
     BIOSFuns::reldb()
@@ -103,10 +99,7 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::Role, ObjectKind::Role),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckNotFound(ObjectKind::Role, "Role"), Some(&context));
     }
     if let Some(code) = &role_modify_req.code {
         if BIOSFuns::reldb()
@@ -122,10 +115,7 @@ pub async fn modify_role(role_modify_req: Json<RoleModifyReq>, req: HttpRequest)
             )
             .await?
         {
-            return BIOSResp::err(
-                IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::Role, ObjectKind::Role),
-                Some(&context),
-            );
+            return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::Role, "Role"), Some(&context));
         }
     }
     let mut values = Vec::new();
@@ -219,10 +209,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::Role, ObjectKind::Role),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckNotFound(ObjectKind::Role, "Role"), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -237,7 +224,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
         .await?
     {
         return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Role, ObjectKind::AuthPolicyObject),
+            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Role, "AuthPolicyObject"),
             Some(&context),
         );
     }
@@ -248,10 +235,7 @@ pub async fn delete_role(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Role, ObjectKind::AccountRole),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::AppConsoleEntityDeleteCheckExistAssociatedData(ObjectKind::Role, "AccountRole"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

@@ -22,7 +22,8 @@ use actix_web::{post, put, web, HttpRequest, HttpResponse};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use bios::web::resp_handler::{BIOSResp, BIOSResponse};
+use bios::basic::dto::BIOSResp;
+use bios::web::resp_handler::BIOSResponse;
 use bios::BIOSFuns;
 
 pub struct AppStateContainer {
@@ -85,6 +86,10 @@ pub async fn normal(query: web::Query<NormalQuery>, body: web::Bytes, data: web:
             code: code.to_string(),
             msg: String::from(""),
             body: Some(body),
+            trace_id: None,
+            trace_app: None,
+            trace_inst: None,
+            ctx: None,
         };
         BIOSResp::resp(code, &resp)?
     }

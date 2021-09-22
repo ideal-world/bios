@@ -23,7 +23,6 @@ use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::basic::error::BIOSError;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
@@ -98,7 +97,7 @@ pub async fn modify_account(account_modify_req: Json<AccountModifyReq>, req: Htt
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::Account, ObjectKind::Account), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::Account, "Account"), Some(&context));
     }
 
     let mut values = Vec::new();
@@ -206,7 +205,7 @@ pub async fn delete_account(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::Account, ObjectKind::Account), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::Account, "Account"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -350,10 +349,7 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityCreateCheckNotFound(ObjectKind::AccountIdent, ObjectKind::Account),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckNotFound(ObjectKind::AccountIdent, "Account"), Some(&context));
     }
     if BIOSFuns::reldb()
         .exists(
@@ -368,10 +364,7 @@ pub async fn add_account_ident(account_ident_add_req: Json<AccountIdentAddReq>, 
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountIdent, ObjectKind::AccountIdent),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountIdent, "AccountIdent"), Some(&context));
     }
 
     auth_processor::valid_account_ident(
@@ -432,7 +425,10 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
     let id: String = req.match_info().get("id").unwrap().parse()?;
 
     if account_ident_modify_req.ak.is_some() && account_ident_modify_req.ak.is_none() || account_ident_modify_req.sk.is_none() && account_ident_modify_req.sk.is_some() {
-        return BIOSResp::err(BIOSError::BadRequest("AccountIdent [ak] and [sk] must exist at the same time".to_string()), Some(&context));
+        return BIOSResp::err(
+            IamOutput::TenantConsoleEntityModifyCheckExistFieldsAtSomeTime(ObjectKind::AccountIdent, "[ak] and [sk]"),
+            Some(&context),
+        );
     }
 
     if !BIOSFuns::reldb()
@@ -447,10 +443,7 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::AccountIdent, ObjectKind::Account),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckNotFound(ObjectKind::AccountIdent, "Account"), Some(&context));
     }
 
     let kind = BIOSFuns::reldb()
@@ -490,10 +483,7 @@ pub async fn modify_account_ident(account_ident_modify_req: Json<AccountIdentMod
             )
             .await?
         {
-            return BIOSResp::err(
-                IamOutput::TenantConsoleEntityModifyCheckExists(ObjectKind::AccountIdent, ObjectKind::AccountIdent),
-                Some(&context),
-            );
+            return BIOSResp::err(IamOutput::TenantConsoleEntityModifyCheckExists(ObjectKind::AccountIdent, "AccountIdent"), Some(&context));
         }
         values.push((IamAccountIdent::Ak, ak.to_string().as_str().into()));
     }
@@ -545,10 +535,7 @@ pub async fn list_account_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityFetchListCheckNotFound(ObjectKind::AccountIdent, ObjectKind::Account),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityFetchListCheckNotFound(ObjectKind::AccountIdent, "Account"), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -604,10 +591,7 @@ pub async fn delete_account_ident(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::AccountIdent, ObjectKind::Account),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::AccountIdent, "Account"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -645,7 +629,7 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountApp, ObjectKind::Account), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountApp, "Account"), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -659,7 +643,7 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountApp, ObjectKind::App), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountApp, "App"), Some(&context));
     }
 
     if BIOSFuns::reldb()
@@ -674,10 +658,7 @@ pub async fn add_account_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountApp, ObjectKind::AccountApp),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityCreateCheckExists(ObjectKind::AccountApp, "AccountApp"), Some(&context));
     }
 
     BIOSFuns::reldb()
@@ -722,10 +703,7 @@ pub async fn list_account_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityFetchListCheckNotFound(ObjectKind::AccountApp, ObjectKind::Account),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityFetchListCheckNotFound(ObjectKind::AccountApp, "Account"), Some(&context));
     }
 
     let create_user_table = Alias::new("create");
@@ -778,10 +756,7 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(
-            IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::AccountApp, ObjectKind::Account),
-            Some(&context),
-        );
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::AccountApp, "Account"), Some(&context));
     }
     if !BIOSFuns::reldb()
         .exists(
@@ -795,7 +770,7 @@ pub async fn delete_account_app(req: HttpRequest) -> BIOSResponse {
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::AccountApp, ObjectKind::App), Some(&context));
+        return BIOSResp::err(IamOutput::TenantConsoleEntityDeleteCheckNotFound(ObjectKind::AccountApp, "App"), Some(&context));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;

@@ -16,7 +16,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(default)]
 pub struct BIOSContext {
     pub ident: IdentInfo,
@@ -34,7 +34,7 @@ impl Default for BIOSContext {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(default)]
 pub struct Trace {
     pub id: String,
@@ -52,7 +52,7 @@ impl Default for Trace {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(default)]
 pub struct IdentInfo {
     pub app_id: String,
@@ -80,9 +80,9 @@ impl Default for IdentInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(default)]
-pub struct BIOSResp<T>
+pub struct BIOSResp<'c, T>
 where
     T: Serialize,
 {
@@ -92,9 +92,11 @@ where
     pub trace_id: Option<String>,
     pub trace_app: Option<String>,
     pub trace_inst: Option<String>,
+    #[serde(skip)]
+    pub ctx: Option<&'c BIOSContext>,
 }
 
-impl<T> Default for BIOSResp<T>
+impl<T> Default for BIOSResp<'_, T>
 where
     T: Serialize,
 {
@@ -106,6 +108,7 @@ where
             trace_id: None,
             trace_app: None,
             trace_inst: None,
+            ctx: None,
         }
     }
 }

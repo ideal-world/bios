@@ -65,7 +65,7 @@ async fn test_group() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<String>, AnyBody>(resp).await;
-    assert_eq!(result.code, "400");
+    assert_eq!(result.code, "400000000000");
 
     let req = test::TestRequest::post()
         .insert_header(test_basic::context_account())
