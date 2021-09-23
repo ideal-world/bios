@@ -31,7 +31,7 @@ pub enum CommonStatus {
 /// 账号认证类型枚举
 ///
 /// 编码属性URI的Host部分，不能带下划线
-#[derive(Display, Debug, Deserialize, Serialize)]
+#[derive(Display, Debug, Deserialize, Serialize, Clone)]
 pub enum AccountIdentKind {
     // 用户名 + 密码
     Username,
@@ -69,7 +69,7 @@ pub enum ResourceKind {
     // 页面元素
     Element,
     // OAuth
-    Oauth,
+    OAuth,
     // 关系数据库
     Reldb,
     // 缓存

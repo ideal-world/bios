@@ -37,14 +37,14 @@ use crate::process::app_console::ac_resource_dto::{
 #[post("/console/app/resource/subject")]
 pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubjectAddReq>, req: HttpRequest) -> BIOSResponse {
     let context = extract_context_with_account(&req)?;
-    let uri = bios::basic::uri::format(&resource_subject_add_req.uri).expect("Uri parse error");
+    let ident_uri = bios::basic::uri::format(&resource_subject_add_req.ident_uri)?;
     if BIOSFuns::reldb()
         .exists(
             &Query::select()
                 .columns(vec![IamResourceSubject::Id])
                 .from(IamResourceSubject::Table)
                 .and_where(Expr::col(IamResourceSubject::Kind).eq(resource_subject_add_req.kind.to_string().to_lowercase()))
-                .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.as_str()))
+                .and_where(Expr::col(IamResourceSubject::IdentUri).eq(ident_uri.as_str()))
                 .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
                 .done(),
             None,
@@ -63,9 +63,10 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                     IamResourceSubject::CreateUser,
                     IamResourceSubject::UpdateUser,
                     IamResourceSubject::Kind,
-                    IamResourceSubject::Uri,
+                    IamResourceSubject::IdentUri,
                     IamResourceSubject::Name,
                     IamResourceSubject::Sort,
+                    IamResourceSubject::Uri,
                     IamResourceSubject::Ak,
                     IamResourceSubject::Sk,
                     IamResourceSubject::PlatformAccount,
@@ -79,9 +80,10 @@ pub async fn add_resource_subject(resource_subject_add_req: Json<ResourceSubject
                     context.ident.account_id.as_str().into(),
                     context.ident.account_id.as_str().into(),
                     resource_subject_add_req.kind.to_string().to_lowercase().into(),
-                    uri.into(),
+                    ident_uri.into(),
                     resource_subject_add_req.name.as_str().into(),
                     resource_subject_add_req.sort.into(),
+                    resource_subject_add_req.uri.as_deref().unwrap_or_default().into(),
                     resource_subject_add_req.ak.as_deref().unwrap_or_default().into(),
                     resource_subject_add_req.sk.as_deref().unwrap_or_default().into(),
                     resource_subject_add_req.platform_account.as_deref().unwrap_or_default().into(),
@@ -120,27 +122,28 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
         );
     }
 
-    if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.uri.is_none()
-        || resource_subject_modify_req.kind.is_none() && resource_subject_modify_req.uri.is_some()
+    if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.ident_uri.is_none()
+        || resource_subject_modify_req.kind.is_none() && resource_subject_modify_req.ident_uri.is_some()
     {
         return BIOSResp::err(
-            IamOutput::AppConsoleEntityModifyCheckExistFieldsAtSomeTime(ObjectKind::ResourceSubject, "[kin] and [uri]"),
+            IamOutput::AppConsoleEntityModifyCheckExistFieldsAtSomeTime(ObjectKind::ResourceSubject, "[kin] and [ident_uri]"),
             Some(&context),
         );
     }
 
     let mut values = Vec::new();
-    if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.uri.is_some() {
+    if resource_subject_modify_req.kind.is_some() && resource_subject_modify_req.ident_uri.is_some() {
         let kind = resource_subject_modify_req.kind.as_ref().unwrap().to_string().to_lowercase();
-        let uri = bios::basic::uri::format(resource_subject_modify_req.uri.as_ref().unwrap()).expect("Uri parse error");
+        let ident_uri = bios::basic::uri::format(resource_subject_modify_req.ident_uri.as_ref().unwrap())?;
         if BIOSFuns::reldb()
             .exists(
                 &Query::select()
                     .columns(vec![IamResourceSubject::Id])
                     .from(IamResourceSubject::Table)
                     .and_where(Expr::col(IamResourceSubject::Kind).eq(kind.as_str()))
-                    .and_where(Expr::col(IamResourceSubject::Uri).eq(uri.as_str()))
+                    .and_where(Expr::col(IamResourceSubject::IdentUri).eq(ident_uri.as_str()))
                     .and_where(Expr::col(IamResourceSubject::RelAppId).eq(context.ident.app_id.as_str()))
+                    .and_where(Expr::col(IamResourceSubject::Id).ne(id.as_str()))
                     .done(),
                 None,
             )
@@ -149,13 +152,16 @@ pub async fn modify_resource_subject(resource_subject_modify_req: Json<ResourceS
             return BIOSResp::err(IamOutput::AppConsoleEntityModifyCheckExists(ObjectKind::ResourceSubject, "ResourceSubject"), Some(&context));
         }
         values.push((IamResourceSubject::Kind, kind.into()));
-        values.push((IamResourceSubject::Uri, uri.into()));
+        values.push((IamResourceSubject::Uri, ident_uri.into()));
     }
     if let Some(name) = &resource_subject_modify_req.name {
         values.push((IamResourceSubject::Name, name.as_str().into()));
     }
     if let Some(sort) = resource_subject_modify_req.sort {
         values.push((IamResourceSubject::Sort, sort.into()));
+    }
+    if let Some(uri) = &resource_subject_modify_req.uri {
+        values.push((IamResourceSubject::Uri, uri.as_str().into()));
     }
     if let Some(ak) = &resource_subject_modify_req.ak {
         values.push((IamResourceSubject::Ak, ak.as_str().into()));
@@ -198,9 +204,10 @@ pub async fn list_resource_subject(query: VQuery<ResourceSubjectQueryReq>, req: 
             (IamResourceSubject::Table, IamResourceSubject::CreateTime),
             (IamResourceSubject::Table, IamResourceSubject::UpdateTime),
             (IamResourceSubject::Table, IamResourceSubject::Kind),
-            (IamResourceSubject::Table, IamResourceSubject::Uri),
+            (IamResourceSubject::Table, IamResourceSubject::IdentUri),
             (IamResourceSubject::Table, IamResourceSubject::Name),
             (IamResourceSubject::Table, IamResourceSubject::Sort),
+            (IamResourceSubject::Table, IamResourceSubject::Uri),
             (IamResourceSubject::Table, IamResourceSubject::Ak),
             (IamResourceSubject::Table, IamResourceSubject::Sk),
             (IamResourceSubject::Table, IamResourceSubject::PlatformAccount),

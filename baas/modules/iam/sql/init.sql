@@ -298,6 +298,7 @@ create table if not exists iam_resource_subject
     id                  varchar(64)
     primary key,
     kind                varchar(100)                        not null comment '资源类型名称',
+    ident_uri           varchar(5000)                       not null comment '资源主体标识URI',
     uri                 varchar(5000)                       not null comment '资源主体连接URI',
     name                varchar(255)                        not null comment '资源主体名称',
     ak                  varchar(1000)                       not null comment 'AK，部分类型支持写到URI中',

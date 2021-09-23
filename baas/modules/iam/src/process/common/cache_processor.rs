@@ -208,7 +208,7 @@ pub async fn remove_auth_policy<'c>(auth_policy_id: &str, tx: &mut Transaction<'
         .fetch_one::<RebuildKeyInfoResp>(
             &Query::select()
                 .column((IamAuthPolicy::Table, IamAuthPolicy::ActionKind))
-                .column((IamResourceSubject::Table, IamResourceSubject::Uri))
+                .column((IamResourceSubject::Table, IamResourceSubject::IdentUri))
                 .column((IamResource::Table, IamResource::PathAndQuery))
                 .column((IamAuthPolicy::Table, IamAuthPolicy::ValidStartTime))
                 .column((IamAuthPolicy::Table, IamAuthPolicy::ValidEndTime))
@@ -231,7 +231,7 @@ pub async fn remove_auth_policy<'c>(auth_policy_id: &str, tx: &mut Transaction<'
         "{}{}{}",
         &key_info.action_kind,
         GENERAL_SPLIT,
-        bios::basic::uri::format_with_item(&key_info.uri, &key_info.path_and_query).unwrap()
+        bios::basic::uri::format_with_item(&key_info.ident_uri, &key_info.path_and_query).unwrap()
     );
     BIOSFuns::cache().hdel(&BIOSFuns::ws_config::<WorkSpaceConfig>().iam.cache.resources, &field).await?;
     BIOSFuns::cache()
@@ -250,7 +250,7 @@ pub async fn rebuild_auth_policy<'c>(auth_policy_id: &str, tx: &mut Transaction<
         .fetch_one::<RebuildKeyInfoResp>(
             &Query::select()
                 .column((IamAuthPolicy::Table, IamAuthPolicy::ActionKind))
-                .column((IamResourceSubject::Table, IamResourceSubject::Uri))
+                .column((IamResourceSubject::Table, IamResourceSubject::IdentUri))
                 .column((IamResource::Table, IamResource::PathAndQuery))
                 .column((IamAuthPolicy::Table, IamAuthPolicy::ValidStartTime))
                 .column((IamAuthPolicy::Table, IamAuthPolicy::ValidEndTime))
@@ -322,7 +322,7 @@ pub async fn rebuild_auth_policy<'c>(auth_policy_id: &str, tx: &mut Transaction<
 
     let field = format!(
         "{}{}{}",
-        bios::basic::uri::format_with_item(&key_info.uri, &key_info.path_and_query).unwrap(),
+        bios::basic::uri::format_with_item(&key_info.ident_uri, &key_info.path_and_query).unwrap(),
         GENERAL_SPLIT,
         &key_info.action_kind,
     );
@@ -346,7 +346,7 @@ pub async fn rebuild_auth_policy<'c>(auth_policy_id: &str, tx: &mut Transaction<
 #[derive(sqlx::FromRow, serde::Deserialize)]
 pub struct RebuildKeyInfoResp {
     pub action_kind: String,
-    pub uri: String,
+    pub ident_uri: String,
     pub path_and_query: String,
     pub valid_start_time: i64,
     pub valid_end_time: i64,

@@ -26,6 +26,10 @@ pub type BIOSResult<T> = Result<T, BIOSError>;
 
 #[derive(Display, Debug)]
 pub enum StatusCodeKind {
+    #[display(fmt = "200")]
+    Success,
+    #[display(fmt = "000")]
+    UnKnown,
     #[display(fmt = "400")]
     BadRequest,
     #[display(fmt = "404")]
