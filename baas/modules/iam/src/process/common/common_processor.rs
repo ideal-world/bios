@@ -60,7 +60,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>, req: 
             tenant_id: bios::basic::field::uuid(),
             ..context.ident
         },
-        lang: "en_US".to_string(),
+        lang: context.lang,
     };
 
     BIOSFuns::reldb()
@@ -340,17 +340,9 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>, req: 
     .await?;
 
     // Init ResourceSubject
-    let resource_subject_api_id = auth_processor::init_resource_subject(
-        &ResourceKind::Api,
-        format!("api://{}", context.ident.app_id).as_str(),
-        format!("{}接口", tenant_register_req.app_name).as_str(),
-        &mut tx,
-        &context,
-    )
-    .await?;
     let resource_subject_menu_id = auth_processor::init_resource_subject(
         &ResourceKind::Menu,
-        format!("menu://{}", context.ident.app_id).as_str(),
+        format!("https://{}/common/resource/menu/{}", iam_config.service_name, context.ident.app_id).as_str(),
         format!("{}菜单", tenant_register_req.app_name).as_str(),
         &mut tx,
         &context,
@@ -358,7 +350,7 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>, req: 
     .await?;
     let resource_subject_element_id = auth_processor::init_resource_subject(
         &ResourceKind::Element,
-        format!("element://{}", context.ident.app_id).as_str(),
+        format!("https://{}/common/resource/element/{}", iam_config.service_name, context.ident.app_id).as_str(),
         format!("{}元素", tenant_register_req.app_name).as_str(),
         &mut tx,
         &context,
@@ -366,7 +358,6 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>, req: 
     .await?;
 
     // Init Resource
-    let resource_pub_api_id = auth_processor::init_resource("/pub/**", "租户共享接口", &resource_subject_api_id, &ExposeKind::Tenant, &mut tx, &context).await?;
     let resource_pub_menu_id = auth_processor::init_resource("/pub/**", "租户共享菜单", &resource_subject_menu_id, &ExposeKind::Tenant, &mut tx, &context).await?;
     let resource_pub_element_id = auth_processor::init_resource("/pub/**", "租户共享元素", &resource_subject_element_id, &ExposeKind::Tenant, &mut tx, &context).await?;
 
@@ -436,15 +427,6 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>, req: 
     .await?;
 
     auth_processor::init_auth(
-        vec![(&resource_pub_api_id, vec![&OptActionKind::Get])],
-        "租户共享接口",
-        &AuthObjectKind::Tenant,
-        &context.ident.tenant_id,
-        &mut tx,
-        &context,
-    )
-    .await?;
-    auth_processor::init_auth(
         vec![(&resource_pub_menu_id, vec![&OptActionKind::Get])],
         "租户共享菜单",
         &AuthObjectKind::Tenant,
@@ -475,8 +457,13 @@ pub async fn register_tenant(tenant_register_req: Json<TenantRegisterReq>, req: 
 }
 
 #[post("/common/account")]
-pub async fn register_account(account_register_req: Json<AccountRegisterReq>, req: HttpRequest) -> BIOSResponse {
+pub async fn register_account_normal(account_register_req: Json<AccountRegisterReq>, req: HttpRequest) -> BIOSResponse {
     let context = extract_context(&req)?;
+    let ident_info = register_account(&account_register_req, &context).await?;
+    BIOSResp::ok(ident_info, Some(&context))
+}
+
+pub async fn register_account(account_register_req: &AccountRegisterReq, context: &BIOSContext) -> BIOSResult<IdentInfo> {
     let tenant_id = BIOSFuns::reldb()
         .fetch_optional_json(
             &Query::select()
@@ -491,21 +478,21 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
         )
         .await?;
     if tenant_id.is_none() {
-        return BIOSResp::err(IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, "App"), Some(&context));
+        return BIOSError::err(IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, "App"));
     }
     let tenant_id = tenant_id.unwrap();
     let tenant_id = tenant_id["id"].as_str().unwrap();
     let account_id = bios::basic::field::uuid();
 
     let context = BIOSContext {
-        trace: Trace { ..context.trace },
+        trace: Trace { ..context.trace.clone() },
         ident: IdentInfo {
             account_id,
             app_id: account_register_req.rel_app_id.to_string(),
             tenant_id: tenant_id.to_string(),
-            ..context.ident
+            ..context.ident.clone()
         },
-        lang: "en_US".to_string(),
+        lang: context.lang.clone(),
     };
 
     if BIOSFuns::reldb()
@@ -521,7 +508,7 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
         )
         .await?
     {
-        return BIOSResp::err(IamOutput::CommonEntityCreateCheckExists(ObjectKind::AccountIdent, "AccountIdent"), Some(&context));
+        return BIOSError::err(IamOutput::CommonEntityCreateCheckExists(ObjectKind::AccountIdent, "AccountIdent"));
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -621,13 +608,17 @@ pub async fn register_account(account_register_req: Json<AccountRegisterReq>, re
     tx.commit().await?;
     // Login
     let ident_info = do_login(account_register_req.ak.as_str(), valid_end_time, "", &context).await?;
-
-    BIOSResp::ok(ident_info, Some(&context))
+    Ok(ident_info)
 }
 
 #[post("/common/login")]
-pub async fn login(account_login_req: Json<AccountLoginReq>, req: HttpRequest) -> BIOSResponse {
+pub async fn login_normal(account_login_req: Json<AccountLoginReq>, req: HttpRequest) -> BIOSResponse {
     let context = extract_context(&req)?;
+    let ident_info = login(&account_login_req, &context).await?;
+    BIOSResp::ok(ident_info, Some(&context))
+}
+
+pub async fn login(account_login_req: &AccountLoginReq, context: &BIOSContext) -> BIOSResult<IdentInfo> {
     log::info!(
         "Login : [{}] kind = {}, ak = {}",
         account_login_req.rel_app_id,
@@ -678,21 +669,21 @@ pub async fn login(account_login_req: Json<AccountLoginReq>, req: HttpRequest) -
             account_login_req.kind.to_string().to_lowercase(),
             account_login_req.ak
         );
-        return BIOSResp::err(IamOutput::CommonLoginCheckAccountNotFoundOrExpired(account_login_req.ak.to_string()), Some(&context));
+        return BIOSError::err(IamOutput::CommonLoginCheckAccountNotFoundOrExpired(account_login_req.ak.to_string()));
     }
     let account_info = account_info.unwrap();
     let stored_sk = account_info["sk"].as_str().unwrap();
     let valid_end_time = account_info["valid_end_time"].as_i64().unwrap();
 
     let context = BIOSContext {
-        trace: Trace { ..context.trace },
+        trace: Trace { ..context.trace.clone() },
         ident: IdentInfo {
             account_id: account_info["id"].as_str().unwrap().to_string(),
             app_id: account_info["app_id"].as_str().unwrap().to_string(),
             tenant_id: account_info["tenant_id"].as_str().unwrap().to_string(),
-            ..context.ident
+            ..context.ident.clone()
         },
-        lang: "en_US".to_string(),
+        lang: context.lang.to_string(),
     };
 
     auth_processor::validate_sk(&account_login_req.kind, account_login_req.ak.as_str(), account_login_req.sk.as_str(), stored_sk, &context).await?;
@@ -709,7 +700,7 @@ pub async fn login(account_login_req: Json<AccountLoginReq>, req: HttpRequest) -
         &context,
     )
     .await?;
-    BIOSResp::ok(ident_info, Some(&context))
+    Ok(ident_info)
 }
 
 async fn do_login<'c>(ak: &str, valid_end_time: i64, cert_category: &str, context: &BIOSContext) -> BIOSResult<IdentInfo> {
@@ -754,7 +745,7 @@ async fn do_login<'c>(ak: &str, valid_end_time: i64, cert_category: &str, contex
             roles: role_info,
             groups: group_node_info,
         },
-        lang: "en_US".to_string(),
+        lang: context.lang.to_string(),
     };
 
     cache_processor::set_token(valid_end_time, &context).await?;
@@ -935,13 +926,13 @@ pub async fn change_account_ident(account_ident_change_req: Json<AccountIdentCha
     BIOSResp::ok("", Some(&context))
 }
 
-#[get("/common/resource/menu")]
+#[get("/common/resource/menu/{app_id}")]
 pub async fn fetch_menu_resources(req: HttpRequest) -> BIOSResponse {
     let context = extract_context_with_account(&req)?;
     BIOSResp::ok(fetch_resources(ResourceKind::Menu.to_string().to_lowercase(), &context).await?, Some(&context))
 }
 
-#[get("/common/resource/element")]
+#[get("/common/resource/element/{app_id}")]
 pub async fn fetch_element_resources(req: HttpRequest) -> BIOSResponse {
     let context = extract_context_with_account(&req)?;
     BIOSResp::ok(fetch_resources(ResourceKind::Element.to_string().to_lowercase(), &context).await?, Some(&context))
@@ -958,7 +949,7 @@ async fn fetch_resources(kind: String, context: &BIOSContext) -> BIOSResult<Vec<
                 .column((IamResource::Table, IamResource::Sort))
                 .column((IamResource::Table, IamResource::ResGroup))
                 .column((IamResource::Table, IamResource::ParentId))
-                .column((IamResourceSubject::Table, IamResourceSubject::Uri))
+                .column((IamResourceSubject::Table, IamResourceSubject::IdentUri))
                 .expr_as(Expr::col((IamResourceSubject::Table, IamResourceSubject::Name)), Alias::new("subject_name"))
                 .from(IamAuthPolicyObject::Table)
                 .inner_join(
@@ -1022,11 +1013,11 @@ async fn fetch_resources(kind: String, context: &BIOSContext) -> BIOSResult<Vec<
             let sort = item["sort"].as_i64().unwrap();
             let res_group = item["res_group"].as_bool().unwrap();
             let parent_id = item["parent_id"].as_str().unwrap();
-            let uri = item["uri"].as_str().unwrap();
+            let ident_uri = item["ident_uri"].as_str().unwrap();
             let subject_name = item["subject_name"].as_str().unwrap();
             ResourceDetailResp {
                 name: format!("{}-{}", subject_name, res_name),
-                uri: bios::basic::uri::format_with_item(uri, path_and_query).unwrap(),
+                ident_uri: bios::basic::uri::format_with_item(ident_uri, path_and_query).unwrap(),
                 icon: icon.to_string(),
                 action: action.to_string(),
                 sort: sort as i32,

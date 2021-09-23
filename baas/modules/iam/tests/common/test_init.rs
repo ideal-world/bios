@@ -135,7 +135,7 @@ async fn test_init() -> BIOSResult<()> {
         )
         .await?;
     assert_eq!(records.len(), 3);
-    assert!(records.iter().find(|x| x.uri == format!("api://{}", iam_config.service_name)).is_some());
+    assert!(records.iter().find(|x| x.ident_uri == format!("https://{}", iam_config.service_name)).is_some());
     assert!(records.iter().find(|x| x.name == format!("{}接口", iam_config.app.app_name)).is_some());
 
     let records = BIOSFuns::reldb()

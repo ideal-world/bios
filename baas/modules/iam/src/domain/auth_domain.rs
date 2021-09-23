@@ -126,41 +126,42 @@ pub enum IamAccountRole {
 ///
 /// 所有三方调用都视为资源，需要配置资源主体，比如微信公众号、华为云等
 ///
-/// ResourceKind#MENU:
-/// uri = MENU路径
+/// ResourceKind#Menu:
 /// e.g.
-/// uri = menu://iam
+/// ident_uri = https://iam/common/resource/menu/<app id>
 ///
-/// ResourceKind#ELEMENT:
-/// uri = 元素路径
+/// ResourceKind#Element:
 /// e.g.
-/// uri = element://iam
+/// ident_uri = https://iam/common/resource/element/<app id>
 ///
-/// ResourceKind#API:
-/// uri = API路径
+/// ResourceKind#Api:
 /// e.g.
-/// uri = http://10.20.0.10:8080/iam
-/// uri = https://iam/iam
+/// ident_uri = https://iam
 ///
-/// ResourceKind#RELDB:
-/// uri = 数据库连接地址
+/// ResourceKind#OAuth:
+/// ident_uri = https://iam/<account ident kind>/<app id>
 /// e.g.
+/// ident_uri = https://iam/common/oauth/wechat_xcx/<app id>
+///
+/// ResourceKind#Reldb:
+/// e.g.
+/// ident_uri = https://reldb/dsi3sdfd
 /// uri = mysql://user1:92njc93nt39n@192.168.0.100:3306/test?useUnicode=true&characterEncoding=utf-8&rewriteBatchedStatements=true
 /// uri = h2:./xyy.db;AUTO_SERVER=TRUE
 ///
-/// ResourceKind#CACHE:
-/// uri = 缓存连接地址
+/// ResourceKind#Cache:
 /// e.g.
+/// ident_uri = https://cache/dfwrfer
 /// uri = redis://:diwn9234@localhost:6379/1
 ///
-/// ResourceKind#MQ:
-/// uri = MQ连接地址
+/// ResourceKind#Mq:
 /// e.g.
+/// ident_uri = https://mq/do2n454s
 /// uri = amqp://user1:onsw3223@localhost:10000/vhost1
 ///
-/// ResourceKind#OBJECT:
-/// uri = 对象存储连接地址
+/// ResourceKind#Object:
 /// e.g.
+/// ident_uri = https://object/dk43mmdsgf
 /// uri = https://test-bucket.obs.cn-north-4.myhuaweicloud.com/test-object?acl
 #[derive(Iden, EnumIter, PartialEq, Copy, Clone)]
 pub enum IamResourceSubject {
@@ -170,6 +171,8 @@ pub enum IamResourceSubject {
     UpdateUser,
     CreateTime,
     UpdateTime,
+    // 资源主体标识URI
+    IdentUri,
     // 资源类型名称
     Kind,
     // 资源主体连接URI

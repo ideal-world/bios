@@ -14,6 +14,7 @@ function _M.ident(conf, ctx)
     local auth_flag = conf.auth_flag
     local date_flag = conf.date_flag
     local host_flag = conf.host_flag
+    local protocol_flag = conf.protocol_flag
     local request_date_offset_ms = conf.request_date_offset_ms
 
     local cache_token = conf.cache_token
@@ -30,15 +31,8 @@ function _M.ident(conf, ctx)
     end
 
     local resource_uri = ngx.var.request_uri
-    if resource_uri == nil or resource_uri == "" then
-        return 400, { message = "Request is not legal, missing [path]" }
-    end
-    local i = string.find(string.sub(resource_uri, 2), "/")
-    if i == nil then
-        return 400, { message = "Request is not legal, missing [service flag] in path" }
-    end
     local resource_action = string.lower(req_method)
-    resource_uri = string.sub(resource_uri, 2, i) .. "://" .. host .. string.sub(resource_uri, i + 1)
+    resource_uri = protocol_flag .. "://" .. host .. resource_uri
 
     -- ident
     local token = core.request.header(ctx, token_flag)

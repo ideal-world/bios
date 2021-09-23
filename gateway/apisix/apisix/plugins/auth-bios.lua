@@ -21,6 +21,7 @@ local schema = {
         auth_flag = { type = "string", default = "Authorization" },
         date_flag = { type = "string", default = "BIOS-Date" },
         host_flag = { type = "string", default = "BIOS-Host" },
+        protocol_flag = { type = "string", default = "https" },
         request_date_offset_ms = { type = "integer", default = 5000 },
 
         context_flag = { type = "string", default = "BIOS-Context" },

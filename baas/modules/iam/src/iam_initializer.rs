@@ -20,8 +20,8 @@ use sqlx::Connection;
 
 use bios::basic::dto::{BIOSContext, IdentInfo};
 use bios::basic::result::BIOSResult;
-use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
+use bios::BIOSFuns;
 
 use crate::domain::auth_domain::IamAuthPolicy;
 use crate::domain::ident_domain::{IamAccount, IamAccountApp, IamAccountIdent, IamApp, IamAppIdent, IamTenant, IamTenantCert, IamTenantIdent};
@@ -47,7 +47,7 @@ pub async fn init() -> BIOSResult<()> {
             groups: vec![],
         },
         trace: Default::default(),
-        lang: "en_US".to_string()
+        lang: "en_US".to_string(),
     };
 
     // Init Tenant
@@ -331,7 +331,7 @@ pub async fn init() -> BIOSResult<()> {
     // Init ResourceSubject
     let resource_subject_api_id = auth_processor::init_resource_subject(
         &ResourceKind::Api,
-        format!("api://{}", iam_config.service_name).as_str(),
+        format!("https://{}", iam_config.service_name).as_str(),
         format!("{}接口", iam_config.app.app_name).as_str(),
         &mut tx,
         &context,
@@ -339,7 +339,7 @@ pub async fn init() -> BIOSResult<()> {
     .await?;
     auth_processor::init_resource_subject(
         &ResourceKind::Menu,
-        format!("menu://{}", iam_config.service_name).as_str(),
+        format!("https://{}/common/resource/menu/{}", iam_config.service_name, context.ident.app_id).as_str(),
         format!("{}菜单", iam_config.app.app_name).as_str(),
         &mut tx,
         &context,
@@ -347,7 +347,7 @@ pub async fn init() -> BIOSResult<()> {
     .await?;
     auth_processor::init_resource_subject(
         &ResourceKind::Element,
-        format!("element://{}", iam_config.service_name).as_str(),
+        format!("https://{}/common/resource/element/{}", iam_config.service_name, context.ident.app_id).as_str(),
         format!("{}元素", iam_config.app.app_name).as_str(),
         &mut tx,
         &context,

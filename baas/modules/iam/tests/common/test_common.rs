@@ -46,8 +46,8 @@ async fn test_flow() -> BIOSResult<()> {
             .wrap(BIOSWebServer::init_cors(&FrameworkConfig::default()))
             .wrap(BIOSWebServer::init_error_handlers())
             .service(common::common_processor::register_tenant)
-            .service(common::common_processor::register_account)
-            .service(common::common_processor::login)
+            .service(common::common_processor::register_account_normal)
+            .service(common::common_processor::login_normal)
             .service(common::common_processor::logout)
             .service(common::common_processor::fetch_login_info)
             .service(common::common_processor::change_account)
@@ -380,22 +380,23 @@ async fn test_flow() -> BIOSResult<()> {
     })?);
 
     // Fetch menu
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/resource/menu").to_request();
+    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/resource/menu/11").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].name, "测试应用菜单-租户共享菜单");
-    assert_eq!(result[0].uri, format!("menu://{}/pub/**", ident_info.app_id));
+    assert_eq!(result[0].ident_uri, format!("https://iam/common/resource/menu/{}/pub/**", ident_info.app_id));
 
     // Fetch element
-    let req = test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/resource/element").to_request();
+    let req =
+        test::TestRequest::get().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/resource/element/11").to_request();
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let result = read_body_json::<BIOSResp<Vec<ResourceDetailResp>>, AnyBody>(resp).await.body.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].name, "测试应用元素-租户共享元素");
-    assert_eq!(result[0].uri, format!("element://{}/pub/**", ident_info.app_id));
+    assert_eq!(result[0].ident_uri, format!("https://iam/common/resource/element/{}/pub/**", ident_info.app_id));
 
     // Logout
     let req = test::TestRequest::delete().insert_header((BIOSFuns::fw_config().web.context_flag.clone(), bios_context_in_header.clone())).uri("/common/logout").to_request();

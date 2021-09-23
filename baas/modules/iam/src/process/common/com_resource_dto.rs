@@ -24,7 +24,7 @@ pub struct ResourceDetailResp {
     pub name: String,
     // 资源uri
     #[validate(length(max = 5000))]
-    pub uri: String,
+    pub ident_uri: String,
     // 资源图标
     #[validate(length(max = 1000))]
     pub icon: String,

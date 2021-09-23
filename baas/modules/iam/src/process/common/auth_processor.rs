@@ -92,12 +92,18 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                         log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
                         BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
                     } else {
-                        log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log());
+                        log::warn!(
+                            "{}",
+                            output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log()
+                        );
                         BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()))
                     }
                 }
             } else {
-                log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log());
+                log::warn!(
+                    "{}",
+                    output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log()
+                );
                 BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()))
             }
         }
@@ -238,7 +244,7 @@ pub async fn init_account_role<'c>(role_code: &str, role_name: &str, tx: &mut Tr
     Ok(role_id)
 }
 
-pub async fn init_resource_subject<'c>(kind: &ResourceKind, uri: &str, name: &str, tx: &mut Transaction<'c, MySql>, context: &BIOSContext) -> BIOSResult<String> {
+pub async fn init_resource_subject<'c>(kind: &ResourceKind, ident_uri: &str, name: &str, tx: &mut Transaction<'c, MySql>, context: &BIOSContext) -> BIOSResult<String> {
     let resource_subject_id = bios::basic::field::uuid();
     BIOSFuns::reldb()
         .exec(
@@ -249,9 +255,10 @@ pub async fn init_resource_subject<'c>(kind: &ResourceKind, uri: &str, name: &st
                     IamResourceSubject::CreateUser,
                     IamResourceSubject::UpdateUser,
                     IamResourceSubject::Kind,
-                    IamResourceSubject::Uri,
+                    IamResourceSubject::IdentUri,
                     IamResourceSubject::Name,
                     IamResourceSubject::Sort,
+                    IamResourceSubject::Uri,
                     IamResourceSubject::Ak,
                     IamResourceSubject::Sk,
                     IamResourceSubject::PlatformAccount,
@@ -265,9 +272,10 @@ pub async fn init_resource_subject<'c>(kind: &ResourceKind, uri: &str, name: &st
                     context.ident.account_id.as_str().into(),
                     context.ident.account_id.as_str().into(),
                     kind.to_string().to_lowercase().into(),
-                    uri.into(),
+                    ident_uri.into(),
                     name.into(),
                     0.into(),
+                    "".into(),
                     "".into(),
                     "".into(),
                     "".into(),

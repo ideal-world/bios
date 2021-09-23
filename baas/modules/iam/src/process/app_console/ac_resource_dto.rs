@@ -37,9 +37,12 @@ pub struct ResourceSubjectAddReq {
     pub sort: i32,
     // 资源类型
     pub kind: ResourceKind,
+    // 资源主体标识URI
+    #[validate(url)]
+    pub ident_uri: String,
     // 资源主体连接URI
     #[validate(url)]
-    pub uri: String,
+    pub uri: Option<String>,
     // AK，部分类型支持写到URI中
     #[validate(length(min = 2, max = 1000))]
     pub ak: Option<String>,
@@ -65,6 +68,9 @@ pub struct ResourceSubjectModifyReq {
     pub sort: Option<i32>,
     // 资源类型
     pub kind: Option<ResourceKind>,
+    // 资源主体标识URI
+    #[validate(url)]
+    pub ident_uri: Option<String>,
     // 资源主体连接URI
     #[validate(url)]
     pub uri: Option<String>,
@@ -96,6 +102,9 @@ pub struct ResourceSubjectDetailResp {
     // 资源类型
     #[validate(length(max = 255))]
     pub kind: String,
+    // 资源主体标识URI
+    #[validate(url)]
+    pub ident_uri: String,
     // 资源主体连接URI
     #[validate(url)]
     pub uri: String,

@@ -31,6 +31,8 @@ enum ModuleKind {
     SystemConsole,
     #[display(fmt = "04")]
     TenantConsole,
+    #[display(fmt = "05")]
+    OAuth,
 }
 
 #[derive(Display, Debug)]
@@ -75,6 +77,8 @@ pub enum ObjectKind {
     Token,
     #[display(fmt = "102")]
     AccessToken,
+    #[display(fmt = "103")]
+    OAuthInfo,
 }
 
 /// 统一错误输出
@@ -433,4 +437,77 @@ pub enum IamOutput {
         _0
     )]
     CommonAccountIdentValidCheckUnsupportedAuthKind(String),
+
+    #[display(
+        fmt = "{}{}{}{}{}##[{}] not found",
+        StatusCodeKind::NotFound,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::AccountIdent,
+        ActionKind::FetchOne,
+        _0
+    )]
+    CommonOAuthFetchAccountIdentKindNotFound(String),
+    #[display(
+        fmt = "{}{}{}{}{}##[ResourceSubject] not found",
+        StatusCodeKind::NotFound,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::ResourceSubject,
+        ActionKind::FetchOne
+    )]
+    CommonOAuthFetchResourceSubjectNotFound(),
+    #[display(
+        fmt = "{}{}{}{}{}##Account Status Disabled",
+        StatusCodeKind::Conflict,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::Account,
+        ActionKind::FetchOne
+    )]
+    CommonOAuthAccountDisabled(),
+    #[display(
+        fmt = "{}{}{}{}{}##[{}] {}",
+        StatusCodeKind::UnKnown,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::OAuthInfo,
+        ActionKind::FetchOne,
+        _0,
+        _1
+    )]
+    CommonOAuthFetchOAuthInfoError(String, String),
+    #[display(
+        fmt = "{}{}{}{}{}##[{}] {}",
+        StatusCodeKind::Success,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::OAuthInfo,
+        ActionKind::FetchOne,
+        _0,
+        _1
+    )]
+    CommonOAuthFetchOAuthInfoTrace(String, String),
+    #[display(
+        fmt = "{}{}{}{}{}##[{}] {}",
+        StatusCodeKind::UnKnown,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::AccessToken,
+        ActionKind::FetchOne,
+        _0,
+        _1
+    )]
+    CommonOAuthFetchAccessTokenError(String, String),
+    #[display(
+        fmt = "{}{}{}{}{}##[{}] {}",
+        StatusCodeKind::Success,
+        APP_FLAG,
+        ModuleKind::OAuth,
+        ObjectKind::AccessToken,
+        ActionKind::FetchOne,
+        _0,
+        _1
+    )]
+    CommonOAuthFetchAccessTokenTrace(String, String),
 }
