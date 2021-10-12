@@ -33,7 +33,8 @@ init_dev_env(){
     sudo apt-get update
     echo "[2/10] install lua openresty and dev tools"
     echo ""
-    sudo apt-get -y install git curl liblua5.1-0-dev openresty openresty-openssl111-dev cpanminus
+    # Add libpcre3-dev to repair https://github.com/Kong/kong/issues/23
+    sudo apt-get -y install git curl liblua5.1-0-dev openresty openresty-openssl111-dev cpanminus libpcre3-dev
     echo "[3/10] install etcd"
     echo ""
     wget https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
@@ -53,12 +54,12 @@ init_dev_env(){
     cd ..
     echo "[6/10] download apisix"
     echo ""
-    wget https://mirrors.bfsu.edu.cn/apache/apisix/2.9/apache-apisix-2.9-src.tgz
+    wget https://mirrors.bfsu.edu.cn/apache/apisix/2.10.0/apache-apisix-2.10.0-src.tgz
     tar -cvf apisix.tar apisix
-    tar -xf apache-apisix-2.9-src.tgz -C apisix
+    tar -xf apache-apisix-2.10.0-src.tgz -C apisix
     tar -xf apisix.tar
     rm apisix.tar
-    rm apache-apisix-2.9-src.tgz
+    rm apache-apisix-2.10.0-src.tgz
     echo "[7/10] make deps"
     echo ""
     cd apisix
