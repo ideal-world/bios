@@ -19,7 +19,6 @@
 use chrono::{Local, NaiveDateTime};
 use sea_query::{ColumnDef, Expr, Iden, Order, Query, Table};
 use serde::Serialize;
-use sqlx::Connection;
 use strum::EnumIter;
 use strum::IntoEnumIterator;
 
@@ -228,7 +227,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
     BIOSTestContainer::mysql(None, |url| async move {
         let client = BIOSRelDBClient::init(&url, 10).await?;
 
-        let mut conn = client.conn().await;
+        let mut conn = client.conn().await?;
         let mut tx = conn.begin().await?;
 
         let sql_builder = Table::create()
@@ -285,7 +284,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
 
         // Again
 
-        let mut conn = client.conn().await;
+        let mut conn = client.conn().await?;
         let mut tx = conn.begin().await?;
 
         let sql_builder = Query::insert()
@@ -366,7 +365,7 @@ async fn test_reldb_client_with_tx() -> BIOSResult<()> {
 
         // Soft Delete
 
-        let mut conn = client.conn().await;
+        let mut conn = client.conn().await?;
         let mut tx = conn.begin().await?;
 
         let sql_builder =
