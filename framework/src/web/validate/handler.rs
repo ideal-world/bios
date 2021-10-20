@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-use crate::basic::field::is_phone;
 use validator::ValidationError;
+use crate::BIOSFuns;
 
 pub fn validate_phone(phone: &str) -> Result<(), ValidationError> {
-    if !is_phone(phone) {
+    if !BIOSFuns::field.is_phone(phone) {
         return Err(ValidationError::new("Not a valid mobile phone number"));
     }
     Ok(())

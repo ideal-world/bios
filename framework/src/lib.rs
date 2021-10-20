@@ -20,7 +20,18 @@ extern crate lazy_static;
 use std::any::Any;
 use std::ptr::replace;
 
+use serde::Deserialize;
+
+use basic::result::BIOSResult;
+
 use crate::basic::config::{BIOSConfig, FrameworkConfig};
+use crate::basic::field::BIOSField;
+use crate::basic::json::BIOSJson;
+use crate::basic::logger::BIOSLogger;
+use crate::basic::security::BIOSSecurity;
+use crate::basic::security::BIOSSecurityBase64;
+use crate::basic::security::BIOSSecurityKey;
+use crate::basic::uri::BIOSUri;
 #[cfg(feature = "cache")]
 use crate::cache::cache_client::BIOSCacheClient;
 #[cfg(feature = "reldb")]
@@ -29,20 +40,6 @@ use crate::db::reldb_client::BIOSRelDBClient;
 use crate::mq::mq_client::BIOSMQClient;
 #[cfg(feature = "web-client")]
 use crate::web::web_client::BIOSWebClient;
-use basic::result::BIOSResult;
-
-static mut BIOS_INST: BIOSFuns = BIOSFuns {
-    workspace_config: None,
-    framework_config: None,
-    #[cfg(feature = "reldb")]
-    reldb: None,
-    #[cfg(feature = "cache")]
-    cache: None,
-    #[cfg(feature = "mq")]
-    mq: None,
-    #[cfg(feature = "web-client")]
-    web_client: None,
-};
 
 pub struct BIOSFuns {
     workspace_config: Option<Box<dyn Any>>,
@@ -57,8 +54,37 @@ pub struct BIOSFuns {
     web_client: Option<BIOSWebClient>,
 }
 
+static mut BIOS_INST: BIOSFuns = BIOSFuns {
+    workspace_config: None,
+    framework_config: None,
+    #[cfg(feature = "reldb")]
+    reldb: None,
+    #[cfg(feature = "cache")]
+    cache: None,
+    #[cfg(feature = "mq")]
+    mq: None,
+    #[cfg(feature = "web-client")]
+    web_client: None,
+};
+
+#[allow(unsafe_code)]
 impl BIOSFuns {
-    pub async fn init<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
+    pub async fn init<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
+        BIOSLogger::init(root_path)?;
+        let config = BIOSConfig::<T>::init(root_path)?;
+        BIOSFuns::init_conf::<T>(config).await
+    }
+
+    pub async fn init_conf_from_path<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
+        let config = BIOSConfig::<T>::init(root_path)?;
+        BIOSFuns::init_conf::<T>(config).await
+    }
+
+    pub fn init_log_from_path(root_path: &str) -> BIOSResult<()> {
+        BIOSLogger::init(root_path)
+    }
+
+    pub async fn init_conf<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
         unsafe {
             replace(&mut BIOS_INST.workspace_config, Some(Box::new(conf.ws)));
             replace(&mut BIOS_INST.framework_config, Some(conf.fw));
@@ -103,9 +129,9 @@ impl BIOSFuns {
     pub fn ws_config<T>() -> &'static T {
         unsafe {
             match &BIOS_INST.workspace_config {
-                None => panic!("Raw Workspace Config not exist"),
+                None => panic!("Raw Workspace Config doesn't exist"),
                 Some(conf) => match conf.downcast_ref::<T>() {
-                    None => panic!("Workspace Config not exist"),
+                    None => panic!("Workspace Config doesn't exist"),
                     Some(t) => t,
                 },
             }
@@ -115,17 +141,32 @@ impl BIOSFuns {
     pub fn fw_config() -> &'static FrameworkConfig {
         unsafe {
             match &BIOS_INST.framework_config {
-                None => panic!("Framework Config not exist"),
+                None => panic!("Framework Config doesn't exist"),
                 Some(t) => t,
             }
         }
     }
 
+    #[allow(non_upper_case_globals)]
+    pub const field: BIOSField = BIOSField {};
+
+    #[allow(non_upper_case_globals)]
+    pub const json: BIOSJson = BIOSJson {};
+
+    #[allow(non_upper_case_globals)]
+    pub const uri: BIOSUri = BIOSUri {};
+
+    #[allow(non_upper_case_globals)]
+    pub const security: BIOSSecurity = BIOSSecurity {
+        base64: BIOSSecurityBase64 {},
+        key: BIOSSecurityKey {},
+    };
+
     #[cfg(feature = "reldb")]
     pub fn reldb() -> &'static BIOSRelDBClient {
         unsafe {
             match &BIOS_INST.reldb {
-                None => panic!("RelDB default instance does not exist"),
+                None => panic!("RelDB default instance doesn't exist"),
                 Some(t) => t,
             }
         }
@@ -135,7 +176,7 @@ impl BIOSFuns {
     pub fn cache() -> &'static mut BIOSCacheClient {
         unsafe {
             match &mut BIOS_INST.cache {
-                None => panic!("Cache default instance does not exist"),
+                None => panic!("Cache default instance doesn't exist"),
                 Some(t) => t,
             }
         }
@@ -145,7 +186,7 @@ impl BIOSFuns {
     pub fn mq() -> &'static mut BIOSMQClient {
         unsafe {
             match &mut BIOS_INST.mq {
-                None => panic!("MQ default instance does not exist"),
+                None => panic!("MQ default instance doesn't exist"),
                 Some(t) => t,
             }
         }
@@ -155,7 +196,7 @@ impl BIOSFuns {
     pub fn web_client() -> &'static BIOSWebClient {
         unsafe {
             match &BIOS_INST.web_client {
-                None => panic!("Web Client default instance does not exist"),
+                None => panic!("Web Client default instance doesn't exist"),
                 Some(t) => t,
             }
         }

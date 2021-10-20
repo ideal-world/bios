@@ -16,6 +16,7 @@
 use serde::{Deserialize, Serialize};
 
 use bios::basic::result::BIOSResult;
+use bios::BIOSFuns;
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -52,34 +53,28 @@ async fn test_basic_json() -> BIOSResult<()> {
     let test_config = TestConfig {
         project_name: "测试".to_string(),
         level_num: 0,
-        db_proj: DatabaseConfig {
-            url: "http://xxx".to_string(),
-        },
+        db_proj: DatabaseConfig { url: "http://xxx".to_string() },
     };
 
-    let json_str = bios::basic::json::obj_to_string(&test_config).unwrap();
-    assert_eq!(
-        json_str,
-        r#"{"project_name":"测试","level_num":0,"db_proj":{"url":"http://xxx"}}"#
-    );
+    let json_str = BIOSFuns::json.obj_to_string(&test_config).unwrap();
+    assert_eq!(json_str, r#"{"project_name":"测试","level_num":0,"db_proj":{"url":"http://xxx"}}"#);
 
-    let json_obj = bios::basic::json::str_to_obj::<TestConfig<DatabaseConfig>>(&json_str).unwrap();
+    let json_obj = BIOSFuns::json.str_to_obj::<TestConfig<DatabaseConfig>>(&json_str).unwrap();
     assert_eq!(json_obj.project_name, "测试");
     assert_eq!(json_obj.level_num, 0);
     assert_eq!(json_obj.db_proj.url, "http://xxx");
 
-    let json_value = bios::basic::json::str_to_json(&json_str).unwrap();
+    let json_value = BIOSFuns::json.str_to_json(&json_str).unwrap();
     assert_eq!(json_value["project_name"], "测试");
     assert_eq!(json_value["level_num"], 0);
     assert_eq!(json_value["db_proj"]["url"], "http://xxx");
 
-    let json_value = bios::basic::json::obj_to_json(&json_obj).unwrap();
+    let json_value = BIOSFuns::json.obj_to_json(&json_obj).unwrap();
     assert_eq!(json_value["project_name"], "测试");
     assert_eq!(json_value["level_num"], 0);
     assert_eq!(json_value["db_proj"]["url"], "http://xxx");
 
-    let json_obj =
-        bios::basic::json::json_to_obj::<TestConfig<DatabaseConfig>>(json_value).unwrap();
+    let json_obj = BIOSFuns::json.json_to_obj::<TestConfig<DatabaseConfig>>(json_value).unwrap();
     assert_eq!(json_obj.project_name, "测试");
     assert_eq!(json_obj.level_num, 0);
     assert_eq!(json_obj.db_proj.url, "http://xxx");

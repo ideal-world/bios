@@ -20,9 +20,8 @@ use std::env;
 
 use serde::{Deserialize, Serialize};
 
-use bios::basic::config::BIOSConfig;
+use bios::basic::config::NoneConfig;
 use bios::basic::result::BIOSResult;
-use bios::basic::logger::BIOSLogger;
 use bios::BIOSFuns;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,33 +56,43 @@ impl Default for DatabaseConfig {
 
 #[tokio::test]
 async fn test_basic_config() -> BIOSResult<()> {
-    BIOSLogger::init("")?;
-    let mut config = BIOSConfig::<TestConfig>::init("tests/config")?;
-    assert_eq!(config.ws.project_name, "测试");
-    assert_eq!(config.fw.db.url, "postgres://postgres@test");
-    assert_eq!(config.ws.db_proj.url, "postgres://postgres@test.proj");
-    assert_eq!(config.fw.app.name, "APP1");
+    BIOSFuns::init::<NoneConfig>("").await?;
+    assert_eq!(BIOSFuns::fw_config().db.url, "");
+    assert_eq!(BIOSFuns::fw_config().db.enabled, true);
+    assert_eq!(BIOSFuns::fw_config().app.name, "BIOS Application");
+
+    BIOSFuns::init::<TestConfig>("tests/config").await?;
+    assert_eq!(BIOSFuns::ws_config::<TestConfig>().project_name, "测试");
+    assert_eq!(BIOSFuns::fw_config().db.url, "postgres://postgres@test");
+    assert_eq!(BIOSFuns::ws_config::<TestConfig>().db_proj.url, "postgres://postgres@test.proj");
+    assert_eq!(BIOSFuns::fw_config().app.name, "APP1");
 
     env::set_var("PROFILE", "prod");
 
-    config = BIOSConfig::<TestConfig>::init("tests/config")?;
-    assert_eq!(config.fw.db.url, "postgres://postgres@prod");
-    assert_eq!(config.ws.db_proj.url, "postgres://postgres@prod.proj");
-    assert_eq!(config.fw.app.name, "BIOS Application");
+    BIOSFuns::init::<TestConfig>("tests/config").await?;
+    assert_eq!(BIOSFuns::fw_config().db.url, "postgres://postgres@prod");
+    assert_eq!(BIOSFuns::ws_config::<TestConfig>().db_proj.url, "postgres://postgres@prod.proj");
+    assert_eq!(BIOSFuns::fw_config().app.name, "BIOS Application");
 
     // cli example: env BIOS_DB.URL=test BIOS_app.name=xx ./xxx
     env::set_var("BIOS_DB.URL", "test");
-    config = BIOSConfig::<TestConfig>::init("tests/config")?;
-    assert_eq!(config.fw.db.url, "test");
-    assert_eq!(config.fw.app.name, "BIOS Application");
+    BIOSFuns::init::<TestConfig>("tests/config").await?;
+    assert_eq!(BIOSFuns::fw_config().db.url, "test");
+    assert_eq!(BIOSFuns::fw_config().app.name, "BIOS Application");
 
+    /*let mut  config=BIOSConfig{
+        ws: BIOSFuns::ws_config::<TestConfig>(),
+        fw: BIOSFuns::fw_config(),
+    };
+
+    BIOSFuns::fw_config().db = "";
     config.fw.cache.enabled = false;
     config.fw.db.enabled = false;
     config.fw.mq.enabled = false;
     BIOSFuns::init(config).await?;
 
     assert_eq!(BIOSFuns::ws_config::<TestConfig>().db_proj.url, "postgres://postgres@prod.proj");
-    assert_eq!(BIOSFuns::fw_config().db.url, "test");
+    assert_eq!(BIOSFuns::fw_config().db.url, "test");*/
 
     Ok(())
 }

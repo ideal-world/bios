@@ -21,8 +21,8 @@ use std::env;
 
 use log::info;
 
-use bios::basic::logger::BIOSLogger;
 use bios::basic::result::BIOSResult;
+use bios::BIOSFuns;
 
 use crate::app::req::test_req;
 
@@ -32,7 +32,7 @@ async fn test_basic_logger() -> BIOSResult<()> {
     env::set_var("PROFILE", "test");
     // BIOSLogger::init("tests/log")?;
     // 配置文件不存在，使用默认配置
-    BIOSLogger::init("")?;
+    BIOSFuns::init_log_from_path("")?;
     info!("info...");
     test_req();
     Ok(())

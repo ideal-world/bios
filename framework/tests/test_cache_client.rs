@@ -17,18 +17,17 @@
 // https://github.com/mitsuhiko/redis-rs
 
 use redis::AsyncCommands;
-use tokio::time::{Duration, sleep};
+use tokio::time::{sleep, Duration};
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
 use bios::basic::result::BIOSResult;
-use bios::basic::logger::BIOSLogger;
-use bios::BIOSFuns;
 use bios::cache::cache_client::BIOSCacheClient;
 use bios::test::test_container::BIOSTestContainer;
+use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_cache_client() -> BIOSResult<()> {
-    BIOSLogger::init("").unwrap();
+    BIOSFuns::init_log_from_path("").unwrap();
     BIOSTestContainer::redis(|url| async move {
         let mut client = BIOSCacheClient::init(&url).await?;
         // basic operations
@@ -124,24 +123,24 @@ async fn test_cache_client() -> BIOSResult<()> {
         assert!(!mem.contains(&"m3".to_string()));
 
         // Default test
-        BIOSFuns::init(BIOSConfig {
+        BIOSFuns::init_conf(BIOSConfig {
             ws: NoneConfig {},
             fw: FrameworkConfig {
                 app: Default::default(),
                 web: Default::default(),
                 cache: CacheConfig { enabled: true, url },
-                db: DBConfig{
+                db: DBConfig {
                     enabled: false,
                     ..Default::default()
                 },
-                mq: MQConfig{
+                mq: MQConfig {
                     enabled: false,
                     ..Default::default()
                 },
                 adv: Default::default(),
             },
         })
-            .await?;
+        .await?;
 
         let map_result = BIOSFuns::cache().hgetall("h").await?;
         assert_eq!(map_result.len(), 3);
@@ -151,5 +150,5 @@ async fn test_cache_client() -> BIOSResult<()> {
 
         Ok(())
     })
-        .await
+    .await
 }

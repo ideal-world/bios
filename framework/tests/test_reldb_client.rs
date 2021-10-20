@@ -191,7 +191,7 @@ async fn test_reldb_client() -> BIOSResult<()> {
         assert_eq!(result.rows_affected(), 1);
 
         // Default test
-        BIOSFuns::init(BIOSConfig {
+        BIOSFuns::init_conf(BIOSConfig {
             ws: NoneConfig {},
             fw: FrameworkConfig {
                 app: Default::default(),

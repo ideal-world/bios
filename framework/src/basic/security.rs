@@ -14,31 +14,27 @@
  * limitations under the License.
  */
 
-pub mod digest {
-    use crypto::digest::Digest;
-    use crypto::hmac::Hmac;
-    use crypto::mac::Mac;
-    use crypto::md5::Md5;
-    use crypto::sha1::Sha1;
-    use crypto::sha2::{Sha256, Sha512};
+use crypto::digest::Digest;
+use crypto::hmac::Hmac;
+use crypto::mac::Mac;
+use crypto::md5::Md5;
+use crypto::sha1::Sha1;
+use crypto::sha2::{Sha256, Sha512};
 
-    pub mod base64 {
-        use crate::basic::error::BIOSError;
-        use crate::basic::result::BIOSResult;
+use crate::basic::error::BIOSError;
+use crate::basic::result::BIOSResult;
+use crate::BIOSFuns;
 
-        pub fn decode(str: &str) -> BIOSResult<String> {
-            match base64::decode(str) {
-                Ok(result) => Ok(String::from_utf8(result).expect("Vec[] to String error")),
-                Err(e) => Err(BIOSError::FormatError(e.to_string())),
-            }
-        }
+pub struct BIOSSecurity {
+    pub base64: BIOSSecurityBase64,
+    pub key: BIOSSecurityKey,
+}
 
-        pub fn encode(str: &str) -> String {
-            base64::encode(str)
-        }
-    }
+pub struct BIOSSecurityBase64;
+pub struct BIOSSecurityKey;
 
-    pub fn digest(str: &str, key: Option<&str>, algorithm: &str) -> String {
+impl BIOSSecurity {
+    pub fn digest(&self, str: &str, key: Option<&str>, algorithm: &str) -> String {
         match algorithm.to_lowercase().as_str() {
             "sha1" => {
                 let mut sha1 = Sha1::new();
@@ -80,18 +76,30 @@ pub mod digest {
     }
 }
 
-pub mod key {
-
-    pub fn generate_token() -> String {
-        format!("tk{}", crate::basic::field::uuid())
+impl BIOSSecurityBase64 {
+    pub fn decode(&self, str: &str) -> BIOSResult<String> {
+        match base64::decode(str) {
+            Ok(result) => Ok(String::from_utf8(result).expect("Vec[] to String error")),
+            Err(e) => Err(BIOSError::FormatError(e.to_string())),
+        }
     }
 
-    pub fn generate_ak() -> String {
-        format!("ak{}", crate::basic::field::uuid())
+    pub fn encode(&self, str: &str) -> String {
+        base64::encode(str)
+    }
+}
+
+impl BIOSSecurityKey {
+    pub fn generate_token(&self) -> String {
+        format!("tk{}", BIOSFuns::field.uuid())
     }
 
-    pub fn generate_sk(ak: &str) -> String {
-        let sk = crate::basic::security::digest::digest(format!("{}{}", ak, crate::basic::field::uuid()).as_str(), None, "SHA1");
+    pub fn generate_ak(&self) -> String {
+        format!("ak{}", BIOSFuns::field.uuid())
+    }
+
+    pub fn generate_sk(&self, ak: &str) -> String {
+        let sk = BIOSFuns::security.digest(format!("{}{}", ak, BIOSFuns::field.uuid()).as_str(), None, "SHA1");
         format!("sk{}", sk)
     }
 }
