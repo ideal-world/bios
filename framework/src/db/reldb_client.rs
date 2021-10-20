@@ -29,7 +29,7 @@ use serde_json::Value;
 use sqlx::mysql::{MySqlPoolOptions, MySqlQueryResult, MySqlRow};
 use sqlx::pool::PoolConnection;
 use sqlx::types::chrono::Utc;
-use sqlx::{Column, FromRow, MySql, Pool, Row, Transaction, TypeInfo};
+use sqlx::{Column, Connection, FromRow, MySql, Pool, Row, Transaction, TypeInfo};
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;
@@ -43,6 +43,14 @@ sea_query::sea_query_driver_mysql!();
 
 pub struct BIOSRelDBClient {
     pool: Pool<MySql>,
+}
+
+pub struct BIOSRelDBConnection {
+    conn: PoolConnection<MySql>,
+}
+
+pub struct BIOSRelDBTransaction<'c> {
+    tx: Transaction<'c, MySql>,
 }
 
 impl BIOSRelDBClient {
@@ -96,14 +104,18 @@ impl BIOSRelDBClient {
         Ok(BIOSRelDBClient { pool })
     }
 
-    pub async fn conn(&self) -> PoolConnection<MySql> {
-        self.pool.acquire().await.unwrap()
+    pub async fn conn(&self) -> BIOSResult<BIOSRelDBConnection> {
+        let connection = self.pool.acquire().await;
+        match connection {
+            Ok(conn) => BIOSResult::Ok(BIOSRelDBConnection { conn }),
+            Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
+        }
     }
 
-    pub async fn exec<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<MySqlQueryResult> {
+    pub async fn exec<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<MySqlQueryResult> {
         let result = bind_query(sqlx::query(&sql_builder.sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.execute(t).await,
+            Some(t) => result.execute(&mut t.tx).await,
             None => result.execute(&self.pool).await,
         };
         match result {
@@ -112,7 +124,7 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_all<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Vec<E>>
+    pub async fn fetch_all<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<Vec<E>>
     where
         E: for<'r> FromRow<'r, MySqlRow>,
         E: std::marker::Send,
@@ -120,7 +132,7 @@ impl BIOSRelDBClient {
     {
         let result = bind_query_as(sqlx::query_as::<_, E>(&sql_builder.sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.fetch_all(t).await,
+            Some(t) => result.fetch_all(&mut t.tx).await,
             None => result.fetch_all(&self.pool).await,
         };
         match result {
@@ -129,10 +141,10 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_all_json<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Vec<Value>> {
+    pub async fn fetch_all_json<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<Vec<Value>> {
         let result = bind_query(sqlx::query(&sql_builder.sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.fetch_all(t).await,
+            Some(t) => result.fetch_all(&mut t.tx).await,
             None => result.fetch_all(&self.pool).await,
         };
         match result {
@@ -141,7 +153,7 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_one<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<E>
+    pub async fn fetch_one<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<E>
     where
         E: for<'r> FromRow<'r, MySqlRow>,
         E: std::marker::Send,
@@ -153,14 +165,14 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_one_json<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Value> {
+    pub async fn fetch_one_json<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<Value> {
         match self.fetch_optional_json(sql_builder, tx).await? {
             Some(row) => BIOSResult::Ok(row),
             None => BIOSResult::Err(BIOSError::NotFound("Record not exists".to_string())),
         }
     }
 
-    pub async fn fetch_optional<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Option<E>>
+    pub async fn fetch_optional<'c, E>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<Option<E>>
     where
         E: for<'r> FromRow<'r, MySqlRow>,
         E: std::marker::Send,
@@ -169,7 +181,7 @@ impl BIOSRelDBClient {
         let fetch_one_sql = format!("{} LIMIT 1", sql_builder.sql);
         let result = bind_query_as(sqlx::query_as::<_, E>(&fetch_one_sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.fetch_optional(t).await,
+            Some(t) => result.fetch_optional(&mut t.tx).await,
             None => result.fetch_optional(&self.pool).await,
         };
         match result {
@@ -178,11 +190,11 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn fetch_optional_json<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<Option<Value>> {
+    pub async fn fetch_optional_json<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<Option<Value>> {
         let fetch_one_sql = format!("{} LIMIT 1", sql_builder.sql);
         let result = bind_query(sqlx::query(&fetch_one_sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.fetch_optional(t).await,
+            Some(t) => result.fetch_optional(&mut t.tx).await,
             None => result.fetch_optional(&self.pool).await,
         };
         match result {
@@ -194,7 +206,7 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn pagination<'c, E>(&self, sql_builder: &BIOSSqlBuilder, page_number: u64, page_size: u64, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<BIOSPage<E>>
+    pub async fn pagination<'c, E>(&self, sql_builder: &BIOSSqlBuilder, page_number: u64, page_size: u64, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<BIOSPage<E>>
     where
         E: for<'r> FromRow<'r, MySqlRow>,
         E: std::marker::Send,
@@ -203,7 +215,7 @@ impl BIOSRelDBClient {
         let page_sql = format!("{} LIMIT {} , {}", sql_builder.sql, (page_number - 1) * page_size, page_size);
         let result = bind_query_as(sqlx::query_as::<_, E>(&page_sql), &sql_builder.values);
         let (total_size, result) = match tx {
-            Some(t) => (self.count(sql_builder, Some(t)).await?, result.fetch_all(t).await),
+            Some(t) => (self.count(sql_builder, Some(t)).await?, result.fetch_all(&mut t.tx).await),
             None => (self.count(sql_builder, None).await?, result.fetch_all(&self.pool).await),
         };
         match result {
@@ -222,12 +234,12 @@ impl BIOSRelDBClient {
         sql_builder: &BIOSSqlBuilder,
         page_number: u64,
         page_size: u64,
-        tx: Option<&mut Transaction<'c, MySql>>,
+        tx: Option<&mut BIOSRelDBTransaction<'c>>,
     ) -> BIOSResult<BIOSPage<Value>> {
         let page_sql = format!("{} LIMIT {} , {}", sql_builder.sql, (page_number - 1) * page_size, page_size);
         let result = bind_query(sqlx::query(&page_sql), &sql_builder.values);
         let (total_size, result) = match tx {
-            Some(t) => (self.count(sql_builder, Some(t)).await?, result.fetch_all(t).await),
+            Some(t) => (self.count(sql_builder, Some(t)).await?, result.fetch_all(&mut t.tx).await),
             None => (self.count(sql_builder, None).await?, result.fetch_all(&self.pool).await),
         };
         match result {
@@ -241,14 +253,14 @@ impl BIOSRelDBClient {
         }
     }
 
-    pub async fn exists<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<bool> {
+    pub async fn exists<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<bool> {
         match self.count(sql_builder, tx).await {
             Ok(count) => Ok(count != 0),
             Err(e) => Err(e),
         }
     }
 
-    pub async fn soft_del<'c, R, T>(&self, table: R, id_column: T, create_user: &str, sql_builder: &BIOSSqlBuilder, tx: &mut Transaction<'c, MySql>) -> BIOSResult<bool>
+    pub async fn soft_del<'c, R, T>(&self, table: R, id_column: T, create_user: &str, sql_builder: &BIOSSqlBuilder, tx: &mut BIOSRelDBTransaction<'c>) -> BIOSResult<bool>
     where
         R: IntoTableRef + Copy,
         T: IntoColumnRef + Copy,
@@ -291,7 +303,7 @@ impl BIOSRelDBClient {
         BIOSResult::Ok(true)
     }
 
-    pub async fn count<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut Transaction<'c, MySql>>) -> BIOSResult<u64> {
+    pub async fn count<'c>(&self, sql_builder: &BIOSSqlBuilder, tx: Option<&mut BIOSRelDBTransaction<'c>>) -> BIOSResult<u64> {
         let count_sql = format!(
             "SELECT COUNT(1) AS _COUNT FROM ( {} ) _{}",
             sql_builder.sql,
@@ -299,7 +311,7 @@ impl BIOSRelDBClient {
         );
         let result = bind_query(sqlx::query(&count_sql), &sql_builder.values);
         let result = match tx {
-            Some(t) => result.fetch_one(t).await,
+            Some(t) => result.fetch_one(&mut t.tx).await,
             None => result.fetch_one(&self.pool).await,
         };
         match result {
@@ -389,6 +401,32 @@ impl BIOSRelDBClient {
 
 pub trait SqlBuilderProcess {
     fn done(&self) -> BIOSSqlBuilder;
+}
+
+impl BIOSRelDBConnection {
+    pub async fn begin<'c>(&'c mut self) -> BIOSResult<BIOSRelDBTransaction<'c>> {
+        let result = self.conn.begin().await;
+        match result {
+            Ok(tx) => BIOSResult::Ok(BIOSRelDBTransaction::<'c> { tx }),
+            Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
+        }
+    }
+}
+
+impl<'c> BIOSRelDBTransaction<'c> {
+    pub async fn commit(self) -> BIOSResult<()> {
+        match self.tx.commit().await {
+            Ok(_) => BIOSResult::Ok(()),
+            Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
+        }
+    }
+
+    pub async fn rollback(self) -> BIOSResult<()> {
+        match self.tx.rollback().await {
+            Ok(_) => BIOSResult::Ok(()),
+            Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
+        }
+    }
 }
 
 impl SqlBuilderProcess for TableCreateStatement {
