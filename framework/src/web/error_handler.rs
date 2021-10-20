@@ -28,6 +28,7 @@ use log::{trace, warn};
 use crate::basic::dto::BIOSResp;
 use crate::basic::error::BIOSError;
 use crate::basic::field::GENERAL_SPLIT;
+use crate::BIOSFuns;
 
 pub struct WebErrorHandler;
 
@@ -78,7 +79,7 @@ where
                     },
                 };
                 let bios_resp = if msg.contains("code") && msg.contains("msg") && msg.contains("body") {
-                    let try_convert_resp = crate::basic::json::str_to_obj::<BIOSResp<()>>(&msg);
+                    let try_convert_resp = BIOSFuns::json.str_to_obj::<BIOSResp<()>>(&msg);
                     if try_convert_resp.is_ok() {
                         try_convert_resp.unwrap()
                     } else {

@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use crate::basic::error::{BIOSError, ERROR_DEFAULT_CODE};
 use crate::basic::fetch_profile;
 use crate::basic::result::BIOSResult;
+use crate::BIOSFuns;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BIOSConfig<T> {
@@ -77,7 +78,7 @@ impl Default for AppConfig {
             version: "0.0.1".to_owned(),
             url: "".to_owned(),
             email: "".to_owned(),
-            inst: format!("inst_{}", crate::basic::field::uuid()),
+            inst: format!("inst_{}", BIOSFuns::field.uuid()),
         }
     }
 }
@@ -188,10 +189,10 @@ impl Default for AdvConfig {
 pub struct NoneConfig {}
 
 impl<'a, T> BIOSConfig<T>
-where
-    T: Deserialize<'a>,
+    where
+        T: Deserialize<'a>,
 {
-    pub fn init(root_path: &str) -> BIOSResult<BIOSConfig<T>> {
+    pub(crate) fn init(root_path: &str) -> BIOSResult<BIOSConfig<T>> {
         let profile = fetch_profile();
         let path = Path::new(root_path);
 

@@ -20,13 +20,12 @@ use awc::http::StatusCode;
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
 use bios::basic::result::BIOSResult;
-use bios::basic::logger::BIOSLogger;
 use bios::web::web_client::BIOSWebClient;
 use bios::BIOSFuns;
 
 #[actix_rt::test]
 async fn test_web_client() -> BIOSResult<()> {
-    BIOSLogger::init("")?;
+    BIOSFuns::init_log_from_path("")?;
     let client = BIOSWebClient::init(60, 60)?;
     let client = client.raw();
     let response = client.get("https://www.baidu.com").insert_header(("User-Agent", "Actix-web")).send().await?;
@@ -44,7 +43,7 @@ async fn test_web_client() -> BIOSResult<()> {
     assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
 
     // Default test
-    BIOSFuns::init(BIOSConfig {
+    BIOSFuns::init_conf(BIOSConfig {
         ws: NoneConfig {},
         fw: FrameworkConfig {
             app: Default::default(),

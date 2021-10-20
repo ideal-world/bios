@@ -22,6 +22,7 @@ use serde::Serialize;
 use crate::basic::dto::{BIOSContext, BIOSResp};
 use crate::basic::error::BIOSError;
 use crate::basic::result::BIOSResult;
+use crate::BIOSFuns;
 
 pub type BIOSResponse = BIOSResult<HttpResponse>;
 
@@ -115,7 +116,7 @@ impl BIOSResp<'_, ()> {
                 }
             }
         };
-        Err(BIOSError::_Inner(crate::basic::json::obj_to_string(&resp).unwrap()))
+        Err(BIOSError::_Inner(BIOSFuns::json.obj_to_string(&resp).unwrap()))
     }
 
     pub fn to_log(self) -> String {

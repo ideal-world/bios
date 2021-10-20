@@ -28,18 +28,18 @@ use validator::Validate;
 use bios::basic::config::FrameworkConfig;
 use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
-use bios::basic::logger::BIOSLogger;
 use bios::basic::result::BIOSResult;
 use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query;
 use bios::web::web_server::BIOSWebServer;
+use bios::BIOSFuns;
 
 mod basic;
 
 #[actix_rt::test]
 async fn test_web_server() -> BIOSResult<()> {
-    BIOSLogger::init("")?;
+    BIOSFuns::init_log_from_path("")?;
     let app = test::init_service(
         App::new()
             //.wrap(BIOSWebServer::init_logger())

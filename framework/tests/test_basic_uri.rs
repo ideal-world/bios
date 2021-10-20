@@ -15,20 +15,12 @@
  */
 
 use bios::basic::result::BIOSResult;
+use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_basic_uri() -> BIOSResult<()> {
-    assert_eq!(
-        bios::basic::uri::format("http://idealwrold.group").unwrap(),
-        "http://idealwrold.group"
-    );
-    assert_eq!(
-        bios::basic::uri::format("jdbc:h2:men:iam").unwrap(),
-        "jdbc:h2:men:iam"
-    );
-    assert_eq!(
-        bios::basic::uri::format("api://a1.t1/e1?q2=2&q1=1&q3=3").unwrap(),
-        "api://a1.t1/e1?q1=1&q2=2&q3=3"
-    );
+    assert_eq!(BIOSFuns::uri.format("http://idealwrold.group").unwrap(), "http://idealwrold.group");
+    assert_eq!(BIOSFuns::uri.format("jdbc:h2:men:iam").unwrap(), "jdbc:h2:men:iam");
+    assert_eq!(BIOSFuns::uri.format("api://a1.t1/e1?q2=2&q1=1&q3=3").unwrap(), "api://a1.t1/e1?q1=1&q2=2&q3=3");
     Ok(())
 }

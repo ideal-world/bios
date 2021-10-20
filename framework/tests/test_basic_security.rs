@@ -15,11 +15,12 @@
  */
 
 use bios::basic::result::BIOSResult;
+use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_basic_security() -> BIOSResult<()> {
-    let b64_str = bios::basic::security::digest::base64::encode("测试");
-    let str = bios::basic::security::digest::base64::decode(&b64_str).unwrap();
+    let b64_str = BIOSFuns::security.base64.encode("测试");
+    let str = BIOSFuns::security.base64.decode(&b64_str).unwrap();
     assert_eq!(str, "测试");
     Ok(())
 }

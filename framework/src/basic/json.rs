@@ -14,49 +14,53 @@
  * limitations under the License.
  */
 
-use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::basic::error::BIOSError;
 use crate::basic::result::BIOSResult;
 
-pub fn str_to_obj<'a, T: Deserialize<'a>>(str: &'a str) -> BIOSResult<T> {
-    let result = serde_json::from_str::<'a, T>(str);
-    match result {
-        Ok(r) => Ok(r),
-        Err(e) => Err(BIOSError::Box(Box::new(e))),
-    }
-}
+pub struct BIOSJson;
 
-pub fn str_to_json<'a>(str: &'a str) -> BIOSResult<Value> {
-    let result = serde_json::from_str::<'a, Value>(str);
-    match result {
-        Ok(r) => Ok(r),
-        Err(e) => Err(BIOSError::Box(Box::new(e))),
+impl BIOSJson {
+    pub fn str_to_obj<'a, T: Deserialize<'a>>(&self, str: &'a str) -> BIOSResult<T> {
+        let result = serde_json::from_str::<'a, T>(str);
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(BIOSError::Box(Box::new(e))),
+        }
     }
-}
 
-pub fn json_to_obj<T: DeserializeOwned>(value: Value) -> BIOSResult<T> {
-    let result = serde_json::from_value::<T>(value);
-    match result {
-        Ok(r) => Ok(r),
-        Err(e) => Err(BIOSError::Box(Box::new(e))),
+    pub fn str_to_json<'a>(&self, str: &'a str) -> BIOSResult<Value> {
+        let result = serde_json::from_str::<'a, Value>(str);
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(BIOSError::Box(Box::new(e))),
+        }
     }
-}
 
-pub fn obj_to_string<T: ?Sized + Serialize>(obj: &T) -> BIOSResult<String> {
-    let result = serde_json::to_string(obj);
-    match result {
-        Ok(r) => Ok(r),
-        Err(e) => Err(BIOSError::Box(Box::new(e))),
+    pub fn json_to_obj<T: DeserializeOwned>(&self, value: Value) -> BIOSResult<T> {
+        let result = serde_json::from_value::<T>(value);
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(BIOSError::Box(Box::new(e))),
+        }
     }
-}
 
-pub fn obj_to_json<T: Serialize>(obj: &T) -> BIOSResult<Value> {
-    let result = serde_json::to_value(obj);
-    match result {
-        Ok(r) => Ok(r),
-        Err(e) => Err(BIOSError::Box(Box::new(e))),
+    pub fn obj_to_string<T: ?Sized + Serialize>(&self, obj: &T) -> BIOSResult<String> {
+        let result = serde_json::to_string(obj);
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(BIOSError::Box(Box::new(e))),
+        }
+    }
+
+    pub fn obj_to_json<T: Serialize>(&self, obj: &T) -> BIOSResult<Value> {
+        let result = serde_json::to_value(obj);
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(BIOSError::Box(Box::new(e))),
+        }
     }
 }

@@ -42,8 +42,8 @@ pub fn extract_context(req: &HttpRequest) -> BIOSResult<BIOSContext> {
     }
     let context = req.headers().get(&BIOSFuns::fw_config().web.context_flag).expect("BIOS Context doesn't exists");
     let context = context.to_str().expect("BIOS Context convert to string error");
-    let context = crate::basic::security::digest::base64::decode(context)?;
-    let mut context = crate::basic::json::str_to_obj::<BIOSContext>(&context)?;
+    let context = BIOSFuns::security.base64.decode(context)?;
+    let mut context = BIOSFuns::json.str_to_obj::<BIOSContext>(&context)?;
     context.trace.app = BIOSFuns::fw_config().app.id.to_string();
     context.trace.inst = BIOSFuns::fw_config().app.inst.to_string();
     if req.headers().contains_key(&BIOSFuns::fw_config().web.lang_flag) {

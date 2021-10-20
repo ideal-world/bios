@@ -33,10 +33,10 @@ lazy_static! {
     static ref INITIALIZED: Mutex<bool> = Mutex::new(false);
 }
 
-pub struct BIOSLogger;
+pub(crate) struct BIOSLogger;
 
 impl BIOSLogger {
-    pub fn init(root_path: &str) -> BIOSResult<()> {
+    pub(crate) fn init(root_path: &str) -> BIOSResult<()> {
         let mut initialized = INITIALIZED.lock().unwrap();
         if *initialized == true {
             return Ok(());
