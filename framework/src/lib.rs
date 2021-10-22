@@ -21,6 +21,7 @@ use std::any::Any;
 use std::ptr::replace;
 
 use serde::Deserialize;
+use url::Url;
 
 use basic::result::BIOSResult;
 
@@ -35,7 +36,8 @@ use crate::basic::uri::BIOSUri;
 #[cfg(feature = "cache")]
 use crate::cache::cache_client::BIOSCacheClient;
 #[cfg(feature = "reldb")]
-use crate::db::reldb_client::BIOSRelDBClient;
+use crate::db::reldb_client_mysql::BIOSRelDBMysqlClient;
+use crate::db::reldb_client_postgres::BIOSRelDBPostgresClient;
 #[cfg(feature = "mq")]
 use crate::mq::mq_client::BIOSMQClient;
 #[cfg(feature = "web-client")]
@@ -45,7 +47,9 @@ pub struct BIOSFuns {
     workspace_config: Option<Box<dyn Any>>,
     framework_config: Option<FrameworkConfig>,
     #[cfg(feature = "reldb")]
-    reldb: Option<BIOSRelDBClient>,
+    reldb_mysql: Option<BIOSRelDBMysqlClient>,
+    #[cfg(feature = "reldb")]
+    reldb_postgres: Option<BIOSRelDBPostgresClient>,
     #[cfg(feature = "cache")]
     cache: Option<BIOSCacheClient>,
     #[cfg(feature = "mq")]
@@ -58,7 +62,9 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
     workspace_config: None,
     framework_config: None,
     #[cfg(feature = "reldb")]
-    reldb: None,
+    reldb_mysql: None,
+    #[cfg(feature = "reldb")]
+    reldb_postgres: None,
     #[cfg(feature = "cache")]
     cache: None,
     #[cfg(feature = "mq")]
@@ -92,10 +98,21 @@ impl BIOSFuns {
         #[cfg(feature = "reldb")]
         {
             if BIOSFuns::fw_config().db.enabled {
-                let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::fw_config()).await?;
-                unsafe {
-                    replace(&mut BIOS_INST.reldb, Some(reldb_client));
-                };
+                match &BIOSFuns::fw_config().db.url.to_lowercase() {
+                    url if url.starts_with("mysql") => {
+                        let reldb_client = BIOSRelDBMysqlClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+                        unsafe {
+                            replace(&mut BIOS_INST.reldb_mysql, Some(reldb_client));
+                        };
+                    }
+                    url if url.starts_with("postgres") => {
+                        let reldb_client = BIOSRelDBPostgresClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+                        unsafe {
+                            replace(&mut BIOS_INST.reldb_postgres, Some(reldb_client));
+                        };
+                    }
+                    _ => panic!("Doesn't support [{}] driver", Url::parse(&BIOSFuns::fw_config().db.url.as_str()).unwrap().scheme()),
+                }
             }
         }
         #[cfg(feature = "cache")]
@@ -163,9 +180,19 @@ impl BIOSFuns {
     };
 
     #[cfg(feature = "reldb")]
-    pub fn reldb() -> &'static BIOSRelDBClient {
+    pub fn mysql() -> &'static BIOSRelDBMysqlClient {
         unsafe {
-            match &BIOS_INST.reldb {
+            match &BIOS_INST.reldb_mysql {
+                None => panic!("RelDB default instance doesn't exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
+    #[cfg(feature = "reldb")]
+    pub fn postgres() -> &'static BIOSRelDBPostgresClient {
+        unsafe {
+            match &BIOS_INST.reldb_postgres {
                 None => panic!("RelDB default instance doesn't exist"),
                 Some(t) => t,
             }
