@@ -37,6 +37,7 @@ use crate::basic::uri::BIOSUri;
 use crate::cache::cache_client::BIOSCacheClient;
 #[cfg(feature = "reldb")]
 use crate::db::reldb_client_mysql::BIOSRelDBMysqlClient;
+#[cfg(feature = "reldb")]
 use crate::db::reldb_client_postgres::BIOSRelDBPostgresClient;
 #[cfg(feature = "mq")]
 use crate::mq::mq_client::BIOSMQClient;
