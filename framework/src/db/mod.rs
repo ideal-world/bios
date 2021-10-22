@@ -16,3 +16,5 @@
 
 pub mod domain;
 pub mod reldb_client;
+pub mod reldb_client_mysql;
+pub mod reldb_client_postgres;
