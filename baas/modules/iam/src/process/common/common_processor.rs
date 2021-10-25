@@ -478,7 +478,7 @@ pub async fn register_account(account_register_req: &AccountRegisterReq, context
         )
         .await?;
     if tenant_id.is_none() {
-        return BIOSError::err(IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, "App"));
+        return IamOutput::CommonEntityCreateCheckNotFound(ObjectKind::Account, "App")?;
     }
     let tenant_id = tenant_id.unwrap();
     let tenant_id = tenant_id["id"].as_str().unwrap();
@@ -508,7 +508,7 @@ pub async fn register_account(account_register_req: &AccountRegisterReq, context
         )
         .await?
     {
-        return BIOSError::err(IamOutput::CommonEntityCreateCheckExists(ObjectKind::AccountIdent, "AccountIdent"));
+        return IamOutput::CommonEntityCreateCheckExists(ObjectKind::AccountIdent, "AccountIdent")?;
     }
 
     let mut conn = BIOSFuns::reldb().conn().await;
@@ -669,7 +669,7 @@ pub async fn login(account_login_req: &AccountLoginReq, context: &BIOSContext) -
             account_login_req.kind.to_string().to_lowercase(),
             account_login_req.ak
         );
-        return BIOSError::err(IamOutput::CommonLoginCheckAccountNotFoundOrExpired(account_login_req.ak.to_string()));
+        return IamOutput::CommonLoginCheckAccountNotFoundOrExpired(account_login_req.ak.to_string())?;
     }
     let account_info = account_info.unwrap();
     let stored_sk = account_info["sk"].as_str().unwrap();

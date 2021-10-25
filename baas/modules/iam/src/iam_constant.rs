@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
+use bios::basic::error::BIOSError;
 use derive_more::Display;
 
-use bios::basic::result::ActionKind;
 use bios::basic::result::StatusCodeKind;
+use bios::basic::result::{ActionKind, BIOSResult};
 
 static APP_FLAG: &str = "01";
 
@@ -510,4 +511,10 @@ pub enum IamOutput {
         _1
     )]
     CommonOAuthFetchAccessTokenTrace(String, String),
+}
+
+impl<T> From<IamOutput> for BIOSResult<T> {
+    fn from(output: IamOutput) -> Self {
+        Err(BIOSError::_Inner(output.to_string()))
+    }
 }

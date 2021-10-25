@@ -16,14 +16,11 @@
 
 use std::convert::Infallible;
 use std::error::Error;
-use std::fmt::Display;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
 use derive_more::Display;
-
-use crate::basic::result::BIOSResult;
 
 pub static ERROR_DEFAULT_CODE: &str = "-1";
 
@@ -53,12 +50,6 @@ pub enum BIOSError {
     Conflict(String),
     #[display(fmt = "{}", _0)]
     _Inner(String),
-}
-
-impl BIOSError {
-    pub fn err<E: Display, T>(error: E) -> BIOSResult<T> {
-        Err(BIOSError::_Inner(error.to_string()))
-    }
 }
 
 impl From<std::io::Error> for BIOSError {

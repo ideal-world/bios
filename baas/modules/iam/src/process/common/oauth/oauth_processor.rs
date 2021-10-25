@@ -135,7 +135,7 @@ async fn check_and_get_aksk<'c>(ident_kind: &AccountIdentKind, context: &BIOSCon
         _ => None,
     };
     if platform_api.is_none() {
-        return BIOSError::err(IamOutput::CommonOAuthFetchAccountIdentKindNotFound(ident_kind.to_string().to_lowercase()));
+        return IamOutput::CommonOAuthFetchAccountIdentKindNotFound(ident_kind.to_string().to_lowercase())?;
     }
     let account_info = BIOSFuns::reldb()
         .fetch_optional_json(
@@ -173,7 +173,7 @@ async fn check_and_get_aksk<'c>(ident_kind: &AccountIdentKind, context: &BIOSCon
         )
         .await?;
     if account_info.is_none() {
-        return BIOSError::err(IamOutput::CommonOAuthFetchResourceSubjectNotFound());
+        return IamOutput::CommonOAuthFetchResourceSubjectNotFound()?;
     }
     let account_info = account_info.unwrap();
     let ak = account_info["ak"].as_str().unwrap();

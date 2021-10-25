@@ -55,10 +55,7 @@ impl PlatformAPI for WechatXcx {
                 )
                 .to_log()
             );
-            return BIOSError::err(IamOutput::CommonOAuthFetchOAuthInfoError(
-                self.get_platform_flag(),
-                "WeChat interface call exception".to_string(),
-            ));
+            return IamOutput::CommonOAuthFetchOAuthInfoError(self.get_platform_flag(), "WeChat interface call exception".to_string())?;
         }
         log::trace!(
             "{}",
@@ -70,14 +67,14 @@ impl PlatformAPI for WechatXcx {
         );
         let user_info = bios::basic::json::str_to_json(&body)?;
         if user_info.get("errcode").is_some() && user_info["errcode"].as_str().unwrap_or_default() != "0" {
-            return BIOSError::err(IamOutput::CommonOAuthFetchOAuthInfoError(
+            return IamOutput::CommonOAuthFetchOAuthInfoError(
                 self.get_platform_flag(),
                 format!(
                     "[{}]{}",
                     user_info["errcode"].as_str().unwrap_or_default(),
                     user_info["errmsg"].as_str().unwrap_or_default()
                 ),
-            ));
+            )?;
         }
         Ok(bios::basic::json::json_to_obj(user_info)?)
     }
@@ -96,17 +93,14 @@ impl PlatformAPI for WechatXcx {
                 )
                 .to_log()
             );
-            return BIOSError::err(IamOutput::CommonOAuthFetchAccessTokenError(
-                self.get_platform_flag(),
-                "WeChat interface call exception".to_string(),
-            ));
+            return IamOutput::CommonOAuthFetchAccessTokenError(self.get_platform_flag(), "WeChat interface call exception".to_string())?;
         }
         let access_token_info = bios::basic::json::str_to_json(&body)?;
         if access_token_info.get("access_token").is_none() {
-            return BIOSError::err(IamOutput::CommonOAuthFetchAccessTokenTrace(
+            return IamOutput::CommonOAuthFetchAccessTokenTrace(
                 self.get_platform_flag(),
                 format!("[{}]{}", access_token_info["errcode"].as_str().unwrap_or_default(), "WeChat interface call exception"),
-            ));
+            )?;
         }
         let access_token = access_token_info["access_token"].as_str().unwrap();
         let expire = access_token_info["expires_in"].as_i64().unwrap();
