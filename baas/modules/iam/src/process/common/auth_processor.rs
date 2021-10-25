@@ -58,7 +58,7 @@ pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str
                 aksks.insert(tenant_ident_info.valid_ak_rule.clone(), Regex::new(&tenant_ident_info.valid_ak_rule).unwrap());
             }
             if !aksks.get(&tenant_ident_info.valid_ak_rule).unwrap().is_match(ak) {
-                return BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidFormat("ak"));
+                return IamOutput::CommonAccountIdentValidCheckInvalidFormat("ak")?;
             }
         }
         if !sk.is_empty() && !tenant_ident_info.valid_sk_rule.is_empty() {
@@ -67,12 +67,12 @@ pub async fn valid_account_ident<'c>(kind: &AccountIdentKind, ak: &str, sk: &str
                 aksks.insert(tenant_ident_info.valid_sk_rule.clone(), Regex::new(&tenant_ident_info.valid_sk_rule).unwrap());
             }
             if !aksks.get(&tenant_ident_info.valid_sk_rule).unwrap().is_match(sk) {
-                return BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidFormat("sk"));
+                return IamOutput::CommonAccountIdentValidCheckInvalidFormat("sk")?;
             }
         }
         Ok(Utc::now().timestamp() + tenant_ident_info.valid_time)
     } else {
-        return BIOSError::err(IamOutput::CommonAccountIdentValidCheckNotFound());
+        return IamOutput::CommonAccountIdentValidCheckNotFound()?;
     }
 }
 
@@ -90,13 +90,13 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                         cache_processor::remove_vcode(ak, &context).await?;
                         cache_processor::remove_vcode_error_times(ak, &context).await?;
                         log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
-                        BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
+                        IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string())?
                     } else {
                         log::warn!(
                             "{}",
                             output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log()
                         );
-                        BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()))
+                        IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string())?
                     }
                 }
             } else {
@@ -104,7 +104,7 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                     "{}",
                     output(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()), &context).to_log()
                 );
-                BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string()))
+                IamOutput::CommonAccountIdentValidCheckInvalidVCodeNotFoundOrExpired(ak.to_string())?
             }
         }
         AccountIdentKind::Username => {
@@ -113,11 +113,11 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                     Ok(())
                 } else {
                     log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()), &context).to_log());
-                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()))
+                    IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string())?
                 }
             } else {
                 log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty(), &context).to_log());
-                BIOSError::err(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty())
+                IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty()?
             }
         }
         AccountIdentKind::WechatXcx => {
@@ -129,19 +129,19 @@ pub async fn validate_sk(kind: &AccountIdentKind, ak: &str, request_sk: &str, st
                         "{}",
                         output(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()), &context).to_log()
                     );
-                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()))
+                    IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string())?
                 }
             } else {
                 log::warn!(
                     "{}",
                     output(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()), &context).to_log()
                 );
-                BIOSError::err(IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string()))
+                IamOutput::CommonAccountIdentValidCheckInvalidAccessTokenNotFoundOrExpired(ak.to_string())?
             }
         }
         _ => {
             log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUnsupportedAuthKind(ak.to_string()), &context).to_log());
-            BIOSError::err(IamOutput::CommonAccountIdentValidCheckUnsupportedAuthKind(ak.to_string()))
+            IamOutput::CommonAccountIdentValidCheckUnsupportedAuthKind(ak.to_string())?
         }
     }
 }
@@ -154,11 +154,11 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, context: &B
                     Ok(sk.to_string())
                 } else {
                     log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
-                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
+                    IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string())?
                 }
             } else {
                 log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()), &context).to_log());
-                BIOSError::err(IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string()))
+                IamOutput::CommonAccountIdentValidCheckVCodeOverMaxTimes(ak.to_string())?
             }
         }
         AccountIdentKind::Username => {
@@ -166,7 +166,7 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, context: &B
                 Ok(bios::basic::security::digest::digest(format!("{}{}", ak, sk).as_str(), None, "SHA512"))
             } else {
                 log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty(), &context).to_log());
-                BIOSError::err(IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty())
+                IamOutput::CommonAccountIdentValidCheckPasswordNotEmpty()?
             }
         }
         AccountIdentKind::WechatXcx => {
@@ -175,11 +175,11 @@ pub async fn process_sk(kind: &AccountIdentKind, ak: &str, sk: &str, context: &B
                     Ok("".to_string())
                 } else {
                     log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()), &context).to_log());
-                    BIOSError::err(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()))
+                    IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string())?
                 }
             } else {
                 log::warn!("{}", output(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()), &context).to_log());
-                BIOSError::err(IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string()))
+                IamOutput::CommonAccountIdentValidCheckUserOrPasswordError(ak.to_string())?
             }
         }
         _ => {
