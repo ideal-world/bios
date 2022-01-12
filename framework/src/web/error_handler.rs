@@ -16,11 +16,11 @@
 
 use std::task::{Context, Poll};
 
+use actix_http::header::HeaderValue;
 use actix_service::{Service, Transform};
-use actix_web::dev::{AnyBody, ServiceRequest, ServiceResponse};
+use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::error::{Error, Result};
-use actix_web::http::{HeaderValue, StatusCode};
-use actix_web::web::Bytes;
+use actix_web::http::{header, StatusCode};
 use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
 use futures_util::future::{ok, FutureExt, LocalBoxFuture, Ready};
 use log::{trace, warn};
@@ -71,6 +71,8 @@ where
             let mut res = fut.await?;
             let http_code = res.status().as_u16();
             if http_code >= 400 {
+                Ok(res)
+            } else {
                 let msg = match res.response().error() {
                     Some(e) => e.to_string(),
                     None => match http_code {
@@ -110,10 +112,9 @@ where
                     // 5xx error: Considering that all kinds of degradation components only provide processing of http status, so the 5xx error isn’t modified
                     *res.response_mut().status_mut() = StatusCode::from_u16(200).unwrap();
                 }
-                let res = res.map_body(|_, _| AnyBody::Bytes(Bytes::from(serde_json::json!(bios_resp).to_string())));
-                Ok(res)
-            } else {
-                Ok(res)
+                let new_response =
+                    HttpResponseBuilder::new(res.response().status()).insert_header((header::CONTENT_TYPE, "application/json")).body(serde_json::json!(bios_resp).to_string());
+                Ok(ServiceResponse::new(res.request().clone(), new_response))
             }
         }
         .boxed_local()

@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-mod test_init;
 mod test_common;
+mod test_init;

@@ -17,8 +17,8 @@
 use std::collections::HashMap;
 
 use log::info;
-use redis::{AsyncCommands, RedisError, RedisResult};
 use redis::aio::Connection;
+use redis::{AsyncCommands, RedisError, RedisResult};
 use url::Url;
 
 use crate::basic::config::FrameworkConfig;

@@ -17,7 +17,6 @@
 // https://github.com/rambler-digital-solutions/actix-web-validator
 // https://github.com/Keats/validator
 
-use actix_http::http::StatusCode;
 use actix_web::post;
 use actix_web::test::{call_service, read_body};
 use actix_web::web::Bytes;
@@ -30,8 +29,6 @@ use bios::basic::dto::BIOSResp;
 use bios::basic::error::BIOSError;
 use bios::basic::result::BIOSResult;
 use bios::web::resp_handler::BIOSResponse;
-use bios::web::validate::json::Json;
-use bios::web::validate::query::Query;
 use bios::web::web_server::BIOSWebServer;
 use bios::BIOSFuns;
 
@@ -55,7 +52,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // Normal
     let req = test::TestRequest::post().uri("/normal/11").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), http::StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
         Bytes::from(r#"{"code":"200","msg":"","body":"successful","trace_id":null,"trace_app":null,"trace_inst":null}"#)
@@ -64,7 +61,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // Business Error
     let req = test::TestRequest::post().uri("/bus_error").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), http::StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
         Bytes::from(r#"{"code":"xxx01","msg":"business error","body":null,"trace_id":null,"trace_app":null,"trace_inst":null}"#),
@@ -73,7 +70,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // Not Found
     let req = test::TestRequest::post().uri("/not_found").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), http::StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
         Bytes::from(r#"{"body":null,"code":"404000000000","msg":"method:POST, url:/not_found","trace_app":null,"trace_id":null,"trace_inst":null}"#),
@@ -82,7 +79,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // System Error
     let req = test::TestRequest::post().uri("/sys_error").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(resp.status(), http::StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(
         read_body(resp).await,
         Bytes::from(r#"{"body":null,"code":"500000000000","msg":"system error","trace_app":null,"trace_id":null,"trace_inst":null}"#),
@@ -91,7 +88,7 @@ async fn test_web_server() -> BIOSResult<()> {
     // Validation
     let req = test::TestRequest::post().uri("/validation").to_request();
     let resp = call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), http::StatusCode::OK);
     assert_eq!(
         read_body(resp).await,
         Bytes::from(r#"{"body":null,"code":"400000000000","msg":"Query deserialize error: missing field `id`","trace_app":null,"trace_id":null,"trace_inst":null}"#),

@@ -63,4 +63,12 @@ impl BIOSJson {
             Err(e) => Err(BIOSError::Box(Box::new(e))),
         }
     }
+
+    pub fn json_to_string(&self, value: Value) -> BIOSResult<String> {
+        let result = serde_json::to_string(&value);
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => Err(BIOSError::Box(Box::new(e))),
+        }
+    }
 }

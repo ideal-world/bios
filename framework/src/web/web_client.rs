@@ -16,10 +16,10 @@
 
 use std::time::Duration;
 
-use actix_http::client::SendRequestError;
 use actix_http::encoding::Decoder;
 use actix_http::error::PayloadError;
-use actix_http::{Payload, PayloadStream};
+use actix_http::Payload;
+use awc::error::SendRequestError;
 use awc::Connector;
 use awc::{Client, ClientResponse};
 use log::info;
@@ -54,7 +54,7 @@ impl BIOSWebClient {
         &self.client
     }
 
-    pub async fn body_as_str(response: &mut ClientResponse<Decoder<Payload<PayloadStream>>>) -> BIOSResult<String> {
+    pub async fn body_as_str(response: &mut ClientResponse<Decoder<Payload>>) -> BIOSResult<String> {
         Ok(String::from_utf8(response.body().await?.to_vec())?)
     }
 }

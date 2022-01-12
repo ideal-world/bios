@@ -21,8 +21,8 @@ use actix_http::{Request, Response};
 use actix_service::{IntoServiceFactory, Service, ServiceFactory};
 use actix_web::body::MessageBody;
 use actix_web::dev::{AppConfig, Server};
-use actix_web::HttpServer;
 use actix_web::middleware::Logger;
+use actix_web::HttpServer;
 use log::info;
 
 use crate::basic::config::FrameworkConfig;

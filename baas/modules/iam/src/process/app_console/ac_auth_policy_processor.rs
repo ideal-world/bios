@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-use actix_web::{delete, get, HttpRequest, post, put};
+use actix_web::{delete, get, post, put, HttpRequest};
 use sea_query::{Alias, Cond, Expr, JoinType, Order, Query};
 use sqlx::Connection;
 use strum::IntoEnumIterator;
 
 use bios::basic::dto::BIOSResp;
-use bios::BIOSFuns;
 use bios::db::reldb_client::SqlBuilderProcess;
 use bios::web::basic_processor::extract_context_with_account;
 use bios::web::resp_handler::BIOSResponse;
 use bios::web::validate::json::Json;
 use bios::web::validate::query::Query as VQuery;
+use bios::BIOSFuns;
 
 use crate::domain::auth_domain::{IamAuthPolicy, IamAuthPolicyObject, IamGroup, IamGroupNode, IamResource, IamRole};
 use crate::domain::ident_domain::{IamAccount, IamAccountApp};
@@ -50,14 +50,15 @@ pub async fn add_auth_policy(auth_policy_add_req: Json<AuthPolicyAddReq>, req: H
                     Cond::any()
                         .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Global.to_string().to_lowercase()))
                         .add(
-                        Cond::all()
-                            .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(context.ident.tenant_id.as_str()))
-                            .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
-                    ).add(
-                        Cond::all()
-                            .add(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(context.ident.app_id.as_str()))
-                            .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::App.to_string().to_lowercase())),
-                    ),
+                            Cond::all()
+                                .add(Expr::tbl(IamResource::Table, IamResource::RelTenantId).eq(context.ident.tenant_id.as_str()))
+                                .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::Tenant.to_string().to_lowercase())),
+                        )
+                        .add(
+                            Cond::all()
+                                .add(Expr::tbl(IamResource::Table, IamResource::RelAppId).eq(context.ident.app_id.as_str()))
+                                .add(Expr::tbl(IamResource::Table, IamResource::ExposeKind).eq(crate::process::basic_dto::ExposeKind::App.to_string().to_lowercase())),
+                        ),
                 )
                 .and_where(Expr::col(IamResource::Id).eq(auth_policy_add_req.rel_resource_id.as_str()))
                 .done(),

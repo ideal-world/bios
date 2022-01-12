@@ -13,6 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-mod test_tenant;
-mod test_app;
 mod test_account;
+mod test_app;
+mod test_tenant;
