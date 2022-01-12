@@ -47,32 +47,20 @@ pub async fn init() -> BIOSResult<()> {
                 .col(ColumnDef::new(Item::Content).not_null().string())
                 .col(ColumnDef::new(Item::Creator).not_null().string())
                 .col(ColumnDef::new(Item::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
-                .col(
-                    ColumnDef::new(Item::UpdateTime)
-                        .extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string())
-                        .timestamp(),
-                )
+                .col(ColumnDef::new(Item::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp())
                 .col(ColumnDef::new(Item::CategoryId).not_null().big_integer())
                 .done(),
             Some(&mut tx),
         )
         .await?;
-    if BIOSFuns::reldb()
-        .count(&Query::select().columns(vec![Category::Id]).from(Category::Table).done(), Some(&mut tx))
-        .await?
-        != 0
-    {
+    if BIOSFuns::reldb().count(&Query::select().columns(vec![Category::Id]).from(Category::Table).done(), Some(&mut tx)).await? != 0 {
         tx.commit().await?;
         return Ok(());
     }
 
     let category_id = BIOSFuns::reldb()
         .exec(
-            &Query::insert()
-                .into_table(Category::Table)
-                .columns(vec![Category::Name])
-                .values_panic(vec!["默认分类".into()])
-                .done(),
+            &Query::insert().into_table(Category::Table).columns(vec![Category::Name]).values_panic(vec!["默认分类".into()]).done(),
             Some(&mut tx),
         )
         .await?

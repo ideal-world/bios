@@ -21,7 +21,6 @@ use std::any::Any;
 use std::ptr::replace;
 
 use serde::Deserialize;
-use url::Url;
 
 use basic::result::BIOSResult;
 

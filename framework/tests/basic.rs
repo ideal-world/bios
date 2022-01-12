@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use actix_http::body::{Body, ResponseBody};
-
 pub trait HttpBody {
     fn as_str(&self) -> &str;
 }

@@ -14,23 +14,15 @@
  * limitations under the License.
  */
 
-use bios::basic::result::BIOSResult;
 use bios::basic::logger::BIOSLogger;
+use bios::basic::result::BIOSResult;
 use bios::web::web_client::BIOSWebClient;
 
 #[actix_rt::main]
 async fn main() -> BIOSResult<()> {
     BIOSLogger::init("").unwrap();
     let client = BIOSWebClient::init(60, 60)?;
-    let mut response = client
-        .raw()
-        .get("https://www.baidu.com/")
-        .insert_header(("User-Agent", "Actix-web"))
-        .send()
-        .await?;
-    println!(
-        "Response: {:?}",
-        BIOSWebClient::body_as_str(&mut response).await.unwrap()
-    );
+    let mut response = client.raw().get("https://www.baidu.com/").insert_header(("User-Agent", "Actix-web")).send().await?;
+    println!("Response: {:?}", BIOSWebClient::body_as_str(&mut response).await.unwrap());
     Ok(())
 }
