@@ -1,0 +1,97 @@
+[package]
+name = "bios-framework"
+version = "0.1.0"
+authors = ["gudaoxuri"]
+description = "BIOS project foundation framework"
+keywords = ["bios", "http", "web", "framework", "async"]
+categories = [
+    "network-programming",
+    "asynchronous",
+    "web-programming::http-server",
+    "web-programming::websocket"
+]
+homepage = "https://bios.idealworld.group/framework"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2018"
+exclude = ["/.travis.yml"]
+readme = "README.adoc"
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[lib]
+name = "bios"
+path = "src/lib.rs"
+
+[features]
+default = ["rslog"]
+rslog = ["log4rs"]
+future = ["tokio", "futures", "async-stream", "futures-util"]
+tracing = ["tracing-subscriber"]
+reldb = ["future", "tracing-subscriber", "sea-orm"]
+web-server = ["future", "poem"]
+cache = ["redis"]
+mq = ["futures-util", "lapin", "amq-protocol-types", "async-global-executor"]
+test = ["testcontainers"]
+
+[dependencies]
+# Basic
+serde = { version = "^1", features = ["derive"] }
+serde_json = { version = "^1" }
+derive_more = { version = "^0" }
+uuid = { version = "^0", features = ["serde", "v4"] }
+base64 = { version = "^0" }
+lazy_static = { version = "^1" }
+rust-crypto = { version = "^0" }
+log = { version = "^0" }
+env_logger = { version = "^0" }
+config = { version = "^0" }
+regex = { version = "^1" }
+url = { version = "^2" }
+
+# Log
+log4rs = { version = "^1", optional = true }
+
+# Future
+tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread"], optional = true }
+futures = { version = "^0.3", optional = true }
+async-stream = { version = "^0.3", optional = true }
+futures-util = { version = "^0.3", optional = true }
+
+# Tracing
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+# RelDB
+sea-orm = { version = "0.5.0", default-features = false, features = ["sqlx-mysql", "macros", "runtime-tokio-native-tls", "debug-print"], optional = true }
+
+# Web
+poem = { version = "1.2.33", features = ["static-files"], optional = true }
+
+# Redis
+redis = { version = "^0", features = ["tokio-comp"], optional = true }
+
+# Rabbit
+lapin = { version = "^1", optional = true }
+amq-protocol-types = { version = "^6", optional = true }
+async-global-executor = { version = "^2", optional = true }
+
+# Test
+testcontainers = { version = "^0", optional = true }
+
+[dev-dependencies]
+# Common
+tokio = { version = "^1", features = ["time", "rt", "macros"] }
+
+[[test]]
+name = "test_reldb_client"
+required-features = ["test", "reldb"]
+
+[[test]]
+name = "test_cache_client"
+required-features = ["test", "testcontainers", "cache"]
+
+[[test]]
+name = "test_mq_client"
+required-features = ["test", "mq"]

@@ -13,11 +13,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-use bios::basic::result::BIOSResult;
-
-#[tokio::test]
-async fn test_basic_error() -> BIOSResult<()> {
-    std::fs::File::open("ccc")?;
-    Ok(())
-}
+pub mod bios_db_config;

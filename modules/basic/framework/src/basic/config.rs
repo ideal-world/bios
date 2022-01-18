@@ -145,6 +145,9 @@ pub struct DBConfig {
     pub enabled: bool,
     pub url: String,
     pub max_connections: u32,
+    pub min_connections: u32,
+    pub connect_timeout_sec: Option<u64>,
+    pub idle_timeout_sec: Option<u64>,
 }
 
 impl Default for DBConfig {
@@ -153,6 +156,9 @@ impl Default for DBConfig {
             enabled: true,
             url: "".to_owned(),
             max_connections: 20,
+            min_connections: 5,
+            connect_timeout_sec: None,
+            idle_timeout_sec: None,
         }
     }
 }

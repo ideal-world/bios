@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-pub trait HttpBody {
-    fn as_str(&self) -> &str;
-}
+// https://github.com/SeaQL/sea-orm
 
-impl HttpBody for ResponseBody<Body> {
-    fn as_str(&self) -> &str {
-        match self {
-            ResponseBody::Body(ref b) => match b {
-                Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
-                _ => "",
-            },
-            ResponseBody::Other(ref b) => match b {
-                Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
-                _ => "",
-            },
-        }
-    }
+use testcontainers::clients;
+
+use bios::basic::result::BIOSResult;
+use bios::db::reldb_client::BIOSRelDBClient;
+use bios::test::test_container::BIOSTestContainer;
+
+#[tokio::test]
+async fn test_reldb_client() -> BIOSResult<()> {
+    let docker = clients::Cli::default();
+    let mysql_container = BIOSTestContainer::mysql(None, &docker);
+    let port = mysql_container.get_host_port(3306).expect("Test port acquisition error");
+    let url = format!("mysql://root:123456@localhost:{}/test", port);
+
+    let client = BIOSRelDBClient::init(&url, 10, 5, None, None).await?;
+
+    Ok(())
 }
