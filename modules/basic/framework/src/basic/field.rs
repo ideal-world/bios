@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 use regex::Regex;
+use uuid::Uuid;
 
 lazy_static! {
     static ref R_PHONE: Regex = Regex::new(r"^1(3\d|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8\d|9[0-35-9])\d{8}$").unwrap();
@@ -41,7 +42,11 @@ impl BIOSField {
         R_CODE_NCS.is_match(str)
     }
 
-    pub fn uuid(&self) -> String {
+    pub fn uuid(&self) -> Uuid {
+        uuid::Uuid::new_v4()
+    }
+
+    pub fn uuid_str(&self) -> String {
         uuid::Uuid::new_v4().to_simple().to_string()
     }
 

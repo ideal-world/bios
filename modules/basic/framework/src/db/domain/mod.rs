@@ -14,3 +14,4 @@
  * limitations under the License.
  */
 pub mod bios_db_config;
+pub mod bios_db_del_record;

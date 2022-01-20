@@ -13,7 +13,7 @@ categories = [
 homepage = "https://bios.idealworld.group/framework"
 repository = "https://github.com/ideal-world/bios"
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 exclude = ["/.travis.yml"]
 readme = "README.adoc"
 
@@ -27,11 +27,11 @@ path = "src/lib.rs"
 
 [features]
 default = ["rslog"]
-rslog = ["log4rs"]
-future = ["tokio", "futures", "async-stream", "futures-util"]
-tracing = ["tracing-subscriber"]
-reldb = ["future", "tracing-subscriber", "sea-orm"]
-web-server = ["future", "poem"]
+trace = ["tracing", "tracing-subscriber"]
+rslog = ["log4rs", "trace"]
+future = ["tokio", "futures", "async-stream", "futures-util", "async-trait"]
+reldb = ["future", "tracing-subscriber", "rslog","sqlparser","sea-orm"]
+web-server = ["future", "poem", "rslog"]
 cache = ["redis"]
 mq = ["futures-util", "lapin", "amq-protocol-types", "async-global-executor"]
 test = ["testcontainers"]
@@ -59,12 +59,15 @@ tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread"], optional
 futures = { version = "^0.3", optional = true }
 async-stream = { version = "^0.3", optional = true }
 futures-util = { version = "^0.3", optional = true }
+async-trait = { version = "^0", optional = true }
 
 # Tracing
+tracing = { version = "^0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 
 # RelDB
-sea-orm = { version = "0.5.0", default-features = false, features = ["sqlx-mysql", "macros", "runtime-tokio-native-tls", "debug-print"], optional = true }
+sea-orm = { version = "0.5.0", features = ["sqlx-mysql", "macros", "runtime-tokio-native-tls", "debug-print"], optional = true }
+sqlparser = { version = "0.13.0", optional = true }
 
 # Web
 poem = { version = "1.2.33", features = ["static-files"], optional = true }
@@ -90,7 +93,7 @@ required-features = ["test", "reldb"]
 
 [[test]]
 name = "test_cache_client"
-required-features = ["test", "testcontainers", "cache"]
+required-features = ["test", "cache"]
 
 [[test]]
 name = "test_mq_client"
