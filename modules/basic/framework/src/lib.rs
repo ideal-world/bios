@@ -212,5 +212,3 @@ pub mod db;
 pub mod mq;
 #[cfg(feature = "test")]
 pub mod test;
-#[cfg(feature = "web-server")]
-pub mod web;

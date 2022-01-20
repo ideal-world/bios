@@ -42,24 +42,32 @@ impl BIOSLogger {
             return Ok(());
         }
         *initialized = true;
-        let profile = fetch_profile();
-        let conf_file = Path::new(root_path).join(&format!("log-{}.yaml", profile));
-        let root_level = match LevelFilter::from_str(&env::var("RUST_LOG").unwrap_or("INFO".to_string())) {
-            Ok(l) => l,
-            Err(_) => LevelFilter::Info,
-        };
-        if conf_file.is_file() {
-            match log4rs::init_file(Path::new(root_path).join(&format!("log-{}.yaml", profile)), Default::default()) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(BIOSError::Custom(ERROR_DEFAULT_CODE.to_string(), e.to_string())),
-            }
-        } else {
-            let stdout = ConsoleAppender::builder().encoder(Box::new(PatternEncoder::new("[{l}] {d} {T} [{t}] {X(requestId, user_id)} - {m}{n}"))).build();
-            let conf_default =
-                log4rs::config::Config::builder().appender(Appender::builder().build("stdout", Box::new(stdout))).build(Root::builder().appender("stdout").build(root_level))?;
-            log4rs::init_config(conf_default)?;
-            Ok(())
-        }
+
+        let default_level = &env::var("RUST_LOG").unwrap_or("INFO".to_string());
+
+        tracing_subscriber::fmt().with_max_level(tracing::Level::from_str(default_level).unwrap()).with_test_writer().init();
+        Ok(())
+
+        // TODO 与 tracing_subscriber 冲突
+
+        // let profile = fetch_profile();
+        // let conf_file = Path::new(root_path).join(&format!("log-{}.yaml", profile));
+        // let root_level = match LevelFilter::from_str(default_level) {
+        //     Ok(l) => l,
+        //     Err(_) => LevelFilter::Info,
+        // };
+        // if conf_file.is_file() {
+        //     match log4rs::init_file(Path::new(root_path).join(&format!("log-{}.yaml", profile)), Default::default()) {
+        //         Ok(_) => Ok(()),
+        //         Err(e) => Err(BIOSError::Custom(ERROR_DEFAULT_CODE.to_string(), e.to_string())),
+        //     }
+        // } else {
+        //     let stdout = ConsoleAppender::builder().encoder(Box::new(PatternEncoder::new("[{l}] {d} {T} [{t}] {X(requestId, user_id)} - {m}{n}"))).build();
+        //     let conf_default =
+        //         log4rs::config::Config::builder().appender(Appender::builder().build("stdout", Box::new(stdout))).build(Root::builder().appender("stdout").build(root_level))?;
+        //     log4rs::init_config(conf_default)?;
+        //     Ok(())
+        // }
     }
 }
 
