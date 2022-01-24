@@ -19,7 +19,7 @@
 use redis::AsyncCommands;
 use tokio::time::{sleep, Duration};
 
-use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
+use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig, WebServerConfig};
 use bios::basic::result::BIOSResult;
 use bios::cache::cache_client::BIOSCacheClient;
 use bios::test::test_container::BIOSTestContainer;
@@ -127,7 +127,11 @@ async fn test_cache_client() -> BIOSResult<()> {
             ws: NoneConfig {},
             fw: FrameworkConfig {
                 app: Default::default(),
-                web: Default::default(),
+                web_server: WebServerConfig {
+                    enabled: false,
+                    ..Default::default()
+                },
+                web_client: Default::default(),
                 cache: CacheConfig { enabled: true, url },
                 db: DBConfig {
                     enabled: false,

@@ -40,12 +40,16 @@ use crate::db::reldb_client::BIOSRelDBClient;
 use crate::mq::mq_client::BIOSMQClient;
 #[cfg(feature = "web-client")]
 use crate::web::web_client::BIOSWebClient;
+#[cfg(feature = "web-server")]
+use crate::web::web_server::BIOSWebServer;
 
 pub struct BIOSFuns {
     workspace_config: Option<Box<dyn Any>>,
     framework_config: Option<FrameworkConfig>,
     #[cfg(feature = "reldb")]
     reldb: Option<BIOSRelDBClient>,
+    #[cfg(feature = "web-server")]
+    web_server: Option<BIOSWebServer>,
     #[cfg(feature = "cache")]
     cache: Option<BIOSCacheClient>,
     #[cfg(feature = "mq")]
@@ -59,6 +63,8 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
     framework_config: None,
     #[cfg(feature = "reldb")]
     reldb: None,
+    #[cfg(feature = "web-server")]
+    web_server: None,
     #[cfg(feature = "cache")]
     cache: None,
     #[cfg(feature = "mq")]
@@ -71,11 +77,6 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
 impl BIOSFuns {
     pub async fn init<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
         BIOSLogger::init(root_path)?;
-        let config = BIOSConfig::<T>::init(root_path)?;
-        BIOSFuns::init_conf::<T>(config).await
-    }
-
-    pub async fn init_conf_from_path<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
         let config = BIOSConfig::<T>::init(root_path)?;
         BIOSFuns::init_conf::<T>(config).await
     }
@@ -95,6 +96,15 @@ impl BIOSFuns {
                 let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::fw_config()).await?;
                 unsafe {
                     replace(&mut BIOS_INST.reldb, Some(reldb_client));
+                };
+            }
+        }
+        #[cfg(feature = "web-server")]
+        {
+            if BIOSFuns::fw_config().web_server.enabled {
+                let web_server = BIOSWebServer::init_by_conf(&BIOSFuns::fw_config()).await?;
+                unsafe {
+                    replace(&mut BIOS_INST.web_server, Some(web_server));
                 };
             }
         }
@@ -172,6 +182,16 @@ impl BIOSFuns {
         }
     }
 
+    #[cfg(feature = "web-server")]
+    pub fn web_server() -> &'static mut BIOSWebServer {
+        unsafe {
+            match &mut BIOS_INST.web_server {
+                None => panic!("Web Server default instance doesn't exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
     #[cfg(feature = "cache")]
     pub fn cache() -> &'static mut BIOSCacheClient {
         unsafe {
@@ -212,3 +232,4 @@ pub mod db;
 pub mod mq;
 #[cfg(feature = "test")]
 pub mod test;
+mod web;

@@ -37,7 +37,8 @@ pub struct BIOSConfig<T> {
 #[serde(default)]
 pub struct FrameworkConfig {
     pub app: AppConfig,
-    pub web: WebConfig,
+    pub web_server: WebServerConfig,
+    pub web_client: WebClientConfig,
     pub cache: CacheConfig,
     pub db: DBConfig,
     pub mq: MQConfig,
@@ -48,7 +49,8 @@ impl Default for FrameworkConfig {
     fn default() -> Self {
         FrameworkConfig {
             app: AppConfig::default(),
-            web: WebConfig::default(),
+            web_server: WebServerConfig::default(),
+            web_client: WebClientConfig::default(),
             cache: CacheConfig::default(),
             db: DBConfig::default(),
             mq: MQConfig::default(),
@@ -85,13 +87,27 @@ impl Default for AppConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
-pub struct WebConfig {
+pub struct WebServerConfig {
+    pub enabled: bool,
     pub host: String,
     pub port: u16,
     pub allowed_origin: String,
-    pub client: WebClientConfig,
     pub context_flag: String,
     pub lang_flag: String,
+    pub modules: Vec<WebServerModuleConfig>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct WebServerModuleConfig {
+    pub code: String,
+    pub title: String,
+    pub version: String,
+    pub doc_urls: Vec<(String, String)>,
+    // TODO
+    pub authors: Vec<(String, String)>,
+    pub ui_path: Option<String>,
+    pub spec_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -101,15 +117,30 @@ pub struct WebClientConfig {
     pub request_timeout_sec: u64,
 }
 
-impl Default for WebConfig {
+impl Default for WebServerConfig {
     fn default() -> Self {
-        WebConfig {
-            host: "0.0.0.0".to_owned(),
+        WebServerConfig {
+            enabled: true,
+            host: "0.0.0.0".to_string(),
             port: 8080,
-            allowed_origin: "*".to_owned(),
-            client: WebClientConfig::default(),
-            context_flag: "BIOS-Context".to_owned(),
+            allowed_origin: "*".to_string(),
+            context_flag: "BIOS-Context".to_string(),
             lang_flag: "Accept-Language".to_string(),
+            modules: [WebServerModuleConfig::default()].iter().cloned().collect(),
+        }
+    }
+}
+
+impl Default for WebServerModuleConfig {
+    fn default() -> Self {
+        WebServerModuleConfig {
+            code: "".to_string(),
+            title: "BIOS-based application".to_string(),
+            version: "1.0.0".to_string(),
+            doc_urls: [("test env".to_string(), "http://localhost:8080/".to_string())].iter().cloned().collect(),
+            authors: [("gudaoxuri".to_string(), "i@sunisle.org".to_string())].iter().cloned().collect(),
+            ui_path: Some("ui".to_string()),
+            spec_path: Some("spec".to_string()),
         }
     }
 }
