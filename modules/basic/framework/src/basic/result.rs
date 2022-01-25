@@ -17,10 +17,10 @@
 use core::result::Result;
 use std::fmt::Display;
 
-use crate::basic::dto::{BIOSContext, BIOSResp};
+use derive_more::Display;
+
 use crate::basic::error::BIOSError;
 use crate::basic::field::GENERAL_SPLIT;
-use derive_more::Display;
 
 pub type BIOSResult<T> = Result<T, BIOSError>;
 
@@ -32,8 +32,14 @@ pub enum StatusCodeKind {
     UnKnown,
     #[display(fmt = "400")]
     BadRequest,
+    #[display(fmt = "401")]
+    Unauthorized,
     #[display(fmt = "404")]
     NotFound,
+    #[display(fmt = "406")]
+    FormatError,
+    #[display(fmt = "408")]
+    Timeout,
     #[display(fmt = "409")]
     Conflict,
     #[display(fmt = "419")]
@@ -42,6 +48,12 @@ pub enum StatusCodeKind {
     ConflictExistFieldsAtSomeTime,
     #[display(fmt = "439")]
     ConflictExistAssociatedData,
+    #[display(fmt = "500")]
+    InternalError,
+    #[display(fmt = "501")]
+    NotImplemented,
+    #[display(fmt = "503")]
+    IOError,
 }
 
 #[derive(Display, Debug)]
@@ -66,17 +78,4 @@ pub fn parse<E: Display>(content: E) -> (String, String) {
     let code = &text[..split_idx];
     let message = &text[split_idx + 2..];
     (code.to_string(), message.to_string())
-}
-
-pub fn output<E: Display>(content: E, context: &BIOSContext) -> BIOSResp<()> {
-    let (code, msg) = parse(content);
-    BIOSResp {
-        code,
-        msg,
-        body: None,
-        trace_id: Some(context.trace.id.to_string()),
-        trace_app: Some(context.trace.app.to_string()),
-        trace_inst: Some(context.trace.inst.to_string()),
-        ctx: Some(context),
-    }
 }

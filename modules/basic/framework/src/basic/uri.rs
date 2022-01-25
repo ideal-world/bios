@@ -78,7 +78,7 @@ impl BIOSUri {
 
     fn sort_query(&self, query: Option<&str>) -> String {
         if query.is_none() {
-            return "".to_owned();
+            return "".to_string();
         }
         let mut query = query.unwrap().split("&").collect::<Vec<&str>>();
         query.sort_by(|a, b| Ord::cmp(a.split("=").next().unwrap(), b.split("=").next().unwrap()));

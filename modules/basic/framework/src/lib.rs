@@ -232,4 +232,4 @@ pub mod db;
 pub mod mq;
 #[cfg(feature = "test")]
 pub mod test;
-mod web;
+pub mod web;

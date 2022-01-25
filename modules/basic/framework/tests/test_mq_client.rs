@@ -81,10 +81,10 @@ async fn test_mq_client() -> BIOSResult<()> {
             })
             .await?;
 
-        client.request("test-addr", "测试!".to_owned(), &header).await?;
-        client.request("test-addr", "测试!".to_owned(), &header).await?;
-        client.request("test-addr", "测试!".to_owned(), &header).await?;
-        client.request("test-addr", "测试!".to_owned(), &header).await?;
+        client.request("test-addr", "测试!".to_string(), &header).await?;
+        client.request("test-addr", "测试!".to_string(), &header).await?;
+        client.request("test-addr", "测试!".to_string(), &header).await?;
+        client.request("test-addr", "测试!".to_string(), &header).await?;
 
         client
             .subscribe("test-topic", |(header, msg)| async move {
@@ -104,10 +104,10 @@ async fn test_mq_client() -> BIOSResult<()> {
             })
             .await?;
 
-        client.publish("test-topic", "测试!".to_owned(), &header).await?;
-        client.publish("test-topic", "测试!".to_owned(), &header).await?;
-        client.publish("test-topic", "测试!".to_owned(), &header).await?;
-        client.publish("test-topic", "测试!".to_owned(), &header).await?;
+        client.publish("test-topic", "测试!".to_string(), &header).await?;
+        client.publish("test-topic", "测试!".to_string(), &header).await?;
+        client.publish("test-topic", "测试!".to_string(), &header).await?;
+        client.publish("test-topic", "测试!".to_string(), &header).await?;
 
         sleep(Duration::from_millis(1000)).await;
 

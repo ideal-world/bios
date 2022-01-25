@@ -74,12 +74,12 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         AppConfig {
-            id: "".to_owned(),
-            name: "BIOS Application".to_owned(),
-            desc: "This is a BIOS Application".to_owned(),
-            version: "0.0.1".to_owned(),
-            url: "".to_owned(),
-            email: "".to_owned(),
+            id: "".to_string(),
+            name: "BIOS Application".to_string(),
+            desc: "This is a BIOS Application".to_string(),
+            version: "0.0.1".to_string(),
+            url: "".to_string(),
+            email: "".to_string(),
             inst: format!("inst_{}", BIOSFuns::field.uuid()),
         }
     }
@@ -165,7 +165,7 @@ impl Default for CacheConfig {
     fn default() -> Self {
         CacheConfig {
             enabled: true,
-            url: "".to_owned(),
+            url: "".to_string(),
         }
     }
 }
@@ -185,7 +185,7 @@ impl Default for DBConfig {
     fn default() -> Self {
         DBConfig {
             enabled: true,
-            url: "".to_owned(),
+            url: "".to_string(),
             max_connections: 20,
             min_connections: 5,
             connect_timeout_sec: None,
@@ -205,7 +205,7 @@ impl Default for MQConfig {
     fn default() -> Self {
         MQConfig {
             enabled: true,
-            url: "".to_owned(),
+            url: "".to_string(),
         }
     }
 }
