@@ -76,16 +76,16 @@ static mut BIOS_INST: BIOSFuns = BIOSFuns {
 #[allow(unsafe_code)]
 impl BIOSFuns {
     pub async fn init<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
-        BIOSLogger::init(root_path)?;
         let config = BIOSConfig::<T>::init(root_path)?;
         BIOSFuns::init_conf::<T>(config).await
     }
 
-    pub fn init_log_from_path(root_path: &str) -> BIOSResult<()> {
-        BIOSLogger::init(root_path)
+    pub fn init_log() -> BIOSResult<()> {
+        BIOSLogger::init()
     }
 
     pub async fn init_conf<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
+        BIOSLogger::init()?;
         unsafe {
             replace(&mut BIOS_INST.workspace_config, Some(Box::new(conf.ws)));
             replace(&mut BIOS_INST.framework_config, Some(conf.fw));

@@ -28,7 +28,7 @@ use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_mq_client() -> BIOSResult<()> {
-    BIOSFuns::init_log_from_path("").unwrap();
+    BIOSFuns::init_log().unwrap();
     BIOSTestContainer::rabbit(|url| async move {
         // Default test
         BIOSFuns::init_conf(BIOSConfig {

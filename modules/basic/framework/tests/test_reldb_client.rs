@@ -37,7 +37,7 @@ use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_reldb_client() -> BIOSResult<()> {
-    BIOSFuns::init_log_from_path("")?;
+    BIOSFuns::init_log()?;
 
     let docker = clients::Cli::default();
     let mysql_container = BIOSTestContainer::mysql_custom(None, &docker);
