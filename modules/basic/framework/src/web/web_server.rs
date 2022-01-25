@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
+use std::collections::HashMap;
+
 use log::info;
 use poem::listener::TcpListener;
 use poem::middleware::{Cors, CorsEndpoint};
-use poem::{Endpoint, EndpointExt, IntoEndpoint, Route};
+use poem::{EndpointExt, Route};
 use poem_openapi::{OpenApi, OpenApiService, ServerObject};
 
 use crate::basic::config::{FrameworkConfig, WebServerConfig};
 use crate::basic::result::BIOSResult;
+use crate::web::web_resp::{UniformError, UniformErrorImpl};
 
 pub struct BIOSWebServer {
     app_name: String,
     config: WebServerConfig,
-    routes: Vec<Route>,
+    routes: HashMap<String, UniformErrorImpl<CorsEndpoint<Route>>>,
 }
 
 impl BIOSWebServer {
@@ -34,7 +37,7 @@ impl BIOSWebServer {
         Ok(BIOSWebServer {
             app_name: conf.app.name.clone(),
             config: conf.web_server.clone(),
-            routes: Vec::default(),
+            routes: HashMap::new(),
         })
     }
 
@@ -49,44 +52,52 @@ impl BIOSWebServer {
         let module = module.unwrap();
         info!("[BIOS.Framework.WebServer] Add module {}", module.code);
         let mut api_serv = OpenApiService::new(apis, &module.title, &module.version);
-        let ui_serv = api_serv.rapidoc();
-        let spec_serv = api_serv.spec();
         for (env, url) in &module.doc_urls {
+            let url = if !url.ends_with("/") {
+                format!("{}/{}", url, module.code)
+            } else {
+                format!("{}{}", url, module.code)
+            };
             api_serv = api_serv.server(ServerObject::new(url).description(env));
         }
+        let ui_serv = api_serv.rapidoc();
+        let spec_serv = api_serv.spec();
         let mut route = Route::new();
-        route = route.nest(format!("/{}", module.code), api_serv);
+        route = route.nest("/", api_serv);
         if let Some(ui_path) = &module.ui_path {
-            route = route.at(format!("/{}", ui_path), ui_serv);
+            route = route.nest(format!("/{}", ui_path), ui_serv);
         }
         if let Some(spec_path) = &module.spec_path {
             route = route.at(format!("/{}", spec_path), poem::endpoint::make_sync(move |_| spec_serv.clone()));
         }
-        // TODO
-        // let route = route.with(Cors::new().allow_origin(&self.config.allowed_origin));
-        self.routes.push(route);
+        let cors = if &self.config.allowed_origin == "*" {
+            // https://github.com/poem-web/poem/issues/161
+            Cors::new()
+        } else {
+            Cors::new().allow_origin(&self.config.allowed_origin)
+        };
+        let route = route.with(cors).with(UniformError);
+        self.routes.insert(module.code.clone(), route);
         self
     }
 
     pub async fn start(&'static self) -> BIOSResult<()> {
         let mut routes = Route::new();
-        for route in self.routes.iter() {
-            // TODO
-            // info!("[BIOS.Framework.WebServer] Add route {:?}", route);
-            routes = routes.nest("/", route);
+        for (code, route) in self.routes.iter() {
+            routes = routes.nest(format!("/{}", code), route);
         }
-        poem::Server::new(TcpListener::bind(format!("{}:{}", self.config.host, self.config.port))).run(routes).await?;
+        let server = poem::Server::new(TcpListener::bind(format!("{}:{}", self.config.host, self.config.port))).run(routes);
         let output_info = format!(
             r#"
-    =================
-    [BIOS.Framework.WebServer] The {app} application has been launched. Visited at: http://{host}:{port}
-    =================
-        "#,
+=================
+[BIOS.Framework.WebServer] The {app} application has been launched. Visited at: http(s)://{host}:{port}
+================="#,
             app = self.app_name,
             host = self.config.host,
             port = self.config.port
         );
         info!("{}", output_info);
+        server.await?;
         Ok(())
     }
 }

@@ -63,14 +63,14 @@ async fn test_advanced_query(client: &BIOSRelDBClient) -> BIOSResult<()> {
     entities::tenant::Entity::delete_many().exec(client.conn()).await?;
 
     let tenant = entities::tenant::ActiveModel {
-        name: Set("tenant1".to_owned()),
+        name: Set("tenant1".to_string()),
         ..Default::default()
     }
     .insert(client.conn())
     .await?;
 
     entities::app::ActiveModel {
-        name: Set("app1".to_owned()),
+        name: Set("app1".to_string()),
         tenant_id: Set(tenant.id.clone()),
         ..Default::default()
     }
@@ -78,7 +78,7 @@ async fn test_advanced_query(client: &BIOSRelDBClient) -> BIOSResult<()> {
     .await?;
 
     let app = entities::app::ActiveModel {
-        name: Set("app2".to_owned()),
+        name: Set("app2".to_string()),
         tenant_id: Set(tenant.id.clone()),
         ..Default::default()
     }
@@ -86,14 +86,14 @@ async fn test_advanced_query(client: &BIOSRelDBClient) -> BIOSResult<()> {
     .await?;
 
     let account = entities::account::ActiveModel {
-        name: Set("account1".to_owned()),
+        name: Set("account1".to_string()),
         ..Default::default()
     }
     .insert(client.conn())
     .await?;
     entities::app_account_rel::ActiveModel {
-        app_id: Set(app.id.to_owned()),
-        account_id: Set(account.id.to_owned()),
+        app_id: Set(app.id.to_string()),
+        account_id: Set(account.id.to_string()),
     }
     .insert(client.conn())
     .await?;
@@ -193,10 +193,10 @@ async fn test_transaction(client: &BIOSRelDBClient) -> BIOSResult<()> {
     let tx = client.conn().begin().await?;
 
     let config = bios_db_config::ActiveModel {
-        k: Set("kn".to_owned()),
-        v: Set("vn".to_owned()),
-        creator: Set("admin".to_owned()),
-        updater: Set("admin".to_owned()),
+        k: Set("kn".to_string()),
+        v: Set("vn".to_string()),
+        creator: Set("admin".to_string()),
+        updater: Set("admin".to_string()),
         ..Default::default()
     }
     .insert(&tx)
@@ -217,10 +217,10 @@ async fn test_transaction(client: &BIOSRelDBClient) -> BIOSResult<()> {
     let tx = client.conn().begin().await?;
 
     let config = bios_db_config::ActiveModel {
-        k: Set("ke".to_owned()),
-        v: Set("ve".to_owned()),
-        creator: Set("admin".to_owned()),
-        updater: Set("admin".to_owned()),
+        k: Set("ke".to_string()),
+        v: Set("ve".to_string()),
+        creator: Set("admin".to_string()),
+        updater: Set("admin".to_string()),
         ..Default::default()
     }
     .insert(&tx)
@@ -242,7 +242,7 @@ async fn test_rel(client: &BIOSRelDBClient) -> BIOSResult<()> {
     client.create_table_from_entity(entities::app_account_rel::Entity).await?;
 
     entities::tenant::ActiveModel {
-        name: Set("tenant1".to_owned()),
+        name: Set("tenant1".to_string()),
         ..Default::default()
     }
     .insert(client.conn())
@@ -254,7 +254,7 @@ async fn test_rel(client: &BIOSRelDBClient) -> BIOSResult<()> {
     assert_eq!(config, None);
 
     entities::tenant_conf::ActiveModel {
-        name: Set("conf1".to_owned()),
+        name: Set("conf1".to_string()),
         tenant_id: Set(tenant.id.clone()),
         ..Default::default()
     }
@@ -262,7 +262,7 @@ async fn test_rel(client: &BIOSRelDBClient) -> BIOSResult<()> {
     .await?;
 
     entities::app::ActiveModel {
-        name: Set("app1".to_owned()),
+        name: Set("app1".to_string()),
         tenant_id: Set(tenant.id.clone()),
         ..Default::default()
     }
@@ -270,7 +270,7 @@ async fn test_rel(client: &BIOSRelDBClient) -> BIOSResult<()> {
     .await?;
 
     entities::app::ActiveModel {
-        name: Set("app2".to_owned()),
+        name: Set("app2".to_string()),
         tenant_id: Set(tenant.id.clone()),
         ..Default::default()
     }
@@ -297,14 +297,14 @@ async fn test_rel(client: &BIOSRelDBClient) -> BIOSResult<()> {
     assert_eq!(accounts.len(), 0);
 
     let account = entities::account::ActiveModel {
-        name: Set("account1".to_owned()),
+        name: Set("account1".to_string()),
         ..Default::default()
     }
     .insert(client.conn())
     .await?;
     entities::app_account_rel::ActiveModel {
-        app_id: Set(apps[0].id.to_owned()),
-        account_id: Set(account.id.to_owned()),
+        app_id: Set(apps[0].id.to_string()),
+        account_id: Set(account.id.to_string()),
     }
     .insert(client.conn())
     .await?;
@@ -318,20 +318,20 @@ async fn test_rel(client: &BIOSRelDBClient) -> BIOSResult<()> {
 async fn test_basic(client: &BIOSRelDBClient) -> BIOSResult<()> {
     // Insert
     bios_db_config::ActiveModel {
-        k: Set("k1".to_owned()),
-        v: Set("v1".to_owned()),
-        creator: Set("admin".to_owned()),
-        updater: Set("admin".to_owned()),
+        k: Set("k1".to_string()),
+        v: Set("v1".to_string()),
+        creator: Set("admin".to_string()),
+        updater: Set("admin".to_string()),
         ..Default::default()
     }
     .insert(client.conn())
     .await?;
 
     let conf2 = bios_db_config::ActiveModel {
-        k: Set("k2".to_owned()),
-        v: Set("v2".to_owned()),
-        creator: Set("admin".to_owned()),
-        updater: Set("admin".to_owned()),
+        k: Set("k2".to_string()),
+        v: Set("v2".to_string()),
+        creator: Set("admin".to_string()),
+        updater: Set("admin".to_string()),
         ..Default::default()
     };
     let insert_result = bios_db_config::Entity::insert(conf2).exec(client.conn()).await?;
@@ -344,7 +344,7 @@ async fn test_basic(client: &BIOSRelDBClient) -> BIOSResult<()> {
     // Update One
     sleep(Duration::from_millis(1100)).await;
     let mut conf2: bios_db_config::ActiveModel = conf2.into();
-    conf2.v = Set("v2更新".to_owned());
+    conf2.v = Set("v2更新".to_string());
     conf2.update(client.conn()).await?;
     let conf2 = bios_db_config::Entity::find_by_id(insert_result.last_insert_id.clone()).one(client.conn()).await?.unwrap();
     assert_eq!(conf2.v, "v2更新");

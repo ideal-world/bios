@@ -60,7 +60,7 @@ impl BIOSMQClient {
         channel.confirm_select(ConfirmSelectOptions::default()).await?;
         let mut mq_header = FieldTable::default();
         for (k, v) in header {
-            mq_header.insert(ShortString::from(k.to_owned()), AMQPValue::from(LongString::from(v.to_owned())));
+            mq_header.insert(ShortString::from(k.to_string()), AMQPValue::from(LongString::from(v.to_string())));
         }
         let confirm = channel
             .basic_publish(
@@ -75,7 +75,7 @@ impl BIOSMQClient {
         if confirm.is_ack() {
             Ok(())
         } else {
-            Err(BIOSError::InternalError("MQ request confirmation error".to_owned()))
+            Err(BIOSError::InternalError("MQ request confirmation error".to_string()))
         }
     }
 
@@ -122,7 +122,7 @@ impl BIOSMQClient {
         channel.confirm_select(ConfirmSelectOptions::default()).await?;
         let mut mq_header = FieldTable::default();
         for (k, v) in header {
-            mq_header.insert(ShortString::from(k.to_owned()), AMQPValue::from(LongString::from(v.to_owned())));
+            mq_header.insert(ShortString::from(k.to_string()), AMQPValue::from(LongString::from(v.to_string())));
         }
         let confirm = channel
             .basic_publish(
@@ -137,7 +137,7 @@ impl BIOSMQClient {
         if confirm.is_ack() {
             Ok(())
         } else {
-            Err(BIOSError::InternalError("MQ request confirmation error".to_owned()))
+            Err(BIOSError::InternalError("MQ request confirmation error".to_string()))
         }
     }
 

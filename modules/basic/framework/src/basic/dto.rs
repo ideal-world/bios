@@ -19,42 +19,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(default)]
 pub struct BIOSContext {
-    pub ident: IdentInfo,
-    pub trace: Trace,
-    pub lang: String,
-}
-
-impl Default for BIOSContext {
-    fn default() -> Self {
-        BIOSContext {
-            ident: Default::default(),
-            trace: Default::default(),
-            lang: "en_US".to_string(),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-#[serde(default)]
-pub struct Trace {
-    pub id: String,
-    pub app: String,
-    pub inst: String,
-}
-
-impl Default for Trace {
-    fn default() -> Self {
-        Trace {
-            id: "".to_string(),
-            app: "".to_string(),
-            inst: "".to_string(),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-#[serde(default)]
-pub struct IdentInfo {
     pub app_id: String,
     pub tenant_id: String,
     pub ak: String,
@@ -65,9 +29,9 @@ pub struct IdentInfo {
     pub groups: Vec<String>,
 }
 
-impl Default for IdentInfo {
+impl Default for BIOSContext {
     fn default() -> Self {
-        IdentInfo {
+        BIOSContext {
             app_id: "".to_string(),
             tenant_id: "".to_string(),
             ak: "".to_string(),
@@ -76,39 +40,6 @@ impl Default for IdentInfo {
             token_kind: "".to_string(),
             roles: vec![],
             groups: vec![],
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(default)]
-pub struct BIOSResp<'c, T>
-where
-    T: Serialize,
-{
-    pub code: String,
-    pub msg: String,
-    pub body: Option<T>,
-    pub trace_id: Option<String>,
-    pub trace_app: Option<String>,
-    pub trace_inst: Option<String>,
-    #[serde(skip)]
-    pub ctx: Option<&'c BIOSContext>,
-}
-
-impl<T> Default for BIOSResp<'_, T>
-where
-    T: Serialize,
-{
-    fn default() -> Self {
-        BIOSResp {
-            code: "".to_owned(),
-            msg: "".to_owned(),
-            body: None,
-            trace_id: None,
-            trace_app: None,
-            trace_inst: None,
-            ctx: None,
         }
     }
 }

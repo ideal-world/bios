@@ -29,7 +29,7 @@ struct TestConfig<T> {
 impl<T: Default> Default for TestConfig<T> {
     fn default() -> Self {
         TestConfig {
-            project_name: "".to_owned(),
+            project_name: "".to_string(),
             level_num: 0,
             db_proj: Default::default(),
         }
@@ -44,7 +44,7 @@ struct DatabaseConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
-        DatabaseConfig { url: "".to_owned() }
+        DatabaseConfig { url: "".to_string() }
     }
 }
 

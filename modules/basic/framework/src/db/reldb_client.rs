@@ -57,7 +57,7 @@ impl BIOSRelDBClient {
             url.port().unwrap_or(0),
             max_connections
         );
-        let mut opt = ConnectOptions::new(str_url.to_owned());
+        let mut opt = ConnectOptions::new(str_url.to_string());
         opt.max_connections(max_connections).min_connections(min_connections).sqlx_logging(true);
         if let Some(connect_timeout_sec) = connect_timeout_sec {
             opt.connect_timeout(Duration::from_secs(connect_timeout_sec));
