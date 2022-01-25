@@ -26,12 +26,11 @@ name = "bios"
 path = "src/lib.rs"
 
 [features]
-default = ["rslog"]
+default = ["trace"]
 trace = ["tracing", "tracing-subscriber"]
-rslog = ["log4rs", "trace"]
 future = ["tokio", "futures", "async-stream", "futures-util", "async-trait"]
-reldb = ["future", "rslog", "sqlparser", "sea-orm"]
-web-server = ["future", "rslog", "poem", "poem-openapi"]
+reldb = ["future", "sqlparser", "sea-orm"]
+web-server = ["future", "poem", "poem-openapi"]
 cache = ["redis"]
 mq = ["futures-util", "lapin", "amq-protocol-types", "async-global-executor"]
 test = ["testcontainers"]
@@ -50,9 +49,6 @@ env_logger = { version = "^0" }
 config = { version = "^0" }
 regex = { version = "^1" }
 url = { version = "^2" }
-
-# Log
-log4rs = { version = "^1", optional = true }
 
 # Future
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread"], optional = true }
@@ -90,10 +86,6 @@ tokio = { version = "^1", features = ["time", "rt", "macros"] }
 
 [[test]]
 name = "test_web_server"
-required-features = ["test", "web-server"]
-
-[[test]]
-name = "test_web_server_demo"
 required-features = ["test", "web-server"]
 
 [[test]]

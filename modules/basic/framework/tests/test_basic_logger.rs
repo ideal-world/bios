@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-// https://github.com/estk/log4rs
-// https://blog.csdn.net/s_lisheng/article/details/78271032
-
 use std::env;
 
-use log::info;
+use log::{error, info};
 
 use bios::basic::result::BIOSResult;
 use bios::BIOSFuns;
@@ -29,21 +26,21 @@ use crate::app::req::test_req;
 #[tokio::test]
 async fn test_basic_logger() -> BIOSResult<()> {
     // env::set_var("RUST_LOG", "OFF");
-    env::set_var("PROFILE", "test");
-    // BIOSLogger::init("tests/log")?;
-    // 配置文件不存在，使用默认配置
-    BIOSFuns::init_log_from_path("")?;
-    info!("info...");
+    env::set_var("RUST_LOG", "error,test_basic_logger::app=info");
+    BIOSFuns::init_log()?;
+    info!("main info...");
+    error!("main error");
     test_req();
     Ok(())
 }
 
 mod app {
     pub mod req {
-        use log::error;
+        use log::{error, info};
 
         pub fn test_req() {
-            error!("test error");
+            info!("app::req info");
+            error!("app::req error");
         }
     }
 }

@@ -27,7 +27,7 @@ use bios::BIOSFuns;
 
 #[tokio::test]
 async fn test_cache_client() -> BIOSResult<()> {
-    BIOSFuns::init_log_from_path("").unwrap();
+    BIOSFuns::init_log().unwrap();
     BIOSTestContainer::redis(|url| async move {
         let mut client = BIOSCacheClient::init(&url).await?;
         // basic operations
