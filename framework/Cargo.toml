@@ -13,9 +13,9 @@ categories = [
 homepage = "https://bios.idealworld.group/framework"
 repository = "https://github.com/ideal-world/bios"
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 exclude = ["/.travis.yml"]
-readme = "README.adoc"
+readme = "readme.adoc"
 
 [profile.release]
 lto = true
@@ -26,35 +26,84 @@ name = "bios"
 path = "src/lib.rs"
 
 [features]
-default = ["rslog", "web-server"]
-
-web-server = ["actix-web", "actix-http", "actix-service", "actix-cors", "validator", "actix-router", "mime", "serde_qs", "serde_urlencoded"]
-
-web-client = ["awc", "actix-http"]
-
+default = ["trace"]
+trace = ["tracing", "tracing-subscriber"]
+future = ["tokio", "futures", "async-stream", "futures-util", "async-trait"]
+reldb = ["future", "sqlparser", "sea-orm"]
+web-server = ["future", "poem", "poem-openapi"]
+web-client = ["tokio","reqwest"]
+cache = ["redis"]
+mq = ["futures-util", "lapin", "amq-protocol-types", "async-global-executor"]
+test = ["testcontainers"]
 
 [dependencies]
 # Basic
-chrono = { version = "^0", features = ["serde"] }
-rust_decimal = { version = "^1" }
-async-trait = "^0"
+serde = { version = "^1", features = ["derive"] }
+serde_json = { version = "^1" }
+derive_more = { version = "^0" }
+uuid = { version = "^0", features = ["serde", "v4"] }
+base64 = { version = "^0" }
+lazy_static = { version = "^1" }
+rust-crypto = { version = "^0" }
+log = { version = "^0" }
+env_logger = { version = "^0" }
+config = { version = "^0" }
+regex = { version = "^1" }
+url = { version = "^2" }
+
+# Future
+tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread"], optional = true }
+futures = { version = "^0.3", optional = true }
+async-stream = { version = "^0.3", optional = true }
+futures-util = { version = "^0.3", optional = true }
+async-trait = { version = "^0", optional = true }
+
+# Tracing
+tracing = { version = "^0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+# RelDB
+sea-orm = { version = "0.5.0", features = ["sqlx-mysql", "macros", "runtime-tokio-rustls", "debug-print"], optional = true }
+sqlparser = { version = "0.13.0", optional = true }
+
+# Web Server
+poem-openapi = { version = "1.2.39", features = ["rapidoc"], optional = true }
+poem = { version = "1.2.39", features = ["csrf", "opentelemetry", "rustls", "prometheus", "websocket"], optional = true }
+
+# Web Client
+reqwest = { version = "0.11.9", features = ["json"], optional = true }
+
+# Redis
+redis = { version = "^0", features = ["tokio-comp"], optional = true }
+
+# Rabbit
+lapin = { version = "^1", optional = true }
+amq-protocol-types = { version = "^6", optional = true }
+async-global-executor = { version = "^2", optional = true }
+
+# Test
+testcontainers = { version = "^0", optional = true }
 
 [dev-dependencies]
 # Common
 tokio = { version = "^1", features = ["time", "rt", "macros"] }
-actix-rt = "^2"
-http = "0.2.5"
+
+[[test]]
+name = "test_reldb_client"
+required-features = ["test", "reldb"]
 
 [[test]]
 name = "test_web_server"
-required-features = ["test", "web-client"]
+required-features = ["test", "web-server", "web-client"]
 
 [[test]]
 name = "test_web_client"
 required-features = ["test", "web-client"]
 
-
+[[test]]
+name = "test_cache_client"
+required-features = ["test", "cache"]
 
 [[test]]
-name = "test_reldb_client"
-required-features = ["test", "reldb"]
+name = "test_mq_client"
+required-features = ["test", "mq"]

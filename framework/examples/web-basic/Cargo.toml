@@ -1,0 +1,11 @@
+[package]
+name = "bios-framework-example-web-basic"
+version = "0.1.0"
+authors = ["gudaoxuri"]
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.15.0", features = ["macros"] }
+bios-framework = { path = "../..", features = ["web-server"] }
+poem-openapi = { version = "1.2.39"}
+

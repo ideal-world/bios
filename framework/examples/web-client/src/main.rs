@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#[cfg(feature = "web-client")]
-pub mod web_client;
-#[cfg(feature = "web-server")]
-pub mod web_resp;
-#[cfg(feature = "web-server")]
-pub mod web_server;
-#[cfg(feature = "web-server")]
-pub mod web_validation;
+#[tokio::main]
+async fn main() -> Result<(), reqwest::Error> {
+    let res = reqwest::get("http://httpbin.org/get").await?;
+    println!("Response: {:?}", res);
+    Ok(())
+}

@@ -14,11 +14,21 @@
  * limitations under the License.
  */
 
-#[cfg(feature = "web-client")]
-pub mod web_client;
-#[cfg(feature = "web-server")]
-pub mod web_resp;
-#[cfg(feature = "web-server")]
-pub mod web_server;
-#[cfg(feature = "web-server")]
-pub mod web_validation;
+use poem_openapi::param::Query;
+use poem_openapi::OpenApi;
+
+use bios::basic::error::BIOSError;
+use bios::web::web_resp::BIOSResp;
+
+pub struct Api;
+
+#[OpenApi]
+impl Api {
+    #[oai(path = "/hello", method = "get")]
+    async fn index(&self, name: Query<Option<String>>) -> BIOSResp<String> {
+        match name.0 {
+            Some(name) => BIOSResp::ok(format!("hello, {}!", name)),
+            None => BIOSResp::err(BIOSError::NotFound("name does not exist".to_string())),
+        }
+    }
+}

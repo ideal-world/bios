@@ -14,11 +14,25 @@
  * limitations under the License.
  */
 
-#[cfg(feature = "web-client")]
-pub mod web_client;
-#[cfg(feature = "web-server")]
-pub mod web_resp;
-#[cfg(feature = "web-server")]
-pub mod web_server;
-#[cfg(feature = "web-server")]
-pub mod web_validation;
+use std::env;
+
+use bios::basic::config::NoneConfig;
+use bios::basic::result::BIOSResult;
+use bios::BIOSFuns;
+
+use crate::processor::Api;
+
+mod processor;
+
+///
+/// Visit: http://127.0.0.1:8089/ui
+///
+#[tokio::main]
+async fn main() -> BIOSResult<()> {
+    env::set_var("RUST_LOG", "debug");
+    env::set_var("PROFILE", "default");
+    // Initial configuration
+    BIOSFuns::init::<NoneConfig>("config").await?;
+    // Register the processor and start the web service
+    BIOSFuns::web_server().add_module("", Api).start().await
+}

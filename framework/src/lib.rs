@@ -35,62 +35,58 @@ use crate::basic::uri::BIOSUri;
 #[cfg(feature = "cache")]
 use crate::cache::cache_client::BIOSCacheClient;
 #[cfg(feature = "reldb")]
-use crate::db::reldb_client_mysql::BIOSRelDBMysqlClient;
-#[cfg(feature = "reldb")]
-use crate::db::reldb_client_postgres::BIOSRelDBPostgresClient;
+use crate::db::reldb_client::BIOSRelDBClient;
 #[cfg(feature = "mq")]
 use crate::mq::mq_client::BIOSMQClient;
 #[cfg(feature = "web-client")]
 use crate::web::web_client::BIOSWebClient;
+#[cfg(feature = "web-server")]
+use crate::web::web_server::BIOSWebServer;
 
 pub struct BIOSFuns {
     workspace_config: Option<Box<dyn Any>>,
     framework_config: Option<FrameworkConfig>,
     #[cfg(feature = "reldb")]
-    reldb_mysql: Option<BIOSRelDBMysqlClient>,
-    #[cfg(feature = "reldb")]
-    reldb_postgres: Option<BIOSRelDBPostgresClient>,
+    reldb: Option<BIOSRelDBClient>,
+    #[cfg(feature = "web-server")]
+    web_server: Option<BIOSWebServer>,
+    #[cfg(feature = "web-client")]
+    web_client: Option<BIOSWebClient>,
     #[cfg(feature = "cache")]
     cache: Option<BIOSCacheClient>,
     #[cfg(feature = "mq")]
     mq: Option<BIOSMQClient>,
-    #[cfg(feature = "web-client")]
-    web_client: Option<BIOSWebClient>,
 }
 
 static mut BIOS_INST: BIOSFuns = BIOSFuns {
     workspace_config: None,
     framework_config: None,
     #[cfg(feature = "reldb")]
-    reldb_mysql: None,
-    #[cfg(feature = "reldb")]
-    reldb_postgres: None,
+    reldb: None,
+    #[cfg(feature = "web-server")]
+    web_server: None,
+    #[cfg(feature = "web-client")]
+    web_client: None,
     #[cfg(feature = "cache")]
     cache: None,
     #[cfg(feature = "mq")]
     mq: None,
-    #[cfg(feature = "web-client")]
-    web_client: None,
 };
 
 #[allow(unsafe_code)]
 impl BIOSFuns {
-    pub async fn init<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
-        BIOSLogger::init(root_path)?;
-        let config = BIOSConfig::<T>::init(root_path)?;
+    pub async fn init<T: 'static + Deserialize<'static>>(relative_path: &str) -> BIOSResult<()> {
+        BIOSLogger::init()?;
+        let config = BIOSConfig::<T>::init(relative_path)?;
         BIOSFuns::init_conf::<T>(config).await
     }
 
-    pub async fn init_conf_from_path<T: 'static + Deserialize<'static>>(root_path: &str) -> BIOSResult<()> {
-        let config = BIOSConfig::<T>::init(root_path)?;
-        BIOSFuns::init_conf::<T>(config).await
-    }
-
-    pub fn init_log_from_path(root_path: &str) -> BIOSResult<()> {
-        BIOSLogger::init(root_path)
+    pub fn init_log() -> BIOSResult<()> {
+        BIOSLogger::init()
     }
 
     pub async fn init_conf<T: 'static>(conf: BIOSConfig<T>) -> BIOSResult<()> {
+        BIOSLogger::init()?;
         unsafe {
             replace(&mut BIOS_INST.workspace_config, Some(Box::new(conf.ws)));
             replace(&mut BIOS_INST.framework_config, Some(conf.fw));
@@ -98,22 +94,27 @@ impl BIOSFuns {
         #[cfg(feature = "reldb")]
         {
             if BIOSFuns::fw_config().db.enabled {
-                match &BIOSFuns::fw_config().db.url.to_lowercase() {
-                    url if url.starts_with("mysql") => {
-                        let reldb_client = BIOSRelDBMysqlClient::init_by_conf(&BIOSFuns::fw_config()).await?;
-                        unsafe {
-                            replace(&mut BIOS_INST.reldb_mysql, Some(reldb_client));
-                        };
-                    }
-                    url if url.starts_with("postgres") => {
-                        let reldb_client = BIOSRelDBPostgresClient::init_by_conf(&BIOSFuns::fw_config()).await?;
-                        unsafe {
-                            replace(&mut BIOS_INST.reldb_postgres, Some(reldb_client));
-                        };
-                    }
-                    _ => panic!("Doesn't support [{}] driver", Url::parse(&BIOSFuns::fw_config().db.url.as_str()).unwrap().scheme()),
-                }
+                let reldb_client = BIOSRelDBClient::init_by_conf(&BIOSFuns::fw_config()).await?;
+                unsafe {
+                    replace(&mut BIOS_INST.reldb, Some(reldb_client));
+                };
             }
+        }
+        #[cfg(feature = "web-server")]
+        {
+            if BIOSFuns::fw_config().web_server.enabled {
+                let web_server = BIOSWebServer::init_by_conf(&BIOSFuns::fw_config()).await?;
+                unsafe {
+                    replace(&mut BIOS_INST.web_server, Some(web_server));
+                };
+            }
+        }
+        #[cfg(feature = "web-client")]
+        {
+            let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::fw_config())?;
+            unsafe {
+                replace(&mut BIOS_INST.web_client, Some(web_client));
+            };
         }
         #[cfg(feature = "cache")]
         {
@@ -133,22 +134,15 @@ impl BIOSFuns {
                 };
             }
         }
-        #[cfg(feature = "web-client")]
-        {
-            let web_client = BIOSWebClient::init_by_conf(&BIOSFuns::fw_config())?;
-            unsafe {
-                replace(&mut BIOS_INST.web_client, Some(web_client));
-            };
-        }
         BIOSResult::Ok(())
     }
 
     pub fn ws_config<T>() -> &'static T {
         unsafe {
             match &BIOS_INST.workspace_config {
-                None => panic!("Raw Workspace Config doesn't exist"),
+                None => panic!("[BIOS.Framework.Config] Raw Workspace Config doesn't exist"),
                 Some(conf) => match conf.downcast_ref::<T>() {
-                    None => panic!("Workspace Config doesn't exist"),
+                    None => panic!("[BIOS.Framework.Config] Workspace Config doesn't exist"),
                     Some(t) => t,
                 },
             }
@@ -158,7 +152,7 @@ impl BIOSFuns {
     pub fn fw_config() -> &'static FrameworkConfig {
         unsafe {
             match &BIOS_INST.framework_config {
-                None => panic!("Framework Config doesn't exist"),
+                None => panic!("[BIOS.Framework.Config] Framework Config doesn't exist"),
                 Some(t) => t,
             }
         }
@@ -180,40 +174,20 @@ impl BIOSFuns {
     };
 
     #[cfg(feature = "reldb")]
-    pub fn mysql() -> &'static BIOSRelDBMysqlClient {
+    pub fn reldb() -> &'static BIOSRelDBClient {
         unsafe {
-            match &BIOS_INST.reldb_mysql {
-                None => panic!("RelDB default instance doesn't exist"),
+            match &BIOS_INST.reldb {
+                None => panic!("[BIOS.Framework.Config] RelDB default instance doesn't exist"),
                 Some(t) => t,
             }
         }
     }
 
-    #[cfg(feature = "reldb")]
-    pub fn postgres() -> &'static BIOSRelDBPostgresClient {
+    #[cfg(feature = "web-server")]
+    pub fn web_server() -> &'static mut BIOSWebServer {
         unsafe {
-            match &BIOS_INST.reldb_postgres {
-                None => panic!("RelDB default instance doesn't exist"),
-                Some(t) => t,
-            }
-        }
-    }
-
-    #[cfg(feature = "cache")]
-    pub fn cache() -> &'static mut BIOSCacheClient {
-        unsafe {
-            match &mut BIOS_INST.cache {
-                None => panic!("Cache default instance doesn't exist"),
-                Some(t) => t,
-            }
-        }
-    }
-
-    #[cfg(feature = "mq")]
-    pub fn mq() -> &'static mut BIOSMQClient {
-        unsafe {
-            match &mut BIOS_INST.mq {
-                None => panic!("MQ default instance doesn't exist"),
+            match &mut BIOS_INST.web_server {
+                None => panic!("[BIOS.Framework.Config] Web Server default instance doesn't exist"),
                 Some(t) => t,
             }
         }
@@ -223,7 +197,27 @@ impl BIOSFuns {
     pub fn web_client() -> &'static BIOSWebClient {
         unsafe {
             match &BIOS_INST.web_client {
-                None => panic!("Web Client default instance doesn't exist"),
+                None => panic!("[BIOS.Framework.Config] Web Client default instance doesn't exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
+    #[cfg(feature = "cache")]
+    pub fn cache() -> &'static mut BIOSCacheClient {
+        unsafe {
+            match &mut BIOS_INST.cache {
+                None => panic!("[BIOS.Framework.Config] Cache default instance doesn't exist"),
+                Some(t) => t,
+            }
+        }
+    }
+
+    #[cfg(feature = "mq")]
+    pub fn mq() -> &'static mut BIOSMQClient {
+        unsafe {
+            match &mut BIOS_INST.mq {
+                None => panic!("[BIOS.Framework.Config] MQ default instance doesn't exist"),
                 Some(t) => t,
             }
         }
