@@ -1,0 +1,83 @@
+https://jetbrains.github.io/projector-client/mkdocs/latest/
+
+https://youtrack.jetbrains.com/issues/PRJ
+
+https://stackoverflow.com/questions/16296753/can-you-run-gui-applications-in-a-linux-docker-container
+
+https://github.com/TekFik/chrome-web
+
+
+docker run -d -p 127.0.0.1:8887:8887 -p 127.0.0.1:8888:8080 --name idea -v /opt/data/idea:/home/projector-user ghcr.io/ideal-world/idea:2020.3.4
+
+---
+
+curl http://127.0.0.1:9080/apisix/admin/consumers -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1' -X PUT -i -d '
+{
+    "username": "gudaoxuri",
+    "plugins": {
+        "basic-auth": {
+            "username":"gudaoxuri",
+            "password": "123456"
+        }
+    }
+}'
+
+curl http://127.0.0.1:9080/apisix/admin/consumers -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1' -X PUT -i -d '
+{
+"username": "jzy",
+    "plugins": {
+        "basic-auth": {
+            "username":"jzy",
+            "password": "123456"
+        }
+    }
+}'
+
+curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: eerxfni1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+    "uri": "/*",
+    "host": "ide.hiveos.xyz",
+    "enable_websocket": true,
+    "upstream": {
+        "type": "roundrobin",
+        "nodes": {
+            "127.0.0.1:8887": 1
+        }
+    },
+    "plugins": {
+        "basic-auth": {},
+        "consumer-restriction": {
+            "whitelist": [
+                "gudaoxuri"
+            ]
+        }
+    }
+}'
+
+curl "http://127.0.0.1:9080/apisix/admin/routes/2" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+    "uri": "/*",
+    "host": "web-1.bios.com",
+    "enable_websocket": true,
+        "upstream": {
+        "type": "roundrobin",
+        "nodes": {
+            "127.0.0.1:8888": 1
+        }
+    },
+    "plugins": {
+        "basic-auth": {},
+        "consumer-restriction": {
+            "whitelist": [
+                "gudaoxuri"
+            ]
+        }
+    }
+}'
+
+
+http://ide-1.bios.com:9080
+
+
+docker run -d --restart=always --name=ddns -v /opt/data/ddns-updater:/updater/data qmcgaw/ddns-updater
+

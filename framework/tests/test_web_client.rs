@@ -14,40 +14,23 @@
  * limitations under the License.
  */
 
-// https://docs.rs/awc
+// https://github.com/seanmonstar/reqwest
 
-use awc::http::StatusCode;
+use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
 
 use bios::basic::config::{BIOSConfig, CacheConfig, DBConfig, FrameworkConfig, MQConfig, NoneConfig};
 use bios::basic::result::BIOSResult;
-use bios::web::web_client::BIOSWebClient;
 use bios::BIOSFuns;
 
-#[actix_rt::test]
+#[tokio::test]
 async fn test_web_client() -> BIOSResult<()> {
-    BIOSFuns::init_log_from_path("")?;
-    let client = BIOSWebClient::init(60, 60)?;
-    let client = client.raw();
-    let response = client.get("https://www.baidu.com").insert_header(("User-Agent", "Actix-web")).send().await?;
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let mut response = client.post("http://httpbin.org/post").send_body("Raw body contents").await?;
-
-    assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "Raw body contents"#));
-
-    let request = serde_json::json!({
-        "lang": "rust",
-        "body": "json"
-    });
-    let mut response = client.post("http://httpbin.org/post").send_json(&request).await?;
-    assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
-
-    // Default test
     BIOSFuns::init_conf(BIOSConfig {
         ws: NoneConfig {},
         fw: FrameworkConfig {
             app: Default::default(),
-            web: Default::default(),
+            web_server: Default::default(),
+            web_client: Default::default(),
             cache: CacheConfig {
                 enabled: false,
                 ..Default::default()
@@ -65,8 +48,66 @@ async fn test_web_client() -> BIOSResult<()> {
     })
     .await?;
 
-    let mut response = BIOSFuns::web_client().raw().post("http://httpbin.org/post").send_json(&request).await?;
-    assert!(BIOSWebClient::body_as_str(&mut response).await?.contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
+    let res = reqwest::get("http://httpbin.org/get").await?;
+
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // --------------------------------------------------
+
+    let response = BIOSFuns::web_client().get_to_str("https://www.baidu.com", Some([("User-Agent".to_string(), "BIOS".to_string())].iter().cloned().collect())).await?;
+    assert_eq!(response.code, StatusCode::OK.as_u16());
+    assert!(response.body.unwrap().contains("baidu"));
+
+    let response = BIOSFuns::web_client().get_to_str("http://httpbin.org/get", Some([("User-Agent".to_string(), "BIOS".to_string())].iter().cloned().collect())).await?;
+    assert_eq!(response.code, StatusCode::OK.as_u16());
+    assert!(response.body.unwrap().contains("BIOS"));
+
+    let response = BIOSFuns::web_client()
+        .delete(
+            "https://httpbin.org/delete",
+            Some([("User-Agent".to_string(), "BIOS".to_string())].iter().cloned().collect()),
+        )
+        .await?;
+    assert_eq!(response.code, StatusCode::OK.as_u16());
+
+    let response = BIOSFuns::web_client().post_str_to_str("https://httpbin.org/post", &"Raw body contents".to_string(), None).await?;
+    assert_eq!(response.code, StatusCode::OK.as_u16());
+    assert!(response.body.unwrap().contains(r#"data": "Raw body contents"#));
+
+    let response = BIOSFuns::web_client().post_str_to_str("https://httpbin.org/post", &"Raw body contents".to_string(), None).await?;
+    assert_eq!(response.code, StatusCode::OK.as_u16());
+    assert!(response.body.unwrap().contains(r#"data": "Raw body contents"#));
+
+    let request = serde_json::json!({
+        "lang": "rust",
+        "body": "json"
+    });
+    let response = BIOSFuns::web_client().post_obj_to_str("https://httpbin.org/post", &request, None).await?;
+    assert_eq!(response.code, StatusCode::OK.as_u16());
+    assert!(response.body.unwrap().contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
+
+    let new_post = Post {
+        id: None,
+        title: "idealworld".into(),
+        body: "http://idealworld.group/".into(),
+        user_id: 1,
+    };
+    let response = BIOSFuns::web_client().post::<Post, Post>("https://jsonplaceholder.typicode.com/posts", &new_post, None).await?;
+    assert_eq!(response.code, StatusCode::CREATED.as_u16());
+    assert_eq!(response.body.unwrap().body, "https://docs.rs/reqwest");
+
+    let response = BIOSFuns::web_client().post_obj_to_str("https://jsonplaceholder.typicode.com/posts", &new_post, None).await?;
+    assert_eq!(response.code, StatusCode::CREATED.as_u16());
+    assert!(response.body.unwrap().contains("http://idealworld.group/"));
 
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Post {
+    id: Option<i32>,
+    title: String,
+    body: String,
+    #[serde(rename = "userId")]
+    user_id: i32,
 }

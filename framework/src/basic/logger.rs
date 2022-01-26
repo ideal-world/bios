@@ -13,12 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+use std::sync::Mutex;
 
-#[cfg(feature = "web-client")]
-pub mod web_client;
-#[cfg(feature = "web-server")]
-pub mod web_resp;
-#[cfg(feature = "web-server")]
-pub mod web_server;
-#[cfg(feature = "web-server")]
-pub mod web_validation;
+use crate::basic::result::BIOSResult;
+
+lazy_static! {
+    static ref INITIALIZED: Mutex<bool> = Mutex::new(false);
+}
+
+pub struct BIOSLogger;
+
+impl BIOSLogger {
+    pub(crate) fn init() -> BIOSResult<()> {
+        let mut initialized = INITIALIZED.lock().unwrap();
+        if *initialized == true {
+            return Ok(());
+        }
+        *initialized = true;
+
+        if std::env::var_os("RUST_LOG").is_none() {
+            std::env::set_var("RUST_LOG", "info");
+        }
+
+        tracing_subscriber::fmt::init();
+        Ok(())
+    }
+}

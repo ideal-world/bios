@@ -1,0 +1,82 @@
+*Preview version, will not guarantee the stability of the API!*
+
+====
+Elegant, clean Rust development framework
+====
+
+== Core Features
+
+* Relational database client for MySQL, PostgresSQL
+* Web service and web client for OpenAPI v3.x
+* Distributed cache client for Redis protocol
+* RabbitMQ client for AMQP protocol
+* Containerized unit testing of mainstream middleware
+* Multi-environment configuration
+* Commonly used operations (E.g. uniform error handling, encryption and decryption, regular checksums)
+
+== Feature Description
+
+* ``trace`` tracing operation
+* ``future`` asynchronous operations
+* ``reldb`` relational database operations
+* ``web-server`` web service operations
+* ``web-client`` web client operations
+* ``cache`` cache operations
+* ``mq`` message queue operations
+* ``test`` unit test operations
+
+== Quick start
+
+The core operations of the framework all use ``BIOSFuns`` as an entry point. E.g.
+
+ BIOSFuns::init(relative_path)      // Initialize the configuration
+ BIOSFuns::field.x                  // Some field operations
+ BIOSFuns::reldb().x                // Some relational database operations
+ BIOSFuns::web_server().x           // Some web service operations
+
+=== Web Service Example
+
+[source,toml]
+.Dependency Configuration
+----
+[dependencies]
+tokio = { version = "1.15.0", features = ["macros"] }
+bios-framework = { version = "0", features = ["web-server"] }
+poem-openapi = { version = "1.2.39"}
+----
+
+[source,rust]
+.Processor Configuration
+----
+pub struct Api;
+
+#[OpenApi]
+impl Api {
+    #[oai(path = "/hello", method = "get")]
+    async fn index(&self, name: Query<Option<String>>) -> BIOSResp<String> {
+        match name.0 {
+            Some(name) => BIOSResp::ok(format!("hello, {}!", name)),
+            None => BIOSResp::err(BIOSError::NotFound("name does not exist".to_string())),
+        }
+    }
+}
+----
+
+[source,rust]
+.Startup class configuration
+----
+#[tokio::main]
+async fn main() -> BIOSResult<()> {
+    // Initial configuration
+    BIOSFuns::init::<NoneConfig>("config").await?;
+    // Register the processor and start the web service
+    BIOSFuns::web_server().add_module("", Api).start().await
+}
+----
+
+=== Relational Database Example
+
+TBD
+
+
+

@@ -1,5 +1,6 @@
 [workspace]
 
 members = [
-    "modules/basic/framework",
+    "framework",
+    "framework/examples/web-basic",
 ]
