@@ -49,10 +49,7 @@ async fn test_web_client() -> BIOSResult<()> {
     .await?;
 
     let res = reqwest::get("http://httpbin.org/get").await?;
-
     assert_eq!(res.status(), StatusCode::OK);
-
-    // --------------------------------------------------
 
     let response = BIOSFuns::web_client().get_to_str("https://www.baidu.com", Some([("User-Agent".to_string(), "BIOS".to_string())].iter().cloned().collect())).await?;
     assert_eq!(response.code, StatusCode::OK.as_u16());
@@ -94,7 +91,7 @@ async fn test_web_client() -> BIOSResult<()> {
     };
     let response = BIOSFuns::web_client().post::<Post, Post>("https://jsonplaceholder.typicode.com/posts", &new_post, None).await?;
     assert_eq!(response.code, StatusCode::CREATED.as_u16());
-    assert_eq!(response.body.unwrap().body, "https://docs.rs/reqwest");
+    assert_eq!(response.body.unwrap().body, "http://idealworld.group/");
 
     let response = BIOSFuns::web_client().post_obj_to_str("https://jsonplaceholder.typicode.com/posts", &new_post, None).await?;
     assert_eq!(response.code, StatusCode::CREATED.as_u16());
