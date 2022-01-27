@@ -14,9 +14,49 @@
  * limitations under the License.
  */
 
+use bios::basic::config::NoneConfig;
+use bios::basic::result::BIOSResult;
+use serde::{Deserialize, Serialize};
+
+use bios::BIOSFuns;
+
 #[tokio::main]
-async fn main() -> Result<(), reqwest::Error> {
-    let res = reqwest::get("http://httpbin.org/get").await?;
-    println!("Response: {:?}", res);
+async fn main() -> BIOSResult<()> {
+    // Initial configuration
+    BIOSFuns::init::<NoneConfig>("").await?;
+
+    // Simple get request
+    let response = BIOSFuns::web_client().get_to_str("http://httpbin.org/get", None).await?;
+    assert_eq!(response.code, 200);
+
+    // Simple post request
+    let request = serde_json::json!({
+        "lang": "rust",
+        "body": "json"
+    });
+    let response = BIOSFuns::web_client().post_obj_to_str("https://httpbin.org/post", &request, None).await?;
+    assert_eq!(response.code, 200);
+    assert!(response.body.unwrap().contains(r#"data": "{\"body\":\"json\",\"lang\":\"rust\"}"#));
+
+    // Simple post request
+    let new_post = Post {
+        id: None,
+        title: "idealworld".into(),
+        body: "http://idealworld.group/".into(),
+        user_id: 1,
+    };
+    let response = BIOSFuns::web_client().post::<Post, Post>("https://jsonplaceholder.typicode.com/posts", &new_post, None).await?;
+    assert_eq!(response.code, 201);
+    assert_eq!(response.body.unwrap().body, "http://idealworld.group/");
+
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Post {
+    id: Option<i32>,
+    title: String,
+    body: String,
+    #[serde(rename = "userId")]
+    user_id: i32,
 }
