@@ -6,4 +6,5 @@ members = [
     "framework/examples/web-basic",
     "framework/examples/web-client",
     "framework/examples/cache",
+    "framework/examples/mq",
 ]
