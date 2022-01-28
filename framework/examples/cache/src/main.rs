@@ -32,10 +32,10 @@ async fn main() -> BIOSResult<()> {
     let redis_container = BIOSTestContainer::redis_custom(&docker);
     let port = redis_container.get_host_port(6379).expect("Test port acquisition error");
     let url = format!("redis://127.0.0.1:{}/0", port);
+    env::set_var("BIOS_CACHE.URL", url);
 
     env::set_var("RUST_LOG", "debug");
     env::set_var("PROFILE", "default");
-    env::set_var("BIOS_CACHE.URL", url);
 
     // Initial configuration
     BIOSFuns::init::<NoneConfig>("config").await?;

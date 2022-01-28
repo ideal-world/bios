@@ -35,10 +35,10 @@ async fn main() -> BIOSResult<()> {
     let mysql_container = BIOSTestContainer::mysql_custom(None, &docker);
     let port = mysql_container.get_host_port(3306).expect("Test port acquisition error");
     let url = format!("mysql://root:123456@localhost:{}/test", port);
+    env::set_var("BIOS_DB.URL", url);
 
     env::set_var("RUST_LOG", "debug");
     env::set_var("PROFILE", "default");
-    env::set_var("BIOS_DB.URL", url);
 
     // Initial configuration
     BIOSFuns::init::<NoneConfig>("config").await?;
