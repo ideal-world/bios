@@ -117,30 +117,30 @@ impl BIOSRelDBClient {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 pub trait BIOSSeaORMExtend<'a> {
-    async fn soft_delete<C>(self, db: &'a C, create_user: &str) -> BIOSResult<()>
+    async fn soft_delete<C>(self, db: &'a C, create_user: &str) -> BIOSResult<usize>
     where
         C: ConnectionTrait<'a>;
 
-    async fn soft_delete_custom<C>(self, db: &'a C, create_user: &str, custom_pk_field: &str) -> BIOSResult<()>
+    async fn soft_delete_custom<C>(self, db: &'a C, create_user: &str, custom_pk_field: &str) -> BIOSResult<usize>
     where
         C: ConnectionTrait<'a>;
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl<'a, E> BIOSSeaORMExtend<'a> for Select<E>
 where
     E: EntityTrait,
 {
-    async fn soft_delete<C>(self, db: &'a C, create_user: &str) -> BIOSResult<()>
+    async fn soft_delete<C>(self, db: &'a C, create_user: &str) -> BIOSResult<usize>
     where
         C: ConnectionTrait<'a>,
     {
         self.soft_delete_custom(db, create_user, "id").await
     }
 
-    async fn soft_delete_custom<C>(self, db: &'a C, create_user: &str, custom_pk_field: &str) -> BIOSResult<()>
+    async fn soft_delete_custom<C>(self, db: &'a C, create_user: &str, custom_pk_field: &str) -> BIOSResult<usize>
     where
         C: ConnectionTrait<'a>,
     {
@@ -186,8 +186,9 @@ where
             .insert(db)
             .await?;
         }
-        if ids.len() == 0 {
-            return Ok(());
+        let delete_num = ids.len();
+        if delete_num == 0 {
+            return Ok(0);
         }
         let statement = Statement::from_sql_and_values(
             db_backend,
@@ -200,7 +201,7 @@ where
         );
         let result = db.execute(statement).await;
         match result {
-            Ok(_) => BIOSResult::Ok(()),
+            Ok(_) => BIOSResult::Ok(delete_num),
             Err(err) => BIOSResult::Err(BIOSError::Box(Box::new(err))),
         }
     }

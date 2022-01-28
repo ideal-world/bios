@@ -23,7 +23,7 @@ use poem_openapi::payload::Payload;
 use poem_openapi::registry::{MetaMediaType, MetaResponse, MetaResponses, MetaSchemaRef, Registry};
 use poem_openapi::{
     types::{ParseFromJSON, ToJSON},
-    ApiResponse,
+    ApiResponse, Object,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -120,6 +120,17 @@ where
     fn register(registry: &mut Registry) {
         T::register(registry);
     }
+}
+
+#[derive(Object, Deserialize, Serialize, Clone, Debug)]
+pub struct BIOSPage<T>
+where
+    T: ParseFromJSON + ToJSON + Serialize + Send + Sync,
+{
+    pub page_size: usize,
+    pub page_number: usize,
+    pub total_size: usize,
+    pub records: Vec<T>,
 }
 
 pub struct UniformError;
