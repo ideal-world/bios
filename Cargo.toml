@@ -5,4 +5,5 @@ members = [
     "framework/examples/reldb",
     "framework/examples/web-basic",
     "framework/examples/web-client",
+    "framework/examples/cache",
 ]
