@@ -33,10 +33,10 @@ async fn main() -> BIOSResult<()> {
     let rabbit_container = BIOSTestContainer::rabbit_custom(&docker);
     let port = rabbit_container.get_host_port(5672).expect("Test port acquisition error");
     let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
+    env::set_var("BIOS_MQ.URL", url);
 
     env::set_var("RUST_LOG", "debug");
     env::set_var("PROFILE", "default");
-    env::set_var("BIOS_MQ.URL", url);
 
     // Initial configuration
     BIOSFuns::init::<NoneConfig>("config").await?;
