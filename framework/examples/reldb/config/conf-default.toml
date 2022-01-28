@@ -4,5 +4,5 @@ name = "关系型数据库基础示例"
 desc = "关系型数据库基础示例"
 version = "1.0.0"
 
-[reldb]
+[db]
 url = "mysql://root:123456@localhost:3306/test"

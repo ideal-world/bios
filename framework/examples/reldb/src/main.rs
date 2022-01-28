@@ -16,14 +16,13 @@
 
 use std::env;
 
+use bios::basic::config::NoneConfig;
 use log::info;
 use sea_orm::entity::*;
 use sea_orm::Set;
 use testcontainers::clients;
 
-use bios::basic::config::NoneConfig;
 use bios::basic::result::BIOSResult;
-use bios::db::reldb_client::BIOSRelDBClient;
 use bios::test::test_container::BIOSTestContainer;
 use bios::BIOSFuns;
 
@@ -31,22 +30,21 @@ mod domain;
 
 #[tokio::main]
 async fn main() -> BIOSResult<()> {
-    env::set_var("RUST_LOG", "debug");
-
-    // --------------
-    // Normally, initialization should be done by loading a configuration file.
-    // env::set_var("PROFILE", "default");
-    // BIOSFuns::init::<NoneConfig>("config").await?;
-    // let client = BIOSFuns::reldb();
-
     // Here is a demonstration of using docker to start a mysql simulation scenario.
-    BIOSFuns::init_log()?;
     let docker = clients::Cli::default();
     let mysql_container = BIOSTestContainer::mysql_custom(None, &docker);
     let port = mysql_container.get_host_port(3306).expect("Test port acquisition error");
     let url = format!("mysql://root:123456@localhost:{}/test", port);
 
-    let client = BIOSRelDBClient::init(&url, 10, 5, None, None).await?;
+    env::set_var("RUST_LOG", "debug");
+    env::set_var("PROFILE", "default");
+    env::set_var("BIOS_DB.URL", url);
+
+    // Initial configuration
+    BIOSFuns::init::<NoneConfig>("config").await?;
+
+    let client = BIOSFuns::reldb();
+
     // --------------------------------------------------
 
     // Create table
