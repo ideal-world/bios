@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-use sea_query::Iden;
+use sea_orm::entity::prelude::*;
 
-#[derive(Iden)]
-pub enum Category {
-    Table,
-    Id,
-    Name,
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[sea_orm(table_name = "todos")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub description: String,
+    pub done: bool,
 }
 
-#[derive(Iden)]
-pub enum Item {
-    Table,
-    Id,
-    Content,
-    Creator,
-    CreateTime,
-    UpdateTime,
-    CategoryId,
-}
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
+
+impl ActiveModelBehavior for ActiveModel {}

@@ -7,4 +7,5 @@ members = [
     "framework/examples/web-client",
     "framework/examples/cache",
     "framework/examples/mq",
+    "framework/examples/todos",
 ]
