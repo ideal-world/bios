@@ -1,5 +1,0 @@
-[db_proj]
-url = "postgres://postgres@prod.proj"
-
-[db]
-url = "postgres://postgres@prod"

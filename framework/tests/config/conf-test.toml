@@ -1,8 +1,0 @@
-[db_proj]
-url = "postgres://postgres@test.proj"
-
-[db]
-url = "postgres://postgres@test"
-
-[app]
-name = "APP1"
