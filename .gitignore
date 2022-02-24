@@ -1,15 +1,15 @@
 # Gateway
-/gateway/apisix
-/gateway/etcd
-/gateway/default.etcd
+/core/gateway/apisix
+/core/gateway/etcd
+/core/gateway/default.etcd
 
-!/gateway/apisix/apisix/plugins/auth-bios/**
-!/gateway/apisix/apisix/plugins/auth-bios.lua
-!/gateway/apisix/conf/config-default.yaml
-!/gateway/apisix/t/plugin/auth-bios
-!/gateway/apisix/t/certs
-!/gateway/apisix/t/error_page
-!/gateway/apisix/t/APISIX.pm
+!/core/gateway/apisix/apisix/plugins/auth-bios/**
+!/core/gateway/apisix/apisix/plugins/auth-bios.lua
+!/core/gateway/apisix/conf/config-default.yaml
+!/core/gateway/apisix/t/plugin/auth-bios
+!/core/gateway/apisix/t/certs
+!/core/gateway/apisix/t/error_page
+!/core/gateway/apisix/t/APISIX.pm
 
 # CI
 /.github/deploy_key

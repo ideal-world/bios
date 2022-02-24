@@ -1,5 +1,5 @@
 [package]
-name = "bios-basic"
+name = "bios-com-iam"
 version = "0.1.0"
 authors = ["gudaoxuri <i@sunisle.org>"]
 homepage = "https://bios.idealworld.group"
@@ -15,7 +15,7 @@ lto = true
 codegen-units = 1
 
 [lib]
-name = "bios_basic"
+name = "bios_com_iam"
 path = "src/lib.rs"
 
 [features]
@@ -25,6 +25,7 @@ service = ["kernel", "tardis/web-server", "poem-openapi"]
 test = ["tardis/test"]
 
 [dependencies]
+bios-basic = { path = "../../basic" }
 tardis = { version = "0.1.0-alpha4" }
 poem-openapi = { version = "^1.3", optional = true }
 sea-orm = { version = "^0.6", features = ["macros"], optional = true }
