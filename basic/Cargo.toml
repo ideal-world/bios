@@ -1,0 +1,36 @@
+[package]
+name = "bios-basic"
+version = "0.1.0"
+authors = ["gudaoxuri <i@sunisle.org>"]
+homepage = "https://bios.idealworld.group"
+documentation = "https://bios.idealworld.group"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.adoc"
+publish = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[lib]
+name = "bios_basic"
+path = "src/lib.rs"
+
+[features]
+kernel = ["tardis/reldb", "tardis/cache", "tardis/mq", "web-client", "sea-orm"]
+sdk = ["tardis/web-client"]
+service = ["tardis/web-server", "poem-openapi"]
+test = ["tardis/test"]
+
+[dependencies]
+tardis = { version = "0.1.0-alpha4" }
+# Web server dependencies
+poem-openapi = { version = "^1.3", optional = true }
+# Reldb dependencies
+sea-orm = { version = "^0.6", features = ["macros"], optional = true }
+
+[dev-dependencies]
+tokio = { version = "^1", features = ["time", "rt", "macros"] }
+
