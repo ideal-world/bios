@@ -11,8 +11,6 @@
 !/gateway/apisix/t/error_page
 !/gateway/apisix/t/APISIX.pm
 
-target/
-
 # CI
 /.github/deploy_key
 out
@@ -21,8 +19,8 @@ out
 *.exe
 
 # Cargo
-*Cargo.lock
-/target
+Cargo.lock
+target
 
 # gh pages docs
 util/gh-pages/lints.json
