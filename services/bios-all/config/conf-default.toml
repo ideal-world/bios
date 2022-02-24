@@ -1,0 +1,21 @@
+[app]
+id = "bios-serv-all"
+name = "BIOS All Services"
+desc = "BIOS All Services"
+version = "0.1.0"
+
+[web_server]
+port = 8081
+[[web_server.modules]]
+code = "iam"
+title = "IAM Component"
+doc_urls = [["test env", "http://localhost:8081/"]]
+
+[db]
+url = "mysql://root:123456@localhost:3306/test"
+
+[cache]
+url = "redis://123456@127.0.0.1:6379"
+
+[mq]
+url = "amqp://user:123456@127.0.0.1:5672/%2f"

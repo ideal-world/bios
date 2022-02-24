@@ -1,0 +1,20 @@
+use std::env;
+
+use tardis::basic::result::TardisResult;
+use tardis::tokio;
+use tardis::TardisFuns;
+
+use crate::config::BiosConfig;
+
+mod config;
+mod initializer;
+
+///
+/// Visit: http://127.0.0.1:8081/ui
+///
+#[tokio::main]
+async fn main() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "info");
+    TardisFuns::init::<BiosConfig>("config").await?;
+    initializer::init().await
+}
