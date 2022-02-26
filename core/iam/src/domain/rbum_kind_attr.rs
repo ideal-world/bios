@@ -1,7 +1,5 @@
-use tardis::db::entity::prelude::*;
-use tardis::db::prelude::DateTime;
-use tardis::db::ActiveModelBehavior;
-use tardis::db::ActiveValue::Set;
+use tardis::db::sea_orm::prelude::*;
+use tardis::db::sea_orm::*;
 use tardis::TardisFuns;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]

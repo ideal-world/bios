@@ -1,14 +1,10 @@
-use async_trait::async_trait;
-use chrono::Utc;
-use sea_orm::IntoActiveModel;
 use tardis::basic::dto::TardisContext;
-use tardis::db::entity::prelude::*;
-use tardis::db::prelude::DateTime;
-use tardis::db::ActiveModelBehavior;
-use tardis::db::ActiveValue::Set;
+use tardis::chrono::Utc;
+use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::TardisFuns;
 
-use crate::domain::BiosSeaORMExtend;
 use crate::enumeration::RbumScopeKind;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -36,24 +32,23 @@ pub struct Model {
     pub ext_table_name: String,
 }
 
-#[async_trait]
-impl BiosSeaORMExtend for ActiveModel {
+impl TardisActiveModel for ActiveModel {
     type Entity = Entity;
 
-    fn insert_cxt(&mut self, cxt: &TardisContext) {
-        self.id = Set(TardisFuns::field.uuid_str());
-        self.scope_kind = Set(RbumScopeKind::APP.to_string());
-        self.rel_app_id = Set(cxt.app_id.to_string());
-        self.rel_tenant_id = Set(cxt.tenant_id.to_string());
-        self.creator_id = Set(cxt.account_id.to_string());
-        self.updater_id = Set(cxt.account_id.to_string());
-        self.create_time = Set(Utc::now().naive_utc());
-        self.update_time = Set(Utc::now().naive_utc());
-    }
-
-    fn update_cxt(&mut self, cxt: &TardisContext) {
-        self.updater_id = Set(cxt.account_id.to_string());
-        self.update_time = Set(Utc::now().naive_utc());
+    fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
+        if is_insert {
+            self.id = Set(TardisFuns::field.uuid_str());
+            self.scope_kind = Set(RbumScopeKind::APP.to_string());
+            self.rel_app_id = Set(cxt.app_id.to_string());
+            self.rel_tenant_id = Set(cxt.tenant_id.to_string());
+            self.creator_id = Set(cxt.account_id.to_string());
+            self.updater_id = Set(cxt.account_id.to_string());
+            self.create_time = Set(Utc::now().naive_utc());
+            self.update_time = Set(Utc::now().naive_utc());
+        } else {
+            self.updater_id = Set(cxt.account_id.to_string());
+            self.update_time = Set(Utc::now().naive_utc());
+        }
     }
 }
 

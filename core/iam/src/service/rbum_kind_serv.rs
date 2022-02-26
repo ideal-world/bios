@@ -1,15 +1,12 @@
-use chrono::Utc;
-use sea_orm::sea_query::Query;
-use sea_orm::ActiveValue::Set;
-use sea_orm::*;
-use sea_query::{Alias, Expr};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisSeaORMExtend;
+use tardis::db::reldb_client::{TardisActiveModel, TardisSeaORMExtend};
+use tardis::db::sea_orm::*;
+use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
-use crate::domain::{rbum_item, rbum_kind, BiosRelDBClient, BiosSeaORMExtend};
+use crate::domain::{rbum_item, rbum_kind};
 use crate::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 
 pub async fn add_rbum_kind(rbum_kind_add_req: &RbumKindAddReq, cxt: &TardisContext) -> TardisResult<String> {
@@ -23,7 +20,7 @@ pub async fn add_rbum_kind(rbum_kind_add_req: &RbumKindAddReq, cxt: &TardisConte
         ext_table_name: Set(rbum_kind_add_req.ext_table_name.to_string()),
         ..Default::default()
     }
-    .insert_with_cxt(&tx, cxt)
+    .insert_cust(&tx, cxt)
     .await
     .unwrap();
     tx.commit().await?;
@@ -52,7 +49,7 @@ pub async fn modify_rbum_kind(id: &str, rbum_kind_modify_req: &RbumKindModifyReq
         rbum_kind.ext_table_name = Set(ext_table_name.to_string());
     }
     let tx = TardisFuns::reldb().conn().begin().await?;
-    rbum_kind.update_with_cxt(&tx, cxt).await?;
+    rbum_kind.update_cust(&tx, cxt).await?;
     tx.commit().await?;
     Ok(())
 }
@@ -78,56 +75,54 @@ pub async fn get_rbum_kind(id: &str, cxt: &TardisContext) -> TardisResult<RbumKi
     let rel_app_table = Alias::new("relApp");
     let rel_tenant_table = Alias::new("relTenant");
 
-    // let dd = BiosRelDBClient::build_detail_resp(rbum_kind::Entity);
-
-    let rbum_kind = BiosRelDBClient::get(
-        Query::select()
-            .columns(vec![
-                (rbum_kind::Entity, rbum_kind::Column::Id),
-                (rbum_kind::Entity, rbum_kind::Column::Code),
-                (rbum_kind::Entity, rbum_kind::Column::Name),
-                (rbum_kind::Entity, rbum_kind::Column::Note),
-                (rbum_kind::Entity, rbum_kind::Column::Icon),
-                (rbum_kind::Entity, rbum_kind::Column::Sort),
-                (rbum_kind::Entity, rbum_kind::Column::ScopeKind),
-                (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
-                (rbum_kind::Entity, rbum_kind::Column::CreateTime),
-                (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
-            ])
-            .expr_as(Expr::tbl(creator_table.clone(), rbum_item::Column::Name), Alias::new("creator_name"))
-            .expr_as(Expr::tbl(updater_table.clone(), rbum_item::Column::Name), Alias::new("updater_name"))
-            .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new("rel_app_name"))
-            .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_item::Column::Name), Alias::new("rel_tenant_name"))
-            .from(rbum_kind::Entity)
-            .join_as(
-                JoinType::LeftJoin,
-                rbum_item::Entity,
-                creator_table.clone(),
-                Expr::tbl(creator_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::CreatorId),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                rbum_item::Entity,
-                updater_table.clone(),
-                Expr::tbl(updater_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::UpdaterId),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                rbum_item::Entity,
-                rel_app_table.clone(),
-                Expr::tbl(rel_app_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelAppId),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                rbum_item::Entity,
-                rel_tenant_table.clone(),
-                Expr::tbl(rel_tenant_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelTenantId),
-            )
-            .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).eq(id.to_string())),
-        TardisFuns::reldb().conn(),
-        cxt,
-    )
-    .await?;
+    let rbum_kind = TardisFuns::reldb()
+        .get_dto(
+            Query::select()
+                .columns(vec![
+                    (rbum_kind::Entity, rbum_kind::Column::Id),
+                    (rbum_kind::Entity, rbum_kind::Column::Code),
+                    (rbum_kind::Entity, rbum_kind::Column::Name),
+                    (rbum_kind::Entity, rbum_kind::Column::Note),
+                    (rbum_kind::Entity, rbum_kind::Column::Icon),
+                    (rbum_kind::Entity, rbum_kind::Column::Sort),
+                    (rbum_kind::Entity, rbum_kind::Column::ScopeKind),
+                    (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
+                    (rbum_kind::Entity, rbum_kind::Column::CreateTime),
+                    (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
+                ])
+                .expr_as(Expr::tbl(creator_table.clone(), rbum_item::Column::Name), Alias::new("creator_name"))
+                .expr_as(Expr::tbl(updater_table.clone(), rbum_item::Column::Name), Alias::new("updater_name"))
+                .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new("rel_app_name"))
+                .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_item::Column::Name), Alias::new("rel_tenant_name"))
+                .from(rbum_kind::Entity)
+                .join_as(
+                    JoinType::LeftJoin,
+                    rbum_item::Entity,
+                    creator_table.clone(),
+                    Expr::tbl(creator_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::CreatorId),
+                )
+                .join_as(
+                    JoinType::LeftJoin,
+                    rbum_item::Entity,
+                    updater_table.clone(),
+                    Expr::tbl(updater_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::UpdaterId),
+                )
+                .join_as(
+                    JoinType::LeftJoin,
+                    rbum_item::Entity,
+                    rel_app_table.clone(),
+                    Expr::tbl(rel_app_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelAppId),
+                )
+                .join_as(
+                    JoinType::LeftJoin,
+                    rbum_item::Entity,
+                    rel_tenant_table.clone(),
+                    Expr::tbl(rel_tenant_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelTenantId),
+                )
+                .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).eq(id.to_string())),
+            TardisFuns::reldb().conn(),
+        )
+        .await?;
     match rbum_kind {
         Some(rbum_kind) => Ok(rbum_kind),
         // TODO
