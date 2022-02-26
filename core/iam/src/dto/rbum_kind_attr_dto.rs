@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tardis::db::FromQueryResult;
+use tardis::chrono::{DateTime, Utc};
+use tardis::db::sea_orm::*;
 use tardis::web::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]

@@ -1,7 +1,7 @@
-use chrono::{DateTime, Utc};
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
-use tardis::db::FromQueryResult;
+use tardis::chrono::{DateTime, Utc};
+use tardis::db::sea_orm::*;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAddReq {
