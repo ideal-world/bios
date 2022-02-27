@@ -7,6 +7,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::domain::{rbum_item, rbum_kind};
+use crate::dto::filer_dto::RbumBasicFilterReq;
 use crate::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 
 pub async fn add_rbum_kind(rbum_kind_add_req: &RbumKindAddReq, cxt: &TardisContext) -> TardisResult<String> {
@@ -61,69 +62,100 @@ pub async fn delete_rbum_kind(id: &str, cxt: &TardisContext) -> TardisResult<()>
     Ok(())
 }
 
-pub async fn peek_rbum_kind(id: &str, cxt: &TardisContext) -> TardisResult<RbumKindSummaryResp> {
-    match rbum_kind::Entity::find_by_id(id.to_string()).into_model::<RbumKindSummaryResp>().one(TardisFuns::reldb().conn()).await? {
+pub async fn peek_rbum_kind(id: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> TardisResult<RbumKindSummaryResp> {
+    let mut query = rbum_kind::Entity::find_by_id(id.to_string());
+    if filter.rel_cxt_app {
+        query = query.filter(rbum_kind::Column::RelAppId.eq(cxt.app_id.as_str()));
+    }
+    if filter.rel_cxt_tenant {
+        query = query.filter(rbum_kind::Column::RelTenantId.eq(cxt.tenant_id.as_str()));
+    }
+    if filter.rel_cxt_creator {
+        query = query.filter(rbum_kind::Column::CreatorId.eq(cxt.account_id.as_str()));
+    }
+    if filter.rel_cxt_updater {
+        query = query.filter(rbum_kind::Column::UpdaterId.eq(cxt.account_id.as_str()));
+    }
+    if let Some(scope_kind) = &filter.scope_kind {
+        query = query.filter(rbum_kind::Column::ScopeKind.eq(scope_kind.as_str()));
+    }
+    let query = query.into_model::<RbumKindSummaryResp>().one(TardisFuns::reldb().conn()).await?;
+    match query {
         Some(rbum_kind) => Ok(rbum_kind),
         // TODO
         None => Err(TardisError::NotFound("".to_string())),
     }
 }
 
-pub async fn get_rbum_kind(id: &str, cxt: &TardisContext) -> TardisResult<RbumKindDetailResp> {
+pub async fn get_rbum_kind(id: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> TardisResult<RbumKindDetailResp> {
     let creator_table = Alias::new("creator");
     let updater_table = Alias::new("updater");
     let rel_app_table = Alias::new("relApp");
     let rel_tenant_table = Alias::new("relTenant");
-
-    let rbum_kind = TardisFuns::reldb()
-        .get_dto(
-            Query::select()
-                .columns(vec![
-                    (rbum_kind::Entity, rbum_kind::Column::Id),
-                    (rbum_kind::Entity, rbum_kind::Column::Code),
-                    (rbum_kind::Entity, rbum_kind::Column::Name),
-                    (rbum_kind::Entity, rbum_kind::Column::Note),
-                    (rbum_kind::Entity, rbum_kind::Column::Icon),
-                    (rbum_kind::Entity, rbum_kind::Column::Sort),
-                    (rbum_kind::Entity, rbum_kind::Column::ScopeKind),
-                    (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
-                    (rbum_kind::Entity, rbum_kind::Column::CreateTime),
-                    (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
-                ])
-                .expr_as(Expr::tbl(creator_table.clone(), rbum_item::Column::Name), Alias::new("creator_name"))
-                .expr_as(Expr::tbl(updater_table.clone(), rbum_item::Column::Name), Alias::new("updater_name"))
-                .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new("rel_app_name"))
-                .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_item::Column::Name), Alias::new("rel_tenant_name"))
-                .from(rbum_kind::Entity)
-                .join_as(
-                    JoinType::LeftJoin,
-                    rbum_item::Entity,
-                    creator_table.clone(),
-                    Expr::tbl(creator_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::CreatorId),
-                )
-                .join_as(
-                    JoinType::LeftJoin,
-                    rbum_item::Entity,
-                    updater_table.clone(),
-                    Expr::tbl(updater_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::UpdaterId),
-                )
-                .join_as(
-                    JoinType::LeftJoin,
-                    rbum_item::Entity,
-                    rel_app_table.clone(),
-                    Expr::tbl(rel_app_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelAppId),
-                )
-                .join_as(
-                    JoinType::LeftJoin,
-                    rbum_item::Entity,
-                    rel_tenant_table.clone(),
-                    Expr::tbl(rel_tenant_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelTenantId),
-                )
-                .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).eq(id.to_string())),
-            TardisFuns::reldb().conn(),
+    
+    let mut query = Query::select();
+    query.columns(vec![
+            (rbum_kind::Entity, rbum_kind::Column::Id),
+            (rbum_kind::Entity, rbum_kind::Column::Code),
+            (rbum_kind::Entity, rbum_kind::Column::Name),
+            (rbum_kind::Entity, rbum_kind::Column::Note),
+            (rbum_kind::Entity, rbum_kind::Column::Icon),
+            (rbum_kind::Entity, rbum_kind::Column::Sort),
+            (rbum_kind::Entity, rbum_kind::Column::ScopeKind),
+            (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
+            (rbum_kind::Entity, rbum_kind::Column::CreateTime),
+            (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
+        ])
+        .expr_as(Expr::tbl(creator_table.clone(), rbum_item::Column::Name), Alias::new("creator_name"))
+        .expr_as(Expr::tbl(updater_table.clone(), rbum_item::Column::Name), Alias::new("updater_name"))
+        .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new("rel_app_name"))
+        .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_item::Column::Name), Alias::new("rel_tenant_name"))
+        .from(rbum_kind::Entity)
+        .join_as(
+            JoinType::InnerJoin,
+            rbum_item::Entity,
+            creator_table.clone(),
+            Expr::tbl(creator_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::CreatorId),
         )
-        .await?;
-    match rbum_kind {
+        .join_as(
+            JoinType::InnerJoin,
+            rbum_item::Entity,
+            updater_table.clone(),
+            Expr::tbl(updater_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::UpdaterId),
+        )
+        .join_as(
+            JoinType::InnerJoin,
+            rbum_item::Entity,
+            rel_app_table.clone(),
+            Expr::tbl(rel_app_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelAppId),
+        )
+        .join_as(
+            JoinType::InnerJoin,
+            rbum_item::Entity,
+            rel_tenant_table.clone(),
+            Expr::tbl(rel_tenant_table, rbum_item::Column::Id).equals(rbum_kind::Entity, rbum_kind::Column::RelTenantId),
+        )
+        .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).eq(id.to_string()));
+
+    if filter.rel_cxt_app {
+       query.and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::RelAppId).eq(cxt.app_id.as_str()));
+    }
+    if filter.rel_cxt_tenant {
+        query.and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::RelTenantId).eq(cxt.tenant_id.as_str()));
+    }
+    if filter.rel_cxt_creator {
+        query.and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::CreatorId).eq(cxt.account_id.as_str()));
+    }
+    if filter.rel_cxt_updater {
+        query.and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::UpdaterId).eq(cxt.account_id
+            .as_str()));
+    }
+    if let Some(scope_kind) = &filter.scope_kind {
+        query.and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::ScopeKind).eq(scope_kind.as_str()));
+    }
+    
+    let query = TardisFuns::reldb().get_dto(&query,TardisFuns::reldb().conn()).await?;
+    match query {
         Some(rbum_kind) => Ok(rbum_kind),
         // TODO
         None => Err(TardisError::NotFound("".to_string())),

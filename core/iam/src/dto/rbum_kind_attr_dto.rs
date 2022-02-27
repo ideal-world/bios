@@ -45,6 +45,7 @@ pub struct RbumKindAttrModifyReq {
     #[oai(validator(max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
+    #[oai(validator(max_length = "255"))]
     pub scope_kind: Option<String>,
 
     pub main_column: Option<bool>,
@@ -94,6 +95,7 @@ pub struct RbumKindAttrDetailResp {
     pub note: String,
     pub icon: String,
     pub sort: i32,
+
     pub scope_kind: String,
 
     pub main_column: bool,
@@ -108,5 +110,5 @@ pub struct RbumKindAttrDetailResp {
     pub min_length: i8,
     pub max_length: i8,
     pub action: String,
-    pub rel_rbum_kind_id: String,
+    pub rel_rbum_kind_name: String,
 }
