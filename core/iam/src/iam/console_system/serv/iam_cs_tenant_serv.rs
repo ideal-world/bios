@@ -3,6 +3,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{TardisActiveModel, TardisSeaORMExtend};
 use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use crate::iam::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantDetailResp, IamCsTenantModifyReq, IamCsTenantSummaryResp};
 use crate::iam::domain::iam_tenant;
@@ -10,9 +11,9 @@ use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::serv::rbum_item_serv;
 
 pub async fn add_iam_tenant<'a, C: ConnectionTrait>(iam_tenant_add_req: &IamCsTenantAddReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<String> {
-    rbum_item_serv::add_rbum_item(&iam_tenant_add_req.basic, tx, cxt).await?;
+    let id = rbum_item_serv::add_rbum_item(&TardisFuns::field.uuid_str(), iam_tenant::RBUM_KIND_ID, &iam_tenant_add_req.basic, None, tx, cxt).await?;
     let iam_tenant = iam_tenant::ActiveModel {
-        id: Set(iam_tenant_add_req.basic.id.to_string()),
+        id: Set(id),
         ..Default::default()
     }
     .insert_cust(tx, cxt)

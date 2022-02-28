@@ -8,8 +8,6 @@ use crate::rbum::enumeration::RbumScopeKind;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub id: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(max_length = "2000"))]
     pub uri_part: String,
@@ -17,12 +15,8 @@ pub struct RbumItemAddReq {
     pub icon: String,
     pub sort: i32,
     #[oai(validator(max_length = "255"))]
-    pub rel_rbum_kind_id: String,
-    #[oai(validator(max_length = "255"))]
     pub rel_rbum_domain_id: String,
 
-    #[oai(validator(max_length = "255"))]
-    pub rel_app_id: Option<String>,
     pub scope_kind: RbumScopeKind,
     pub disabled: bool,
 }
@@ -37,8 +31,6 @@ pub struct RbumItemModifyReq {
     pub icon: Option<String>,
     pub sort: Option<i32>,
 
-    #[oai(validator(max_length = "255"))]
-    pub rel_app_id: Option<String>,
     pub scope_kind: Option<RbumScopeKind>,
     pub disabled: Option<bool>,
 }

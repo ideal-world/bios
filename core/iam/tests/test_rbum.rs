@@ -6,9 +6,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
+use tardis::TardisFuns;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::tokio;
-use tardis::TardisFuns;
 use testcontainers::clients;
 
 use bios_com_iam::iam::domain::iam_tenant;
@@ -119,54 +119,48 @@ pub async fn prepare() -> TardisResult<()> {
     .await?;
 
     rbum_item_serv::add_rbum_item(
+        "account1","account",
         &RbumItemAddReq {
-            id: "account1".to_string(),
-            rel_app_id: None,
             scope_kind: RbumScopeKind::APP,
             disabled: false,
             name: "钢铁侠".to_string(),
             uri_part: "".to_string(),
             icon: "".to_string(),
             sort: 0,
-            rel_rbum_kind_id: "account".to_string(),
             rel_rbum_domain_id: "iam".to_string(),
-        },
+        },None,
         &tx,
         &CXT_DEFAULT,
     )
     .await?;
 
     rbum_item_serv::add_rbum_item(
+        "tenant1",iam_tenant::RBUM_KIND_ID,
         &RbumItemAddReq {
-            id: "tenant1".to_string(),
-            rel_app_id: None,
             scope_kind: RbumScopeKind::APP,
             disabled: false,
             name: "默认租户".to_string(),
             uri_part: "".to_string(),
             icon: "".to_string(),
             sort: 0,
-            rel_rbum_kind_id: iam_tenant::RBUM_KIND_ID.to_string(),
             rel_rbum_domain_id: "iam".to_string(),
-        },
+        },None,
         &tx,
         &CXT_DEFAULT,
     )
     .await?;
 
     rbum_item_serv::add_rbum_item(
+        "app1","app",
         &RbumItemAddReq {
-            id: "app1".to_string(),
-            rel_app_id: None,
             scope_kind: RbumScopeKind::APP,
             disabled: false,
             name: "IAM应用".to_string(),
             uri_part: "".to_string(),
             icon: "".to_string(),
             sort: 0,
-            rel_rbum_kind_id: "app".to_string(),
             rel_rbum_domain_id: "iam".to_string(),
-        },
+        },None,
         &tx,
         &CXT_DEFAULT,
     )
