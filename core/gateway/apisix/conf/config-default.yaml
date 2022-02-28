@@ -273,7 +273,7 @@ etcd:
     verify: true                  # whether to verify the etcd endpoint certificate when setup a TLS connection to etcd,
     # the default value is true, e.g. the certificate will be verified strictly.
 
-#discovery:                       # service discovery center
+#discovery:                       # serv discovery center
 #  dns:
 #    servers:
 #      - "127.0.0.1:8600"         # use the real address of your dns server
