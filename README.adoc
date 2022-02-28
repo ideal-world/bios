@@ -1,8 +1,10 @@
-= BIOS(Business Informatization OS)
+= WIP ! BIOS(Business Informatization OS)
 
 In a word: BIOS is a new form of ``low-intrusive``, ``high-adaptation``, and ``fast output`` to enable digital transformation of enterprises.
 
 TIP: For the Chinese description see: http://www.idealworld.group/2021/06/09/bios/
+
+TIP: For a performance version of the service framework see: https://github.com/ideal-world/tardis
 
 TIP: For a generic version of the service framework see: https://github.com/gudaoxuri/dew/
 

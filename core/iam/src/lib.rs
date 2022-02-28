@@ -1,11 +1,4 @@
-pub mod domain;
+extern crate lazy_static;
 
-pub mod dto;
-
-pub mod enumeration;
-
-pub mod sdk;
-
-pub mod service;
-
-pub mod controller;
+pub mod rbum;
+pub mod iam;
