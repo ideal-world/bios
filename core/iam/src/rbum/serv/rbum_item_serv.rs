@@ -11,20 +11,26 @@ use crate::rbum::domain::{rbum_item, rbum_kind};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
 
-pub async fn add_rbum_item<'a, C: ConnectionTrait>(rbum_item_add_req: &RbumItemAddReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<String> {
+pub async fn add_rbum_item<'a, C: ConnectionTrait>(
+    id: &str,
+    rbum_kind_id: &str,
+    rbum_item_add_req: &RbumItemAddReq,
+    rel_app_id: Option<String>,
+    tx: &'a C,
+    cxt: &TardisContext,
+) -> TardisResult<String> {
+    // TODO 检查rel_rbum_kind_id是否存在且合法
+    // TODO 检查rel_rbum_domain_id是否存在且合法
+    // TODO 检查rel_app_id是否存在且合法
     let rbum_item = rbum_item::ActiveModel {
-        id: Set(rbum_item_add_req.id.to_string()),
+        id: Set(id.to_string()),
         name: Set(rbum_item_add_req.name.to_string()),
         uri_part: Set(rbum_item_add_req.uri_part.to_string()),
         icon: Set(rbum_item_add_req.icon.to_string()),
         sort: Set(rbum_item_add_req.sort),
-        rel_rbum_kind_id: Set(rbum_item_add_req.rel_rbum_kind_id.to_string()),
+        rel_rbum_kind_id: Set(rbum_kind_id.to_string()),
         rel_rbum_domain_id: Set(rbum_item_add_req.rel_rbum_domain_id.to_string()),
-        rel_app_id: if let Some(rel_app_id) = &rbum_item_add_req.rel_app_id {
-            Set(rel_app_id.to_string())
-        } else {
-            NotSet
-        },
+        rel_app_id: if let Some(rel_app_id) = &rel_app_id { Set(rel_app_id.to_string()) } else { NotSet },
         scope_kind: Set(rbum_item_add_req.scope_kind.to_string()),
         disabled: Set(rbum_item_add_req.disabled),
         ..Default::default()
@@ -36,11 +42,9 @@ pub async fn add_rbum_item<'a, C: ConnectionTrait>(rbum_item_add_req: &RbumItemA
 }
 
 pub async fn modify_rbum_item<'a, C: ConnectionTrait>(id: &str, rbum_item_modify_req: &RbumItemModifyReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<()> {
+    // TODO 检查id是否存在且合法
     let mut rbum_item = rbum_item::ActiveModel { ..Default::default() };
     rbum_item.id = Set(id.to_string());
-    if let Some(rel_app_id) = &rbum_item_modify_req.rel_app_id {
-        rbum_item.rel_app_id = Set(rel_app_id.to_string());
-    }
     if let Some(scope_kind) = &rbum_item_modify_req.scope_kind {
         rbum_item.scope_kind = Set(scope_kind.to_string());
     }
@@ -64,6 +68,7 @@ pub async fn modify_rbum_item<'a, C: ConnectionTrait>(id: &str, rbum_item_modify
 }
 
 pub async fn delete_rbum_item<'a, C: ConnectionTrait>(id: &str, tx: &'a C, cxt: &TardisContext) -> TardisResult<usize> {
+    // TODO 检查id是否存在且合法
     rbum_item::Entity::find().filter(rbum_item::Column::Id.eq(id)).soft_delete(tx, &cxt.account_id).await
 }
 

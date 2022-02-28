@@ -54,16 +54,12 @@ async fn test_tenant() -> TardisResult<()> {
     let id = iam_cs_tenant_serv::add_iam_tenant(
         &IamCsTenantAddReq {
             basic: RbumItemAddReq {
-                id: "test1".to_string(),
-                rel_app_id: None,
                 scope_kind: RbumScopeKind::APP,
                 disabled: false,
                 name: "测试记录".to_string(),
                 uri_part: "".to_string(),
                 icon: "".to_string(),
                 sort: 0,
-                // TODO remove
-                rel_rbum_kind_id: iam_tenant::RBUM_KIND_ID.to_string(),
                 rel_rbum_domain_id: "iam".to_string(),
             },
         },
@@ -86,7 +82,6 @@ async fn test_tenant() -> TardisResult<()> {
                 uri_part: None,
                 icon: None,
                 sort: None,
-                rel_app_id: None,
                 scope_kind: None,
                 disabled: None,
             },
