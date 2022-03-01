@@ -1,10 +1,10 @@
+use crate::rbum::enumeration::RbumScopeKind;
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::prelude::*;
+use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
-use crate::rbum::enumeration::RbumScopeKind;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind_attr")]
@@ -41,8 +41,6 @@ pub struct Model {
 }
 
 impl TardisActiveModel for ActiveModel {
-    type Entity = Entity;
-
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
             self.id = Set(TardisFuns::field.uuid_str());

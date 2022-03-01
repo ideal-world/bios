@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::prelude::*;
+use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
@@ -30,8 +30,6 @@ pub struct Model {
 }
 
 impl TardisActiveModel for ActiveModel {
-    type Entity = Entity;
-
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
             if self.id == ActiveValue::NotSet {
