@@ -14,8 +14,6 @@ pub struct Model {
 }
 
 impl TardisActiveModel for ActiveModel {
-    type Entity = Entity;
-
     fn fill_cxt(&mut self, _: &TardisContext, is_insert: bool) {
         if is_insert {
             if self.id == ActiveValue::NotSet {

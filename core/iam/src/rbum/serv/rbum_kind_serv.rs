@@ -1,38 +1,41 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::{TardisActiveModel, TardisSeaORMExtend};
+use tardis::db::reldb_client::TardisRelDBClientTransaction;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::TardisFuns;
 use tardis::web::web_resp::TardisPage;
 
 use crate::rbum::domain::{rbum_item, rbum_kind};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 
-pub async fn add_rbum_kind<'a, C: ConnectionTrait>(rbum_kind_add_req: &RbumKindAddReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<String> {
-    let rbum_kind = rbum_kind::ActiveModel {
-        id: Set(rbum_kind_add_req.id.to_string()),
-        name: Set(rbum_kind_add_req.name.to_string()),
-        note: Set(rbum_kind_add_req.note.to_string()),
-        icon: Set(rbum_kind_add_req.icon.to_string()),
-        sort: Set(rbum_kind_add_req.sort),
-        ext_table_name: Set(rbum_kind_add_req.ext_table_name.to_string()),
-        rel_app_id: if let Some(rel_app_id) = &rbum_kind_add_req.rel_app_id {
-            Set(rel_app_id.to_string())
-        } else {
-            NotSet
-        },
-        scope_kind: Set(rbum_kind_add_req.scope_kind.to_string()),
-        ..Default::default()
-    }
-    .insert_cust(tx, cxt)
-    .await?;
-    Ok(rbum_kind.id)
+pub async fn add_rbum_kind(rbum_kind_add_req: &RbumKindAddReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<String> {
+    let rbum_kind_id: String = db
+        .insert_one(
+            rbum_kind::ActiveModel {
+                id: Set(rbum_kind_add_req.id.to_string()),
+                name: Set(rbum_kind_add_req.name.to_string()),
+                note: Set(rbum_kind_add_req.note.to_string()),
+                icon: Set(rbum_kind_add_req.icon.to_string()),
+                sort: Set(rbum_kind_add_req.sort),
+                ext_table_name: Set(rbum_kind_add_req.ext_table_name.to_string()),
+                rel_app_id: if let Some(rel_app_id) = &rbum_kind_add_req.rel_app_id {
+                    Set(rel_app_id.to_string())
+                } else {
+                    NotSet
+                },
+                scope_kind: Set(rbum_kind_add_req.scope_kind.to_string()),
+                ..Default::default()
+            },
+            cxt,
+        )
+        .await?
+        .last_insert_id;
+    Ok(rbum_kind_id)
 }
 
-pub async fn modify_rbum_kind<'a, C: ConnectionTrait>(id: &str, rbum_kind_modify_req: &RbumKindModifyReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<()> {
+pub async fn modify_rbum_kind(id: &str, rbum_kind_modify_req: &RbumKindModifyReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<()> {
     let mut rbum_kind = rbum_kind::ActiveModel { ..Default::default() };
     rbum_kind.id = Set(id.to_string());
     if let Some(rel_app_id) = &rbum_kind_modify_req.rel_app_id {
@@ -56,32 +59,40 @@ pub async fn modify_rbum_kind<'a, C: ConnectionTrait>(id: &str, rbum_kind_modify
     if let Some(ext_table_name) = &rbum_kind_modify_req.ext_table_name {
         rbum_kind.ext_table_name = Set(ext_table_name.to_string());
     }
-    rbum_kind.update_cust(tx, cxt).await?;
+    db.update_one(rbum_kind, cxt).await?;
     Ok(())
 }
 
-pub async fn delete_rbum_kind<'a, C: ConnectionTrait>(id: &str, tx: &'a C, cxt: &TardisContext) -> TardisResult<usize> {
-    rbum_kind::Entity::find().filter(rbum_kind::Column::Id.eq(id)).soft_delete(tx, &cxt.account_id).await
+pub async fn delete_rbum_kind(id: &str, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<u64> {
+    db.soft_delete(rbum_kind::Entity::find().filter(rbum_kind::Column::Id.eq(id)), &cxt.account_id).await
 }
 
-pub async fn peek_rbum_kind<'a, C: ConnectionTrait>(id: &str, filter: &RbumBasicFilterReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<RbumKindSummaryResp> {
-    let mut query = rbum_kind::Entity::find_by_id(id.to_string());
+pub async fn peek_rbum_kind(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<RbumKindSummaryResp> {
+    let mut query = Query::select();
+    query.columns(vec![
+        rbum_kind::Column::Id,
+        rbum_kind::Column::Name,
+        rbum_kind::Column::Icon,
+        rbum_kind::Column::Sort,
+        rbum_kind::Column::ExtTableName,
+    ]);
+    query.from(rbum_kind::Entity).and_where(rbum_kind::Column::Id.eq(id));
     if filter.rel_cxt_app {
-        query = query.filter(rbum_kind::Column::RelAppId.eq(cxt.app_id.as_str()));
+        query.and_where(rbum_kind::Column::RelAppId.eq(cxt.app_id.as_str()));
     }
     if filter.rel_cxt_tenant {
-        query = query.filter(rbum_kind::Column::RelTenantId.eq(cxt.tenant_id.as_str()));
+        query.and_where(rbum_kind::Column::RelTenantId.eq(cxt.tenant_id.as_str()));
     }
     if filter.rel_cxt_creator {
-        query = query.filter(rbum_kind::Column::CreatorId.eq(cxt.account_id.as_str()));
+        query.and_where(rbum_kind::Column::CreatorId.eq(cxt.account_id.as_str()));
     }
     if filter.rel_cxt_updater {
-        query = query.filter(rbum_kind::Column::UpdaterId.eq(cxt.account_id.as_str()));
+        query.and_where(rbum_kind::Column::UpdaterId.eq(cxt.account_id.as_str()));
     }
     if let Some(scope_kind) = &filter.scope_kind {
-        query = query.filter(rbum_kind::Column::ScopeKind.eq(scope_kind.to_string()));
+        query.and_where(rbum_kind::Column::ScopeKind.eq(scope_kind.to_string()));
     }
-    let query = query.into_model::<RbumKindSummaryResp>().one(tx).await?;
+    let query = db.get_dto(&query).await?;
     match query {
         Some(rbum_kind) => Ok(rbum_kind),
         // TODO
@@ -89,10 +100,10 @@ pub async fn peek_rbum_kind<'a, C: ConnectionTrait>(id: &str, filter: &RbumBasic
     }
 }
 
-pub async fn get_rbum_kind<'a, C: ConnectionTrait>(id: &str, filter: &RbumBasicFilterReq, tx: &'a C, cxt: &TardisContext) -> TardisResult<RbumKindDetailResp> {
+pub async fn get_rbum_kind(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<RbumKindDetailResp> {
     let mut query = package_rbum_kind_query(filter, cxt);
     query.and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).eq(id.to_string()));
-    let query = TardisFuns::reldb().get_dto(&query, tx).await?;
+    let query = db.get_dto(&query).await?;
     match query {
         Some(rbum_kind) => Ok(rbum_kind),
         // TODO
@@ -100,15 +111,15 @@ pub async fn get_rbum_kind<'a, C: ConnectionTrait>(id: &str, filter: &RbumBasicF
     }
 }
 
-pub async fn find_rbum_kinds<'a, C: ConnectionTrait>(
+pub async fn find_rbum_kinds(
     filter: &RbumBasicFilterReq,
     page_number: u64,
     page_size: u64,
-    tx: &'a C,
+    db: &TardisRelDBClientTransaction,
     cxt: &TardisContext,
 ) -> TardisResult<TardisPage<RbumKindDetailResp>> {
     let query = package_rbum_kind_query(filter, cxt);
-    let (records, total_size) = TardisFuns::reldb().paginate_dtos(&query, page_number, page_size, tx).await?;
+    let (records, total_size) = db.paginate_dtos(&query, page_number, page_size).await?;
     Ok(TardisPage {
         page_size,
         page_number,

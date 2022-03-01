@@ -5,10 +5,9 @@ use tardis::basic::config::NoneConfig;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::*;
-use tardis::TardisFuns;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::tokio;
+use tardis::TardisFuns;
 use testcontainers::clients;
 
 use bios_com_iam::iam::domain::iam_tenant;
@@ -63,12 +62,12 @@ lazy_static! {
 }
 
 pub async fn prepare() -> TardisResult<()> {
-    let tx = TardisFuns::reldb().conn().begin().await?;
     let db_kind = TardisFuns::reldb().backend();
-    TardisFuns::reldb().create_table(&rbum_kind::ActiveModel::create_table_statement(db_kind), &tx).await?;
-    TardisFuns::reldb().create_index(&rbum_kind::ActiveModel::create_index_statement(), &tx).await?;
-    TardisFuns::reldb().create_table(&rbum_item::ActiveModel::create_table_statement(db_kind), &tx).await?;
-    TardisFuns::reldb().create_index(&rbum_item::ActiveModel::create_index_statement(), &tx).await?;
+    let tx = TardisFuns::reldb().begin().await?;
+    tx.create_table(&rbum_kind::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_kind::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_item::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_item::ActiveModel::create_index_statement()).await?;
 
     rbum_kind_serv::add_rbum_kind(
         &RbumKindAddReq {
@@ -119,7 +118,8 @@ pub async fn prepare() -> TardisResult<()> {
     .await?;
 
     rbum_item_serv::add_rbum_item(
-        "account1","account",
+        "account1",
+        "account",
         &RbumItemAddReq {
             scope_kind: RbumScopeKind::APP,
             disabled: false,
@@ -128,14 +128,16 @@ pub async fn prepare() -> TardisResult<()> {
             icon: "".to_string(),
             sort: 0,
             rel_rbum_domain_id: "iam".to_string(),
-        },None,
+        },
+        None,
         &tx,
         &CXT_DEFAULT,
     )
     .await?;
 
     rbum_item_serv::add_rbum_item(
-        "tenant1",iam_tenant::RBUM_KIND_ID,
+        "tenant1",
+        iam_tenant::RBUM_KIND_ID,
         &RbumItemAddReq {
             scope_kind: RbumScopeKind::APP,
             disabled: false,
@@ -144,14 +146,16 @@ pub async fn prepare() -> TardisResult<()> {
             icon: "".to_string(),
             sort: 0,
             rel_rbum_domain_id: "iam".to_string(),
-        },None,
+        },
+        None,
         &tx,
         &CXT_DEFAULT,
     )
     .await?;
 
     rbum_item_serv::add_rbum_item(
-        "app1","app",
+        "app1",
+        "app",
         &RbumItemAddReq {
             scope_kind: RbumScopeKind::APP,
             disabled: false,
@@ -160,7 +164,8 @@ pub async fn prepare() -> TardisResult<()> {
             icon: "".to_string(),
             sort: 0,
             rel_rbum_domain_id: "iam".to_string(),
-        },None,
+        },
+        None,
         &tx,
         &CXT_DEFAULT,
     )
@@ -171,7 +176,7 @@ pub async fn prepare() -> TardisResult<()> {
 }
 
 async fn test_rbum_kind() -> TardisResult<()> {
-    let tx = TardisFuns::reldb().conn().begin().await?;
+    let tx = TardisFuns::reldb().begin().await?;
 
     // add_rbum_kind
     let id = rbum_kind_serv::add_rbum_kind(

@@ -3,7 +3,6 @@ use std::env;
 use tardis::basic::config::NoneConfig;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::*;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::tokio;
 use tardis::TardisFuns;
@@ -46,9 +45,9 @@ async fn test_tenant() -> TardisResult<()> {
 
     test_rbum::prepare().await?;
 
-    let tx = TardisFuns::reldb().conn().begin().await?;
+    let tx = TardisFuns::reldb().begin().await?;
 
-    TardisFuns::reldb().create_table(&iam_tenant::ActiveModel::create_table_statement(TardisFuns::reldb().backend()), &tx).await?;
+    tx.create_table(&iam_tenant::ActiveModel::create_table_statement(TardisFuns::reldb().backend())).await?;
 
     // add_iam_tenant
     let id = iam_cs_tenant_serv::add_iam_tenant(
