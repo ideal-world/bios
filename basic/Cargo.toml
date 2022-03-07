@@ -30,3 +30,5 @@ derive_more = { version = "^0" }
 [dev-dependencies]
 # TODO
 tardis = { path = "../../tardis", features = ["test"] }
+
+testcontainers = { version = "^0" }

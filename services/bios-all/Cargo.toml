@@ -15,8 +15,9 @@ lto = true
 codegen-units = 1
 
 [dependencies]
-serde = { version = "^1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha4" }
+tardis = { path = "../../../tardis", features = ["web-server"] }
 
-bios-com-iam = { path = "../../core/iam" }
+serde = { version = "^1", features = ["derive"] }
+
+bios-iam = { path = "../../core/iam" }
 

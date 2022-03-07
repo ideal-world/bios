@@ -1,5 +1,5 @@
 [package]
-name = "bios-com-iam"
+name = "bios-iam"
 version = "0.1.0"
 authors = ["gudaoxuri <i@sunisle.org>"]
 homepage = "https://bios.idealworld.group"
@@ -15,7 +15,7 @@ lto = true
 codegen-units = 1
 
 [lib]
-name = "bios_com_iam"
+name = "bios_iam"
 path = "src/lib.rs"
 
 [dependencies]
@@ -25,7 +25,6 @@ tardis = { path = "../../../tardis", features = ["reldb", "cache", "mq", "web-se
 poem-openapi = { version = "^1.3", features = ["chrono"] }
 sea-orm = { version = "^0.6", features = ["macros"] }
 
-lazy_static = { version = "^1" }
 serde = { version = "^1", features = ["derive"] }
 derive_more = { version = "^0" }
 
@@ -33,6 +32,3 @@ derive_more = { version = "^0" }
 # TODO
 tardis = { path = "../../../tardis", features = ["test"] }
 testcontainers = { version = "^0" }
-
-[[test]]
-name = "test_rbum"

@@ -4,8 +4,6 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
-pub const RBUM_KIND_ID: &str = "iam_tenant";
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "iam_tenant")]
 pub struct Model {
