@@ -16,5 +16,7 @@ mod initializer;
 async fn main() -> TardisResult<()> {
     env::set_var("RUST_LOG", "info");
     TardisFuns::init::<BiosConfig>("config").await?;
-    initializer::init().await
+    let web_server = TardisFuns::web_server();
+    initializer::init(web_server).await?;
+    web_server.start().await
 }

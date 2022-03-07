@@ -1,7 +1,7 @@
 use tardis::basic::result::TardisResult;
-use tardis::TardisFuns;
+use tardis::web::web_server::TardisWebServer;
 
-pub async fn init() -> TardisResult<()> {
-    TardisFuns::reldb().create_table_from_entity(bios_com_iam::domain::rbum_kind::Entity).await?;
-    TardisFuns::web_server().add_module("iam", bios_com_iam::controller::processor::TodoApi).start().await
+pub async fn init(web_server: &mut TardisWebServer) -> TardisResult<()> {
+    bios_iam::initializer::init_db().await?;
+    bios_iam::initializer::init_api(web_server).await
 }

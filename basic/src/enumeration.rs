@@ -1,10 +1,19 @@
 use std::str::FromStr;
 
 use derive_more::Display;
-use sea_orm::strum::EnumString;
 use serde::{Deserialize, Serialize};
-use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
+use tardis::db::sea_orm::{DbErr, QueryResult, TryGetable, TryGetError};
+use tardis::db::sea_orm::strum::EnumString;
 use tardis::web::poem_openapi::Enum;
+use tardis::web::poem_openapi::Tags;
+
+#[derive(Tags, Display, EnumString, Debug)]
+pub enum Components {
+    /// IAM Component
+    #[oai(rename = "IAM")]
+    #[display(fmt = "iam")]
+    IAM,
+}
 
 #[derive(Enum, Display, EnumString, Debug, Deserialize, Serialize)]
 pub enum DataTypeKind {

@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBClientTransaction;
+use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::web::web_resp::TardisPage;
@@ -10,12 +10,12 @@ use crate::rbum::domain::{rbum_item, rbum_kind};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
 
-pub async fn add_rbum_item(
+pub async fn add_rbum_item<'a>(
     id: &str,
     rbum_kind_id: &str,
     rbum_item_add_req: &RbumItemAddReq,
     rel_app_id: Option<String>,
-    db: &TardisRelDBClientTransaction,
+    db: &TardisRelDBlConnection<'a>,
     cxt: &TardisContext,
 ) -> TardisResult<String> {
     // TODO 检查rel_rbum_kind_id是否存在且合法
@@ -43,7 +43,7 @@ pub async fn add_rbum_item(
     Ok(rbum_item_id)
 }
 
-pub async fn modify_rbum_item(id: &str, rbum_item_modify_req: &RbumItemModifyReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<()> {
+pub async fn modify_rbum_item<'a>(id: &str, rbum_item_modify_req: &RbumItemModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
     // TODO 检查id是否存在且合法
     let mut rbum_item = rbum_item::ActiveModel { ..Default::default() };
     rbum_item.id = Set(id.to_string());
@@ -69,12 +69,12 @@ pub async fn modify_rbum_item(id: &str, rbum_item_modify_req: &RbumItemModifyReq
     Ok(())
 }
 
-pub async fn delete_rbum_item(id: &str, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<u64> {
+pub async fn delete_rbum_item<'a>(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
     // TODO 检查id是否存在且合法
     db.soft_delete(rbum_item::Entity::find().filter(rbum_item::Column::Id.eq(id)), &cxt.account_id).await
 }
 
-pub async fn peek_rbum_item(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<RbumItemSummaryResp> {
+pub async fn peek_rbum_item<'a>(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<RbumItemSummaryResp> {
     let mut query = Query::select();
     query.columns(vec![rbum_item::Column::Id, rbum_item::Column::Name, rbum_item::Column::Icon, rbum_item::Column::Sort]);
     query.from(rbum_item::Entity).and_where(rbum_item::Column::Id.eq(id));
@@ -107,7 +107,7 @@ pub async fn peek_rbum_item(id: &str, filter: &RbumBasicFilterReq, db: &TardisRe
     }
 }
 
-pub async fn get_rbum_item(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBClientTransaction, cxt: &TardisContext) -> TardisResult<RbumItemDetailResp> {
+pub async fn get_rbum_item<'a>(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<RbumItemDetailResp> {
     let mut query = package_rbum_kind_query(filter, cxt);
     query.and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).eq(id.to_string()));
     let query = db.get_dto(&query).await?;
@@ -118,14 +118,18 @@ pub async fn get_rbum_item(id: &str, filter: &RbumBasicFilterReq, db: &TardisRel
     }
 }
 
-pub async fn find_rbum_items(
+pub async fn find_rbum_items<'a>(
     filter: &RbumBasicFilterReq,
     page_number: u64,
     page_size: u64,
-    db: &TardisRelDBClientTransaction,
+    desc_sort_by_update: Option<bool>,
+    db: &TardisRelDBlConnection<'a>,
     cxt: &TardisContext,
 ) -> TardisResult<TardisPage<RbumItemDetailResp>> {
-    let query = package_rbum_kind_query(filter, cxt);
+    let mut query = package_rbum_kind_query(filter, cxt);
+    if let Some(sort) = desc_sort_by_update {
+        query.order_by(rbum_kind::Column::UpdateTime, if sort { Order::Desc } else { Order::Asc });
+    }
     let (records, total_size) = db.paginate_dtos(&query, page_number, page_size).await?;
     Ok(TardisPage {
         page_size,

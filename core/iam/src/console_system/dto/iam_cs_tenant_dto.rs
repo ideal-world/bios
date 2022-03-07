@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamCsTenantAddReq {
