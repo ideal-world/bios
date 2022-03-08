@@ -8,25 +8,25 @@ use tardis::TardisFuns;
 use crate::rbum::enumeration::RbumScopeKind;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "rbum_kind")]
+#[sea_orm(table_name = "rbum_rel")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
-    pub uri_scheme: String,
-    pub name: String,
-    pub note: String,
-    pub icon: String,
-    pub sort: i32,
-    pub ext_table_name: String,
+    pub from_rbum_kind_id: String,
+    pub from_rbum_item_id: String,
+    pub to_rbum_kind_id: String,
+    pub to_rbum_item_id: String,
+    pub to_other_app_id: String,
+    pub to_other_tenant_id: String,
+    pub tags: String,
+    pub ext: String,
     // Basic
     pub rel_app_id: String,
     pub rel_tenant_id: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
-    // With Scope
-    pub scope_kind: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -35,9 +35,6 @@ impl TardisActiveModel for ActiveModel {
             self.id = Set(TardisFuns::field.uuid_str());
             self.rel_app_id = Set(cxt.app_id.to_string());
             self.rel_tenant_id = Set(cxt.tenant_id.to_string());
-            if self.scope_kind == ActiveValue::NotSet {
-                self.scope_kind = Set(RbumScopeKind::App.to_string());
-            }
         }
         self.updater_id = Set(cxt.account_id.to_string());
     }
@@ -48,20 +45,20 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::UriScheme).not_null().string())
-            .col(ColumnDef::new(Column::Name).not_null().string())
-            .col(ColumnDef::new(Column::Note).not_null().string())
-            .col(ColumnDef::new(Column::Icon).not_null().string())
-            .col(ColumnDef::new(Column::Sort).not_null().integer())
-            .col(ColumnDef::new(Column::ExtTableName).not_null().string())
+            .col(ColumnDef::new(Column::FromRbumKindId).not_null().string())
+            .col(ColumnDef::new(Column::FromRbumItemId).not_null().string())
+            .col(ColumnDef::new(Column::ToRbumKindId).not_null().string())
+            .col(ColumnDef::new(Column::ToRbumItemId).not_null().string())
+            .col(ColumnDef::new(Column::ToOtherAppId).not_null().string())
+            .col(ColumnDef::new(Column::ToOtherTenantId).not_null().string())
+            .col(ColumnDef::new(Column::Tags).not_null().string())
+            .col(ColumnDef::new(Column::Ext).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::RelAppId).not_null().string())
             .col(ColumnDef::new(Column::RelTenantId).not_null().string())
             .col(ColumnDef::new(Column::UpdaterId).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
-            // With Scope
-            .col(ColumnDef::new(Column::ScopeKind).not_null().string())
             .to_owned()
     }
 
@@ -73,9 +70,18 @@ impl TardisActiveModel for ActiveModel {
                 .col(Column::RelAppId)
                 .col(Column::RelTenantId)
                 .to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterId.to_string())).table(Entity).col(Column::UpdaterId).to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Name.to_string())).table(Entity).col(Column::Name).to_owned(),
+            Index::create()
+                .name(&format!("idx-{}-{}", Entity.table_name(), Column::FromRbumKindId.to_string()))
+                .table(Entity)
+                .col(Column::FromRbumKindId)
+                .col(Column::FromRbumItemId)
+                .to_owned(),
+            Index::create()
+                .name(&format!("idx-{}-{}", Entity.table_name(), Column::ToRbumKindId.to_string()))
+                .table(Entity)
+                .col(Column::ToRbumKindId)
+                .col(Column::ToRbumItemId)
+                .to_owned(),
         ]
     }
 }

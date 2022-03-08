@@ -8,27 +8,53 @@ use tardis::web::poem_openapi::Enum;
 
 #[derive(Enum, Display, EnumString, Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum RbumScopeKind {
-    /// 标签级
-    /// 表明只这个标签可用
     #[display(fmt = "TAG")]
-    TAG,
-    /// 应用级
-    /// 表明在应用内共享
+    Tag,
     #[display(fmt = "APP")]
-    APP,
-    /// 租户级
-    /// 表明在租户内共享
+    App,
     #[display(fmt = "TENANT")]
-    TENANT,
-    /// 系统级
-    /// 表明整个系统共享
+    Tenant,
     #[display(fmt = "GLOBAL")]
-    GLOBAL,
+    Global,
 }
 
 impl TryGetable for RbumScopeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         RbumScopeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+    }
+}
+
+#[derive(Enum, Display, EnumString, Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub enum RbumCertStatusKind {
+    #[display(fmt = "PENDING")]
+    Pending,
+    #[display(fmt = "ENABLED")]
+    Enabled,
+    #[display(fmt = "DISABLED")]
+    Disabled,
+}
+
+impl TryGetable for RbumCertStatusKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        RbumCertStatusKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+    }
+}
+
+#[derive(Enum, Display, EnumString, Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub enum RbumRelEnvKind {
+    #[display(fmt = "DT_DATETIME_RANGE")]
+    DatetimeRange,
+    #[display(fmt = "DT_TIME_RANGE")]
+    TimeRange,
+    #[display(fmt = "SPACE_IPS")]
+    Ips,
+}
+
+impl TryGetable for RbumRelEnvKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        RbumRelEnvKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }

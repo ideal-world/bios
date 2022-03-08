@@ -1,10 +1,11 @@
-use crate::rbum::enumeration::RbumScopeKind;
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
+
+use crate::rbum::enumeration::RbumScopeKind;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind_attr")]
@@ -32,7 +33,6 @@ pub struct Model {
     // Basic
     pub rel_app_id: String,
     pub rel_tenant_id: String,
-    pub creator_id: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
@@ -44,18 +44,13 @@ impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
             self.id = Set(TardisFuns::field.uuid_str());
-            if self.rel_app_id == ActiveValue::NotSet {
-                self.rel_app_id = Set(cxt.app_id.to_string());
-            }
+            self.rel_app_id = Set(cxt.app_id.to_string());
             self.rel_tenant_id = Set(cxt.tenant_id.to_string());
-            self.creator_id = Set(cxt.account_id.to_string());
-            self.updater_id = Set(cxt.account_id.to_string());
             if self.scope_kind == ActiveValue::NotSet {
                 self.scope_kind = Set(RbumScopeKind::APP.to_string());
             }
-        } else {
-            self.updater_id = Set(cxt.account_id.to_string());
         }
+        self.updater_id = Set(cxt.account_id.to_string());
     }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
@@ -84,7 +79,6 @@ impl TardisActiveModel for ActiveModel {
             // Basic
             .col(ColumnDef::new(Column::RelAppId).not_null().string())
             .col(ColumnDef::new(Column::RelTenantId).not_null().string())
-            .col(ColumnDef::new(Column::CreatorId).not_null().string())
             .col(ColumnDef::new(Column::UpdaterId).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
@@ -95,15 +89,8 @@ impl TardisActiveModel for ActiveModel {
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create()
-                .name(&format!("idx-{}-{}-{}", Entity.table_name(), Column::RelAppId.to_string(), Column::RelTenantId.to_string()))
-                .table(Entity)
-                .col(Column::RelAppId)
-                .col(Column::RelTenantId)
-                .to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::CreatorId.to_string())).table(Entity).col(Column::CreatorId).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Name.to_string())).table(Entity).col(Column::Name).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string())).table(Entity).col(Column::RelRbumKindId).to_owned(),
         ]
     }
 }

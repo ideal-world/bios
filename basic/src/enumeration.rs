@@ -12,35 +12,35 @@ pub enum Components {
     /// IAM Component
     #[oai(rename = "IAM")]
     #[display(fmt = "iam")]
-    IAM,
+    Iam,
 }
 
 #[derive(Enum, Display, EnumString, Debug, Deserialize, Serialize)]
 pub enum DataTypeKind {
     #[display(fmt = "STRING")]
-    STRING,
+    String,
     #[display(fmt = "NUMBER")]
-    NUMBER,
+    Number,
     #[display(fmt = "BOOLEAN")]
-    BOOLEAN,
+    Boolean,
     #[display(fmt = "DATE")]
-    DATE,
+    Date,
     #[display(fmt = "DATETIME")]
-    DATETIME,
+    DateTime,
     #[display(fmt = "JSON")]
-    JSON,
+    Json,
     #[display(fmt = "STRINGS")]
-    STRINGS,
+    Strings,
     #[display(fmt = "NUMBERS")]
-    NUMBERS,
+    Numbers,
     #[display(fmt = "BOOLEANS")]
-    BOOLEANS,
+    Booleans,
     #[display(fmt = "DATES")]
-    DATES,
+    Dates,
     #[display(fmt = "DATETIMES")]
-    DATETIMES,
+    DateTimes,
     #[display(fmt = "ARRAY")]
-    ARRAY,
+    Array,
 }
 
 impl TryGetable for DataTypeKind {

@@ -10,7 +10,7 @@ pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(max_length = "2000"))]
-    pub uri_part: String,
+    pub uri_path: String,
     #[oai(validator(max_length = "1000"))]
     pub icon: String,
     pub sort: i32,
@@ -26,7 +26,7 @@ pub struct RbumItemModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<String>,
     #[oai(validator(max_length = "2000"))]
-    pub uri_part: Option<String>,
+    pub uri_path: Option<String>,
     #[oai(validator(max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
@@ -47,7 +47,7 @@ pub struct RbumItemSummaryResp {
 pub struct RbumItemDetailResp {
     pub id: String,
     pub name: String,
-    pub uri_part: String,
+    pub uri_path: String,
     pub icon: String,
     pub sort: i32,
     pub rel_rbum_kind_id: String,
@@ -59,8 +59,6 @@ pub struct RbumItemDetailResp {
     pub rel_app_name: String,
     pub rel_tenant_id: String,
     pub rel_tenant_name: String,
-    pub creator_id: String,
-    pub creator_name: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
