@@ -7,7 +7,9 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::constants;
-use crate::rbum::domain::{rbum_item, rbum_kind};
+use crate::rbum::domain::{
+    rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate, rbum_set_item,
+};
 use crate::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use crate::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use crate::rbum::enumeration::RbumScopeKind;
@@ -17,10 +19,32 @@ pub async fn init_db() -> TardisResult<()> {
     let db_kind = TardisFuns::reldb().backend();
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
+    tx.create_table(&rbum_domain::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_domain::ActiveModel::create_index_statement()).await?;
     tx.create_table(&rbum_kind::ActiveModel::create_table_statement(db_kind)).await?;
     tx.create_index(&rbum_kind::ActiveModel::create_index_statement()).await?;
     tx.create_table(&rbum_item::ActiveModel::create_table_statement(db_kind)).await?;
     tx.create_index(&rbum_item::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_kind_attr::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_kind_attr::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_item_attr::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_item_attr::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_rel::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_rel::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_rel_attr::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_rel_attr::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_rel_env::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_rel_env::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_cert_conf::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_cert_conf::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_cert::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_cert::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_set::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_set::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_set_cate::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_set_cate::ActiveModel::create_index_statement()).await?;
+    tx.create_table(&rbum_set_item::ActiveModel::create_table_statement(db_kind)).await?;
+    tx.create_index(&rbum_set_item::ActiveModel::create_index_statement()).await?;
 
     let tenant_id = TardisFuns::field.uuid_str();
     let app_id = TardisFuns::field.uuid_str();
@@ -36,11 +60,11 @@ pub async fn init_db() -> TardisResult<()> {
         groups: vec![],
     };
 
-    rbum_kind_serv::add_rbum_kind(
+    rbum_kind_serv::kind::add_rbum_kind(
         &RbumKindAddReq {
             id: constants::RBUM_KIND_ID_IAM_TENANT.to_string(),
             rel_app_id: None,
-            scope_kind: RbumScopeKind::GLOBAL,
+            scope_kind: RbumScopeKind::Global,
             name: "Tenant".to_string(),
             note: "".to_string(),
             icon: "".to_string(),
@@ -52,11 +76,11 @@ pub async fn init_db() -> TardisResult<()> {
     )
     .await?;
 
-    rbum_kind_serv::add_rbum_kind(
+    rbum_kind_serv::kind::add_rbum_kind(
         &RbumKindAddReq {
             id: constants::RBUM_KIND_ID_IAM_APP.to_string(),
             rel_app_id: None,
-            scope_kind: RbumScopeKind::GLOBAL,
+            scope_kind: RbumScopeKind::Global,
             name: "App".to_string(),
             note: "".to_string(),
             icon: "".to_string(),
@@ -68,11 +92,11 @@ pub async fn init_db() -> TardisResult<()> {
     )
     .await?;
 
-    rbum_kind_serv::add_rbum_kind(
+    rbum_kind_serv::kind::add_rbum_kind(
         &RbumKindAddReq {
             id: constants::RBUM_KIND_ID_IAM_ACCOUNT.to_string(),
             rel_app_id: None,
-            scope_kind: RbumScopeKind::GLOBAL,
+            scope_kind: RbumScopeKind::Global,
             name: "Account".to_string(),
             note: "".to_string(),
             icon: "".to_string(),
@@ -84,17 +108,17 @@ pub async fn init_db() -> TardisResult<()> {
     )
     .await?;
 
-    rbum_item_serv::add_rbum_item(
+    rbum_item_serv::item::add_rbum_item(
         tenant_id.as_str(),
         constants::RBUM_KIND_ID_IAM_TENANT,
         &RbumItemAddReq {
-            scope_kind: RbumScopeKind::TENANT,
+            scope_kind: RbumScopeKind::Tenant,
             disabled: false,
             name: "System Tenant".to_string(),
-            uri_part: "".to_string(),
+            uri_path: "".to_string(),
             icon: "".to_string(),
             sort: 0,
-            rel_rbum_domain_id: crate::Components::IAM.to_string(),
+            rel_rbum_domain_id: crate::Components::Iam.to_string(),
         },
         None,
         &tx,
@@ -102,17 +126,17 @@ pub async fn init_db() -> TardisResult<()> {
     )
     .await?;
 
-    rbum_item_serv::add_rbum_item(
+    rbum_item_serv::item::add_rbum_item(
         app_id.as_str(),
         constants::RBUM_KIND_ID_IAM_APP,
         &RbumItemAddReq {
-            scope_kind: RbumScopeKind::APP,
+            scope_kind: RbumScopeKind::App,
             disabled: false,
             name: "IAM".to_string(),
-            uri_part: "".to_string(),
+            uri_path: "".to_string(),
             icon: "".to_string(),
             sort: 0,
-            rel_rbum_domain_id: crate::Components::IAM.to_string(),
+            rel_rbum_domain_id: crate::Components::Iam.to_string(),
         },
         None,
         &tx,
@@ -120,17 +144,17 @@ pub async fn init_db() -> TardisResult<()> {
     )
     .await?;
 
-    rbum_item_serv::add_rbum_item(
+    rbum_item_serv::item::add_rbum_item(
         sys_admin_id.as_str(),
         constants::RBUM_KIND_ID_IAM_ACCOUNT,
         &RbumItemAddReq {
-            scope_kind: RbumScopeKind::APP,
+            scope_kind: RbumScopeKind::App,
             disabled: false,
             name: "SysAdmin".to_string(),
-            uri_part: "".to_string(),
+            uri_path: "".to_string(),
             icon: "".to_string(),
             sort: 0,
-            rel_rbum_domain_id: crate::Components::IAM.to_string(),
+            rel_rbum_domain_id: crate::Components::Iam.to_string(),
         },
         None,
         &tx,

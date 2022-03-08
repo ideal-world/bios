@@ -7,7 +7,6 @@ use crate::rbum::enumeration::RbumScopeKind;
 pub struct RbumBasicFilterReq {
     pub rel_cxt_app: bool,
     pub rel_cxt_tenant: bool,
-    pub rel_cxt_creator: bool,
     pub rel_cxt_updater: bool,
     pub scope_kind: Option<RbumScopeKind>,
     pub kind_id: Option<String>,
