@@ -11,13 +11,13 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
+    pub name: String,
     pub ak: String,
     pub sk: String,
     pub ext: String,
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub coexist_flag: String,
-    pub coexist_num: i32,
     pub status: String,
     pub rel_rbum_cert_conf_id: String,
     pub rel_rbum_domain_id: String,
@@ -47,12 +47,12 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::Ak).not_null().string())
+            .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Sk).not_null().string())
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::StartTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::EndTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::CoexistFlag).not_null().string())
-            .col(ColumnDef::new(Column::CoexistNum).not_null().integer())
             .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())

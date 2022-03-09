@@ -15,6 +15,7 @@ pub struct Model {
     // Specific
     pub name: String,
     pub note: String,
+    pub icon: String,
     pub sort: i32,
     // With Scope
     pub scope_kind: String,
@@ -47,6 +48,7 @@ impl TardisActiveModel for ActiveModel {
             // Specific
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
+            .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().integer())
             // With Scope
             .col(ColumnDef::new(Column::ScopeKind).not_null().string())
