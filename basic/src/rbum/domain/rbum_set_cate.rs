@@ -13,7 +13,8 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
-    pub code: String,
+    pub sys_code: String,
+    pub bus_code: String,
     pub name: String,
     pub sort: i32,
     pub rel_rbum_set_id: String,
@@ -46,7 +47,8 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Code).not_null().string())
+            .col(ColumnDef::new(Column::SysCode).not_null().string())
+            .col(ColumnDef::new(Column::BusCode).not_null().string())
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().integer())
             .col(ColumnDef::new(Column::RelRbumSetId).not_null().string())
@@ -62,12 +64,20 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![Index::create()
-            .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumSetId.to_string()))
-            .table(Entity)
-            .col(Column::RelRbumSetId)
-            .col(Column::Code)
-            .to_owned()]
+        vec![
+            Index::create()
+                .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumSetId.to_string()))
+                .table(Entity)
+                .col(Column::RelRbumSetId)
+                .col(Column::SysCode)
+                .to_owned(),
+            Index::create()
+                .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumSetId.to_string()))
+                .table(Entity)
+                .col(Column::RelRbumSetId)
+                .col(Column::BusCode)
+                .to_owned(),
+        ]
     }
 }
 
