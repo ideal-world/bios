@@ -7,20 +7,18 @@ use tardis::web::poem_openapi::Object;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub id: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub uri_scheme: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(max_length = "2000"))]
-    pub note: String,
+    pub note: Option<String>,
     #[oai(validator(max_length = "1000"))]
-    pub icon: String,
-    pub sort: i32,
+    pub icon: Option<String>,
+    pub sort: Option<i32>,
     #[oai(validator(max_length = "255"))]
-    pub ext_table_name: String,
+    pub ext_table_name: Option<String>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: Option<RbumScopeKind>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

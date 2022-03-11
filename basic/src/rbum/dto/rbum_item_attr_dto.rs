@@ -3,8 +3,6 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemAttrAddReq {
     #[oai(validator(min_length = "1", max_length = "2000"))]
@@ -14,7 +12,7 @@ pub struct RbumItemAttrAddReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemAttrModifyReq {
     #[oai(validator(min_length = "1", max_length = "2000"))]
-    pub value: Option<String>,
+    pub value: String,
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]

@@ -5,8 +5,6 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind_attr")]
 pub struct Model {
@@ -26,8 +24,8 @@ pub struct Model {
     pub default_value: String,
     pub options: String,
     pub required: bool,
-    pub min_length: u8,
-    pub max_length: u8,
+    pub min_length: i8,
+    pub max_length: i8,
     pub action: String,
     pub rel_rbum_kind_id: String,
     // Basic
@@ -46,9 +44,6 @@ impl TardisActiveModel for ActiveModel {
             self.id = Set(TardisFuns::field.uuid_str());
             self.rel_app_id = Set(cxt.app_id.to_string());
             self.rel_tenant_id = Set(cxt.tenant_id.to_string());
-            if self.scope_kind == ActiveValue::NotSet {
-                self.scope_kind = Set(RbumScopeKind::APP.to_string());
-            }
         }
         self.updater_id = Set(cxt.account_id.to_string());
     }
