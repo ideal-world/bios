@@ -11,28 +11,28 @@ pub struct RbumKindAttrAddReq {
     pub name: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
-    #[oai(validator(max_length = "2000"))]
-    pub note: String,
-    pub sort: i32,
-    pub main_column: bool,
-    pub position: bool,
-    pub capacity: bool,
-    pub overload: bool,
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(min_length = "2",max_length = "255"))]
     pub data_type_kind: String,
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(min_length = "2",max_length = "255"))]
     pub widget_type: String,
     #[oai(validator(max_length = "2000"))]
-    pub default_value: String,
-    #[oai(validator(max_length = "255"))]
-    pub options: String,
-    pub required: bool,
-    pub min_length: i8,
-    pub max_length: i8,
+    pub note: Option<String>,
+    pub sort: Option<i32>,
+    pub main_column: Option<bool>,
+    pub position: Option<bool>,
+    pub capacity: Option<bool>,
+    pub overload: Option<bool>,
     #[oai(validator(max_length = "2000"))]
-    pub action: String,
+    pub default_value: Option<String>,
+    #[oai(validator(max_length = "255"))]
+    pub options: Option<String>,
+    pub required: Option<bool>,
+    pub min_length: Option<i8>,
+    pub max_length: Option<i8>,
+    #[oai(validator(max_length = "2000"))]
+    pub action: Option<String>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: Option<RbumScopeKind>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -41,6 +41,10 @@ pub struct RbumKindAttrModifyReq {
     pub name: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: Option<String>,
+    #[oai(validator(min_length = "2",max_length = "255"))]
+    pub data_type_kind: Option<String>,
+    #[oai(validator(min_length = "2",max_length = "255"))]
+    pub widget_type: Option<String>,
     #[oai(validator(min_length = "2",max_length = "2000"))]
     pub note: Option<String>,
     pub sort: Option<i32>,
@@ -48,10 +52,6 @@ pub struct RbumKindAttrModifyReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
-    #[oai(validator(min_length = "2",max_length = "255"))]
-    pub data_type_kind: Option<String>,
-    #[oai(validator(min_length = "2",max_length = "255"))]
-    pub widget_type: Option<String>,
     #[oai(validator(min_length = "2",max_length = "2000"))]
     pub default_value: Option<String>,
     #[oai(validator(min_length = "2",max_length = "255"))]

@@ -14,11 +14,11 @@ pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(max_length = "1000"))]
-    pub icon: String,
-    pub sort: i32,
+    pub icon: Option<String>,
+    pub sort: Option<i32>,
 
-    pub scope_kind: RbumScopeKind,
-    pub disabled: bool,
+    pub scope_kind: Option<RbumScopeKind>,
+    pub disabled: Option<bool>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
