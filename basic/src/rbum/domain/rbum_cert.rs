@@ -47,7 +47,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::Ak).not_null().string())
-            .col(ColumnDef::new(Column::Note).not_null().string())
+            .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Sk).not_null().string())
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::StartTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())

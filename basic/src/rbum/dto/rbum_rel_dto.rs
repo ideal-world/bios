@@ -3,8 +3,6 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -16,20 +14,20 @@ pub struct RbumRelAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_rbum_item_id: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub to_other_app_id: String,
+    pub to_other_app_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub to_other_tenant_id: String,
-    #[oai(validator(max_length = "255"))]
-    pub tags: String,
-    #[oai(validator(max_length = "1000"))]
-    pub ext: String,
+    pub to_other_tenant_id: Option<String>,
+    #[oai(validator(min_length = "2",max_length = "255"))]
+    pub tags: Option<String>,
+    #[oai(validator(min_length = "2",max_length = "1000"))]
+    pub ext: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelModifyReq {
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(min_length = "2",max_length = "255"))]
     pub tags: Option<String>,
-    #[oai(validator(max_length = "1000"))]
+    #[oai(validator(min_length = "2",max_length = "1000"))]
     pub ext: Option<String>,
 }
 

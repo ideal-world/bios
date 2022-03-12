@@ -13,7 +13,7 @@ pub struct RbumItemAddReq {
     pub uri_path: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    #[oai(validator(max_length = "1000"))]
+    #[oai(validator(min_length = "2",max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
 

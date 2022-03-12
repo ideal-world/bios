@@ -11,9 +11,9 @@ pub struct RbumSetCateAddReq {
     pub bus_code: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    pub sort: i32,
+    pub sort: Option<i32>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: Option<RbumScopeKind>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

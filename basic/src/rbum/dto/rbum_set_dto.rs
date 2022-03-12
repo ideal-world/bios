@@ -9,13 +9,15 @@ use crate::rbum::enumeration::RbumScopeKind;
 pub struct RbumSetAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    #[oai(validator(max_length = "2000"))]
-    pub note: String,
-    #[oai(validator(max_length = "1000"))]
-    pub icon: String,
-    pub sort: i32,
-
-    pub scope_kind: RbumScopeKind,
+    #[oai(validator(min_length = "2",max_length = "2000"))]
+    pub note: Option<String>,
+    #[oai(validator(min_length = "2",max_length = "1000"))]
+    pub icon: Option<String>,
+    pub sort: Option<i32>,
+    #[oai(validator(min_length = "2",max_length = "255"))]
+    pub tags: Option<String>,
+    
+    pub scope_kind: Option<RbumScopeKind>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -27,6 +29,8 @@ pub struct RbumSetModifyReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tags: Option<String>,
 
     pub scope_kind: Option<RbumScopeKind>,
 }
@@ -37,6 +41,7 @@ pub struct RbumSetSummaryResp {
     pub name: String,
     pub icon: String,
     pub sort: i32,
+    pub tags: String,
 
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -51,6 +56,7 @@ pub struct RbumSetDetailResp {
     pub note: String,
     pub icon: String,
     pub sort: i32,
+    pub tags: String,
 
     pub rel_app_id: String,
     pub rel_app_name: String,

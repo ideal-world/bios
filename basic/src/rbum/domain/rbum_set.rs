@@ -5,8 +5,6 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_set")]
 pub struct Model {
@@ -17,6 +15,7 @@ pub struct Model {
     pub note: String,
     pub icon: String,
     pub sort: i32,
+    pub tags: String,
     // With Scope
     pub scope_kind: String,
     // Basic
@@ -33,9 +32,6 @@ impl TardisActiveModel for ActiveModel {
             self.id = Set(TardisFuns::field.uuid_str());
             self.rel_app_id = Set(cxt.app_id.to_string());
             self.rel_tenant_id = Set(cxt.tenant_id.to_string());
-            if self.scope_kind == ActiveValue::NotSet {
-                self.scope_kind = Set(RbumScopeKind::App.to_string());
-            }
         }
         self.updater_id = Set(cxt.account_id.to_string());
     }
@@ -50,6 +46,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().integer())
+            .col(ColumnDef::new(Column::Tags).not_null().string())
             // With Scope
             .col(ColumnDef::new(Column::ScopeKind).not_null().string())
             // Basic
