@@ -3,8 +3,6 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumSetItemAddReq {
     pub sort: i32,

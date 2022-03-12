@@ -3,15 +3,15 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::{RbumRelEnvKind, RbumScopeKind};
+use crate::rbum::enumeration::RbumRelEnvKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelEnvAddReq {
     pub kind: RbumRelEnvKind,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value1: String,
-    #[oai(validator(max_length = "2000"))]
-    pub value2: String,
+    #[oai(validator(min_length = "1", max_length = "2000"))]
+    pub value2: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -29,7 +29,6 @@ pub struct RbumRelEnvDetailResp {
     pub value1: String,
     pub value2: String,
     pub rel_rbum_rel_id: String,
-    pub rel_rbum_rel_name: String,
 
     pub rel_app_id: String,
     pub rel_app_name: String,

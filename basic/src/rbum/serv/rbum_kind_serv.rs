@@ -177,7 +177,12 @@ pub mod kind_attr {
     use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
     use crate::rbum::enumeration::RbumScopeKind;
 
-    pub async fn add_rbum_kind_attr<'a>(rbum_kind_attr_add_req: &RbumKindAttrAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_rbum_kind_attr<'a>(
+        rel_rbum_kind_id: &str,
+        rbum_kind_attr_add_req: &RbumKindAttrAddReq,
+        db: &TardisRelDBlConnection<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<String> {
         let rbum_kind_attr_id: String = db
             .insert_one(
                 rbum_kind_attr::ActiveModel {
@@ -197,6 +202,7 @@ pub mod kind_attr {
                     min_length: Set(rbum_kind_attr_add_req.min_length.unwrap_or(0)),
                     max_length: Set(rbum_kind_attr_add_req.max_length.unwrap_or(0)),
                     action: Set(rbum_kind_attr_add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
+                    rel_rbum_kind_id: Set(rel_rbum_kind_id.to_string()),
                     scope_kind: Set(rbum_kind_attr_add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
                     ..Default::default()
                 },
@@ -353,9 +359,10 @@ pub mod kind_attr {
 
         if is_detail {
             query
-                .expr_as(Expr::tbl(rel_app_table.clone(), rbum_kind_attr::Column::Name), Alias::new("rel_app_name"))
-                .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_kind_attr::Column::Name), Alias::new("rel_tenant_name"))
-                .expr_as(Expr::tbl(updater_table.clone(), rbum_kind_attr::Column::Name), Alias::new("updater_name"))
+                .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new
+                    ("rel_app_name"))
+                .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_item::Column::Name), Alias::new("rel_tenant_name"))
+                .expr_as(Expr::tbl(updater_table.clone(), rbum_item::Column::Name), Alias::new("updater_name"))
                 .join_as(
                     JoinType::InnerJoin,
                     rbum_item::Entity,

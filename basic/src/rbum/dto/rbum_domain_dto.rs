@@ -11,13 +11,13 @@ pub struct RbumDomainAddReq {
     pub uri_authority: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    #[oai(validator(max_length = "2000"))]
-    pub note: String,
-    #[oai(validator(max_length = "1000"))]
-    pub icon: String,
-    pub sort: i32,
+    #[oai(validator(min_length = "2",max_length = "2000"))]
+    pub note: Option<String>,
+    #[oai(validator(min_length = "2",max_length = "1000"))]
+    pub icon: Option<String>,
+    pub sort: Option<i32>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: Option<RbumScopeKind>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

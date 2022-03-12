@@ -1,11 +1,9 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
-
-use crate::rbum::enumeration::RbumScopeKind;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_domain")]
@@ -34,9 +32,6 @@ impl TardisActiveModel for ActiveModel {
             self.id = Set(TardisFuns::field.uuid_str());
             self.rel_app_id = Set(cxt.app_id.to_string());
             self.rel_tenant_id = Set(cxt.tenant_id.to_string());
-            if self.scope_kind == ActiveValue::NotSet {
-                self.scope_kind = Set(RbumScopeKind::App.to_string());
-            }
         }
         self.updater_id = Set(cxt.account_id.to_string());
     }

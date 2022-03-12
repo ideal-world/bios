@@ -3,23 +3,22 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::{RbumCertStatusKind, RbumScopeKind};
+use crate::rbum::enumeration::RbumCertStatusKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    #[oai(validator(max_length = "2000"))]
-    pub ak: String,
-    #[oai(validator(max_length = "2000"))]
-    pub sk: String,
-    #[oai(validator(max_length = "2000"))]
-    pub ext: String,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    #[oai(validator(max_length = "255"))]
-    pub coexist_flag: String,
-    pub coexist_num: i32,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub ak: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub sk: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub ext: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub coexist_flag: Option<String>,
     pub status: RbumCertStatusKind,
 }
 

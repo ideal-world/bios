@@ -1,8 +1,9 @@
-use crate::rbum::enumeration::RbumScopeKind;
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
+
+use crate::rbum::enumeration::RbumScopeKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAddReq {
@@ -10,12 +11,12 @@ pub struct RbumKindAddReq {
     pub uri_scheme: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    #[oai(validator(max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
-    #[oai(validator(max_length = "1000"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
-    #[oai(validator(max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub ext_table_name: Option<String>,
 
     pub scope_kind: Option<RbumScopeKind>,

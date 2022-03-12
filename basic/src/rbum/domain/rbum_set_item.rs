@@ -5,8 +5,6 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_set_cate_item")]
 pub struct Model {
