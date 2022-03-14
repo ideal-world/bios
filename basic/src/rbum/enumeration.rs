@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
 use derive_more::Display;
-use sea_orm::strum::EnumString;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "default")]
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
-use tardis::web::poem_openapi::Enum;
 
-#[derive(Enum, Display, EnumString, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumScopeKind {
     #[display(fmt = "TAG")]
     Tag,
@@ -18,6 +18,7 @@ pub enum RbumScopeKind {
     Global,
 }
 
+#[cfg(feature = "default")]
 impl TryGetable for RbumScopeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
@@ -25,7 +26,8 @@ impl TryGetable for RbumScopeKind {
     }
 }
 
-#[derive(Enum, Display, EnumString, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumCertStatusKind {
     #[display(fmt = "PENDING")]
     Pending,
@@ -35,6 +37,7 @@ pub enum RbumCertStatusKind {
     Disabled,
 }
 
+#[cfg(feature = "default")]
 impl TryGetable for RbumCertStatusKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
@@ -42,7 +45,8 @@ impl TryGetable for RbumCertStatusKind {
     }
 }
 
-#[derive(Enum, Display, EnumString, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumRelEnvKind {
     #[display(fmt = "DT_DATETIME_RANGE")]
     DatetimeRange,
@@ -52,9 +56,47 @@ pub enum RbumRelEnvKind {
     Ips,
 }
 
+#[cfg(feature = "default")]
 impl TryGetable for RbumRelEnvKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         RbumRelEnvKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
+pub enum RbumDataTypeKind {
+    #[display(fmt = "STRING")]
+    String,
+    #[display(fmt = "NUMBER")]
+    Number,
+    #[display(fmt = "BOOLEAN")]
+    Boolean,
+    #[display(fmt = "DATE")]
+    Date,
+    #[display(fmt = "DATETIME")]
+    DateTime,
+    #[display(fmt = "JSON")]
+    Json,
+    #[display(fmt = "STRINGS")]
+    Strings,
+    #[display(fmt = "NUMBERS")]
+    Numbers,
+    #[display(fmt = "BOOLEANS")]
+    Booleans,
+    #[display(fmt = "DATES")]
+    Dates,
+    #[display(fmt = "DATETIMES")]
+    DateTimes,
+    #[display(fmt = "ARRAY")]
+    Array,
+}
+
+#[cfg(feature = "default")]
+impl TryGetable for RbumDataTypeKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        RbumDataTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }

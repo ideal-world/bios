@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumScopeKind;
+use crate::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAttrAddReq {
@@ -11,8 +10,7 @@ pub struct RbumKindAttrAddReq {
     pub name: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub data_type_kind: String,
+    pub data_type_kind: RbumDataTypeKind,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub widget_type: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -41,8 +39,7 @@ pub struct RbumKindAttrModifyReq {
     pub name: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub data_type_kind: Option<String>,
+    pub data_type_kind: Option<RbumDataTypeKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub widget_type: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -65,7 +62,8 @@ pub struct RbumKindAttrModifyReq {
     pub scope_kind: Option<RbumScopeKind>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumKindAttrSummaryResp {
     pub id: String,
     pub name: String,
@@ -78,7 +76,8 @@ pub struct RbumKindAttrSummaryResp {
     pub overload: bool,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumKindAttrDetailResp {
     pub id: String,
     pub name: String,
@@ -89,7 +88,7 @@ pub struct RbumKindAttrDetailResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
-    pub data_type_kind: String,
+    pub data_type_kind: RbumDataTypeKind,
     pub widget_type: String,
     pub default_value: String,
     pub options: String,

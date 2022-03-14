@@ -16,14 +16,14 @@ pub struct Model {
     pub icon: String,
     pub sort: i32,
     pub tags: String,
-    // With Scope
-    pub scope_kind: String,
     // Basic
     pub rel_app_id: String,
     pub rel_tenant_id: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
+    // With Scope
+    pub scope_kind: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -47,14 +47,14 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().integer())
             .col(ColumnDef::new(Column::Tags).not_null().string())
-            // With Scope
-            .col(ColumnDef::new(Column::ScopeKind).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::RelAppId).not_null().string())
             .col(ColumnDef::new(Column::RelTenantId).not_null().string())
             .col(ColumnDef::new(Column::UpdaterId).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
+            // With Scope
+            .col(ColumnDef::new(Column::ScopeKind).not_null().string())
             .to_owned()
     }
 
