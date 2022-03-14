@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
 use crate::rbum::enumeration::RbumScopeKind;
@@ -9,14 +8,14 @@ use crate::rbum::enumeration::RbumScopeKind;
 pub struct RbumSetAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
-    #[oai(validator(min_length = "2",max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
-    #[oai(validator(min_length = "2",max_length = "1000"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
-    #[oai(validator(min_length = "2",max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tags: Option<String>,
-    
+
     pub scope_kind: Option<RbumScopeKind>,
 }
 
@@ -35,7 +34,8 @@ pub struct RbumSetModifyReq {
     pub scope_kind: Option<RbumScopeKind>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetSummaryResp {
     pub id: String,
     pub name: String,
@@ -49,7 +49,8 @@ pub struct RbumSetSummaryResp {
     pub scope_kind: RbumScopeKind,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetDetailResp {
     pub id: String,
     pub name: String,

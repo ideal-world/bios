@@ -16,14 +16,14 @@ pub struct Model {
     pub note: String,
     pub icon: String,
     pub sort: i32,
-    // With Scope
-    pub scope_kind: String,
     // Basic
     pub rel_app_id: String,
     pub rel_tenant_id: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
+    // With Scope
+    pub scope_kind: String,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -66,18 +66,7 @@ impl TardisActiveModel for ActiveModel {
                 .col(Column::RelAppId)
                 .col(Column::RelTenantId)
                 .to_owned(),
-            Index::create()
-                .name(&format!(
-                    "idx-{}-{}-{}",
-                    Entity.table_name(),
-                    Column::UriAuthority.to_string(),
-                    Column::RelTenantId.to_string()
-                ))
-                .table(Entity)
-                .col(Column::UriAuthority)
-                .col(Column::RelAppId)
-                .unique()
-                .to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UriAuthority.to_string(),)).table(Entity).col(Column::UriAuthority).unique().to_owned(),
         ]
     }
 }

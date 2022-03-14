@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
 use crate::rbum::enumeration::RbumRelEnvKind;
@@ -22,7 +21,8 @@ pub struct RbumRelEnvModifyReq {
     pub value2: Option<String>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumRelEnvDetailResp {
     pub id: String,
     pub kind: String,

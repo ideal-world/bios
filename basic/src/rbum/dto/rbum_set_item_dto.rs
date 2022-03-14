@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -13,7 +12,8 @@ pub struct RbumSetItemModifyReq {
     pub sort: i32,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetItemDetailResp {
     pub id: String,
     pub sort: i32,

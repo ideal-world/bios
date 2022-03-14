@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
 use crate::rbum::enumeration::RbumScopeKind;
@@ -39,7 +38,8 @@ pub struct RbumKindModifyReq {
     pub scope_kind: Option<RbumScopeKind>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumKindSummaryResp {
     pub id: String,
     pub name: String,
@@ -53,7 +53,8 @@ pub struct RbumKindSummaryResp {
     pub scope_kind: RbumScopeKind,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumKindDetailResp {
     pub id: String,
     pub uri_scheme: String,

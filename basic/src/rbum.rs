@@ -1,6 +1,9 @@
 pub mod constants;
+#[cfg(feature = "default")]
 pub(crate) mod domain;
 pub mod dto;
 pub mod enumeration;
+#[cfg(feature = "default")]
 pub mod initializer;
+#[cfg(feature = "default")]
 pub mod serv;

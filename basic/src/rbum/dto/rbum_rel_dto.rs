@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -17,21 +16,22 @@ pub struct RbumRelAddReq {
     pub to_other_app_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_other_tenant_id: Option<String>,
-    #[oai(validator(min_length = "2",max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tags: Option<String>,
-    #[oai(validator(min_length = "2",max_length = "1000"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelModifyReq {
-    #[oai(validator(min_length = "2",max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub tags: Option<String>,
-    #[oai(validator(min_length = "2",max_length = "1000"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumRelDetailResp {
     pub id: String,
     pub from_rbum_kind_id: String,

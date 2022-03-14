@@ -359,8 +359,7 @@ pub mod kind_attr {
 
         if is_detail {
             query
-                .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new
-                    ("rel_app_name"))
+                .expr_as(Expr::tbl(rel_app_table.clone(), rbum_item::Column::Name), Alias::new("rel_app_name"))
                 .expr_as(Expr::tbl(rel_tenant_table.clone(), rbum_item::Column::Name), Alias::new("rel_tenant_name"))
                 .expr_as(Expr::tbl(updater_table.clone(), rbum_item::Column::Name), Alias::new("updater_name"))
                 .join_as(

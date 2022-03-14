@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -47,7 +46,8 @@ pub struct RbumCertConfModifyReq {
     pub coexist_num: Option<i32>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumCertConfSummaryResp {
     pub id: String,
     pub name: String,
@@ -57,7 +57,8 @@ pub struct RbumCertConfSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumCertConfDetailResp {
     pub id: String,
     pub name: String,
@@ -73,7 +74,6 @@ pub struct RbumCertConfDetailResp {
     pub coexist_num: i32,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,
-
 
     pub rel_app_id: String,
     pub rel_app_name: String,

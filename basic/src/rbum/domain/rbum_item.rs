@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
@@ -18,16 +18,16 @@ pub struct Model {
     pub sort: i32,
     pub rel_rbum_kind_id: String,
     pub rel_rbum_domain_id: String,
-    // With Scope
-    pub scope_kind: String,
-    // With Status
-    pub disabled: bool,
     // Basic
     pub rel_app_id: String,
     pub rel_tenant_id: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
+    // With Scope
+    pub scope_kind: String,
+    // With Status
+    pub disabled: bool,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -73,6 +73,12 @@ impl TardisActiveModel for ActiveModel {
                 .table(Entity)
                 .col(Column::RelAppId)
                 .col(Column::RelTenantId)
+                .to_owned(),
+            Index::create()
+                .name(&format!("idx-{}-{}-{}", Entity.table_name(), Column::RelAppId.to_string(), Column::Code.to_string()))
+                .table(Entity)
+                .col(Column::RelAppId)
+                .col(Column::Code)
                 .to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterId.to_string())).table(Entity).col(Column::UpdaterId).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),

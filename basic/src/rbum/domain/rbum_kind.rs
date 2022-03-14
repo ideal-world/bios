@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::TardisFuns;
 
@@ -67,6 +67,16 @@ impl TardisActiveModel for ActiveModel {
                 .table(Entity)
                 .col(Column::RelAppId)
                 .col(Column::RelTenantId)
+                .to_owned(),
+            Index::create()
+                .name(&format!(
+                    "idx-{}-{}",
+                    Entity.table_name(),
+                    Column::UriScheme.to_string()
+                ))
+                .table(Entity)
+                .col(Column::UriScheme)
+                .unique()
                 .to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterId.to_string())).table(Entity).col(Column::UpdaterId).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),
