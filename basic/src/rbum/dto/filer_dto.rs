@@ -13,6 +13,7 @@ pub struct RbumBasicFilterReq {
     pub kind_id: Option<String>,
     pub domain_id: Option<String>,
     pub enabled: Option<bool>,
+    pub name: Option<String>,
 }
 
 impl Default for RbumBasicFilterReq {
@@ -21,10 +22,11 @@ impl Default for RbumBasicFilterReq {
             rel_cxt_app: true,
             rel_cxt_tenant: true,
             rel_cxt_updater: false,
-            scope_kind: Some(RbumScopeKind::App),
+            scope_kind: None,
             kind_id: None,
             domain_id: None,
             enabled: None,
+            name: None,
         }
     }
 }

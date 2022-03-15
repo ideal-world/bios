@@ -18,6 +18,11 @@ pub struct RbumItemAddReq {
 
     pub scope_kind: Option<RbumScopeKind>,
     pub disabled: Option<bool>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_kind_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_domain_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -49,7 +54,7 @@ pub struct RbumItemSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 
     pub disabled: bool,
 }
@@ -77,7 +82,7 @@ pub struct RbumItemDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 
     pub disabled: bool,
 }

@@ -4,7 +4,6 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 
 use crate::rbum::domain::rbum_domain;
-use crate::rbum::domain::rbum_domain::ActiveModel;
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
 use crate::rbum::enumeration::RbumScopeKind;
@@ -16,10 +15,6 @@ pub struct RbumDomainServ;
 impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainModifyReq, RbumDomainSummaryResp, RbumDomainDetailResp> for RbumDomainServ {
     fn get_table_name() -> &'static str {
         rbum_domain::Entity.table_name()
-    }
-
-    fn has_scope() -> bool {
-        true
     }
 
     fn package_add(add_req: &RbumDomainAddReq, _: &TardisContext) -> rbum_domain::ActiveModel {
@@ -34,7 +29,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         }
     }
 
-    fn package_modify(id: &str, modify_req: &RbumDomainModifyReq, _: &TardisContext) -> ActiveModel {
+    fn package_modify(id: &str, modify_req: &RbumDomainModifyReq, _: &TardisContext) -> rbum_domain::ActiveModel {
         let mut rbum_domain = rbum_domain::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -60,10 +55,6 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         rbum_domain
     }
 
-    fn package_delete(id: &str, _: &TardisContext) -> Select<rbum_domain::Entity> {
-        rbum_domain::Entity::find().filter(rbum_domain::Column::Id.eq(id))
-    }
-
     fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query.columns(vec![
@@ -87,6 +78,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         }
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
+        query.query_with_scope(Self::get_table_name(), cxt);
 
         query
     }

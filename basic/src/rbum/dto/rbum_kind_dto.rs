@@ -42,6 +42,7 @@ pub struct RbumKindModifyReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumKindSummaryResp {
     pub id: String,
+    pub uri_scheme: String,
     pub name: String,
     pub icon: String,
     pub sort: i32,
@@ -50,7 +51,7 @@ pub struct RbumKindSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -73,5 +74,5 @@ pub struct RbumKindDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }
