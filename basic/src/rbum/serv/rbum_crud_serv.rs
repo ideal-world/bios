@@ -1,20 +1,16 @@
-use std::process::id;
-use std::ptr::eq;
-
 use async_trait::async_trait;
 use lazy_static::lazy_static;
-use poem_openapi::types::{ParseFromJSON, ToJSON};
-use sea_orm::sea_query::{Alias, Cond};
-use sea_orm::{FromQueryResult, InsertResult, Select};
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBlConnection};
-use tardis::db::sea_query::{Expr, JoinType, Order, Query, SelectStatement};
+use tardis::db::sea_orm::*;
+use tardis::db::sea_query::{Alias, Cond, Expr, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
+use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 
-use crate::rbum::domain::{rbum_domain, rbum_item};
+use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::enumeration::RbumScopeKind;
 
@@ -38,6 +34,8 @@ pub trait RbumCrudQueryPackage {
     fn query_with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> &mut Self;
 
     fn query_with_safe(&mut self, table_name: &str) -> &mut Self;
+
+    fn query_with_scope(&mut self, table_name: &str, cxt: &TardisContext) -> &mut Self;
 }
 
 impl RbumCrudQueryPackage for SelectStatement {
@@ -62,6 +60,9 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
         if let Some(enabled) = filter.enabled {
             self.and_where(Expr::tbl(Alias::new(table_name), DISABLED_FIELD.clone()).eq(!enabled));
+        }
+        if let Some(name) = &filter.name {
+            self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(name));
         }
         self
     }
@@ -90,6 +91,24 @@ impl RbumCrudQueryPackage for SelectStatement {
         );
         self
     }
+
+    fn query_with_scope(&mut self, table_name: &str, cxt: &TardisContext) -> &mut Self {
+        self.cond_where(
+            Cond::any()
+                .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Global.to_string()))
+                .add(
+                    Cond::all()
+                        .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Tenant.to_string()))
+                        .add(Expr::tbl(Alias::new(table_name), REL_TENANT_ID_FIELD.clone()).eq(cxt.tenant_id.as_str())),
+                )
+                .add(
+                    Cond::all()
+                        .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::App.to_string()))
+                        .add(Expr::tbl(Alias::new(table_name), REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str())),
+                ),
+        );
+        self
+    }
 }
 
 #[async_trait]
@@ -103,8 +122,6 @@ where
 {
     fn get_table_name() -> &'static str;
 
-    fn has_scope() -> bool;
-
     fn package_ownership_query(id: &str, cxt: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query
@@ -116,18 +133,13 @@ where
         query
     }
 
-    fn package_scope_query(id: &str, cxt: &TardisContext) -> SelectStatement {
+    fn package_scope_query(id: &str, table_name: &str, cxt: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
-        query.column(ID_FIELD.clone()).from(Alias::new(Self::get_table_name())).and_where(Expr::col(ID_FIELD.clone()).eq(id)).cond_where(
-            Cond::any()
-                .add(Expr::col(SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Global.to_string()))
-                .add(
-                    Cond::all()
-                        .add(Expr::col(SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Tenant.to_string()))
-                        .add(Expr::col(REL_TENANT_ID_FIELD.clone()).eq(cxt.tenant_id.as_str())),
-                )
-                .add(Cond::all().add(Expr::col(SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::App.to_string())).add(Expr::col(REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()))),
-        );
+        query
+            .column((Alias::new(table_name), ID_FIELD.clone()))
+            .from(Alias::new(table_name))
+            .and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).eq(id))
+            .query_with_scope(table_name, cxt);
         query
     }
 
@@ -135,39 +147,91 @@ where
 
     fn package_modify(id: &str, modify_req: &ModifyReq, cxt: &TardisContext) -> E;
 
-    fn package_delete(id: &str, cxt: &TardisContext) -> Select<E::Entity>;
+    fn package_delete(id: &str, _: &TardisContext) -> Select<E::Entity> {
+        E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id))
+    }
 
     fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement;
 
-    async fn add_rbum(add_req: &AddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<InsertResult<E>> {
-        let domain = Self::package_add(add_req, cxt);
-        Ok(db.insert_one(domain, cxt).await?)
-    }
-
-    async fn modify_rbum(id: &str, modify_req: &ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn check_ownership(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if db.count(&Self::package_ownership_query(id, cxt)).await? == 0 {
             return Err(TardisError::NotFound(format!("The ownership of {}.{} is illegal", Self::get_table_name(), id)));
         }
+        Ok(())
+    }
+
+    async fn check_scope(id: &str, table_name: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        if db.count(&Self::package_scope_query(id, table_name, cxt)).await? == 0 {
+            return Err(TardisError::NotFound(format!("The scope of {}.{} is illegal", Self::get_table_name(), id)));
+        }
+        Ok(())
+    }
+
+    async fn before_add_rbum(_: &AddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+        Ok(())
+    }
+
+    async fn after_add_rbum(_: &str, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+        Ok(())
+    }
+
+    async fn add_rbum(add_req: &AddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        Self::before_add_rbum(add_req, db, cxt).await?;
+        let domain = Self::package_add(add_req, cxt);
+        let insert_result = db.insert_one(domain, cxt).await?;
+        let id_value = insert_result.last_insert_id.into_value_tuple();
+        let id = match id_value {
+            ValueTuple::One(v) => {
+                if let Value::String(s) = v {
+                    s.map(|id| id.to_string())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        if let Some(id) = id {
+            Self::after_add_rbum(&id, db, cxt).await?;
+            Ok(id)
+        } else {
+            return Err(TardisError::InternalError(
+                "The id data type is invalid, currently only the string is supported".to_string(),
+            ));
+        }
+    }
+
+    async fn before_modify_rbum(id: &str, _: &ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await
+    }
+
+    async fn after_modify_rbum(_: &str, _: &ModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+        Ok(())
+    }
+
+    async fn modify_rbum(id: &str, modify_req: &ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::before_modify_rbum(id, modify_req, db, cxt).await?;
         let domain = Self::package_modify(id, modify_req, cxt);
         db.update_one(domain, cxt).await?;
+        Self::after_modify_rbum(id, modify_req, db, cxt).await
+    }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await
+    }
+
+    async fn after_delete_rbum(_: &str, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
     async fn delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        if db.count(&Self::package_ownership_query(id, cxt)).await? == 0 {
-            return Err(TardisError::NotFound(format!("The ownership of {}.{} is illegal", Self::get_table_name(), id)));
-        }
+        Self::before_delete_rbum(id, db, cxt).await?;
         let select = Self::package_delete(id, cxt);
-        db.soft_delete(select, &cxt.account_id).await
+        let delete_records = db.soft_delete(select, &cxt.account_id).await?;
+        Self::after_delete_rbum(id, db, cxt).await?;
+        Ok(delete_records)
     }
 
     async fn get_rbum(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
-        if Self::has_scope() && db.count(&Self::package_scope_query(id, cxt)).await? == 0 {
-            return Err(TardisError::NotFound(format!("The scope of {}.{} is illegal", Self::get_table_name(), id)));
-        }
-        if !Self::has_scope() && db.count(&Self::package_ownership_query(id, cxt)).await? == 0 {
-            return Err(TardisError::NotFound(format!("The ownership of {}.{} is illegal", Self::get_table_name(), id)));
-        }
         let mut query = Self::package_query(true, filter, cxt);
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = db.get_dto(&query).await?;

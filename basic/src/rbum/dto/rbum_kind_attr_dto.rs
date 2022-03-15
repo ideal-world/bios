@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind};
+use crate::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind, RbumWidgetKind};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAttrAddReq {
@@ -11,8 +11,7 @@ pub struct RbumKindAttrAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
     pub data_type_kind: RbumDataTypeKind,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub widget_type: String,
+    pub widget_type: RbumWidgetKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     pub sort: Option<i32>,
@@ -31,6 +30,9 @@ pub struct RbumKindAttrAddReq {
     pub action: Option<String>,
 
     pub scope_kind: Option<RbumScopeKind>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_kind_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -40,8 +42,7 @@ pub struct RbumKindAttrModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: Option<String>,
     pub data_type_kind: Option<RbumDataTypeKind>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub widget_type: Option<String>,
+    pub widget_type: Option<RbumWidgetKind>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     pub sort: Option<i32>,
@@ -88,7 +89,7 @@ pub struct RbumKindAttrDetailResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
-    pub data_type_kind: RbumDataTypeKind,
+    pub data_type_kind: String,
     pub widget_type: String,
     pub default_value: String,
     pub options: String,
@@ -108,5 +109,5 @@ pub struct RbumKindAttrDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }

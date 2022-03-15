@@ -7,15 +7,16 @@ use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
-pub async fn test_rbum_domain() -> TardisResult<()> {
+pub async fn test() -> TardisResult<()> {
     let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
+    // Test Add
     let id = RbumDomainServ::add_rbum(
         &RbumDomainAddReq {
-            uri_authority: "db".to_string(),
-            name: "database".to_string(),
+            uri_authority: "mysql_dev".to_string(),
+            name: "Mysql测试集群".to_string(),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
@@ -24,15 +25,17 @@ pub async fn test_rbum_domain() -> TardisResult<()> {
         &tx,
         &context,
     )
-    .await?
-    .last_insert_id;
+    .await?;
 
+    // Test Get
     let rbum = RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
     assert_eq!(rbum.id, id);
-    assert_eq!(rbum.name, "database");
+    assert_eq!(rbum.uri_authority, "mysql_dev");
+    assert_eq!(rbum.name, "Mysql测试集群");
     assert_eq!(rbum.icon, "...");
     assert_eq!(rbum.note, "...");
 
+    // Test Modify
     RbumDomainServ::modify_rbum(
         &id,
         &RbumDomainModifyReq {
@@ -48,6 +51,7 @@ pub async fn test_rbum_domain() -> TardisResult<()> {
     )
     .await?;
 
+    // Test Find
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
             scope_kind: Some(RbumScopeKind::App),
@@ -65,11 +69,11 @@ pub async fn test_rbum_domain() -> TardisResult<()> {
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().icon, ".");
 
+    // Test Delete
     RbumDomainServ::delete_rbum(&id, &tx, &context).await?;
-
     assert!(RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await.is_err());
 
-    tx.commit().await?;
+    tx.rollback().await?;
 
     Ok(())
 }

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "default")]
-use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
+use tardis::db::sea_orm::{DbErr, QueryResult, TryGetable, TryGetError};
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
@@ -98,5 +98,42 @@ impl TryGetable for RbumDataTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         RbumDataTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
+pub enum RbumWidgetKind {
+    #[display(fmt = "INPUT")]
+    Input,
+    #[display(fmt = "INPUT_TXT")]
+    InputTxt,
+    #[display(fmt = "INPUT_NUM")]
+    InputNum,
+    #[display(fmt = "TEXTAREA")]
+    Textarea,
+    #[display(fmt = "NUMBER")]
+    Number,
+    #[display(fmt = "DATE")]
+    Date,
+    #[display(fmt = "DATETIME")]
+    DateTime,
+    #[display(fmt = "UPLOAD")]
+    Upload,
+    #[display(fmt = "RADIO")]
+    Radio,
+    #[display(fmt = "CHECKBOX")]
+    Checkbox,
+    #[display(fmt = "SWITCH")]
+    Switch,
+    #[display(fmt = "SELECT")]
+    Select,
+}
+
+#[cfg(feature = "default")]
+impl TryGetable for RbumWidgetKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = String::try_get(res, pre, col)?;
+        RbumWidgetKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }

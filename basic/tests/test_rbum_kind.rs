@@ -1,98 +1,269 @@
 use tardis::basic::result::TardisResult;
-use tardis::tokio;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq};
-use bios_basic::rbum::enumeration::RbumScopeKind;
-use bios_basic::rbum::serv::rbum_kind_serv;
+use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind, RbumWidgetKind};
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 
-async fn test_rbum_domain() -> TardisResult<()> {
+pub async fn test() -> TardisResult<()> {
+    test_rbum_kind().await?;
+    test_rbum_kind_attr().await?;
+    Ok(())
+}
+
+async fn test_rbum_kind() -> TardisResult<()> {
     let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
-    // add_rbum_kind
-    let id = rbum_kind_serv::add_rbum_kind(
+    // Test Add
+    let id = RbumKindServ::add_rbum(
         &RbumKindAddReq {
-            id: "task".to_string(),
-            rel_app_id: None,
-            scope_kind: RbumScopeKind::APP,
-            name: "代办任务".to_string(),
-            note: "".to_string(),
-            icon: "".to_string(),
-            sort: 0,
-            ext_table_name: "todo".to_string(),
+            uri_scheme: "db".to_string(),
+            name: "关系型数据库".to_string(),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some("reldb_mgr".to_string()),
+            scope_kind: None,
         },
         &tx,
         &context,
     )
     .await?;
-    
-    // peek_rbum_kind
-    let rbum_kind = rbum_kind_serv::peek_rbum_kind(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
-    assert_eq!(rbum_kind.id, id);
-    assert_eq!(rbum_kind.name, "代办任务");
-    assert_eq!(rbum_kind.ext_table_name, "todo");
-    
-    // modify_rbum_kind
-    rbum_kind_serv::modify_rbum_kind(
+
+    // Test Get
+    let rbum = RbumKindServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
+    assert_eq!(rbum.id, id);
+    assert_eq!(rbum.uri_scheme, "db");
+    assert_eq!(rbum.name, "关系型数据库");
+
+    // Test Modify
+    RbumKindServ::modify_rbum(
         &id,
         &RbumKindModifyReq {
-            rel_app_id: None,
-            scope_kind: Some(RbumScopeKind::GLOBAL),
-            name: Some("代办事项".to_string()),
-            note: Some("代办事项说明".to_string()),
+            uri_scheme: Some("reldb".to_string()),
+            name: None,
+            note: None,
             icon: None,
             sort: None,
             ext_table_name: None,
+            scope_kind: None,
         },
         &tx,
         &context,
     )
     .await?;
-    
-    // get_rbum_kind
-    let rbum_kind = rbum_kind_serv::get_rbum_kind(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
-    assert_eq!(rbum_kind.id, id);
-    assert_eq!(rbum_kind.scope_kind, RbumScopeKind::GLOBAL);
-    assert_eq!(rbum_kind.name, "代办事项");
-    assert_eq!(rbum_kind.note, "代办事项说明");
-    
-    // find_rbum_kinds
-    let rbum_kind = rbum_kind_serv::find_rbum_kinds(&RbumBasicFilterReq::default(), 1, 2, None, &tx, &context).await?;
-    assert_eq!(rbum_kind.page_number, 1);
-    assert_eq!(rbum_kind.page_size, 2);
-    assert_eq!(rbum_kind.total_size, 4);
-    let rbum_kind = rbum_kind_serv::find_rbum_kinds(
+
+    // Test Find
+    let rbums = RbumKindServ::find_rbums(
         &RbumBasicFilterReq {
-            rel_cxt_app: true,
-            rel_cxt_tenant: true,
-            rel_cxt_creator: true,
-            rel_cxt_updater: false,
-            scope_kind: Some(RbumScopeKind::GLOBAL),
-            kind_id: None,
-            domain_id: None,
-            disabled: false,
+            scope_kind: Some(RbumScopeKind::App),
+            ..Default::default()
         },
         1,
-        4,
-        Some(true),
+        10,
+        None,
         &tx,
         &context,
     )
     .await?;
-    println!("================{:#?}", rbum_kind);
-    assert_eq!(rbum_kind.page_number, 1);
-    assert_eq!(rbum_kind.page_size, 4);
-    assert_eq!(rbum_kind.total_size, 4);
-    assert!(rbum_kind.records.iter().any(|i| i.name == "代办事项"));
-    assert_eq!(rbum_kind.records.get(0).unwrap().creator_id, context.account_id.to_string());
-    assert_eq!(rbum_kind.records.get(0).unwrap().updater_id, context.account_id.to_string());
-    assert_eq!(rbum_kind.records.get(0).unwrap().rel_app_id, context.app_id.to_string());
-    assert_eq!(rbum_kind.records.get(0).unwrap().rel_tenant_id, context.tenant_id.to_string());
+    assert_eq!(rbums.page_number, 1);
+    assert_eq!(rbums.page_size, 10);
+    assert_eq!(rbums.total_size, 1);
+    assert_eq!(rbums.records.get(0).unwrap().uri_scheme, "reldb");
 
-    tx.commit().await?;
+    // Test Delete
+    RbumKindServ::delete_rbum(&id, &tx, &context).await?;
+    assert!(RbumKindServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await.is_err());
+
+    tx.rollback().await?;
+
+    Ok(())
+}
+
+pub async fn test_rbum_kind_attr() -> TardisResult<()> {
+    let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
+    let mut tx = TardisFuns::reldb().conn();
+    tx.begin().await?;
+
+    // Prepare Kind
+    let kind_id = RbumKindServ::add_rbum(
+        &RbumKindAddReq {
+            uri_scheme: "reldb".to_string(),
+            name: "关系型数据库".to_string(),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: None,
+            scope_kind: None,
+        },
+        &tx,
+        &context,
+    )
+    .await?;
+
+    // -----------------------------------
+
+    // Test Add
+    assert!(RbumKindAttrServ::add_rbum(
+        &RbumKindAttrAddReq {
+            name: "db_type".to_string(),
+            label: "数据库类型".to_string(),
+            data_type_kind: RbumDataTypeKind::String,
+            widget_type: RbumWidgetKind::InputTxt,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: None,
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            scope_kind: None,
+            rel_rbum_kind_id: "".to_string(),
+        },
+        &tx,
+        &context,
+    )
+    .await
+    .is_err());
+
+    assert!(RbumKindAttrServ::add_rbum(
+        &RbumKindAttrAddReq {
+            name: "db_type".to_string(),
+            label: "数据库类型".to_string(),
+            data_type_kind: RbumDataTypeKind::String,
+            widget_type: RbumWidgetKind::InputTxt,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: None,
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            scope_kind: None,
+            rel_rbum_kind_id: "11".to_string(),
+        },
+        &tx,
+        &context,
+    )
+    .await
+    .is_err());
+
+    let kind_attr_id = RbumKindAttrServ::add_rbum(
+        &RbumKindAttrAddReq {
+            name: "db_type".to_string(),
+            label: "数据库类型".to_string(),
+            data_type_kind: RbumDataTypeKind::String,
+            widget_type: RbumWidgetKind::InputTxt,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: None,
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            scope_kind: None,
+            rel_rbum_kind_id: kind_id.to_string(),
+        },
+        &tx,
+        &context,
+    )
+    .await?;
+
+    // Test Get
+    let rbum = RbumKindAttrServ::get_rbum(&kind_attr_id, &RbumBasicFilterReq::default(), &tx, &context).await?;
+    assert_eq!(rbum.id, kind_attr_id);
+    assert_eq!(rbum.name, "db_type");
+    assert_eq!(rbum.label, "数据库类型");
+    assert_eq!(rbum.data_type_kind, RbumDataTypeKind::String.to_string());
+    assert_eq!(rbum.widget_type, RbumWidgetKind::InputTxt.to_string());
+    assert!(!rbum.overload);
+
+    // Test Modify
+    assert!(RbumKindAttrServ::modify_rbum(
+        "111",
+        &RbumKindAttrModifyReq {
+            name: None,
+            label: None,
+            data_type_kind: None,
+            widget_type: None,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: Some(true),
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            scope_kind: None
+        },
+        &tx,
+        &context
+    )
+    .await
+    .is_err());
+
+    RbumKindAttrServ::modify_rbum(
+        &kind_attr_id,
+        &RbumKindAttrModifyReq {
+            name: None,
+            label: None,
+            data_type_kind: None,
+            widget_type: None,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: Some(true),
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            scope_kind: None,
+        },
+        &tx,
+        &context,
+    )
+    .await?;
+
+    // Test Find
+    let rbums = RbumKindAttrServ::find_rbums(&RbumBasicFilterReq::default(), 1, 10, None, &tx, &context).await?;
+    assert_eq!(rbums.page_number, 1);
+    assert_eq!(rbums.page_size, 10);
+    assert_eq!(rbums.total_size, 1);
+    assert!(rbums.records.get(0).unwrap().overload);
+
+    // Test Delete
+    RbumKindAttrServ::delete_rbum(&kind_attr_id, &tx, &context).await?;
+    assert!(RbumKindAttrServ::get_rbum(&kind_attr_id, &RbumBasicFilterReq::default(), &tx, &context).await.is_err());
+
+    tx.rollback().await?;
 
     Ok(())
 }

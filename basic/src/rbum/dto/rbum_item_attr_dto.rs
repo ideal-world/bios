@@ -6,6 +6,11 @@ use tardis::web::poem_openapi::Object;
 pub struct RbumItemAttrAddReq {
     #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value: String,
+    
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_item_id:String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_kind_attr_id:String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
