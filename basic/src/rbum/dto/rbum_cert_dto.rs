@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
@@ -6,12 +7,10 @@ use crate::rbum::enumeration::RbumCertStatusKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub ak: Option<String>,
+    pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub sk: Option<String>,
+    pub sk: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
@@ -19,16 +18,17 @@ pub struct RbumCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub coexist_flag: Option<String>,
     pub status: RbumCertStatusKind,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_cert_conf_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_item_id: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub ak: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub sk: Option<String>,
+    pub ak: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
@@ -42,7 +42,11 @@ pub struct RbumCertModifyReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumCertSummaryResp {
     pub id: String,
-    pub name: String,
+    pub ak: String,
+    pub rel_rbum_cert_conf_id: String,
+    pub rel_rbum_cert_conf_name: String,
+    pub rel_rbum_item_id: Option<String>,
+    pub rel_rbum_item_name: Option<String>,
 
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -52,20 +56,16 @@ pub struct RbumCertSummaryResp {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumCertDetailResp {
     pub id: String,
-    pub name: String,
     pub ak: String,
-    pub sk: String,
     pub ext: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub coexist_flag: String,
-    pub status: RbumCertStatusKind,
+    pub status: String,
     pub rel_rbum_cert_conf_id: String,
     pub rel_rbum_cert_conf_name: String,
-    pub rel_rbum_domain_id: String,
-    pub rel_rbum_domain_name: String,
-    pub rel_rbum_item_id: String,
-    pub rel_rbum_item_name: String,
+    pub rel_rbum_item_id: Option<String>,
+    pub rel_rbum_item_name: Option<String>,
 
     pub rel_app_id: String,
     pub rel_app_name: String,

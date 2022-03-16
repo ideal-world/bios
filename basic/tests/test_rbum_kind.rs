@@ -1,3 +1,4 @@
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFuns;
 
@@ -21,9 +22,9 @@ async fn test_rbum_kind() -> TardisResult<()> {
 
     // Test Add
     let id = RbumKindServ::add_rbum(
-        &RbumKindAddReq {
-            uri_scheme: "db".to_string(),
-            name: "关系型数据库".to_string(),
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString("db".to_string()),
+            name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -44,8 +45,8 @@ async fn test_rbum_kind() -> TardisResult<()> {
     // Test Modify
     RbumKindServ::modify_rbum(
         &id,
-        &RbumKindModifyReq {
-            uri_scheme: Some("reldb".to_string()),
+        &mut RbumKindModifyReq {
+            uri_scheme: Some(TrimString("reldb".to_string())),
             name: None,
             note: None,
             icon: None,
@@ -92,9 +93,9 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
 
     // Prepare Kind
     let kind_id = RbumKindServ::add_rbum(
-        &RbumKindAddReq {
-            uri_scheme: "reldb".to_string(),
-            name: "关系型数据库".to_string(),
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString("reldb".to_string()),
+            name:TrimString( "关系型数据库".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -110,8 +111,8 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
 
     // Test Add
     assert!(RbumKindAttrServ::add_rbum(
-        &RbumKindAttrAddReq {
-            name: "db_type".to_string(),
+        &mut RbumKindAttrAddReq {
+            name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
             data_type_kind: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
@@ -137,8 +138,8 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
     .is_err());
 
     assert!(RbumKindAttrServ::add_rbum(
-        &RbumKindAttrAddReq {
-            name: "db_type".to_string(),
+        &mut RbumKindAttrAddReq {
+            name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
             data_type_kind: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
@@ -164,8 +165,8 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
     .is_err());
 
     let kind_attr_id = RbumKindAttrServ::add_rbum(
-        &RbumKindAttrAddReq {
-            name: "db_type".to_string(),
+        &mut RbumKindAttrAddReq {
+            name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
             data_type_kind: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
@@ -201,7 +202,7 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
     // Test Modify
     assert!(RbumKindAttrServ::modify_rbum(
         "111",
-        &RbumKindAttrModifyReq {
+        &mut RbumKindAttrModifyReq {
             name: None,
             label: None,
             data_type_kind: None,
@@ -228,7 +229,7 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
 
     RbumKindAttrServ::modify_rbum(
         &kind_attr_id,
-        &RbumKindAttrModifyReq {
+        &mut RbumKindAttrModifyReq {
             name: None,
             label: None,
             data_type_kind: None,

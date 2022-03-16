@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
@@ -7,7 +8,7 @@ use crate::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind, RbumWidgetKind};
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAttrAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: String,
+    pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
     pub data_type_kind: RbumDataTypeKind,
@@ -38,7 +39,7 @@ pub struct RbumKindAttrAddReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAttrModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: Option<String>,
     pub data_type_kind: Option<RbumDataTypeKind>,

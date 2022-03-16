@@ -11,7 +11,6 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
-    pub name: String,
     pub ak: String,
     pub sk: String,
     pub ext: String,
@@ -20,7 +19,6 @@ pub struct Model {
     pub coexist_flag: String,
     pub status: String,
     pub rel_rbum_cert_conf_id: String,
-    pub rel_rbum_domain_id: String,
     pub rel_rbum_item_id: String,
     // Basic
     pub rel_app_id: String,
@@ -47,7 +45,6 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::Ak).not_null().string())
-            .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Sk).not_null().string())
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::StartTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
@@ -55,7 +52,6 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::CoexistFlag).not_null().string())
             .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::RelAppId).not_null().string())
@@ -74,14 +70,13 @@ impl TardisActiveModel for ActiveModel {
                 .col(Column::RelAppId)
                 .col(Column::RelTenantId)
                 .to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterId.to_string())).table(Entity).col(Column::UpdaterId).to_owned(),
             Index::create()
-                .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumCertConfId.to_string()))
+                .name(&format!("idx-{}-ak-unique", Entity.table_name()))
                 .table(Entity)
                 .col(Column::RelRbumCertConfId)
                 .col(Column::Ak)
-                .col(Column::StartTime)
-                .col(Column::EndTime)
+                .col(Column::RelTenantId)
+                .unique()
                 .to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumItemId.to_string())).table(Entity).col(Column::RelRbumItemId).to_owned(),
         ]

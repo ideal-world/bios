@@ -1,3 +1,4 @@
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFuns;
 
@@ -14,9 +15,9 @@ pub async fn test() -> TardisResult<()> {
 
     // Test Add
     let id = RbumDomainServ::add_rbum(
-        &RbumDomainAddReq {
-            uri_authority: "mysql_dev".to_string(),
-            name: "Mysql测试集群".to_string(),
+        &mut RbumDomainAddReq {
+            uri_authority: TrimString("mysql_dev".to_string()),
+            name: TrimString("Mysql测试集群".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
@@ -38,7 +39,7 @@ pub async fn test() -> TardisResult<()> {
     // Test Modify
     RbumDomainServ::modify_rbum(
         &id,
-        &RbumDomainModifyReq {
+        &mut RbumDomainModifyReq {
             uri_authority: None,
             name: None,
             note: None,
