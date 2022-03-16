@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
@@ -7,11 +8,11 @@ use crate::rbum::enumeration::RbumScopeKind;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: String,
+    pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub uri_path: String,
+    pub uri_path: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: String,
+    pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
@@ -28,11 +29,11 @@ pub struct RbumItemAddReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: Option<String>,
+    pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub uri_path: Option<String>,
+    pub uri_path: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,

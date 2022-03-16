@@ -123,10 +123,14 @@ where
     fn get_table_name() -> &'static str;
 
     fn package_ownership_query(id: &str, cxt: &TardisContext) -> SelectStatement {
+        Self::package_ownership_query_with_table_name(id, Self::get_table_name(), cxt)
+    }
+
+    fn package_ownership_query_with_table_name(id: &str, table_name: &str, cxt: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query
             .column(ID_FIELD.clone())
-            .from(Alias::new(Self::get_table_name()))
+            .from(Alias::new(table_name))
             .and_where(Expr::col(ID_FIELD.clone()).eq(id))
             .and_where(Expr::col(REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()))
             .and_where(Expr::col(REL_TENANT_ID_FIELD.clone()).eq(cxt.tenant_id.as_str()));
@@ -154,7 +158,11 @@ where
     fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement;
 
     async fn check_ownership(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        if db.count(&Self::package_ownership_query(id, cxt)).await? == 0 {
+        Self::check_ownership_with_table_name(id, Self::get_table_name(), db, cxt).await
+    }
+
+    async fn check_ownership_with_table_name(id: &str, table_name: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        if db.count(&Self::package_ownership_query_with_table_name(id, table_name, cxt)).await? == 0 {
             return Err(TardisError::NotFound(format!("The ownership of {}.{} is illegal", Self::get_table_name(), id)));
         }
         Ok(())
@@ -167,7 +175,7 @@ where
         Ok(())
     }
 
-    async fn before_add_rbum(_: &AddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(_: &mut AddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
@@ -175,7 +183,7 @@ where
         Ok(())
     }
 
-    async fn add_rbum(add_req: &AddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    async fn add_rbum(add_req: &mut AddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
         Self::before_add_rbum(add_req, db, cxt).await?;
         let domain = Self::package_add(add_req, cxt);
         let insert_result = db.insert_one(domain, cxt).await?;
@@ -200,15 +208,15 @@ where
         }
     }
 
-    async fn before_modify_rbum(id: &str, _: &ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_modify_rbum(id: &str, _: &mut ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, db, cxt).await
     }
 
-    async fn after_modify_rbum(_: &str, _: &ModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_rbum(_: &str, _: &mut ModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
-    async fn modify_rbum(id: &str, modify_req: &ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn modify_rbum(id: &str, modify_req: &mut ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::before_modify_rbum(id, modify_req, db, cxt).await?;
         let domain = Self::package_modify(id, modify_req, cxt);
         db.update_one(domain, cxt).await?;
