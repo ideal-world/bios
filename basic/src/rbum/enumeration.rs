@@ -3,18 +3,14 @@ use std::str::FromStr;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "default")]
-use tardis::db::sea_orm::{DbErr, QueryResult, TryGetable, TryGetError};
+use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumScopeKind {
-    #[display(fmt = "TAG")]
     Tag,
-    #[display(fmt = "APP")]
     App,
-    #[display(fmt = "TENANT")]
     Tenant,
-    #[display(fmt = "GLOBAL")]
     Global,
 }
 
@@ -29,11 +25,8 @@ impl TryGetable for RbumScopeKind {
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumCertStatusKind {
-    #[display(fmt = "PENDING")]
     Pending,
-    #[display(fmt = "ENABLED")]
     Enabled,
-    #[display(fmt = "DISABLED")]
     Disabled,
 }
 
@@ -48,11 +41,8 @@ impl TryGetable for RbumCertStatusKind {
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumRelEnvKind {
-    #[display(fmt = "DT_DATETIME_RANGE")]
     DatetimeRange,
-    #[display(fmt = "DT_TIME_RANGE")]
     TimeRange,
-    #[display(fmt = "SPACE_IPS")]
     Ips,
 }
 
@@ -67,29 +57,17 @@ impl TryGetable for RbumRelEnvKind {
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumDataTypeKind {
-    #[display(fmt = "STRING")]
     String,
-    #[display(fmt = "NUMBER")]
     Number,
-    #[display(fmt = "BOOLEAN")]
     Boolean,
-    #[display(fmt = "DATE")]
     Date,
-    #[display(fmt = "DATETIME")]
     DateTime,
-    #[display(fmt = "JSON")]
     Json,
-    #[display(fmt = "STRINGS")]
     Strings,
-    #[display(fmt = "NUMBERS")]
     Numbers,
-    #[display(fmt = "BOOLEANS")]
     Booleans,
-    #[display(fmt = "DATES")]
     Dates,
-    #[display(fmt = "DATETIMES")]
     DateTimes,
-    #[display(fmt = "ARRAY")]
     Array,
 }
 
@@ -104,29 +82,17 @@ impl TryGetable for RbumDataTypeKind {
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumWidgetKind {
-    #[display(fmt = "INPUT")]
     Input,
-    #[display(fmt = "INPUT_TXT")]
     InputTxt,
-    #[display(fmt = "INPUT_NUM")]
     InputNum,
-    #[display(fmt = "TEXTAREA")]
     Textarea,
-    #[display(fmt = "NUMBER")]
     Number,
-    #[display(fmt = "DATE")]
     Date,
-    #[display(fmt = "DATETIME")]
     DateTime,
-    #[display(fmt = "UPLOAD")]
     Upload,
-    #[display(fmt = "RADIO")]
     Radio,
-    #[display(fmt = "CHECKBOX")]
     Checkbox,
-    #[display(fmt = "SWITCH")]
     Switch,
-    #[display(fmt = "SELECT")]
     Select,
 }
 

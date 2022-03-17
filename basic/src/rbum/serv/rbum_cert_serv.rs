@@ -28,8 +28,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         rbum_cert_conf::Entity.table_name()
     }
 
-    fn package_add(add_req: &RbumCertConfAddReq, _: &TardisContext) -> rbum_cert_conf::ActiveModel {
-        rbum_cert_conf::ActiveModel {
+    async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
+        Ok(rbum_cert_conf::ActiveModel {
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             ak_note: Set(add_req.ak_note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -45,10 +45,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             coexist_num: Set(add_req.coexist_num.unwrap_or(1)),
             rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
             ..Default::default()
-        }
+        })
     }
 
-    fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, _: &TardisContext) -> rbum_cert_conf::ActiveModel {
+    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         let mut rbum_cert_conf = rbum_cert_conf::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -92,10 +92,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         if let Some(coexist_num) = modify_req.coexist_num {
             rbum_cert_conf.coexist_num = Set(coexist_num);
         }
-        rbum_cert_conf
+        Ok(rbum_cert_conf)
     }
 
-    fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -133,7 +133,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
 
-        query
+        Ok(query)
     }
 
     async fn before_add_rbum(add_req: &mut RbumCertConfAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -154,8 +154,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         rbum_cert::Entity.table_name()
     }
 
-    fn package_add(add_req: &RbumCertAddReq, _: &TardisContext) -> rbum_cert::ActiveModel {
-        rbum_cert::ActiveModel {
+    async fn package_add(add_req: &RbumCertAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
+        Ok(rbum_cert::ActiveModel {
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -166,10 +166,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.to_string()),
             rel_rbum_item_id: Set(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
-        }
+        })
     }
 
-    fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisContext) -> rbum_cert::ActiveModel {
+    async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         let mut rbum_cert = rbum_cert::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -192,10 +192,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         if let Some(status) = &modify_req.status {
             rbum_cert.status = Set(status.to_string());
         }
-        rbum_cert
+        Ok(rbum_cert)
     }
 
-    fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_rbum_item_table = Alias::new("relRbumItem");
 
         let mut query = Query::select();
@@ -236,7 +236,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
 
-        query
+        Ok(query)
     }
 
     async fn before_add_rbum(add_req: &mut RbumCertAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {

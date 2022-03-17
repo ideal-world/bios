@@ -14,6 +14,15 @@ pub struct RbumBasicFilterReq {
     pub domain_id: Option<String>,
     pub enabled: Option<bool>,
     pub name: Option<String>,
+    pub ids: Option<Vec<String>>,
+
+    pub rbum_rel_tag: Option<String>,
+    pub rbum_rel_is_from: Option<bool>,
+    pub rbum_rel_rbum_kind_id: Option<String>,
+    pub rbum_rel_rbum_item_id: Option<String>,
+    pub rbum_rel_app_id: Option<String>,
+    pub rbum_rel_tenant_id: Option<String>,
+    pub rbum_rel_id: Option<String>,
 }
 
 impl Default for RbumBasicFilterReq {
@@ -27,6 +36,14 @@ impl Default for RbumBasicFilterReq {
             domain_id: None,
             enabled: None,
             name: None,
+            ids: None,
+            rbum_rel_tag: None,
+            rbum_rel_is_from: None,
+            rbum_rel_rbum_kind_id: None,
+            rbum_rel_rbum_item_id: None,
+            rbum_rel_app_id: None,
+            rbum_rel_tenant_id: None,
+            rbum_rel_id: None
         }
     }
 }

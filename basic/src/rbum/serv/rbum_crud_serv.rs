@@ -64,6 +64,9 @@ impl RbumCrudQueryPackage for SelectStatement {
         if let Some(name) = &filter.name {
             self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(name));
         }
+        if let Some(ids) = &filter.ids {
+            self.and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).is_in(ids.clone()));
+        }
         self
     }
 
@@ -147,15 +150,15 @@ where
         query
     }
 
-    fn package_add(add_req: &AddReq, cxt: &TardisContext) -> E;
+    async fn package_add(add_req: &AddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<E>;
 
-    fn package_modify(id: &str, modify_req: &ModifyReq, cxt: &TardisContext) -> E;
+    async fn package_modify(id: &str, modify_req: &ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<E>;
 
-    fn package_delete(id: &str, _: &TardisContext) -> Select<E::Entity> {
-        E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id))
+    async fn package_delete(id: &str, _db: &TardisRelDBlConnection<'a>, _cxt: &TardisContext) -> TardisResult<Select<E::Entity>> {
+        Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
-    fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement;
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement>;
 
     async fn check_ownership(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership_with_table_name(id, Self::get_table_name(), db, cxt).await
@@ -185,7 +188,7 @@ where
 
     async fn add_rbum(add_req: &mut AddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
         Self::before_add_rbum(add_req, db, cxt).await?;
-        let domain = Self::package_add(add_req, cxt);
+        let domain = Self::package_add(add_req, db, cxt).await?;
         let insert_result = db.insert_one(domain, cxt).await?;
         let id_value = insert_result.last_insert_id.into_value_tuple();
         let id = match id_value {
@@ -218,7 +221,7 @@ where
 
     async fn modify_rbum(id: &str, modify_req: &mut ModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::before_modify_rbum(id, modify_req, db, cxt).await?;
-        let domain = Self::package_modify(id, modify_req, cxt);
+        let domain = Self::package_modify(id, modify_req, db, cxt).await?;
         db.update_one(domain, cxt).await?;
         Self::after_modify_rbum(id, modify_req, db, cxt).await
     }
@@ -233,14 +236,14 @@ where
 
     async fn delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         Self::before_delete_rbum(id, db, cxt).await?;
-        let select = Self::package_delete(id, cxt);
+        let select = Self::package_delete(id, db, cxt).await?;
         let delete_records = db.soft_delete(select, &cxt.account_id).await?;
         Self::after_delete_rbum(id, db, cxt).await?;
         Ok(delete_records)
     }
 
     async fn get_rbum(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
-        let mut query = Self::package_query(true, filter, cxt);
+        let mut query = Self::package_query(true, filter, db, cxt).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = db.get_dto(&query).await?;
         match query {
@@ -250,7 +253,7 @@ where
         }
     }
 
-    async fn find_rbums(
+    async fn paginate_rbums(
         filter: &RbumBasicFilterReq,
         page_number: u64,
         page_size: u64,
@@ -258,7 +261,7 @@ where
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<SummaryResp>> {
-        let mut query = Self::package_query(false, filter, cxt);
+        let mut query = Self::package_query(false, filter, db, cxt).await?;
         if let Some(sort) = desc_sort_by_update {
             query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -270,4 +273,17 @@ where
             records,
         })
     }
+
+    async fn find_rbums(filter: &RbumBasicFilterReq, desc_sort_by_update: Option<bool>, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<Vec<SummaryResp>> {
+        let mut query = Self::package_query(false, filter, db, cxt).await?;
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(db.find_dtos(&query).await?)
+    }
+}
+
+#[derive(Debug, FromQueryResult)]
+pub struct NameResp {
+    pub name: String,
 }

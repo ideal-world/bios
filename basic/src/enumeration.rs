@@ -6,6 +6,5 @@ use tardis::web::poem_openapi::Tags;
 pub enum Components {
     /// IAM Component
     #[oai(rename = "IAM")]
-    #[display(fmt = "iam")]
     Iam,
 }

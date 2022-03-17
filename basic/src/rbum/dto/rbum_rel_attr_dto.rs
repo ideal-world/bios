@@ -7,12 +7,17 @@ pub struct RbumRelAttrAddReq {
     pub is_from: bool,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub value: String,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_rel_id:String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_kind_attr_id:String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelAttrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub value: Option<String>,
+    pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,6 +26,7 @@ pub struct RbumRelAttrDetailResp {
     pub id: String,
     pub is_from: bool,
     pub value: String,
+    pub name: String,
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_kind_attr_name: String,
     pub rel_rbum_rel_id: String,

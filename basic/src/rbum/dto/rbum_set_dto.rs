@@ -47,7 +47,7 @@ pub struct RbumSetSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -69,5 +69,5 @@ pub struct RbumSetDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }

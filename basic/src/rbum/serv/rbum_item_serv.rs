@@ -23,22 +23,22 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         rbum_item::Entity.table_name()
     }
 
-    fn package_add(add_req: &RbumItemAddReq, _: &TardisContext) -> rbum_item::ActiveModel {
-        rbum_item::ActiveModel {
-            code: Set(add_req.code.to_string()),
-            uri_path: Set(add_req.uri_path.to_string()),
-            name: Set(add_req.name.to_string()),
-            icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
-            sort: Set(add_req.sort.unwrap_or(0)),
-            rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
-            rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
-            disabled: Set(add_req.disabled.unwrap_or(false)),
-            ..Default::default()
-        }
+   async fn package_add(add_req: &RbumItemAddReq,_: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
+       Ok( rbum_item::ActiveModel {
+           code: Set(add_req.code.to_string()),
+           uri_path: Set(add_req.uri_path.to_string()),
+           name: Set(add_req.name.to_string()),
+           icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+           sort: Set(add_req.sort.unwrap_or(0)),
+           rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
+           rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
+           scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+           disabled: Set(add_req.disabled.unwrap_or(false)),
+           ..Default::default()
+       })
     }
 
-    fn package_modify(id: &str, modify_req: &RbumItemModifyReq, _: &TardisContext) -> rbum_item::ActiveModel {
+    async  fn package_modify(id: &str, modify_req: &RbumItemModifyReq,_: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
         let mut rbum_item = rbum_item::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -64,10 +64,10 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         if let Some(disabled) = modify_req.disabled {
             rbum_item.disabled = Set(disabled);
         }
-        rbum_item
+        Ok(rbum_item)
     }
 
-    fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq,_: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -108,7 +108,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         query.query_with_filter(Self::get_table_name(), filter, cxt);
         query.query_with_scope(Self::get_table_name(), cxt);
 
-        query
+        Ok(query)
     }
 
     async fn before_add_rbum(add_req: &mut RbumItemAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -123,24 +123,24 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
         rbum_item_attr::Entity.table_name()
     }
 
-    fn package_add(add_req: &RbumItemAttrAddReq, _: &TardisContext) -> rbum_item_attr::ActiveModel {
-        rbum_item_attr::ActiveModel {
-            value: Set(add_req.value.to_string()),
-            rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
-            rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
-            ..Default::default()
-        }
+    async  fn package_add(add_req: &RbumItemAttrAddReq,_: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_item_attr::ActiveModel> {
+       Ok( rbum_item_attr::ActiveModel {
+           value: Set(add_req.value.to_string()),
+           rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
+           rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
+           ..Default::default()
+       })
     }
 
-    fn package_modify(id: &str, modify_req: &RbumItemAttrModifyReq, _: &TardisContext) -> rbum_item_attr::ActiveModel {
-        rbum_item_attr::ActiveModel {
+    async  fn package_modify(id: &str, modify_req: &RbumItemAttrModifyReq,_: &TardisRelDBlConnection<'a>, _: &TardisContext) ->  TardisResult<rbum_item_attr::ActiveModel> {
+        Ok(rbum_item_attr::ActiveModel {
             id: Set(id.to_string()),
             value: Set(modify_req.value.to_string()),
             ..Default::default()
-        }
+        })
     }
 
-    fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement {
+    async  fn package_query(is_detail: bool, filter: &RbumBasicFilterReq,_: &TardisRelDBlConnection<'a>, cxt: &TardisContext) ->  TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -172,7 +172,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
 
-        query
+        Ok(query)
     }
 
     async fn before_add_rbum(add_req: &mut RbumItemAttrAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
