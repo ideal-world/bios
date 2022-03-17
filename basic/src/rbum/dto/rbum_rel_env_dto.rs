@@ -11,6 +11,9 @@ pub struct RbumRelEnvAddReq {
     pub value1: String,
     #[oai(validator(min_length = "1", max_length = "2000"))]
     pub value2: Option<String>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_rel_id:String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

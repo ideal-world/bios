@@ -12,3 +12,4 @@ pub mod rbum_rel_env_dto;
 pub mod rbum_set_cate_dto;
 pub mod rbum_set_dto;
 pub mod rbum_set_item_dto;
+pub mod rbum_rel_agg_dto;

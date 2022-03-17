@@ -12,8 +12,15 @@ pub struct RbumSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub sort: Option<i32>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub rbum_sibling_cate_code: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub rbum_parent_cate_code: Option<String>,
 
     pub scope_kind: Option<RbumScopeKind>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_set_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -38,7 +45,7 @@ pub struct RbumSetCateSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -58,5 +65,5 @@ pub struct RbumSetCateDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: RbumScopeKind,
+    pub scope_kind: String,
 }

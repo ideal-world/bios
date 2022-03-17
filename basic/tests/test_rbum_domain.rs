@@ -53,7 +53,7 @@ pub async fn test() -> TardisResult<()> {
     .await?;
 
     // Test Find
-    let rbums = RbumDomainServ::find_rbums(
+    let rbums = RbumDomainServ::paginate_rbums(
         &RbumBasicFilterReq {
             scope_kind: Some(RbumScopeKind::App),
             ..Default::default()

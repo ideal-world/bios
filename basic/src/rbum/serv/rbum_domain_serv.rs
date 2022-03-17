@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::result::TardisResult;
+use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 
@@ -17,8 +19,8 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         rbum_domain::Entity.table_name()
     }
 
-    fn package_add(add_req: &RbumDomainAddReq, _: &TardisContext) -> rbum_domain::ActiveModel {
-        rbum_domain::ActiveModel {
+    async fn package_add(add_req: &RbumDomainAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
+        Ok(rbum_domain::ActiveModel {
             uri_authority: Set(add_req.uri_authority.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -26,10 +28,10 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             sort: Set(add_req.sort.unwrap_or(0)),
             scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
             ..Default::default()
-        }
+        })
     }
 
-    fn package_modify(id: &str, modify_req: &RbumDomainModifyReq, _: &TardisContext) -> rbum_domain::ActiveModel {
+    async fn package_modify(id: &str, modify_req: &RbumDomainModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
         let mut rbum_domain = rbum_domain::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -52,10 +54,10 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         if let Some(scope_kind) = &modify_req.scope_kind {
             rbum_domain.scope_kind = Set(scope_kind.to_string());
         }
-        rbum_domain
+        Ok(rbum_domain)
     }
 
-    fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> SelectStatement {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query.columns(vec![
             (rbum_domain::Entity, rbum_domain::Column::Id),
@@ -80,6 +82,6 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         query.query_with_filter(Self::get_table_name(), filter, cxt);
         query.query_with_scope(Self::get_table_name(), cxt);
 
-        query
+        Ok(query)
     }
 }

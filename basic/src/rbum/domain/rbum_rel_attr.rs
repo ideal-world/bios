@@ -13,6 +13,7 @@ pub struct Model {
     // Specific
     pub is_from: bool,
     pub value: String,
+    pub name: String,
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_rel_id: String,
     // Basic
@@ -39,8 +40,9 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::IsFrom).not_null().string())
+            .col(ColumnDef::new(Column::IsFrom).not_null().boolean())
             .col(ColumnDef::new(Column::Value).not_null().string())
+            .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKindAttrId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumRelId).not_null().string())
             // Basic

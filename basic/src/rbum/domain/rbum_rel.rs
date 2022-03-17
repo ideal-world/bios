@@ -11,13 +11,13 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
+    pub tag: String,
     pub from_rbum_kind_id: String,
     pub from_rbum_item_id: String,
     pub to_rbum_kind_id: String,
     pub to_rbum_item_id: String,
     pub to_other_app_id: String,
     pub to_other_tenant_id: String,
-    pub tags: String,
     pub ext: String,
     // Basic
     pub rel_app_id: String,
@@ -43,13 +43,13 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
+            .col(ColumnDef::new(Column::Tag).not_null().string())
             .col(ColumnDef::new(Column::FromRbumKindId).not_null().string())
             .col(ColumnDef::new(Column::FromRbumItemId).not_null().string())
             .col(ColumnDef::new(Column::ToRbumKindId).not_null().string())
             .col(ColumnDef::new(Column::ToRbumItemId).not_null().string())
             .col(ColumnDef::new(Column::ToOtherAppId).not_null().string())
             .col(ColumnDef::new(Column::ToOtherTenantId).not_null().string())
-            .col(ColumnDef::new(Column::Tags).not_null().string())
             .col(ColumnDef::new(Column::Ext).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::RelAppId).not_null().string())
@@ -68,18 +68,8 @@ impl TardisActiveModel for ActiveModel {
                 .col(Column::RelAppId)
                 .col(Column::RelTenantId)
                 .to_owned(),
-            Index::create()
-                .name(&format!("idx-{}-{}", Entity.table_name(), Column::FromRbumKindId.to_string()))
-                .table(Entity)
-                .col(Column::FromRbumKindId)
-                .col(Column::FromRbumItemId)
-                .to_owned(),
-            Index::create()
-                .name(&format!("idx-{}-{}", Entity.table_name(), Column::ToRbumKindId.to_string()))
-                .table(Entity)
-                .col(Column::ToRbumKindId)
-                .col(Column::ToRbumItemId)
-                .to_owned(),
+            Index::create().name(&format!("idx-{}-from", Entity.table_name())).table(Entity).col(Column::Tag).col(Column::FromRbumKindId).col(Column::FromRbumItemId).to_owned(),
+            Index::create().name(&format!("idx-{}-to", Entity.table_name())).table(Entity).col(Column::Tag).col(Column::ToRbumKindId).col(Column::ToRbumItemId).to_owned(),
         ]
     }
 }

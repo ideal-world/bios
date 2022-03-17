@@ -154,7 +154,7 @@ async fn test_rbum_item() -> TardisResult<()> {
     .await?;
 
     // Test Find
-    let rbums = RbumItemServ::find_rbums(
+    let rbums = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
             scope_kind: Some(RbumScopeKind::App),
             name: Some("%据库%".to_string()),
@@ -181,7 +181,7 @@ async fn test_rbum_item() -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn test_rbum_item_attr() -> TardisResult<()> {
+async fn test_rbum_item_attr() -> TardisResult<()> {
     let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
@@ -325,7 +325,7 @@ pub async fn test_rbum_item_attr() -> TardisResult<()> {
     RbumItemAttrServ::modify_rbum(&item_attr_id, &mut RbumItemAttrModifyReq { value: "数据3".to_string() }, &tx, &context).await?;
 
     // Test Find
-    let rbums = RbumItemAttrServ::find_rbums(&RbumBasicFilterReq::default(), 1, 10, None, &tx, &context).await?;
+    let rbums = RbumItemAttrServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, &tx, &context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);

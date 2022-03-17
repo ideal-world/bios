@@ -60,7 +60,7 @@ async fn test_rbum_kind() -> TardisResult<()> {
     .await?;
 
     // Test Find
-    let rbums = RbumKindServ::find_rbums(
+    let rbums = RbumKindServ::paginate_rbums(
         &RbumBasicFilterReq {
             scope_kind: Some(RbumScopeKind::App),
             ..Default::default()
@@ -86,7 +86,7 @@ async fn test_rbum_kind() -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn test_rbum_kind_attr() -> TardisResult<()> {
+async fn test_rbum_kind_attr() -> TardisResult<()> {
     let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
@@ -254,7 +254,7 @@ pub async fn test_rbum_kind_attr() -> TardisResult<()> {
     .await?;
 
     // Test Find
-    let rbums = RbumKindAttrServ::find_rbums(&RbumBasicFilterReq::default(), 1, 10, None, &tx, &context).await?;
+    let rbums = RbumKindAttrServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, &tx, &context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);

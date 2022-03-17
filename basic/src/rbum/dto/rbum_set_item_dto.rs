@@ -5,6 +5,13 @@ use tardis::web::poem_openapi::Object;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumSetItemAddReq {
     pub sort: i32,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_set_id: String,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub rel_rbum_set_cate_code: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_item_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
