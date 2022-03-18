@@ -13,9 +13,9 @@ pub struct RbumSetCateAddReq {
     pub name: TrimString,
     pub sort: Option<i32>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub rbum_sibling_cate_code: Option<String>,
+    pub rbum_sibling_cate_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub rbum_parent_cate_code: Option<String>,
+    pub rbum_parent_cate_id: Option<String>,
 
     pub scope_kind: Option<RbumScopeKind>,
 
@@ -46,6 +46,22 @@ pub struct RbumSetCateSummaryResp {
     pub update_time: DateTime<Utc>,
 
     pub scope_kind: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+pub struct RbumSetCateSummaryWithPidResp {
+    pub id: String,
+    pub bus_code: String,
+    pub name: String,
+    pub sort: i32,
+
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+
+    pub scope_kind: String,
+    
+    pub pid: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
