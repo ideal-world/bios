@@ -8,8 +8,8 @@ pub struct RbumSetItemAddReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_id: String,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub rel_rbum_set_cate_code: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_set_cate_id: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_item_id: String,
 }
@@ -24,7 +24,7 @@ pub struct RbumSetItemModifyReq {
 pub struct RbumSetItemDetailResp {
     pub id: String,
     pub sort: i32,
-    pub rel_rbum_set_cate_code: String,
+    pub rel_rbum_set_cate_id: String,
     pub rel_rbum_set_cate_name: String,
     pub rel_rbum_item_id: String,
     pub rel_rbum_item_name: String,

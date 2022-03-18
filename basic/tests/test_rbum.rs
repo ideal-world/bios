@@ -7,6 +7,7 @@ mod test_rbum_domain;
 mod test_rbum_item;
 mod test_rbum_kind;
 mod test_rbum_rel;
+mod test_rbum_set;
 
 #[tokio::test]
 async fn test_rbum() -> TardisResult<()> {
@@ -17,5 +18,6 @@ async fn test_rbum() -> TardisResult<()> {
     test_rbum_item::test().await?;
     test_rbum_cert::test().await?;
     test_rbum_rel::test().await?;
+    test_rbum_set::test().await?;
     Ok(())
 }

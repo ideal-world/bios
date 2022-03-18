@@ -65,6 +65,7 @@ impl TardisActiveModel for ActiveModel {
                 .table(Entity)
                 .col(Column::RelRbumSetId)
                 .col(Column::SysCode)
+                .unique()
                 .to_owned(),
             Index::create()
                 .name(&format!("idx-{}-{}-{}", Entity.table_name(), Column::RelRbumSetId.to_string(), Column::BusCode.to_string()))
