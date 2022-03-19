@@ -17,12 +17,11 @@ use crate::rbum::enumeration::RbumScopeKind;
 lazy_static! {
     static ref UPDATER_TABLE: Alias = Alias::new("updater");
     static ref REL_APP_TABLE: Alias = Alias::new("relApp");
-    static ref REL_TENANT_TABLE: Alias = Alias::new("relTenant");
     static ref ID_FIELD: Alias = Alias::new("id");
+    static ref CODE_FIELD: Alias = Alias::new("code");
     static ref NAME_FIELD: Alias = Alias::new("name");
     static ref UPDATER_ID_FIELD: Alias = Alias::new("updater_id");
     static ref REL_APP_ID_FIELD: Alias = Alias::new("rel_app_id");
-    static ref REL_TENANT_ID_FIELD: Alias = Alias::new("rel_tenant_id");
     static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
     static ref SCOPE_KIND_FIELD: Alias = Alias::new("scope_kind");
     static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_kind_id");
@@ -42,9 +41,6 @@ impl RbumCrudQueryPackage for SelectStatement {
     fn query_with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> &mut Self {
         if filter.rel_cxt_app {
             self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()));
-        }
-        if filter.rel_cxt_tenant {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_TENANT_ID_FIELD.clone()).eq(cxt.tenant_id.as_str()));
         }
         if filter.rel_cxt_updater {
             self.and_where(Expr::tbl(Alias::new(table_name), UPDATER_ID_FIELD.clone()).eq(cxt.account_id.as_str()));
@@ -72,19 +68,12 @@ impl RbumCrudQueryPackage for SelectStatement {
 
     fn query_with_safe(&mut self, table_name: &str) -> &mut Self {
         self.expr_as(Expr::tbl(REL_APP_TABLE.clone(), NAME_FIELD.clone()), Alias::new("rel_app_name"))
-            .expr_as(Expr::tbl(REL_TENANT_TABLE.clone(), NAME_FIELD.clone()), Alias::new("rel_tenant_name"))
             .expr_as(Expr::tbl(UPDATER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("updater_name"));
         self.join_as(
             JoinType::InnerJoin,
             rbum_item::Entity,
             REL_APP_TABLE.clone(),
-            Expr::tbl(REL_APP_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), REL_APP_ID_FIELD.clone()),
-        )
-        .join_as(
-            JoinType::InnerJoin,
-            rbum_item::Entity,
-            REL_TENANT_TABLE.clone(),
-            Expr::tbl(REL_TENANT_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), REL_TENANT_ID_FIELD.clone()),
+            Expr::tbl(REL_APP_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), REL_APP_ID_FIELD.clone()),
         )
         .join_as(
             JoinType::InnerJoin,
@@ -102,7 +91,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                 .add(
                     Cond::all()
                         .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Tenant.to_string()))
-                        .add(Expr::tbl(Alias::new(table_name), REL_TENANT_ID_FIELD.clone()).eq(cxt.tenant_id.as_str())),
+                        .add(Expr::tbl(Alias::new(table_name), REL_APP_ID_FIELD.clone()).like(format!("{}%", cxt.tenant_id).as_str())),
                 )
                 .add(
                     Cond::all()
@@ -135,8 +124,7 @@ where
             .column(ID_FIELD.clone())
             .from(Alias::new(table_name))
             .and_where(Expr::col(ID_FIELD.clone()).eq(id))
-            .and_where(Expr::col(REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()))
-            .and_where(Expr::col(REL_TENANT_ID_FIELD.clone()).eq(cxt.tenant_id.as_str()));
+            .and_where(Expr::col(REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()));
         query
     }
 

@@ -8,6 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::constants;
+use crate::rbum::constants::{RBUM_DOMAIN_ID_LEN, RBUM_ITEM_APP_ID_LEN, RBUM_ITEM_TENANT_ID_LEN, RBUM_KIND_ID_LEN};
 use crate::rbum::domain::{
     rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate, rbum_set_item,
 };
@@ -31,13 +32,13 @@ pub async fn init_db() -> TardisResult<()> {
     tx.create_table_and_index(&rbum_set_cate::ActiveModel::create_table_and_index_statement(db_kind)).await?;
     tx.create_table_and_index(&rbum_set_item::ActiveModel::create_table_and_index_statement(db_kind)).await?;
 
-    let kind_tenant_id = TardisFuns::field.uuid_str();
-    let kind_app_id = TardisFuns::field.uuid_str();
-    let kind_account_id = TardisFuns::field.uuid_str();
-    let domain_iam_id = TardisFuns::field.uuid_str();
-    let item_default_tenant_id = TardisFuns::field.uuid_str();
-    let item_iam_app_id = TardisFuns::field.uuid_str();
-    let item_sys_admin_id = TardisFuns::field.uuid_str();
+    let kind_tenant_id = TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN);
+    let kind_app_id = TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN);
+    let kind_account_id = TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN);
+    let domain_iam_id = TardisFuns::field.nanoid_len(RBUM_DOMAIN_ID_LEN);
+    let item_default_tenant_id = format!("{}{}{}", kind_tenant_id, domain_iam_id, TardisFuns::field.nanoid());
+    let item_iam_app_id = format!("{}{}{}", kind_app_id, domain_iam_id, TardisFuns::field.nanoid());
+    let item_sys_admin_id = format!("{}{}{}", kind_account_id, domain_iam_id, TardisFuns::field.nanoid());
 
     rbum_kind::ActiveModel {
         id: Set(kind_tenant_id.clone()),
@@ -48,7 +49,6 @@ pub async fn init_db() -> TardisResult<()> {
         sort: Set(0),
         ext_table_name: Set(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string().to_lowercase()),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::Global.to_string()),
         ..Default::default()
@@ -65,7 +65,6 @@ pub async fn init_db() -> TardisResult<()> {
         sort: Set(0),
         ext_table_name: Set(constants::RBUM_KIND_SCHEME_IAM_APP.to_string().to_lowercase()),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::Global.to_string()),
         ..Default::default()
@@ -82,7 +81,6 @@ pub async fn init_db() -> TardisResult<()> {
         sort: Set(0),
         ext_table_name: Set(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string().to_lowercase()),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::Global.to_string()),
         ..Default::default()
@@ -98,7 +96,6 @@ pub async fn init_db() -> TardisResult<()> {
         icon: Set("".to_string()),
         sort: Set(0),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::Global.to_string()),
         ..Default::default()
@@ -106,18 +103,21 @@ pub async fn init_db() -> TardisResult<()> {
     .insert(tx.raw_tx()?)
     .await?;
 
+    let default_tenant_code = TardisFuns::field.nanoid_len(RBUM_ITEM_TENANT_ID_LEN);
+    let default_app_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid_len(RBUM_ITEM_APP_ID_LEN));
+    let default_account_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid());
+
     rbum_item::ActiveModel {
         id: Set(item_default_tenant_id.clone()),
-        code: Set(constants::RBUM_ITEM_CODE_DEFAULT_TENANT.to_string()),
-        uri_path: Set(constants::RBUM_ITEM_CODE_DEFAULT_TENANT.to_string()),
-        name: Set(constants::RBUM_ITEM_CODE_DEFAULT_TENANT.to_string()),
+        code: Set(default_tenant_code.clone()),
+        uri_path: Set(default_tenant_code.clone()),
+        name: Set(constants::RBUM_ITEM_NAME_DEFAULT_TENANT.to_string()),
         icon: Set("".to_string()),
         sort: Set(0),
         rel_rbum_kind_id: Set(kind_tenant_id.clone()),
         rel_rbum_domain_id: Set(domain_iam_id.clone()),
         disabled: Set(false),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::App.to_string()),
         ..Default::default()
@@ -127,16 +127,15 @@ pub async fn init_db() -> TardisResult<()> {
 
     rbum_item::ActiveModel {
         id: Set(item_iam_app_id.clone()),
-        code: Set(constants::RBUM_ITEM_CODE_DEFAULT_APP.to_string()),
-        uri_path: Set(constants::RBUM_ITEM_CODE_DEFAULT_APP.to_string()),
-        name: Set(constants::RBUM_ITEM_CODE_DEFAULT_APP.to_string()),
+        code: Set(default_app_code.clone()),
+        uri_path: Set(default_app_code.clone()),
+        name: Set(constants::RBUM_ITEM_NAME_DEFAULT_APP.to_string()),
         icon: Set("".to_string()),
         sort: Set(0),
         rel_rbum_kind_id: Set(kind_app_id.clone()),
         rel_rbum_domain_id: Set(domain_iam_id.clone()),
         disabled: Set(false),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::App.to_string()),
         ..Default::default()
@@ -146,16 +145,15 @@ pub async fn init_db() -> TardisResult<()> {
 
     rbum_item::ActiveModel {
         id: Set(item_sys_admin_id.clone()),
-        code: Set(constants::RBUM_ITEM_CODE_DEFAULT_ACCOUNT.to_string()),
-        uri_path: Set(constants::RBUM_ITEM_CODE_DEFAULT_ACCOUNT.to_string()),
-        name: Set(constants::RBUM_ITEM_CODE_DEFAULT_ACCOUNT.to_string()),
+        code: Set(default_account_code.clone()),
+        uri_path: Set(default_account_code.clone()),
+        name: Set(constants::RBUM_ITEM_NAME_DEFAULT_ACCOUNT.to_string()),
         icon: Set("".to_string()),
         sort: Set(0),
         rel_rbum_kind_id: Set(kind_account_id.clone()),
         rel_rbum_domain_id: Set(domain_iam_id.clone()),
         disabled: Set(false),
         rel_app_id: Set(item_iam_app_id.clone()),
-        rel_tenant_id: Set(item_default_tenant_id.clone()),
         updater_id: Set(item_sys_admin_id.clone()),
         scope_kind: Set(RbumScopeKind::App.to_string()),
         ..Default::default()
@@ -169,25 +167,17 @@ pub async fn init_db() -> TardisResult<()> {
 
 pub async fn get_sys_admin_context() -> TardisResult<TardisContext> {
     let app_table = Alias::new("app");
-    let tenant_table = Alias::new("tenant");
 
     let mut query = Query::select();
     query
         .expr_as(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id), Alias::new("account_id"))
-        .expr_as(Expr::tbl(app_table.clone(), rbum_item::Column::Id), Alias::new("app_id"))
-        .expr_as(Expr::tbl(tenant_table.clone(), rbum_item::Column::Id), Alias::new("tenant_id"))
+        .expr_as(Expr::tbl(app_table.clone(), rbum_item::Column::Code), Alias::new("app_id"))
         .from(rbum_item::Entity)
         .join_as(
             JoinType::InnerJoin,
             rbum_item::Entity,
             app_table.clone(),
             Expr::tbl(app_table, rbum_item::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelAppId),
-        )
-        .join_as(
-            JoinType::InnerJoin,
-            rbum_item::Entity,
-            tenant_table.clone(),
-            Expr::tbl(tenant_table, rbum_item::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelTenantId),
         )
         .inner_join(
             rbum_kind::Entity,
@@ -201,7 +191,7 @@ pub async fn get_sys_admin_context() -> TardisResult<TardisContext> {
 
     Ok(TardisContext {
         app_id: context.app_id.to_string(),
-        tenant_id: context.tenant_id.to_string(),
+        tenant_id: context.app_id[..RBUM_ITEM_TENANT_ID_LEN].to_string(),
         ak: "_".to_string(),
         account_id: context.account_id,
         token: "_".to_string(),
@@ -214,6 +204,5 @@ pub async fn get_sys_admin_context() -> TardisResult<TardisContext> {
 #[derive(Deserialize, FromQueryResult, Serialize, Clone, Debug)]
 struct TmpContext {
     pub app_id: String,
-    pub tenant_id: String,
     pub account_id: String,
 }

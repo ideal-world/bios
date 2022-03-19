@@ -390,8 +390,7 @@ async fn test_rbum_cert() -> TardisResult<()> {
     assert!(RbumCertServ::modify_rbum(
         "111",
         &mut RbumCertModifyReq {
-            ak: Some(TrimString("sunisle".to_string())),
-            ext: None,
+            ext: Some("ext".to_string()),
             start_time: None,
             end_time: None,
             coexist_flag: None,
@@ -406,8 +405,7 @@ async fn test_rbum_cert() -> TardisResult<()> {
     RbumCertServ::modify_rbum(
         &cert_gudaoxuri_id,
         &mut RbumCertModifyReq {
-            ak: Some(TrimString("sunisle".to_string())),
-            ext: None,
+            ext: Some("ext".to_string()),
             start_time: None,
             end_time: None,
             coexist_flag: None,
@@ -445,11 +443,11 @@ async fn test_rbum_cert() -> TardisResult<()> {
 
     // Test Validate
     assert!(RbumCertServ::validate("11", "11", "111", "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("sunisle", "11", "111", "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("sunisle", "11", &cert_conf_user_pwd_id, "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("sunisle", "11", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", "111", "11", &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, "11", &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await.is_err());
     assert_eq!(
-        RbumCertServ::validate("sunisle", "abcdefgh", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await?,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await?,
         cert_gudaoxuri_id.to_string()
     );
     assert_eq!(
@@ -458,7 +456,7 @@ async fn test_rbum_cert() -> TardisResult<()> {
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
     // Expire
-    assert!(RbumCertServ::validate("sunisle", "11", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await.is_err());
 
     // Test Delete
     RbumCertServ::delete_rbum(&cert_gudaoxuri_id, &tx, &context).await?;

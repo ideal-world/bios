@@ -7,7 +7,6 @@ use crate::rbum::enumeration::RbumScopeKind;
 #[serde(default)]
 pub struct RbumBasicFilterReq {
     pub rel_cxt_app: bool,
-    pub rel_cxt_tenant: bool,
     pub rel_cxt_updater: bool,
     pub scope_kind: Option<RbumScopeKind>,
     pub kind_id: Option<String>,
@@ -21,7 +20,6 @@ pub struct RbumBasicFilterReq {
     pub rbum_rel_rbum_kind_id: Option<String>,
     pub rbum_rel_rbum_item_id: Option<String>,
     pub rbum_rel_app_id: Option<String>,
-    pub rbum_rel_tenant_id: Option<String>,
     pub rbum_rel_id: Option<String>,
 }
 
@@ -29,7 +27,6 @@ impl Default for RbumBasicFilterReq {
     fn default() -> Self {
         Self {
             rel_cxt_app: true,
-            rel_cxt_tenant: true,
             rel_cxt_updater: false,
             scope_kind: None,
             kind_id: None,
@@ -42,7 +39,6 @@ impl Default for RbumBasicFilterReq {
             rbum_rel_rbum_kind_id: None,
             rbum_rel_rbum_item_id: None,
             rbum_rel_app_id: None,
-            rbum_rel_tenant_id: None,
             rbum_rel_id: None
         }
     }

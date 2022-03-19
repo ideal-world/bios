@@ -4,6 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
@@ -25,6 +26,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
 
    async fn package_add(add_req: &RbumItemAddReq,_: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
        Ok( rbum_item::ActiveModel {
+           id:Set(format!("{}{}{}",add_req.rel_rbum_kind_id,add_req.rel_rbum_domain_id,TardisFuns::field.nanoid())),
            code: Set(add_req.code.to_string()),
            uri_path: Set(add_req.uri_path.to_string()),
            name: Set(add_req.name.to_string()),
@@ -80,7 +82,6 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                 (rbum_item::Entity, rbum_item::Column::RelRbumKindId),
                 (rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
                 (rbum_item::Entity, rbum_item::Column::RelAppId),
-                (rbum_item::Entity, rbum_item::Column::RelTenantId),
                 (rbum_item::Entity, rbum_item::Column::UpdaterId),
                 (rbum_item::Entity, rbum_item::Column::CreateTime),
                 (rbum_item::Entity, rbum_item::Column::UpdateTime),
@@ -125,6 +126,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
 
     async  fn package_add(add_req: &RbumItemAttrAddReq,_: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_item_attr::ActiveModel> {
        Ok( rbum_item_attr::ActiveModel {
+           id:Set(TardisFuns::field.nanoid()),
            value: Set(add_req.value.to_string()),
            rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
            rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
@@ -149,7 +151,6 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelAppId),
-                (rbum_item_attr::Entity, rbum_item_attr::Column::RelTenantId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdaterId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::CreateTime),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdateTime),

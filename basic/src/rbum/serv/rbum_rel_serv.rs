@@ -9,8 +9,9 @@ use tardis::db::reldb_client::{IdResp, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
-use crate::rbum::domain::{rbum_item, rbum_kind, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env};
+use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
@@ -19,7 +20,7 @@ use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp,
 use crate::rbum::enumeration::RbumRelEnvKind;
 use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
-use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
+use crate::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
 
 pub struct RbumRelServ;
 pub struct RbumRelAttrServ;
@@ -33,13 +34,11 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
 
     async fn package_add(add_req: &RbumRelAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_rel::ActiveModel> {
         Ok(rbum_rel::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             tag: Set(add_req.tag.to_string()),
-            from_rbum_kind_id: Set(add_req.from_rbum_kind_id.to_string()),
             from_rbum_item_id: Set(add_req.from_rbum_item_id.to_string()),
-            to_rbum_kind_id: Set(add_req.to_rbum_kind_id.to_string()),
             to_rbum_item_id: Set(add_req.to_rbum_item_id.to_string()),
-            to_other_app_id: Set(add_req.to_other_app_id.as_ref().unwrap_or(&"".to_string()).to_string()),
-            to_other_tenant_id: Set(add_req.to_other_tenant_id.as_ref().unwrap_or(&"".to_string()).to_string()),
+            to_other_app_id: Set(add_req.to_other_app_id.to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
@@ -61,10 +60,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
 
     async fn package_query(_: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let to_other_app_table = Alias::new("toOtherApp");
-        let to_other_tenant_table = Alias::new("toOtherTenant");
-        let from_rbum_kind_table = Alias::new("fromRbumKind");
         let from_rbum_item_table = Alias::new("fromRbumItem");
-        let to_rbum_kind_table = Alias::new("toRbumKind");
         let to_rbum_item_table = Alias::new("toRbumItem");
 
         let mut query = Query::select();
@@ -72,32 +68,19 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             .columns(vec![
                 (rbum_rel::Entity, rbum_rel::Column::Id),
                 (rbum_rel::Entity, rbum_rel::Column::Tag),
-                (rbum_rel::Entity, rbum_rel::Column::FromRbumKindId),
                 (rbum_rel::Entity, rbum_rel::Column::FromRbumItemId),
-                (rbum_rel::Entity, rbum_rel::Column::ToRbumKindId),
                 (rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
                 (rbum_rel::Entity, rbum_rel::Column::ToOtherAppId),
-                (rbum_rel::Entity, rbum_rel::Column::ToOtherTenantId),
                 (rbum_rel::Entity, rbum_rel::Column::Ext),
                 (rbum_rel::Entity, rbum_rel::Column::RelAppId),
-                (rbum_rel::Entity, rbum_rel::Column::RelTenantId),
                 (rbum_rel::Entity, rbum_rel::Column::UpdaterId),
                 (rbum_rel::Entity, rbum_rel::Column::CreateTime),
                 (rbum_rel::Entity, rbum_rel::Column::UpdateTime),
             ])
-            .expr_as(Expr::tbl(from_rbum_kind_table.clone(), rbum_kind::Column::Name), Alias::new("from_rbum_kind_name"))
             .expr_as(Expr::tbl(from_rbum_item_table.clone(), rbum_item::Column::Name), Alias::new("from_rbum_item_name"))
-            .expr_as(Expr::tbl(to_rbum_kind_table.clone(), rbum_kind::Column::Name), Alias::new("to_rbum_kind_name"))
             .expr_as(Expr::tbl(to_rbum_item_table.clone(), rbum_item::Column::Name), Alias::new("to_rbum_item_name"))
             .expr_as(Expr::tbl(to_other_app_table.clone(), rbum_item::Column::Name), Alias::new("to_other_app_name"))
-            .expr_as(Expr::tbl(to_other_tenant_table.clone(), rbum_item::Column::Name), Alias::new("to_other_tenant_name"))
             .from(rbum_rel::Entity)
-            .join_as(
-                JoinType::InnerJoin,
-                rbum_kind::Entity,
-                from_rbum_kind_table.clone(),
-                Expr::tbl(from_rbum_kind_table, rbum_kind::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::FromRbumKindId),
-            )
             .join_as(
                 JoinType::InnerJoin,
                 rbum_item::Entity,
@@ -106,27 +89,15 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             )
             .join_as(
                 JoinType::InnerJoin,
-                rbum_kind::Entity,
-                to_rbum_kind_table.clone(),
-                Expr::tbl(to_rbum_kind_table, rbum_kind::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToRbumKindId),
-            )
-            .join_as(
-                JoinType::InnerJoin,
                 rbum_item::Entity,
                 to_rbum_item_table.clone(),
                 Expr::tbl(to_rbum_item_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
             )
             .join_as(
-                JoinType::LeftJoin,
+                JoinType::InnerJoin,
                 rbum_item::Entity,
                 to_other_app_table.clone(),
-                Expr::tbl(to_other_app_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToOtherAppId),
-            )
-            .join_as(
-                JoinType::LeftJoin,
-                rbum_item::Entity,
-                to_other_tenant_table.clone(),
-                Expr::tbl(to_other_tenant_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToOtherTenantId),
+                Expr::tbl(to_other_app_table, rbum_item::Column::Code).equals(rbum_rel::Entity, rbum_rel::Column::ToOtherAppId),
             );
 
         if let Some(rbum_rel_tag) = &filter.rbum_rel_tag {
@@ -134,38 +105,18 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         }
         if let Some(is_from) = filter.rbum_rel_is_from {
             if is_from {
-                if let Some(rbum_rel_rbum_kind_id) = &filter.rbum_rel_rbum_kind_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKindId).eq(rbum_rel_rbum_kind_id.to_string()));
-                }
                 if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
                 }
                 if let Some(rbum_rel_app_id) = &filter.rbum_rel_app_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::RelAppId).eq(rbum_rel_app_id.to_string()));
                 }
-                if let Some(rbum_rel_tenant_id) = &filter.rbum_rel_tenant_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::RelTenantId).eq(rbum_rel_tenant_id.to_string()));
-                }
             } else {
-                if let Some(rbum_rel_rbum_kind_id) = &filter.rbum_rel_rbum_kind_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumKindId).eq(rbum_rel_rbum_kind_id.to_string()));
-                }
                 if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
                 }
                 if let Some(rbum_rel_app_id) = &filter.rbum_rel_app_id {
-                    query.cond_where(
-                        Cond::any()
-                            .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::RelAppId).eq(rbum_rel_app_id.to_string()))
-                            .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOtherAppId).eq(rbum_rel_app_id.to_string())),
-                    );
-                }
-                if let Some(rbum_rel_tenant_id) = &filter.rbum_rel_tenant_id {
-                    query.cond_where(
-                        Cond::any()
-                            .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::RelTenantId).eq(rbum_rel_tenant_id.to_string()))
-                            .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOtherTenantId).eq(rbum_rel_tenant_id.to_string())),
-                    );
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOtherAppId).eq(rbum_rel_app_id.to_string()));
                 }
             }
         }
@@ -178,9 +129,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
     }
 
     async fn before_add_rbum(add_req: &mut RbumRelAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.from_rbum_kind_id, RbumKindServ::get_table_name(), db, cxt).await?;
         Self::check_scope(&add_req.from_rbum_item_id, RbumItemServ::get_table_name(), db, cxt).await?;
-        Self::check_scope(&add_req.to_rbum_kind_id, RbumKindServ::get_table_name(), db, cxt).await?;
         Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), db, cxt).await?;
         Ok(())
     }
@@ -235,7 +184,6 @@ impl<'a> RbumRelServ {
                 rbum_rel_rbum_kind_id: Some(from_rbum_kind_id.to_string()),
                 rbum_rel_rbum_item_id: Some(from_rbum_item_id.to_string()),
                 rbum_rel_app_id: Some(cxt.app_id.to_string()),
-                rbum_rel_tenant_id: Some(cxt.tenant_id.to_string()),
                 ..Default::default()
             },
             page_number,
@@ -264,7 +212,6 @@ impl<'a> RbumRelServ {
                 rbum_rel_rbum_kind_id: Some(to_rbum_kind_id.to_string()),
                 rbum_rel_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 rbum_rel_app_id: Some(cxt.app_id.to_string()),
-                rbum_rel_tenant_id: Some(cxt.tenant_id.to_string()),
                 ..Default::default()
             },
             page_number,
@@ -328,14 +275,9 @@ impl<'a> RbumRelServ {
             .column(rbum_rel::Column::Id)
             .from(rbum_rel::Entity)
             .and_where(Expr::col(rbum_rel::Column::Tag).eq(check_req.tag.as_str()))
-            .and_where(Expr::col(rbum_rel::Column::FromRbumKindId).eq(check_req.from_rbum_kind_id.as_str()))
             .and_where(Expr::col(rbum_rel::Column::FromRbumItemId).eq(check_req.from_rbum_item_id.as_str()))
-            .and_where(Expr::col(rbum_rel::Column::ToRbumKindId).eq(check_req.to_rbum_kind_id.as_str()))
             .and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(check_req.to_rbum_item_id.as_str()))
-            .cond_where(Cond::any().add(Expr::col(rbum_rel::Column::RelAppId).eq(cxt.app_id.as_str())).add(Expr::col(rbum_rel::Column::ToOtherAppId).eq(cxt.app_id.as_str())))
-            .cond_where(
-                Cond::any().add(Expr::col(rbum_rel::Column::RelTenantId).eq(cxt.tenant_id.as_str())).add(Expr::col(rbum_rel::Column::ToOtherTenantId).eq(cxt.tenant_id.as_str())),
-            );
+            .cond_where(Cond::any().add(Expr::col(rbum_rel::Column::RelAppId).eq(cxt.app_id.as_str())).add(Expr::col(rbum_rel::Column::ToOtherAppId).eq(cxt.app_id.as_str())));
         let rbum_rel = db.get_dto::<IdResp>(&query).await?;
         if let Some(rbum_rel) = rbum_rel {
             let rbum_rel_id = rbum_rel.id;
@@ -419,9 +361,10 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
             .ok_or_else(|| TardisError::NotFound(format!("rbum_kind_attr not found: {}", add_req.rel_rbum_kind_attr_id.as_str())))?
             .name;
         Ok(rbum_rel_attr::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             is_from: Set(add_req.is_from),
             value: Set(add_req.value.to_string()),
-            name: Set(rbum_rel_attr_name.to_string()),
+            name: Set(rbum_rel_attr_name),
             rel_rbum_kind_attr_id: Set(add_req.rel_rbum_kind_attr_id.to_string()),
             rel_rbum_rel_id: Set(add_req.rel_rbum_rel_id.to_string()),
             ..Default::default()
@@ -447,7 +390,6 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumKindAttrId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelAppId),
-                (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelTenantId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdaterId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::CreateTime),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdateTime),
@@ -485,6 +427,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
 
     async fn package_add(add_req: &RbumRelEnvAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_rel_env::ActiveModel> {
         Ok(rbum_rel_env::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             kind: Set(add_req.kind.to_string()),
             value1: Set(add_req.value1.to_string()),
             value2: Set(add_req.value2.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -517,7 +460,6 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
                 (rbum_rel_env::Entity, rbum_rel_env::Column::Value2),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::RelRbumRelId),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::RelAppId),
-                (rbum_rel_env::Entity, rbum_rel_env::Column::RelTenantId),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::UpdaterId),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::CreateTime),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::UpdateTime),

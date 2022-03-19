@@ -6,6 +6,7 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::TardisFuns;
 
+use bios_basic::rbum::constants::RBUM_ITEM_NAME_DEFAULT_APP;
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
@@ -136,12 +137,9 @@ async fn test_rbum_rel() -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: "".to_string(),
             from_rbum_item_id: "".to_string(),
-            to_rbum_kind_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: "".to_string(),
             ext: None
         },
         &tx,
@@ -153,12 +151,9 @@ async fn test_rbum_rel() -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: kind_reldb_id.to_string(),
             from_rbum_item_id: "".to_string(),
-            to_rbum_kind_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: context.app_id.to_string(),
             ext: None
         },
         &tx,
@@ -170,12 +165,9 @@ async fn test_rbum_rel() -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: kind_reldb_id.to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
-            to_rbum_kind_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: context.app_id.to_string(),
             ext: None
         },
         &tx,
@@ -187,12 +179,9 @@ async fn test_rbum_rel() -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: kind_reldb_id.to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
-            to_rbum_kind_id: kind_account_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: context.app_id.to_string(),
             ext: None
         },
         &tx,
@@ -204,12 +193,9 @@ async fn test_rbum_rel() -> TardisResult<()> {
     let id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: kind_reldb_id.to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
-            to_rbum_kind_id: kind_account_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: context.app_id.to_string(),
             ext: None,
         },
         &tx,
@@ -221,12 +207,8 @@ async fn test_rbum_rel() -> TardisResult<()> {
     let rbum = RbumRelServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.tag, "bind");
-    assert_eq!(rbum.from_rbum_kind_name, "关系型数据库");
-    assert_eq!(rbum.from_rbum_kind_name, "关系型数据库");
-    assert_eq!(rbum.to_other_app_id, "");
-    assert_eq!(rbum.to_other_app_name, None);
-    assert_eq!(rbum.to_other_tenant_id, "");
-    assert_eq!(rbum.to_other_tenant_name, None);
+    assert_eq!(rbum.to_other_app_id, context.app_id);
+    assert_eq!(rbum.to_other_app_name, RBUM_ITEM_NAME_DEFAULT_APP);
 
     // Test Modify
     RbumRelServ::modify_rbum(
@@ -387,12 +369,9 @@ async fn test_rbum_rel_attr() -> TardisResult<()> {
     let rel_id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: kind_reldb_id.to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
-            to_rbum_kind_id: kind_account_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: context.app_id.to_string(),
             ext: None,
         },
         &tx,
@@ -571,12 +550,9 @@ async fn test_rbum_rel_env() -> TardisResult<()> {
     let rel_id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_kind_id: kind_reldb_id.to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
-            to_rbum_kind_id: kind_account_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_other_app_id: None,
-            to_other_tenant_id: None,
+            to_other_app_id: context.app_id.to_string(),
             ext: None,
         },
         &tx,
@@ -787,12 +763,9 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
         &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: "bind".to_string(),
-                from_rbum_kind_id: kind_reldb_id.to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
-                to_rbum_kind_id: kind_account_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
-                to_other_app_id: None,
-                to_other_tenant_id: None,
+                to_other_app_id: context.app_id.to_string(),
                 ext: None,
             },
             attrs: vec![RbumRelAttrAggAddReq {
@@ -817,8 +790,7 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_app_id, "");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_tenant_id, "");
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_app_id, context.app_id.to_string());
     assert_eq!(rbums.records.get(0).unwrap().rel.rel_app_id, context.app_id.as_str());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
@@ -833,8 +805,7 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_app_id, "");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_tenant_id, "");
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_app_id, context.app_id.to_string());
     assert_eq!(rbums.records.get(0).unwrap().rel.rel_app_id, context.app_id.as_str());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
@@ -848,9 +819,7 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "".to_string(),
-                from_rbum_kind_id: "".to_string(),
                 from_rbum_item_id: "".to_string(),
-                to_rbum_kind_id: "".to_string(),
                 to_rbum_item_id: "".to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default()
@@ -865,9 +834,7 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_kind_id: kind_reldb_id.to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
-                to_rbum_kind_id: kind_account_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default()
@@ -882,28 +849,9 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_kind_id: kind_reldb_id.to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
-                to_rbum_kind_id: kind_account_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "tidb".to_string()),]),
-                to_attrs: Default::default()
-            },
-            &tx,
-            &context
-        )
-        .await?
-    );
-
-    assert!(
-        !RbumRelServ::check_rel(
-            &RbumRelCheckReq {
-                tag: "bind".to_string(),
-                from_rbum_kind_id: kind_reldb_id.to_string(),
-                from_rbum_item_id: item_reldb_inst1_id.to_string(),
-                to_rbum_kind_id: "ssssss".to_string(),
-                to_rbum_item_id: item_account_a1_id.to_string(),
-                from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
                 to_attrs: Default::default()
             },
             &tx,
@@ -916,9 +864,7 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
         RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_kind_id: kind_reldb_id.to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
-                to_rbum_kind_id: kind_account_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
                 to_attrs: Default::default()
@@ -935,9 +881,7 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_kind_id: kind_reldb_id.to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
-                to_rbum_kind_id: kind_account_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
                 to_attrs: Default::default()
