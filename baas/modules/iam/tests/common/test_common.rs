@@ -129,7 +129,7 @@ async fn test_flow() -> BIOSResult<()> {
             kind: AccountIdentKind::Username,
             ak: "gudaoxuri".to_string(),
             sk: "123456".to_string(),
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -148,7 +148,7 @@ async fn test_flow() -> BIOSResult<()> {
             kind: AccountIdentKind::Username,
             ak: "gudaoxuri1".to_string(),
             sk: "123456".to_string(),
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -167,7 +167,7 @@ async fn test_flow() -> BIOSResult<()> {
             kind: AccountIdentKind::Username,
             ak: "gudaoxuri1".to_string(),
             sk: "39d*32fSd".to_string(),
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -189,7 +189,7 @@ async fn test_flow() -> BIOSResult<()> {
             ak: "gudaoxuri2".to_string(),
             sk: "123456".to_string(),
             cert_category: None,
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -206,7 +206,7 @@ async fn test_flow() -> BIOSResult<()> {
             ak: "gudaoxuri".to_string(),
             sk: "123456".to_string(),
             cert_category: None,
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -223,7 +223,7 @@ async fn test_flow() -> BIOSResult<()> {
             ak: "gudaoxuri".to_string(),
             sk: "83j#@$sS".to_string(),
             cert_category: None,
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -249,7 +249,7 @@ async fn test_flow() -> BIOSResult<()> {
             ak: "gudaoxuri".to_string(),
             sk: "83j#@$sS".to_string(),
             cert_category: None,
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;
@@ -362,7 +362,7 @@ async fn test_flow() -> BIOSResult<()> {
             ak: "gudaoxuri".to_string(),
             sk: "dfok&i34".to_string(),
             cert_category: None,
-            rel_app_id: ident_info.app_id.to_string(),
+            rel_app_code: ident_info.app_id.to_string(),
         })
         .to_request();
     let resp = call_service(&app, req).await;

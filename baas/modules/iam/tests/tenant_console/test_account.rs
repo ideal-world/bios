@@ -245,7 +245,7 @@ async fn test_account_app() -> BIOSResult<()> {
     let resp = call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let body = read_body_json::<BIOSResp<Vec<AccountAppDetailResp>>, AnyBody>(resp).await.body.unwrap();
-    assert_eq!(body[0].rel_app_id, "app1");
+    assert_eq!(body[0].rel_app_code, "app1");
     assert_eq!(body[0].rel_account_id, account_id);
     assert_eq!(body[0].create_user, "平台管理员");
     assert_eq!(body[0].update_user, "平台管理员");

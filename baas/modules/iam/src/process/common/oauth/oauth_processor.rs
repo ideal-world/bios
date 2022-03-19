@@ -49,7 +49,7 @@ pub async fn oauth_login(account_oauth_login_req: Json<AccountOAuthLoginReq>, re
                 .inner_join(IamTenant::Table, Expr::tbl(IamTenant::Table, IamTenant::Id).equals(IamApp::Table, IamApp::RelTenantId))
                 .and_where(Expr::tbl(IamApp::Table, IamApp::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .and_where(Expr::tbl(IamTenant::Table, IamTenant::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
-                .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_oauth_login_req.rel_app_id.as_str()))
+                .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_oauth_login_req.rel_app_code.as_str()))
                 .done(),
             None,
         )
@@ -57,7 +57,7 @@ pub async fn oauth_login(account_oauth_login_req: Json<AccountOAuthLoginReq>, re
     let context = BIOSContext {
         trace: Trace { ..context.trace },
         ident: IdentInfo {
-            app_id: account_oauth_login_req.rel_app_id.to_string(),
+            app_id: account_oauth_login_req.rel_app_code.to_string(),
             tenant_id: tenant_id["id"].as_str().unwrap().to_string(),
             ..context.ident
         },
@@ -65,7 +65,7 @@ pub async fn oauth_login(account_oauth_login_req: Json<AccountOAuthLoginReq>, re
     };
     log::info!(
         "Login : [{}] kind = {}, code = {}",
-        account_oauth_login_req.rel_app_id,
+        account_oauth_login_req.rel_app_code,
         account_oauth_login_req.kind.to_string().to_lowercase(),
         account_oauth_login_req.code
     );
@@ -105,7 +105,7 @@ pub async fn oauth_login(account_oauth_login_req: Json<AccountOAuthLoginReq>, re
                 ak: user_info.account_open_id,
                 sk: access_token,
                 cert_category: None,
-                rel_app_id: context.ident.app_id.to_string(),
+                rel_app_code: context.ident.app_id.to_string(),
             },
             &context,
         )
@@ -120,7 +120,7 @@ pub async fn oauth_login(account_oauth_login_req: Json<AccountOAuthLoginReq>, re
                 kind: account_oauth_login_req.kind.clone(),
                 ak: user_info.account_open_id,
                 sk: access_token,
-                rel_app_id: context.ident.app_id.to_string(),
+                rel_app_code: context.ident.app_id.to_string(),
             },
             &context,
         )

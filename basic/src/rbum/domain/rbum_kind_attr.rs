@@ -28,8 +28,8 @@ pub struct Model {
     pub action: String,
     pub rel_rbum_kind_id: String,
     // Basic
-    pub rel_app_id: String,
-    pub updater_id: String,
+    pub rel_app_code: String,
+    pub updater_code: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
@@ -39,9 +39,9 @@ pub struct Model {
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.rel_app_id = Set(cxt.app_id.to_string());
+            self.rel_app_code = Set(cxt.app_code.to_string());
         }
-        self.updater_id = Set(cxt.account_id.to_string());
+        self.updater_code = Set(cxt.account_code.to_string());
     }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
@@ -68,8 +68,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Action).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKindId).not_null().string())
             // Basic
-            .col(ColumnDef::new(Column::RelAppId).not_null().string())
-            .col(ColumnDef::new(Column::UpdaterId).not_null().string())
+            .col(ColumnDef::new(Column::RelAppCode).not_null().string())
+            .col(ColumnDef::new(Column::UpdaterCode).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope

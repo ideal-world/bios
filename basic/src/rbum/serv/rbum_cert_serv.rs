@@ -10,12 +10,13 @@ use tardis::db::sea_query::*;
 use tardis::regex::Regex;
 use tardis::TardisFuns;
 
-use crate::rbum::constants::RBUM_ITEM_TENANT_ID_LEN;
+use crate::rbum::constants::RBUM_CERT_CONF_ID_LEN;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
 use crate::rbum::enumeration::RbumCertStatusKind;
+use crate::rbum::get_tenant_code_from_app_code;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -31,7 +32,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
 
     async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         Ok(rbum_cert_conf::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
+            id: Set(TardisFuns::field.nanoid_len(RBUM_CERT_CONF_ID_LEN)),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             ak_note: Set(add_req.ak_note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -116,8 +117,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::ExpireSec),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CoexistNum),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelAppId),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdaterId),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelAppCode),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdaterCode),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CreateTime),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdateTime),
             ])
@@ -157,7 +158,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 
     async fn package_add(add_req: &RbumCertAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         Ok(rbum_cert::ActiveModel {
-            id: Set(TardisFuns::field.nanoid()),
+            id: Set(format!("{}{}", add_req.rel_rbum_cert_conf_id, TardisFuns::field.nanoid())),
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -209,8 +210,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 (rbum_cert::Entity, rbum_cert::Column::Status),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumItemId),
-                (rbum_cert::Entity, rbum_cert::Column::RelAppId),
-                (rbum_cert::Entity, rbum_cert::Column::UpdaterId),
+                (rbum_cert::Entity, rbum_cert::Column::RelAppCode),
+                (rbum_cert::Entity, rbum_cert::Column::UpdaterCode),
                 (rbum_cert::Entity, rbum_cert::Column::CreateTime),
                 (rbum_cert::Entity, rbum_cert::Column::UpdateTime),
             ])
@@ -247,7 +248,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         RbumCertServ::check_cert_conf_constraint_by_add(add_req, &rbum_cert_conf, db, cxt).await?;
         if rbum_cert_conf.sk_encrypted {
             if let Some(sk) = &add_req.sk {
-                let sk = Self::encrypt_sk(sk.0.as_str(), add_req.ak.0.as_str(), &cxt.tenant_id)?;
+                let sk = Self::encrypt_sk(sk.0.as_str(), add_req.ak.0.as_str(), &cxt.tenant_code)?;
                 add_req.sk = Some(TrimString(sk));
             }
         }
@@ -270,7 +271,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 impl<'a> RbumCertServ {
     // TODO find cert
 
-    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, tenant_id: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<String> {
+    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, tenant_code: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<String> {
         #[derive(Debug, FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
@@ -289,7 +290,7 @@ impl<'a> RbumCertServ {
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
-            .and_where(Expr::col(rbum_cert::Column::RelAppId).like(format!("{}%", tenant_id).as_str()))
+            .and_where(Expr::col(rbum_cert::Column::RelAppCode).like(format!("{}%", tenant_code).as_str()))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_string()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
@@ -302,7 +303,7 @@ impl<'a> RbumCertServ {
                 .await?
                 .ok_or_else(|| TardisError::NotFound("cert conf not found".to_string()))?;
             let sk = if sk_encrypted_resp.sk_encrypted {
-                Self::encrypt_sk(sk, ak, tenant_id)?
+                Self::encrypt_sk(sk, ak, tenant_code)?
             } else {
                 sk.to_string()
             };
@@ -310,15 +311,15 @@ impl<'a> RbumCertServ {
                 Ok(rbum_cert.id)
             } else {
                 tardis::log::warn!(
-                    "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, tenant_id {}",
+                    "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, tenant_code {}",
                     ak,
                     rbum_cert_conf_id,
-                    tenant_id
+                    tenant_code
                 );
                 Err(TardisError::Unauthorized("validation error".to_string()))
             }
         } else {
-            tardis::log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, tenant_id);
+            tardis::log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, tenant_code);
             Err(TardisError::Unauthorized("validation error".to_string()))
         }
     }
@@ -349,7 +350,7 @@ impl<'a> RbumCertServ {
             return Err(TardisError::BadRequest(format!("sk {} is not match sk rule", new_sk)));
         }
         let new_sk = if rbum_cert_conf.sk_encrypted {
-            Self::encrypt_sk(new_sk, rbum_cert.ak.as_str(), &rbum_cert.rel_app_id[..RBUM_ITEM_TENANT_ID_LEN])?
+            Self::encrypt_sk(new_sk, rbum_cert.ak.as_str(), get_tenant_code_from_app_code(&rbum_cert.rel_app_code).as_str())?
         } else {
             new_sk.to_string()
         };
@@ -369,7 +370,7 @@ impl<'a> RbumCertServ {
         let rbum_cert_conf = RbumCertConfServ::get_rbum(&rbum_cert.rel_rbum_cert_conf_id, &RbumBasicFilterReq::default(), db, cxt).await?;
         let stored_sk = Self::show_sk(id, filter, db, cxt).await?;
         let original_sk = if rbum_cert_conf.sk_encrypted {
-            Self::encrypt_sk(original_sk, rbum_cert.ak.as_str(), &rbum_cert.rel_app_id[..RBUM_ITEM_TENANT_ID_LEN])?
+            Self::encrypt_sk(original_sk, rbum_cert.ak.as_str(), get_tenant_code_from_app_code(&rbum_cert.rel_app_code).as_str())?
         } else {
             original_sk.to_string()
         };
@@ -380,7 +381,7 @@ impl<'a> RbumCertServ {
             return Err(TardisError::BadRequest(format!("sk {} is not match sk rule", new_sk)));
         }
         let new_sk = if rbum_cert_conf.sk_encrypted {
-            Self::encrypt_sk(new_sk, rbum_cert.ak.as_str(), &rbum_cert.rel_app_id[..RBUM_ITEM_TENANT_ID_LEN])?
+            Self::encrypt_sk(new_sk, rbum_cert.ak.as_str(), get_tenant_code_from_app_code(&rbum_cert.rel_app_code).as_str())?
         } else {
             new_sk.to_string()
         };
@@ -421,7 +422,7 @@ impl<'a> RbumCertServ {
                     .from(rbum_cert::Entity)
                     .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.as_str()))
                     .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
-                    .and_where(Expr::col(rbum_cert::Column::RelAppId).like(format!("{}%", cxt.tenant_id).as_str())),
+                    .and_where(Expr::col(rbum_cert::Column::RelAppCode).like(format!("{}%", cxt.tenant_code).as_str())),
             )
             .await?
             > 0

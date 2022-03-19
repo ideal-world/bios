@@ -19,7 +19,7 @@ pub struct RbumBasicFilterReq {
     pub rbum_rel_is_from: Option<bool>,
     pub rbum_rel_rbum_kind_id: Option<String>,
     pub rbum_rel_rbum_item_id: Option<String>,
-    pub rbum_rel_app_id: Option<String>,
+    pub rbum_rel_app_code: Option<String>,
     pub rbum_rel_id: Option<String>,
 }
 
@@ -38,8 +38,8 @@ impl Default for RbumBasicFilterReq {
             rbum_rel_is_from: None,
             rbum_rel_rbum_kind_id: None,
             rbum_rel_rbum_item_id: None,
-            rbum_rel_app_id: None,
-            rbum_rel_id: None
+            rbum_rel_app_code: None,
+            rbum_rel_id: None,
         }
     }
 }

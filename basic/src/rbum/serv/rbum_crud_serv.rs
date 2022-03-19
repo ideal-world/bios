@@ -20,8 +20,8 @@ lazy_static! {
     static ref ID_FIELD: Alias = Alias::new("id");
     static ref CODE_FIELD: Alias = Alias::new("code");
     static ref NAME_FIELD: Alias = Alias::new("name");
-    static ref UPDATER_ID_FIELD: Alias = Alias::new("updater_id");
-    static ref REL_APP_ID_FIELD: Alias = Alias::new("rel_app_id");
+    static ref UPDATER_CODE_FIELD: Alias = Alias::new("updater_code");
+    static ref REL_APP_CODE_FIELD: Alias = Alias::new("rel_app_code");
     static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
     static ref SCOPE_KIND_FIELD: Alias = Alias::new("scope_kind");
     static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_kind_id");
@@ -40,10 +40,10 @@ pub trait RbumCrudQueryPackage {
 impl RbumCrudQueryPackage for SelectStatement {
     fn query_with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> &mut Self {
         if filter.rel_cxt_app {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).eq(cxt.app_code.as_str()));
         }
         if filter.rel_cxt_updater {
-            self.and_where(Expr::tbl(Alias::new(table_name), UPDATER_ID_FIELD.clone()).eq(cxt.account_id.as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), UPDATER_CODE_FIELD.clone()).eq(cxt.account_code.as_str()));
         }
         if let Some(scope_kind) = &filter.scope_kind {
             self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(scope_kind.to_string()));
@@ -73,13 +73,13 @@ impl RbumCrudQueryPackage for SelectStatement {
             JoinType::InnerJoin,
             rbum_item::Entity,
             REL_APP_TABLE.clone(),
-            Expr::tbl(REL_APP_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), REL_APP_ID_FIELD.clone()),
+            Expr::tbl(REL_APP_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), REL_APP_CODE_FIELD.clone()),
         )
         .join_as(
             JoinType::InnerJoin,
             rbum_item::Entity,
             UPDATER_TABLE.clone(),
-            Expr::tbl(UPDATER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), UPDATER_ID_FIELD.clone()),
+            Expr::tbl(UPDATER_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), UPDATER_CODE_FIELD.clone()),
         );
         self
     }
@@ -91,12 +91,12 @@ impl RbumCrudQueryPackage for SelectStatement {
                 .add(
                     Cond::all()
                         .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Tenant.to_string()))
-                        .add(Expr::tbl(Alias::new(table_name), REL_APP_ID_FIELD.clone()).like(format!("{}%", cxt.tenant_id).as_str())),
+                        .add(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).like(format!("{}%", cxt.tenant_code).as_str())),
                 )
                 .add(
                     Cond::all()
                         .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::App.to_string()))
-                        .add(Expr::tbl(Alias::new(table_name), REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str())),
+                        .add(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).eq(cxt.app_code.as_str())),
                 ),
         );
         self
@@ -124,7 +124,7 @@ where
             .column(ID_FIELD.clone())
             .from(Alias::new(table_name))
             .and_where(Expr::col(ID_FIELD.clone()).eq(id))
-            .and_where(Expr::col(REL_APP_ID_FIELD.clone()).eq(cxt.app_id.as_str()));
+            .and_where(Expr::col(REL_APP_CODE_FIELD.clone()).eq(cxt.app_code.as_str()));
         query
     }
 
@@ -225,7 +225,7 @@ where
     async fn delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         Self::before_delete_rbum(id, db, cxt).await?;
         let select = Self::package_delete(id, db, cxt).await?;
-        let delete_records = db.soft_delete(select, &cxt.account_id).await?;
+        let delete_records = db.soft_delete(select, &cxt.account_code).await?;
         Self::after_delete_rbum(id, db, cxt).await?;
         Ok(delete_records)
     }

@@ -25,7 +25,7 @@ pub async fn modify_iam_tenant<'a>(id: &str, iam_tenant_modify_req: &IamCsTenant
 
 pub async fn delete_iam_tenant<'a>(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
     rbum_item_serv::delete_rbum_item(id, db, cxt).await?;
-    db.soft_delete(iam_tenant::Entity::find().filter(iam_tenant::Column::Id.eq(id)), &cxt.account_id).await
+    db.soft_delete(iam_tenant::Entity::find().filter(iam_tenant::Column::Id.eq(id)), &cxt.account_code).await
 }
 
 pub async fn peek_iam_tenant<'a>(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamCsTenantSummaryResp> {

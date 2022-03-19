@@ -29,9 +29,9 @@ pub struct RbumSetItemDetailResp {
     pub rel_rbum_item_id: String,
     pub rel_rbum_item_name: String,
 
-    pub rel_app_id: String,
+    pub rel_app_code: String,
     pub rel_app_name: String,
-    pub updater_id: String,
+    pub updater_code: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
