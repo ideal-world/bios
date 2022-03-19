@@ -47,13 +47,13 @@ create table if not exists iam_account_app
     id             varchar(64)
     primary key,
     rel_account_id varchar(64)                         not null comment '关联账号Id',
-    rel_app_id     varchar(64)                         not null comment '关联应用Id',
+    rel_app_code     varchar(64)                         not null comment '关联应用Id',
     create_time    timestamp default CURRENT_TIMESTAMP null comment '创建时间',
     create_user    varchar(64)                         not null comment '创建者Id',
     update_time    timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '最后一次修改时间',
     update_user    varchar(64)                         not null comment '最后一次修改者Id',
     constraint u_account_app
-    unique (rel_app_id, rel_account_id)
+    unique (rel_app_code, rel_account_id)
     )
     comment '账号应用关联';
 

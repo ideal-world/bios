@@ -445,18 +445,19 @@ async fn test_rbum_cert() -> TardisResult<()> {
     assert!(RbumCertServ::validate("11", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_code, &tx).await.is_err());
+    tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(
-        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await?,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.tenant_code, &tx).await?,
         cert_gudaoxuri_id.to_string()
     );
     assert_eq!(
-        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.tenant_id, &tx).await?,
+        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.tenant_code, &tx).await?,
         cert_root_id.to_string()
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
     // Expire
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_id, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_code, &tx).await.is_err());
 
     // Test Delete
     RbumCertServ::delete_rbum(&cert_gudaoxuri_id, &tx, &context).await?;

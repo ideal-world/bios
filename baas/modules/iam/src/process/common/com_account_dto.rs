@@ -59,7 +59,7 @@ pub struct AccountLoginReq {
     pub cert_category: Option<String>,
     // 关联应用Id
     #[validate(length(max = 32))]
-    pub rel_app_id: String,
+    pub rel_app_code: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -71,7 +71,7 @@ pub struct AccountOAuthLoginReq {
     pub code: String,
     // 关联应用Id
     #[validate(length(max = 32))]
-    pub rel_app_id: String,
+    pub rel_app_code: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -95,7 +95,7 @@ pub struct AccountRegisterReq {
     pub sk: String,
     // 关联应用Id
     #[validate(length(max = 32))]
-    pub rel_app_id: String,
+    pub rel_app_code: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]

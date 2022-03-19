@@ -50,7 +50,7 @@ pub struct AppIdentDetailResp {
     pub valid_time: i64,
     // 所属应用Id
     #[validate(length(max = 32))]
-    pub rel_app_id: String,
+    pub rel_app_code: String,
     // 所属租户Id
     #[validate(length(max = 32))]
     pub rel_tenant_id: String,

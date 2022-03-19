@@ -201,7 +201,7 @@ pub struct AccountAppDetailResp {
     pub rel_account_id: String,
     // 关联应用Id
     #[validate(length(max = 32))]
-    pub rel_app_id: String,
+    pub rel_app_code: String,
     #[validate(length(max = 255))]
     pub create_user: String,
     #[validate(length(max = 255))]

@@ -470,7 +470,7 @@ pub async fn register_account(account_register_req: &AccountRegisterReq, context
                 .column((IamTenant::Table, IamTenant::Id))
                 .from(IamApp::Table)
                 .inner_join(IamTenant::Table, Expr::tbl(IamTenant::Table, IamTenant::Id).equals(IamApp::Table, IamApp::RelTenantId))
-                .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_register_req.rel_app_id.as_str()))
+                .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_register_req.rel_app_code.as_str()))
                 .and_where(Expr::tbl(IamApp::Table, IamApp::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .and_where(Expr::tbl(IamTenant::Table, IamTenant::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .done(),
@@ -488,7 +488,7 @@ pub async fn register_account(account_register_req: &AccountRegisterReq, context
         trace: Trace { ..context.trace.clone() },
         ident: IdentInfo {
             account_id,
-            app_id: account_register_req.rel_app_id.to_string(),
+            app_id: account_register_req.rel_app_code.to_string(),
             tenant_id: tenant_id.to_string(),
             ..context.ident.clone()
         },
@@ -621,7 +621,7 @@ pub async fn login_normal(account_login_req: Json<AccountLoginReq>, req: HttpReq
 pub async fn login(account_login_req: &AccountLoginReq, context: &BIOSContext) -> BIOSResult<IdentInfo> {
     log::info!(
         "Login : [{}] kind = {}, ak = {}",
-        account_login_req.rel_app_id,
+        account_login_req.rel_app_code,
         account_login_req.kind.to_string().to_lowercase(),
         account_login_req.ak
     );
@@ -653,7 +653,7 @@ pub async fn login(account_login_req: &AccountLoginReq, context: &BIOSContext) -
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::Ak).eq(account_login_req.ak.as_str()))
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::ValidStartTime).lte(now))
                 .and_where(Expr::tbl(IamAccountIdent::Table, IamAccountIdent::ValidEndTime).gte(now))
-                .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_login_req.rel_app_id.as_str()))
+                .and_where(Expr::tbl(IamApp::Table, IamApp::Id).eq(account_login_req.rel_app_code.as_str()))
                 .and_where(Expr::tbl(IamTenantCert::Table, IamTenantCert::Category).eq(account_login_req.cert_category.as_deref().unwrap_or_default()))
                 .and_where(Expr::tbl(IamAccount::Table, IamAccount::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
                 .and_where(Expr::tbl(IamApp::Table, IamApp::Status).eq(CommonStatus::Enabled.to_string().to_lowercase()))
@@ -665,7 +665,7 @@ pub async fn login(account_login_req: &AccountLoginReq, context: &BIOSContext) -
     if account_info.is_none() {
         log::warn!(
             "Login Fail: [{}] kind = {}, ak = {} doesn't exist or has expired",
-            account_login_req.rel_app_id,
+            account_login_req.rel_app_code,
             account_login_req.kind.to_string().to_lowercase(),
             account_login_req.ak
         );

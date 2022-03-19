@@ -17,8 +17,8 @@ pub struct Model {
     pub sort: i32,
     pub ext_table_name: String,
     // Basic
-    pub rel_app_id: String,
-    pub updater_id: String,
+    pub rel_app_code: String,
+    pub updater_code: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
@@ -28,9 +28,9 @@ pub struct Model {
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.rel_app_id = Set(cxt.app_id.to_string());
+            self.rel_app_code = Set(cxt.app_code.to_string());
         }
-        self.updater_id = Set(cxt.account_id.to_string());
+        self.updater_code = Set(cxt.account_code.to_string());
     }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
@@ -46,8 +46,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Sort).not_null().integer())
             .col(ColumnDef::new(Column::ExtTableName).not_null().string())
             // Basic
-            .col(ColumnDef::new(Column::RelAppId).not_null().string())
-            .col(ColumnDef::new(Column::UpdaterId).not_null().string())
+            .col(ColumnDef::new(Column::RelAppCode).not_null().string())
+            .col(ColumnDef::new(Column::UpdaterCode).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
@@ -57,9 +57,9 @@ impl TardisActiveModel for ActiveModel {
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelAppId.to_string())).table(Entity).col(Column::RelAppId).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelAppCode.to_string())).table(Entity).col(Column::RelAppCode).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UriScheme.to_string())).table(Entity).col(Column::UriScheme).unique().to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterId.to_string())).table(Entity).col(Column::UpdaterId).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterCode.to_string())).table(Entity).col(Column::UpdaterCode).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Name.to_string())).table(Entity).col(Column::Name).to_owned(),
         ]
