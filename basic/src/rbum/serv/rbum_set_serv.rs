@@ -8,6 +8,7 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
+use crate::rbum::constants::RBUM_REL_CATE_SYS_CODE_NODE_LEN;
 use crate::rbum::domain::{rbum_item, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateSummaryWithPidResp};
@@ -18,12 +19,8 @@ use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage}
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 
 pub struct RbumSetServ;
-
 pub struct RbumSetCateServ;
-
 pub struct RbumSetItemServ;
-
-const SYS_CODE_NODE_LEN: usize = 4;
 
 #[async_trait]
 impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, RbumSetSummaryResp, RbumSetDetailResp> for RbumSetServ {
@@ -33,6 +30,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 
     async fn package_add(add_req: &RbumSetAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
         Ok(rbum_set::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -80,7 +78,6 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 (rbum_set::Entity, rbum_set::Column::Sort),
                 (rbum_set::Entity, rbum_set::Column::Tags),
                 (rbum_set::Entity, rbum_set::Column::RelAppId),
-                (rbum_set::Entity, rbum_set::Column::RelTenantId),
                 (rbum_set::Entity, rbum_set::Column::UpdaterId),
                 (rbum_set::Entity, rbum_set::Column::CreateTime),
                 (rbum_set::Entity, rbum_set::Column::UpdateTime),
@@ -114,7 +111,7 @@ impl<'a> RbumSetServ {
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_kind: r.scope_kind.to_string(),
-                pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - SYS_CODE_NODE_LEN]).map(|i| i.id.to_string()),
+                pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - RBUM_REL_CATE_SYS_CODE_NODE_LEN]).map(|i| i.id.to_string()),
             })
             .collect())
     }
@@ -158,7 +155,6 @@ impl<'a> RbumSetServ {
                 (rbum_set_cate::Column::Name),
                 (rbum_set_cate::Column::Sort),
                 (rbum_set_cate::Column::RelAppId),
-                (rbum_set_cate::Column::RelTenantId),
                 (rbum_set_cate::Column::UpdaterId),
                 (rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Column::UpdateTime),
@@ -172,9 +168,9 @@ impl<'a> RbumSetServ {
                 Self::check_scope(parent_set_cate_id, RbumSetCateServ::get_table_name(), db, cxt).await?;
                 let parent_sys_code = RbumSetCateServ::get_sys_code(parent_set_cate_id, db, cxt).await?;
                 query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
-                query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + SYS_CODE_NODE_LEN) as i32));
+                query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + RBUM_REL_CATE_SYS_CODE_NODE_LEN) as i32));
             } else {
-                query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(SYS_CODE_NODE_LEN as i32));
+                query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(RBUM_REL_CATE_SYS_CODE_NODE_LEN as i32));
             }
             query.order_by(rbum_set_cate::Column::Sort, Order::Asc);
         }
@@ -198,6 +194,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             Self::package_sys_code(&add_req.rel_rbum_set_id, None, false, db, cxt).await?
         };
         Ok(rbum_set_cate::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             sys_code: Set(sys_code),
             bus_code: Set(add_req.bus_code.to_string()),
             name: Set(add_req.name.to_string()),
@@ -237,7 +234,6 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Name),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Sort),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::RelAppId),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::RelTenantId),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::UpdaterId),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::UpdateTime),
@@ -274,7 +270,7 @@ impl<'a> RbumSetCateServ {
             if is_next {
                 Self::get_max_sys_code_by_level(rbum_set_id, Some(&rel_sys_code), db, cxt).await
             } else {
-                let parent_sys_code = rel_sys_code[..rel_sys_code.len() - SYS_CODE_NODE_LEN].to_string();
+                let parent_sys_code = rel_sys_code[..rel_sys_code.len() - RBUM_REL_CATE_SYS_CODE_NODE_LEN].to_string();
                 Self::get_max_sys_code_by_level(rbum_set_id, Some(&parent_sys_code), db, cxt).await
             }
         } else {
@@ -288,18 +284,18 @@ impl<'a> RbumSetCateServ {
 
         if let Some(parent_sys_code) = parent_sys_code {
             query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
-            query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + SYS_CODE_NODE_LEN) as i32));
+            query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + RBUM_REL_CATE_SYS_CODE_NODE_LEN) as i32));
         } else {
             // fetch max code in level 1
-            query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(SYS_CODE_NODE_LEN as i32));
+            query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(RBUM_REL_CATE_SYS_CODE_NODE_LEN as i32));
         }
         query.order_by(rbum_set_cate::Column::SysCode, Order::Desc);
         let max_sys_code = db.get_dto::<SysCodeResp>(&query).await?.map(|r| r.sys_code);
         if let Some(max_sys_code) = max_sys_code {
-            if max_sys_code.len() != SYS_CODE_NODE_LEN {
+            if max_sys_code.len() != RBUM_REL_CATE_SYS_CODE_NODE_LEN {
                 // if level N (N!-1) not empty
-                let curr_level_sys_code = max_sys_code[max_sys_code.len() - SYS_CODE_NODE_LEN..].to_string();
-                let parent_sys_code = max_sys_code[..max_sys_code.len() - SYS_CODE_NODE_LEN].to_string();
+                let curr_level_sys_code = max_sys_code[max_sys_code.len() - RBUM_REL_CATE_SYS_CODE_NODE_LEN..].to_string();
+                let parent_sys_code = max_sys_code[..max_sys_code.len() - RBUM_REL_CATE_SYS_CODE_NODE_LEN].to_string();
                 let curr_level_sys_code =
                     TardisFuns::field.incr_by_base36(&curr_level_sys_code).ok_or_else(|| TardisError::BadRequest("the current number of nodes is saturated".to_string()))?;
                 Ok(format!("{}{}", parent_sys_code, curr_level_sys_code))
@@ -309,10 +305,10 @@ impl<'a> RbumSetCateServ {
             }
         } else if let Some(parent_sys_code) = parent_sys_code {
             // if level N (N!=1) is empty
-            Ok(format!("{}{}", parent_sys_code, String::from_utf8(vec![b'a'; SYS_CODE_NODE_LEN])?))
+            Ok(format!("{}{}", parent_sys_code, String::from_utf8(vec![b'a'; RBUM_REL_CATE_SYS_CODE_NODE_LEN])?))
         } else {
             // if level 1 is empty
-            Ok(String::from_utf8(vec![b'a'; SYS_CODE_NODE_LEN])?)
+            Ok(String::from_utf8(vec![b'a'; RBUM_REL_CATE_SYS_CODE_NODE_LEN])?)
         }
     }
 }
@@ -340,6 +336,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
     async fn package_add(add_req: &RbumSetItemAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
         let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), db, cxt).await?;
         Ok(rbum_set_item::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
             rel_rbum_set_cate_code: Set(rel_sys_code),
             rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
@@ -366,7 +363,6 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 (rbum_set_item::Entity, rbum_set_item::Column::Sort),
                 (rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
                 (rbum_set_item::Entity, rbum_set_item::Column::RelAppId),
-                (rbum_set_item::Entity, rbum_set_item::Column::RelTenantId),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdaterId),
                 (rbum_set_item::Entity, rbum_set_item::Column::CreateTime),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdateTime),

@@ -28,8 +28,6 @@ pub struct RbumCertAddReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub ak: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
@@ -69,8 +67,6 @@ pub struct RbumCertDetailResp {
 
     pub rel_app_id: String,
     pub rel_app_name: String,
-    pub rel_tenant_id: String,
-    pub rel_tenant_name: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

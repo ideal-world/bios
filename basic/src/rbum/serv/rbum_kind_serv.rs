@@ -4,7 +4,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 
+use crate::rbum::constants::RBUM_KIND_ID_LEN;
 use crate::rbum::domain::{rbum_kind, rbum_kind_attr};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
@@ -23,6 +25,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
 
     async fn package_add(add_req: &RbumKindAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_kind::ActiveModel> {
         Ok(rbum_kind::ActiveModel {
+            id: Set(TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN)),
             uri_scheme: Set(add_req.uri_scheme.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -74,7 +77,6 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             (rbum_kind::Entity, rbum_kind::Column::Sort),
             (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
             (rbum_kind::Entity, rbum_kind::Column::RelAppId),
-            (rbum_kind::Entity, rbum_kind::Column::RelTenantId),
             (rbum_kind::Entity, rbum_kind::Column::UpdaterId),
             (rbum_kind::Entity, rbum_kind::Column::CreateTime),
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
@@ -101,6 +103,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
 
     async fn package_add(add_req: &RbumKindAttrAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
         Ok(rbum_kind_attr::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
             label: Set(add_req.label.to_string()),
             data_type_kind: Set(add_req.data_type_kind.to_string()),
@@ -205,7 +208,6 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Action),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelAppId),
-                (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelTenantId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdaterId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::CreateTime),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdateTime),

@@ -4,7 +4,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 
+use crate::rbum::constants::RBUM_DOMAIN_ID_LEN;
 use crate::rbum::domain::rbum_domain;
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
@@ -21,6 +23,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
 
     async fn package_add(add_req: &RbumDomainAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
         Ok(rbum_domain::ActiveModel {
+            id: Set(TardisFuns::field.nanoid_len(RBUM_DOMAIN_ID_LEN)),
             uri_authority: Set(add_req.uri_authority.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -67,7 +70,6 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             (rbum_domain::Entity, rbum_domain::Column::Icon),
             (rbum_domain::Entity, rbum_domain::Column::Sort),
             (rbum_domain::Entity, rbum_domain::Column::RelAppId),
-            (rbum_domain::Entity, rbum_domain::Column::RelTenantId),
             (rbum_domain::Entity, rbum_domain::Column::UpdaterId),
             (rbum_domain::Entity, rbum_domain::Column::CreateTime),
             (rbum_domain::Entity, rbum_domain::Column::UpdateTime),

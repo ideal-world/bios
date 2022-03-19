@@ -33,8 +33,6 @@ pub struct RbumRelAttrDetailResp {
 
     pub rel_app_id: String,
     pub rel_app_name: String,
-    pub rel_tenant_id: String,
-    pub rel_tenant_name: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
