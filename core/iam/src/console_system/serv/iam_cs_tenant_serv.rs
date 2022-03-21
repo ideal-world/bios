@@ -1,102 +1,89 @@
+use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
-use tardis::web::web_resp::TardisPage;
-use tardis::TardisFuns;
+use tardis::db::sea_query::SelectStatement;
 
-use bios_basic::rbum::constants::RBUM_KIND_ID_IAM_TENANT;
-use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv;
+use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::enumeration::RbumScopeKind;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantDetailResp, IamCsTenantModifyReq, IamCsTenantSummaryResp};
+use crate::constants;
 use crate::domain::iam_tenant;
+use crate::domain::iam_tenant::ActiveModel;
 
-pub async fn add_iam_tenant<'a>(iam_tenant_add_req: &IamCsTenantAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
-    let id = rbum_item_serv::add_rbum_item(&TardisFuns::field.uuid_str(), RBUM_KIND_ID_IAM_TENANT, &iam_tenant_add_req.basic, None, db, cxt).await?;
-    let iam_tenant_id = db.insert_one(iam_tenant::ActiveModel { id: Set(id) }, cxt).await?.last_insert_id;
-    Ok(iam_tenant_id)
-}
+pub struct IamCsTenantServ;
 
-pub async fn modify_iam_tenant<'a>(id: &str, iam_tenant_modify_req: &IamCsTenantModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
-    rbum_item_serv::modify_rbum_item(id, &iam_tenant_modify_req.basic, db, cxt).await?;
-    Ok(())
-}
+#[async_trait]
+impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamCsTenantAddReq, IamCsTenantModifyReq, IamCsTenantSummaryResp, IamCsTenantDetailResp> for IamCsTenantServ {
+    fn get_ext_table_name() -> &'static str {
+        iam_tenant::Entity.table_name()
+    }
 
-pub async fn delete_iam_tenant<'a>(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-    rbum_item_serv::delete_rbum_item(id, db, cxt).await?;
-    db.soft_delete(iam_tenant::Entity::find().filter(iam_tenant::Column::Id.eq(id)), &cxt.account_code).await
-}
+    fn get_rbum_kind_id() -> String {
+        constants::get_rbum_basic_info().rbum_tenant_kind_id.clone()
+    }
 
-pub async fn peek_iam_tenant<'a>(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamCsTenantSummaryResp> {
-    let basic = rbum_item_serv::peek_rbum_item(
-        id,
-        &RbumBasicFilterReq {
-            rel_cxt_app: false,
-            rel_cxt_tenant: false,
-            rel_cxt_creator: false,
-            rel_cxt_updater: false,
+    fn get_rbum_domain_id() -> String {
+        constants::get_rbum_basic_info().rbum_iam_domain_id.clone()
+    }
+
+    async fn package_item_add(add_req: &IamCsTenantAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
+        Ok(RbumItemAddReq {
+            code: None,
+            uri_path: None,
+            name: TrimString(add_req.name.0.clone()),
+            icon: add_req.icon.clone(),
+            sort: add_req.sort,
+            scope_kind: Some(RbumScopeKind::Tenant),
+            disabled: add_req.disabled,
+            rel_rbum_kind_id: "".to_string(),
+            rel_rbum_domain_id: "".to_string(),
+        })
+    }
+
+    async fn package_ext_add(id: &str, add_req: &IamCsTenantAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<ActiveModel> {
+        Ok(iam_tenant::ActiveModel {
+            id: Set(id.to_string()),
+            contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
+        })
+    }
+
+    async fn package_item_modify(_: &str, modify_req: &IamCsTenantModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.disabled.is_none() {
+            return Ok(None);
+        }
+        Ok(Some(RbumItemModifyReq {
+            code: None,
+            uri_path: None,
+            name: modify_req.name.clone(),
+            icon: modify_req.icon.clone(),
+            sort: modify_req.sort,
             scope_kind: None,
-            kind_id: Some(RBUM_KIND_ID_IAM_TENANT.to_string()),
-            domain_id: None,
-            disabled: false,
-        },
-        db,
-        cxt,
-    )
-    .await?;
-    Ok(IamCsTenantSummaryResp { basic })
-}
+            disabled: modify_req.disabled,
+        }))
+    }
 
-pub async fn get_iam_tenant<'a>(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamCsTenantDetailResp> {
-    let basic = rbum_item_serv::get_rbum_item(
-        id,
-        &RbumBasicFilterReq {
-            rel_cxt_app: false,
-            rel_cxt_tenant: false,
-            rel_cxt_creator: false,
-            rel_cxt_updater: false,
-            scope_kind: None,
-            kind_id: Some(RBUM_KIND_ID_IAM_TENANT.to_string()),
-            domain_id: None,
-            disabled: false,
-        },
-        db,
-        cxt,
-    )
-    .await?;
-    Ok(IamCsTenantDetailResp { basic })
-}
+    async fn package_ext_modify(id: &str, modify_req: &IamCsTenantModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<ActiveModel>> {
+        if modify_req.contact_phone.is_none() {
+            return Ok(None);
+        }
+        let mut iam_tenant = iam_tenant::ActiveModel {
+            id: Set(id.to_string()),
+            ..Default::default()
+        };
+        if let Some(contact_phone) = &modify_req.contact_phone {
+            iam_tenant.contact_phone = Set(contact_phone.to_string());
+        }
+        Ok(Some(iam_tenant))
+    }
 
-pub async fn find_iam_tenants<'a>(
-    page_number: u64,
-    page_size: u64,
-    desc_sort_by_update: Option<bool>,
-    db: &TardisRelDBlConnection<'a>,
-    cxt: &TardisContext,
-) -> TardisResult<TardisPage<IamCsTenantDetailResp>> {
-    let basic = rbum_item_serv::find_rbum_items(
-        &RbumBasicFilterReq {
-            rel_cxt_app: false,
-            rel_cxt_tenant: false,
-            rel_cxt_creator: false,
-            rel_cxt_updater: false,
-            scope_kind: None,
-            kind_id: Some(RBUM_KIND_ID_IAM_TENANT.to_string()),
-            domain_id: None,
-            disabled: false,
-        },
-        page_number,
-        page_size,
-        desc_sort_by_update,
-        db,
-        cxt,
-    )
-    .await?;
-    Ok(TardisPage {
-        page_number: basic.page_number,
-        page_size: basic.page_size,
-        total_size: basic.total_size,
-        records: basic.records.into_iter().map(|r| IamCsTenantDetailResp { basic: r }).collect(),
-    })
+    async fn package_item_query(query: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+        query.column((iam_tenant::Entity, iam_tenant::Column::ContactPhone));
+        Ok(())
+    }
 }

@@ -98,8 +98,8 @@ async fn test_rbum_rel() -> TardisResult<()> {
     // Prepare Item
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("inst1".to_string()),
-            uri_path: TrimString("inst1".to_string()),
+            code: Some(TrimString("inst1".to_string())),
+            uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -115,8 +115,8 @@ async fn test_rbum_rel() -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("a1".to_string()),
-            uri_path: TrimString("a1".to_string()),
+            code: Some(TrimString("a1".to_string())),
+            uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -332,8 +332,8 @@ async fn test_rbum_rel_attr() -> TardisResult<()> {
     // Prepare Item
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("inst1".to_string()),
-            uri_path: TrimString("inst1".to_string()),
+            code: Some(TrimString("inst1".to_string())),
+            uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -349,8 +349,8 @@ async fn test_rbum_rel_attr() -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("a1".to_string()),
-            uri_path: TrimString("a1".to_string()),
+            code: Some(TrimString("a1".to_string())),
+            uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -513,8 +513,8 @@ async fn test_rbum_rel_env() -> TardisResult<()> {
     // Prepare Item
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("inst1".to_string()),
-            uri_path: TrimString("inst1".to_string()),
+            code: Some(TrimString("inst1".to_string())),
+            uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -530,8 +530,8 @@ async fn test_rbum_rel_env() -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("a1".to_string()),
-            uri_path: TrimString("a1".to_string()),
+            code: Some(TrimString("a1".to_string())),
+            uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -721,8 +721,8 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
     // Prepare Item
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("inst1".to_string()),
-            uri_path: TrimString("inst1".to_string()),
+            code: Some(TrimString("inst1".to_string())),
+            uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -738,8 +738,8 @@ async fn test_rbum_rel_use() -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("a1".to_string()),
-            uri_path: TrimString("a1".to_string()),
+            code: Some(TrimString("a1".to_string())),
+            uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,

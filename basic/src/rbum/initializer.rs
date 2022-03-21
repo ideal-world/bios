@@ -1,18 +1,26 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
-use crate::rbum::{constants, get_tenant_code_from_app_code};
-use crate::rbum::constants::{RBUM_DOMAIN_ID_LEN, RBUM_ITEM_APP_CODE_LEN, RBUM_ITEM_TENANT_CODE_LEN, RBUM_KIND_ID_LEN};
+use crate::rbum::constants::{RBUM_ITEM_APP_CODE_LEN, RBUM_ITEM_TENANT_CODE_LEN};
 use crate::rbum::domain::{
     rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate, rbum_set_item,
 };
+use crate::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
+use crate::rbum::dto::rbum_item_dto::RbumItemAddReq;
+use crate::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use crate::rbum::enumeration::RbumScopeKind;
+use crate::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
+use crate::rbum::serv::rbum_item_serv::RbumItemServ;
+use crate::rbum::serv::rbum_kind_serv::RbumKindServ;
+use crate::rbum::{constants, get_tenant_code_from_app_code};
 
 pub async fn init_db() -> TardisResult<()> {
     let db_kind = TardisFuns::reldb().backend();
@@ -32,133 +40,129 @@ pub async fn init_db() -> TardisResult<()> {
     tx.create_table_and_index(&rbum_set_cate::ActiveModel::create_table_and_index_statement(db_kind)).await?;
     tx.create_table_and_index(&rbum_set_item::ActiveModel::create_table_and_index_statement(db_kind)).await?;
 
-    let kind_tenant_id = TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN);
-    let kind_app_id = TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN);
-    let kind_account_id = TardisFuns::field.nanoid_len(RBUM_KIND_ID_LEN);
-    let domain_iam_id = TardisFuns::field.nanoid_len(RBUM_DOMAIN_ID_LEN);
-    let item_default_tenant_id = format!("{}{}{}", kind_tenant_id, domain_iam_id, TardisFuns::field.nanoid());
-    let item_iam_app_id = format!("{}{}{}", kind_app_id, domain_iam_id, TardisFuns::field.nanoid());
-    let item_sys_admin_id = format!("{}{}{}", kind_account_id, domain_iam_id, TardisFuns::field.nanoid());
-
-    rbum_kind::ActiveModel {
-        id: Set(kind_tenant_id.clone()),
-        uri_scheme: Set(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
-        name: Set(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
-        note: Set("".to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        ext_table_name: Set(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string().to_lowercase()),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::Global.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
-    .await?;
-
-    rbum_kind::ActiveModel {
-        id: Set(kind_app_id.clone()),
-        uri_scheme: Set(constants::RBUM_KIND_SCHEME_IAM_APP.to_string()),
-        name: Set(constants::RBUM_KIND_SCHEME_IAM_APP.to_string()),
-        note: Set("".to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        ext_table_name: Set(constants::RBUM_KIND_SCHEME_IAM_APP.to_string().to_lowercase()),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::Global.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
-    .await?;
-
-    rbum_kind::ActiveModel {
-        id: Set(kind_account_id.clone()),
-        uri_scheme: Set(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
-        name: Set(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
-        note: Set("".to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        ext_table_name: Set(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string().to_lowercase()),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::Global.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
-    .await?;
-
-    rbum_domain::ActiveModel {
-        id: Set(domain_iam_id.clone()),
-        uri_authority: Set(crate::Components::Iam.to_string()),
-        name: Set(crate::Components::Iam.to_string()),
-        note: Set("".to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::Global.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
-    .await?;
-
     let default_tenant_code = TardisFuns::field.nanoid_len(RBUM_ITEM_TENANT_CODE_LEN);
     let default_app_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid_len(RBUM_ITEM_APP_CODE_LEN));
     let default_account_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid());
 
-    rbum_item::ActiveModel {
-        id: Set(item_default_tenant_id.clone()),
-        code: Set(default_tenant_code.clone()),
-        uri_path: Set(default_tenant_code.clone()),
-        name: Set(constants::RBUM_ITEM_NAME_DEFAULT_TENANT.to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        rel_rbum_kind_id: Set(kind_tenant_id.clone()),
-        rel_rbum_domain_id: Set(domain_iam_id.clone()),
-        disabled: Set(false),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::App.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
+    let cxt = TardisContext {
+        app_code: default_app_code.clone(),
+        tenant_code: default_tenant_code.clone(),
+        ak: "".to_string(),
+        account_code: default_account_code.clone(),
+        token: "".to_string(),
+        token_kind: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+    };
+
+    let kind_tenant_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
+            name: TrimString(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some(constants::RBUM_KIND_SCHEME_IAM_TENANT.to_string().to_lowercase()),
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
     .await?;
 
-    rbum_item::ActiveModel {
-        id: Set(item_iam_app_id.clone()),
-        code: Set(default_app_code.clone()),
-        uri_path: Set(default_app_code.clone()),
-        name: Set(constants::RBUM_ITEM_NAME_DEFAULT_APP.to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        rel_rbum_kind_id: Set(kind_app_id.clone()),
-        rel_rbum_domain_id: Set(domain_iam_id.clone()),
-        disabled: Set(false),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::App.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
+    let kind_app_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString(constants::RBUM_KIND_SCHEME_IAM_APP.to_string()),
+            name: TrimString(constants::RBUM_KIND_SCHEME_IAM_APP.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some(constants::RBUM_KIND_SCHEME_IAM_APP.to_string().to_lowercase()),
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
     .await?;
 
-    rbum_item::ActiveModel {
-        id: Set(item_sys_admin_id.clone()),
-        code: Set(default_account_code.clone()),
-        uri_path: Set(default_account_code.clone()),
-        name: Set(constants::RBUM_ITEM_NAME_DEFAULT_ACCOUNT.to_string()),
-        icon: Set("".to_string()),
-        sort: Set(0),
-        rel_rbum_kind_id: Set(kind_account_id.clone()),
-        rel_rbum_domain_id: Set(domain_iam_id.clone()),
-        disabled: Set(false),
-        rel_app_code: Set(item_iam_app_id.clone()),
-        updater_code: Set(item_sys_admin_id.clone()),
-        scope_kind: Set(RbumScopeKind::App.to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx()?)
+    let kind_account_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
+            name: TrimString(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some(constants::RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string().to_lowercase()),
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    let domain_iam_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            uri_authority: TrimString(crate::Components::Iam.to_string()),
+            name: TrimString(crate::Components::Iam.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some(TrimString(default_tenant_code.clone())),
+            uri_path: None,
+            name: TrimString(constants::RBUM_ITEM_NAME_DEFAULT_TENANT.to_string()),
+            icon: None,
+            sort: None,
+            scope_kind: None,
+            disabled: None,
+            rel_rbum_kind_id: kind_tenant_id.clone(),
+            rel_rbum_domain_id: domain_iam_id.clone(),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some(TrimString(default_app_code.clone())),
+            uri_path: None,
+            name: TrimString(constants::RBUM_ITEM_NAME_DEFAULT_APP.to_string()),
+            icon: None,
+            sort: None,
+            scope_kind: None,
+            disabled: None,
+            rel_rbum_kind_id: kind_app_id.clone(),
+            rel_rbum_domain_id: domain_iam_id.clone(),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some(TrimString(default_account_code.clone())),
+            uri_path: None,
+            name: TrimString(constants::RBUM_ITEM_NAME_DEFAULT_ACCOUNT.to_string()),
+            icon: None,
+            sort: None,
+            scope_kind: None,
+            disabled: None,
+            rel_rbum_kind_id: kind_account_id.clone(),
+            rel_rbum_domain_id: domain_iam_id.clone(),
+        },
+        &tx,
+        &cxt,
+    )
     .await?;
 
     tx.commit().await?;
@@ -177,7 +181,7 @@ pub async fn get_sys_admin_context() -> TardisResult<TardisContext> {
             JoinType::InnerJoin,
             rbum_item::Entity,
             app_table.clone(),
-            Expr::tbl(app_table, rbum_item::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelAppCode),
+            Expr::tbl(app_table, rbum_item::Column::Code).equals(rbum_item::Entity, rbum_item::Column::RelAppCode),
         )
         .inner_join(
             rbum_kind::Entity,

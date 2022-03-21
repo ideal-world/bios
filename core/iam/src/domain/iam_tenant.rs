@@ -2,26 +2,25 @@ use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateStatement};
-use tardis::TardisFuns;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "iam_tenant")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    pub contact_phone: String,
 }
 
 impl TardisActiveModel for ActiveModel {
-    fn fill_cxt(&mut self, _: &TardisContext, is_insert: bool) {
-        if is_insert {
-            if self.id == ActiveValue::NotSet {
-                self.id = Set(TardisFuns::field.uuid_str());
-            }
-        }
-    }
+    fn fill_cxt(&mut self, _: &TardisContext, _: bool) {}
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
-        Table::create().table(Entity.table_ref()).if_not_exists().col(ColumnDef::new(Column::Id).not_null().string().primary_key()).to_owned()
+        Table::create()
+            .table(Entity.table_ref())
+            .if_not_exists()
+            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
+            .col(ColumnDef::new(Column::ContactPhone).not_null().string())
+            .to_owned()
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {

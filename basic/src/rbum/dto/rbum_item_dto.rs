@@ -8,9 +8,9 @@ use crate::rbum::enumeration::RbumScopeKind;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: TrimString,
+    pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub uri_path: TrimString,
+    pub uri_path: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]

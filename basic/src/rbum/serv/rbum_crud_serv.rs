@@ -15,18 +15,18 @@ use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::enumeration::RbumScopeKind;
 
 lazy_static! {
-    static ref UPDATER_TABLE: Alias = Alias::new("updater");
-    static ref REL_APP_TABLE: Alias = Alias::new("relApp");
-    static ref ID_FIELD: Alias = Alias::new("id");
-    static ref CODE_FIELD: Alias = Alias::new("code");
-    static ref NAME_FIELD: Alias = Alias::new("name");
-    static ref UPDATER_CODE_FIELD: Alias = Alias::new("updater_code");
-    static ref REL_APP_CODE_FIELD: Alias = Alias::new("rel_app_code");
-    static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
-    static ref SCOPE_KIND_FIELD: Alias = Alias::new("scope_kind");
-    static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_kind_id");
-    static ref REL_DOMAIN_ID_FIELD: Alias = Alias::new("rel_domain_id");
-    static ref DISABLED_FIELD: Alias = Alias::new("disabled");
+    pub static ref UPDATER_TABLE: Alias = Alias::new("updater");
+    pub static ref REL_APP_TABLE: Alias = Alias::new("relApp");
+    pub static ref ID_FIELD: Alias = Alias::new("id");
+    pub static ref CODE_FIELD: Alias = Alias::new("code");
+    pub static ref NAME_FIELD: Alias = Alias::new("name");
+    pub static ref UPDATER_CODE_FIELD: Alias = Alias::new("updater_code");
+    pub static ref REL_APP_CODE_FIELD: Alias = Alias::new("rel_app_code");
+    pub static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
+    pub static ref SCOPE_KIND_FIELD: Alias = Alias::new("scope_kind");
+    pub static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_rbum_kind_id");
+    pub static ref REL_DOMAIN_ID_FIELD: Alias = Alias::new("rel_rbum_domain_id");
+    pub static ref DISABLED_FIELD: Alias = Alias::new("disabled");
 }
 
 pub trait RbumCrudQueryPackage {
@@ -59,6 +59,9 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
         if let Some(name) = &filter.name {
             self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(name));
+        }
+        if let Some(code) = &filter.code {
+            self.and_where(Expr::tbl(Alias::new(table_name), CODE_FIELD.clone()).eq(code.to_string()));
         }
         if let Some(ids) = &filter.ids {
             self.and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).is_in(ids.clone()));

@@ -347,8 +347,8 @@ async fn test_rbum_set_item() -> TardisResult<()> {
     // Prepare Item
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("a1".to_string()),
-            uri_path: TrimString("a1".to_string()),
+            code: Some(TrimString("a1".to_string())),
+            uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
