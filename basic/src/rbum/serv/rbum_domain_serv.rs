@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
+use tardis::db::reldb_client::{IdResp, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
@@ -85,5 +85,21 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         query.query_with_scope(Self::get_table_name(), cxt);
 
         Ok(query)
+    }
+}
+
+impl<'a> RbumDomainServ {
+    pub async fn get_rbum_domain_id_by_uri_authority(uri_authority: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<Option<String>> {
+        let resp = db
+            .get_dto::<IdResp>(
+                Query::select()
+                    .column(rbum_domain::Column::Id)
+                    .from(rbum_domain::Entity)
+                    .and_where(Expr::col(rbum_domain::Column::UriAuthority).eq(uri_authority))
+                    .query_with_scope(Self::get_table_name(), cxt),
+            )
+            .await?
+            .map(|r| r.id);
+        Ok(resp)
     }
 }

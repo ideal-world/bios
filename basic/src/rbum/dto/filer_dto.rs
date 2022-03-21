@@ -13,6 +13,7 @@ pub struct RbumBasicFilterReq {
     pub domain_id: Option<String>,
     pub enabled: Option<bool>,
     pub name: Option<String>,
+    pub code: Option<String>,
     pub ids: Option<Vec<String>>,
 
     pub rbum_rel_tag: Option<String>,
@@ -33,6 +34,7 @@ impl Default for RbumBasicFilterReq {
             domain_id: None,
             enabled: None,
             name: None,
+            code: None,
             ids: None,
             rbum_rel_tag: None,
             rbum_rel_is_from: None,
@@ -40,6 +42,30 @@ impl Default for RbumBasicFilterReq {
             rbum_rel_rbum_item_id: None,
             rbum_rel_app_code: None,
             rbum_rel_id: None,
+        }
+    }
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+#[serde(default)]
+pub struct RbumItemFilterReq {
+    pub rel_cxt_app: bool,
+    pub rel_cxt_updater: bool,
+    pub scope_kind: Option<RbumScopeKind>,
+    pub enabled: Option<bool>,
+    pub name: Option<String>,
+    pub code: Option<String>,
+}
+
+impl Default for RbumItemFilterReq {
+    fn default() -> Self {
+        Self {
+            rel_cxt_app: true,
+            rel_cxt_updater: false,
+            scope_kind: None,
+            enabled: None,
+            name: None,
+            code: None,
         }
     }
 }

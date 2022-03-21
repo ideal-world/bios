@@ -61,8 +61,8 @@ async fn test_rbum_item() -> TardisResult<()> {
     // Test Add
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("".to_string()),
-            uri_path: TrimString("".to_string()),
+            code: None,
+            uri_path: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
@@ -79,8 +79,8 @@ async fn test_rbum_item() -> TardisResult<()> {
 
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("".to_string()),
-            uri_path: TrimString("".to_string()),
+            code: None,
+            uri_path: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
@@ -97,8 +97,8 @@ async fn test_rbum_item() -> TardisResult<()> {
 
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("".to_string()),
-            uri_path: TrimString("".to_string()),
+            code: None,
+            uri_path: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
@@ -115,8 +115,8 @@ async fn test_rbum_item() -> TardisResult<()> {
 
     let id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("inst1".to_string()),
-            uri_path: TrimString("inst1".to_string()),
+            code: Some(TrimString("inst1".to_string())),
+            uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -246,8 +246,8 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
 
     let item_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: TrimString("inst1".to_string()),
-            uri_path: TrimString("inst1".to_string()),
+            code: Some(TrimString("inst1".to_string())),
+            uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,

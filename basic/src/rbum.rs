@@ -1,6 +1,6 @@
 use crate::rbum::constants::RBUM_ITEM_TENANT_CODE_LEN;
 
-pub(crate) mod constants;
+pub mod constants;
 #[cfg(feature = "default")]
 pub(crate) mod domain;
 pub mod dto;

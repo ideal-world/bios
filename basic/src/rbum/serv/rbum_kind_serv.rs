@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
+use tardis::db::reldb_client::{IdResp, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
@@ -95,6 +95,22 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
     }
 }
 
+impl<'a> RbumKindServ {
+    pub async fn get_rbum_kind_id_by_uri_scheme(uri_scheme: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<Option<String>> {
+        let resp = db
+            .get_dto::<IdResp>(
+                Query::select()
+                    .column(rbum_kind::Column::Id)
+                    .from(rbum_kind::Entity)
+                    .and_where(Expr::col(rbum_kind::Column::UriScheme).eq(uri_scheme))
+                    .query_with_scope(Self::get_table_name(), cxt),
+            )
+            .await?
+            .map(|r| r.id);
+        Ok(resp)
+    }
+}
+
 #[async_trait]
 impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp> for RbumKindAttrServ {
     fn get_table_name() -> &'static str {
@@ -103,7 +119,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
 
     async fn package_add(add_req: &RbumKindAttrAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
         Ok(rbum_kind_attr::ActiveModel {
-            id: Set(format!("{}{}", add_req.rel_rbum_kind_id,TardisFuns::field.nanoid())),
+            id: Set(format!("{}{}", add_req.rel_rbum_kind_id, TardisFuns::field.nanoid())),
             name: Set(add_req.name.to_string()),
             label: Set(add_req.label.to_string()),
             data_type_kind: Set(add_req.data_type_kind.to_string()),
