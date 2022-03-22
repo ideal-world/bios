@@ -13,11 +13,12 @@ mod test_rbum_set;
 async fn test_rbum() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = test_basic::init(&docker).await?;
-    test_rbum_domain::test().await?;
-    test_rbum_kind::test().await?;
-    test_rbum_item::test().await?;
-    test_rbum_cert::test().await?;
-    test_rbum_rel::test().await?;
-    test_rbum_set::test().await?;
+    let cxt = test_basic::init_test_data().await?;
+    test_rbum_domain::test(&cxt).await?;
+    test_rbum_kind::test(&cxt).await?;
+    test_rbum_item::test(&cxt).await?;
+    test_rbum_cert::test(&cxt).await?;
+    test_rbum_rel::test(&cxt).await?;
+    test_rbum_set::test(&cxt).await?;
     Ok(())
 }

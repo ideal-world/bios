@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
@@ -7,7 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::constants::RBUM_DOMAIN_ID_LEN;
-use crate::rbum::domain::rbum_domain;
+use crate::rbum::domain::{rbum_domain, rbum_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
 use crate::rbum::enumeration::RbumScopeKind;
@@ -85,6 +86,30 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         query.query_with_scope(Self::get_table_name(), cxt);
 
         Ok(query)
+    }
+
+    async fn before_add_rbum(add_req: &mut RbumDomainAddReq, db: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+        if db
+            .count(
+                Query::select()
+                    .column(rbum_domain::Column::Id)
+                    .from(rbum_domain::Entity)
+                    .and_where(Expr::col(rbum_domain::Column::UriAuthority).eq(add_req.uri_authority.0.as_str())),
+            )
+            .await?
+            > 0
+        {
+            return Err(TardisError::BadRequest(format!("URI authority {} already exists", add_req.uri_authority)));
+        }
+        Ok(())
+    }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db.count(Query::select().column(rbum_item::Column::Id).from(rbum_item::Entity).and_where(Expr::col(rbum_item::Column::RelRbumDomainId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum domain when there are rbum item".to_string()));
+        }
+        Ok(())
     }
 }
 

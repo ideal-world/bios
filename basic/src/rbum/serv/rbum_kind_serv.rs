@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
@@ -7,7 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::constants::RBUM_KIND_ID_LEN;
-use crate::rbum::domain::{rbum_kind, rbum_kind_attr};
+use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
@@ -92,6 +93,28 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
         query.query_with_scope(Self::get_table_name(), cxt);
 
         Ok(query)
+    }
+
+    async fn before_add_rbum(add_req: &mut RbumKindAddReq, db: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+        if db
+            .count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::UriScheme).eq(add_req.uri_scheme.0.as_str())))
+            .await?
+            > 0
+        {
+            return Err(TardisError::BadRequest(format!("URI scheme {} already exists", add_req.uri_scheme)));
+        }
+        Ok(())
+    }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db.count(Query::select().column(rbum_kind_attr::Column::Id).from(rbum_kind_attr::Entity).and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum kind when there are rbum kind attr".to_string()));
+        }
+        if db.count(Query::select().column(rbum_item::Column::Id).from(rbum_item::Entity).and_where(Expr::col(rbum_item::Column::RelRbumKindId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum kind when there are rbum item".to_string()));
+        }
+        Ok(())
     }
 }
 
@@ -249,5 +272,15 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
 
     async fn before_add_rbum(add_req: &mut RbumKindAttrAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), db, cxt).await
+    }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db.count(Query::select().column(rbum_item_attr::Column::Id).from(rbum_item_attr::Entity).and_where(Expr::col(rbum_item_attr::Column::RelRbumKindAttrId).eq(id))).await?
+            > 0
+        {
+            return Err(TardisError::BadRequest("can not delete rbum kind attr when there are rbum item attr".to_string()));
+        }
+        Ok(())
     }
 }

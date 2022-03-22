@@ -148,6 +148,14 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         }
         Ok(())
     }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db.count(Query::select().column(rbum_cert::Column::Id).from(rbum_cert::Entity).and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum cert conf when there are rbum cert".to_string()));
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -229,6 +237,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 Expr::tbl(rel_rbum_item_table, rbum_item::Column::Id).equals(rbum_cert::Entity, rbum_cert::Column::RelRbumItemId),
             );
 
+        if let Some(rbum_cert_conf_id) = &filter.rbum_cert_conf_id {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id.to_string()));
+        }
+
         if is_detail {
             query.query_with_safe(Self::get_table_name());
         }
@@ -261,10 +273,6 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             add_req.end_time = Some(now + Duration::seconds(rbum_cert_conf.expire_sec as i64));
         }
         Ok(())
-    }
-
-    async fn before_modify_rbum(id: &str, _: &mut RbumCertModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership(id, db, cxt).await
     }
 }
 

@@ -5,9 +5,7 @@ use tardis::db::sea_orm::FromQueryResult;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamCsTenantAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: Option<TrimString>,
+pub struct IamCaAppAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -21,7 +19,7 @@ pub struct IamCsTenantAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamCsTenantModifyReq {
+pub struct IamCaAppModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -35,9 +33,8 @@ pub struct IamCsTenantModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
-pub struct IamCsTenantSummaryResp {
+pub struct IamCaAppSummaryResp {
     pub id: String,
-    pub code: String,
     pub name: String,
     pub icon: String,
     pub sort: i32,
@@ -51,9 +48,8 @@ pub struct IamCsTenantSummaryResp {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
-pub struct IamCsTenantDetailResp {
+pub struct IamCaAppDetailResp {
     pub id: String,
-    pub code: String,
     pub name: String,
     pub icon: String,
     pub sort: i32,

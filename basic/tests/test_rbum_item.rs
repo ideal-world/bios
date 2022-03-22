@@ -1,5 +1,7 @@
+use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
@@ -14,18 +16,17 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 
-pub async fn test() -> TardisResult<()> {
-    test_rbum_item().await?;
-    test_rbum_item_attr().await?;
+pub async fn test(context:&TardisContext) -> TardisResult<()> {
+    test_rbum_item(context).await?;
+    test_rbum_item_attr(context).await?;
     Ok(())
 }
 
-async fn test_rbum_item() -> TardisResult<()> {
-    let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
+async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
-    // Prepare Kind
+    info!("【test_rbum_item】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             uri_scheme: TrimString("reldb".to_string()),
@@ -37,11 +38,11 @@ async fn test_rbum_item() -> TardisResult<()> {
             scope_kind: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Prepare Domain
+    info!("【test_rbum_item】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
             uri_authority: TrimString("mysql_dev".to_string()),
@@ -52,13 +53,13 @@ async fn test_rbum_item() -> TardisResult<()> {
             scope_kind: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
     // -----------------------------------
 
-    // Test Add
+    info!("【test_rbum_item】 : Test Add : RbumItemServ::add_rbum");
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             code: None,
@@ -72,7 +73,7 @@ async fn test_rbum_item() -> TardisResult<()> {
             rel_rbum_domain_id: domain_id.to_string()
         },
         &tx,
-        &context,
+        context,
     )
     .await
     .is_err());
@@ -90,7 +91,7 @@ async fn test_rbum_item() -> TardisResult<()> {
             rel_rbum_domain_id: "".to_string()
         },
         &tx,
-        &context,
+        context,
     )
     .await
     .is_err());
@@ -108,7 +109,7 @@ async fn test_rbum_item() -> TardisResult<()> {
             rel_rbum_domain_id: "123".to_string()
         },
         &tx,
-        &context,
+        context,
     )
     .await
     .is_err());
@@ -126,17 +127,17 @@ async fn test_rbum_item() -> TardisResult<()> {
             rel_rbum_domain_id: domain_id.to_string(),
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Test Get
-    let rbum = RbumItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
+    info!("【test_rbum_item】 : Test Get : RbumItemServ::get_rbum");
+    let rbum = RbumItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.uri_path, "inst1");
     assert_eq!(rbum.name, "实例1");
 
-    // Test Modify
+    info!("【test_rbum_item】 : Test Modify : RbumItemServ::modify_rbum");
     RbumItemServ::modify_rbum(
         &id,
         &mut RbumItemModifyReq {
@@ -149,11 +150,11 @@ async fn test_rbum_item() -> TardisResult<()> {
             disabled: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Test Find
+    info!("【test_rbum_item】 : Test Find : RbumItemServ::paginate_rbums");
     let rbums = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
             scope_kind: Some(RbumScopeKind::App),
@@ -163,8 +164,9 @@ async fn test_rbum_item() -> TardisResult<()> {
         1,
         10,
         None,
+        None,
         &tx,
-        &context,
+        context,
     )
     .await?;
     assert_eq!(rbums.page_number, 1);
@@ -172,21 +174,20 @@ async fn test_rbum_item() -> TardisResult<()> {
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().name, "数据库实例1");
 
-    // Test Delete
-    RbumItemServ::delete_rbum(&id, &tx, &context).await?;
-    assert!(RbumItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await.is_err());
+    info!("【test_rbum_item】 : Test Delete : RbumItemServ::delete_rbum");
+    RbumItemServ::delete_rbum(&id, &tx, context).await?;
+    assert!(RbumItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await.is_err());
 
     tx.rollback().await?;
 
     Ok(())
 }
 
-async fn test_rbum_item_attr() -> TardisResult<()> {
-    let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
+async fn test_rbum_item_attr(context:&TardisContext) -> TardisResult<()> {
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
-    // Prepare Kind
+    info!("【test_rbum_item_attr】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             uri_scheme: TrimString("reldb".to_string()),
@@ -198,11 +199,11 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             scope_kind: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Prepare Kind Attr
+    info!("【test_rbum_item_attr】 : Prepare Kind Attr : RbumKindAttrServ::add_rbum");
     let kind_attr_id = RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
@@ -225,11 +226,11 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             rel_rbum_kind_id: kind_id.to_string(),
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Prepare Domain
+    info!("【test_rbum_item_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
             uri_authority: TrimString("mysql_dev".to_string()),
@@ -240,7 +241,7 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             scope_kind: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
@@ -257,12 +258,13 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             rel_rbum_domain_id: domain_id.to_string(),
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
     // -----------------------------------
-    // Test Add
+
+    info!("【test_rbum_item_attr】 : Test Add : RbumItemAttrServ::add_rbum");
     assert!(RbumItemAttrServ::add_rbum(
         &mut RbumItemAttrAddReq {
             value: "数据1".to_string(),
@@ -270,7 +272,7 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             rel_rbum_kind_attr_id: "".to_string()
         },
         &tx,
-        &context,
+        context,
     )
     .await
     .is_err());
@@ -282,7 +284,7 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             rel_rbum_kind_attr_id: "".to_string()
         },
         &tx,
-        &context,
+        context,
     )
     .await
     .is_err());
@@ -294,7 +296,7 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             rel_rbum_kind_attr_id: kind_attr_id.to_string()
         },
         &tx,
-        &context,
+        context,
     )
     .await
     .is_err());
@@ -306,12 +308,12 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
             rel_rbum_kind_attr_id: kind_attr_id.to_string(),
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Test Get
-    let rbum = RbumItemAttrServ::get_rbum(&item_attr_id, &RbumBasicFilterReq::default(), &tx, &context).await?;
+    info!("【test_rbum_item_attr】 : Test Get : RbumItemAttrServ::get_rbum");
+    let rbum = RbumItemAttrServ::get_rbum(&item_attr_id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, item_attr_id);
     assert_eq!(rbum.value, "数据1");
     assert_eq!(rbum.rel_rbum_item_id, item_id.to_string());
@@ -319,21 +321,20 @@ async fn test_rbum_item_attr() -> TardisResult<()> {
     assert_eq!(rbum.rel_rbum_kind_attr_id, kind_attr_id.to_string());
     assert_eq!(rbum.rel_rbum_kind_attr_name, "db_type".to_string());
 
-    // Test Modify
-    assert!(RbumItemAttrServ::modify_rbum("111", &mut RbumItemAttrModifyReq { value: "数据2".to_string() }, &tx, &context).await.is_err());
+    info!("【test_rbum_item_attr】 : Test Modify : RbumItemAttrServ::modify_rbum");
+    assert!(RbumItemAttrServ::modify_rbum("111", &mut RbumItemAttrModifyReq { value: "数据2".to_string() }, &tx, context).await.is_err());
+    RbumItemAttrServ::modify_rbum(&item_attr_id, &mut RbumItemAttrModifyReq { value: "数据3".to_string() }, &tx, context).await?;
 
-    RbumItemAttrServ::modify_rbum(&item_attr_id, &mut RbumItemAttrModifyReq { value: "数据3".to_string() }, &tx, &context).await?;
-
-    // Test Find
-    let rbums = RbumItemAttrServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, &tx, &context).await?;
+    info!("【test_rbum_item_attr】 : Test Find : RbumItemAttrServ::paginate_rbums");
+    let rbums = RbumItemAttrServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, None, &tx, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().value, "数据3");
 
-    // Test Delete
-    RbumItemAttrServ::delete_rbum(&item_attr_id, &tx, &context).await?;
-    assert!(RbumItemAttrServ::get_rbum(&item_attr_id, &RbumBasicFilterReq::default(), &tx, &context).await.is_err());
+    info!("【test_rbum_item_attr】 : Test Delete : RbumItemAttrServ::delete_rbum");
+    RbumItemAttrServ::delete_rbum(&item_attr_id, &tx, context).await?;
+    assert!(RbumItemAttrServ::get_rbum(&item_attr_id, &RbumBasicFilterReq::default(), &tx, context).await.is_err());
 
     tx.rollback().await?;
 
