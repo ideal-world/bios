@@ -49,6 +49,12 @@ impl RbumCrudQueryPackage for SelectStatement {
         if let Some(scope_kind) = &filter.scope_kind {
             self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(scope_kind.to_string()));
         }
+        if let Some(rel_tenant_code) = &filter.rel_tenant_code {
+            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).like(format!("{}%", rel_tenant_code).as_str()));
+        }
+        if let Some(rel_app_code) = &filter.rel_app_code {
+            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).eq(rel_app_code.to_string()));
+        }
         if let Some(rbum_kind_id) = &filter.rbum_kind_id {
             self.and_where(Expr::tbl(Alias::new(table_name), REL_KIND_ID_FIELD.clone()).eq(rbum_kind_id.to_string()));
         }

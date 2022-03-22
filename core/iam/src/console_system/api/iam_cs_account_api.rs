@@ -37,6 +37,7 @@ impl IamCsAccountApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
+        iam_tenant_code: Query<String>,
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
@@ -47,6 +48,7 @@ impl IamCsAccountApi {
         let result = IamAccountCrudServ::paginate_items(
             &RbumItemFilterReq {
                 name: name.0,
+                iam_tenant_code: Some(iam_tenant_code.0),
                 ..Default::default()
             },
             page_number.0,
