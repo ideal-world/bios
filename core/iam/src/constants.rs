@@ -1,11 +1,19 @@
 use tardis::basic::result::TardisResult;
 
-pub const RBUM_KIND_SCHEME_IAM_TENANT: &str = bios_basic::rbum::constants::RBUM_KIND_SCHEME_IAM_TENANT;
-pub const RBUM_KIND_SCHEME_IAM_APP: &str = bios_basic::rbum::constants::RBUM_KIND_SCHEME_IAM_APP;
-pub const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = bios_basic::rbum::constants::RBUM_KIND_SCHEME_IAM_ACCOUNT;
+pub const RBUM_KIND_SCHEME_IAM_TENANT: &str = "iam_tenant";
+pub const RBUM_KIND_SCHEME_IAM_APP: &str = "iam_app";
+pub const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam_account";
 pub const RBUM_KIND_SCHEME_IAM_ROLE: &str = "iam_role";
-pub const RBUM_KIND_SCHEME_IAM_GROUP: &str = "iam_group";
 pub const RBUM_KIND_SCHEME_IAM_RES_HTTP: &str = "iam_res_http";
+
+pub const RBUM_ITEM_NAME_DEFAULT_TENANT: &str = "system";
+pub const RBUM_ITEM_NAME_IAM_APP: &str = "iam";
+pub const RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT: &str = "bios";
+pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";
+pub const RBUM_ITEM_NAME_TENANT_ADMIN_ROLE: &str = "tenant_admin";
+pub const RBUM_ITEM_NAME_APP_ADMIN_ROLE: &str = "app_admin";
+
+pub const RBUM_REL_BIND: &str = "iam_bind";
 
 static mut BASIC_INFO: BasicInfo = BasicInfo { info: None };
 
@@ -16,13 +24,16 @@ struct BasicInfo {
 
 #[derive(Debug)]
 pub struct BasicInfoPub {
-    pub rbum_tenant_kind_id: String,
-    pub rbum_app_kind_id: String,
-    pub rbum_account_kind_id: String,
-    pub rbum_role_kind_id: String,
-    pub rbum_group_kind_id: String,
-    pub rbum_res_http_kind_id: String,
-    pub rbum_iam_domain_id: String,
+    pub kind_tenant_id: String,
+    pub kind_app_id: String,
+    pub kind_account_id: String,
+    pub kind_role_id: String,
+    pub kind_res_http_id: String,
+    pub domain_iam_id: String,
+    pub iam_app_id: String,
+    pub role_sys_admin_id: String,
+    pub role_tenant_admin_id: String,
+    pub role_app_admin_id: String,
 }
 
 pub fn set_basic_info(basic_info: BasicInfoPub) -> TardisResult<()> {

@@ -22,6 +22,7 @@ lazy_static! {
     pub static ref NAME_FIELD: Alias = Alias::new("name");
     pub static ref UPDATER_CODE_FIELD: Alias = Alias::new("updater_code");
     pub static ref REL_APP_CODE_FIELD: Alias = Alias::new("rel_app_code");
+    pub static ref CREATE_TIME_FIELD: Alias = Alias::new("create_time");
     pub static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
     pub static ref SCOPE_KIND_FIELD: Alias = Alias::new("scope_kind");
     pub static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_rbum_kind_id");
@@ -48,11 +49,11 @@ impl RbumCrudQueryPackage for SelectStatement {
         if let Some(scope_kind) = &filter.scope_kind {
             self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(scope_kind.to_string()));
         }
-        if let Some(kind_id) = &filter.kind_id {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_KIND_ID_FIELD.clone()).eq(kind_id.to_string()));
+        if let Some(rbum_kind_id) = &filter.rbum_kind_id {
+            self.and_where(Expr::tbl(Alias::new(table_name), REL_KIND_ID_FIELD.clone()).eq(rbum_kind_id.to_string()));
         }
-        if let Some(domain_id) = &filter.domain_id {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_DOMAIN_ID_FIELD.clone()).eq(domain_id.to_string()));
+        if let Some(rbum_domain_id) = &filter.rbum_domain_id {
+            self.and_where(Expr::tbl(Alias::new(table_name), REL_DOMAIN_ID_FIELD.clone()).eq(rbum_domain_id.to_string()));
         }
         if let Some(enabled) = filter.enabled {
             self.and_where(Expr::tbl(Alias::new(table_name), DISABLED_FIELD.clone()).eq(!enabled));
@@ -248,11 +249,15 @@ where
         filter: &RbumBasicFilterReq,
         page_number: u64,
         page_size: u64,
+        desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<SummaryResp>> {
         let mut query = Self::package_query(false, filter, db, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
         if let Some(sort) = desc_sort_by_update {
             query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -265,12 +270,26 @@ where
         })
     }
 
-    async fn find_rbums(filter: &RbumBasicFilterReq, desc_sort_by_update: Option<bool>, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<Vec<SummaryResp>> {
+    async fn find_rbums(
+        filter: &RbumBasicFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        db: &TardisRelDBlConnection<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<SummaryResp>> {
         let mut query = Self::package_query(false, filter, db, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
         if let Some(sort) = desc_sort_by_update {
             query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
         Ok(db.find_dtos(&query).await?)
+    }
+
+    async fn count_rbums(filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        let query = Self::package_query(false, filter, db, cxt).await?;
+        db.count(&query).await
     }
 }
 

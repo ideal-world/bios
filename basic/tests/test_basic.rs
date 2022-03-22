@@ -1,6 +1,8 @@
 use std::env;
 
 use tardis::basic::config::NoneConfig;
+use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::TardisFuns;
@@ -8,6 +10,23 @@ use testcontainers::clients::Cli;
 use testcontainers::images::generic::GenericImage;
 use testcontainers::images::redis::Redis;
 use testcontainers::Container;
+
+use bios_basic::rbum::constants::{RBUM_ITEM_APP_CODE_LEN, RBUM_ITEM_TENANT_CODE_LEN};
+use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
+use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
+use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
+use bios_basic::rbum::enumeration::RbumScopeKind;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
+use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
+
+const RBUM_KIND_SCHEME_IAM_TENANT: &str = "iam_tenant";
+const RBUM_KIND_SCHEME_IAM_APP: &str = "iam_app";
+const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam_account";
+const RBUM_ITEM_NAME_DEFAULT_TENANT: &str = "system";
+const RBUM_ITEM_NAME_DEFAULT_APP: &str = "iam";
+const RBUM_ITEM_NAME_DEFAULT_ACCOUNT: &str = "sys_admin";
 
 pub struct LifeHold<'a> {
     pub mysql: Container<'a, Cli, GenericImage>,
@@ -42,4 +61,137 @@ pub async fn init<'a>(docker: &'a Cli) -> TardisResult<LifeHold<'a>> {
         mysql: mysql_container,
         redis: redis_container,
     })
+}
+
+pub async fn init_test_data() -> TardisResult<TardisContext> {
+    let mut tx = TardisFuns::reldb().conn();
+    tx.begin().await?;
+
+    let default_tenant_code = TardisFuns::field.nanoid_len(RBUM_ITEM_TENANT_CODE_LEN);
+    let default_app_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid_len(RBUM_ITEM_APP_CODE_LEN));
+    let default_account_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid());
+
+    let cxt = TardisContext {
+        app_code: default_app_code.clone(),
+        tenant_code: default_tenant_code.clone(),
+        ak: "".to_string(),
+        account_code: default_account_code.clone(),
+        token: "".to_string(),
+        token_kind: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+    };
+
+    let kind_tenant_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
+            name: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some(RBUM_KIND_SCHEME_IAM_TENANT.to_string().to_lowercase()),
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    let kind_app_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
+            name: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some(RBUM_KIND_SCHEME_IAM_APP.to_string().to_lowercase()),
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    let kind_account_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            uri_scheme: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
+            name: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string().to_lowercase()),
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    let domain_iam_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            uri_authority: TrimString(bios_basic::Components::Iam.to_string()),
+            name: TrimString(bios_basic::Components::Iam.to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_kind: Some(RbumScopeKind::Global),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some(TrimString(default_tenant_code.clone())),
+            uri_path: None,
+            name: TrimString(RBUM_ITEM_NAME_DEFAULT_TENANT.to_string()),
+            icon: None,
+            sort: None,
+            scope_kind: None,
+            disabled: None,
+            rel_rbum_kind_id: kind_tenant_id.clone(),
+            rel_rbum_domain_id: domain_iam_id.clone(),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some(TrimString(default_app_code.clone())),
+            uri_path: None,
+            name: TrimString(RBUM_ITEM_NAME_DEFAULT_APP.to_string()),
+            icon: None,
+            sort: None,
+            scope_kind: None,
+            disabled: None,
+            rel_rbum_kind_id: kind_app_id.clone(),
+            rel_rbum_domain_id: domain_iam_id.clone(),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            code: Some(TrimString(default_account_code.clone())),
+            uri_path: None,
+            name: TrimString(RBUM_ITEM_NAME_DEFAULT_ACCOUNT.to_string()),
+            icon: None,
+            sort: None,
+            scope_kind: None,
+            disabled: None,
+            rel_rbum_kind_id: kind_account_id.clone(),
+            rel_rbum_domain_id: domain_iam_id.clone(),
+        },
+        &tx,
+        &cxt,
+    )
+    .await?;
+
+    tx.commit().await?;
+    Ok(cxt)
 }

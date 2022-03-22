@@ -1,5 +1,7 @@
+use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
@@ -8,12 +10,11 @@ use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
-pub async fn test() -> TardisResult<()> {
-    let context = bios_basic::rbum::initializer::get_sys_admin_context().await?;
+pub async fn test(context: &TardisContext) -> TardisResult<()> {
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
-    // Test Add
+    info!("【test_rbum_domin】 : Test Add : RbumDomainServ::add_rbum");
     let id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
             uri_authority: TrimString("mysql_dev".to_string()),
@@ -24,19 +25,19 @@ pub async fn test() -> TardisResult<()> {
             scope_kind: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Test Get
-    let rbum = RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await?;
+    info!("【test_rbum_domin】 : Test Get : RbumDomainServ::get_rbum");
+    let rbum = RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.uri_authority, "mysql_dev");
     assert_eq!(rbum.name, "Mysql测试集群");
     assert_eq!(rbum.icon, "...");
     assert_eq!(rbum.note, "...");
 
-    // Test Modify
+    info!("【test_rbum_domin】 : Test Modify : RbumDomainServ::modify_rbum");
     RbumDomainServ::modify_rbum(
         &id,
         &mut RbumDomainModifyReq {
@@ -48,11 +49,11 @@ pub async fn test() -> TardisResult<()> {
             scope_kind: None,
         },
         &tx,
-        &context,
+        context,
     )
     .await?;
 
-    // Test Find
+    info!("【test_rbum_domin】 : Test Find : RbumDomainServ::paginate_rbums");
     let rbums = RbumDomainServ::paginate_rbums(
         &RbumBasicFilterReq {
             scope_kind: Some(RbumScopeKind::App),
@@ -61,8 +62,9 @@ pub async fn test() -> TardisResult<()> {
         1,
         10,
         None,
+        None,
         &tx,
-        &context,
+        context,
     )
     .await?;
     assert_eq!(rbums.page_number, 1);
@@ -70,9 +72,9 @@ pub async fn test() -> TardisResult<()> {
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().icon, ".");
 
-    // Test Delete
-    RbumDomainServ::delete_rbum(&id, &tx, &context).await?;
-    assert!(RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, &context).await.is_err());
+    info!("【test_rbum_domin】 : Test Delete : RbumDomainServ::delete_rbum");
+    RbumDomainServ::delete_rbum(&id, &tx, context).await?;
+    assert!(RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await.is_err());
 
     tx.rollback().await?;
 

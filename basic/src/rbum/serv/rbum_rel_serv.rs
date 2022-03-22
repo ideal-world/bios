@@ -133,6 +133,17 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), db, cxt).await?;
         Ok(())
     }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db.count(Query::select().column(rbum_rel_attr::Column::Id).from(rbum_rel_attr::Entity).and_where(Expr::col(rbum_rel_attr::Column::RelRbumRelId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum rel when there are rbum rel attr".to_string()));
+        }
+        if db.count(Query::select().column(rbum_rel_env::Column::Id).from(rbum_rel_env::Entity).and_where(Expr::col(rbum_rel_env::Column::RelRbumRelId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum rel when there are rbum rel env".to_string()));
+        }
+        Ok(())
+    }
 }
 
 impl<'a> RbumRelServ {
@@ -173,6 +184,7 @@ impl<'a> RbumRelServ {
         from_rbum_item_id: &str,
         page_number: u64,
         page_size: u64,
+        desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
@@ -188,6 +200,7 @@ impl<'a> RbumRelServ {
             },
             page_number,
             page_size,
+            desc_sort_by_create,
             desc_sort_by_update,
             db,
             cxt,
@@ -201,6 +214,7 @@ impl<'a> RbumRelServ {
         to_rbum_item_id: &str,
         page_number: u64,
         page_size: u64,
+        desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
@@ -216,6 +230,7 @@ impl<'a> RbumRelServ {
             },
             page_number,
             page_size,
+            desc_sort_by_create,
             desc_sort_by_update,
             db,
             cxt,
@@ -227,11 +242,12 @@ impl<'a> RbumRelServ {
         filter: &RbumBasicFilterReq,
         page_number: u64,
         page_size: u64,
+        desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_update, db, cxt).await?;
+        let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, db, cxt).await?;
         let rbum_rel_ids: Vec<String> = rbum_rels.records.iter().map(|r| r.id.to_string()).collect();
         let mut result = Vec::with_capacity(rbum_rel_ids.len());
         for record in rbum_rels.records {
@@ -244,6 +260,7 @@ impl<'a> RbumRelServ {
                         ..Default::default()
                     },
                     None,
+                    None,
                     db,
                     cxt,
                 )
@@ -253,6 +270,7 @@ impl<'a> RbumRelServ {
                         rbum_rel_id: Some(rbum_rel_id.clone()),
                         ..Default::default()
                     },
+                    None,
                     None,
                     db,
                     cxt,

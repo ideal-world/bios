@@ -94,6 +94,17 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 
         Ok(query)
     }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db.count(Query::select().column(rbum_set_cate::Column::Id).from(rbum_set_cate::Entity).and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum set when there are rbum set cate".to_string()));
+        }
+        if db.count(Query::select().column(rbum_set_item::Column::Id).from(rbum_set_item::Entity).and_where(Expr::col(rbum_set_item::Column::RelRbumSetId).eq(id))).await? > 0 {
+            return Err(TardisError::BadRequest("can not delete rbum set when there are rbum set item".to_string()));
+        }
+        Ok(())
+    }
 }
 
 impl<'a> RbumSetServ {
@@ -258,6 +269,27 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         }
         if let Some(rbum_sibling_cate_id) = &add_req.rbum_sibling_cate_id {
             Self::check_ownership(rbum_sibling_cate_id, db, cxt).await?;
+        }
+        Ok(())
+    }
+
+    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, db, cxt).await?;
+        if db
+            .count(
+                Query::select()
+                    .column((rbum_set_item::Entity, rbum_set_item::Column::Id))
+                    .from(rbum_set_item::Entity)
+                    .inner_join(
+                        rbum_set_cate::Entity,
+                        Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode),
+                    )
+                    .and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).eq(id)),
+            )
+            .await?
+            > 0
+        {
+            return Err(TardisError::BadRequest("can not delete rbum set cate when there are rbum set item".to_string()));
         }
         Ok(())
     }

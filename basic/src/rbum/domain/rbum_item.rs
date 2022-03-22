@@ -69,6 +69,7 @@ impl TardisActiveModel for ActiveModel {
                 .table(Entity)
                 .col(Column::RelAppCode)
                 .col(Column::Code)
+                .unique()
                 .to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UpdaterCode.to_string())).table(Entity).col(Column::UpdaterCode).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),
