@@ -7,7 +7,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq};
-use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind, RbumWidgetKind};
+use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumWidgetKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 
@@ -30,7 +30,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: Some("reldb_mgr".to_string()),
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -53,7 +53,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: None,
         },
         &tx,
         context,
@@ -63,7 +63,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_kind】 : Test Find : RbumKindServ::paginate_rbums");
     let rbums = RbumKindServ::paginate_rbums(
         &RbumBasicFilterReq {
-            scope_kind: Some(RbumScopeKind::App),
+            scope_level: Some(2),
             ..Default::default()
         },
         1,
@@ -101,7 +101,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -129,8 +129,8 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
             rel_rbum_kind_id: "".to_string(),
+            scope_level: 2
         },
         &tx,
         context,
@@ -156,8 +156,8 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
             rel_rbum_kind_id: "11".to_string(),
+            scope_level: 2
         },
         &tx,
         context,
@@ -183,8 +183,8 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
             rel_rbum_kind_id: kind_id.to_string(),
+            scope_level: 2,
         },
         &tx,
         context,
@@ -220,7 +220,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None
+            scope_level: None
         },
         &tx,
         context
@@ -247,7 +247,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
+            scope_level: None,
         },
         &tx,
         context,

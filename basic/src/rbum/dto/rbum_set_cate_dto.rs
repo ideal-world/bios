@@ -3,8 +3,6 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -17,7 +15,7 @@ pub struct RbumSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rbum_parent_cate_id: Option<String>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: i32,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_id: String,
@@ -31,7 +29,7 @@ pub struct RbumSetCateModifyReq {
     pub name: Option<TrimString>,
     pub sort: Option<i32>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -45,7 +43,7 @@ pub struct RbumSetCateSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -59,7 +57,7 @@ pub struct RbumSetCateSummaryWithPidResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 
     pub pid: Option<String>,
 }
@@ -72,12 +70,11 @@ pub struct RbumSetCateDetailResp {
     pub name: String,
     pub sort: i32,
 
-    pub rel_app_code: String,
-    pub rel_app_name: String,
-    pub updater_code: String,
+    pub scope_ids: String,
+    pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 }

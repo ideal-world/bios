@@ -45,7 +45,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -60,7 +60,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -75,7 +75,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -89,7 +89,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -99,12 +99,12 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel】 : Prepare Item : RbumItemServ::add_rbum");
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("inst1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_reldb_id.to_string(),
             rel_rbum_domain_id: domain_reldb_id.to_string(),
@@ -116,12 +116,12 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("a1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_account_id.to_string(),
             rel_rbum_domain_id: domain_iam_id.to_string(),
@@ -139,7 +139,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_code: "".to_string(),
+            to_scope_ids: "".to_string(),
             ext: None
         },
         &tx,
@@ -153,7 +153,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_code: context.app_code.to_string(),
+            to_scope_ids: context.scope_ids.to_string(),
             ext: None
         },
         &tx,
@@ -167,7 +167,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_code: context.app_code.to_string(),
+            to_scope_ids: context.scope_ids.to_string(),
             ext: None
         },
         &tx,
@@ -181,7 +181,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_other_app_code: context.app_code.to_string(),
+            to_scope_ids: context.scope_ids.to_string(),
             ext: None
         },
         &tx,
@@ -195,7 +195,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_other_app_code: context.app_code.to_string(),
+            to_scope_ids: context.scope_ids.to_string(),
             ext: None,
         },
         &tx,
@@ -207,8 +207,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     let rbum = RbumRelServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.tag, "bind");
-    assert_eq!(rbum.to_other_app_code, context.app_code);
-    assert_eq!(rbum.to_other_app_name, "iam");
+    assert_eq!(rbum.to_scope_ids, context.scope_ids);
 
     info!("【test_rbum_rel】 : Test Modify : RbumRelServ::modify_rbum");
     RbumRelServ::modify_rbum(
@@ -251,7 +250,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -266,7 +265,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -292,7 +291,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
+            scope_level: 2,
             rel_rbum_kind_id: kind_reldb_id.to_string(),
         },
         &tx,
@@ -308,7 +307,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -322,7 +321,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -332,12 +331,12 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_attr】 : Prepare Item : RbumItemServ::add_rbum");
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("inst1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_reldb_id.to_string(),
             rel_rbum_domain_id: domain_reldb_id.to_string(),
@@ -349,12 +348,12 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("a1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_account_id.to_string(),
             rel_rbum_domain_id: domain_iam_id.to_string(),
@@ -370,7 +369,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_other_app_code: context.app_code.to_string(),
+            to_scope_ids: context.scope_ids.to_string(),
             ext: None,
         },
         &tx,
@@ -459,7 +458,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -474,7 +473,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -489,7 +488,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -503,7 +502,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -513,12 +512,12 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_env】 : Prepare Item : RbumItemServ::add_rbum");
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("inst1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_reldb_id.to_string(),
             rel_rbum_domain_id: domain_reldb_id.to_string(),
@@ -530,12 +529,12 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("a1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_account_id.to_string(),
             rel_rbum_domain_id: domain_iam_id.to_string(),
@@ -551,7 +550,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_other_app_code: context.app_code.to_string(),
+            to_scope_ids: context.scope_ids.to_string(),
             ext: None,
         },
         &tx,
@@ -640,7 +639,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -666,7 +665,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
+            scope_level: 2,
             rel_rbum_kind_id: kind_reldb_id.to_string(),
         },
         &tx,
@@ -682,7 +681,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -697,7 +696,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -711,7 +710,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -721,12 +720,12 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_use】 : Prepare Item : RbumItemServ::add_rbum");
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("inst1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_reldb_id.to_string(),
             rel_rbum_domain_id: domain_reldb_id.to_string(),
@@ -738,12 +737,12 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("a1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_account_id.to_string(),
             rel_rbum_domain_id: domain_iam_id.to_string(),
@@ -764,7 +763,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 tag: "bind".to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
-                to_other_app_code: context.app_code.to_string(),
+                to_scope_ids: context.scope_ids.to_string(),
                 ext: None,
             },
             attrs: vec![RbumRelAttrAggAddReq {
@@ -789,8 +788,8 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_app_code, context.app_code.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.rel_app_code, context.app_code.as_str());
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_ids, context.scope_ids.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.scope_ids, context.scope_ids.to_string());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");
@@ -805,8 +804,8 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_other_app_code, context.app_code.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.rel_app_code, context.app_code.as_str());
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_ids, context.scope_ids.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.scope_ids, context.scope_ids.as_str());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");

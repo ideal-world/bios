@@ -9,7 +9,6 @@ use tardis::TardisFuns;
 use crate::rbum::domain::{
     rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate, rbum_set_item,
 };
-use crate::rbum::get_tenant_code_from_app_code;
 
 pub async fn init_db() -> TardisResult<()> {
     let db_kind = TardisFuns::reldb().backend();
@@ -35,14 +34,14 @@ pub async fn init_db() -> TardisResult<()> {
 pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_domain_uri_authority: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<Option<TardisContext>> {
     #[derive(Deserialize, FromQueryResult, Serialize, Clone, Debug)]
     struct TmpContext {
-        pub code: String,
-        pub rel_app_code: String,
+        pub id: String,
+        pub scope_ids: String,
     }
 
     let mut query = Query::select();
     query
-        .column((rbum_item::Entity, rbum_item::Column::Code))
-        .column((rbum_item::Entity, rbum_item::Column::RelAppCode))
+        .column((rbum_item::Entity, rbum_item::Column::Id))
+        .column((rbum_item::Entity, rbum_item::Column::ScopeIds))
         .from(rbum_item::Entity)
         .inner_join(
             rbum_kind::Entity,
@@ -60,10 +59,9 @@ pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_doma
 
     if let Some(context) = context {
         Ok(Some(TardisContext {
-            app_code: context.rel_app_code.to_string(),
-            tenant_code: get_tenant_code_from_app_code(&context.rel_app_code).unwrap_or("".to_string()),
+            scope_ids: context.scope_ids.to_string(),
             ak: "_".to_string(),
-            account_code: context.code,
+            account_id: context.id,
             token: "_".to_string(),
             token_kind: "_".to_string(),
             roles: vec![],

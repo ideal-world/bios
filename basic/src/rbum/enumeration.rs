@@ -7,23 +7,6 @@ use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
-pub enum RbumScopeKind {
-    Tag,
-    App,
-    Tenant,
-    Global,
-}
-
-#[cfg(feature = "default")]
-impl TryGetable for RbumScopeKind {
-    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = String::try_get(res, pre, col)?;
-        RbumScopeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
-    }
-}
-
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumCertStatusKind {
     Pending,
     Enabled,

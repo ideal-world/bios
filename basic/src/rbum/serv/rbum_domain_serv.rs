@@ -11,7 +11,6 @@ use crate::rbum::constants::RBUM_DOMAIN_ID_LEN;
 use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
-use crate::rbum::enumeration::RbumScopeKind;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 
 pub struct RbumDomainServ;
@@ -30,7 +29,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+            scope_level: Set(add_req.scope_level),
             ..Default::default()
         })
     }
@@ -55,8 +54,8 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         if let Some(sort) = modify_req.sort {
             rbum_domain.sort = Set(sort);
         }
-        if let Some(scope_kind) = &modify_req.scope_kind {
-            rbum_domain.scope_kind = Set(scope_kind.to_string());
+        if let Some(scope_level) = modify_req.scope_level {
+            rbum_domain.scope_level = Set(scope_level);
         }
         Ok(rbum_domain)
     }
@@ -70,11 +69,11 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             (rbum_domain::Entity, rbum_domain::Column::Note),
             (rbum_domain::Entity, rbum_domain::Column::Icon),
             (rbum_domain::Entity, rbum_domain::Column::Sort),
-            (rbum_domain::Entity, rbum_domain::Column::RelAppCode),
-            (rbum_domain::Entity, rbum_domain::Column::UpdaterCode),
+            (rbum_domain::Entity, rbum_domain::Column::ScopeIds),
+            (rbum_domain::Entity, rbum_domain::Column::UpdaterId),
             (rbum_domain::Entity, rbum_domain::Column::CreateTime),
             (rbum_domain::Entity, rbum_domain::Column::UpdateTime),
-            (rbum_domain::Entity, rbum_domain::Column::ScopeKind),
+            (rbum_domain::Entity, rbum_domain::Column::ScopeLevel),
         ]);
         query.from(rbum_domain::Entity);
 

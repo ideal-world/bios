@@ -10,19 +10,19 @@ use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttr
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
-use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind, RbumWidgetKind};
+use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumWidgetKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 
-pub async fn test(context:&TardisContext) -> TardisResult<()> {
+pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_item(context).await?;
     test_rbum_item_attr(context).await?;
     Ok(())
 }
 
-async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
+async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
@@ -35,7 +35,7 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -50,7 +50,7 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -62,12 +62,12 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Test Add : RbumItemServ::add_rbum");
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: None,
+            id: None,
             uri_path: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: "".to_string(),
             rel_rbum_domain_id: domain_id.to_string()
@@ -80,12 +80,12 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
 
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: None,
+            id: None,
             uri_path: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: kind_id.to_string(),
             rel_rbum_domain_id: "".to_string()
@@ -98,12 +98,12 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
 
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: None,
+            id: None,
             uri_path: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
             disabled: None,
             rel_rbum_kind_id: "123".to_string(),
             rel_rbum_domain_id: "123".to_string()
@@ -116,15 +116,15 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
 
     let id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("inst1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
             disabled: None,
             rel_rbum_kind_id: kind_id.to_string(),
             rel_rbum_domain_id: domain_id.to_string(),
+            scope_level: 2,
         },
         &tx,
         context,
@@ -134,20 +134,18 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Test Get : RbumItemServ::get_rbum");
     let rbum = RbumItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
-    assert_eq!(rbum.uri_path, "inst1");
     assert_eq!(rbum.name, "实例1");
 
     info!("【test_rbum_item】 : Test Modify : RbumItemServ::modify_rbum");
     RbumItemServ::modify_rbum(
         &id,
         &mut RbumItemModifyReq {
-            code: None,
             uri_path: None,
             name: Some(TrimString("数据库实例1".to_string())),
             icon: None,
             sort: None,
-            scope_kind: None,
             disabled: None,
+            scope_level: None,
         },
         &tx,
         context,
@@ -157,7 +155,7 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Test Find : RbumItemServ::paginate_rbums");
     let rbums = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
-            scope_kind: Some(RbumScopeKind::App),
+            scope_level: Some(2),
             name: Some("%据库%".to_string()),
             ..Default::default()
         },
@@ -183,7 +181,7 @@ async fn test_rbum_item(context:&TardisContext) -> TardisResult<()> {
     Ok(())
 }
 
-async fn test_rbum_item_attr(context:&TardisContext) -> TardisResult<()> {
+async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
@@ -196,7 +194,7 @@ async fn test_rbum_item_attr(context:&TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext_table_name: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -222,8 +220,8 @@ async fn test_rbum_item_attr(context:&TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_kind: None,
             rel_rbum_kind_id: kind_id.to_string(),
+            scope_level: 2,
         },
         &tx,
         context,
@@ -238,7 +236,7 @@ async fn test_rbum_item_attr(context:&TardisContext) -> TardisResult<()> {
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -247,15 +245,15 @@ async fn test_rbum_item_attr(context:&TardisContext) -> TardisResult<()> {
 
     let item_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString("inst1".to_string())),
+            id: None,
             uri_path: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
             disabled: None,
             rel_rbum_kind_id: kind_id.to_string(),
             rel_rbum_domain_id: domain_id.to_string(),
+            scope_level: 2,
         },
         &tx,
         context,

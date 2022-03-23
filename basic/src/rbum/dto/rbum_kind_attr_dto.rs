@@ -3,7 +3,7 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::{RbumDataTypeKind, RbumScopeKind, RbumWidgetKind};
+use crate::rbum::enumeration::{RbumDataTypeKind, RbumWidgetKind};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAttrAddReq {
@@ -30,7 +30,7 @@ pub struct RbumKindAttrAddReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: i32,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_id: String,
@@ -61,7 +61,7 @@ pub struct RbumKindAttrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -101,12 +101,11 @@ pub struct RbumKindAttrDetailResp {
     pub rel_rbum_kind_id: String,
     pub rel_rbum_kind_name: String,
 
-    pub rel_app_code: String,
-    pub rel_app_name: String,
-    pub updater_code: String,
+    pub scope_ids: String,
+    pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 }

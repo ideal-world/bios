@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -16,20 +16,20 @@ pub struct Model {
     pub sort: i32,
     pub tags: String,
     // Basic
-    pub rel_app_code: String,
-    pub updater_code: String,
+    pub scope_ids: String,
+    pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
-    pub scope_kind: String,
+    pub scope_level: i32,
 }
 
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.rel_app_code = Set(cxt.app_code.to_string());
+            self.scope_ids = Set(cxt.scope_ids.to_string());
         }
-        self.updater_code = Set(cxt.account_code.to_string());
+        self.updater_id = Set(cxt.account_id.to_string());
     }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
@@ -44,19 +44,19 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Sort).not_null().integer())
             .col(ColumnDef::new(Column::Tags).not_null().string())
             // Basic
-            .col(ColumnDef::new(Column::RelAppCode).not_null().string())
-            .col(ColumnDef::new(Column::UpdaterCode).not_null().string())
+            .col(ColumnDef::new(Column::ScopeIds).not_null().string())
+            .col(ColumnDef::new(Column::UpdaterId).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeKind).not_null().string())
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().integer())
             .to_owned()
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelAppCode.to_string())).table(Entity).col(Column::RelAppCode).to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeKind.to_string())).table(Entity).col(Column::ScopeKind).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeIds.to_string())).table(Entity).col(Column::ScopeIds).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeLevel.to_string())).table(Entity).col(Column::ScopeLevel).to_owned(),
         ]
     }
 }
