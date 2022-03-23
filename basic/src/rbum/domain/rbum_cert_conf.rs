@@ -10,6 +10,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
+    pub code: String,
     pub name: String,
     pub note: String,
     pub ak_note: String,
@@ -24,6 +25,7 @@ pub struct Model {
     pub expire_sec: i32,
     pub coexist_num: i32,
     pub rel_rbum_domain_id: String,
+    pub rel_rbum_item_id: String,
     // Basic
     pub rel_app_code: String,
     pub updater_code: String,
@@ -45,6 +47,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
+            .col(ColumnDef::new(Column::Code).not_null().string())
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::AkNote).not_null().string())
@@ -59,6 +62,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::ExpireSec).not_null().integer())
             .col(ColumnDef::new(Column::CoexistNum).not_null().integer())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
+            .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::RelAppCode).not_null().string())
             .col(ColumnDef::new(Column::UpdaterCode).not_null().string())
@@ -68,7 +72,17 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelAppCode.to_string())).table(Entity).col(Column::RelAppCode).to_owned()]
+        vec![
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelAppCode.to_string())).table(Entity).col(Column::RelAppCode).to_owned(),
+            Index::create()
+                .name(&format!("idx-{}-{}", Entity.table_name(), Column::Code.to_string()))
+                .table(Entity)
+                .col(Column::Code)
+                .col(Column::RelRbumDomainId)
+                .col(Column::RelRbumItemId)
+                .unique()
+                .to_owned(),
+        ]
     }
 }
 

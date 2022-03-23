@@ -7,7 +7,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
-use bios_iam::basic::serv::iam_tenant_serv::IamTenantCrudServ;
+use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
 use bios_iam::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
 
@@ -18,33 +18,53 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     info!("【test_cs_tenant】 : Test Add : IamCsTenantServ::add_tenant");
     let id1 = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
-            name: TrimString("测试租户1".to_string()),
-            icon: None,
-            contact_phone: None,
+            tenant_name: TrimString("测试租户1".to_string()),
+            tenant_icon: None,
+            tenant_contact_phone: None,
+            admin_username: TrimString("admin".to_string()),
             disabled: None,
+            admin_name: TrimString("测试管理员".to_string()),
         },
         &tx,
         context,
     )
-    .await?;
+    .await?
+    .0;
+    assert!(IamCsTenantServ::add_tenant(
+        &mut IamCsTenantAddReq {
+            tenant_name: TrimString("测试租户2".to_string()),
+            tenant_icon: None,
+            tenant_contact_phone: Some("12345678901".to_string()),
+            admin_username: TrimString("admin".to_string()),
+            disabled: None,
+            admin_name: TrimString("测试管理员".to_string()),
+        },
+        &tx,
+        context,
+    )
+    .await
+    .is_err());
     let id2 = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
-            name: TrimString("测试租户2".to_string()),
-            icon: None,
-            contact_phone: Some("12345678901".to_string()),
+            tenant_name: TrimString("测试租户2".to_string()),
+            tenant_icon: None,
+            tenant_contact_phone: Some("12345678901".to_string()),
+            admin_username: TrimString("admin1".to_string()),
             disabled: None,
+            admin_name: TrimString("测试管理员".to_string()),
         },
         &tx,
         context,
     )
-    .await?;
+    .await?
+    .0;
 
     info!("【test_cs_tenant】 : Test Get : IamTenantCrudServ::get_item");
-    let tenant = IamTenantCrudServ::get_item(&id1, &RbumItemFilterReq::default(), &tx, context).await?;
+    let tenant = IamTenantServ::get_item(&id1, &RbumItemFilterReq::default(), &tx, context).await?;
     assert_eq!(tenant.id, id1);
     assert_eq!(tenant.name, "测试租户1");
     assert_eq!(tenant.contact_phone, "");
-    let tenant = IamTenantCrudServ::get_item(&id2, &RbumItemFilterReq::default(), &tx, context).await?;
+    let tenant = IamTenantServ::get_item(&id2, &RbumItemFilterReq::default(), &tx, context).await?;
     assert_eq!(tenant.id, id2);
     assert_eq!(tenant.name, "测试租户2");
     assert_eq!(tenant.contact_phone, "12345678901");
@@ -53,7 +73,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     IamCsTenantServ::modify_tenant(&id1, &mut IamCsTenantModifyReq { disabled: Some(true) }, &tx, context).await?;
 
     info!("【test_cs_tenant】 : Test Modify : IamTenantCrudServ::modify_item");
-    IamTenantCrudServ::modify_item(
+    IamTenantServ::modify_item(
         &id2,
         &mut IamTenantModifyReq {
             name: None,
@@ -69,7 +89,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_cs_tenant】 : Test Find : IamTenantCrudServ::paginate_items");
-    let tenants = IamTenantCrudServ::paginate_items(
+    let tenants = IamTenantServ::paginate_items(
         &RbumItemFilterReq {
             name: Some("测试租户%".to_string()),
             ..Default::default()
@@ -84,13 +104,11 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     .await?;
     assert_eq!(tenants.page_number, 1);
     assert_eq!(tenants.page_size, 10);
-    assert_eq!(tenants.total_size, 2);
     assert!(tenants.records.iter().any(|r| r.contact_phone == "xxxx"));
     assert!(tenants.records.iter().any(|r| r.disabled));
 
     info!("【test_cs_tenant】 : Test Delete : IamTenantCrudServ::delete_item");
-    IamTenantCrudServ::delete_item(&id1, &tx, context).await?;
-    assert!(IamTenantCrudServ::get_item(&id1, &RbumItemFilterReq::default(), &tx, context).await.is_err());
+    assert!(IamTenantServ::delete_item(&id1, &tx, context).await.is_err());
 
     tx.rollback().await?;
 

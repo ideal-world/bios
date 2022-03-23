@@ -4,10 +4,8 @@ use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Jso
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_tenant_dto::{IamTenantDetailResp, IamTenantSummaryResp};
-use crate::basic::serv::iam_tenant_serv::IamTenantCrudServ;
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
 use crate::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
 
@@ -21,7 +19,7 @@ impl IamCsTenantApi {
     async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut tx = TardisFuns::reldb().conn();
         tx.begin().await?;
-        let result = IamCsTenantServ::add_tenant(&mut add_req.0, &tx, &cxt.0).await?;
+        let result = IamCsTenantServ::add_tenant(&mut add_req.0, &tx, &cxt.0).await?.1;
         tx.commit().await?;
         TardisResp::ok(result)
     }
@@ -36,20 +34,10 @@ impl IamCsTenantApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Tenant
-    #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        IamTenantCrudServ::delete_item(&id.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
     /// Get Tenant By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
-        let result = IamTenantCrudServ::get_item(&id.0, &RbumItemFilterReq::default(), &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCsTenantServ::get_tenant(&id.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -64,7 +52,7 @@ impl IamCsTenantApi {
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamTenantSummaryResp>> {
-        let result = IamTenantCrudServ::paginate_items(
+        let result = IamCsTenantServ::paginate_tenants(
             &RbumItemFilterReq {
                 name: name.0,
                 ..Default::default()
@@ -78,5 +66,15 @@ impl IamCsTenantApi {
         )
         .await?;
         TardisResp::ok(result)
+    }
+
+    /// Delete Tenant
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut tx = TardisFuns::reldb().conn();
+        tx.begin().await?;
+        IamCsTenantServ::delete_tenant(&id.0, &tx, &cxt.0).await?;
+        tx.commit().await?;
+        TardisResp::ok(Void {})
     }
 }

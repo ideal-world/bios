@@ -35,23 +35,15 @@ pub async fn init_db() -> TardisResult<()> {
 pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_domain_uri_authority: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<Option<TardisContext>> {
     #[derive(Deserialize, FromQueryResult, Serialize, Clone, Debug)]
     struct TmpContext {
-        pub app_code: String,
-        pub account_code: String,
+        pub code: String,
+        pub rel_app_code: String,
     }
-
-    let app_table = Alias::new("app");
 
     let mut query = Query::select();
     query
-        .expr_as(Expr::tbl(rbum_item::Entity, rbum_item::Column::Code), Alias::new("account_code"))
-        .expr_as(Expr::tbl(app_table.clone(), rbum_item::Column::Code), Alias::new("app_code"))
+        .column((rbum_item::Entity, rbum_item::Column::Code))
+        .column((rbum_item::Entity, rbum_item::Column::RelAppCode))
         .from(rbum_item::Entity)
-        .join_as(
-            JoinType::InnerJoin,
-            rbum_item::Entity,
-            app_table.clone(),
-            Expr::tbl(app_table, rbum_item::Column::Code).equals(rbum_item::Entity, rbum_item::Column::RelAppCode),
-        )
         .inner_join(
             rbum_kind::Entity,
             Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
@@ -68,10 +60,10 @@ pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_doma
 
     if let Some(context) = context {
         Ok(Some(TardisContext {
-            app_code: context.app_code.to_string(),
-            tenant_code: get_tenant_code_from_app_code(&context.app_code),
+            app_code: context.rel_app_code.to_string(),
+            tenant_code: get_tenant_code_from_app_code(&context.rel_app_code).unwrap_or("".to_string()),
             ak: "_".to_string(),
-            account_code: context.account_code,
+            account_code: context.code,
             token: "_".to_string(),
             token_kind: "_".to_string(),
             roles: vec![],

@@ -2,13 +2,13 @@ use tardis::basic::result::TardisResult;
 use tardis::{tokio, TardisFuns};
 
 use bios_basic::rbum::initializer::get_first_account_context;
-use bios_iam::constants;
+use bios_iam::basic::constants;
 
 mod test_basic;
 mod test_cs_tenant;
 
 #[tokio::test]
-async fn test_rbum() -> TardisResult<()> {
+async fn test_iam() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = test_basic::init(&docker).await?;
     let cxt = get_first_account_context(

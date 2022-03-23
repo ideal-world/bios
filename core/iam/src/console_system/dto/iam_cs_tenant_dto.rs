@@ -5,12 +5,17 @@ use tardis::web::poem_openapi::Object;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamCsTenantAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: TrimString,
+    pub tenant_name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub icon: Option<String>,
+    pub tenant_icon: Option<String>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub contact_phone: Option<String>,
+    pub tenant_contact_phone: Option<String>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub admin_username: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub admin_name: TrimString,
 
     pub disabled: Option<bool>,
 }

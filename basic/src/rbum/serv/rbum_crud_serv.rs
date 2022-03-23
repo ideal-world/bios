@@ -77,10 +77,10 @@ impl RbumCrudQueryPackage for SelectStatement {
     }
 
     fn query_with_safe(&mut self, table_name: &str) -> &mut Self {
-        self.expr_as(Expr::tbl(REL_APP_TABLE.clone(), NAME_FIELD.clone()), Alias::new("rel_app_name"))
+        self.expr_as(Expr::tbl(REL_APP_TABLE.clone(), NAME_FIELD.clone()).if_null(""), Alias::new("rel_app_name"))
             .expr_as(Expr::tbl(UPDATER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("updater_name"));
         self.join_as(
-            JoinType::InnerJoin,
+            JoinType::LeftJoin,
             rbum_item::Entity,
             REL_APP_TABLE.clone(),
             Expr::tbl(REL_APP_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), REL_APP_CODE_FIELD.clone()),
