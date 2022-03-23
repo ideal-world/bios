@@ -14,16 +14,15 @@ pub struct IamCtTenantServ;
 impl IamCtTenantServ {
     pub async fn modify_tenant<'a>(modify_req: &mut IamCtTenantModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
-        let tenant_id = IamTenantServ::get_id_by_cxt(db, cxt).await?;
         IamTenantServ::modify_item(
-            &tenant_id,
+            &IamTenantServ::get_id_by_cxt(cxt)?,
             &mut IamTenantModifyReq {
                 name: modify_req.name.clone(),
                 icon: modify_req.icon.clone(),
                 sort: modify_req.sort,
                 contact_phone: modify_req.contact_phone.clone(),
-                scope_kind: modify_req.scope_kind.clone(),
                 disabled: modify_req.disabled,
+                scope_level: modify_req.scope_level,
             },
             db,
             cxt,

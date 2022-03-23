@@ -1,11 +1,9 @@
 use tardis::basic::dto::TardisContext;
-use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
-use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
@@ -26,13 +24,12 @@ impl<'a> IamCsTenantServ {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         let tenant_id = IamTenantServ::add_item(
             &mut IamTenantAddReq {
-                code: Some(TrimString(IamTenantServ::get_new_code())),
                 name: add_req.tenant_name.clone(),
                 icon: add_req.tenant_icon.clone(),
                 sort: None,
                 contact_phone: add_req.tenant_contact_phone.clone(),
-                scope_kind: Some(RbumScopeKind::Global),
                 disabled: add_req.disabled,
+                scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
             },
             db,
             cxt,
@@ -40,11 +37,11 @@ impl<'a> IamCsTenantServ {
         .await?;
         let account_id = IamAccountServ::add_item_with_simple_rel(
             &mut IamAccountAddReq {
-                code: None,
+                id: None,
                 name: add_req.admin_name.clone(),
                 icon: None,
-                scope_kind: Some(RbumScopeKind::Tenant),
                 disabled: add_req.disabled,
+                scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
             },
             constants::RBUM_REL_BIND,
             &tenant_id,
@@ -67,8 +64,8 @@ impl<'a> IamCsTenantServ {
                 icon: None,
                 sort: None,
                 contact_phone: None,
-                scope_kind: None,
                 disabled: modify_req.disabled,
+                scope_level: None,
             },
             db,
             cxt,

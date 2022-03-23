@@ -1,13 +1,14 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::constants::RBUM_ITEM_TENANT_CODE_LEN;
+use bios_basic::rbum::constants::RBUM_SCOPE_L1_LEN;
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -34,12 +35,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
 
     async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
-            code: add_req.code.clone(),
+            id: Some(TrimString(IamTenantServ::get_new_id())),
             uri_path: None,
             name: add_req.name.clone(),
             icon: add_req.icon.clone(),
             sort: add_req.sort,
-            scope_kind: add_req.scope_kind.clone(),
+            scope_level: add_req.scope_level,
             disabled: add_req.disabled,
             rel_rbum_kind_id: "".to_string(),
             rel_rbum_domain_id: "".to_string(),
@@ -54,16 +55,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamTenantModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
-        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_kind.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            code: None,
             uri_path: None,
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: modify_req.sort,
-            scope_kind: modify_req.scope_kind.clone(),
+            scope_level: modify_req.scope_level.clone(),
             disabled: modify_req.disabled,
         }))
     }
@@ -89,11 +89,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
 }
 
 impl IamTenantServ {
-    pub fn get_new_code() -> String {
-        TardisFuns::field.nanoid_len(RBUM_ITEM_TENANT_CODE_LEN)
+    pub fn get_new_id() -> String {
+        TardisFuns::field.nanoid_len(RBUM_SCOPE_L1_LEN)
     }
 
-    pub async fn get_id_by_cxt<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        Self::get_rbum_item_id_by_code(&cxt.tenant_code, &cxt.app_code, db).await?.ok_or_else(|| TardisError::NotFound(format!("tenant code {} not found", cxt.tenant_code)))
+    pub fn get_id_by_cxt(cxt: &TardisContext) -> TardisResult<String> {
+        if cxt.scope_ids.len() >= RBUM_SCOPE_L1_LEN {
+            Ok(cxt.scope_ids[..RBUM_SCOPE_L1_LEN].to_string())
+        } else {
+            Err(TardisError::Unauthorized(format!("tenant id not found in tardis content {}", cxt.scope_ids)))
+        }
     }
 }

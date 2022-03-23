@@ -15,7 +15,6 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::constants;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
-use crate::basic::serv::iam_account_serv::IamAccountServ;
 
 pub struct IamRoleServ;
 
@@ -35,15 +34,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
 
     async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
-            code: None,
+            id: None,
             uri_path: None,
             name: add_req.name.clone(),
             icon: None,
             sort: None,
-            scope_kind: add_req.scope_kind.clone(),
             disabled: None,
             rel_rbum_kind_id: "".to_string(),
             rel_rbum_domain_id: "".to_string(),
+            scope_level: add_req.scope_level,
         })
     }
 
@@ -52,16 +51,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamRoleModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
-        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_kind.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            code: None,
             uri_path: None,
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: modify_req.sort,
-            scope_kind: modify_req.scope_kind.clone(),
+            scope_level: modify_req.scope_level,
             disabled: modify_req.disabled,
         }))
     }
@@ -93,7 +91,7 @@ impl IamRoleServ {
         let exist = RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
                 tag: constants::RBUM_REL_BIND.to_string(),
-                from_rbum_item_id: IamAccountServ::get_id_by_cxt(db, cxt).await?,
+                from_rbum_item_id: cxt.account_id.clone(),
                 to_rbum_item_id: iam_role_id.to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default(),

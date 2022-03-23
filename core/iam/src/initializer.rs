@@ -10,13 +10,13 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
-use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::initializer::get_first_account_context;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use crate::basic::constants;
 
 use crate::basic::constants::*;
 use crate::basic::domain::{iam_account, iam_app, iam_http_res, iam_role, iam_tenant};
@@ -122,17 +122,16 @@ async fn init_basic_info<'a>(tx: &TardisRelDBlConnection<'a>, cxt: &TardisContex
 }
 
 async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()> {
-    let default_account_code = TardisFuns::field.nanoid();
+    let default_account_id = TardisFuns::field.nanoid();
 
     let cxt = TardisContext {
-        app_code: "".to_string(),
-        tenant_code: "".to_string(),
+        scope_ids: "".to_string(),
         ak: "".to_string(),
-        account_code: default_account_code.clone(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
+        account_id: default_account_id.to_string()
     };
 
     let kind_tenant_id = add_kind(RBUM_KIND_SCHEME_IAM_TENANT, tx, &cxt).await?;
@@ -160,7 +159,7 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
             disabled: None,
         },
         tx,
@@ -172,7 +171,7 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
             name: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
             disabled: None,
         },
         tx,
@@ -184,7 +183,7 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
             name: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
             disabled: None,
         },
         tx,
@@ -208,11 +207,11 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
 
     let account_sys_admin_id = IamAccountServ::add_item(
         &mut IamAccountAddReq {
-            code: Some(TrimString(default_account_code)),
+            id: Some(TrimString(default_account_id)),
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
             icon: None,
-            scope_kind: Some(RbumScopeKind::Global),
             disabled: None,
+            scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
         },
         tx,
         &cxt,
@@ -242,7 +241,7 @@ async fn add_kind<'a>(scheme: &str, tx: &TardisRelDBlConnection<'a>, cxt: &Tardi
             icon: None,
             sort: None,
             ext_table_name: Some(scheme.to_string().to_lowercase()),
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
         },
         &tx,
         &cxt,
@@ -258,7 +257,7 @@ async fn add_domain<'a>(tx: &TardisRelDBlConnection<'a>, cxt: &TardisContext) ->
             note: None,
             icon: None,
             sort: None,
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
         },
         &tx,
         &cxt,
