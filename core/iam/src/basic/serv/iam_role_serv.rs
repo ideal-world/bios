@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
@@ -7,16 +8,19 @@ use tardis::db::sea_query::SelectStatement;
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelCheckReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
+use crate::basic::constants;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
-use crate::constants;
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 
-pub struct IamRoleCrudServ;
+pub struct IamRoleServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyReq, IamRoleSummaryResp, IamRoleDetailResp> for IamRoleCrudServ {
+impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyReq, IamRoleSummaryResp, IamRoleDetailResp> for IamRoleServ {
     fn get_ext_table_name() -> &'static str {
         iam_role::Entity.table_name()
     }
@@ -48,7 +52,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamRoleModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
-        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() &&modify_req.scope_kind.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_kind.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
@@ -68,5 +72,40 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
 
     async fn package_item_query(_: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
+    }
+}
+
+impl IamRoleServ {
+    pub async fn need_sys_admin<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::need_role(&constants::get_rbum_basic_info().role_sys_admin_id, db, cxt).await
+    }
+
+    pub async fn need_tenant_admin<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::need_role(&constants::get_rbum_basic_info().role_tenant_admin_id, db, cxt).await
+    }
+
+    pub async fn need_app_admin<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::need_role(&constants::get_rbum_basic_info().role_app_admin_id, db, cxt).await
+    }
+
+    pub async fn need_role<'a>(iam_role_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        // TODO cache
+        let exist = RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: constants::RBUM_REL_BIND.to_string(),
+                from_rbum_item_id: IamAccountServ::get_id_by_cxt(db, cxt).await?,
+                to_rbum_item_id: iam_role_id.to_string(),
+                from_attrs: Default::default(),
+                to_attrs: Default::default(),
+            },
+            db,
+            cxt,
+        )
+        .await?;
+        if !exist {
+            Err(TardisError::Unauthorized("illegal operation".to_string()))
+        } else {
+            Ok(())
+        }
     }
 }

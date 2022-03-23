@@ -9,14 +9,14 @@ use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use crate::basic::constants;
 use crate::basic::domain::iam_http_res;
 use crate::basic::dto::iam_http_res_dto::{IamHttpResAddReq, IamHttpResDetailResp, IamHttpResModifyReq, IamHttpResSummaryResp};
-use crate::constants;
 
-pub struct IamHttpResCrudServ;
+pub struct IamHttpResServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, IamHttpResModifyReq, IamHttpResSummaryResp, IamHttpResDetailResp> for IamHttpResCrudServ {
+impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, IamHttpResModifyReq, IamHttpResSummaryResp, IamHttpResDetailResp> for IamHttpResServ {
     fn get_ext_table_name() -> &'static str {
         iam_http_res::Entity.table_name()
     }

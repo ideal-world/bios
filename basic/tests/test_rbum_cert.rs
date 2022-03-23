@@ -45,6 +45,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_cert_conf】 : Test Add : RbumCertConfServ::add_rbum");
     assert!(RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
+            code: TrimString("UserPwd".to_string()),
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -58,7 +59,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
-            rel_rbum_domain_id: "".to_string()
+            rel_rbum_domain_id: "".to_string(),
+            rel_rbum_item_id: None
         },
         &tx,
         context,
@@ -68,6 +70,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 
     assert!(RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
+            code: TrimString("UserPwd".to_string()),
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -81,7 +84,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
-            rel_rbum_domain_id: "".to_string()
+            rel_rbum_domain_id: "".to_string(),
+            rel_rbum_item_id: None
         },
         &tx,
         context,
@@ -91,6 +95,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 
     let id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
+            code: TrimString("UserPwd".to_string()),
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -105,11 +110,37 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             expire_sec: None,
             coexist_num: None,
             rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
         },
         &tx,
         context,
     )
     .await?;
+
+    assert!(RbumCertConfServ::add_rbum(
+        &mut RbumCertConfAddReq {
+            code: TrimString("UserPwd".to_string()),
+            name: TrimString("用户名+密码".to_string()),
+            note: None,
+            ak_note: None,
+            ak_rule: Some("^[a-zA-Z0-9]{6,20}$".to_string()),
+            sk_note: None,
+            sk_rule: Some("^.{8,40}$".to_string()),
+            sk_need: Some(true),
+            sk_encrypted: Some(true),
+            repeatable: None,
+            is_basic: None,
+            rest_by_kinds: None,
+            expire_sec: None,
+            coexist_num: None,
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None
+        },
+        &tx,
+        context,
+    )
+    .await
+    .is_err());
 
     info!("【test_rbum_cert_conf】 : Test Get : RbumCertConfServ::get_rbum");
     let rbum = RbumCertConfServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
@@ -204,6 +235,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_cert】 : Prepare Cert Conf : RbumCertConfServ::add_rbum");
     let cert_conf_user_pwd_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
+            code: TrimString("UserPwd".to_string()),
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -218,6 +250,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             expire_sec: Some(2),
             coexist_num: None,
             rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
         },
         &tx,
         context,
@@ -226,6 +259,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
 
     let cert_conf_ssh_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
+            code: TrimString("MysqlConn".to_string()),
             name: TrimString("mysql ident".to_string()),
             note: None,
             ak_note: None,
@@ -240,6 +274,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             expire_sec: None,
             coexist_num: None,
             rel_rbum_domain_id: domain_db_id.to_string(),
+            rel_rbum_item_id: None,
         },
         &tx,
         context,

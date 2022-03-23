@@ -1,22 +1,25 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
+use tardis::TardisFuns;
 
+use bios_basic::rbum::constants::RBUM_ITEM_APP_CODE_LEN;
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use crate::basic::constants;
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
-use crate::constants;
 
-pub struct IamAppCrudServ;
+pub struct IamAppServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, IamAppSummaryResp, IamAppDetailResp> for IamAppCrudServ {
+impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, IamAppSummaryResp, IamAppDetailResp> for IamAppServ {
     fn get_ext_table_name() -> &'static str {
         iam_app::Entity.table_name()
     }
@@ -51,7 +54,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamAppModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
-        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() &&modify_req.scope_kind.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_kind.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
@@ -82,5 +85,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     async fn package_item_query(query: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         Ok(())
+    }
+}
+
+impl IamAppServ {
+    pub fn get_new_code(tenant_code: &str) -> String {
+        format!("{}{}", tenant_code, TardisFuns::field.nanoid_len(RBUM_ITEM_APP_CODE_LEN))
+    }
+
+    pub async fn get_id_by_cxt<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        Self::get_rbum_item_id_by_code(&cxt.app_code, &cxt.app_code, db).await?.ok_or_else(|| TardisError::NotFound(format!("app code {} not found", cxt.app_code)))
     }
 }

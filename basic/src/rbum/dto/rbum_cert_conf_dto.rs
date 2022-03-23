@@ -6,6 +6,8 @@ use tardis::web::poem_openapi::Object;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertConfAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
@@ -28,6 +30,8 @@ pub struct RbumCertConfAddReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_domain_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_item_id: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -58,6 +62,7 @@ pub struct RbumCertConfModifyReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumCertConfSummaryResp {
     pub id: String,
+    pub code: String,
     pub name: String,
 
     pub create_time: DateTime<Utc>,
@@ -68,6 +73,7 @@ pub struct RbumCertConfSummaryResp {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumCertConfDetailResp {
     pub id: String,
+    pub code: String,
     pub name: String,
     pub note: String,
     pub ak_note: String,
@@ -83,6 +89,8 @@ pub struct RbumCertConfDetailResp {
     pub coexist_num: i32,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,
+    pub rel_rbum_item_id: String,
+    pub rel_rbum_item_name: String,
 
     pub rel_app_code: String,
     pub rel_app_name: String,

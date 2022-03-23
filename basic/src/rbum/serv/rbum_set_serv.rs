@@ -90,8 +90,10 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         }
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
-        query.query_with_scope(Self::get_table_name(), cxt);
-
+        if !filter.ignore_scope_check {
+            query.query_with_scope(Self::get_table_name(), cxt);
+        }
+        
         Ok(query)
     }
 
@@ -257,8 +259,10 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         }
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
-        query.query_with_scope(Self::get_table_name(), cxt);
-
+        if !filter.ignore_scope_check {
+            query.query_with_scope(Self::get_table_name(), cxt);
+        }
+        
         Ok(query)
     }
 

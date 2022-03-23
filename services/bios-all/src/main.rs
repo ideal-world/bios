@@ -10,7 +10,7 @@ mod config;
 mod initializer;
 
 ///
-/// Visit: http://127.0.0.1:8081/ui
+/// Visit: http://127.0.0.1:8081/
 ///
 #[tokio::main]
 async fn main() -> TardisResult<()> {

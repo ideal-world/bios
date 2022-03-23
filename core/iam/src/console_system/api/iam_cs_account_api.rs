@@ -7,7 +7,7 @@ use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSummaryResp};
-use crate::basic::serv::iam_account_serv::IamAccountCrudServ;
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::console_system::dto::iam_cs_account_dto::IamCsAccountModifyReq;
 use crate::console_system::serv::iam_cs_account_serv::IamCsAccountServ;
 
@@ -29,7 +29,7 @@ impl IamCsAccountApi {
     /// Get Account By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
-        let result = IamAccountCrudServ::get_item(&id.0, &RbumItemFilterReq::default(), &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCsAccountServ::get_account(&id.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -37,7 +37,7 @@ impl IamCsAccountApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        iam_tenant_code: Query<String>,
+        iam_tenant_id: Query<String>,
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
@@ -45,12 +45,9 @@ impl IamCsAccountApi {
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
-        let result = IamAccountCrudServ::paginate_items(
-            &RbumItemFilterReq {
-                name: name.0,
-                iam_tenant_code: Some(iam_tenant_code.0),
-                ..Default::default()
-            },
+        let result = IamCsAccountServ::paginate_accounts(
+            iam_tenant_id.0,
+            name.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,

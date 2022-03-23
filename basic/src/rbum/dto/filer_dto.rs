@@ -27,6 +27,8 @@ pub struct RbumBasicFilterReq {
     pub rbum_rel_rbum_item_id: Option<String>,
     pub rbum_rel_app_code: Option<String>,
     pub rbum_rel_id: Option<String>,
+
+    pub ignore_scope_check: bool,
 }
 
 impl Default for RbumBasicFilterReq {
@@ -50,6 +52,7 @@ impl Default for RbumBasicFilterReq {
             rbum_rel_rbum_item_id: None,
             rbum_rel_app_code: None,
             rbum_rel_id: None,
+            ignore_scope_check: false
         }
     }
 }
@@ -64,8 +67,10 @@ pub struct RbumItemFilterReq {
     pub name: Option<String>,
     pub code: Option<String>,
 
-    pub iam_tenant_code: Option<String>,
-    pub iam_app_code: Option<String>,
+    pub iam_tenant_id: Option<String>,
+    pub iam_app_id: Option<String>,
+
+    pub ignore_scope_check: bool,
 }
 
 impl Default for RbumItemFilterReq {
@@ -77,8 +82,9 @@ impl Default for RbumItemFilterReq {
             enabled: None,
             name: None,
             code: None,
-            iam_tenant_code: None,
-            iam_app_code: None,
+            iam_tenant_id: None,
+            iam_app_id: None,
+            ignore_scope_check: false
         }
     }
 }

@@ -147,6 +147,22 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
 }
 
 impl<'a> RbumRelServ {
+    pub async fn add_simple_rel(tag: &str, from_rbum_item_id: &str, to_rbum_item_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        RbumRelServ::add_rbum(
+            &mut RbumRelAddReq {
+                tag: tag.to_string(),
+                from_rbum_item_id: from_rbum_item_id.to_string(),
+                to_rbum_item_id: to_rbum_item_id.to_string(),
+                to_other_app_code: cxt.app_code.to_string(),
+                ext: None,
+            },
+            db,
+            cxt,
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn add_rel(add_req: &mut RbumRelAggAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let rbum_rel_id = Self::add_rbum(&mut add_req.rel, db, cxt).await?;
         for attr in &add_req.attrs {

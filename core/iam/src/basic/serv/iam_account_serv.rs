@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
@@ -9,14 +10,14 @@ use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use crate::basic::constants;
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSummaryResp};
-use crate::constants;
 
-pub struct IamAccountCrudServ;
+pub struct IamAccountServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, IamAccountModifyReq, IamAccountSummaryResp, IamAccountDetailResp> for IamAccountCrudServ {
+impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, IamAccountModifyReq, IamAccountSummaryResp, IamAccountDetailResp> for IamAccountServ {
     fn get_ext_table_name() -> &'static str {
         iam_account::Entity.table_name()
     }
@@ -68,5 +69,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
 
     async fn package_item_query(_: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
+    }
+}
+
+impl IamAccountServ {
+    pub async fn get_id_by_cxt<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        Self::get_rbum_item_id_by_code(&cxt.account_code, &cxt.app_code, db).await?.ok_or_else(|| TardisError::NotFound(format!("account code {} not found", cxt.account_code)))
     }
 }
