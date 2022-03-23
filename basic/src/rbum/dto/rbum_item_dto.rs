@@ -3,12 +3,10 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumScopeKind;
-
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub id: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub uri_path: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -16,8 +14,8 @@ pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
-
-    pub scope_kind: Option<RbumScopeKind>,
+    
+    pub scope_level: i32,
     pub disabled: Option<bool>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -28,8 +26,6 @@ pub struct RbumItemAddReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub uri_path: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -38,7 +34,7 @@ pub struct RbumItemModifyReq {
     pub icon: Option<String>,
     pub sort: Option<i32>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: Option<i32>,
     pub disabled: Option<bool>,
 }
 
@@ -46,7 +42,6 @@ pub struct RbumItemModifyReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumItemSummaryResp {
     pub id: String,
-    pub code: String,
     pub uri_path: String,
     pub name: String,
     pub icon: String,
@@ -55,7 +50,7 @@ pub struct RbumItemSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 
     pub disabled: bool,
 }
@@ -64,7 +59,6 @@ pub struct RbumItemSummaryResp {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumItemDetailResp {
     pub id: String,
-    pub code: String,
     pub uri_path: String,
     pub name: String,
     pub icon: String,
@@ -74,14 +68,13 @@ pub struct RbumItemDetailResp {
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,
 
-    pub rel_app_code: String,
-    pub rel_app_name: String,
-    pub updater_code: String,
+    pub scope_ids: String,
+    pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 
     pub disabled: bool,
 }

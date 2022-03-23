@@ -33,7 +33,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -211,7 +211,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -225,7 +225,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: None,
+            scope_level: 2,
         },
         &tx,
         context,
@@ -481,22 +481,22 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumCertServ::validate("11", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.tenant_code, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.scope_ids, &tx).await.is_err());
     tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     info!("Test Validate RbumCertServ::validate gudaoxuri abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.tenant_code, &tx).await?,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_ids, &tx).await?,
         cert_gudaoxuri_id.to_string()
     );
     info!("Test Validate RbumCertServ::validate root abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.tenant_code, &tx).await?,
+        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.scope_ids, &tx).await?,
         cert_root_id.to_string()
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
     // Expire
     info!("Test Validate Expire RbumCertServ::validate gudaoxuri abcdefgh");
-    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.tenant_code, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_ids, &tx).await.is_err());
 
     info!("【test_rbum_cert】 : Test Delete : RbumCertServ::delete_rbum");
     RbumCertServ::delete_rbum(&cert_gudaoxuri_id, &tx, context).await?;

@@ -12,7 +12,6 @@ use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, 
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
-use crate::rbum::enumeration::RbumScopeKind;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 
 pub struct RbumKindServ;
@@ -33,7 +32,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             ext_table_name: Set(add_req.ext_table_name.as_ref().unwrap_or(&"".to_string()).to_string()),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+            scope_level: Set(add_req.scope_level),
             ..Default::default()
         })
     }
@@ -61,8 +60,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
         if let Some(ext_table_name) = &modify_req.ext_table_name {
             rbum_kind.ext_table_name = Set(ext_table_name.to_string());
         }
-        if let Some(scope_kind) = &modify_req.scope_kind {
-            rbum_kind.scope_kind = Set(scope_kind.to_string());
+        if let Some(scope_level) = modify_req.scope_level {
+            rbum_kind.scope_level = Set(scope_level);
         }
         Ok(rbum_kind)
     }
@@ -77,11 +76,11 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             (rbum_kind::Entity, rbum_kind::Column::Icon),
             (rbum_kind::Entity, rbum_kind::Column::Sort),
             (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
-            (rbum_kind::Entity, rbum_kind::Column::RelAppCode),
-            (rbum_kind::Entity, rbum_kind::Column::UpdaterCode),
+            (rbum_kind::Entity, rbum_kind::Column::ScopeIds),
+            (rbum_kind::Entity, rbum_kind::Column::UpdaterId),
             (rbum_kind::Entity, rbum_kind::Column::CreateTime),
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
-            (rbum_kind::Entity, rbum_kind::Column::ScopeKind),
+            (rbum_kind::Entity, rbum_kind::Column::ScopeLevel),
         ]);
         query.from(rbum_kind::Entity);
 
@@ -156,7 +155,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             max_length: Set(add_req.max_length.unwrap_or(0)),
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+            scope_level: Set(add_req.scope_level),
             ..Default::default()
         })
     }
@@ -214,8 +213,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         if let Some(action) = &modify_req.action {
             rbum_kind_attr.default_value = Set(action.to_string());
         }
-        if let Some(scope_kind) = &modify_req.scope_kind {
-            rbum_kind_attr.scope_kind = Set(scope_kind.to_string());
+        if let Some(scope_level) = modify_req.scope_level {
+            rbum_kind_attr.scope_level = Set(scope_level);
         }
         Ok(rbum_kind_attr)
     }
@@ -242,11 +241,11 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::MaxLength),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Action),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
-                (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelAppCode),
-                (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdaterCode),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ScopeIds),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdaterId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::CreateTime),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdateTime),
-                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ScopeKind),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ScopeLevel),
             ])
             .from(rbum_kind_attr::Entity);
 

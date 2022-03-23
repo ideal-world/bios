@@ -6,7 +6,6 @@ use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainModifyReq};
-use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
@@ -22,7 +21,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
-            scope_kind: None,
+            scope_level: 2
         },
         &tx,
         context,
@@ -46,7 +45,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             note: None,
             icon: Some(".".to_string()),
             sort: None,
-            scope_kind: None,
+            scope_level: None
         },
         &tx,
         context,
@@ -56,7 +55,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_domin】 : Test Find : RbumDomainServ::paginate_rbums");
     let rbums = RbumDomainServ::paginate_rbums(
         &RbumBasicFilterReq {
-            scope_kind: Some(RbumScopeKind::App),
+            scope_level: Some(2),
             ..Default::default()
         },
         1,

@@ -8,13 +8,12 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
-use crate::rbum::constants::{RBUM_REL_CATE_SYS_CODE_NODE_LEN, RBUM_SET_CATE_ID_LEN, RBUM_SET_ID_LEN};
+use crate::rbum::constants::RBUM_REL_CATE_SYS_CODE_NODE_LEN;
 use crate::rbum::domain::{rbum_item, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateSummaryWithPidResp};
 use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetSummaryResp};
 use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
-use crate::rbum::enumeration::RbumScopeKind;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 
@@ -30,13 +29,13 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 
     async fn package_add(add_req: &RbumSetAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
         Ok(rbum_set::ActiveModel {
-            id: Set(TardisFuns::field.nanoid_len(RBUM_SET_ID_LEN)),
+            id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             tags: Set(add_req.tags.as_ref().unwrap_or(&"".to_string()).to_string()),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+            scope_level: Set(add_req.scope_level),
             ..Default::default()
         })
     }
@@ -61,8 +60,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         if let Some(tags) = &modify_req.tags {
             rbum_set.tags = Set(tags.to_string());
         }
-        if let Some(scope_kind) = &modify_req.scope_kind {
-            rbum_set.scope_kind = Set(scope_kind.to_string());
+        if let Some(scope_level) = modify_req.scope_level {
+            rbum_set.scope_level = Set(scope_level);
         }
         Ok(rbum_set)
     }
@@ -77,11 +76,11 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 (rbum_set::Entity, rbum_set::Column::Icon),
                 (rbum_set::Entity, rbum_set::Column::Sort),
                 (rbum_set::Entity, rbum_set::Column::Tags),
-                (rbum_set::Entity, rbum_set::Column::RelAppCode),
-                (rbum_set::Entity, rbum_set::Column::UpdaterCode),
+                (rbum_set::Entity, rbum_set::Column::ScopeIds),
+                (rbum_set::Entity, rbum_set::Column::UpdaterId),
                 (rbum_set::Entity, rbum_set::Column::CreateTime),
                 (rbum_set::Entity, rbum_set::Column::UpdateTime),
-                (rbum_set::Entity, rbum_set::Column::ScopeKind),
+                (rbum_set::Entity, rbum_set::Column::ScopeLevel),
             ])
             .from(rbum_set::Entity);
 
@@ -93,7 +92,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         if !filter.ignore_scope_check {
             query.query_with_scope(Self::get_table_name(), cxt);
         }
-        
+
         Ok(query)
     }
 
@@ -123,7 +122,7 @@ impl<'a> RbumSetServ {
                 sort: r.sort,
                 create_time: r.create_time,
                 update_time: r.update_time,
-                scope_kind: r.scope_kind.to_string(),
+                scope_level: r.scope_level,
                 pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - RBUM_REL_CATE_SYS_CODE_NODE_LEN]).map(|i| i.id.to_string()),
             })
             .collect())
@@ -145,7 +144,7 @@ impl<'a> RbumSetServ {
                 sort: r.sort,
                 create_time: r.create_time,
                 update_time: r.update_time,
-                scope_kind: r.scope_kind,
+                scope_level: r.scope_level,
             })
             .collect())
     }
@@ -167,11 +166,11 @@ impl<'a> RbumSetServ {
                 (rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Column::Name),
                 (rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Column::RelAppCode),
-                (rbum_set_cate::Column::UpdaterCode),
+                (rbum_set_cate::Column::ScopeIds),
+                (rbum_set_cate::Column::UpdaterId),
                 (rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Column::UpdateTime),
-                (rbum_set_cate::Column::ScopeKind),
+                (rbum_set_cate::Column::ScopeLevel),
             ])
             .from(rbum_set_cate::Entity)
             .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(rbum_set_id));
@@ -207,12 +206,12 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             Self::package_sys_code(&add_req.rel_rbum_set_id, None, false, db, cxt).await?
         };
         Ok(rbum_set_cate::ActiveModel {
-            id: Set(format!("{}{}", add_req.rel_rbum_set_id, TardisFuns::field.nanoid_len(RBUM_SET_CATE_ID_LEN))),
+            id: Set(TardisFuns::field.nanoid()),
             sys_code: Set(sys_code),
             bus_code: Set(add_req.bus_code.to_string()),
             name: Set(add_req.name.to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+            scope_level: Set(add_req.scope_level),
             rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
             ..Default::default()
         })
@@ -232,8 +231,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         if let Some(sort) = modify_req.sort {
             rbum_set_cate.sort = Set(sort);
         }
-        if let Some(scope_kind) = &modify_req.scope_kind {
-            rbum_set_cate.scope_kind = Set(scope_kind.to_string());
+        if let Some(scope_level) = modify_req.scope_level {
+            rbum_set_cate.scope_level = Set(scope_level);
         }
         Ok(rbum_set_cate)
     }
@@ -246,11 +245,11 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 (rbum_set_cate::Entity, rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Name),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::RelAppCode),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::UpdaterCode),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::ScopeIds),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::UpdaterId),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::UpdateTime),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::ScopeKind),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::ScopeLevel),
             ])
             .from(rbum_set_cate::Entity);
 
@@ -262,7 +261,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         if !filter.ignore_scope_check {
             query.query_with_scope(Self::get_table_name(), cxt);
         }
-        
+
         Ok(query)
     }
 
@@ -398,8 +397,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 (rbum_set_item::Entity, rbum_set_item::Column::Id),
                 (rbum_set_item::Entity, rbum_set_item::Column::Sort),
                 (rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
-                (rbum_set_item::Entity, rbum_set_item::Column::RelAppCode),
-                (rbum_set_item::Entity, rbum_set_item::Column::UpdaterCode),
+                (rbum_set_item::Entity, rbum_set_item::Column::ScopeIds),
+                (rbum_set_item::Entity, rbum_set_item::Column::UpdaterId),
                 (rbum_set_item::Entity, rbum_set_item::Column::CreateTime),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdateTime),
             ])
@@ -449,5 +448,5 @@ struct RbumSetCateWithLevelResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
 }

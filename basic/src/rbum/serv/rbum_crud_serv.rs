@@ -10,21 +10,20 @@ use tardis::db::sea_query::{Alias, Cond, Expr, IntoValueTuple, JoinType, Order, 
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 
+use crate::rbum::constants;
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
-use crate::rbum::enumeration::RbumScopeKind;
 
 lazy_static! {
     pub static ref UPDATER_TABLE: Alias = Alias::new("updater");
-    pub static ref REL_APP_TABLE: Alias = Alias::new("relApp");
     pub static ref ID_FIELD: Alias = Alias::new("id");
-    pub static ref CODE_FIELD: Alias = Alias::new("code");
-    pub static ref NAME_FIELD: Alias = Alias::new("name");
-    pub static ref UPDATER_CODE_FIELD: Alias = Alias::new("updater_code");
-    pub static ref REL_APP_CODE_FIELD: Alias = Alias::new("rel_app_code");
+    pub static ref UPDATER_ID_FIELD: Alias = Alias::new("updater_id");
+    pub static ref SCOPE_IDS_FIELD: Alias = Alias::new("scope_ids");
     pub static ref CREATE_TIME_FIELD: Alias = Alias::new("create_time");
     pub static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
-    pub static ref SCOPE_KIND_FIELD: Alias = Alias::new("scope_kind");
+    pub static ref CODE_FIELD: Alias = Alias::new("code");
+    pub static ref NAME_FIELD: Alias = Alias::new("name");
+    pub static ref SCOPE_LEVEL_FIELD: Alias = Alias::new("scope_level");
     pub static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_rbum_kind_id");
     pub static ref REL_DOMAIN_ID_FIELD: Alias = Alias::new("rel_rbum_domain_id");
     pub static ref DISABLED_FIELD: Alias = Alias::new("disabled");
@@ -40,20 +39,19 @@ pub trait RbumCrudQueryPackage {
 
 impl RbumCrudQueryPackage for SelectStatement {
     fn query_with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> &mut Self {
-        if filter.rel_cxt_app {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).eq(cxt.app_code.as_str()));
+        if filter.rel_cxt_scope {
+            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", cxt.scope_ids).as_str()));
         }
         if filter.rel_cxt_updater {
-            self.and_where(Expr::tbl(Alias::new(table_name), UPDATER_CODE_FIELD.clone()).eq(cxt.account_code.as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), UPDATER_ID_FIELD.clone()).eq(cxt.account_id.as_str()));
         }
-        if let Some(scope_kind) = &filter.scope_kind {
-            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(scope_kind.to_string()));
+
+        if let Some(rel_scope_ids) = &filter.rel_scope_ids {
+            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", rel_scope_ids).as_str()));
         }
-        if let Some(rel_tenant_code) = &filter.rel_tenant_code {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).like(format!("{}%", rel_tenant_code).as_str()));
-        }
-        if let Some(rel_app_code) = &filter.rel_app_code {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).eq(rel_app_code.to_string()));
+
+        if let Some(scope_level) = &filter.scope_level {
+            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(scope_level.to_string()));
         }
         if let Some(rbum_kind_id) = &filter.rbum_kind_id {
             self.and_where(Expr::tbl(Alias::new(table_name), REL_KIND_ID_FIELD.clone()).eq(rbum_kind_id.to_string()));
@@ -77,37 +75,36 @@ impl RbumCrudQueryPackage for SelectStatement {
     }
 
     fn query_with_safe(&mut self, table_name: &str) -> &mut Self {
-        self.expr_as(Expr::tbl(REL_APP_TABLE.clone(), NAME_FIELD.clone()).if_null(""), Alias::new("rel_app_name"))
-            .expr_as(Expr::tbl(UPDATER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("updater_name"));
-        self.join_as(
-            JoinType::LeftJoin,
-            rbum_item::Entity,
-            REL_APP_TABLE.clone(),
-            Expr::tbl(REL_APP_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), REL_APP_CODE_FIELD.clone()),
-        )
-        .join_as(
+        self.expr_as(Expr::tbl(UPDATER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("updater_name")).join_as(
             JoinType::InnerJoin,
             rbum_item::Entity,
             UPDATER_TABLE.clone(),
-            Expr::tbl(UPDATER_TABLE.clone(), CODE_FIELD.clone()).equals(Alias::new(table_name), UPDATER_CODE_FIELD.clone()),
+            Expr::tbl(UPDATER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), UPDATER_ID_FIELD.clone()),
         );
         self
     }
 
     fn query_with_scope(&mut self, table_name: &str, cxt: &TardisContext) -> &mut Self {
         self.cond_where(
-            Cond::any()
-                .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Global.to_string()))
-                .add(
-                    Cond::all()
-                        .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::Tenant.to_string()))
-                        .add(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).like(format!("{}%", cxt.tenant_code).as_str())),
-                )
-                .add(
-                    Cond::all()
-                        .add(Expr::tbl(Alias::new(table_name), SCOPE_KIND_FIELD.clone()).eq(RbumScopeKind::App.to_string()))
-                        .add(Expr::tbl(Alias::new(table_name), REL_APP_CODE_FIELD.clone()).eq(cxt.app_code.as_str())),
-                ),
+            Cond::all().add(
+                Cond::any()
+                    .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0))
+                    .add(
+                        Cond::all()
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1))
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", constants::get_pre_levels(1, &cxt.scope_ids)).as_str())),
+                    )
+                    .add(
+                        Cond::all()
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2))
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", constants::get_pre_levels(2, &cxt.scope_ids)).as_str())),
+                    )
+                    .add(
+                        Cond::all()
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3))
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", constants::get_pre_levels(3, &cxt.scope_ids)).as_str())),
+                    ),
+            ),
         );
         self
     }
@@ -134,7 +131,7 @@ where
             .column(ID_FIELD.clone())
             .from(Alias::new(table_name))
             .and_where(Expr::col(ID_FIELD.clone()).eq(id))
-            .and_where(Expr::col(REL_APP_CODE_FIELD.clone()).eq(cxt.app_code.as_str()));
+            .and_where(Expr::col(SCOPE_IDS_FIELD.clone()).like(format!("{}%", cxt.scope_ids).as_str()));
         query
     }
 
@@ -235,7 +232,7 @@ where
     async fn delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         Self::before_delete_rbum(id, db, cxt).await?;
         let select = Self::package_delete(id, db, cxt).await?;
-        let delete_records = db.soft_delete(select, &cxt.account_code).await?;
+        let delete_records = db.soft_delete(select, &cxt.account_id).await?;
         Self::after_delete_rbum(id, db, cxt).await?;
         Ok(delete_records)
     }

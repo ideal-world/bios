@@ -38,7 +38,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             tag: Set(add_req.tag.to_string()),
             from_rbum_item_id: Set(add_req.from_rbum_item_id.to_string()),
             to_rbum_item_id: Set(add_req.to_rbum_item_id.to_string()),
-            to_other_app_code: Set(add_req.to_other_app_code.to_string()),
+            to_scope_ids: Set(add_req.to_scope_ids.to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
@@ -59,7 +59,6 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
     }
 
     async fn package_query(_: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
-        let to_other_app_table = Alias::new("toOtherApp");
         let from_rbum_item_table = Alias::new("fromRbumItem");
         let to_rbum_item_table = Alias::new("toRbumItem");
 
@@ -70,16 +69,15 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 (rbum_rel::Entity, rbum_rel::Column::Tag),
                 (rbum_rel::Entity, rbum_rel::Column::FromRbumItemId),
                 (rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
-                (rbum_rel::Entity, rbum_rel::Column::ToOtherAppCode),
+                (rbum_rel::Entity, rbum_rel::Column::ToScopeIds),
                 (rbum_rel::Entity, rbum_rel::Column::Ext),
-                (rbum_rel::Entity, rbum_rel::Column::RelAppCode),
-                (rbum_rel::Entity, rbum_rel::Column::UpdaterCode),
+                (rbum_rel::Entity, rbum_rel::Column::ScopeIds),
+                (rbum_rel::Entity, rbum_rel::Column::UpdaterId),
                 (rbum_rel::Entity, rbum_rel::Column::CreateTime),
                 (rbum_rel::Entity, rbum_rel::Column::UpdateTime),
             ])
             .expr_as(Expr::tbl(from_rbum_item_table.clone(), rbum_item::Column::Name), Alias::new("from_rbum_item_name"))
             .expr_as(Expr::tbl(to_rbum_item_table.clone(), rbum_item::Column::Name), Alias::new("to_rbum_item_name"))
-            .expr_as(Expr::tbl(to_other_app_table.clone(), rbum_item::Column::Name), Alias::new("to_other_app_name"))
             .from(rbum_rel::Entity)
             .join_as(
                 JoinType::InnerJoin,
@@ -92,12 +90,6 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 rbum_item::Entity,
                 to_rbum_item_table.clone(),
                 Expr::tbl(to_rbum_item_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
-            )
-            .join_as(
-                JoinType::InnerJoin,
-                rbum_item::Entity,
-                to_other_app_table.clone(),
-                Expr::tbl(to_other_app_table, rbum_item::Column::Code).equals(rbum_rel::Entity, rbum_rel::Column::ToOtherAppCode),
             );
 
         if let Some(rbum_rel_tag) = &filter.rbum_rel_tag {
@@ -108,15 +100,15 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
                 }
-                if let Some(rbum_rel_app_code) = &filter.rbum_rel_app_code {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::RelAppCode).eq(rbum_rel_app_code.to_string()));
+                if let Some(rel_scope_ids) = &filter.rel_scope_ids {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ScopeIds).eq(rel_scope_ids.to_string()));
                 }
             } else {
                 if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
                 }
-                if let Some(rbum_rel_app_code) = &filter.rbum_rel_app_code {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOtherAppCode).eq(rbum_rel_app_code.to_string()));
+                if let Some(rel_scope_ids) = &filter.rel_scope_ids {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToScopeIds).eq(rel_scope_ids.to_string()));
                 }
             }
         }
@@ -153,7 +145,7 @@ impl<'a> RbumRelServ {
                 tag: tag.to_string(),
                 from_rbum_item_id: from_rbum_item_id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
-                to_other_app_code: cxt.app_code.to_string(),
+                to_scope_ids: cxt.scope_ids.to_string(),
                 ext: None,
             },
             db,
@@ -211,7 +203,7 @@ impl<'a> RbumRelServ {
                 rbum_rel_is_from: Some(true),
                 rbum_rel_rbum_kind_id: Some(from_rbum_kind_id.to_string()),
                 rbum_rel_rbum_item_id: Some(from_rbum_item_id.to_string()),
-                rbum_rel_app_code: Some(cxt.app_code.to_string()),
+                rel_scope_ids: Some(cxt.scope_ids.to_string()),
                 ..Default::default()
             },
             page_number,
@@ -241,7 +233,7 @@ impl<'a> RbumRelServ {
                 rbum_rel_is_from: Some(false),
                 rbum_rel_rbum_kind_id: Some(to_rbum_kind_id.to_string()),
                 rbum_rel_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                rbum_rel_app_code: Some(cxt.app_code.to_string()),
+                rel_scope_ids: Some(cxt.scope_ids.to_string()),
                 ..Default::default()
             },
             page_number,
@@ -311,9 +303,7 @@ impl<'a> RbumRelServ {
             .and_where(Expr::col(rbum_rel::Column::Tag).eq(check_req.tag.as_str()))
             .and_where(Expr::col(rbum_rel::Column::FromRbumItemId).eq(check_req.from_rbum_item_id.as_str()))
             .and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(check_req.to_rbum_item_id.as_str()))
-            .cond_where(
-                Cond::any().add(Expr::col(rbum_rel::Column::RelAppCode).eq(cxt.app_code.as_str())).add(Expr::col(rbum_rel::Column::ToOtherAppCode).eq(cxt.app_code.as_str())),
-            );
+            .cond_where(Cond::any().add(Expr::col(rbum_rel::Column::ScopeIds).eq(cxt.scope_ids.as_str())).add(Expr::col(rbum_rel::Column::ToScopeIds).eq(cxt.scope_ids.as_str())));
         let rbum_rel = db.get_dto::<IdResp>(&query).await?;
         if let Some(rbum_rel) = rbum_rel {
             let rbum_rel_id = rbum_rel.id;
@@ -425,8 +415,8 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::Name),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumKindAttrId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId),
-                (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelAppCode),
-                (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdaterCode),
+                (rbum_rel_attr::Entity, rbum_rel_attr::Column::ScopeIds),
+                (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdaterId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::CreateTime),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdateTime),
             ])
@@ -495,8 +485,8 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
                 (rbum_rel_env::Entity, rbum_rel_env::Column::Value1),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::Value2),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::RelRbumRelId),
-                (rbum_rel_env::Entity, rbum_rel_env::Column::RelAppCode),
-                (rbum_rel_env::Entity, rbum_rel_env::Column::UpdaterCode),
+                (rbum_rel_env::Entity, rbum_rel_env::Column::ScopeIds),
+                (rbum_rel_env::Entity, rbum_rel_env::Column::UpdaterId),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::CreateTime),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::UpdateTime),
             ])

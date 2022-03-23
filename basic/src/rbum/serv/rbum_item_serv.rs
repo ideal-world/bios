@@ -3,7 +3,7 @@ use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::{IdResp, TardisActiveModel, TardisRelDBlConnection};
+use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
@@ -15,7 +15,6 @@ use crate::rbum::dto::filer_dto::{RbumBasicFilterReq, RbumItemFilterReq};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
-use crate::rbum::enumeration::RbumScopeKind;
 use crate::rbum::serv::rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, RbumCrudOperation, RbumCrudQueryPackage, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
@@ -31,19 +30,17 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
     }
 
     async fn package_add(add_req: &RbumItemAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
-        let id = format!("{}{}{}", add_req.rel_rbum_kind_id, add_req.rel_rbum_domain_id, TardisFuns::field.nanoid());
-        let code = if let Some(code) = &add_req.code { code.0.clone() } else { id.clone() };
-        let uri_path = if let Some(uri_path) = &add_req.uri_path { uri_path.0.clone() } else { code.clone() };
+        let id = if let Some(id) = &add_req.id { id.0.clone() } else { TardisFuns::field.nanoid() };
+        let uri_path = if let Some(uri_path) = &add_req.uri_path { uri_path.0.clone() } else { id.clone() };
         Ok(rbum_item::ActiveModel {
             id: Set(id),
-            code: Set(code),
             uri_path: Set(uri_path),
             name: Set(add_req.name.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
             rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
-            scope_kind: Set(add_req.scope_kind.as_ref().unwrap_or(&RbumScopeKind::App).to_string()),
+            scope_level: Set(add_req.scope_level),
             disabled: Set(add_req.disabled.unwrap_or(false)),
             ..Default::default()
         })
@@ -54,9 +51,6 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
             id: Set(id.to_string()),
             ..Default::default()
         };
-        if let Some(code) = &modify_req.code {
-            rbum_item.code = Set(code.to_string());
-        }
         if let Some(uri_path) = &modify_req.uri_path {
             rbum_item.uri_path = Set(uri_path.to_string());
         }
@@ -69,8 +63,8 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         if let Some(sort) = modify_req.sort {
             rbum_item.sort = Set(sort);
         }
-        if let Some(scope_kind) = &modify_req.scope_kind {
-            rbum_item.scope_kind = Set(scope_kind.to_string());
+        if let Some(scope_level) = modify_req.scope_level {
+            rbum_item.scope_level = Set(scope_level);
         }
         if let Some(disabled) = modify_req.disabled {
             rbum_item.disabled = Set(disabled);
@@ -83,18 +77,17 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         query
             .columns(vec![
                 (rbum_item::Entity, rbum_item::Column::Id),
-                (rbum_item::Entity, rbum_item::Column::Code),
                 (rbum_item::Entity, rbum_item::Column::UriPath),
                 (rbum_item::Entity, rbum_item::Column::Name),
                 (rbum_item::Entity, rbum_item::Column::Icon),
                 (rbum_item::Entity, rbum_item::Column::Sort),
                 (rbum_item::Entity, rbum_item::Column::RelRbumKindId),
                 (rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
-                (rbum_item::Entity, rbum_item::Column::RelAppCode),
-                (rbum_item::Entity, rbum_item::Column::UpdaterCode),
+                (rbum_item::Entity, rbum_item::Column::ScopeIds),
+                (rbum_item::Entity, rbum_item::Column::UpdaterId),
                 (rbum_item::Entity, rbum_item::Column::CreateTime),
                 (rbum_item::Entity, rbum_item::Column::UpdateTime),
-                (rbum_item::Entity, rbum_item::Column::ScopeKind),
+                (rbum_item::Entity, rbum_item::Column::ScopeLevel),
                 (rbum_item::Entity, rbum_item::Column::Disabled),
             ])
             .from(rbum_item::Entity);
@@ -126,21 +119,6 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
     async fn before_add_rbum(add_req: &mut RbumItemAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), db, cxt).await?;
         Self::check_scope(&add_req.rel_rbum_domain_id, RbumDomainServ::get_table_name(), db, cxt).await?;
-        if let Some(code) = &add_req.code {
-            if db
-                .count(
-                    Query::select()
-                        .column(rbum_item::Column::Id)
-                        .from(rbum_item::Entity)
-                        .and_where(Expr::col(rbum_item::Column::RelAppCode).eq(cxt.app_code.as_str()))
-                        .and_where(Expr::col(rbum_item::Column::Code).eq(code.0.as_str())),
-                )
-                .await?
-                > 0
-            {
-                return Err(TardisError::BadRequest(format!("Code {} already exists", code.0)));
-            }
-        }
         Ok(())
     }
 
@@ -214,7 +192,7 @@ where
                 tag: tag.to_string(),
                 from_rbum_item_id: id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
-                to_other_app_code: cxt.app_code.to_string(),
+                to_scope_ids: cxt.scope_ids.to_string(),
                 ext: None,
             },
             db,
@@ -269,7 +247,7 @@ where
         Self::before_delete_item(id, db, cxt).await?;
         RbumItemServ::delete_rbum(id, db, cxt).await?;
         let select = Self::package_delete(id, db, cxt).await?;
-        let delete_records = db.soft_delete(select, &cxt.account_code).await?;
+        let delete_records = db.soft_delete(select, &cxt.account_id).await?;
         Self::after_delete_item(id, db, cxt).await?;
         Ok(delete_records)
     }
@@ -347,24 +325,13 @@ where
     }
 
     async fn package_query(is_detail: bool, filter: &RbumItemFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
-        let iam_tenant_code = if let Some(iam_tenant_id) = &filter.iam_tenant_id {
-            Self::get_rbum_item_code_by_id(iam_tenant_id, db).await?
-        } else {
-            None
-        };
-        let iam_app_code = if let Some(iam_app_id) = &filter.iam_app_id {
-            Self::get_rbum_item_code_by_id(iam_app_id, db).await?
-        } else {
-            None
-        };
         RbumItemServ::package_query(
             is_detail,
             &RbumBasicFilterReq {
-                rel_cxt_app: filter.rel_cxt_app,
+                rel_cxt_scope: filter.rel_cxt_scope,
                 rel_cxt_updater: filter.rel_cxt_updater,
-                scope_kind: filter.scope_kind.clone(),
-                rel_tenant_code: iam_tenant_code,
-                rel_app_code: iam_app_code,
+                scope_level: filter.scope_level.clone(),
+                rel_scope_ids: filter.rel_scope_ids.clone(),
                 rbum_kind_id: Some(Self::get_rbum_kind_id()),
                 rbum_domain_id: Some(Self::get_rbum_domain_id()),
                 enabled: filter.enabled,
@@ -377,29 +344,6 @@ where
             cxt,
         )
         .await
-    }
-
-    async fn get_rbum_item_id_by_code(code: &str, rel_app_code: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<Option<String>> {
-        // TODO cache
-        let resp = db
-            .get_dto::<IdResp>(
-                Query::select()
-                    .column(rbum_item::Column::Id)
-                    .from(rbum_item::Entity)
-                    .and_where(Expr::col(rbum_item::Column::Code).eq(code))
-                    .and_where(Expr::col(rbum_item::Column::RelAppCode).eq(rel_app_code)),
-            )
-            .await?
-            .map(|r| r.id);
-        Ok(resp)
-    }
-
-    async fn get_rbum_item_code_by_id(rbum_item_id: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<Option<String>> {
-        let resp = db
-            .get_dto::<CodeResp>(Query::select().column(rbum_item::Column::Code).from(rbum_item::Entity).and_where(Expr::col(rbum_item::Column::Id).eq(rbum_item_id)))
-            .await?
-            .map(|r| r.code);
-        Ok(resp)
     }
 }
 
@@ -435,8 +379,8 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
                 (rbum_item_attr::Entity, rbum_item_attr::Column::Value),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId),
-                (rbum_item_attr::Entity, rbum_item_attr::Column::RelAppCode),
-                (rbum_item_attr::Entity, rbum_item_attr::Column::UpdaterCode),
+                (rbum_item_attr::Entity, rbum_item_attr::Column::ScopeIds),
+                (rbum_item_attr::Entity, rbum_item_attr::Column::UpdaterId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::CreateTime),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdateTime),
             ])

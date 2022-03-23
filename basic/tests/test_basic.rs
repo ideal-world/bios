@@ -11,11 +11,10 @@ use testcontainers::images::generic::GenericImage;
 use testcontainers::images::redis::Redis;
 use testcontainers::Container;
 
-use bios_basic::rbum::constants::{RBUM_ITEM_APP_CODE_LEN, RBUM_ITEM_TENANT_CODE_LEN};
+use bios_basic::rbum::constants::{RBUM_SCOPE_L1_LEN, RBUM_SCOPE_L2_LEN};
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
-use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -67,19 +66,14 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
 
-    let default_tenant_code = TardisFuns::field.nanoid_len(RBUM_ITEM_TENANT_CODE_LEN);
-    let default_app_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid_len(RBUM_ITEM_APP_CODE_LEN));
-    let default_account_code = format!("{}{}", default_tenant_code, TardisFuns::field.nanoid());
-
     let cxt = TardisContext {
-        app_code: default_app_code.clone(),
-        tenant_code: default_tenant_code.clone(),
+        scope_ids: "".to_string(),
         ak: "".to_string(),
-        account_code: default_account_code.clone(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
+        account_id: "".to_string(),
     };
 
     let kind_tenant_id = RbumKindServ::add_rbum(
@@ -90,7 +84,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             icon: None,
             sort: None,
             ext_table_name: Some(RBUM_KIND_SCHEME_IAM_TENANT.to_string().to_lowercase()),
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: 0,
         },
         &tx,
         &cxt,
@@ -105,7 +99,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             icon: None,
             sort: None,
             ext_table_name: Some(RBUM_KIND_SCHEME_IAM_APP.to_string().to_lowercase()),
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: 0,
         },
         &tx,
         &cxt,
@@ -120,7 +114,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             icon: None,
             sort: None,
             ext_table_name: Some(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string().to_lowercase()),
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: 0,
         },
         &tx,
         &cxt,
@@ -134,58 +128,58 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             note: None,
             icon: None,
             sort: None,
-            scope_kind: Some(RbumScopeKind::Global),
+            scope_level: 0,
         },
         &tx,
         &cxt,
     )
     .await?;
 
-    RbumItemServ::add_rbum(
+    let tenant_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString(default_tenant_code.clone())),
             uri_path: None,
             name: TrimString(RBUM_ITEM_NAME_DEFAULT_TENANT.to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
             disabled: None,
             rel_rbum_kind_id: kind_tenant_id.clone(),
             rel_rbum_domain_id: domain_iam_id.clone(),
+            scope_level: 2,
+            id: Some(TrimString(TardisFuns::field.nanoid_len(RBUM_SCOPE_L1_LEN))),
         },
         &tx,
         &cxt,
     )
     .await?;
 
-    RbumItemServ::add_rbum(
+    let app_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString(default_app_code.clone())),
             uri_path: None,
             name: TrimString(RBUM_ITEM_NAME_DEFAULT_APP.to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
             disabled: None,
             rel_rbum_kind_id: kind_app_id.clone(),
             rel_rbum_domain_id: domain_iam_id.clone(),
+            scope_level: 2,
+            id: Some(TrimString(TardisFuns::field.nanoid_len(RBUM_SCOPE_L2_LEN))),
         },
         &tx,
         &cxt,
     )
     .await?;
 
-    RbumItemServ::add_rbum(
+    let account_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            code: Some(TrimString(default_account_code.clone())),
             uri_path: None,
             name: TrimString(RBUM_ITEM_NAME_DEFAULT_ACCOUNT.to_string()),
             icon: None,
             sort: None,
-            scope_kind: None,
             disabled: None,
             rel_rbum_kind_id: kind_account_id.clone(),
             rel_rbum_domain_id: domain_iam_id.clone(),
+            scope_level: 0,
+            id: None,
         },
         &tx,
         &cxt,
@@ -193,5 +187,13 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
     .await?;
 
     tx.commit().await?;
-    Ok(cxt)
+    Ok(TardisContext {
+        scope_ids: format!("{}{}", tenant_id, app_id),
+        ak: "".to_string(),
+        token: "".to_string(),
+        token_kind: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+        account_id: account_id.to_string(),
+    })
 }
