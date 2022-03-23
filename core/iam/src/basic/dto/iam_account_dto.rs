@@ -4,15 +4,13 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::FromQueryResult;
 use tardis::web::poem_openapi::Object;
 
-use bios_basic::rbum::enumeration::RbumScopeKind;
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IamAccountAddReq {
-    pub code: Option<TrimString>,
+    pub id: Option<TrimString>,
     pub name: TrimString,
     pub icon: Option<String>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: i32,
     pub disabled: Option<bool>,
 }
 
@@ -21,7 +19,7 @@ pub struct IamAccountModifyReq {
     pub name: Option<TrimString>,
     pub icon: Option<String>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: Option<i32>,
     pub disabled: Option<bool>,
 }
 
@@ -34,7 +32,7 @@ pub struct IamAccountSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
     pub disabled: bool,
 }
 
@@ -44,11 +42,11 @@ pub struct IamAccountDetailResp {
     pub name: String,
     pub icon: String,
 
-    pub updater_code: String,
+    pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_kind: String,
+    pub scope_level: i32,
     pub disabled: bool,
 }

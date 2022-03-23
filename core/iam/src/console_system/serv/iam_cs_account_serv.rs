@@ -7,10 +7,8 @@ use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountModifyReq, IamAccountSummaryResp};
-use crate::basic::dto::iam_tenant_dto::{IamTenantDetailResp, IamTenantSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_system::dto::iam_cs_account_dto::IamCsAccountModifyReq;
 
 pub struct IamCsAccountServ;
@@ -23,8 +21,8 @@ impl<'a> IamCsAccountServ {
             &mut IamAccountModifyReq {
                 name: None,
                 icon: None,
-                scope_kind: None,
                 disabled: modify_req.disabled,
+                scope_level: None
             },
             db,
             cxt,
@@ -54,7 +52,7 @@ impl<'a> IamCsAccountServ {
         IamAccountServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                iam_tenant_id: Some(tenant_id),
+                rel_scope_ids: Some(tenant_id),
                 ignore_scope_check: true,
                 ..Default::default()
             }, page_number, page_size, desc_sort_by_create, desc_sort_by_update, db, cxt).await

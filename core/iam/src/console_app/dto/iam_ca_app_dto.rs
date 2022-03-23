@@ -56,7 +56,7 @@ pub struct IamCaAppDetailResp {
 
     pub contact_phone: String,
 
-    pub updater_code: String,
+    pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,

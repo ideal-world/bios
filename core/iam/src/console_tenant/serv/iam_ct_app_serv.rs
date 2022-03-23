@@ -1,17 +1,13 @@
 use tardis::basic::dto::TardisContext;
-use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
-use bios_basic::rbum::enumeration::RbumScopeKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::constants;
-use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSummaryResp};
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
-use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -24,16 +20,15 @@ impl<'a> IamCtAppServ {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamAppServ::add_item_with_simple_rel(
             &mut IamAppAddReq {
-                code: Some(TrimString(IamAppServ::get_new_code(&cxt.tenant_code))),
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
                 sort: None,
                 contact_phone: add_req.contact_phone.clone(),
-                scope_kind: Some(RbumScopeKind::Tenant),
                 disabled: add_req.disabled,
+                scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
             },
             constants::RBUM_REL_BIND,
-            &IamTenantServ::get_id_by_cxt(db, cxt).await?,
+            &IamTenantServ::get_id_by_cxt(cxt)?,
             db,
             cxt,
         )
@@ -49,8 +44,8 @@ impl<'a> IamCtAppServ {
                 icon: modify_req.icon.clone(),
                 sort: modify_req.sort,
                 contact_phone: modify_req.contact_phone.clone(),
-                scope_kind: None,
                 disabled: modify_req.disabled,
+                scope_level: None,
             },
             db,
             cxt,
@@ -76,7 +71,7 @@ impl<'a> IamCtAppServ {
         IamAppServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                iam_tenant_id: Some(IamTenantServ::get_id_by_cxt(db, cxt).await?),
+                rel_scope_ids: Some(cxt.scope_ids.clone()),
                 ..Default::default()
             },
             page_number,

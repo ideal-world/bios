@@ -31,15 +31,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
 
     async fn package_item_add(add_req: &IamHttpResAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
-            code: None,
+            id: None,
             uri_path: Some(add_req.uri_path.clone()),
             name: add_req.name.clone(),
             icon: add_req.icon.clone(),
             sort: add_req.sort,
-            scope_kind: add_req.scope_kind.clone(),
             disabled: add_req.disabled,
             rel_rbum_kind_id: "".to_string(),
             rel_rbum_domain_id: "".to_string(),
+            scope_level: add_req.scope_level
         })
     }
 
@@ -55,18 +55,17 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
             && modify_req.name.is_none()
             && modify_req.icon.is_none()
             && modify_req.sort.is_none()
-            && modify_req.scope_kind.is_none()
+            && modify_req.scope_level.is_none()
             && modify_req.disabled.is_none()
         {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            code: None,
             uri_path: modify_req.uri_path.clone(),
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: modify_req.sort,
-            scope_kind: modify_req.scope_kind.clone(),
+            scope_level: modify_req.scope_level,
             disabled: modify_req.disabled,
         }))
     }

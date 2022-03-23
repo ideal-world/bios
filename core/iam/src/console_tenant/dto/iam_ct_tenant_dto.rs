@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-use bios_basic::rbum::enumeration::RbumScopeKind;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IamCtTenantModifyReq {
@@ -10,6 +9,6 @@ pub struct IamCtTenantModifyReq {
 
     pub contact_phone: Option<String>,
 
-    pub scope_kind: Option<RbumScopeKind>,
+    pub scope_level: Option<i32>,
     pub disabled: Option<bool>,
 }

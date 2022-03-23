@@ -11,6 +11,10 @@ pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";
 pub const RBUM_ITEM_NAME_TENANT_ADMIN_ROLE: &str = "tenant_admin";
 pub const RBUM_ITEM_NAME_APP_ADMIN_ROLE: &str = "app_admin";
 
+pub const RBUM_SCOPE_LEVEL_GLOBAL: i32 = 0;
+pub const RBUM_SCOPE_LEVEL_TENANT: i32 = 1;
+pub const RBUM_SCOPE_LEVEL_APP: i32 = 2;
+
 pub const RBUM_REL_BIND: &str = "iam_bind";
 
 static mut BASIC_INFO: BasicInfo = BasicInfo { info: None };
