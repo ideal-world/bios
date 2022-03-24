@@ -1,7 +1,7 @@
 use tardis::basic::result::TardisResult;
 use tardis::{tokio, TardisFuns};
 
-use bios_basic::rbum::initializer::get_first_account_context;
+use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_iam::basic::constants;
 
 mod test_basic;

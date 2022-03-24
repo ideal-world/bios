@@ -15,6 +15,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::constants;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::enumeration::IAMRelKind;
 
 pub struct IamRoleServ;
 
@@ -90,9 +91,9 @@ impl IamRoleServ {
         // TODO cache
         let exist = RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
-                tag: constants::RBUM_REL_BIND.to_string(),
-                from_rbum_item_id: cxt.account_id.clone(),
-                to_rbum_item_id: iam_role_id.to_string(),
+                tag: IAMRelKind::IamRoleAccount.to_string(),
+                from_rbum_item_id: iam_role_id.to_string(),
+                to_rbum_item_id: cxt.account_id.clone(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default(),
             },

@@ -10,19 +10,19 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
-use bios_basic::rbum::initializer::get_first_account_context;
+use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use crate::basic::constants;
 
+use crate::basic::constants;
 use crate::basic::constants::*;
 use crate::basic::domain::{iam_account, iam_app, iam_http_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
-use crate::basic::enumeration::IamIdentKind;
+use crate::basic::enumeration::{IAMRelKind, IamIdentKind};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
@@ -34,7 +34,7 @@ pub async fn init_api(web_server: &mut TardisWebServer) -> TardisResult<()> {
 }
 
 pub async fn init_db() -> TardisResult<()> {
-    bios_basic::rbum::initializer::init_db().await?;
+    bios_basic::rbum::rbum_initializer::init_db().await?;
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;
     let cxt = get_first_account_context(RBUM_KIND_SCHEME_IAM_ACCOUNT, &bios_basic::Components::Iam.to_string(), &tx).await?;
@@ -125,13 +125,13 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
     let default_account_id = TardisFuns::field.nanoid();
 
     let cxt = TardisContext {
-        scope_ids: "".to_string(),
+        scope_paths: "".to_string(),
         ak: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
-        account_id: default_account_id.to_string()
+        account_id: default_account_id.to_string(),
     };
 
     let kind_tenant_id = add_kind(RBUM_KIND_SCHEME_IAM_TENANT, tx, &cxt).await?;
@@ -218,7 +218,7 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
     )
     .await?;
 
-    RbumRelServ::add_simple_rel(RBUM_REL_BIND, &account_sys_admin_id, &role_sys_admin_id, tx, &cxt).await?;
+    RbumRelServ::add_simple_rel(&IAMRelKind::IamRoleAccount.to_string(), &role_sys_admin_id, &account_sys_admin_id, tx, &cxt).await?;
     let pwd = IamCertServ::get_new_pwd();
     IamCertServ::add_ident(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, Some(&pwd), IamIdentKind::UserPwd, None, &account_sys_admin_id, tx, &cxt).await?;
 
@@ -243,8 +243,8 @@ async fn add_kind<'a>(scheme: &str, tx: &TardisRelDBlConnection<'a>, cxt: &Tardi
             ext_table_name: Some(scheme.to_string().to_lowercase()),
             scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
         },
-        &tx,
-        &cxt,
+        tx,
+        cxt,
     )
     .await
 }
@@ -259,8 +259,8 @@ async fn add_domain<'a>(tx: &TardisRelDBlConnection<'a>, cxt: &TardisContext) ->
             sort: None,
             scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
         },
-        &tx,
-        &cxt,
+        tx,
+        cxt,
     )
     .await
 }

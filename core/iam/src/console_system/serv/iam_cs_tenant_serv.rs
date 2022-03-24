@@ -5,14 +5,14 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::constants;
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
-use crate::basic::enumeration::IamIdentKind;
+use crate::basic::enumeration::{IAMRelKind, IamIdentKind};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
@@ -43,14 +43,23 @@ impl<'a> IamCsTenantServ {
                 disabled: add_req.disabled,
                 scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
             },
-            constants::RBUM_REL_BIND,
+            &IAMRelKind::IamAccountTenant.to_string(),
             &tenant_id,
             db,
             cxt,
         )
         .await?;
         let pwd = IamCertServ::get_new_pwd();
-        RbumRelServ::add_simple_rel(constants::RBUM_REL_BIND, &account_id, &constants::get_rbum_basic_info().role_tenant_admin_id, db, cxt).await?;
+        IamRelServ::add_rel(
+            IAMRelKind::IamAccountTenant,
+            &account_id,
+            &constants::get_rbum_basic_info().role_tenant_admin_id,
+            None,
+            None,
+            db,
+            cxt,
+        )
+        .await?;
         IamCertServ::add_ident(add_req.admin_username.0.as_str(), Some(&pwd), IamIdentKind::UserPwd, None, &account_id, db, cxt).await?;
         Ok((tenant_id, pwd))
     }

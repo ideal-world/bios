@@ -9,3 +9,13 @@ pub enum IamIdentKind {
     MailVCode,
     PhoneVCode,
 }
+
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
+pub enum IAMRelKind {
+    IamAppTenant,
+    IamAccountTenant,
+    IamRoleTenant,
+    IamRoleAccount,
+    IamHttpResTenant,
+    IamRoleHttpRes,
+}

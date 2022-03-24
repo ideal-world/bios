@@ -8,12 +8,13 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::constants::{RBUM_SCOPE_L1_LEN, RBUM_SCOPE_L2_LEN};
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::constants;
+use crate::basic::constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 
@@ -90,14 +91,14 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
 
 impl IamAppServ {
     pub fn get_new_id() -> String {
-        TardisFuns::field.nanoid_len(RBUM_SCOPE_L2_LEN)
+        TardisFuns::field.nanoid_len(RBUM_ITEM_ID_APP_LEN)
     }
 
     pub fn get_id_by_cxt(cxt: &TardisContext) -> TardisResult<String> {
-        if cxt.scope_ids.len() >= (RBUM_SCOPE_L1_LEN + RBUM_SCOPE_L2_LEN) {
-            Ok(cxt.scope_ids[RBUM_SCOPE_L1_LEN..RBUM_SCOPE_L2_LEN].to_string())
+        if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP, &cxt.scope_paths) {
+            Ok(id)
         } else {
-            Err(TardisError::Unauthorized(format!("app id not found in tardis content {}", cxt.scope_ids)))
+            Err(TardisError::Unauthorized(format!("app id not found in tardis content {}", cxt.scope_paths)))
         }
     }
 }

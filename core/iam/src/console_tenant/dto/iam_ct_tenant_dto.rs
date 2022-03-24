@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
+use tardis::web::poem_openapi::Object;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamCtTenantModifyReq {
     pub name: Option<TrimString>,
     pub icon: Option<String>,

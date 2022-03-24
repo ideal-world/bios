@@ -1,7 +1,7 @@
-use tardis::TardisFuns;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
+use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 
@@ -24,7 +24,7 @@ impl IamCsTenantApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Tenant
+    /// Modify Tenant By Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCsTenantModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut tx = TardisFuns::reldb().conn();
@@ -68,7 +68,7 @@ impl IamCsTenantApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Tenant
+    /// Delete Tenant By Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut tx = TardisFuns::reldb().conn();
