@@ -3,7 +3,7 @@ use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamCaHttpResAddReq {
+pub struct IamCtHttpResAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -19,7 +19,7 @@ pub struct IamCaHttpResAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamCaHttpResModifyReq {
+pub struct IamCtHttpResModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "2000"))]

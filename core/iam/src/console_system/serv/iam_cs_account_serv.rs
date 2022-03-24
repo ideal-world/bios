@@ -22,7 +22,7 @@ impl<'a> IamCsAccountServ {
                 name: None,
                 icon: None,
                 disabled: modify_req.disabled,
-                scope_level: None
+                scope_level: None,
             },
             db,
             cxt,
@@ -32,10 +32,16 @@ impl<'a> IamCsAccountServ {
 
     pub async fn get_account(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
-        IamAccountServ::get_item(id, &RbumItemFilterReq {
-            ignore_scope_check: true,
-            ..Default::default()
-        }, db, cxt).await
+        IamAccountServ::get_item(
+            id,
+            &RbumItemFilterReq {
+                ignore_scope_check: true,
+                ..Default::default()
+            },
+            db,
+            cxt,
+        )
+        .await
     }
 
     pub async fn paginate_accounts(
@@ -52,9 +58,17 @@ impl<'a> IamCsAccountServ {
         IamAccountServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                rel_scope_ids: Some(tenant_id),
+                rel_scope_paths: Some(tenant_id),
                 ignore_scope_check: true,
                 ..Default::default()
-            }, page_number, page_size, desc_sort_by_create, desc_sort_by_update, db, cxt).await
+            },
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            db,
+            cxt,
+        )
+        .await
     }
 }

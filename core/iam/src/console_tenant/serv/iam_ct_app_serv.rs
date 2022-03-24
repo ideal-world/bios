@@ -8,6 +8,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::constants;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::enumeration::IAMRelKind;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -27,7 +28,7 @@ impl<'a> IamCtAppServ {
                 disabled: add_req.disabled,
                 scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
             },
-            constants::RBUM_REL_BIND,
+            &IAMRelKind::IamAppTenant.to_string(),
             &IamTenantServ::get_id_by_cxt(cxt)?,
             db,
             cxt,
@@ -71,7 +72,7 @@ impl<'a> IamCtAppServ {
         IamAppServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                rel_scope_ids: Some(cxt.scope_ids.clone()),
+                rel_scope_paths: Some(cxt.scope_paths.clone()),
                 ..Default::default()
             },
             page_number,
