@@ -17,7 +17,7 @@ use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAttrAggAd
 use bios_basic::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelModifyReq};
 use bios_basic::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvModifyReq};
-use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumRelEnvKind, RbumWidgetKind};
+use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumRelEnvKind, RbumWidgetKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -139,7 +139,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_ids: "".to_string(),
+            to_scope_paths: "".to_string(),
             ext: None
         },
         &tx,
@@ -153,7 +153,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_ids: context.scope_ids.to_string(),
+            to_scope_paths: context.scope_paths.to_string(),
             ext: None
         },
         &tx,
@@ -167,7 +167,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_ids: context.scope_ids.to_string(),
+            to_scope_paths: context.scope_paths.to_string(),
             ext: None
         },
         &tx,
@@ -181,7 +181,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_ids: context.scope_ids.to_string(),
+            to_scope_paths: context.scope_paths.to_string(),
             ext: None
         },
         &tx,
@@ -195,7 +195,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_scope_ids: context.scope_ids.to_string(),
+            to_scope_paths: context.scope_paths.to_string(),
             ext: None,
         },
         &tx,
@@ -207,7 +207,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     let rbum = RbumRelServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.tag, "bind");
-    assert_eq!(rbum.to_scope_ids, context.scope_ids);
+    assert_eq!(rbum.to_scope_paths, context.scope_paths);
 
     info!("【test_rbum_rel】 : Test Modify : RbumRelServ::modify_rbum");
     RbumRelServ::modify_rbum(
@@ -369,7 +369,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_scope_ids: context.scope_ids.to_string(),
+            to_scope_paths: context.scope_paths.to_string(),
             ext: None,
         },
         &tx,
@@ -550,7 +550,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
             tag: "bind".to_string(),
             from_rbum_item_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_scope_ids: context.scope_ids.to_string(),
+            to_scope_paths: context.scope_paths.to_string(),
             ext: None,
         },
         &tx,
@@ -763,7 +763,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
                 tag: "bind".to_string(),
                 from_rbum_item_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
-                to_scope_ids: context.scope_ids.to_string(),
+                to_scope_paths: context.scope_paths.to_string(),
                 ext: None,
             },
             attrs: vec![RbumRelAttrAggAddReq {
@@ -783,13 +783,13 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_rel_use】 : Test Find From Rels : RbumRelServ::find_from_rels");
-    let rbums = RbumRelServ::find_from_rels("bind", kind_reldb_id.as_str(), item_reldb_inst1_id.as_str(), 1, 10, None, None, &tx, context).await?;
+    let rbums = RbumRelServ::paginate_from_rels("bind", item_reldb_inst1_id.as_str(), 1, 10, None, None, &tx, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_ids, context.scope_ids.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.scope_ids, context.scope_ids.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_paths, context.scope_paths.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.scope_paths, context.scope_paths.to_string());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");
@@ -799,13 +799,13 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.get(0).unwrap().envs.get(0).unwrap().value2, end_time);
 
     info!("【test_rbum_rel_use】 : Test Find To Rels : RbumRelServ::find_to_rels");
-    let rbums = RbumRelServ::find_to_rels("bind", kind_account_id.as_str(), item_account_a1_id.as_str(), 1, 10, None, None, &tx, context).await?;
+    let rbums = RbumRelServ::paginate_to_rels("bind", item_account_a1_id.as_str(), 1, 10, None, None, &tx, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_ids, context.scope_ids.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.scope_ids, context.scope_ids.as_str());
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_paths, context.scope_paths.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.scope_paths, context.scope_paths.as_str());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");

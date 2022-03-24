@@ -27,6 +27,7 @@ serde = { version = "^1", features = ["derive"] }
 derive_more = { version = "^0" }
 async-trait = { version = "^0" }
 lazy_static = { version = "^1" }
+itertools = { version = "^0" }
 
 
 tardis = { path = "../../tardis", optional = true }

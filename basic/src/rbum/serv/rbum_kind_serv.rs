@@ -7,7 +7,7 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
-use crate::rbum::constants::RBUM_KIND_ID_LEN;
+use crate::rbum::rbum_constants::RBUM_KIND_ID_LEN;
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
@@ -76,7 +76,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             (rbum_kind::Entity, rbum_kind::Column::Icon),
             (rbum_kind::Entity, rbum_kind::Column::Sort),
             (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
-            (rbum_kind::Entity, rbum_kind::Column::ScopeIds),
+            (rbum_kind::Entity, rbum_kind::Column::ScopePaths),
             (rbum_kind::Entity, rbum_kind::Column::UpdaterId),
             (rbum_kind::Entity, rbum_kind::Column::CreateTime),
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
@@ -241,7 +241,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::MaxLength),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Action),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
-                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ScopeIds),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ScopePaths),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdaterId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::CreateTime),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::UpdateTime),

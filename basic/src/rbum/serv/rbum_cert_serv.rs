@@ -14,7 +14,7 @@ use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
-use crate::rbum::enumeration::RbumCertStatusKind;
+use crate::rbum::rbum_enumeration::RbumCertStatusKind;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -119,12 +119,16 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CoexistNum),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumItemId),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::ScopeIds),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::ScopePaths),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdaterId),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CreateTime),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdateTime),
             ])
             .from(rbum_cert_conf::Entity);
+
+        if let Some(rbum_item_id) = &filter.rbum_item_id {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumItemId).eq(rbum_item_id.to_string()));
+        }
 
         if is_detail {
             query
@@ -258,7 +262,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 (rbum_cert::Entity, rbum_cert::Column::Status),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumItemId),
-                (rbum_cert::Entity, rbum_cert::Column::ScopeIds),
+                (rbum_cert::Entity, rbum_cert::Column::ScopePaths),
                 (rbum_cert::Entity, rbum_cert::Column::UpdaterId),
                 (rbum_cert::Entity, rbum_cert::Column::CreateTime),
                 (rbum_cert::Entity, rbum_cert::Column::UpdateTime),
@@ -319,7 +323,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 impl<'a> RbumCertServ {
     // TODO find cert
 
-    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, scope_ids: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<String> {
+    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, scope_paths: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<String> {
         #[derive(Debug, FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
@@ -338,7 +342,7 @@ impl<'a> RbumCertServ {
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
-            .and_where(Expr::col(rbum_cert::Column::ScopeIds).like(format!("{}%", scope_ids).as_str()))
+            .and_where(Expr::col(rbum_cert::Column::ScopePaths).like(format!("{}%", scope_paths).as_str()))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_string()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
@@ -355,15 +359,15 @@ impl<'a> RbumCertServ {
                 Ok(rbum_cert.id)
             } else {
                 tardis::log::warn!(
-                    "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, scope_ids {}",
+                    "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, scope_paths {}",
                     ak,
                     rbum_cert_conf_id,
-                    scope_ids
+                    scope_paths
                 );
                 Err(TardisError::Unauthorized("validation error".to_string()))
             }
         } else {
-            tardis::log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, scope_ids);
+            tardis::log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, scope_paths);
             Err(TardisError::Unauthorized("validation error".to_string()))
         }
     }
@@ -466,7 +470,7 @@ impl<'a> RbumCertServ {
                     .from(rbum_cert::Entity)
                     .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.as_str()))
                     .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
-                    .and_where(Expr::col(rbum_cert::Column::ScopeIds).like(format!("{}%", cxt.scope_ids).as_str())),
+                    .and_where(Expr::col(rbum_cert::Column::ScopePaths).like(format!("{}%", cxt.scope_paths).as_str())),
             )
             .await?
             > 0

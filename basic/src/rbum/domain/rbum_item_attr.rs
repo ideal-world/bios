@@ -14,7 +14,7 @@ pub struct Model {
     pub rel_rbum_item_id: String,
     pub rel_rbum_kind_attr_id: String,
     // Basic
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
@@ -23,7 +23,7 @@ pub struct Model {
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.scope_ids = Set(cxt.scope_ids.to_string());
+            self.scope_paths = Set(cxt.scope_paths.to_string());
         }
         self.updater_id = Set(cxt.account_id.to_string());
     }
@@ -38,7 +38,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKindAttrId).not_null().string())
             // Basic
-            .col(ColumnDef::new(Column::ScopeIds).not_null().string())
+            .col(ColumnDef::new(Column::ScopePaths).not_null().string())
             .col(ColumnDef::new(Column::UpdaterId).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())

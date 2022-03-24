@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumRelEnvKind;
+use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelEnvAddReq {
@@ -33,7 +33,7 @@ pub struct RbumRelEnvDetailResp {
     pub value2: String,
     pub rel_rbum_rel_id: String,
 
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

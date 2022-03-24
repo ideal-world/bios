@@ -10,7 +10,7 @@ use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttr
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
-use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumWidgetKind};
+use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};

@@ -10,15 +10,15 @@ use tardis::db::sea_query::{Alias, Cond, Expr, IntoValueTuple, JoinType, Order, 
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 
-use crate::rbum::constants;
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
+use crate::rbum::helper::rbum_scope_helper;
 
 lazy_static! {
     pub static ref UPDATER_TABLE: Alias = Alias::new("updater");
     pub static ref ID_FIELD: Alias = Alias::new("id");
     pub static ref UPDATER_ID_FIELD: Alias = Alias::new("updater_id");
-    pub static ref SCOPE_IDS_FIELD: Alias = Alias::new("scope_ids");
+    pub static ref SCOPE_PATHS_FIELD: Alias = Alias::new("scope_paths");
     pub static ref CREATE_TIME_FIELD: Alias = Alias::new("create_time");
     pub static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
     pub static ref CODE_FIELD: Alias = Alias::new("code");
@@ -40,14 +40,14 @@ pub trait RbumCrudQueryPackage {
 impl RbumCrudQueryPackage for SelectStatement {
     fn query_with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> &mut Self {
         if filter.rel_cxt_scope {
-            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", cxt.scope_ids).as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_PATHS_FIELD.clone()).eq(cxt.scope_paths.as_str()));
         }
         if filter.rel_cxt_updater {
             self.and_where(Expr::tbl(Alias::new(table_name), UPDATER_ID_FIELD.clone()).eq(cxt.account_id.as_str()));
         }
 
-        if let Some(rel_scope_ids) = &filter.rel_scope_ids {
-            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", rel_scope_ids).as_str()));
+        if let Some(rel_scope_paths) = &filter.rel_scope_paths {
+            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_PATHS_FIELD.clone()).eq(rel_scope_paths.to_string()));
         }
 
         if let Some(scope_level) = &filter.scope_level {
@@ -92,17 +92,17 @@ impl RbumCrudQueryPackage for SelectStatement {
                     .add(
                         Cond::all()
                             .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1))
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", constants::get_pre_levels(1, &cxt.scope_ids)).as_str())),
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_PATHS_FIELD.clone()).like(format!("{}%", rbum_scope_helper::get_pre_paths(1, &cxt.scope_paths)).as_str())),
                     )
                     .add(
                         Cond::all()
                             .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2))
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", constants::get_pre_levels(2, &cxt.scope_ids)).as_str())),
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_PATHS_FIELD.clone()).like(format!("{}%", rbum_scope_helper::get_pre_paths(2, &cxt.scope_paths)).as_str())),
                     )
                     .add(
                         Cond::all()
                             .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3))
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_IDS_FIELD.clone()).like(format!("{}%", constants::get_pre_levels(3, &cxt.scope_ids)).as_str())),
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_PATHS_FIELD.clone()).like(format!("{}%", rbum_scope_helper::get_pre_paths(3, &cxt.scope_paths)).as_str())),
                     ),
             ),
         );
@@ -131,7 +131,7 @@ where
             .column(ID_FIELD.clone())
             .from(Alias::new(table_name))
             .and_where(Expr::col(ID_FIELD.clone()).eq(id))
-            .and_where(Expr::col(SCOPE_IDS_FIELD.clone()).like(format!("{}%", cxt.scope_ids).as_str()));
+            .and_where(Expr::col(SCOPE_PATHS_FIELD.clone()).like(format!("{}%", cxt.scope_paths).as_str()));
         query
     }
 

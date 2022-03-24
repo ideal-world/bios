@@ -8,7 +8,7 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
-use crate::rbum::constants::RBUM_REL_CATE_SYS_CODE_NODE_LEN;
+use crate::rbum::rbum_constants::RBUM_REL_CATE_SYS_CODE_NODE_LEN;
 use crate::rbum::domain::{rbum_item, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateSummaryWithPidResp};
@@ -76,7 +76,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 (rbum_set::Entity, rbum_set::Column::Icon),
                 (rbum_set::Entity, rbum_set::Column::Sort),
                 (rbum_set::Entity, rbum_set::Column::Tags),
-                (rbum_set::Entity, rbum_set::Column::ScopeIds),
+                (rbum_set::Entity, rbum_set::Column::ScopePaths),
                 (rbum_set::Entity, rbum_set::Column::UpdaterId),
                 (rbum_set::Entity, rbum_set::Column::CreateTime),
                 (rbum_set::Entity, rbum_set::Column::UpdateTime),
@@ -120,6 +120,7 @@ impl<'a> RbumSetServ {
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
                 sort: r.sort,
+                scope_paths: r.scope_paths.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_level: r.scope_level,
@@ -142,6 +143,7 @@ impl<'a> RbumSetServ {
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
                 sort: r.sort,
+                scope_paths: r.scope_paths.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_level: r.scope_level,
@@ -166,7 +168,7 @@ impl<'a> RbumSetServ {
                 (rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Column::Name),
                 (rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Column::ScopeIds),
+                (rbum_set_cate::Column::ScopePaths),
                 (rbum_set_cate::Column::UpdaterId),
                 (rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Column::UpdateTime),
@@ -245,7 +247,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 (rbum_set_cate::Entity, rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Name),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::ScopeIds),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::ScopePaths),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::UpdaterId),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::UpdateTime),
@@ -397,7 +399,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 (rbum_set_item::Entity, rbum_set_item::Column::Id),
                 (rbum_set_item::Entity, rbum_set_item::Column::Sort),
                 (rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
-                (rbum_set_item::Entity, rbum_set_item::Column::ScopeIds),
+                (rbum_set_item::Entity, rbum_set_item::Column::ScopePaths),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdaterId),
                 (rbum_set_item::Entity, rbum_set_item::Column::CreateTime),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdateTime),
@@ -445,6 +447,7 @@ struct RbumSetCateWithLevelResp {
     pub name: String,
     pub sort: i32,
 
+    pub scope_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 

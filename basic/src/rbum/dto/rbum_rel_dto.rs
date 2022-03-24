@@ -13,7 +13,7 @@ pub struct RbumRelAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub to_rbum_item_id: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub to_scope_ids: String,
+    pub to_scope_paths: String,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 }
@@ -38,6 +38,16 @@ pub struct RbumRelCheckReq {
     pub to_attrs: HashMap<String, String>,
 }
 
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct RbumRelFindReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tag: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub from_rbum_item_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub to_rbum_item_id: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumRelDetailResp {
@@ -47,10 +57,10 @@ pub struct RbumRelDetailResp {
     pub from_rbum_item_name: String,
     pub to_rbum_item_id: String,
     pub to_rbum_item_name: String,
-    pub to_scope_ids: String,
+    pub to_scope_paths: String,
     pub ext: String,
 
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

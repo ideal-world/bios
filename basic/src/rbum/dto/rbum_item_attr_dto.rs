@@ -43,7 +43,7 @@ pub struct RbumItemAttrDetailResp {
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_kind_attr_name: String,
 
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

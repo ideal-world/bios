@@ -4,7 +4,7 @@ use tardis::web::poem_openapi::Object;
 use crate::rbum::dto::rbum_rel_attr_dto::RbumRelAttrDetailResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp};
 use crate::rbum::dto::rbum_rel_env_dto::RbumRelEnvDetailResp;
-use crate::rbum::enumeration::RbumRelEnvKind;
+use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelAggAddReq {

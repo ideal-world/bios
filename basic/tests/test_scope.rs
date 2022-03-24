@@ -4,7 +4,6 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::constants;
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -16,7 +15,7 @@ pub async fn test() -> TardisResult<()> {
 
     info!("【test_scope】 : Prepare");
     let s0 = TardisContext {
-        scope_ids: "".to_string(),
+        scope_paths: "".to_string(),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -26,7 +25,7 @@ pub async fn test() -> TardisResult<()> {
     };
 
     let s1 = TardisContext {
-        scope_ids: TardisFuns::field.nanoid_len(constants::RBUM_SCOPE_L1_LEN),
+        scope_paths: TardisFuns::field.nanoid_len(4),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -36,7 +35,7 @@ pub async fn test() -> TardisResult<()> {
     };
 
     let s2 = TardisContext {
-        scope_ids: format!("{}{}", s1.scope_ids, TardisFuns::field.nanoid_len(constants::RBUM_SCOPE_L2_LEN)),
+        scope_paths: format!("{}/{}", s1.scope_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -46,7 +45,7 @@ pub async fn test() -> TardisResult<()> {
     };
 
     let s3 = TardisContext {
-        scope_ids: format!("{}{}", s2.scope_ids, TardisFuns::field.nanoid_len(constants::RBUM_SCOPE_L3_LEN)),
+        scope_paths: format!("{}/{}", s2.scope_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -291,7 +290,11 @@ pub async fn test() -> TardisResult<()> {
         &s0,
     )
     .await?;
-    info!("{}:{:?}", s0.scope_ids, rbums.iter().map(|r| r.name.as_str()).collect::<Vec<&str>>());
+    info!(
+        "{}:{:#?}",
+        s0.scope_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+    );
     assert_eq!(rbums.len(), 16);
 
     let rbums = RbumDomainServ::find_rbums(
@@ -305,8 +308,12 @@ pub async fn test() -> TardisResult<()> {
         &s1,
     )
     .await?;
-    info!("{}:{:?}", s1.scope_ids, rbums.iter().map(|r| r.name.as_str()).collect::<Vec<&str>>());
-    assert_eq!(rbums.len(), 13);
+    info!(
+        "{}:{:?}",
+        s1.scope_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+    );
+    assert_eq!(rbums.len(), 7);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
@@ -319,8 +326,12 @@ pub async fn test() -> TardisResult<()> {
         &s2,
     )
     .await?;
-    info!("{}:{:?}", s2.scope_ids, rbums.iter().map(|r| r.name.as_str()).collect::<Vec<&str>>());
-    assert_eq!(rbums.len(), 11);
+    info!(
+        "{}:{:?}",
+        s2.scope_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+    );
+    assert_eq!(rbums.len(), 9);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
@@ -333,7 +344,11 @@ pub async fn test() -> TardisResult<()> {
         &s3,
     )
     .await?;
-    info!("{}:{:?}", s3.scope_ids, rbums.iter().map(|r| r.name.as_str()).collect::<Vec<&str>>());
+    info!(
+        "{}:{:?}",
+        s3.scope_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+    );
     assert_eq!(rbums.len(), 10);
 
     let rbums = RbumDomainServ::find_rbums(
@@ -345,7 +360,7 @@ pub async fn test() -> TardisResult<()> {
         None,
         &tx,
         &TardisContext {
-            scope_ids: "xxx".to_string(),
+            scope_paths: "xxx".to_string(),
             ak: "".to_string(),
             account_id: "".to_string(),
             token: "".to_string(),
@@ -355,7 +370,7 @@ pub async fn test() -> TardisResult<()> {
         },
     )
     .await?;
-    info!("xxx:{:?}", rbums.iter().map(|r| r.name.as_str()).collect::<Vec<&str>>());
+    info!("xxx:{:?}", rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>());
     assert_eq!(rbums.len(), 4);
 
     let rbums = RbumDomainServ::find_rbums(
@@ -367,7 +382,7 @@ pub async fn test() -> TardisResult<()> {
         None,
         &tx,
         &TardisContext {
-            scope_ids: format!("{}x", s3.scope_ids),
+            scope_paths: format!("{}/x", s3.scope_paths),
             ak: "".to_string(),
             account_id: "".to_string(),
             token: "".to_string(),
@@ -377,7 +392,11 @@ pub async fn test() -> TardisResult<()> {
         },
     )
     .await?;
-    info!("{}x:{:?}", s3.scope_ids, rbums.iter().map(|r| r.name.as_str()).collect::<Vec<&str>>());
+    info!(
+        "{}x:{:?}",
+        s3.scope_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+    );
     assert_eq!(rbums.len(), 10);
 
     tx.rollback().await?;

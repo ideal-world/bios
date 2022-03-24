@@ -14,7 +14,7 @@ pub struct RbumItemAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
-    
+
     pub scope_level: i32,
     pub disabled: Option<bool>,
 
@@ -47,6 +47,7 @@ pub struct RbumItemSummaryResp {
     pub icon: String,
     pub sort: i32,
 
+    pub scope_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -68,7 +69,7 @@ pub struct RbumItemDetailResp {
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,
 
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

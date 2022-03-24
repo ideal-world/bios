@@ -35,13 +35,13 @@ pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_doma
     #[derive(Deserialize, FromQueryResult, Serialize, Clone, Debug)]
     struct TmpContext {
         pub id: String,
-        pub scope_ids: String,
+        pub scope_paths: String,
     }
 
     let mut query = Query::select();
     query
         .column((rbum_item::Entity, rbum_item::Column::Id))
-        .column((rbum_item::Entity, rbum_item::Column::ScopeIds))
+        .column((rbum_item::Entity, rbum_item::Column::ScopePaths))
         .from(rbum_item::Entity)
         .inner_join(
             rbum_kind::Entity,
@@ -59,7 +59,7 @@ pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_doma
 
     if let Some(context) = context {
         Ok(Some(TardisContext {
-            scope_ids: context.scope_ids.to_string(),
+            scope_paths: context.scope_paths.to_string(),
             ak: "_".to_string(),
             account_id: context.id,
             token: "_".to_string(),

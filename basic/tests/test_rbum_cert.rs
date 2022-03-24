@@ -10,7 +10,7 @@ use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use bios_basic::rbum::enumeration::RbumCertStatusKind;
+use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -481,22 +481,22 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumCertServ::validate("11", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.scope_ids, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await.is_err());
     tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     info!("Test Validate RbumCertServ::validate gudaoxuri abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_ids, &tx).await?,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await?,
         cert_gudaoxuri_id.to_string()
     );
     info!("Test Validate RbumCertServ::validate root abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.scope_ids, &tx).await?,
+        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.scope_paths, &tx).await?,
         cert_root_id.to_string()
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
     // Expire
     info!("Test Validate Expire RbumCertServ::validate gudaoxuri abcdefgh");
-    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_ids, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await.is_err());
 
     info!("【test_rbum_cert】 : Test Delete : RbumCertServ::delete_rbum");
     RbumCertServ::delete_rbum(&cert_gudaoxuri_id, &tx, context).await?;

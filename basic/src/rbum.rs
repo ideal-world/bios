@@ -1,9 +1,10 @@
-pub mod constants;
 #[cfg(feature = "default")]
 pub(crate) mod domain;
 pub mod dto;
-pub mod enumeration;
+pub mod helper;
+pub mod rbum_constants;
+pub mod rbum_enumeration;
 #[cfg(feature = "default")]
-pub mod initializer;
+pub mod rbum_initializer;
 #[cfg(feature = "default")]
 pub mod serv;

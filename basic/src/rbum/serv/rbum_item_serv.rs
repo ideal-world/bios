@@ -6,16 +6,16 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBlConnection};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::filer_dto::{RbumBasicFilterReq, RbumItemFilterReq};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
-use crate::rbum::serv::rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, RbumCrudOperation, RbumCrudQueryPackage, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -83,7 +83,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                 (rbum_item::Entity, rbum_item::Column::Sort),
                 (rbum_item::Entity, rbum_item::Column::RelRbumKindId),
                 (rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
-                (rbum_item::Entity, rbum_item::Column::ScopeIds),
+                (rbum_item::Entity, rbum_item::Column::ScopePaths),
                 (rbum_item::Entity, rbum_item::Column::UpdaterId),
                 (rbum_item::Entity, rbum_item::Column::CreateTime),
                 (rbum_item::Entity, rbum_item::Column::UpdateTime),
@@ -192,7 +192,7 @@ where
                 tag: tag.to_string(),
                 from_rbum_item_id: id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
-                to_scope_ids: cxt.scope_ids.to_string(),
+                to_scope_paths: cxt.scope_paths.to_string(),
                 ext: None,
             },
             db,
@@ -330,8 +330,8 @@ where
             &RbumBasicFilterReq {
                 rel_cxt_scope: filter.rel_cxt_scope,
                 rel_cxt_updater: filter.rel_cxt_updater,
-                scope_level: filter.scope_level.clone(),
-                rel_scope_ids: filter.rel_scope_ids.clone(),
+                scope_level: filter.scope_level,
+                rel_scope_paths: filter.rel_scope_paths.clone(),
                 rbum_kind_id: Some(Self::get_rbum_kind_id()),
                 rbum_domain_id: Some(Self::get_rbum_domain_id()),
                 enabled: filter.enabled,
@@ -379,7 +379,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
                 (rbum_item_attr::Entity, rbum_item_attr::Column::Value),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId),
-                (rbum_item_attr::Entity, rbum_item_attr::Column::ScopeIds),
+                (rbum_item_attr::Entity, rbum_item_attr::Column::ScopePaths),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdaterId),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::CreateTime),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdateTime),
