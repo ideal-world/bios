@@ -15,9 +15,9 @@ use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rb
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
-use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelDetailResp, RbumRelModifyReq};
+use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
 use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp, RbumRelEnvModifyReq};
-use crate::rbum::enumeration::RbumRelEnvKind;
+use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
@@ -38,7 +38,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             tag: Set(add_req.tag.to_string()),
             from_rbum_item_id: Set(add_req.from_rbum_item_id.to_string()),
             to_rbum_item_id: Set(add_req.to_rbum_item_id.to_string()),
-            to_scope_ids: Set(add_req.to_scope_ids.to_string()),
+            to_scope_paths: Set(add_req.to_scope_paths.to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
@@ -69,9 +69,9 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 (rbum_rel::Entity, rbum_rel::Column::Tag),
                 (rbum_rel::Entity, rbum_rel::Column::FromRbumItemId),
                 (rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
-                (rbum_rel::Entity, rbum_rel::Column::ToScopeIds),
+                (rbum_rel::Entity, rbum_rel::Column::ToScopePaths),
                 (rbum_rel::Entity, rbum_rel::Column::Ext),
-                (rbum_rel::Entity, rbum_rel::Column::ScopeIds),
+                (rbum_rel::Entity, rbum_rel::Column::ScopePaths),
                 (rbum_rel::Entity, rbum_rel::Column::UpdaterId),
                 (rbum_rel::Entity, rbum_rel::Column::CreateTime),
                 (rbum_rel::Entity, rbum_rel::Column::UpdateTime),
@@ -100,15 +100,15 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
                 }
-                if let Some(rel_scope_ids) = &filter.rel_scope_ids {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ScopeIds).eq(rel_scope_ids.to_string()));
+                if let Some(rel_scope_paths) = &filter.rel_scope_paths {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ScopePaths).eq(rel_scope_paths.to_string()));
                 }
             } else {
                 if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
                 }
-                if let Some(rel_scope_ids) = &filter.rel_scope_ids {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToScopeIds).eq(rel_scope_ids.to_string()));
+                if let Some(rel_scope_paths) = &filter.rel_scope_paths {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToScopePaths).eq(rel_scope_paths.to_string()));
                 }
             }
         }
@@ -145,7 +145,7 @@ impl<'a> RbumRelServ {
                 tag: tag.to_string(),
                 from_rbum_item_id: from_rbum_item_id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
-                to_scope_ids: cxt.scope_ids.to_string(),
+                to_scope_paths: cxt.scope_paths.to_string(),
                 ext: None,
             },
             db,
@@ -186,9 +186,8 @@ impl<'a> RbumRelServ {
         Ok(rbum_rel_id)
     }
 
-    pub async fn find_from_rels(
+    pub async fn paginate_from_rels(
         tag: &str,
-        from_rbum_kind_id: &str,
         from_rbum_item_id: &str,
         page_number: u64,
         page_size: u64,
@@ -197,13 +196,12 @@ impl<'a> RbumRelServ {
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        Self::find_rels(
+        Self::paginate_rels(
             &RbumBasicFilterReq {
                 rbum_rel_tag: Some(tag.to_string()),
                 rbum_rel_is_from: Some(true),
-                rbum_rel_rbum_kind_id: Some(from_rbum_kind_id.to_string()),
                 rbum_rel_rbum_item_id: Some(from_rbum_item_id.to_string()),
-                rel_scope_ids: Some(cxt.scope_ids.to_string()),
+                rel_scope_paths: Some(cxt.scope_paths.to_string()),
                 ..Default::default()
             },
             page_number,
@@ -216,9 +214,8 @@ impl<'a> RbumRelServ {
         .await
     }
 
-    pub async fn find_to_rels(
+    pub async fn paginate_to_rels(
         tag: &str,
-        to_rbum_kind_id: &str,
         to_rbum_item_id: &str,
         page_number: u64,
         page_size: u64,
@@ -227,13 +224,12 @@ impl<'a> RbumRelServ {
         db: &TardisRelDBlConnection<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        Self::find_rels(
+        Self::paginate_rels(
             &RbumBasicFilterReq {
                 rbum_rel_tag: Some(tag.to_string()),
                 rbum_rel_is_from: Some(false),
-                rbum_rel_rbum_kind_id: Some(to_rbum_kind_id.to_string()),
                 rbum_rel_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                rel_scope_ids: Some(cxt.scope_ids.to_string()),
+                rel_scope_paths: Some(cxt.scope_paths.to_string()),
                 ..Default::default()
             },
             page_number,
@@ -246,7 +242,7 @@ impl<'a> RbumRelServ {
         .await
     }
 
-    async fn find_rels(
+    async fn paginate_rels(
         filter: &RbumBasicFilterReq,
         page_number: u64,
         page_size: u64,
@@ -295,6 +291,21 @@ impl<'a> RbumRelServ {
         })
     }
 
+    pub async fn find_rel_id(check_req: &RbumRelFindReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<Option<String>> {
+        let mut query = Query::select();
+        query
+            .column(rbum_rel::Column::Id)
+            .from(rbum_rel::Entity)
+            .and_where(Expr::col(rbum_rel::Column::Tag).eq(check_req.tag.as_str()))
+            .and_where(Expr::col(rbum_rel::Column::FromRbumItemId).eq(check_req.from_rbum_item_id.as_str()))
+            .and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(check_req.to_rbum_item_id.as_str()))
+            .cond_where(
+                Cond::any().add(Expr::col(rbum_rel::Column::ScopePaths).eq(cxt.scope_paths.as_str())).add(Expr::col(rbum_rel::Column::ToScopePaths).eq(cxt.scope_paths.as_str())),
+            );
+        let id = db.get_dto::<IdResp>(&query).await?;
+        Ok(id.map(|resp| resp.id))
+    }
+
     pub async fn check_rel(check_req: &RbumRelCheckReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<bool> {
         let mut query = Query::select();
         query
@@ -303,7 +314,9 @@ impl<'a> RbumRelServ {
             .and_where(Expr::col(rbum_rel::Column::Tag).eq(check_req.tag.as_str()))
             .and_where(Expr::col(rbum_rel::Column::FromRbumItemId).eq(check_req.from_rbum_item_id.as_str()))
             .and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(check_req.to_rbum_item_id.as_str()))
-            .cond_where(Cond::any().add(Expr::col(rbum_rel::Column::ScopeIds).eq(cxt.scope_ids.as_str())).add(Expr::col(rbum_rel::Column::ToScopeIds).eq(cxt.scope_ids.as_str())));
+            .cond_where(
+                Cond::any().add(Expr::col(rbum_rel::Column::ScopePaths).eq(cxt.scope_paths.as_str())).add(Expr::col(rbum_rel::Column::ToScopePaths).eq(cxt.scope_paths.as_str())),
+            );
         let rbum_rel = db.get_dto::<IdResp>(&query).await?;
         if let Some(rbum_rel) = rbum_rel {
             let rbum_rel_id = rbum_rel.id;
@@ -415,7 +428,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::Name),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumKindAttrId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId),
-                (rbum_rel_attr::Entity, rbum_rel_attr::Column::ScopeIds),
+                (rbum_rel_attr::Entity, rbum_rel_attr::Column::ScopePaths),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdaterId),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::CreateTime),
                 (rbum_rel_attr::Entity, rbum_rel_attr::Column::UpdateTime),
@@ -485,7 +498,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
                 (rbum_rel_env::Entity, rbum_rel_env::Column::Value1),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::Value2),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::RelRbumRelId),
-                (rbum_rel_env::Entity, rbum_rel_env::Column::ScopeIds),
+                (rbum_rel_env::Entity, rbum_rel_env::Column::ScopePaths),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::UpdaterId),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::CreateTime),
                 (rbum_rel_env::Entity, rbum_rel_env::Column::UpdateTime),

@@ -3,7 +3,7 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::enumeration::RbumCertStatusKind;
+use crate::rbum::rbum_enumeration::RbumCertStatusKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertAddReq {
@@ -46,6 +46,7 @@ pub struct RbumCertSummaryResp {
     pub rel_rbum_item_id: Option<String>,
     pub rel_rbum_item_name: Option<String>,
 
+    pub scope_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -65,7 +66,7 @@ pub struct RbumCertDetailResp {
     pub rel_rbum_item_id: Option<String>,
     pub rel_rbum_item_name: Option<String>,
 
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

@@ -11,7 +11,6 @@ use testcontainers::images::generic::GenericImage;
 use testcontainers::images::redis::Redis;
 use testcontainers::Container;
 
-use bios_basic::rbum::constants::{RBUM_SCOPE_L1_LEN, RBUM_SCOPE_L2_LEN};
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
@@ -54,7 +53,7 @@ pub async fn init<'a>(docker: &'a Cli) -> TardisResult<LifeHold<'a>> {
     env::set_var("RUST_LOG", "debug");
     TardisFuns::init::<NoneConfig>("").await?;
 
-    bios_basic::rbum::initializer::init_db().await?;
+    bios_basic::rbum::rbum_initializer::init_db().await?;
 
     Ok(LifeHold {
         mysql: mysql_container,
@@ -67,7 +66,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
     tx.begin().await?;
 
     let cxt = TardisContext {
-        scope_ids: "".to_string(),
+        scope_paths: "".to_string(),
         ak: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
@@ -145,7 +144,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             rel_rbum_kind_id: kind_tenant_id.clone(),
             rel_rbum_domain_id: domain_iam_id.clone(),
             scope_level: 2,
-            id: Some(TrimString(TardisFuns::field.nanoid_len(RBUM_SCOPE_L1_LEN))),
+            id: Some(TrimString(TardisFuns::field.nanoid_len(4))),
         },
         &tx,
         &cxt,
@@ -162,7 +161,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             rel_rbum_kind_id: kind_app_id.clone(),
             rel_rbum_domain_id: domain_iam_id.clone(),
             scope_level: 2,
-            id: Some(TrimString(TardisFuns::field.nanoid_len(RBUM_SCOPE_L2_LEN))),
+            id: Some(TrimString(TardisFuns::field.nanoid_len(4))),
         },
         &tx,
         &cxt,
@@ -188,7 +187,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     tx.commit().await?;
     Ok(TardisContext {
-        scope_ids: format!("{}{}", tenant_id, app_id),
+        scope_paths: format!("{}/{}", tenant_id, app_id),
         ak: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),

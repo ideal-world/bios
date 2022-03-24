@@ -16,7 +16,7 @@ pub struct Model {
     pub icon: String,
     pub sort: i32,
     // Basic
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
@@ -27,7 +27,7 @@ pub struct Model {
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.scope_ids = Set(cxt.scope_ids.to_string());
+            self.scope_paths = Set(cxt.scope_paths.to_string());
         }
         self.updater_id = Set(cxt.account_id.to_string());
     }
@@ -46,7 +46,7 @@ impl TardisActiveModel for ActiveModel {
             // With Scope
             .col(ColumnDef::new(Column::ScopeLevel).not_null().integer())
             // Basic
-            .col(ColumnDef::new(Column::ScopeIds).not_null().string())
+            .col(ColumnDef::new(Column::ScopePaths).not_null().string())
             .col(ColumnDef::new(Column::UpdaterId).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
@@ -55,7 +55,7 @@ impl TardisActiveModel for ActiveModel {
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeIds.to_string())).table(Entity).col(Column::ScopeIds).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopePaths.to_string())).table(Entity).col(Column::ScopePaths).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::UriAuthority.to_string(),)).table(Entity).col(Column::UriAuthority).unique().to_owned(),
         ]
     }

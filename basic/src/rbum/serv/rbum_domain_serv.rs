@@ -7,7 +7,7 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
-use crate::rbum::constants::RBUM_DOMAIN_ID_LEN;
+use crate::rbum::rbum_constants::RBUM_DOMAIN_ID_LEN;
 use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
@@ -69,7 +69,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             (rbum_domain::Entity, rbum_domain::Column::Note),
             (rbum_domain::Entity, rbum_domain::Column::Icon),
             (rbum_domain::Entity, rbum_domain::Column::Sort),
-            (rbum_domain::Entity, rbum_domain::Column::ScopeIds),
+            (rbum_domain::Entity, rbum_domain::Column::ScopePaths),
             (rbum_domain::Entity, rbum_domain::Column::UpdaterId),
             (rbum_domain::Entity, rbum_domain::Column::CreateTime),
             (rbum_domain::Entity, rbum_domain::Column::UpdateTime),

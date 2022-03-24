@@ -42,6 +42,7 @@ pub struct RbumSetSummaryResp {
     pub sort: i32,
     pub tags: String,
 
+    pub scope_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -58,7 +59,7 @@ pub struct RbumSetDetailResp {
     pub sort: i32,
     pub tags: String,
 
-    pub scope_ids: String,
+    pub scope_paths: String,
     pub updater_id: String,
     pub updater_name: String,
     pub create_time: DateTime<Utc>,

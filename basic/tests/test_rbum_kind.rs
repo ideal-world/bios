@@ -7,7 +7,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq};
-use bios_basic::rbum::enumeration::{RbumDataTypeKind, RbumWidgetKind};
+use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 
