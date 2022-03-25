@@ -23,7 +23,7 @@ use sqlx::types::chrono::{DateTime, Utc};
 #[derive(Deserialize, Validate)]
 pub struct ResourceSubjectQueryReq {
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     pub page_number: u64,
     pub page_size: u64,
 }
@@ -32,7 +32,7 @@ pub struct ResourceSubjectQueryReq {
 pub struct ResourceSubjectAddReq {
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 资源主体显示排序，asc
     pub sort: i32,
     // 资源类型
@@ -63,7 +63,7 @@ pub struct ResourceSubjectAddReq {
 pub struct ResourceSubjectModifyReq {
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 资源主体显示排序，asc
     pub sort: Option<i32>,
     // 资源类型
@@ -96,7 +96,7 @@ pub struct ResourceSubjectDetailResp {
     pub id: String,
     // 资源主体名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 资源主体显示排序，asc
     pub sort: i32,
     // 资源类型
@@ -139,7 +139,7 @@ pub struct ResourceSubjectDetailResp {
 #[derive(Deserialize, Validate)]
 pub struct ResourceQueryReq {
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     #[validate(length(min = 2, max = 5000))]
     pub path_and_query: Option<String>,
     pub expose: bool,
@@ -151,7 +151,7 @@ pub struct ResourceQueryReq {
 pub struct ResourceAddReq {
     // 资源名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 资源路径
     #[validate(length(max = 5000))]
     pub path_and_query: String,
@@ -179,7 +179,7 @@ pub struct ResourceAddReq {
 pub struct ResourceModifyReq {
     // 资源名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 资源路径
     #[validate(length(max = 5000))]
     pub path_and_query: Option<String>,
@@ -206,7 +206,7 @@ pub struct ResourceDetailResp {
     pub id: String,
     // 资源名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 资源路径
     #[validate(length(max = 5000))]
     pub path_and_query: String,

@@ -30,7 +30,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     )
     .await?
     .0;
-    assert!(IamCsTenantServ::add_tenant(
+    IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
             tenant_name: TrimString("测试租户2".to_string()),
             tenant_icon: None,
@@ -42,8 +42,8 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
         &tx,
         context,
     )
-    .await
-    .is_err());
+    .await?;
+
     let id2 = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
             tenant_name: TrimString("测试租户2".to_string()),

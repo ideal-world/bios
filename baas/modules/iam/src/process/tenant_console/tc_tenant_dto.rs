@@ -24,7 +24,7 @@ use crate::process::basic_dto::AccountIdentKind;
 pub struct TenantModifyReq {
     // 租户名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 租户图标
     #[validate(length(min = 2, max = 1000))]
     pub icon: Option<String>,
@@ -41,7 +41,7 @@ pub struct TenantDetailResp {
     pub id: String,
     // 租户名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 租户图标
     #[validate(length(max = 1000))]
     pub icon: String,

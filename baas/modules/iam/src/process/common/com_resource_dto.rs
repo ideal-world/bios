@@ -21,7 +21,7 @@ use validator::Validate;
 pub struct ResourceDetailResp {
     // 资源名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 资源uri
     #[validate(length(max = 5000))]
     pub ident_uri: String,

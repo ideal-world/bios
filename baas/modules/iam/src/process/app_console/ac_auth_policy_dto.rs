@@ -23,7 +23,7 @@ use sqlx::types::chrono::{DateTime, Utc};
 #[derive(Deserialize, Validate)]
 pub struct AuthPolicyQueryReq {
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     pub valid_start_time: Option<i64>,
     pub valid_end_time: Option<i64>,
     #[validate(length(max = 32))]
@@ -36,7 +36,7 @@ pub struct AuthPolicyQueryReq {
 pub struct AuthPolicyAddReq {
     // 权限策略名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 有效开始时间
     pub valid_start_time: i64,
     // 有效结束时间
@@ -54,7 +54,7 @@ pub struct AuthPolicyAddReq {
 pub struct AuthPolicyModifyReq {
     // 权限策略名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 有效开始时间
     pub valid_start_time: Option<i64>,
     // 有效结束时间
@@ -67,7 +67,7 @@ pub struct AuthPolicyDetailResp {
     pub id: String,
     // 权限策略名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 有效开始时间
     pub valid_start_time: i64,
     // 有效结束时间

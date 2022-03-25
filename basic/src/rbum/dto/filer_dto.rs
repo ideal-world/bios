@@ -21,7 +21,6 @@ pub struct RbumBasicFilterReq {
 
     pub rbum_rel_tag: Option<String>,
     pub rbum_rel_is_from: Option<bool>,
-    pub rbum_rel_rbum_item_id: Option<String>,
     pub rbum_rel_id: Option<String>,
 
     pub ignore_scope_check: bool,
@@ -43,7 +42,6 @@ impl Default for RbumBasicFilterReq {
             rbum_cert_conf_id: None,
             rbum_rel_tag: None,
             rbum_rel_is_from: None,
-            rbum_rel_rbum_item_id: None,
             rbum_rel_id: None,
             ignore_scope_check: false,
             rbum_item_id: None,

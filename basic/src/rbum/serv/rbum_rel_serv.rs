@@ -97,15 +97,15 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         }
         if let Some(is_from) = filter.rbum_rel_is_from {
             if is_from {
-                if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
+                if let Some(rbum_item_id) = &filter.rbum_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumItemId).eq(rbum_item_id.to_string()));
                 }
                 if let Some(rel_scope_paths) = &filter.rel_scope_paths {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ScopePaths).eq(rel_scope_paths.to_string()));
                 }
             } else {
-                if let Some(rbum_rel_rbum_item_id) = &filter.rbum_rel_rbum_item_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rbum_rel_rbum_item_id.to_string()));
+                if let Some(rbum_item_id) = &filter.rbum_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rbum_item_id.to_string()));
                 }
                 if let Some(rel_scope_paths) = &filter.rel_scope_paths {
                     query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToScopePaths).eq(rel_scope_paths.to_string()));
@@ -200,7 +200,7 @@ impl<'a> RbumRelServ {
             &RbumBasicFilterReq {
                 rbum_rel_tag: Some(tag.to_string()),
                 rbum_rel_is_from: Some(true),
-                rbum_rel_rbum_item_id: Some(from_rbum_item_id.to_string()),
+                rbum_item_id: Some(from_rbum_item_id.to_string()),
                 rel_scope_paths: Some(cxt.scope_paths.to_string()),
                 ..Default::default()
             },
@@ -228,7 +228,7 @@ impl<'a> RbumRelServ {
             &RbumBasicFilterReq {
                 rbum_rel_tag: Some(tag.to_string()),
                 rbum_rel_is_from: Some(false),
-                rbum_rel_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                rbum_item_id: Some(to_rbum_item_id.to_string()),
                 rel_scope_paths: Some(cxt.scope_paths.to_string()),
                 ..Default::default()
             },

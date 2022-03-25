@@ -21,5 +21,5 @@ use validator::Validate;
 pub struct AppRegisterReq {
     // 应用名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
 }

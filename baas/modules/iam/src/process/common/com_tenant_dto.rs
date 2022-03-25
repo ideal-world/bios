@@ -21,7 +21,7 @@ use validator::Validate;
 pub struct TenantRegisterReq {
     // 租户名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 租户图标
     #[validate(length(min = 2, max = 1000))]
     pub icon: Option<String>,
