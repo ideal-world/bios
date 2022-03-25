@@ -15,7 +15,6 @@ pub struct Model {
     pub ext: String,
     pub start_time: DateTime,
     pub end_time: DateTime,
-    pub coexist_flag: String,
     pub status: String,
     pub rel_rbum_cert_conf_id: String,
     pub rel_rbum_item_id: String,
@@ -45,7 +44,6 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::StartTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::EndTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
-            .col(ColumnDef::new(Column::CoexistFlag).not_null().string())
             .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())

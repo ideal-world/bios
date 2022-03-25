@@ -23,7 +23,7 @@ use crate::process::basic_dto::{AccountIdentKind, CommonStatus};
 #[derive(Deserialize, Validate)]
 pub struct AccountQueryReq {
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     pub page_number: u64,
     pub page_size: u64,
 }
@@ -32,7 +32,7 @@ pub struct AccountQueryReq {
 pub struct AccountAddReq {
     // 账号名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 账号头像
     #[validate(length(min = 2, max = 1000))]
     pub avatar: Option<String>,
@@ -48,7 +48,7 @@ pub struct AccountAddReq {
 pub struct AccountModifyReq {
     // 账号名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 账号头像
     #[validate(length(min = 2, max = 1000))]
     pub avatar: Option<String>,
@@ -71,7 +71,7 @@ pub struct AccountDetailResp {
     pub open_id: String,
     // 账号名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 账号头像
     #[validate(length(max = 1000))]
     pub avatar: String,

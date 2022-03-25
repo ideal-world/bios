@@ -22,7 +22,7 @@ use validator::Validate;
 #[derive(Deserialize, Validate)]
 pub struct AppQueryReq {
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     pub page_number: u64,
     pub page_size: u64,
 }
@@ -31,7 +31,7 @@ pub struct AppQueryReq {
 pub struct AppAddReq {
     // 应用名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 应用图标
     #[validate(length(min = 2, max = 1000))]
     pub icon: Option<String>,
@@ -44,7 +44,7 @@ pub struct AppAddReq {
 pub struct AppModifyReq {
     // 应用名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 应用图标
     #[validate(length(min = 2, max = 1000))]
     pub icon: Option<String>,
@@ -61,7 +61,7 @@ pub struct AppDetailResp {
     pub id: String,
     // 应用名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 应用图标
     #[validate(length(max = 1000))]
     pub icon: String,

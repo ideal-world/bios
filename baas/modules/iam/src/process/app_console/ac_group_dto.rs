@@ -25,7 +25,7 @@ pub struct GroupQueryReq {
     #[validate(length(min = 2, max = 255))]
     pub code: Option<String>,
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     pub expose: bool,
     pub page_number: u64,
     pub page_size: u64,
@@ -38,7 +38,7 @@ pub struct GroupAddReq {
     pub code: String,
     // 群组名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 群组类型
     pub kind: GroupKind,
     // 群组显示排序，asc
@@ -60,7 +60,7 @@ pub struct GroupAddReq {
 pub struct GroupModifyReq {
     // 群组名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 群组类型
     pub kind: Option<GroupKind>,
     // 群组显示排序，asc
@@ -87,7 +87,7 @@ pub struct GroupDetailResp {
     pub code: String,
     // 群组名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 群组类型
     #[validate(length(max = 255))]
     pub kind: String,
@@ -126,7 +126,7 @@ pub struct GroupNodeAddReq {
     pub bus_code: Option<String>,
     // 节点名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 节点扩展信息，Json格式
     #[validate(length(max = 2000))]
     pub parameters: Option<String>,
@@ -144,7 +144,7 @@ pub struct GroupNodeModifyReq {
     pub bus_code: Option<String>,
     // 节点名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 节点扩展信息，Json格式
     #[validate(length(max = 2000))]
     pub parameters: Option<String>,
@@ -164,7 +164,7 @@ pub struct GroupNodeDetailResp {
     pub bus_code: String,
     // 节点名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 节点扩展信息，Json格式
     #[validate(length(max = 2000))]
     pub parameters: String,

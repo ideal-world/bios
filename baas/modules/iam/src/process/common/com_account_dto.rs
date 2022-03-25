@@ -23,7 +23,7 @@ use crate::process::basic_dto::AccountIdentKind;
 pub struct AccountChangeReq {
     // 账号名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 账号头像
     #[validate(length(min = 2, max = 1000))]
     pub avatar: Option<String>,
@@ -78,7 +78,7 @@ pub struct AccountOAuthLoginReq {
 pub struct AccountRegisterReq {
     // 账号名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 账号头像
     #[validate(length(min = 2, max = 1000))]
     pub avatar: Option<String>,

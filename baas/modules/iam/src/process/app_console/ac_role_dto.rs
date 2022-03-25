@@ -23,7 +23,7 @@ pub struct RoleQueryReq {
     #[validate(length(min = 2, max = 255))]
     pub code: Option<String>,
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     pub page_number: u64,
     pub page_size: u64,
 }
@@ -35,7 +35,7 @@ pub struct RoleAddReq {
     pub code: String,
     // 角色名称
     #[validate(length(min = 2, max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 角色显示排序，asc
     pub sort: i32,
 }
@@ -47,7 +47,7 @@ pub struct RoleModifyReq {
     pub code: Option<String>,
     // 资源主体名称
     #[validate(length(min = 2, max = 255))]
-    pub name: Option<String>,
+    pub name: Option<TrimString>,
     // 资源主体显示排序，asc
     pub sort: Option<i32>,
 }
@@ -61,7 +61,7 @@ pub struct RoleDetailResp {
     pub code: String,
     // 角色名称
     #[validate(length(max = 255))]
-    pub name: String,
+    pub name: TrimString,
     // 角色显示排序，asc
     pub sort: i32,
     // 所属应用Id

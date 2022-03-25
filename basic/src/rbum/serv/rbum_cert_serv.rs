@@ -216,7 +216,6 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now).naive_utc()),
             end_time: Set(add_req.end_time.unwrap_or_else(Utc::now).naive_utc()),
-            coexist_flag: Set(add_req.coexist_flag.as_ref().unwrap_or(&"".to_string()).to_string()),
             status: Set(add_req.status.to_string()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.to_string()),
             rel_rbum_item_id: Set(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -238,9 +237,6 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         if let Some(end_time) = modify_req.end_time {
             rbum_cert.end_time = Set(end_time.naive_utc());
         }
-        if let Some(coexist_flag) = &modify_req.coexist_flag {
-            rbum_cert.coexist_flag = Set(coexist_flag.to_string());
-        }
         if let Some(status) = &modify_req.status {
             rbum_cert.status = Set(status.to_string());
         }
@@ -258,7 +254,6 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 (rbum_cert::Entity, rbum_cert::Column::Ext),
                 (rbum_cert::Entity, rbum_cert::Column::StartTime),
                 (rbum_cert::Entity, rbum_cert::Column::EndTime),
-                (rbum_cert::Entity, rbum_cert::Column::CoexistFlag),
                 (rbum_cert::Entity, rbum_cert::Column::Status),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumItemId),
@@ -285,6 +280,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id.to_string()));
         }
 
+        if let Some(rbum_item_id) = &filter.rbum_item_id {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumItemId).eq(rbum_item_id.to_string()));
+        }
+
         if is_detail {
             query.query_with_safe(Self::get_table_name());
         }
@@ -299,6 +298,27 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         if let Some(rel_rbum_item_id) = &add_req.rel_rbum_item_id {
             Self::check_scope(rel_rbum_item_id, RbumItemServ::get_table_name(), db, cxt).await?;
         }
+        let cert_conf = RbumCertConfServ::get_rbum(&add_req.rel_rbum_cert_conf_id, &RbumBasicFilterReq::default(), db, cxt).await?;
+        if cert_conf.coexist_num != 0 {
+            let need_delete_rbum_certs = Self::paginate_rbums(
+                &RbumBasicFilterReq {
+                    rbum_cert_conf_id: Some(cert_conf.id),
+                    rbum_item_id: add_req.rel_rbum_item_id.clone(),
+                    ..Default::default()
+                },
+                // Skip normal records
+                2,
+                cert_conf.coexist_num as u64,
+                Some(true),
+                None,
+                db,
+                cxt,
+            )
+            .await?;
+            for need_delete_rbum_cert in need_delete_rbum_certs.records {
+                Self::delete_rbum(&need_delete_rbum_cert.id, db, cxt).await?;
+            }
+        }
         // Encrypt Sk
         let rbum_cert_conf = RbumCertConfServ::get_rbum(&add_req.rel_rbum_cert_conf_id, &RbumBasicFilterReq::default(), db, cxt).await?;
         RbumCertServ::check_cert_conf_constraint_by_add(add_req, &rbum_cert_conf, db, cxt).await?;
@@ -308,7 +328,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 add_req.sk = Some(TrimString(sk));
             }
         }
-        // Fill EndTime
+        // Fill Time
         if let Some(start_time) = &add_req.start_time {
             add_req.end_time = Some(*start_time + Duration::seconds(rbum_cert_conf.expire_sec as i64));
         } else {
@@ -323,11 +343,12 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 impl<'a> RbumCertServ {
     // TODO find cert
 
-    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, scope_paths: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<String> {
+    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, scope_paths: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<(String, String)> {
         #[derive(Debug, FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
             pub sk: String,
+            pub rel_rbum_item_id: String,
         }
 
         #[derive(Debug, FromQueryResult)]
@@ -339,6 +360,7 @@ impl<'a> RbumCertServ {
         query
             .column(rbum_cert::Column::Id)
             .column(rbum_cert::Column::Sk)
+            .column(rbum_cert::Column::RelRbumItemId)
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
@@ -356,7 +378,7 @@ impl<'a> RbumCertServ {
                 .ok_or_else(|| TardisError::NotFound("cert conf not found".to_string()))?;
             let sk = if sk_encrypted_resp.sk_encrypted { Self::encrypt_sk(sk, ak)? } else { sk.to_string() };
             if rbum_cert.sk == sk {
-                Ok(rbum_cert.id)
+                Ok((rbum_cert.id, rbum_cert.rel_rbum_item_id))
             } else {
                 tardis::log::warn!(
                     "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, scope_paths {}",

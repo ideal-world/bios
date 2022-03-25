@@ -21,15 +21,33 @@ use crate::basic::constants;
 use crate::basic::constants::*;
 use crate::basic::domain::{iam_account, iam_app, iam_http_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
+use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
-use crate::basic::enumeration::{IAMRelKind, IamIdentKind};
+use crate::basic::enumeration::IAMRelKind;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_tenant_api};
+use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_conf_api, iam_ct_http_res_api, iam_ct_role_api, iam_ct_tenant_api};
 
 pub async fn init_api(web_server: &mut TardisWebServer) -> TardisResult<()> {
-    web_server.add_module("iam", (iam_cs_tenant_api::IamCsTenantApi, iam_cs_account_api::IamCsAccountApi));
+    web_server.add_module(
+        "iam",
+        (
+            iam_cp_account_api::IamCpAccountApi,
+            iam_cp_cert_api::IamCpAccountApi,
+            iam_cs_tenant_api::IamCsTenantApi,
+            iam_cs_account_api::IamCsAccountApi,
+            iam_ct_tenant_api::IamCtTenantApi,
+            iam_ct_account_api::IamCtAccountApi,
+            iam_ct_app_api::IamCtAppApi,
+            iam_ct_role_api::IamCtRoleApi,
+            iam_ct_cert_conf_api::IamCtCertConfApi,
+            iam_ct_http_res_api::IamCtHttpResApi,
+        ),
+    );
     Ok(())
 }
 
@@ -220,7 +238,17 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
 
     RbumRelServ::add_simple_rel(&IAMRelKind::IamRoleAccount.to_string(), &role_sys_admin_id, &account_sys_admin_id, tx, &cxt).await?;
     let pwd = IamCertServ::get_new_pwd();
-    IamCertServ::add_ident(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, Some(&pwd), IamIdentKind::UserPwd, None, &account_sys_admin_id, tx, &cxt).await?;
+    IamCertUserPwdServ::add_cert(
+        &mut IamUserPwdCertAddReq {
+            ak: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            sk: TrimString(pwd.clone()),
+        },
+        &account_sys_admin_id,
+        None,
+        tx,
+        &cxt,
+    )
+    .await?;
 
     info!(
         "Initialization is complete.

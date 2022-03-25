@@ -36,7 +36,7 @@ pub async fn init<'a>(docker: &'a Cli) -> TardisResult<LifeHold<'a>> {
     env::set_var("RUST_LOG", "debug");
     TardisFuns::init::<NoneConfig>("").await?;
 
-    bios_iam::initializer::init_db().await?;
+    bios_iam::iam_initializer::init_db().await?;
 
     Ok(LifeHold {
         mysql: mysql_container,

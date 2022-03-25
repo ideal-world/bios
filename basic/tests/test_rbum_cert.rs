@@ -291,7 +291,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: "".to_string(),
             rel_rbum_item_id: None
@@ -310,7 +309,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: "".to_string(),
             rel_rbum_item_id: None
@@ -329,7 +327,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: "".to_string(),
             rel_rbum_item_id: None
@@ -348,7 +345,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: "".to_string(),
             rel_rbum_item_id: None
@@ -366,7 +362,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: cert_conf_user_pwd_id.to_string(),
             rel_rbum_item_id: None,
@@ -384,7 +379,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: cert_conf_user_pwd_id.to_string(),
             rel_rbum_item_id: None,
@@ -402,7 +396,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: cert_conf_ssh_id.to_string(),
             rel_rbum_item_id: None,
@@ -429,7 +422,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: Some("ext".to_string()),
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: None
         },
         &tx,
@@ -444,7 +436,6 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ext: Some("ext".to_string()),
             start_time: None,
             end_time: None,
-            coexist_flag: None,
             status: None,
         },
         &tx,
@@ -485,12 +476,12 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     info!("Test Validate RbumCertServ::validate gudaoxuri abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await?,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await?.0,
         cert_gudaoxuri_id.to_string()
     );
     info!("Test Validate RbumCertServ::validate root abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.scope_paths, &tx).await?,
+        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.scope_paths, &tx).await?.0,
         cert_root_id.to_string()
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
