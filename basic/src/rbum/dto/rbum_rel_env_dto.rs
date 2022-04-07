@@ -33,9 +33,9 @@ pub struct RbumRelEnvDetailResp {
     pub value2: String,
     pub rel_rbum_rel_id: String,
 
-    pub scope_paths: String,
-    pub updater_id: String,
-    pub updater_name: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

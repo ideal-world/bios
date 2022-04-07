@@ -316,7 +316,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_item】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_account_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("account".to_string()),
+            code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
             note: None,
             icon: None,
@@ -332,7 +332,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_item】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM2".to_string()),
             note: None,
             icon: None,
@@ -348,7 +348,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,

@@ -24,7 +24,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_kind】 : Test Add : RbumKindServ::add_rbum");
     let id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("db".to_string()),
+            code: TrimString("db".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -40,14 +40,14 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_kind】 : Test Get : RbumKindServ::get_rbum");
     let rbum = RbumKindServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
-    assert_eq!(rbum.uri_scheme, "db");
+    assert_eq!(rbum.code, "db");
     assert_eq!(rbum.name, "关系型数据库");
 
     info!("【test_rbum_kind】 : Test Modify : RbumKindServ::modify_rbum");
     RbumKindServ::modify_rbum(
         &id,
         &mut RbumKindModifyReq {
-            uri_scheme: Some(TrimString("reldb".to_string())),
+            code: Some(TrimString("reldb".to_string())),
             name: None,
             note: None,
             icon: None,
@@ -77,7 +77,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().uri_scheme, "reldb");
+    assert_eq!(rbums.records.get(0).unwrap().code, "reldb");
 
     info!("【test_rbum_kind】 : Test Delete : RbumKindServ::delete_rbum");
     RbumKindServ::delete_rbum(&id, &tx, context).await?;
@@ -95,7 +95,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_kind_attr】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -115,7 +115,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
-            data_type_kind: RbumDataTypeKind::String,
+            data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
             note: None,
             sort: None,
@@ -142,7 +142,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
-            data_type_kind: RbumDataTypeKind::String,
+            data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
             note: None,
             sort: None,
@@ -169,7 +169,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
-            data_type_kind: RbumDataTypeKind::String,
+            data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
             note: None,
             sort: None,
@@ -196,7 +196,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbum.id, kind_attr_id);
     assert_eq!(rbum.name, "db_type");
     assert_eq!(rbum.label, "数据库类型");
-    assert_eq!(rbum.data_type_kind, RbumDataTypeKind::String.to_string());
+    assert_eq!(rbum.data_type, RbumDataTypeKind::String.to_string());
     assert_eq!(rbum.widget_type, RbumWidgetKind::InputTxt.to_string());
     assert!(!rbum.overload);
 
@@ -206,7 +206,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrModifyReq {
             name: None,
             label: None,
-            data_type_kind: None,
+            data_type: None,
             widget_type: None,
             note: None,
             sort: None,
@@ -233,7 +233,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrModifyReq {
             name: None,
             label: None,
-            data_type_kind: None,
+            data_type: None,
             widget_type: None,
             note: None,
             sort: None,

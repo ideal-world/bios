@@ -12,7 +12,7 @@ use crate::console_tenant::dto::iam_ct_tenant_dto::IamCtTenantModifyReq;
 pub struct IamCtTenantServ;
 
 impl IamCtTenantServ {
-    pub async fn modify_tenant<'a>(modify_req: &mut IamCtTenantModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_tenant<'a>(modify_req: &mut IamCtTenantModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamTenantServ::modify_item(
             &IamTenantServ::get_id_by_cxt(cxt)?,

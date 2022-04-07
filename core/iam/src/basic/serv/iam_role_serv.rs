@@ -33,10 +33,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         constants::get_rbum_basic_info().domain_iam_id.clone()
     }
 
-    async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
+    async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: add_req.name.clone(),
             icon: None,
             sort: None,
@@ -47,16 +47,16 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         })
     }
 
-    async fn package_ext_add(id: &str, _: &IamRoleAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<iam_role::ActiveModel> {
+    async fn package_ext_add(id: &str, _: &IamRoleAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_role::ActiveModel> {
         Ok(iam_role::ActiveModel { id: Set(id.to_string()) })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamRoleModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamRoleModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            uri_path: None,
+            code: None,
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: modify_req.sort,
@@ -65,34 +65,34 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         }))
     }
 
-    async fn package_ext_modify(_: &str, _: &IamRoleModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<iam_role::ActiveModel>> {
+    async fn package_ext_modify(_: &str, _: &IamRoleModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_role::ActiveModel>> {
         return Ok(None);
     }
 
-    async fn package_item_query(_: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_item_query(_: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 }
 
 impl IamRoleServ {
-    pub async fn need_sys_admin<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_sys_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::need_role(&constants::get_rbum_basic_info().role_sys_admin_id, db, cxt).await
     }
 
-    pub async fn need_tenant_admin<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_tenant_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::need_role(&constants::get_rbum_basic_info().role_tenant_admin_id, db, cxt).await
     }
 
-    pub async fn need_app_admin<'a>(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_app_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::need_role(&constants::get_rbum_basic_info().role_app_admin_id, db, cxt).await
     }
 
-    pub async fn need_role<'a>(iam_role_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_role<'a>(iam_role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         // TODO cache
         let exist = RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
                 tag: IAMRelKind::IamRoleAccount.to_string(),
-                from_rbum_item_id: iam_role_id.to_string(),
+                from_rbum_id: iam_role_id.to_string(),
                 to_rbum_item_id: cxt.account_id.clone(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default(),

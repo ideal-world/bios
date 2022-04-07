@@ -29,29 +29,29 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
         constants::get_rbum_basic_info().domain_iam_id.clone()
     }
 
-    async fn package_item_add(add_req: &IamHttpResAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
+    async fn package_item_add(add_req: &IamHttpResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
             id: None,
-            uri_path: Some(add_req.uri_path.clone()),
+            code: Some(add_req.code.clone()),
             name: add_req.name.clone(),
             icon: add_req.icon.clone(),
             sort: add_req.sort,
             disabled: add_req.disabled,
             rel_rbum_kind_id: "".to_string(),
             rel_rbum_domain_id: "".to_string(),
-            scope_level: add_req.scope_level
+            scope_level: add_req.scope_level,
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &IamHttpResAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<iam_http_res::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamHttpResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_http_res::ActiveModel> {
         Ok(iam_http_res::ActiveModel {
             id: Set(id.to_string()),
-            method: Set(add_req.uri_path.0.to_string()),
+            method: Set(add_req.code.0.to_string()),
         })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamHttpResModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
-        if modify_req.uri_path.is_none()
+    async fn package_item_modify(_: &str, modify_req: &IamHttpResModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+        if modify_req.code.is_none()
             && modify_req.name.is_none()
             && modify_req.icon.is_none()
             && modify_req.sort.is_none()
@@ -61,7 +61,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            uri_path: modify_req.uri_path.clone(),
+            code: modify_req.code.clone(),
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: modify_req.sort,
@@ -70,7 +70,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &IamHttpResModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<iam_http_res::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamHttpResModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_http_res::ActiveModel>> {
         if modify_req.method.is_none() {
             return Ok(None);
         }
@@ -84,7 +84,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
         Ok(Some(iam_http_res))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_item_query(query: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_http_res::Entity, iam_http_res::Column::Method));
         Ok(())
     }

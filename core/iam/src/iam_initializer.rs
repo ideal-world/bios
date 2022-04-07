@@ -71,23 +71,22 @@ pub async fn init_db() -> TardisResult<()> {
 }
 
 async fn init_basic_info<'a>(tx: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
-    let kind_tenant_id = RbumKindServ::get_rbum_kind_id_by_uri_scheme(RBUM_KIND_SCHEME_IAM_TENANT, tx)
+    let kind_tenant_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_TENANT, tx)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, tenant kind not found".to_string()))?;
-    let kind_app_id = RbumKindServ::get_rbum_kind_id_by_uri_scheme(RBUM_KIND_SCHEME_IAM_APP, tx)
-        .await?
-        .ok_or_else(|| TardisError::NotFound("Initialization error, app kind not found".to_string()))?;
-    let kind_role_id = RbumKindServ::get_rbum_kind_id_by_uri_scheme(RBUM_KIND_SCHEME_IAM_ROLE, tx)
+    let kind_app_id =
+        RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_APP, tx).await?.ok_or_else(|| TardisError::NotFound("Initialization error, app kind not found".to_string()))?;
+    let kind_role_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_ROLE, tx)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, role kind not found".to_string()))?;
-    let kind_account_id = RbumKindServ::get_rbum_kind_id_by_uri_scheme(RBUM_KIND_SCHEME_IAM_ACCOUNT, tx)
+    let kind_account_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_ACCOUNT, tx)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, account kind not found".to_string()))?;
-    let kind_http_res_id = RbumKindServ::get_rbum_kind_id_by_uri_scheme(RBUM_KIND_SCHEME_IAM_RES_HTTP, tx)
+    let kind_http_res_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_RES_HTTP, tx)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, http res kind not found".to_string()))?;
 
-    let domain_iam_id = RbumDomainServ::get_rbum_domain_id_by_uri_authority(&bios_basic::Components::Iam.to_string(), tx)
+    let domain_iam_id = RbumDomainServ::get_rbum_domain_id_by_code(&bios_basic::Components::Iam.to_string(), tx)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, iam domain not found".to_string()))?;
 
@@ -143,7 +142,7 @@ async fn init_rbum_data<'a>(tx: &TardisRelDBlConnection<'a>) -> TardisResult<()>
     let default_account_id = TardisFuns::field.nanoid();
 
     let cxt = TardisContext {
-        scope_paths: "".to_string(),
+        own_paths: "".to_string(),
         ak: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
@@ -263,7 +262,7 @@ System administrator name: {} ,Initial password: {}
 async fn add_kind<'a>(scheme: &str, tx: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
     RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString(scheme.to_string()),
+            code: TrimString(scheme.to_string()),
             name: TrimString(scheme.to_string()),
             note: None,
             icon: None,
@@ -280,7 +279,7 @@ async fn add_kind<'a>(scheme: &str, tx: &TardisRelDBlConnection<'a>, cxt: &Tardi
 async fn add_domain<'a>(tx: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString(bios_basic::Components::Iam.to_string()),
+            code: TrimString(bios_basic::Components::Iam.to_string()),
             name: TrimString(bios_basic::Components::Iam.to_string()),
             note: None,
             icon: None,

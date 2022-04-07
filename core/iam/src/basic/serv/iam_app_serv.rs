@@ -34,10 +34,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         constants::get_rbum_basic_info().domain_iam_id.clone()
     }
 
-    async fn package_item_add(add_req: &IamAppAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
+    async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
             id: Some(TrimString(IamAppServ::get_new_id())),
-            uri_path: None,
+            code: None,
             name: add_req.name.clone(),
             icon: add_req.icon.clone(),
             sort: None,
@@ -48,19 +48,19 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &IamAppAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<iam_app::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_app::ActiveModel> {
         Ok(iam_app::ActiveModel {
             id: Set(id.to_string()),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
         })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamAppModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            uri_path: None,
+            code: None,
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: modify_req.sort,
@@ -69,7 +69,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &IamAppModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<iam_app::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_app::ActiveModel>> {
         if modify_req.contact_phone.is_none() {
             return Ok(None);
         }
@@ -83,7 +83,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_item_query(query: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         Ok(())
     }
@@ -95,10 +95,10 @@ impl IamAppServ {
     }
 
     pub fn get_id_by_cxt(cxt: &TardisContext) -> TardisResult<String> {
-        if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP, &cxt.scope_paths) {
+        if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP, &cxt.own_paths) {
             Ok(id)
         } else {
-            Err(TardisError::Unauthorized(format!("app id not found in tardis content {}", cxt.scope_paths)))
+            Err(TardisError::Unauthorized(format!("app id not found in tardis content {}", cxt.own_paths)))
         }
     }
 }

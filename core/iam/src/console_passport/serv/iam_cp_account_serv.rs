@@ -17,7 +17,7 @@ use crate::console_passport::dto::iam_cp_account_dto::IamCpAccountModifyReq;
 pub struct IamCpAccountServ;
 
 impl<'a> IamCpAccountServ {
-    pub async fn modify_account(modify_req: &mut IamCpAccountModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_account(modify_req: &mut IamCpAccountModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamAccountServ::modify_item(
             &cxt.account_id,
             &mut IamAccountModifyReq {
@@ -32,11 +32,11 @@ impl<'a> IamCpAccountServ {
         .await
     }
 
-    pub async fn get_account(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
+    pub async fn get_account(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
         IamAccountServ::get_item(&cxt.account_id, &RbumItemFilterReq::default(), db, cxt).await
     }
 
-    pub async fn delete_account(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_account(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamAccountServ::delete_item(&cxt.account_id, db, cxt).await
     }
 
@@ -45,7 +45,7 @@ impl<'a> IamCpAccountServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;

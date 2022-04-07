@@ -1,4 +1,4 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisRelDBlConnection;
@@ -27,8 +27,8 @@ use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTena
 pub struct IamCsTenantServ;
 
 impl<'a> IamCsTenantServ {
-    pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<(String, String)> {
-        IamRoleServ::need_sys_admin(db, cxt).await?;
+    pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<(String, String)> {
+        IamRoleServ::need_sys_admin(funs.db(), cxt).await?;
         let tenant_id = IamTenantServ::add_item(
             &mut IamTenantAddReq {
                 name: add_req.tenant_name.clone(),
@@ -38,7 +38,7 @@ impl<'a> IamCsTenantServ {
                 disabled: add_req.disabled,
                 scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
             },
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -52,7 +52,7 @@ impl<'a> IamCsTenantServ {
             },
             &IAMRelKind::IamAccountTenant.to_string(),
             &tenant_id,
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -63,7 +63,7 @@ impl<'a> IamCsTenantServ {
             &constants::get_rbum_basic_info().role_tenant_admin_id,
             None,
             None,
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -77,7 +77,7 @@ impl<'a> IamCsTenantServ {
                 expire_sec: None,
             },
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -85,7 +85,7 @@ impl<'a> IamCsTenantServ {
         IamCertMailVCodeServ::add_cert_conf(
             &mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -93,7 +93,7 @@ impl<'a> IamCsTenantServ {
         IamCertPhoneVCodeServ::add_cert_conf(
             &mut IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -106,7 +106,7 @@ impl<'a> IamCsTenantServ {
             },
             IamCertTokenKind::TokenDefault,
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -119,7 +119,7 @@ impl<'a> IamCsTenantServ {
             },
             IamCertTokenKind::TokenPc,
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -132,7 +132,7 @@ impl<'a> IamCsTenantServ {
             },
             IamCertTokenKind::TokenPhone,
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -145,7 +145,7 @@ impl<'a> IamCsTenantServ {
             },
             IamCertTokenKind::TokenPad,
             Some(tenant_id.to_string()),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
@@ -157,14 +157,14 @@ impl<'a> IamCsTenantServ {
             },
             &account_id,
             Some(&tenant_id),
-            db,
+            funs.db(),
             cxt,
         )
         .await?;
         Ok((tenant_id, pwd))
     }
 
-    pub async fn modify_tenant(id: &str, modify_req: &mut IamCsTenantModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_tenant(id: &str, modify_req: &mut IamCsTenantModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamTenantServ::modify_item(
             id,
@@ -182,7 +182,7 @@ impl<'a> IamCsTenantServ {
         .await
     }
 
-    pub async fn get_tenant(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamTenantDetailResp> {
+    pub async fn get_tenant(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamTenantDetailResp> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamTenantServ::get_item(id, &RbumItemFilterReq::default(), db, cxt).await
     }
@@ -193,14 +193,14 @@ impl<'a> IamCsTenantServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamTenantSummaryResp>> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamTenantServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, db, cxt).await
     }
 
-    pub async fn delete_tenant(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_tenant(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamTenantServ::delete_item(id, db, cxt).await
     }

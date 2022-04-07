@@ -17,7 +17,7 @@ use crate::console_tenant::dto::iam_ct_app_dto::{IamCtAppAddReq, IamCtAppModifyR
 pub struct IamCtAppServ;
 
 impl<'a> IamCtAppServ {
-    pub async fn add_app(add_req: &mut IamCtAppAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_app(add_req: &mut IamCtAppAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamAppServ::add_item_with_simple_rel(
             &mut IamAppAddReq {
@@ -36,7 +36,7 @@ impl<'a> IamCtAppServ {
         .await
     }
 
-    pub async fn modify_app(id: &str, modify_req: &mut IamCtAppModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_app(id: &str, modify_req: &mut IamCtAppModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamAppServ::modify_item(
             id,
@@ -54,7 +54,7 @@ impl<'a> IamCtAppServ {
         .await
     }
 
-    pub async fn get_app(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamAppDetailResp> {
+    pub async fn get_app(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamAppDetailResp> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamAppServ::get_item(id, &RbumItemFilterReq::default(), db, cxt).await
     }
@@ -65,14 +65,14 @@ impl<'a> IamCtAppServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamAppSummaryResp>> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamAppServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                rel_scope_paths: Some(cxt.scope_paths.clone()),
+                own_paths: Some(cxt.own_paths.clone()),
                 ..Default::default()
             },
             page_number,
@@ -85,7 +85,7 @@ impl<'a> IamCtAppServ {
         .await
     }
 
-    pub async fn delete_app(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_app(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamAppServ::delete_item(id, db, cxt).await
     }

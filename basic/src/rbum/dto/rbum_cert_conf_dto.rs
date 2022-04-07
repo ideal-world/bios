@@ -27,6 +27,8 @@ pub struct RbumCertConfAddReq {
     pub rest_by_kinds: Option<String>,
     pub expire_sec: Option<i32>,
     pub coexist_num: Option<i32>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub conn_uri: Option<String>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_domain_id: String,
@@ -56,6 +58,8 @@ pub struct RbumCertConfModifyReq {
     pub rest_by_kinds: Option<String>,
     pub expire_sec: Option<i32>,
     pub coexist_num: Option<i32>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub conn_uri: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -64,8 +68,9 @@ pub struct RbumCertConfSummaryResp {
     pub id: String,
     pub code: String,
     pub name: String,
+    pub conn_uri: String,
 
-    pub scope_paths: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -88,14 +93,15 @@ pub struct RbumCertConfDetailResp {
     pub rest_by_kinds: String,
     pub expire_sec: i32,
     pub coexist_num: i32,
+    pub conn_uri: String,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,
     pub rel_rbum_item_id: String,
     pub rel_rbum_item_name: String,
 
-    pub scope_paths: String,
-    pub updater_id: String,
-    pub updater_name: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

@@ -28,7 +28,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_cert_conf】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM".to_string()),
             note: None,
             icon: None,
@@ -206,7 +206,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_cert】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM".to_string()),
             note: None,
             icon: None,
@@ -220,7 +220,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
 
     let domain_db_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -472,22 +472,22 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumCertServ::validate("11", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", "111", "11", &tx).await.is_err());
     assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, "11", &tx).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.own_paths, &tx).await.is_err());
     tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     info!("Test Validate RbumCertServ::validate gudaoxuri abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await?.0,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.own_paths, &tx).await?.0,
         cert_gudaoxuri_id.to_string()
     );
     info!("Test Validate RbumCertServ::validate root abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.scope_paths, &tx).await?.0,
+        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.own_paths, &tx).await?.0,
         cert_root_id.to_string()
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
     // Expire
     info!("Test Validate Expire RbumCertServ::validate gudaoxuri abcdefgh");
-    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.scope_paths, &tx).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.own_paths, &tx).await.is_err());
 
     info!("【test_rbum_cert】 : Test Delete : RbumCertServ::delete_rbum");
     RbumCertServ::delete_rbum(&cert_gudaoxuri_id, &tx, context).await?;

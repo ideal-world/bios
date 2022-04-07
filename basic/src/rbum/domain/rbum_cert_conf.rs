@@ -24,11 +24,12 @@ pub struct Model {
     pub rest_by_kinds: String,
     pub expire_sec: i32,
     pub coexist_num: i32,
+    pub conn_uri: String,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_item_id: String,
     // Basic
-    pub scope_paths: String,
-    pub updater_id: String,
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
 }
@@ -36,9 +37,9 @@ pub struct Model {
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.scope_paths = Set(cxt.scope_paths.to_string());
+            self.own_paths = Set(cxt.own_paths.to_string());
+            self.owner = Set(cxt.owner.to_string());
         }
-        self.updater_id = Set(cxt.account_id.to_string());
     }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
@@ -61,11 +62,12 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::RestByKinds).not_null().string())
             .col(ColumnDef::new(Column::ExpireSec).not_null().integer())
             .col(ColumnDef::new(Column::CoexistNum).not_null().integer())
+            .col(ColumnDef::new(Column::ConnUri).not_null().string())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
             // Basic
-            .col(ColumnDef::new(Column::ScopePaths).not_null().string())
-            .col(ColumnDef::new(Column::UpdaterId).not_null().string())
+            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
+            .col(ColumnDef::new(Column::Owner).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             .to_owned()
@@ -73,7 +75,7 @@ impl TardisActiveModel for ActiveModel {
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopePaths.to_string())).table(Entity).col(Column::ScopePaths).to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::OwnPaths.to_string())).table(Entity).col(Column::OwnPaths).to_owned(),
             Index::create()
                 .name(&format!("idx-{}-{}", Entity.table_name(), Column::Code.to_string()))
                 .table(Entity)
