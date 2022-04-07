@@ -20,15 +20,15 @@ impl<'a> IamRelServ {
         to_iam_item_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: rel_kind.to_string(),
-                from_rbum_item_id: from_iam_item_id.to_string(),
+                from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
-                to_scope_paths: cxt.scope_paths.to_string(),
+                to_own_paths: cxt.own_paths.to_string(),
                 ext: None,
             },
             attrs: vec![],
@@ -53,7 +53,7 @@ impl<'a> IamRelServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         RbumRelServ::paginate_from_rels(
@@ -76,7 +76,7 @@ impl<'a> IamRelServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         RbumRelServ::paginate_to_rels(
@@ -92,11 +92,11 @@ impl<'a> IamRelServ {
         .await
     }
 
-    pub async fn delete_rel(rel_kind: IAMRelKind, from_iam_item_id: &str, to_iam_item_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel(rel_kind: IAMRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let id = RbumRelServ::find_rel_id(
             &RbumRelFindReq {
                 tag: rel_kind.to_string(),
-                from_rbum_item_id: from_iam_item_id.to_string(),
+                from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
             },
             db,

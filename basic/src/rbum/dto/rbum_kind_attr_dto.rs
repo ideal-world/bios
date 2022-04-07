@@ -3,7 +3,7 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetKind};
+use crate::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetKind};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumKindAttrAddReq {
@@ -11,8 +11,6 @@ pub struct RbumKindAttrAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: String,
-    pub data_type_kind: RbumDataTypeKind,
-    pub widget_type: RbumWidgetKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     pub sort: Option<i32>,
@@ -20,6 +18,8 @@ pub struct RbumKindAttrAddReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub data_type: RbumDataTypeKind,
+    pub widget_type: RbumWidgetKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub default_value: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -29,11 +29,10 @@ pub struct RbumKindAttrAddReq {
     pub max_length: Option<i8>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
-
-    pub scope_level: i32,
-
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_id: String,
+
+    pub scope_level: RbumScopeLevelKind,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -42,8 +41,6 @@ pub struct RbumKindAttrModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub label: Option<String>,
-    pub data_type_kind: Option<RbumDataTypeKind>,
-    pub widget_type: Option<RbumWidgetKind>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
     pub sort: Option<i32>,
@@ -51,6 +48,8 @@ pub struct RbumKindAttrModifyReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub data_type: Option<RbumDataTypeKind>,
+    pub widget_type: Option<RbumWidgetKind>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub default_value: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -61,7 +60,7 @@ pub struct RbumKindAttrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
 
-    pub scope_level: Option<i32>,
+    pub scope_level: Option<RbumScopeLevelKind>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -71,7 +70,6 @@ pub struct RbumKindAttrSummaryResp {
     pub name: String,
     pub label: String,
     pub sort: i32,
-
     pub main_column: bool,
     pub position: bool,
     pub capacity: bool,
@@ -90,7 +88,7 @@ pub struct RbumKindAttrDetailResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
-    pub data_type_kind: String,
+    pub data_type: String,
     pub widget_type: String,
     pub default_value: String,
     pub options: String,
@@ -101,11 +99,11 @@ pub struct RbumKindAttrDetailResp {
     pub rel_rbum_kind_id: String,
     pub rel_rbum_kind_name: String,
 
-    pub scope_paths: String,
-    pub updater_id: String,
-    pub updater_name: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_level: i32,
+    pub scope_level: RbumScopeLevelKind,
 }

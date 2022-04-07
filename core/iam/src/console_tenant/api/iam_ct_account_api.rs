@@ -1,8 +1,12 @@
+use tardis::basic::dto::TardisFunsInst;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
+
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::Components;
+
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSummaryResp};
 use crate::console_tenant::dto::iam_ct_account_dto::{IamCtAccountAddReq, IamCtAccountModifyReq};
 use crate::console_tenant::serv::iam_ct_account_serv::IamCtAccountServ;
@@ -15,10 +19,10 @@ impl IamCtAccountApi {
     /// Add Account
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamCtAccountAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        let result = IamCtAccountServ::add_account(&mut add_req.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = TardisFunsInst::conn(&Components::Iam.to_string());
+        funs.begin().await?;
+        let result = IamCtAccountServ::add_account(&mut add_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(result)
     }
 

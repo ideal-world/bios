@@ -14,7 +14,7 @@ use crate::console_system::dto::iam_cs_account_dto::IamCsAccountModifyReq;
 pub struct IamCsAccountServ;
 
 impl<'a> IamCsAccountServ {
-    pub async fn modify_account(id: &str, modify_req: &mut IamCsAccountModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_account(id: &str, modify_req: &mut IamCsAccountModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamAccountServ::modify_item(
             id,
@@ -30,7 +30,7 @@ impl<'a> IamCsAccountServ {
         .await
     }
 
-    pub async fn get_account(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
+    pub async fn get_account(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamAccountServ::get_item(
             id,
@@ -51,14 +51,14 @@ impl<'a> IamCsAccountServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamAccountSummaryResp>> {
         IamRoleServ::need_sys_admin(db, cxt).await?;
         IamAccountServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                rel_scope_paths: Some(tenant_id),
+                own_paths: Some(tenant_id),
                 ignore_scope_check: true,
                 ..Default::default()
             },

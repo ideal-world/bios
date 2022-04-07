@@ -18,7 +18,7 @@ use crate::console_tenant::dto::iam_ct_role_dto::{IamCtRoleAddReq, IamCtRoleModi
 pub struct IamCtRoleServ;
 
 impl<'a> IamCtRoleServ {
-    pub async fn add_role(add_req: &mut IamCtRoleAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_role(add_req: &mut IamCtRoleAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRoleServ::add_item_with_simple_rel(
             &mut IamRoleAddReq {
@@ -36,7 +36,7 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn modify_role(id: &str, modify_req: &mut IamCtRoleModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_role(id: &str, modify_req: &mut IamCtRoleModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRoleServ::modify_item(
             id,
@@ -53,7 +53,7 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn get_role(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<IamRoleDetailResp> {
+    pub async fn get_role(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamRoleDetailResp> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRoleServ::get_item(id, &RbumItemFilterReq::default(), db, cxt).await
     }
@@ -64,14 +64,14 @@ impl<'a> IamCtRoleServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamRoleSummaryResp>> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRoleServ::paginate_items(
             &RbumItemFilterReq {
                 name: q_name,
-                rel_scope_paths: Some(IamTenantServ::get_id_by_cxt(cxt)?),
+                own_paths: Some(IamTenantServ::get_id_by_cxt(cxt)?),
                 ..Default::default()
             },
             page_number,
@@ -84,7 +84,7 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn delete_role(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_role(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRoleServ::delete_item(id, db, cxt).await
     }
@@ -94,7 +94,7 @@ impl<'a> IamCtRoleServ {
         iam_account_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
@@ -107,7 +107,7 @@ impl<'a> IamCtRoleServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRelServ::paginate_from_rels(
@@ -123,7 +123,7 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn delete_rel_account(iam_role_id: &str, iam_account_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel_account(iam_role_id: &str, iam_account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRelServ::delete_rel(IAMRelKind::IamRoleAccount, iam_role_id, iam_account_id, db, cxt).await
     }
@@ -133,7 +133,7 @@ impl<'a> IamCtRoleServ {
         iam_http_res_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
@@ -146,7 +146,7 @@ impl<'a> IamCtRoleServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRelServ::paginate_from_rels(
@@ -162,7 +162,7 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn delete_rel_http_res(iam_role_id: &str, iam_http_res_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel_http_res(iam_role_id: &str, iam_http_res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamRelServ::delete_rel(IAMRelKind::IamRoleHttpRes, iam_role_id, iam_http_res_id, db, cxt).await
     }

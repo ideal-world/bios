@@ -7,17 +7,21 @@ pub struct RbumRelAttrAddReq {
     pub is_from: bool,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub value: String,
-
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub rel_rbum_rel_id: String,
+    pub name: String,
+    pub record_only: bool,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_attr_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_rel_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelAttrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub value: String,
+    pub value: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,13 +31,14 @@ pub struct RbumRelAttrDetailResp {
     pub is_from: bool,
     pub value: String,
     pub name: String,
+    pub record_only: bool,
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_kind_attr_name: String,
     pub rel_rbum_rel_id: String,
 
-    pub scope_paths: String,
-    pub updater_id: String,
-    pub updater_name: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

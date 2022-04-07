@@ -39,7 +39,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_reldb_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -54,7 +54,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
 
     let kind_account_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("account".to_string()),
+            code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
             note: None,
             icon: None,
@@ -70,7 +70,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -84,7 +84,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
 
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM2".to_string()),
             note: None,
             icon: None,
@@ -100,7 +100,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -117,7 +117,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -137,9 +137,9 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: "".to_string(),
+            from_rbum_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_paths: "".to_string(),
+            to_own_paths: "".to_string(),
             ext: None
         },
         &tx,
@@ -151,9 +151,9 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: "".to_string(),
+            from_rbum_id: "".to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_paths: context.scope_paths.to_string(),
+            to_own_paths: context.own_paths.to_string(),
             ext: None
         },
         &tx,
@@ -165,9 +165,9 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: item_reldb_inst1_id.to_string(),
+            from_rbum_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_paths: context.scope_paths.to_string(),
+            to_own_paths: context.own_paths.to_string(),
             ext: None
         },
         &tx,
@@ -179,9 +179,9 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: item_reldb_inst1_id.to_string(),
+            from_rbum_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: "".to_string(),
-            to_scope_paths: context.scope_paths.to_string(),
+            to_own_paths: context.own_paths.to_string(),
             ext: None
         },
         &tx,
@@ -193,9 +193,9 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     let id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: item_reldb_inst1_id.to_string(),
+            from_rbum_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_scope_paths: context.scope_paths.to_string(),
+            to_own_paths: context.own_paths.to_string(),
             ext: None,
         },
         &tx,
@@ -207,7 +207,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     let rbum = RbumRelServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.tag, "bind");
-    assert_eq!(rbum.to_scope_paths, context.scope_paths);
+    assert_eq!(rbum.to_own_paths, context.own_paths);
 
     info!("【test_rbum_rel】 : Test Modify : RbumRelServ::modify_rbum");
     RbumRelServ::modify_rbum(
@@ -244,7 +244,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_attr】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_reldb_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -259,7 +259,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
 
     let kind_account_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("account".to_string()),
+            code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
             note: None,
             icon: None,
@@ -277,7 +277,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
-            data_type_kind: RbumDataTypeKind::String,
+            data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
             note: None,
             sort: None,
@@ -302,7 +302,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -316,7 +316,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
 
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM2".to_string()),
             note: None,
             icon: None,
@@ -332,7 +332,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -349,7 +349,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -367,9 +367,9 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     let rel_id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: item_reldb_inst1_id.to_string(),
+            from_rbum_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_scope_paths: context.scope_paths.to_string(),
+            to_own_paths: context.own_paths.to_string(),
             ext: None,
         },
         &tx,
@@ -452,7 +452,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_env】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_reldb_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -467,7 +467,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
 
     let kind_account_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("account".to_string()),
+            code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
             note: None,
             icon: None,
@@ -483,7 +483,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_env】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -497,7 +497,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
 
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM2".to_string()),
             note: None,
             icon: None,
@@ -513,7 +513,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -530,7 +530,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -548,9 +548,9 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     let rel_id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),
-            from_rbum_item_id: item_reldb_inst1_id.to_string(),
+            from_rbum_id: item_reldb_inst1_id.to_string(),
             to_rbum_item_id: item_account_a1_id.to_string(),
-            to_scope_paths: context.scope_paths.to_string(),
+            to_own_paths: context.own_paths.to_string(),
             ext: None,
         },
         &tx,
@@ -633,7 +633,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_use】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_reldb_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -651,7 +651,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
-            data_type_kind: RbumDataTypeKind::String,
+            data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
             note: None,
             sort: None,
@@ -675,7 +675,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     let kind_account_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("account".to_string()),
+            code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
             note: None,
             icon: None,
@@ -691,7 +691,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_use】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -705,7 +705,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("iam2".to_string()),
+            code: TrimString("iam2".to_string()),
             name: TrimString("IAM2".to_string()),
             note: None,
             icon: None,
@@ -721,7 +721,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     let item_reldb_inst1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -738,7 +738,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     let item_account_a1_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("用户1".to_string()),
             icon: None,
             sort: None,
@@ -761,9 +761,9 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: "bind".to_string(),
-                from_rbum_item_id: item_reldb_inst1_id.to_string(),
+                from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
-                to_scope_paths: context.scope_paths.to_string(),
+                to_own_paths: context.own_paths.to_string(),
                 ext: None,
             },
             attrs: vec![RbumRelAttrAggAddReq {
@@ -788,8 +788,8 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_paths, context.scope_paths.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.scope_paths, context.scope_paths.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_own_paths, context.own_paths.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.own_paths, context.own_paths.to_string());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");
@@ -804,8 +804,8 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
     assert_eq!(rbums.records.get(0).unwrap().rel.tag, "bind");
-    assert_eq!(rbums.records.get(0).unwrap().rel.to_scope_paths, context.scope_paths.to_string());
-    assert_eq!(rbums.records.get(0).unwrap().rel.scope_paths, context.scope_paths.as_str());
+    assert_eq!(rbums.records.get(0).unwrap().rel.to_own_paths, context.own_paths.to_string());
+    assert_eq!(rbums.records.get(0).unwrap().rel.own_paths, context.own_paths.as_str());
     assert_eq!(rbums.records.get(0).unwrap().attrs.len(), 1);
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().value, "mysql");
     assert_eq!(rbums.records.get(0).unwrap().attrs.get(0).unwrap().name, "db_type");
@@ -819,7 +819,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "".to_string(),
-                from_rbum_item_id: "".to_string(),
+                from_rbum_id: "".to_string(),
                 to_rbum_item_id: "".to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default()
@@ -834,7 +834,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_item_id: item_reldb_inst1_id.to_string(),
+                from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default()
@@ -849,7 +849,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_item_id: item_reldb_inst1_id.to_string(),
+                from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "tidb".to_string()),]),
                 to_attrs: Default::default()
@@ -864,7 +864,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_item_id: item_reldb_inst1_id.to_string(),
+                from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
                 to_attrs: Default::default()
@@ -881,7 +881,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         !RbumRelServ::check_rel(
             &RbumRelCheckReq {
                 tag: "bind".to_string(),
-                from_rbum_item_id: item_reldb_inst1_id.to_string(),
+                from_rbum_id: item_reldb_inst1_id.to_string(),
                 to_rbum_item_id: item_account_a1_id.to_string(),
                 from_attrs: HashMap::from([("db_type".to_string(), "mysql".to_string()),]),
                 to_attrs: Default::default()

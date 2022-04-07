@@ -17,7 +17,7 @@ impl<'a> IamCertMailVCodeServ {
     pub async fn add_cert_conf(
         add_req: &mut IamMailVCodeCertConfAddOrModifyReq,
         rel_iam_tenant_id: Option<String>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertConfServ::add_rbum(
@@ -46,7 +46,7 @@ impl<'a> IamCertMailVCodeServ {
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamMailVCodeCertConfAddOrModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {

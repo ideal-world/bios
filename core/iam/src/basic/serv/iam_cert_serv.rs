@@ -27,7 +27,7 @@ impl<'a> IamCertServ {
         TardisFuns::field.nanoid_len(10)
     }
 
-    pub async fn init_global_ident_conf(db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn init_global_ident_conf(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamCertUserPwdServ::add_cert_conf(
             &mut IamUserPwdCertConfAddOrModifyReq {
                 ak_note: None,
@@ -102,7 +102,7 @@ impl<'a> IamCertServ {
         Ok(())
     }
 
-    pub async fn get_cert_conf(id: &str, rbum_item_id: Option<String>, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
+    pub async fn get_cert_conf(id: &str, rbum_item_id: Option<String>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
         RbumCertConfServ::get_rbum(
             id,
             &RbumBasicFilterReq {
@@ -123,7 +123,7 @@ impl<'a> IamCertServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumCertConfSummaryResp>> {
         RbumCertConfServ::paginate_rbums(
@@ -143,15 +143,15 @@ impl<'a> IamCertServ {
         .await
     }
 
-    pub async fn delete_cert_conf(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         RbumCertConfServ::delete_rbum(id, db, cxt).await
     }
 
-    pub async fn delete_cert(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         RbumCertServ::delete_rbum(id, db, cxt).await
     }
 
-    pub async fn get_id_by_code(code: &str, rel_iam_tenant_id: Option<&str>, db: &TardisRelDBlConnection<'a>) -> TardisResult<String> {
+    pub async fn get_id_by_code(code: &str, rel_iam_tenant_id: Option<&str>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &constants::get_rbum_basic_info().domain_iam_id, rel_iam_tenant_id.unwrap_or(""), db)
             .await?
             .ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
@@ -164,9 +164,9 @@ impl<'a> IamCertServ {
         account_id: &str,
         token: Option<&str>,
         token_kind: Option<&str>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
     ) -> TardisResult<TardisContext> {
-        let scope_paths = if let Some(iam_tenant_id) = iam_tenant_id {
+        let own_paths = if let Some(iam_tenant_id) = iam_tenant_id {
             if let Some(iam_app_id) = iam_app_id {
                 format!("{}/{}", iam_tenant_id, iam_app_id)
             } else {
@@ -176,7 +176,7 @@ impl<'a> IamCertServ {
             "".to_string()
         };
         let mut context = TardisContext {
-            scope_paths,
+            own_paths,
             ak: ak.to_string(),
             account_id: account_id.to_string(),
             token: token.unwrap_or("").to_string(),

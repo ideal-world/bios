@@ -1,7 +1,9 @@
+use tardis::basic::dto::TardisFunsInst;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
+use bios_basic::Components;
 
 use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
 
@@ -17,10 +19,10 @@ impl IamCsTenantApi {
     /// Add Tenant
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        let result = IamCsTenantServ::add_tenant(&mut add_req.0, &tx, &cxt.0).await?.1;
-        tx.commit().await?;
+        let mut funs = TardisFunsInst::conn(&Components::Iam.to_string());
+        funs.begin().await?;
+        let result = IamCsTenantServ::add_tenant(&mut add_req.0, &funs, &cxt.0).await?.1;
+        funs.commit().await?;
         TardisResp::ok(result)
     }
 

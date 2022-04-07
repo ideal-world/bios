@@ -29,7 +29,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -45,7 +45,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
@@ -63,7 +63,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
@@ -81,7 +81,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
@@ -99,7 +99,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("".to_string()),
             icon: None,
             sort: None,
@@ -117,7 +117,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     let id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,
@@ -140,7 +140,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     RbumItemServ::modify_rbum(
         &id,
         &mut RbumItemModifyReq {
-            uri_path: None,
+            code: None,
             name: Some(TrimString("数据库实例1".to_string())),
             icon: None,
             sort: None,
@@ -188,7 +188,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item_attr】 : Prepare Kind : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString("reldb".to_string()),
+            code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
             note: None,
             icon: None,
@@ -206,7 +206,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
             label: "数据库类型".to_string(),
-            data_type_kind: RbumDataTypeKind::String,
+            data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetKind::InputTxt,
             note: None,
             sort: None,
@@ -231,7 +231,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql_dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
@@ -246,7 +246,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     let item_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
             id: None,
-            uri_path: None,
+            code: None,
             name: TrimString("实例1".to_string()),
             icon: None,
             sort: None,

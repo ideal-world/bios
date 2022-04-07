@@ -31,17 +31,17 @@ pub async fn init_db() -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_domain_uri_authority: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<Option<TardisContext>> {
+pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_code: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<TardisContext>> {
     #[derive(Deserialize, FromQueryResult, Serialize, Clone, Debug)]
     struct TmpContext {
         pub id: String,
-        pub scope_paths: String,
+        pub own_paths: String,
     }
 
     let mut query = Query::select();
     query
         .column((rbum_item::Entity, rbum_item::Column::Id))
-        .column((rbum_item::Entity, rbum_item::Column::ScopePaths))
+        .column((rbum_item::Entity, rbum_item::Column::OwnPaths))
         .from(rbum_item::Entity)
         .inner_join(
             rbum_kind::Entity,
@@ -51,17 +51,17 @@ pub async fn get_first_account_context<'a>(rbum_kind_uri_scheme: &str, rbum_doma
             rbum_domain::Entity,
             Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
         )
-        .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::UriScheme).eq(rbum_kind_uri_scheme))
-        .and_where(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::UriAuthority).eq(rbum_domain_uri_authority))
+        .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Code).eq(rbum_kind_code))
+        .and_where(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Code).eq(rbum_domain_code))
         .order_by((rbum_item::Entity, rbum_item::Column::CreateTime), Order::Asc);
 
     let context: Option<TmpContext> = db.get_dto(&query).await?;
 
     if let Some(context) = context {
         Ok(Some(TardisContext {
-            scope_paths: context.scope_paths.to_string(),
+            own_paths: context.own_paths.to_string(),
+            owner: context.id,
             ak: "_".to_string(),
-            account_id: context.id,
             token: "_".to_string(),
             token_kind: "_".to_string(),
             roles: vec![],

@@ -28,7 +28,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         rbum_cert_conf::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
+    async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         Ok(rbum_cert_conf::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             code: Set(add_req.code.to_string()),
@@ -51,7 +51,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         let mut rbum_cert_conf = rbum_cert_conf::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -98,7 +98,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(rbum_cert_conf)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -119,8 +119,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CoexistNum),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumItemId),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::ScopePaths),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdaterId),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::OwnPaths),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Owner),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CreateTime),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdateTime),
             ])
@@ -151,7 +151,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(query)
     }
 
-    async fn before_add_rbum(add_req: &mut RbumCertConfAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumCertConfAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_domain_id, RbumDomainServ::get_table_name(), db, cxt).await?;
         if let Some(ak_rule) = &add_req.ak_rule {
             Regex::new(ak_rule).map_err(|e| TardisError::BadRequest(format!("ak rule is invalid:{}", e)))?;
@@ -176,7 +176,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(())
     }
 
-    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, db, cxt).await?;
         if db.count(Query::select().column(rbum_cert::Column::Id).from(rbum_cert::Entity).and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(id))).await? > 0 {
             return Err(TardisError::BadRequest("can not delete rbum cert conf when there are rbum cert".to_string()));
@@ -186,7 +186,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
 }
 
 impl RbumCertConfServ {
-    pub async fn get_rbum_cert_conf_id_by_code<'a>(code: &str, rbum_domain_id: &str, rbum_item_id: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<Option<String>> {
+    pub async fn get_rbum_cert_conf_id_by_code<'a>(code: &str, rbum_domain_id: &str, rbum_item_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
         let resp = db
             .get_dto::<IdResp>(
                 Query::select()
@@ -208,7 +208,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         rbum_cert::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumCertAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
+    async fn package_add(add_req: &RbumCertAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         Ok(rbum_cert::ActiveModel {
             id: Set(format!("{}{}", add_req.rel_rbum_cert_conf_id, TardisFuns::field.nanoid())),
             ak: Set(add_req.ak.to_string()),
@@ -223,7 +223,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         let mut rbum_cert = rbum_cert::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -243,7 +243,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         Ok(rbum_cert)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_rbum_item_table = Alias::new("relRbumItem");
 
         let mut query = Query::select();
@@ -257,8 +257,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 (rbum_cert::Entity, rbum_cert::Column::Status),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumItemId),
-                (rbum_cert::Entity, rbum_cert::Column::ScopePaths),
-                (rbum_cert::Entity, rbum_cert::Column::UpdaterId),
+                (rbum_cert::Entity, rbum_cert::Column::OwnPaths),
+                (rbum_cert::Entity, rbum_cert::Column::Owner),
                 (rbum_cert::Entity, rbum_cert::Column::CreateTime),
                 (rbum_cert::Entity, rbum_cert::Column::UpdateTime),
             ])
@@ -293,7 +293,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         Ok(query)
     }
 
-    async fn before_add_rbum(add_req: &mut RbumCertAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership_with_table_name(&add_req.rel_rbum_cert_conf_id, RbumCertConfServ::get_table_name(), db, cxt).await?;
         if let Some(rel_rbum_item_id) = &add_req.rel_rbum_item_id {
             Self::check_scope(rel_rbum_item_id, RbumItemServ::get_table_name(), db, cxt).await?;
@@ -343,7 +343,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 impl<'a> RbumCertServ {
     // TODO find cert
 
-    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, scope_paths: &str, db: &TardisRelDBlConnection<'a>) -> TardisResult<(String, String)> {
+    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<(String, String)> {
         #[derive(Debug, FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
@@ -364,7 +364,7 @@ impl<'a> RbumCertServ {
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
-            .and_where(Expr::col(rbum_cert::Column::ScopePaths).like(format!("{}%", scope_paths).as_str()))
+            .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", own_paths).as_str()))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_string()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
@@ -381,20 +381,20 @@ impl<'a> RbumCertServ {
                 Ok((rbum_cert.id, rbum_cert.rel_rbum_item_id))
             } else {
                 tardis::log::warn!(
-                    "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, scope_paths {}",
+                    "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, own_paths {}",
                     ak,
                     rbum_cert_conf_id,
-                    scope_paths
+                    own_paths
                 );
                 Err(TardisError::Unauthorized("validation error".to_string()))
             }
         } else {
-            tardis::log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, scope_paths);
+            tardis::log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, own_paths);
             Err(TardisError::Unauthorized("validation error".to_string()))
         }
     }
 
-    pub async fn show_sk(id: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn show_sk(id: &str, filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         #[derive(FromQueryResult)]
         struct SkResp {
             pub sk: String,
@@ -413,7 +413,7 @@ impl<'a> RbumCertServ {
         }
     }
 
-    pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::get_rbum(id, filter, db, cxt).await?;
         let rbum_cert_conf = RbumCertConfServ::get_rbum(&rbum_cert.rel_rbum_cert_conf_id, &RbumBasicFilterReq::default(), db, cxt).await?;
         if !rbum_cert_conf.sk_rule.is_empty() && !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(new_sk) {
@@ -435,7 +435,7 @@ impl<'a> RbumCertServ {
         .await?;
         Ok(())
     }
-    pub async fn change_sk(id: &str, original_sk: &str, new_sk: &str, filter: &RbumBasicFilterReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn change_sk(id: &str, original_sk: &str, new_sk: &str, filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::get_rbum(id, filter, db, cxt).await?;
         let rbum_cert_conf = RbumCertConfServ::get_rbum(&rbum_cert.rel_rbum_cert_conf_id, &RbumBasicFilterReq::default(), db, cxt).await?;
         let stored_sk = Self::show_sk(id, filter, db, cxt).await?;
@@ -470,7 +470,7 @@ impl<'a> RbumCertServ {
     async fn check_cert_conf_constraint_by_add(
         add_req: &RbumCertAddReq,
         rbum_cert_conf: &RbumCertConfDetailResp,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         if rbum_cert_conf.sk_need && add_req.sk.is_none() {
@@ -492,7 +492,7 @@ impl<'a> RbumCertServ {
                     .from(rbum_cert::Entity)
                     .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.as_str()))
                     .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
-                    .and_where(Expr::col(rbum_cert::Column::ScopePaths).like(format!("{}%", cxt.scope_paths).as_str())),
+                    .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
             )
             .await?
             > 0

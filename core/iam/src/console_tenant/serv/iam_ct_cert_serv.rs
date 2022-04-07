@@ -16,51 +16,37 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 pub struct IamCtCertServ;
 
 impl<'a> IamCtCertServ {
-    pub async fn add_cert_conf_user_pwd(add_req: &mut IamUserPwdCertConfAddOrModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert_conf_user_pwd(add_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
-        IamCertUserPwdServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, cxt)
-            .await
+        IamCertUserPwdServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, cxt).await
     }
 
-    pub async fn modify_cert_conf_user_pwd(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf_user_pwd(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamCertUserPwdServ::modify_cert_conf(id, modify_req, db, cxt).await
     }
 
-    pub async fn add_cert_conf_mail_vcode(add_req: &mut IamMailVCodeCertConfAddOrModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert_conf_mail_vcode(add_req: &mut IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
-        IamCertMailVCodeServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, 
-                                          cxt).await
+        IamCertMailVCodeServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, cxt).await
     }
 
-    pub async fn modify_cert_conf_mail_vcode(
-        id: &str,
-        modify_req: &mut IamMailVCodeCertConfAddOrModifyReq,
-        db: &TardisRelDBlConnection<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn modify_cert_conf_mail_vcode(id: &str, modify_req: &mut IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamCertMailVCodeServ::modify_cert_conf(id, modify_req, db, cxt).await
     }
 
-    pub async fn add_cert_conf_phone_vcode(add_req: &mut IamPhoneVCodeCertConfAddOrModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert_conf_phone_vcode(add_req: &mut IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
-        IamCertPhoneVCodeServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, 
-                                          cxt)
-            .await
+        IamCertPhoneVCodeServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, cxt).await
     }
 
-    pub async fn modify_cert_conf_phone_vcode(
-        id: &str,
-        modify_req: &mut IamPhoneVCodeCertConfAddOrModifyReq,
-        db: &TardisRelDBlConnection<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn modify_cert_conf_phone_vcode(id: &str, modify_req: &mut IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamCertPhoneVCodeServ::modify_cert_conf(id, modify_req, db, cxt).await
     }
 
-    pub async fn get_cert_conf(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
+    pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamCertServ::get_cert_conf(id, Some(IamTenantServ::get_id_by_cxt(cxt)?), db, cxt).await
     }
@@ -71,7 +57,7 @@ impl<'a> IamCtCertServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumCertConfSummaryResp>> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
@@ -88,8 +74,7 @@ impl<'a> IamCtCertServ {
         .await
     }
 
-    pub async fn delete_cert_conf(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext)
-        -> TardisResult<u64> {
+    pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(db, cxt).await?;
         IamCertServ::delete_cert_conf(id, db, cxt).await
     }

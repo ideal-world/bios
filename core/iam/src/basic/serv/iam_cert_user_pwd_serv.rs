@@ -23,7 +23,7 @@ impl<'a> IamCertUserPwdServ {
     pub async fn add_cert_conf(
         add_req: &mut IamUserPwdCertConfAddOrModifyReq,
         rel_iam_tenant_id: Option<String>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertConfServ::add_rbum(
@@ -52,7 +52,7 @@ impl<'a> IamCertUserPwdServ {
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -81,7 +81,7 @@ impl<'a> IamCertUserPwdServ {
         add_req: &mut IamUserPwdCertAddReq,
         iam_item_id: &str,
         rel_iam_tenant_id: Option<&str>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertServ::add_rbum(
@@ -106,7 +106,7 @@ impl<'a> IamCertUserPwdServ {
         modify_req: &mut IamUserPwdCertModifyReq,
         iam_item_id: &str,
         rel_iam_tenant_id: &str,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         let certs = RbumCertServ::find_rbums(

@@ -27,7 +27,7 @@ bios-basic = { path = "../../basic" }
 # TODO
 tardis = { path = "../../../tardis", features = ["reldb", "cache", "mq", "web-server", "web-client"] }
 poem-openapi = { version = "^1.3", features = ["chrono"] }
-sea-orm = { version = "^0.6", features = ["macros"] }
+sea-orm = { version = "^0.7", features = ["macros"] }
 
 [dev-dependencies]
 # TODO

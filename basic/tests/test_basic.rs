@@ -66,7 +66,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
     tx.begin().await?;
 
     let cxt = TardisContext {
-        scope_paths: "".to_string(),
+        own_paths: "".to_string(),
         ak: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
@@ -77,7 +77,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let kind_tenant_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
+            code: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
             name: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
             note: None,
             icon: None,
@@ -92,7 +92,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let kind_app_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
+            code: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
             name: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
             note: None,
             icon: None,
@@ -107,7 +107,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let kind_account_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
-            uri_scheme: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
+            code: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
             name: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
             note: None,
             icon: None,
@@ -122,7 +122,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString(bios_basic::Components::Iam.to_string()),
+            code: TrimString(bios_basic::Components::Iam.to_string()),
             name: TrimString(bios_basic::Components::Iam.to_string()),
             note: None,
             icon: None,
@@ -136,7 +136,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let tenant_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            uri_path: None,
+            code: None,
             name: TrimString(RBUM_ITEM_NAME_DEFAULT_TENANT.to_string()),
             icon: None,
             sort: None,
@@ -153,7 +153,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let app_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            uri_path: None,
+            code: None,
             name: TrimString(RBUM_ITEM_NAME_DEFAULT_APP.to_string()),
             icon: None,
             sort: None,
@@ -170,7 +170,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let account_id = RbumItemServ::add_rbum(
         &mut RbumItemAddReq {
-            uri_path: None,
+            code: None,
             name: TrimString(RBUM_ITEM_NAME_DEFAULT_ACCOUNT.to_string()),
             icon: None,
             sort: None,
@@ -187,7 +187,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     tx.commit().await?;
     Ok(TardisContext {
-        scope_paths: format!("{}/{}", tenant_id, app_id),
+        own_paths: format!("{}/{}", tenant_id, app_id),
         ak: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),

@@ -3,7 +3,7 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::rbum_enumeration::RbumCertStatusKind;
+use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumCertAddReq {
@@ -18,9 +18,10 @@ pub struct RbumCertAddReq {
     pub status: RbumCertStatusKind,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub rel_rbum_cert_conf_id: String,
+    pub rel_rbum_cert_conf_id: Option<String>,
+    pub rel_rbum_kind: RbumCertRelKind,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub rel_rbum_item_id: Option<String>,
+    pub rel_rbum_item_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -37,12 +38,13 @@ pub struct RbumCertModifyReq {
 pub struct RbumCertSummaryResp {
     pub id: String,
     pub ak: String,
-    pub rel_rbum_cert_conf_id: String,
-    pub rel_rbum_cert_conf_name: String,
-    pub rel_rbum_item_id: Option<String>,
-    pub rel_rbum_item_name: Option<String>,
+    pub rel_rbum_cert_conf_id: Option<String>,
+    pub rel_rbum_cert_conf_name: Option<String>,
+    pub rel_rbum_kind: String,
+    pub rel_rbum_item_id: String,
+    pub rel_rbum_item_name: String,
 
-    pub scope_paths: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
@@ -56,14 +58,15 @@ pub struct RbumCertDetailResp {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub status: String,
-    pub rel_rbum_cert_conf_id: String,
-    pub rel_rbum_cert_conf_name: String,
-    pub rel_rbum_item_id: Option<String>,
-    pub rel_rbum_item_name: Option<String>,
+    pub rel_rbum_cert_conf_id: Option<String>,
+    pub rel_rbum_cert_conf_name: Option<String>,
+    pub rel_rbum_kind: String,
+    pub rel_rbum_item_id: String,
+    pub rel_rbum_item_name: String,
 
-    pub scope_paths: String,
-    pub updater_id: String,
-    pub updater_name: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

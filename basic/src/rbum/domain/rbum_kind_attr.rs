@@ -18,7 +18,7 @@ pub struct Model {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
-    pub data_type_kind: String,
+    pub data_type: String,
     pub widget_type: String,
     pub default_value: String,
     pub options: String,
@@ -28,8 +28,8 @@ pub struct Model {
     pub action: String,
     pub rel_rbum_kind_id: String,
     // Basic
-    pub scope_paths: String,
-    pub updater_id: String,
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
@@ -39,9 +39,9 @@ pub struct Model {
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.scope_paths = Set(cxt.scope_paths.to_string());
+            self.own_paths = Set(cxt.own_paths.to_string());
+            self.owner = Set(cxt.owner.to_string());
         }
-        self.updater_id = Set(cxt.account_id.to_string());
     }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
@@ -58,7 +58,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Position).not_null().boolean())
             .col(ColumnDef::new(Column::Capacity).not_null().boolean())
             .col(ColumnDef::new(Column::Overload).not_null().boolean())
-            .col(ColumnDef::new(Column::DataTypeKind).not_null().string())
+            .col(ColumnDef::new(Column::DataType).not_null().string())
             .col(ColumnDef::new(Column::WidgetType).not_null().string())
             .col(ColumnDef::new(Column::DefaultValue).not_null().string())
             .col(ColumnDef::new(Column::Options).not_null().text())
@@ -68,8 +68,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Action).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKindId).not_null().string())
             // Basic
-            .col(ColumnDef::new(Column::ScopePaths).not_null().string())
-            .col(ColumnDef::new(Column::UpdaterId).not_null().string())
+            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
+            .col(ColumnDef::new(Column::Owner).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
@@ -78,10 +78,7 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::ScopeLevel.to_string())).table(Entity).col(Column::ScopeLevel).to_owned(),
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string())).table(Entity).col(Column::RelRbumKindId).to_owned(),
-        ]
+        vec![Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string())).table(Entity).col(Column::RelRbumKindId).to_owned()]
     }
 }
 

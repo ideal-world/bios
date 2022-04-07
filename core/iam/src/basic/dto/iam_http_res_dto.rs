@@ -7,7 +7,7 @@ use tardis::web::poem_openapi::Object;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IamHttpResAddReq {
     pub name: TrimString,
-    pub uri_path: TrimString,
+    pub code: TrimString,
     pub icon: Option<String>,
     pub sort: Option<i32>,
 
@@ -20,7 +20,7 @@ pub struct IamHttpResAddReq {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IamHttpResModifyReq {
     pub name: Option<TrimString>,
-    pub uri_path: Option<TrimString>,
+    pub code: Option<TrimString>,
     pub icon: Option<String>,
     pub sort: Option<i32>,
 
@@ -33,7 +33,7 @@ pub struct IamHttpResModifyReq {
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamHttpResSummaryResp {
     pub id: String,
-    pub uri_path: String,
+    pub code: String,
     pub name: String,
     pub icon: String,
     pub sort: i32,
@@ -50,15 +50,15 @@ pub struct IamHttpResSummaryResp {
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamHttpResDetailResp {
     pub id: String,
-    pub uri_path: String,
+    pub code: String,
     pub name: String,
     pub icon: String,
     pub sort: i32,
 
     pub method: String,
 
-    pub updater_id: String,
-    pub updater_name: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 

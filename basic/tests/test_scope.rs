@@ -15,7 +15,7 @@ pub async fn test() -> TardisResult<()> {
 
     info!("【test_scope】 : Prepare");
     let s0 = TardisContext {
-        scope_paths: "".to_string(),
+        own_paths: "".to_string(),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -25,7 +25,7 @@ pub async fn test() -> TardisResult<()> {
     };
 
     let s1 = TardisContext {
-        scope_paths: TardisFuns::field.nanoid_len(4),
+        own_paths: TardisFuns::field.nanoid_len(4),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -35,7 +35,7 @@ pub async fn test() -> TardisResult<()> {
     };
 
     let s2 = TardisContext {
-        scope_paths: format!("{}/{}", s1.scope_paths, TardisFuns::field.nanoid_len(4)),
+        own_paths: format!("{}/{}", s1.own_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -45,7 +45,7 @@ pub async fn test() -> TardisResult<()> {
     };
 
     let s3 = TardisContext {
-        scope_paths: format!("{}/{}", s2.scope_paths, TardisFuns::field.nanoid_len(4)),
+        own_paths: format!("{}/{}", s2.own_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
         account_id: "".to_string(),
         token: "".to_string(),
@@ -56,7 +56,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s0_l3".to_string()),
+            code: TrimString("s0_l3".to_string()),
             name: TrimString("scope_test_s0_l3".to_string()),
             note: None,
             icon: None,
@@ -70,7 +70,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s0_l2".to_string()),
+            code: TrimString("s0_l2".to_string()),
             name: TrimString("scope_test_s0_l2".to_string()),
             note: None,
             icon: None,
@@ -84,7 +84,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s0_l1".to_string()),
+            code: TrimString("s0_l1".to_string()),
             name: TrimString("scope_test_s0_l1".to_string()),
             note: None,
             icon: None,
@@ -98,7 +98,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s0_l0".to_string()),
+            code: TrimString("s0_l0".to_string()),
             name: TrimString("scope_test_s0_l0".to_string()),
             note: None,
             icon: None,
@@ -112,7 +112,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s1_l3".to_string()),
+            code: TrimString("s1_l3".to_string()),
             name: TrimString("scope_test_s1_l3".to_string()),
             note: None,
             icon: None,
@@ -126,7 +126,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s1_l2".to_string()),
+            code: TrimString("s1_l2".to_string()),
             name: TrimString("scope_test_s1_l2".to_string()),
             note: None,
             icon: None,
@@ -140,7 +140,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s1_l1".to_string()),
+            code: TrimString("s1_l1".to_string()),
             name: TrimString("scope_test_s1_l1".to_string()),
             note: None,
             icon: None,
@@ -154,7 +154,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s1_l0".to_string()),
+            code: TrimString("s1_l0".to_string()),
             name: TrimString("scope_test_s1_l0".to_string()),
             note: None,
             icon: None,
@@ -168,7 +168,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s2_l3".to_string()),
+            code: TrimString("s2_l3".to_string()),
             name: TrimString("scope_test_s2_l3".to_string()),
             note: None,
             icon: None,
@@ -182,7 +182,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s2_l2".to_string()),
+            code: TrimString("s2_l2".to_string()),
             name: TrimString("scope_test_s2_l2".to_string()),
             note: None,
             icon: None,
@@ -196,7 +196,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s2_l1".to_string()),
+            code: TrimString("s2_l1".to_string()),
             name: TrimString("scope_test_s2_l1".to_string()),
             note: None,
             icon: None,
@@ -210,7 +210,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s2_l0".to_string()),
+            code: TrimString("s2_l0".to_string()),
             name: TrimString("scope_test_s2_l0".to_string()),
             note: None,
             icon: None,
@@ -224,7 +224,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s3_l3".to_string()),
+            code: TrimString("s3_l3".to_string()),
             name: TrimString("scope_test_s3_l3".to_string()),
             note: None,
             icon: None,
@@ -238,7 +238,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s3_l2".to_string()),
+            code: TrimString("s3_l2".to_string()),
             name: TrimString("scope_test_s3_l2".to_string()),
             note: None,
             icon: None,
@@ -252,7 +252,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s3_l1".to_string()),
+            code: TrimString("s3_l1".to_string()),
             name: TrimString("scope_test_s3_l1".to_string()),
             note: None,
             icon: None,
@@ -266,7 +266,7 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            uri_authority: TrimString("s3_l0".to_string()),
+            code: TrimString("s3_l0".to_string()),
             name: TrimString("scope_test_s3_l0".to_string()),
             note: None,
             icon: None,
@@ -292,8 +292,8 @@ pub async fn test() -> TardisResult<()> {
     .await?;
     info!(
         "{}:{:#?}",
-        s0.scope_paths,
-        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+        s0.own_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
     assert_eq!(rbums.len(), 16);
 
@@ -310,8 +310,8 @@ pub async fn test() -> TardisResult<()> {
     .await?;
     info!(
         "{}:{:?}",
-        s1.scope_paths,
-        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+        s1.own_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
     assert_eq!(rbums.len(), 7);
 
@@ -328,8 +328,8 @@ pub async fn test() -> TardisResult<()> {
     .await?;
     info!(
         "{}:{:?}",
-        s2.scope_paths,
-        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+        s2.own_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
     assert_eq!(rbums.len(), 9);
 
@@ -346,8 +346,8 @@ pub async fn test() -> TardisResult<()> {
     .await?;
     info!(
         "{}:{:?}",
-        s3.scope_paths,
-        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+        s3.own_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
     assert_eq!(rbums.len(), 10);
 
@@ -360,7 +360,7 @@ pub async fn test() -> TardisResult<()> {
         None,
         &tx,
         &TardisContext {
-            scope_paths: "xxx".to_string(),
+            own_paths: "xxx".to_string(),
             ak: "".to_string(),
             account_id: "".to_string(),
             token: "".to_string(),
@@ -370,7 +370,7 @@ pub async fn test() -> TardisResult<()> {
         },
     )
     .await?;
-    info!("xxx:{:?}", rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>());
+    info!("xxx:{:?}", rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>());
     assert_eq!(rbums.len(), 4);
 
     let rbums = RbumDomainServ::find_rbums(
@@ -382,7 +382,7 @@ pub async fn test() -> TardisResult<()> {
         None,
         &tx,
         &TardisContext {
-            scope_paths: format!("{}/x", s3.scope_paths),
+            own_paths: format!("{}/x", s3.own_paths),
             ak: "".to_string(),
             account_id: "".to_string(),
             token: "".to_string(),
@@ -394,8 +394,8 @@ pub async fn test() -> TardisResult<()> {
     .await?;
     info!(
         "{}x:{:?}",
-        s3.scope_paths,
-        rbums.iter().map(|r| format!("{}:{}", r.name, r.scope_paths)).collect::<Vec<String>>()
+        s3.own_paths,
+        rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
     assert_eq!(rbums.len(), 10);
 

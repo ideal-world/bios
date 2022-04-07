@@ -27,7 +27,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         rbum_set::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumSetAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
+    async fn package_add(add_req: &RbumSetAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
         Ok(rbum_set::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
@@ -40,7 +40,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumSetModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumSetModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_set::ActiveModel> {
         let mut rbum_set = rbum_set::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -66,7 +66,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         Ok(rbum_set)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -76,8 +76,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 (rbum_set::Entity, rbum_set::Column::Icon),
                 (rbum_set::Entity, rbum_set::Column::Sort),
                 (rbum_set::Entity, rbum_set::Column::Tags),
-                (rbum_set::Entity, rbum_set::Column::ScopePaths),
-                (rbum_set::Entity, rbum_set::Column::UpdaterId),
+                (rbum_set::Entity, rbum_set::Column::OwnPaths),
+                (rbum_set::Entity, rbum_set::Column::Owner),
                 (rbum_set::Entity, rbum_set::Column::CreateTime),
                 (rbum_set::Entity, rbum_set::Column::UpdateTime),
                 (rbum_set::Entity, rbum_set::Column::ScopeLevel),
@@ -89,14 +89,12 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         }
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
-        if !filter.ignore_scope_check {
-            query.query_with_scope(Self::get_table_name(), cxt);
-        }
+        query.query_with_scope(Self::get_table_name(), cxt);
 
         Ok(query)
     }
 
-    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, db, cxt).await?;
         if db.count(Query::select().column(rbum_set_cate::Column::Id).from(rbum_set_cate::Entity).and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(id))).await? > 0 {
             return Err(TardisError::BadRequest("can not delete rbum set when there are rbum set cate".to_string()));
@@ -109,7 +107,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 }
 
 impl<'a> RbumSetServ {
-    pub async fn get_tree_all(rbum_set_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetCateSummaryWithPidResp>> {
+    pub async fn get_tree_all(rbum_set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetCateSummaryWithPidResp>> {
         let mut resp = Self::do_get_tree(rbum_set_id, None, true, db, cxt).await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
@@ -120,7 +118,7 @@ impl<'a> RbumSetServ {
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
                 sort: r.sort,
-                scope_paths: r.scope_paths.to_string(),
+                own_paths: r.own_paths.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_level: r.scope_level,
@@ -132,7 +130,7 @@ impl<'a> RbumSetServ {
     pub async fn get_tree_by_level(
         rbum_set_id: &str,
         rbum_parent_set_cate_id: Option<&str>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumSetCateSummaryResp>> {
         let resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, false, db, cxt).await?;
@@ -143,7 +141,7 @@ impl<'a> RbumSetServ {
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
                 sort: r.sort,
-                scope_paths: r.scope_paths.to_string(),
+                own_paths: r.own_paths.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_level: r.scope_level,
@@ -155,7 +153,7 @@ impl<'a> RbumSetServ {
         rbum_set_id: &str,
         rbum_parent_set_cate_id: Option<&str>,
         fetch_all: bool,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumSetCateWithLevelResp>> {
         Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), db, cxt).await?;
@@ -168,8 +166,8 @@ impl<'a> RbumSetServ {
                 (rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Column::Name),
                 (rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Column::ScopePaths),
-                (rbum_set_cate::Column::UpdaterId),
+                (rbum_set_cate::Column::OwnPaths),
+                (rbum_set_cate::Column::Owner),
                 (rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Column::UpdateTime),
                 (rbum_set_cate::Column::ScopeLevel),
@@ -199,7 +197,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         rbum_set_cate::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumSetCateAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
+    async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let sys_code = if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
             Self::package_sys_code(&add_req.rel_rbum_set_id, Some(rbum_parent_cate_id), true, db, cxt).await?
         } else if let Some(rbum_sibling_cate_id) = &add_req.rbum_sibling_cate_id {
@@ -219,7 +217,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumSetCateModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let mut rbum_set_cate = rbum_set_cate::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -239,7 +237,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         Ok(rbum_set_cate)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -247,8 +245,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 (rbum_set_cate::Entity, rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Name),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::ScopePaths),
-                (rbum_set_cate::Entity, rbum_set_cate::Column::UpdaterId),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::OwnPaths),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::Owner),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::CreateTime),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::UpdateTime),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::ScopeLevel),
@@ -260,14 +258,12 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         }
 
         query.query_with_filter(Self::get_table_name(), filter, cxt);
-        if !filter.ignore_scope_check {
-            query.query_with_scope(Self::get_table_name(), cxt);
-        }
+        query.query_with_scope(Self::get_table_name(), cxt);
 
         Ok(query)
     }
 
-    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership_with_table_name(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), db, cxt).await?;
         if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
             Self::check_ownership(rbum_parent_cate_id, db, cxt).await?;
@@ -278,7 +274,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         Ok(())
     }
 
-    async fn before_delete_rbum(id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, db, cxt).await?;
         if db
             .count(
@@ -301,7 +297,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
 }
 
 impl<'a> RbumSetCateServ {
-    async fn package_sys_code(rbum_set_id: &str, rbum_set_cate_id: Option<&str>, is_next: bool, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    async fn package_sys_code(rbum_set_id: &str, rbum_set_cate_id: Option<&str>, is_next: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         if let Some(rbum_set_cate_id) = rbum_set_cate_id {
             let rel_sys_code = Self::get_sys_code(rbum_set_cate_id, db, cxt).await?;
             if is_next {
@@ -315,7 +311,7 @@ impl<'a> RbumSetCateServ {
         }
     }
 
-    async fn get_max_sys_code_by_level(rbum_set_id: &str, parent_sys_code: Option<&str>, db: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<String> {
+    async fn get_max_sys_code_by_level(rbum_set_id: &str, parent_sys_code: Option<&str>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<String> {
         let mut query = Query::select();
         query.columns(vec![(rbum_set_cate::Column::SysCode)]).from(rbum_set_cate::Entity).and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(rbum_set_id));
 
@@ -351,7 +347,7 @@ impl<'a> RbumSetCateServ {
 }
 
 impl<'a> RbumSetCateServ {
-    async fn get_sys_code(rbum_set_cate_id: &str, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         Self::check_ownership(rbum_set_cate_id, db, cxt).await?;
         let sys_code = db
             .get_dto::<SysCodeResp>(
@@ -370,7 +366,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         rbum_set_item::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumSetItemAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
+    async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
         let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), db, cxt).await?;
         Ok(rbum_set_item::ActiveModel {
             id: Set(format!("{}{}{}", add_req.rel_rbum_set_id, add_req.rel_rbum_set_cate_id, TardisFuns::field.nanoid())),
@@ -382,7 +378,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         })
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumSetItemModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumSetItemModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
         Ok(rbum_set_item::ActiveModel {
             id: Set(id.to_string()),
             sort: Set(modify_req.sort),
@@ -390,7 +386,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         })
     }
 
-    async fn package_query(_: bool, filter: &RbumBasicFilterReq, _: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
 
         let mut query = Query::select();
@@ -399,8 +395,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 (rbum_set_item::Entity, rbum_set_item::Column::Id),
                 (rbum_set_item::Entity, rbum_set_item::Column::Sort),
                 (rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
-                (rbum_set_item::Entity, rbum_set_item::Column::ScopePaths),
-                (rbum_set_item::Entity, rbum_set_item::Column::UpdaterId),
+                (rbum_set_item::Entity, rbum_set_item::Column::OwnPaths),
+                (rbum_set_item::Entity, rbum_set_item::Column::Owner),
                 (rbum_set_item::Entity, rbum_set_item::Column::CreateTime),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdateTime),
             ])
@@ -426,7 +422,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         Ok(query)
     }
 
-    async fn before_add_rbum(add_req: &mut RbumSetItemAddReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership_with_table_name(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), db, cxt).await?;
         Self::check_ownership_with_table_name(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), db, cxt).await?;
         Self::check_ownership_with_table_name(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), db, cxt).await?;
@@ -447,7 +443,7 @@ struct RbumSetCateWithLevelResp {
     pub name: String,
     pub sort: i32,
 
-    pub scope_paths: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 

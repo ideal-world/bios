@@ -29,10 +29,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         constants::get_rbum_basic_info().domain_iam_id.clone()
     }
 
-    async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
+    async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
         Ok(RbumItemAddReq {
             id: add_req.id.clone(),
-            uri_path: None,
+            code: None,
             name: add_req.name.clone(),
             icon: add_req.icon.clone(),
             sort: None,
@@ -43,16 +43,16 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         })
     }
 
-    async fn package_ext_add(id: &str, _: &IamAccountAddReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<iam_account::ActiveModel> {
+    async fn package_ext_add(id: &str, _: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_account::ActiveModel> {
         Ok(iam_account::ActiveModel { id: Set(id.to_string()) })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamAccountModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.icon.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         Ok(Some(RbumItemModifyReq {
-            uri_path: None,
+            code: None,
             name: modify_req.name.clone(),
             icon: modify_req.icon.clone(),
             sort: None,
@@ -61,11 +61,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         }))
     }
 
-    async fn package_ext_modify(_: &str, _: &IamAccountModifyReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
+    async fn package_ext_modify(_: &str, _: &IamAccountModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
         return Ok(None);
     }
 
-    async fn package_item_query(_: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisRelDBlConnection<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_item_query(_: &mut SelectStatement, _: bool, _: &RbumItemFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 }

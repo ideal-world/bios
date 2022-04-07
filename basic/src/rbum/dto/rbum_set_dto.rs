@@ -3,8 +3,12 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::web::poem_openapi::Object;
 
+use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
+
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumSetAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -12,10 +16,11 @@ pub struct RbumSetAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tags: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub ext: Option<String>,
 
-    pub scope_level: i32,
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -27,26 +32,29 @@ pub struct RbumSetModifyReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i32>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tags: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub ext: Option<String>,
 
-    pub scope_level: Option<i32>,
+    pub scope_level: Option<RbumScopeLevelKind>,
+    pub disabled: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetSummaryResp {
     pub id: String,
+    pub code: String,
     pub name: String,
     pub icon: String,
     pub sort: i32,
-    pub tags: String,
+    pub ext: String,
 
-    pub scope_paths: String,
+    pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_level: i32,
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -57,13 +65,14 @@ pub struct RbumSetDetailResp {
     pub note: String,
     pub icon: String,
     pub sort: i32,
-    pub tags: String,
+    pub ext: String,
 
-    pub scope_paths: String,
-    pub updater_id: String,
-    pub updater_name: String,
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_level: i32,
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
 }

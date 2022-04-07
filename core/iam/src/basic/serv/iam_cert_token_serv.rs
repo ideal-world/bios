@@ -21,7 +21,7 @@ impl<'a> IamCertTokenServ {
         add_req: &mut IamTokenCertConfAddReq,
         token_kind: IamCertTokenKind,
         rel_iam_tenant_id: Option<String>,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertConfServ::add_rbum(
@@ -50,7 +50,7 @@ impl<'a> IamCertTokenServ {
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamTokenCertConfModifyReq, db: &TardisRelDBlConnection<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamTokenCertConfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -81,7 +81,7 @@ impl<'a> IamCertTokenServ {
         iam_item_id: &str,
         rel_iam_tenant_id: &str,
         from_cert_id: &str,
-        db: &TardisRelDBlConnection<'a>,
+        funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         // TODO cache
