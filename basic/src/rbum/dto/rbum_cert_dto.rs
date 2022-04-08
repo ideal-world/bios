@@ -21,7 +21,7 @@ pub struct RbumCertAddReq {
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_kind: RbumCertRelKind,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub rel_rbum_item_id: String,
+    pub rel_rbum_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -41,8 +41,7 @@ pub struct RbumCertSummaryResp {
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
     pub rel_rbum_kind: String,
-    pub rel_rbum_item_id: String,
-    pub rel_rbum_item_name: String,
+    pub rel_rbum_id: String,
 
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
@@ -61,8 +60,8 @@ pub struct RbumCertDetailResp {
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
     pub rel_rbum_kind: String,
-    pub rel_rbum_item_id: String,
-    pub rel_rbum_item_name: String,
+    pub rel_rbum_id: String,
+    pub rel_rbum_name: String,
 
     pub own_paths: String,
     pub owner: String,

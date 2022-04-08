@@ -1,3 +1,5 @@
+use std::process::id;
+
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use serde::Serialize;
@@ -83,6 +85,35 @@ where
             == 0
         {
             return Err(TardisError::NotFound(format!("The scope of {}.{} is illegal", Self::get_table_name(), id)));
+        }
+        Ok(())
+    }
+
+    // ----------------------------- Exist -------------------------------
+
+    async fn check_exist_before_delete(id: &str, rel_table_name: &str, rel_field_name: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let query = Query::select()
+            .column((Alias::new(rel_table_name), ID_FIELD.clone()))
+            .from(Alias::new(rel_table_name))
+            .and_where(Expr::tbl(Alias::new(rel_table_name), Alias::new(rel_field_name)).eq(id));
+        if funs.db().count(query).await? > 0 {
+            return Err(TardisError::BadRequest(format!(
+                "Can not delete {} when there are {}",
+                Self::get_table_name(),
+                rel_table_name
+            )));
+        }
+        Ok(())
+    }
+
+    async fn check_exist_with_cond_before_delete(rel_table_name: &str, condition: Condition, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let query = Query::select().column((Alias::new(rel_table_name), ID_FIELD.clone())).from(Alias::new(rel_table_name)).cond_where(condition);
+        if funs.db().count(query).await? > 0 {
+            return Err(TardisError::BadRequest(format!(
+                "Can not delete {} when there are {}",
+                Self::get_table_name(),
+                rel_table_name
+            )));
         }
         Ok(())
     }
@@ -226,15 +257,20 @@ where
         let query = Self::package_query(false, filter, funs, cxt).await?;
         funs.db().count(&query).await
     }
+
+    async fn exist_rbum(filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+        let query = Self::count_rbums(filter, funs, cxt).await?;
+        Ok(query > 0)
+    }
 }
 
 pub trait RbumCrudQueryPackage {
-    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, ignore_owner: bool, ignore_scope: bool, cxt: &TardisContext) -> &mut Self;
+    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, ignore_owner: bool, has_scope: bool, cxt: &TardisContext) -> &mut Self;
     fn with_scope(&mut self, table_name: &str, cxt: &TardisContext) -> &mut Self;
 }
 
 impl RbumCrudQueryPackage for SelectStatement {
-    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, ignore_owner: bool, ignore_scope: bool, cxt: &TardisContext) -> &mut Self {
+    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, with_owner: bool, has_scope: bool, cxt: &TardisContext) -> &mut Self {
         if filter.rel_cxt_scope {
             self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
         }
@@ -257,10 +293,10 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
 
         if let Some(name) = &filter.name {
-            self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(name));
+            self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(format!("%{}%", name).as_str()));
         }
         if let Some(code) = &filter.code {
-            self.and_where(Expr::tbl(Alias::new(table_name), CODE_FIELD.clone()).eq(code.to_string()));
+            self.and_where(Expr::tbl(Alias::new(table_name), CODE_FIELD.clone()).like(format!("{}%", code).as_str()));
         }
 
         if let Some(rbum_kind_id) = &filter.rbum_kind_id {
@@ -269,7 +305,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         if let Some(rbum_domain_id) = &filter.rbum_domain_id {
             self.and_where(Expr::tbl(Alias::new(table_name), REL_DOMAIN_ID_FIELD.clone()).eq(rbum_domain_id.to_string()));
         }
-        if !ignore_owner {
+        if with_owner {
             self.expr_as(Expr::tbl(OWNER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("owner_name")).join_as(
                 JoinType::InnerJoin,
                 rbum_item::Entity,
@@ -277,7 +313,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Expr::tbl(OWNER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), OWNER_FIELD.clone()),
             );
         }
-        if !ignore_scope {
+        if has_scope && !filter.ignore_scope {
             self.with_scope(table_name, cxt);
         }
         self

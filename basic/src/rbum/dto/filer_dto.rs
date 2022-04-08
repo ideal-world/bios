@@ -6,6 +6,7 @@ use crate::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind};
 #[derive(Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
 pub struct RbumBasicFilterReq {
+    pub ignore_scope: bool,
     pub rel_cxt_scope: bool,
     pub rel_cxt_owner: bool,
 
@@ -22,6 +23,7 @@ pub struct RbumBasicFilterReq {
 impl Default for RbumBasicFilterReq {
     fn default() -> Self {
         Self {
+            ignore_scope: false,
             rel_cxt_scope: false,
             rel_cxt_owner: false,
             own_paths: None,
