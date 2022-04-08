@@ -20,7 +20,7 @@ pub struct RbumSetAddReq {
     pub ext: Option<String>,
 
     pub scope_level: RbumScopeLevelKind,
-    pub disabled: bool,
+    pub disabled: Option<bool>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

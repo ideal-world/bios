@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::Object;
 pub struct IamCaHttpResAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
@@ -22,7 +22,7 @@ pub struct IamCaHttpResAddReq {
 pub struct IamCaHttpResModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,

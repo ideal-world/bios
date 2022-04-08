@@ -6,7 +6,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumDomainAddReq {
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
@@ -21,7 +21,7 @@ pub struct RbumDomainAddReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumDomainModifyReq {
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,

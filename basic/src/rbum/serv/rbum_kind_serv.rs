@@ -5,15 +5,14 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::tokio::count;
-use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
-use crate::rbum::rbum_constants::RBUM_KIND_ID_LEN;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
+use crate::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
+use crate::rbum::serv::rbum_rel_serv::RbumRelAttrServ;
 
 pub struct RbumKindServ;
 pub struct RbumKindAttrServ;
@@ -74,17 +73,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, funs, cxt).await?;
-        if funs
-            .db()
-            .count(Query::select().column(rbum_kind_attr::Column::Id).from(rbum_kind_attr::Entity).and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(id)))
-            .await?
-            > 0
-        {
-            return Err(TardisError::BadRequest("can not delete rbum kind when there are rbum kind attr".to_string()));
-        }
-        if funs.db().count(Query::select().column(rbum_item::Column::Id).from(rbum_item::Entity).and_where(Expr::col(rbum_item::Column::RelRbumKindId).eq(id))).await? > 0 {
-            return Err(TardisError::BadRequest("can not delete rbum kind when there are rbum item".to_string()));
-        }
+        Self::check_exist_before_delete(id, RbumKindAttrServ::get_table_name(), rbum_kind_attr::Column::RelRbumKindId.as_str(), funs).await?;
+        Self::check_exist_before_delete(id, RbumItemServ::get_table_name(), rbum_item::Column::RelRbumKindId.as_str(), funs).await?;
         Ok(())
     }
 
@@ -104,7 +94,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
             (rbum_kind::Entity, rbum_kind::Column::ScopeLevel),
         ]);
-        query.from(rbum_kind::Entity).with_filter(Self::get_table_name(), filter, !is_detail, false, cxt);
+        query.from(rbum_kind::Entity).with_filter(Self::get_table_name(), filter, is_detail, 
+                                                  true,cxt);
         Ok(query)
     }
 }
@@ -215,22 +206,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, funs, cxt).await?;
-        if funs
-            .db()
-            .count(Query::select().column(rbum_item_attr::Column::Id).from(rbum_item_attr::Entity).and_where(Expr::col(rbum_item_attr::Column::RelRbumKindAttrId).eq(id)))
-            .await?
-            > 0
-        {
-            return Err(TardisError::BadRequest("can not delete rbum kind attr when there are rbum item attr".to_string()));
-        }
-        if funs
-            .db()
-            .count(Query::select().column(rbum_rel_attr::Column::Id).from(rbum_rel_attr::Entity).and_where(Expr::col(rbum_rel_attr::Column::RelRbumKindAttrId).eq(id)))
-            .await?
-            > 0
-        {
-            return Err(TardisError::BadRequest("can not delete rbum kind attr when there are rbum rel attr".to_string()));
-        }
+        Self::check_exist_before_delete(id, RbumItemAttrServ::get_table_name(), rbum_item_attr::Column::RelRbumKindAttrId.as_str(), funs).await?;
+        Self::check_exist_before_delete(id, RbumRelAttrServ::get_table_name(), rbum_rel_attr::Column::RelRbumKindAttrId.as_str(), funs).await?;
         Ok(())
     }
 
@@ -270,7 +247,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
             );
         }
-        query.with_filter(Self::get_table_name(), filter, !is_detail, false, cxt);
+        query.with_filter(Self::get_table_name(), filter, is_detail,true, cxt);
         Ok(query)
     }
 }
