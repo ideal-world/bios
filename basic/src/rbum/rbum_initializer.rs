@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBlConnection};
+use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
@@ -55,7 +55,7 @@ pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_cod
         .and_where(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Code).eq(rbum_domain_code))
         .order_by((rbum_item::Entity, rbum_item::Column::CreateTime), Order::Asc);
 
-    let context: Option<TmpContext> = db.get_dto(&query).await?;
+    let context: Option<TmpContext> = funs.db().get_dto(&query).await?;
 
     if let Some(context) = context {
         Ok(Some(TardisContext {

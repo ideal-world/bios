@@ -40,7 +40,7 @@ impl TardisActiveModel for ActiveModel {
             // Specific
             .col(ColumnDef::new(Column::Tag).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
-            .col(ColumnDef::new(Column::FromRbumKind).not_null().integer())
+            .col(ColumnDef::new(Column::FromRbumKind).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::FromRbumId).not_null().string())
             .col(ColumnDef::new(Column::ToRbumItemId).not_null().string())
             .col(ColumnDef::new(Column::ToOwnPaths).not_null().string())

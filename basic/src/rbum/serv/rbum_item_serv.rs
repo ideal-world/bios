@@ -6,9 +6,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
-use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::filer_dto::{RbumBasicFilterReq, RbumItemFilterReq};
@@ -17,7 +17,7 @@ use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumIt
 use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
-use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, RbumCrudOperation, RbumCrudQueryPackage, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -27,7 +27,7 @@ pub struct RbumItemServ;
 pub struct RbumItemAttrServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemModifyReq, RbumItemSummaryResp, RbumItemDetailResp> for RbumItemServ {
+impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemModifyReq, RbumItemSummaryResp, RbumItemDetailResp, RbumBasicFilterReq> for RbumItemServ {
     fn get_table_name() -> &'static str {
         rbum_item::Entity.table_name()
     }
@@ -230,7 +230,7 @@ where
         Self::before_delete_item(id, funs, cxt).await?;
         RbumItemServ::delete_rbum(id, funs, cxt).await?;
         let select = Self::package_delete(id, funs, cxt).await?;
-        let delete_records = funs.db().soft_delete(select, &cxt.account_id).await?;
+        let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
         Self::after_delete_item(id, funs, cxt).await?;
         Ok(delete_records)
     }
@@ -272,7 +272,7 @@ where
         if let Some(sort) = desc_sort_by_update {
             query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
-        let (records, total_size) = db.paginate_dtos(&query, page_number, page_size).await?;
+        let (records, total_size) = funs.db().paginate_dtos(&query, page_number, page_size).await?;
         Ok(TardisPage {
             page_size,
             page_number,
@@ -313,7 +313,9 @@ where
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrDetailResp> for RbumItemAttrServ {
+impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrDetailResp, RbumBasicFilterReq>
+    for RbumItemAttrServ
+{
     fn get_table_name() -> &'static str {
         rbum_item_attr::Entity.table_name()
     }

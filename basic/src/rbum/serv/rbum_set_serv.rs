@@ -24,7 +24,7 @@ pub struct RbumSetCateServ;
 pub struct RbumSetItemServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, RbumSetSummaryResp, RbumSetDetailResp> for RbumSetServ {
+impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, RbumSetSummaryResp, RbumSetDetailResp, RbumBasicFilterReq> for RbumSetServ {
     fn get_table_name() -> &'static str {
         rbum_set::Entity.table_name()
     }
@@ -209,7 +209,9 @@ impl<'a> RbumSetServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateDetailResp> for RbumSetCateServ {
+impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateDetailResp, RbumBasicFilterReq>
+    for RbumSetCateServ
+{
     fn get_table_name() -> &'static str {
         rbum_set_cate::Entity.table_name()
     }
@@ -237,12 +239,12 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
     }
 
     async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
+        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
         if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
-            Self::check_ownership(rbum_parent_cate_id, funs, cxt).await?;
+            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
         }
         if let Some(rbum_sibling_cate_id) = &add_req.rbum_sibling_cate_id {
-            Self::check_ownership(rbum_sibling_cate_id, funs, cxt).await?;
+            Self::check_scope(rbum_sibling_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
         }
         Ok(())
     }
@@ -389,7 +391,9 @@ impl<'a> RbumSetCateServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemDetailResp, RbumSetItemDetailResp> for RbumSetItemServ {
+impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemDetailResp, RbumSetItemDetailResp, RbumBasicFilterReq>
+    for RbumSetItemServ
+{
     fn get_table_name() -> &'static str {
         rbum_set_item::Entity.table_name()
     }
@@ -397,7 +401,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
     async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
         let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, cxt).await?;
         Ok(rbum_set_item::ActiveModel {
-            id: Set(format!("{}{}{}", add_req.rel_rbum_set_id, add_req.rel_rbum_set_cate_id, TardisFuns::field.nanoid())),
+            id: Set(TardisFuns::field.nanoid()),
             rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
             rel_rbum_set_cate_code: Set(rel_sys_code),
             rel_rbum_item_id: Set(add_req.rel_rbum_item_id.to_string()),
@@ -407,9 +411,9 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
     }
 
     async fn before_add_rbum(add_req: &mut RbumSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
+        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
+        Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
+        Self::check_scope(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
         Ok(())
     }
 
@@ -466,7 +470,7 @@ struct RbumSetCateWithLevelResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
 
     pub own_paths: String,

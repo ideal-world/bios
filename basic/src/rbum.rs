@@ -3,7 +3,6 @@ pub(crate) mod domain;
 pub mod dto;
 pub mod helper;
 pub mod rbum_config;
-pub mod rbum_constants;
 pub mod rbum_enumeration;
 #[cfg(feature = "default")]
 pub mod rbum_initializer;

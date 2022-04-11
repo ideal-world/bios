@@ -48,7 +48,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::EndTime).not_null().date_time())
             .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumKind).not_null().integer())
+            .col(ColumnDef::new(Column::RelRbumKind).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::RelRbumId).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())

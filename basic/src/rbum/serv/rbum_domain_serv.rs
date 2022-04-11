@@ -5,24 +5,28 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 
-use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr};
+use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
 use crate::rbum::serv::rbum_cert_serv::RbumCertConfServ;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
-use crate::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
+use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 
 pub struct RbumDomainServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainModifyReq, RbumDomainSummaryResp, RbumDomainDetailResp> for RbumDomainServ {
+impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumDomainModifyReq, RbumDomainSummaryResp, RbumDomainDetailResp, RbumBasicFilterReq>
+    for RbumDomainServ
+{
     fn get_table_name() -> &'static str {
         rbum_domain::Entity.table_name()
     }
 
     async fn package_add(add_req: &RbumDomainAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_domain::ActiveModel> {
         Ok(rbum_domain::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             code: Set(add_req.code.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -36,7 +40,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
     async fn before_add_rbum(add_req: &mut RbumDomainAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         if funs
             .db()
-            .count(Query::select().column(rbum_domain::Column::Id).from(rbum_domain::Entity).and_where(Expr::col(rbum_domain::Column::code).eq(add_req.code.0.as_str())))
+            .count(Query::select().column(rbum_domain::Column::Id).from(rbum_domain::Entity).and_where(Expr::col(rbum_domain::Column::Code).eq(add_req.code.0.as_str())))
             .await?
             > 0
         {

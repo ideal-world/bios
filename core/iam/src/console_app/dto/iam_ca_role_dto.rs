@@ -8,7 +8,7 @@ pub struct IamCaRoleAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub disabled: Option<bool>,
 }
@@ -19,7 +19,7 @@ pub struct IamCaRoleModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub disabled: Option<bool>,
 }

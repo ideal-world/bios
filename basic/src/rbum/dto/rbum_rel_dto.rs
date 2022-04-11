@@ -28,6 +28,8 @@ pub struct RbumRelModifyReq {
     pub tag: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub note: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub ext: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -62,9 +64,7 @@ pub struct RbumRelDetailResp {
     pub note: String,
     pub from_rbum_kind:RbumRelFromKind,
     pub from_rbum_id: String,
-    pub from_rbum_name: String,
     pub to_rbum_item_id: String,
-    pub to_rbum_item_name: String,
     pub to_own_paths: String,
     pub ext: String,
 

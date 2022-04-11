@@ -6,18 +6,19 @@ use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
 pub async fn test() -> TardisResult<()> {
-    let mut tx = TardisFuns::reldb().conn();
-    tx.begin().await?;
+    let mut funs = TardisFuns::inst_with_db_conn("");
+    funs.begin().await?;
 
     info!("【test_scope】 : Prepare");
     let s0 = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
-        account_id: "".to_string(),
+        owner: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
@@ -27,7 +28,7 @@ pub async fn test() -> TardisResult<()> {
     let s1 = TardisContext {
         own_paths: TardisFuns::field.nanoid_len(4),
         ak: "".to_string(),
-        account_id: "".to_string(),
+        owner: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
@@ -37,7 +38,7 @@ pub async fn test() -> TardisResult<()> {
     let s2 = TardisContext {
         own_paths: format!("{}/{}", s1.own_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
-        account_id: "".to_string(),
+        owner: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
@@ -47,7 +48,7 @@ pub async fn test() -> TardisResult<()> {
     let s3 = TardisContext {
         own_paths: format!("{}/{}", s2.own_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
-        account_id: "".to_string(),
+        owner: "".to_string(),
         token: "".to_string(),
         token_kind: "".to_string(),
         roles: vec![],
@@ -61,9 +62,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 3,
+            scope_level: RbumScopeLevelKind::L3,
         },
-        &tx,
+        &funs,
         &s0,
     )
     .await?;
@@ -75,9 +76,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 2,
+            scope_level: RbumScopeLevelKind::L2,
         },
-        &tx,
+        &funs,
         &s0,
     )
     .await?;
@@ -89,9 +90,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 1,
+            scope_level: RbumScopeLevelKind::L1,
         },
-        &tx,
+        &funs,
         &s0,
     )
     .await?;
@@ -103,9 +104,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 0,
+            scope_level: RbumScopeLevelKind::Root,
         },
-        &tx,
+        &funs,
         &s0,
     )
     .await?;
@@ -117,9 +118,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 3,
+            scope_level: RbumScopeLevelKind::L3,
         },
-        &tx,
+        &funs,
         &s1,
     )
     .await?;
@@ -131,9 +132,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 2,
+            scope_level: RbumScopeLevelKind::L2,
         },
-        &tx,
+        &funs,
         &s1,
     )
     .await?;
@@ -145,9 +146,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 1,
+            scope_level: RbumScopeLevelKind::L1,
         },
-        &tx,
+        &funs,
         &s1,
     )
     .await?;
@@ -159,9 +160,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 0,
+            scope_level: RbumScopeLevelKind::Root,
         },
-        &tx,
+        &funs,
         &s1,
     )
     .await?;
@@ -173,9 +174,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 3,
+            scope_level: RbumScopeLevelKind::L3,
         },
-        &tx,
+        &funs,
         &s2,
     )
     .await?;
@@ -187,9 +188,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 2,
+            scope_level: RbumScopeLevelKind::L2,
         },
-        &tx,
+        &funs,
         &s2,
     )
     .await?;
@@ -201,9 +202,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 1,
+            scope_level: RbumScopeLevelKind::L1,
         },
-        &tx,
+        &funs,
         &s2,
     )
     .await?;
@@ -215,9 +216,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 0,
+            scope_level: RbumScopeLevelKind::Root,
         },
-        &tx,
+        &funs,
         &s2,
     )
     .await?;
@@ -229,9 +230,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 3,
+            scope_level: RbumScopeLevelKind::L3,
         },
-        &tx,
+        &funs,
         &s3,
     )
     .await?;
@@ -243,9 +244,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 2,
+            scope_level: RbumScopeLevelKind::L2,
         },
-        &tx,
+        &funs,
         &s3,
     )
     .await?;
@@ -257,9 +258,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 1,
+            scope_level: RbumScopeLevelKind::L1,
         },
-        &tx,
+        &funs,
         &s3,
     )
     .await?;
@@ -271,9 +272,9 @@ pub async fn test() -> TardisResult<()> {
             note: None,
             icon: None,
             sort: None,
-            scope_level: 0,
+            scope_level: RbumScopeLevelKind::Root,
         },
-        &tx,
+        &funs,
         &s3,
     )
     .await?;
@@ -286,7 +287,7 @@ pub async fn test() -> TardisResult<()> {
         },
         None,
         None,
-        &tx,
+        &funs,
         &s0,
     )
     .await?;
@@ -304,7 +305,7 @@ pub async fn test() -> TardisResult<()> {
         },
         None,
         None,
-        &tx,
+        &funs,
         &s1,
     )
     .await?;
@@ -322,7 +323,7 @@ pub async fn test() -> TardisResult<()> {
         },
         None,
         None,
-        &tx,
+        &funs,
         &s2,
     )
     .await?;
@@ -340,7 +341,7 @@ pub async fn test() -> TardisResult<()> {
         },
         None,
         None,
-        &tx,
+        &funs,
         &s3,
     )
     .await?;
@@ -358,11 +359,11 @@ pub async fn test() -> TardisResult<()> {
         },
         None,
         None,
-        &tx,
+        &funs,
         &TardisContext {
             own_paths: "xxx".to_string(),
             ak: "".to_string(),
-            account_id: "".to_string(),
+            owner: "".to_string(),
             token: "".to_string(),
             token_kind: "".to_string(),
             roles: vec![],
@@ -380,11 +381,11 @@ pub async fn test() -> TardisResult<()> {
         },
         None,
         None,
-        &tx,
+        &funs,
         &TardisContext {
             own_paths: format!("{}/x", s3.own_paths),
             ak: "".to_string(),
-            account_id: "".to_string(),
+            owner: "".to_string(),
             token: "".to_string(),
             token_kind: "".to_string(),
             roles: vec![],
@@ -399,7 +400,7 @@ pub async fn test() -> TardisResult<()> {
     );
     assert_eq!(rbums.len(), 10);
 
-    tx.rollback().await?;
+    funs.rollback().await?;
 
     Ok(())
 }

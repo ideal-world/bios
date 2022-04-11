@@ -32,7 +32,7 @@ pub struct ResourceDetailResp {
     #[validate(length(max = 5000))]
     pub action: String,
     // 资源显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 是否是资源组
     pub res_group: bool,
     // 资源所属组Id

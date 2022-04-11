@@ -14,14 +14,14 @@ pub struct Model {
     pub name: String,
     pub note: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     // Basic
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
-    pub scope_level: i32,
+    pub scope_level: u8,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -42,14 +42,14 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Icon).not_null().string())
-            .col(ColumnDef::new(Column::Sort).not_null().integer())
+            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().integer())
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_unsigned())
             .to_owned()
     }
 

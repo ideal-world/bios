@@ -28,7 +28,7 @@ pub struct RbumRelEnvModifyReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumRelEnvDetailResp {
     pub id: String,
-    pub kind: String,
+    pub kind: RbumRelEnvKind,
     pub value1: String,
     pub value2: String,
     pub rel_rbum_rel_id: String,

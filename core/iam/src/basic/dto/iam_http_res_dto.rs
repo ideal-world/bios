@@ -9,7 +9,7 @@ pub struct IamHttpResAddReq {
     pub name: TrimString,
     pub code: TrimString,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub method: TrimString,
 
@@ -22,7 +22,7 @@ pub struct IamHttpResModifyReq {
     pub name: Option<TrimString>,
     pub code: Option<TrimString>,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub method: Option<TrimString>,
 
@@ -36,7 +36,7 @@ pub struct IamHttpResSummaryResp {
     pub code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
 
     pub method: String,
 
@@ -53,7 +53,7 @@ pub struct IamHttpResDetailResp {
     pub code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
 
     pub method: String,
 

@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi::Object;
 
-use crate::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind};
+use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct RbumBasicFilterReq {
     pub ignore_scope: bool,
-    pub rel_cxt_scope: bool,
     pub rel_cxt_owner: bool,
 
     pub own_paths: Option<String>,
@@ -24,7 +23,6 @@ impl Default for RbumBasicFilterReq {
     fn default() -> Self {
         Self {
             ignore_scope: false,
-            rel_cxt_scope: false,
             rel_cxt_owner: false,
             own_paths: None,
             ids: None,
@@ -40,18 +38,38 @@ impl Default for RbumBasicFilterReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
+pub struct RbumCertConfFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel_rbum_domain_id: Option<String>,
+    pub rel_rbum_item_id: Option<String>,
+}
+
+impl Default for RbumCertConfFilterReq {
+    fn default() -> Self {
+        Self {
+            basic: Default::default(),
+            rel_rbum_domain_id: None,
+            rel_rbum_item_id: None,
+        }
+    }
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+#[serde(default)]
 pub struct RbumCertFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub rbum_item_id: Option<String>,
-    pub rbum_cert_conf_id: Option<String>,
+    pub rel_rbum_kind: Option<RbumCertRelKind>,
+    pub rel_rbum_id: Option<String>,
+    pub rel_rbum_cert_conf_id: Option<String>,
 }
 
 impl Default for RbumCertFilterReq {
     fn default() -> Self {
         Self {
             basic: Default::default(),
-            rbum_item_id: None,
-            rbum_cert_conf_id: None,
+            rel_rbum_kind: None,
+            rel_rbum_id: None,
+            rel_rbum_cert_conf_id: None,
         }
     }
 }
@@ -60,20 +78,38 @@ impl Default for RbumCertFilterReq {
 #[serde(default)]
 pub struct RbumRelFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub rbum_rel_id: Option<String>,
-    pub rbum_rel_tag: Option<String>,
-    pub rbum_rel_from_kind: Option<RbumRelFromKind>,
-    pub rbum_rel_is_from: Option<bool>,
+    pub tag: Option<String>,
+    pub from_rbum_kind: Option<RbumRelFromKind>,
+    pub from_rbum_id: Option<String>,
+    pub to_rbum_item_id: Option<String>,
+    pub to_own_paths: Option<String>,
 }
 
 impl Default for RbumRelFilterReq {
     fn default() -> Self {
         Self {
             basic: Default::default(),
-            rbum_rel_id: None,
-            rbum_rel_tag: None,
-            rbum_rel_from_kind: None,
-            rbum_rel_is_from: None,
+            tag: None,
+            from_rbum_kind: None,
+            from_rbum_id: None,
+            to_rbum_item_id: None,
+            to_own_paths: None,
+        }
+    }
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+#[serde(default)]
+pub struct RbumRelExtFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel_rbum_rel_id: Option<String>,
+}
+
+impl Default for RbumRelExtFilterReq {
+    fn default() -> Self {
+        Self {
+            basic: Default::default(),
+            rel_rbum_rel_id: None,
         }
     }
 }

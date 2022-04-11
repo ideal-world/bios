@@ -6,12 +6,13 @@ use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainModifyReq};
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
-    let mut tx = TardisFuns::reldb().conn();
-    tx.begin().await?;
+    let mut funs = TardisFuns::inst_with_db_conn("");
+    funs.begin().await?;
 
     info!("【test_rbum_domin】 : Test Add : RbumDomainServ::add_rbum");
     let id = RbumDomainServ::add_rbum(
@@ -21,15 +22,15 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
-            scope_level: 2,
+            scope_level: RbumScopeLevelKind::L2,
         },
-        &tx,
+        &funs,
         context,
     )
     .await?;
 
     info!("【test_rbum_domin】 : Test Get : RbumDomainServ::get_rbum");
-    let rbum = RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await?;
+    let rbum = RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.code, "mysql_dev");
     assert_eq!(rbum.name, "Mysql测试集群");
@@ -47,7 +48,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             scope_level: None,
         },
-        &tx,
+        &funs,
         context,
     )
     .await?;
@@ -55,14 +56,14 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_domin】 : Test Find : RbumDomainServ::paginate_rbums");
     let rbums = RbumDomainServ::paginate_rbums(
         &RbumBasicFilterReq {
-            scope_level: Some(2),
+            scope_level: Some(RbumScopeLevelKind::L2),
             ..Default::default()
         },
         1,
         10,
         None,
         None,
-        &tx,
+        &funs,
         context,
     )
     .await?;
@@ -72,10 +73,10 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.get(0).unwrap().icon, ".");
 
     info!("【test_rbum_domin】 : Test Delete : RbumDomainServ::delete_rbum");
-    RbumDomainServ::delete_rbum(&id, &tx, context).await?;
-    assert!(RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &tx, context).await.is_err());
+    RbumDomainServ::delete_rbum(&id, &funs, context).await?;
+    assert!(RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
 
-    tx.rollback().await?;
+    funs.rollback().await?;
 
     Ok(())
 }

@@ -13,7 +13,7 @@ pub struct Model {
     pub name: String,
     pub label: String,
     pub note: String,
-    pub sort: i32,
+    pub sort: u32,
     pub main_column: bool,
     pub position: bool,
     pub capacity: bool,
@@ -23,8 +23,8 @@ pub struct Model {
     pub default_value: String,
     pub options: String,
     pub required: bool,
-    pub min_length: i8,
-    pub max_length: i8,
+    pub min_length: u32,
+    pub max_length: u32,
     pub action: String,
     pub rel_rbum_kind_id: String,
     // Basic
@@ -33,7 +33,7 @@ pub struct Model {
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
-    pub scope_level: i32,
+    pub scope_level: u8,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -53,7 +53,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Label).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
-            .col(ColumnDef::new(Column::Sort).not_null().integer())
+            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::MainColumn).not_null().boolean())
             .col(ColumnDef::new(Column::Position).not_null().boolean())
             .col(ColumnDef::new(Column::Capacity).not_null().boolean())
@@ -63,8 +63,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::DefaultValue).not_null().string())
             .col(ColumnDef::new(Column::Options).not_null().text())
             .col(ColumnDef::new(Column::Required).not_null().boolean())
-            .col(ColumnDef::new(Column::MinLength).not_null().integer())
-            .col(ColumnDef::new(Column::MaxLength).not_null().integer())
+            .col(ColumnDef::new(Column::MinLength).not_null().unsigned())
+            .col(ColumnDef::new(Column::MaxLength).not_null().unsigned())
             .col(ColumnDef::new(Column::Action).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKindId).not_null().string())
             // Basic
@@ -73,7 +73,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().integer())
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_unsigned())
             .to_owned()
     }
 
