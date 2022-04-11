@@ -19,7 +19,9 @@ pub struct RbumRelAttrAggAddReq {
     pub is_from: bool,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub value: String,
-
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: String,
+    pub record_only: bool,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_kind_attr_id: String,
 }

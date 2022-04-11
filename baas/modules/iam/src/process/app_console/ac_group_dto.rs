@@ -42,7 +42,7 @@ pub struct GroupAddReq {
     // 群组类型
     pub kind: GroupKind,
     // 群组显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 群组图标
     #[validate(length(max = 1000))]
     pub icon: Option<String>,
@@ -64,7 +64,7 @@ pub struct GroupModifyReq {
     // 群组类型
     pub kind: Option<GroupKind>,
     // 群组显示排序，asc
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     // 群组图标
     #[validate(length(max = 1000))]
     pub icon: Option<String>,
@@ -92,7 +92,7 @@ pub struct GroupDetailResp {
     #[validate(length(max = 255))]
     pub kind: String,
     // 群组显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 群组图标
     #[validate(length(max = 1000))]
     pub icon: String,
@@ -134,7 +134,7 @@ pub struct GroupNodeAddReq {
     #[validate(length(max = 255))]
     pub parent_code: String,
     // 群组节点显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -149,7 +149,7 @@ pub struct GroupNodeModifyReq {
     #[validate(length(max = 2000))]
     pub parameters: Option<String>,
     // 群组节点显示排序，asc
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Validate)]
@@ -169,7 +169,7 @@ pub struct GroupNodeDetailResp {
     #[validate(length(max = 2000))]
     pub parameters: String,
     // 群组节点显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 关联群组Id
     #[validate(length(max = 32))]
     pub rel_group_id: String,

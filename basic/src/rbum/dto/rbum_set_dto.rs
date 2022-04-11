@@ -15,7 +15,7 @@ pub struct RbumSetAddReq {
     pub note: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 
@@ -31,7 +31,7 @@ pub struct RbumSetModifyReq {
     pub note: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 
@@ -46,7 +46,7 @@ pub struct RbumSetSummaryResp {
     pub code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
 
     pub own_paths: String,
@@ -64,7 +64,7 @@ pub struct RbumSetDetailResp {
     pub name: String,
     pub note: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
 
     pub own_paths: String,

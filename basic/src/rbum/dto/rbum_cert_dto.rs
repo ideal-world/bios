@@ -40,7 +40,7 @@ pub struct RbumCertSummaryResp {
     pub ak: String,
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
-    pub rel_rbum_kind: String,
+    pub rel_rbum_kind: RbumCertRelKind,
     pub rel_rbum_id: String,
 
     pub own_paths: String,
@@ -56,12 +56,11 @@ pub struct RbumCertDetailResp {
     pub ext: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
-    pub status: String,
+    pub status: RbumCertStatusKind,
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
-    pub rel_rbum_kind: String,
+    pub rel_rbum_kind: RbumCertRelKind,
     pub rel_rbum_id: String,
-    pub rel_rbum_name: String,
 
     pub own_paths: String,
     pub owner: String,

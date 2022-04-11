@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::Object;
 pub struct IamCtTenantModifyReq {
     pub name: Option<TrimString>,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub contact_phone: Option<String>,
 

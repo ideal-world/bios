@@ -14,7 +14,7 @@ pub struct Model {
     pub name: String,
     pub note: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
     // Basic
     pub own_paths: String,
@@ -22,7 +22,7 @@ pub struct Model {
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
-    pub scope_level: i32,
+    pub scope_level: u8,
     // With Status
     pub disabled: bool,
 }
@@ -45,7 +45,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Icon).not_null().string())
-            .col(ColumnDef::new(Column::Sort).not_null().integer())
+            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::Ext).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
@@ -53,7 +53,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().integer())
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_unsigned())
             // With Status
             .col(ColumnDef::new(Column::Disabled).not_null().boolean())
             .to_owned()

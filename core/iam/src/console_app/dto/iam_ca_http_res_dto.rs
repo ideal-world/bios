@@ -10,7 +10,7 @@ pub struct IamCaHttpResAddReq {
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub method: TrimString,
@@ -26,7 +26,7 @@ pub struct IamCaHttpResModifyReq {
     pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub method: Option<TrimString>,

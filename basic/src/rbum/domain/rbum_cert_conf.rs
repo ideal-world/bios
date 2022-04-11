@@ -22,8 +22,8 @@ pub struct Model {
     pub repeatable: bool,
     pub is_basic: bool,
     pub rest_by_kinds: String,
-    pub expire_sec: i32,
-    pub coexist_num: i32,
+    pub expire_sec: u32,
+    pub coexist_num: u32,
     pub conn_uri: String,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_item_id: String,
@@ -60,8 +60,8 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Repeatable).not_null().boolean())
             .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
             .col(ColumnDef::new(Column::RestByKinds).not_null().string())
-            .col(ColumnDef::new(Column::ExpireSec).not_null().integer())
-            .col(ColumnDef::new(Column::CoexistNum).not_null().integer())
+            .col(ColumnDef::new(Column::ExpireSec).not_null().unsigned())
+            .col(ColumnDef::new(Column::CoexistNum).not_null().unsigned())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())

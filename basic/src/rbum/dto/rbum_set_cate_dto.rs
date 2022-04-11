@@ -13,7 +13,7 @@ pub struct RbumSetCateAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -34,7 +34,7 @@ pub struct RbumSetCateModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 
@@ -48,7 +48,7 @@ pub struct RbumSetCateSummaryResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
 
     pub own_paths: String,
@@ -65,7 +65,7 @@ pub struct RbumSetCateSummaryWithPidResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
 
     pub own_paths: String,
@@ -83,7 +83,7 @@ pub struct RbumSetCateDetailResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
     pub ext: String,
 
     pub own_paths: String,

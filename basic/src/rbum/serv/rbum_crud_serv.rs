@@ -1,5 +1,3 @@
-use std::process::id;
-
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use serde::Serialize;
@@ -32,13 +30,14 @@ lazy_static! {
 }
 
 #[async_trait]
-pub trait RbumCrudOperation<'a, E, AddReq, ModifyReq, SummaryResp, DetailResp>
+pub trait RbumCrudOperation<'a, E, AddReq, ModifyReq, SummaryResp, DetailResp, FilterReq>
 where
     E: TardisActiveModel + Sync + Send,
     AddReq: Sync + Send,
     ModifyReq: Sync + Send,
     SummaryResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     DetailResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
+    FilterReq: Sync + Send,
 {
     fn get_table_name() -> &'static str;
 
@@ -92,11 +91,17 @@ where
     // ----------------------------- Exist -------------------------------
 
     async fn check_exist_before_delete(id: &str, rel_table_name: &str, rel_field_name: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        let query = Query::select()
-            .column((Alias::new(rel_table_name), ID_FIELD.clone()))
-            .from(Alias::new(rel_table_name))
-            .and_where(Expr::tbl(Alias::new(rel_table_name), Alias::new(rel_field_name)).eq(id));
-        if funs.db().count(query).await? > 0 {
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column((Alias::new(rel_table_name), ID_FIELD.clone()))
+                    .from(Alias::new(rel_table_name))
+                    .and_where(Expr::tbl(Alias::new(rel_table_name), Alias::new(rel_field_name)).eq(id)),
+            )
+            .await?
+            > 0
+        {
             return Err(TardisError::BadRequest(format!(
                 "Can not delete {} when there are {}",
                 Self::get_table_name(),
@@ -107,8 +112,7 @@ where
     }
 
     async fn check_exist_with_cond_before_delete(rel_table_name: &str, condition: Condition, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        let query = Query::select().column((Alias::new(rel_table_name), ID_FIELD.clone())).from(Alias::new(rel_table_name)).cond_where(condition);
-        if funs.db().count(query).await? > 0 {
+        if funs.db().count(Query::select().column((Alias::new(rel_table_name), ID_FIELD.clone())).from(Alias::new(rel_table_name)).cond_where(condition)).await? > 0 {
             return Err(TardisError::BadRequest(format!(
                 "Can not delete {} when there are {}",
                 Self::get_table_name(),
@@ -198,9 +202,9 @@ where
 
     // ----------------------------- Query -------------------------------
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement>;
+    async fn package_query(is_detail: bool, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement>;
 
-    async fn get_rbum(id: &str, filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
+    async fn get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_query(true, filter, funs, cxt).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = funs.db().get_dto(&query).await?;
@@ -212,7 +216,7 @@ where
     }
 
     async fn paginate_rbums(
-        filter: &RbumBasicFilterReq,
+        filter: &FilterReq,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -237,7 +241,7 @@ where
     }
 
     async fn find_rbums(
-        filter: &RbumBasicFilterReq,
+        filter: &FilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
@@ -253,12 +257,12 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
-    async fn count_rbums(filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    async fn count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         let query = Self::package_query(false, filter, funs, cxt).await?;
         funs.db().count(&query).await
     }
 
-    async fn exist_rbum(filter: &RbumBasicFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+    async fn exist_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
         let query = Self::count_rbums(filter, funs, cxt).await?;
         Ok(query > 0)
     }
@@ -271,9 +275,6 @@ pub trait RbumCrudQueryPackage {
 
 impl RbumCrudQueryPackage for SelectStatement {
     fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, with_owner: bool, has_scope: bool, cxt: &TardisContext) -> &mut Self {
-        if filter.rel_cxt_scope {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
-        }
         if filter.rel_cxt_owner {
             self.and_where(Expr::tbl(Alias::new(table_name), OWNER_FIELD.clone()).eq(cxt.owner.as_str()));
         }
@@ -315,6 +316,8 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
         if has_scope && !filter.ignore_scope {
             self.with_scope(table_name, cxt);
+        } else if !has_scope && !filter.ignore_scope {
+            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
         }
         self
     }

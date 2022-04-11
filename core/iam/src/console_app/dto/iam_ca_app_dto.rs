@@ -8,7 +8,7 @@ pub struct IamCaAppAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
@@ -22,7 +22,7 @@ pub struct IamCaAppModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,

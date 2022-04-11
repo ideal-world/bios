@@ -10,7 +10,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
-    pub sort: i32,
+    pub sort: u32,
     pub rel_rbum_set_id: String,
     pub rel_rbum_set_cate_code: String,
     pub rel_rbum_item_id: String,
@@ -35,7 +35,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Sort).not_null().integer())
+            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::RelRbumSetId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumSetCateCode).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())

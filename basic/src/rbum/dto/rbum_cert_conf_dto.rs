@@ -25,8 +25,8 @@ pub struct RbumCertConfAddReq {
     pub is_basic: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub rest_by_kinds: Option<String>,
-    pub expire_sec: Option<i32>,
-    pub coexist_num: Option<i32>,
+    pub expire_sec: Option<u32>,
+    pub coexist_num: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
 
@@ -56,8 +56,8 @@ pub struct RbumCertConfModifyReq {
     pub is_basic: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub rest_by_kinds: Option<String>,
-    pub expire_sec: Option<i32>,
-    pub coexist_num: Option<i32>,
+    pub expire_sec: Option<u32>,
+    pub coexist_num: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: Option<String>,
 }
@@ -91,8 +91,8 @@ pub struct RbumCertConfDetailResp {
     pub repeatable: bool,
     pub is_basic: bool,
     pub rest_by_kinds: String,
-    pub expire_sec: i32,
-    pub coexist_num: i32,
+    pub expire_sec: u32,
+    pub coexist_num: u32,
     pub conn_uri: String,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,

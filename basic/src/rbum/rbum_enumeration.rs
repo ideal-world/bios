@@ -27,7 +27,7 @@ impl RbumScopeLevelKind {
         }
     }
 
-    pub fn to_int(&self) -> i32 {
+    pub fn to_int(&self) -> u8 {
         match self {
             RbumScopeLevelKind::Root => 0,
             RbumScopeLevelKind::L1 => 1,
@@ -69,6 +69,14 @@ impl RbumCertRelKind {
             RbumCertRelKind::Set => 1,
             RbumCertRelKind::Rel => 2,
         }
+    }
+}
+
+#[cfg(feature = "default")]
+impl TryGetable for RbumCertRelKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = u8::try_get(res, pre, col)?;
+        RbumCertRelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
 
@@ -166,7 +174,7 @@ impl TryGetable for RbumDataTypeKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
-pub enum RbumWidgetKind {
+pub enum RbumWidgetTypeKind {
     Input,
     InputTxt,
     InputNum,
@@ -182,9 +190,9 @@ pub enum RbumWidgetKind {
 }
 
 #[cfg(feature = "default")]
-impl TryGetable for RbumWidgetKind {
+impl TryGetable for RbumWidgetTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
-        RbumWidgetKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumWidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }

@@ -13,7 +13,7 @@ pub struct IamUserPwdCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk_rule: Option<String>,
     pub repeatable: Option<bool>,
-    pub expire_sec: Option<i32>,
+    pub expire_sec: Option<u32>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -36,14 +36,14 @@ pub struct IamPhoneVCodeCertConfAddOrModifyReq {
 pub struct IamTokenCertConfAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
-    pub coexist_num: i32,
-    pub expire_sec: Option<i32>,
+    pub coexist_num: u32,
+    pub expire_sec: Option<u32>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamTokenCertConfModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
-    pub coexist_num: Option<i32>,
-    pub expire_sec: Option<i32>,
+    pub coexist_num: Option<u32>,
+    pub expire_sec: Option<u32>,
 }

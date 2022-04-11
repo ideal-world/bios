@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::Object;
 pub struct IamTenantAddReq {
     pub name: TrimString,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub contact_phone: Option<String>,
 
@@ -20,7 +20,7 @@ pub struct IamTenantAddReq {
 pub struct IamTenantModifyReq {
     pub name: Option<TrimString>,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub contact_phone: Option<String>,
 
@@ -33,7 +33,7 @@ pub struct IamTenantSummaryResp {
     pub id: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
 
     pub contact_phone: String,
 
@@ -49,7 +49,7 @@ pub struct IamTenantDetailResp {
     pub id: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
 
     pub contact_phone: String,
 

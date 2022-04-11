@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::Object;
 pub struct IamRoleAddReq {
     pub name: TrimString,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub scope_level: i32,
     pub disabled: Option<bool>,
@@ -18,7 +18,7 @@ pub struct IamRoleAddReq {
 pub struct IamRoleModifyReq {
     pub name: Option<TrimString>,
     pub icon: Option<String>,
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
 
     pub scope_level: Option<i32>,
     pub disabled: Option<bool>,
@@ -29,7 +29,7 @@ pub struct IamRoleSummaryResp {
     pub id: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
 
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -43,7 +43,7 @@ pub struct IamRoleDetailResp {
     pub id: String,
     pub name: String,
     pub icon: String,
-    pub sort: i32,
+    pub sort: u32,
 
     pub owner: String,
     pub owner_name: String,

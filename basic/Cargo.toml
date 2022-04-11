@@ -36,5 +36,3 @@ sea-orm = { version = "^0.7", features = ["macros"], optional = true }
 
 [dev-dependencies]
 tardis = { path = "../../tardis", features = ["test"] }
-
-testcontainers = { version = "^0" }

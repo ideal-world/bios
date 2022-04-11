@@ -34,7 +34,7 @@ pub struct ResourceSubjectAddReq {
     #[validate(length(min = 2, max = 255))]
     pub name: TrimString,
     // 资源主体显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 资源类型
     pub kind: ResourceKind,
     // 资源主体标识URI
@@ -65,7 +65,7 @@ pub struct ResourceSubjectModifyReq {
     #[validate(length(min = 2, max = 255))]
     pub name: Option<TrimString>,
     // 资源主体显示排序，asc
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     // 资源类型
     pub kind: Option<ResourceKind>,
     // 资源主体标识URI
@@ -98,7 +98,7 @@ pub struct ResourceSubjectDetailResp {
     #[validate(length(max = 255))]
     pub name: TrimString,
     // 资源主体显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 资源类型
     #[validate(length(max = 255))]
     pub kind: String,
@@ -162,7 +162,7 @@ pub struct ResourceAddReq {
     #[validate(length(max = 5000))]
     pub action: Option<String>,
     // 资源显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 是否是资源组
     pub res_group: bool,
     // 资源所属组Id
@@ -190,7 +190,7 @@ pub struct ResourceModifyReq {
     #[validate(length(max = 5000))]
     pub action: Option<String>,
     // 资源显示排序，asc
-    pub sort: Option<i32>,
+    pub sort: Option<u32>,
     // 是否是资源组
     pub res_group: Option<bool>,
     // 资源所属组Id
@@ -217,7 +217,7 @@ pub struct ResourceDetailResp {
     #[validate(length(max = 5000))]
     pub action: String,
     // 资源显示排序，asc
-    pub sort: i32,
+    pub sort: u32,
     // 是否是资源组
     pub res_group: bool,
     // 资源所属组Id

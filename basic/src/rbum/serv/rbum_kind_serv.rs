@@ -5,6 +5,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
 use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
@@ -18,13 +19,14 @@ pub struct RbumKindServ;
 pub struct RbumKindAttrServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp> for RbumKindServ {
+impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp, RbumBasicFilterReq> for RbumKindServ {
     fn get_table_name() -> &'static str {
         rbum_kind::Entity.table_name()
     }
 
     async fn package_add(add_req: &RbumKindAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind::ActiveModel> {
         Ok(rbum_kind::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             code: Set(add_req.code.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -94,8 +96,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
             (rbum_kind::Entity, rbum_kind::Column::ScopeLevel),
         ]);
-        query.from(rbum_kind::Entity).with_filter(Self::get_table_name(), filter, is_detail, 
-                                                  true,cxt);
+        query.from(rbum_kind::Entity).with_filter(Self::get_table_name(), filter, is_detail, true, cxt);
         Ok(query)
     }
 }
@@ -112,13 +113,16 @@ impl<'a> RbumKindServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp> for RbumKindAttrServ {
+impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp, RbumBasicFilterReq>
+    for RbumKindAttrServ
+{
     fn get_table_name() -> &'static str {
         rbum_kind_attr::Entity.table_name()
     }
 
     async fn package_add(add_req: &RbumKindAttrAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
         Ok(rbum_kind_attr::ActiveModel {
+            id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
             label: Set(add_req.label.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -247,7 +251,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
             );
         }
-        query.with_filter(Self::get_table_name(), filter, is_detail,true, cxt);
+        query.with_filter(Self::get_table_name(), filter, is_detail, true, cxt);
         Ok(query)
     }
 }
