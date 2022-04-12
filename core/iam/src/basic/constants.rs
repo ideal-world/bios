@@ -1,5 +1,7 @@
 use tardis::basic::result::TardisResult;
 
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+
 pub const RBUM_KIND_SCHEME_IAM_TENANT: &str = "iam_tenant";
 pub const RBUM_KIND_SCHEME_IAM_APP: &str = "iam_app";
 pub const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam_account";
@@ -11,15 +13,15 @@ pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";
 pub const RBUM_ITEM_NAME_TENANT_ADMIN_ROLE: &str = "tenant_admin";
 pub const RBUM_ITEM_NAME_APP_ADMIN_ROLE: &str = "app_admin";
 
-pub const RBUM_ITEM_ID_TENANT_LEN: usize = 6;
-pub const RBUM_ITEM_ID_APP_LEN: usize = 6;
+pub const RBUM_ITEM_ID_TENANT_LEN: u8 = 6;
+pub const RBUM_ITEM_ID_APP_LEN: u8 = 6;
 
-pub const RBUM_SCOPE_LEVEL_GLOBAL: i32 = 0;
-pub const RBUM_SCOPE_LEVEL_TENANT: i32 = 1;
-pub const RBUM_SCOPE_LEVEL_APP: i32 = 2;
+pub const RBUM_SCOPE_LEVEL_GLOBAL: RbumScopeLevelKind = RbumScopeLevelKind::Root;
+pub const RBUM_SCOPE_LEVEL_TENANT: RbumScopeLevelKind = RbumScopeLevelKind::L1;
+pub const RBUM_SCOPE_LEVEL_APP: RbumScopeLevelKind = RbumScopeLevelKind::L2;
 
-pub const RBUM_CERT_CONF_TOKEN_EXPIRE_SEC: i32 = 60 * 60 * 24 * 7;
-pub const RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM: i32 = 5;
+pub const RBUM_CERT_CONF_TOKEN_EXPIRE_SEC: u32 = 60 * 60 * 24 * 7;
+pub const RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM: u32 = 5;
 
 static mut BASIC_INFO: BasicInfo = BasicInfo { info: None };
 

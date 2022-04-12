@@ -1,13 +1,13 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::web::web_resp::TardisPage;
 
-use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumItemFilterReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountModifyReq};
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::enumeration::IAMRelKind;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -19,25 +19,25 @@ pub struct IamCpAccountServ;
 impl<'a> IamCpAccountServ {
     pub async fn modify_account(modify_req: &mut IamCpAccountModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamAccountServ::modify_item(
-            &cxt.account_id,
+            &cxt.owner,
             &mut IamAccountModifyReq {
                 name: modify_req.name.clone(),
                 icon: modify_req.icon.clone(),
                 disabled: modify_req.disabled,
                 scope_level: None,
             },
-            db,
+            funs,
             cxt,
         )
         .await
     }
 
     pub async fn get_account(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
-        IamAccountServ::get_item(&cxt.account_id, &RbumItemFilterReq::default(), db, cxt).await
+        IamAccountServ::get_item(&cxt.owner, &IamAccountFilterReq::default(), funs, cxt).await
     }
 
     pub async fn delete_account(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamAccountServ::delete_item(&cxt.account_id, db, cxt).await
+        IamAccountServ::delete_item(&cxt.owner, funs, cxt).await
     }
 
     pub async fn paginate_rel_roles(
@@ -48,15 +48,15 @@ impl<'a> IamCpAccountServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRoleServ::need_tenant_admin(db, cxt).await?;
+        IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamRelServ::paginate_to_rels(
             IAMRelKind::IamRoleAccount,
-            &cxt.account_id,
+            &cxt.owner,
             page_number,
             page_size,
             desc_sort_by_create,
             desc_sort_by_update,
-            db,
+            funs,
             cxt,
         )
         .await

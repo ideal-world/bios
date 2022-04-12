@@ -8,7 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
-use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
+use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};

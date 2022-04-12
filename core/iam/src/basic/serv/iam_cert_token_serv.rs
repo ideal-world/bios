@@ -1,11 +1,10 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
-use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
+use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -40,10 +39,11 @@ impl<'a> IamCertTokenServ {
                 rest_by_kinds: None,
                 expire_sec: add_req.expire_sec,
                 coexist_num: Some(add_req.coexist_num),
+                conn_uri: None,
                 rel_rbum_domain_id: constants::get_rbum_basic_info().domain_iam_id.to_string(),
                 rel_rbum_item_id: rel_iam_tenant_id,
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -67,8 +67,9 @@ impl<'a> IamCertTokenServ {
                 rest_by_kinds: None,
                 expire_sec: modify_req.expire_sec,
                 coexist_num: modify_req.coexist_num,
+                conn_uri: None,
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -93,10 +94,11 @@ impl<'a> IamCertTokenServ {
                 start_time: None,
                 end_time: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: IamCertServ::get_id_by_code(token_kind.to_string().as_str(), Some(rel_iam_tenant_id), db).await?,
-                rel_rbum_item_id: Some(iam_item_id.to_string()),
+                rel_rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(token_kind.to_string().as_str(), Some(rel_iam_tenant_id), funs).await?),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: iam_item_id.to_string(),
             },
-            db,
+            funs,
             cxt,
         )
         .await?;

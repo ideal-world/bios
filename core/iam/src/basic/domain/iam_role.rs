@@ -8,13 +8,19 @@ use tardis::db::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateS
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    pub icon: String,
+    pub sort: u32,
 }
 
 impl TardisActiveModel for ActiveModel {
     fn fill_cxt(&mut self, _: &TardisContext, _: bool) {}
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
-        Table::create().table(Entity.table_ref()).if_not_exists().col(ColumnDef::new(Column::Id).not_null().string().primary_key()).to_owned()
+        Table::create().table(Entity.table_ref()).if_not_exists()
+            .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
+            .col(ColumnDef::new(Column::Icon).not_null().string())
+            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .to_owned()
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {

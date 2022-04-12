@@ -12,7 +12,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env};
-use crate::rbum::dto::filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq};
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
@@ -82,7 +82,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         Ok(())
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumRelFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumRelFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -116,7 +116,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         if let Some(to_own_paths) = &filter.to_own_paths {
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOwnPaths).eq(to_own_paths.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
         Ok(query)
     }
 }
@@ -432,7 +432,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
         Ok(rbum_rel_attr)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -457,7 +457,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
         if let Some(rel_rbum_rel_id) = &filter.rel_rbum_rel_id {
             query.and_where(Expr::tbl(rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId).eq(rel_rbum_rel_id.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
         Ok(query)
     }
 }
@@ -500,7 +500,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
         Ok(rbum_rel_env)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -519,7 +519,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
         if let Some(rel_rbum_rel_id) = &filter.rel_rbum_rel_id {
             query.and_where(Expr::tbl(rbum_rel_env::Entity, rbum_rel_env::Column::RelRbumRelId).eq(rel_rbum_rel_id.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
         Ok(query)
     }
 }

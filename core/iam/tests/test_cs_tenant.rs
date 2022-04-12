@@ -1,10 +1,13 @@
+use std::default::default;
+
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
-use bios_basic::rbum::dto::filer_dto::RbumItemFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
@@ -59,11 +62,11 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     .0;
 
     info!("【test_cs_tenant】 : Test Get : IamTenantCrudServ::get_item");
-    let tenant = IamTenantServ::get_item(&id1, &RbumItemFilterReq::default(), funs.db(), context).await?;
+    let tenant = IamTenantServ::get_item(&id1, &IamTenantFilterReq::default(), funs.db(), context).await?;
     assert_eq!(tenant.id, id1);
     assert_eq!(tenant.name, "测试租户1");
     assert_eq!(tenant.contact_phone, "");
-    let tenant = IamTenantServ::get_item(&id2, &RbumItemFilterReq::default(), funs.db(), context).await?;
+    let tenant = IamTenantServ::get_item(&id2, &IamTenantFilterReq::default(), funs.db(), context).await?;
     assert_eq!(tenant.id, id2);
     assert_eq!(tenant.name, "测试租户2");
     assert_eq!(tenant.contact_phone, "12345678901");
@@ -89,8 +92,11 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_cs_tenant】 : Test Find : IamTenantCrudServ::paginate_items");
     let tenants = IamTenantServ::paginate_items(
-        &RbumItemFilterReq {
-            name: Some("测试租户%".to_string()),
+        &IamTenantFilterReq {
+            basic: RbumBasicFilterReq {
+                name: Some("测试租户%".to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         },
         1,

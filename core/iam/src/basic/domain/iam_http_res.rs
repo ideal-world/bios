@@ -8,6 +8,8 @@ use tardis::db::sea_query::{ColumnDef, IndexCreateStatement, Table, TableCreateS
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
+    pub icon: String,
+    pub sort: u32,
     pub method:String,
 }
 
@@ -19,6 +21,8 @@ impl TardisActiveModel for ActiveModel {
             .table(Entity.table_ref())
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
+            .col(ColumnDef::new(Column::Icon).not_null().string())
+            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::Method).not_null().string())
             .to_owned()
     }

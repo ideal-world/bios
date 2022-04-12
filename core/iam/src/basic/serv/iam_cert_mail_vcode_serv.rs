@@ -1,7 +1,6 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertConfServ;
@@ -36,10 +35,11 @@ impl<'a> IamCertMailVCodeServ {
                 rest_by_kinds: None,
                 expire_sec: None,
                 coexist_num: Some(1),
+                conn_uri: None,
                 rel_rbum_domain_id: constants::get_rbum_basic_info().domain_iam_id.to_string(),
                 rel_rbum_item_id: rel_iam_tenant_id,
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -63,8 +63,9 @@ impl<'a> IamCertMailVCodeServ {
                 rest_by_kinds: None,
                 expire_sec: None,
                 coexist_num: None,
+                conn_uri: None
             },
-            db,
+            funs,
             cxt,
         )
         .await?;

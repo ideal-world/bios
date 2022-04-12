@@ -11,7 +11,7 @@ use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 
 use crate::rbum::domain::rbum_item;
-use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
+use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::helper::rbum_scope_helper;
 
 lazy_static! {

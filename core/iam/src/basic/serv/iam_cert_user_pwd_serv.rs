@@ -1,13 +1,12 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 
-use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
-use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -42,10 +41,11 @@ impl<'a> IamCertUserPwdServ {
                 rest_by_kinds: Some(format!("{},{}", IamCertKind::MailVCode.to_string(), IamCertKind::PhoneVCode.to_string())),
                 expire_sec: add_req.expire_sec,
                 coexist_num: Some(1),
+                conn_uri: None,
                 rel_rbum_domain_id: constants::get_rbum_basic_info().domain_iam_id.to_string(),
                 rel_rbum_item_id: rel_iam_tenant_id,
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -69,8 +69,9 @@ impl<'a> IamCertUserPwdServ {
                 rest_by_kinds: None,
                 expire_sec: modify_req.expire_sec,
                 coexist_num: None,
+                conn_uri: None,
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -92,10 +93,11 @@ impl<'a> IamCertUserPwdServ {
                 start_time: None,
                 end_time: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: IamCertServ::get_id_by_code(IamCertKind::UserPwd.to_string().as_str(), rel_iam_tenant_id, db).await?,
-                rel_rbum_item_id: Some(iam_item_id.to_string()),
+                rel_rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(IamCertKind::UserPwd.to_string().as_str(), rel_iam_tenant_id, funs).await?),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: iam_item_id.to_string(),
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -110,14 +112,15 @@ impl<'a> IamCertUserPwdServ {
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         let certs = RbumCertServ::find_rbums(
-            &RbumBasicFilterReq {
-                rbum_item_id: Some(iam_item_id.to_string()),
-                rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(rel_iam_tenant_id), db).await?),
+            &RbumCertFilterReq {
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_id: Some(iam_item_id.to_string()),
+                rel_rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(rel_iam_tenant_id), funs).await?),
                 ..Default::default()
             },
             None,
             None,
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -128,7 +131,7 @@ impl<'a> IamCertUserPwdServ {
             )));
         }
         if let Some(cert) = certs.get(0) {
-            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumBasicFilterReq::default(), db, cxt).await
+            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {}", IamCertKind::UserPwd.to_string())))
         }

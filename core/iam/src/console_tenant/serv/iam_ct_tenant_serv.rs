@@ -1,6 +1,5 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -13,7 +12,7 @@ pub struct IamCtTenantServ;
 
 impl IamCtTenantServ {
     pub async fn modify_tenant<'a>(modify_req: &mut IamCtTenantModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRoleServ::need_tenant_admin(db, cxt).await?;
+        IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamTenantServ::modify_item(
             &IamTenantServ::get_id_by_cxt(cxt)?,
             &mut IamTenantModifyReq {
@@ -22,9 +21,9 @@ impl IamCtTenantServ {
                 sort: modify_req.sort,
                 contact_phone: modify_req.contact_phone.clone(),
                 disabled: modify_req.disabled,
-                scope_level: modify_req.scope_level,
+                scope_level: modify_req.scope_level.clone(),
             },
-            db,
+            funs,
             cxt,
         )
         .await
