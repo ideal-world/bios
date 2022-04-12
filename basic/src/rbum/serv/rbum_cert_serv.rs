@@ -11,9 +11,9 @@ use tardis::regex::Regex;
 use tardis::{log, TardisFuns};
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
-use crate::rbum::dto::filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
+use crate::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -400,7 +400,7 @@ impl<'a> RbumCertServ {
                 Err(TardisError::Unauthorized("validation error".to_string()))
             }
         } else {
-            log::warn!("validation error by ak {},rbum_cert_conf_id {}, tenant_id {}", ak, rbum_cert_conf_id, own_paths);
+            log::warn!("validation error by ak {},rbum_cert_conf_id {}, own_paths {}", ak, rbum_cert_conf_id, own_paths);
             Err(TardisError::Unauthorized("validation error".to_string()))
         }
     }
@@ -466,7 +466,7 @@ impl<'a> RbumCertServ {
     pub async fn change_sk(id: &str, original_sk: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::get_rbum(id, filter, funs, cxt).await?;
         let stored_sk = Self::show_sk(id, filter, funs, cxt).await?;
-        let new_sk = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
+        let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::get_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
             let original_sk = if rbum_cert_conf.sk_encrypted {
                 Self::encrypt_sk(original_sk, rbum_cert.ak.as_str())?
@@ -479,22 +479,24 @@ impl<'a> RbumCertServ {
             if !rbum_cert_conf.sk_rule.is_empty() && !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(new_sk) {
                 return Err(TardisError::BadRequest(format!("sk {} is not match sk rule", new_sk)));
             }
+            let end_time = Utc::now() + Duration::seconds(rbum_cert_conf.expire_sec as i64);
             if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(new_sk, rbum_cert.ak.as_str())?
+                (Self::encrypt_sk(new_sk, rbum_cert.ak.as_str())?, end_time)
             } else {
-                new_sk.to_string()
+                (new_sk.to_string(), end_time)
             }
         } else {
             if original_sk != stored_sk {
                 return Err(TardisError::Unauthorized("sk not match".to_string()));
             }
-            new_sk.to_string()
+            (new_sk.to_string(), rbum_cert.start_time + (rbum_cert.end_time - rbum_cert.start_time))
         };
         funs.db()
             .update_one(
                 rbum_cert::ActiveModel {
                     id: Set(id.to_string()),
                     sk: Set(new_sk),
+                    end_time: Set(end_time.naive_utc()),
                     ..Default::default()
                 },
                 cxt,

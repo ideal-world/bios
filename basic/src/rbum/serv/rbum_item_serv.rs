@@ -6,18 +6,18 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
-use crate::rbum::dto::filer_dto::{RbumBasicFilterReq, RbumItemFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
-use crate::rbum::serv::rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, RbumCrudOperation, RbumCrudQueryPackage, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -132,13 +132,14 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
 }
 
 #[async_trait]
-pub trait RbumItemCrudOperation<'a, EXT, AddReq, ModifyReq, SummaryResp, DetailResp>
+pub trait RbumItemCrudOperation<'a, EXT, AddReq, ModifyReq, SummaryResp, DetailResp, ItemFilterReq>
 where
     EXT: TardisActiveModel + Sync + Send,
     AddReq: Sync + Send,
     ModifyReq: Sync + Send,
     SummaryResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     DetailResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
+    ItemFilterReq: Sync + Send + RbumBasicFilterFetcher,
 {
     fn get_ext_table_name() -> &'static str;
     fn get_rbum_kind_id() -> String;
@@ -156,7 +157,7 @@ where
         Ok(EXT::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, is_detail: bool, filter: &RbumItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
+    async fn package_item_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
 
     async fn before_add_item(_: &mut AddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
@@ -235,7 +236,7 @@ where
         Ok(delete_records)
     }
 
-    async fn get_item(id: &str, filter: &RbumItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
+    async fn get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_query(true, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
@@ -252,7 +253,7 @@ where
     }
 
     async fn paginate_items(
-        filter: &RbumItemFilterReq,
+        filter: &ItemFilterReq,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -282,7 +283,7 @@ where
     }
 
     async fn find_items(
-        filter: &RbumItemFilterReq,
+        filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
@@ -303,12 +304,14 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
-    async fn count_items(filter: &RbumItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        funs.db().count(&Self::package_query(false, filter, funs, cxt).await?).await
+    async fn count_items(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        Self::package_item_query(&mut query, false, filter, funs, cxt).await?;
+        funs.db().count(&query).await
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
-        RbumItemServ::package_query(is_detail, &filter.basic, funs, cxt).await
+    async fn package_query(is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+        RbumItemServ::package_query(is_detail, &filter.basic(), funs, cxt).await
     }
 }
 

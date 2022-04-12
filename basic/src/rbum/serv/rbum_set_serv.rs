@@ -8,7 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
-use crate::rbum::dto::filer_dto::RbumBasicFilterReq;
+use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateSummaryWithPidResp};
 use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetSummaryResp};
 use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
@@ -99,11 +99,13 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         query
             .columns(vec![
                 (rbum_set::Entity, rbum_set::Column::Id),
+                (rbum_set::Entity, rbum_set::Column::Code),
                 (rbum_set::Entity, rbum_set::Column::Name),
                 (rbum_set::Entity, rbum_set::Column::Note),
                 (rbum_set::Entity, rbum_set::Column::Icon),
                 (rbum_set::Entity, rbum_set::Column::Sort),
                 (rbum_set::Entity, rbum_set::Column::Ext),
+                (rbum_set::Entity, rbum_set::Column::Disabled),
                 (rbum_set::Entity, rbum_set::Column::OwnPaths),
                 (rbum_set::Entity, rbum_set::Column::Owner),
                 (rbum_set::Entity, rbum_set::Column::CreateTime),

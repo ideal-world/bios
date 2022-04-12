@@ -114,6 +114,10 @@ impl Default for RbumRelExtFilterReq {
     }
 }
 
+pub trait RbumBasicFilterFetcher {
+    fn basic(&self) -> &RbumBasicFilterReq;
+}
+
 #[derive(Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
 pub struct RbumItemFilterReq {
@@ -123,5 +127,11 @@ pub struct RbumItemFilterReq {
 impl Default for RbumItemFilterReq {
     fn default() -> Self {
         Self { basic: Default::default() }
+    }
+}
+
+impl RbumBasicFilterFetcher for RbumItemFilterReq {
+    fn basic(&self) -> &RbumBasicFilterReq {
+        &self.basic
     }
 }

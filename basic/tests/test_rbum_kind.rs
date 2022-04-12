@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq};
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};

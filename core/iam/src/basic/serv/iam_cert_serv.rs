@@ -1,13 +1,12 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -38,14 +37,14 @@ impl<'a> IamCertServ {
                 expire_sec: None,
             },
             None,
-            db,
+            funs,
             cxt,
         )
         .await?;
 
-        IamCertMailVCodeServ::add_cert_conf(&mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, None, db, cxt).await?;
+        IamCertMailVCodeServ::add_cert_conf(&mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, None, funs, cxt).await?;
 
-        IamCertPhoneVCodeServ::add_cert_conf(&mut IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, None, db, cxt).await?;
+        IamCertPhoneVCodeServ::add_cert_conf(&mut IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, None, funs, cxt).await?;
 
         IamCertTokenServ::add_cert_conf(
             &mut IamTokenCertConfAddReq {
@@ -55,7 +54,7 @@ impl<'a> IamCertServ {
             },
             IamCertTokenKind::TokenDefault,
             None,
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -68,7 +67,7 @@ impl<'a> IamCertServ {
             },
             IamCertTokenKind::TokenPc,
             None,
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -81,7 +80,7 @@ impl<'a> IamCertServ {
             },
             IamCertTokenKind::TokenPhone,
             None,
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -94,7 +93,7 @@ impl<'a> IamCertServ {
             },
             IamCertTokenKind::TokenPad,
             None,
-            db,
+            funs,
             cxt,
         )
         .await?;
@@ -105,12 +104,12 @@ impl<'a> IamCertServ {
     pub async fn get_cert_conf(id: &str, rbum_item_id: Option<String>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
         RbumCertConfServ::get_rbum(
             id,
-            &RbumBasicFilterReq {
-                rbum_domain_id: Some(constants::get_rbum_basic_info().domain_iam_id.to_string()),
-                rbum_item_id,
+            &RbumCertConfFilterReq {
+                rel_rbum_domain_id: Some(constants::get_rbum_basic_info().domain_iam_id.to_string()),
+                rel_rbum_item_id: rbum_item_id,
                 ..Default::default()
             },
-            db,
+            funs,
             cxt,
         )
         .await
@@ -127,32 +126,35 @@ impl<'a> IamCertServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumCertConfSummaryResp>> {
         RbumCertConfServ::paginate_rbums(
-            &RbumBasicFilterReq {
-                name: q_name,
-                rbum_domain_id: Some(constants::get_rbum_basic_info().domain_iam_id.to_string()),
-                rbum_item_id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    name: q_name,
+                    ..Default::default()
+                },
+                rel_rbum_domain_id: Some(constants::get_rbum_basic_info().domain_iam_id.to_string()),
+                rel_rbum_item_id: rbum_item_id,
                 ..Default::default()
             },
             page_number,
             page_size,
             desc_sort_by_create,
             desc_sort_by_update,
-            db,
+            funs,
             cxt,
         )
         .await
     }
 
     pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumCertConfServ::delete_rbum(id, db, cxt).await
+        RbumCertConfServ::delete_rbum(id, funs, cxt).await
     }
 
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumCertServ::delete_rbum(id, db, cxt).await
+        RbumCertServ::delete_rbum(id, funs, cxt).await
     }
 
     pub async fn get_id_by_code(code: &str, rel_iam_tenant_id: Option<&str>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &constants::get_rbum_basic_info().domain_iam_id, rel_iam_tenant_id.unwrap_or(""), db)
+        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &constants::get_rbum_basic_info().domain_iam_id, rel_iam_tenant_id.unwrap_or(""), funs)
             .await?
             .ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
     }
@@ -178,14 +180,14 @@ impl<'a> IamCertServ {
         let mut context = TardisContext {
             own_paths,
             ak: ak.to_string(),
-            account_id: account_id.to_string(),
+            owner: account_id.to_string(),
             token: token.unwrap_or("").to_string(),
             token_kind: token_kind.unwrap_or("").to_string(),
             roles: vec![],
             // TODO
             groups: vec![],
         };
-        let roles = IamRelServ::paginate_to_rels(IAMRelKind::IamRoleAccount, account_id, 1, u64::MAX, Some(true), None, db, &context)
+        let roles = IamRelServ::paginate_to_rels(IAMRelKind::IamRoleAccount, account_id, 1, u64::MAX, Some(true), None, funs, &context)
             .await?
             .records
             .iter()

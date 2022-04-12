@@ -32,9 +32,6 @@ pub struct LifeHold<'a> {
 }
 
 pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
-    env::set_var("TARDIS_CACHE.ENABLED", "false");
-    env::set_var("TARDIS_MQ.ENABLED", "false");
-
     let mysql_container = TardisTestContainer::mysql_custom(None, docker);
     let port = mysql_container.get_host_port(3306);
     let url = format!("mysql://root:123456@localhost:{}/test", port);
@@ -49,10 +46,9 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     // let port = rabbit_container.get_host_port(5672);
     // let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
     // env::set_var("TARDIS_FW.MQ.URL", url);
-    env::set_var("TARDIS_FW.MQ.ENABLED", "false");
 
     env::set_var("RUST_LOG", "debug");
-    TardisFuns::init("").await?;
+    TardisFuns::init("tests/config").await?;
 
     bios_basic::rbum::rbum_initializer::init_db().await?;
 

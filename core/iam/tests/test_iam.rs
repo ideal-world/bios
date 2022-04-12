@@ -1,5 +1,5 @@
 use tardis::basic::result::TardisResult;
-use tardis::{tokio, TardisFuns};
+use tardis::{testcontainers, tokio, TardisFuns};
 
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_iam::basic::constants;
@@ -14,7 +14,7 @@ async fn test_iam() -> TardisResult<()> {
     let cxt = get_first_account_context(
         constants::RBUM_KIND_SCHEME_IAM_ACCOUNT,
         &bios_basic::Components::Iam.to_string(),
-        &TardisFuns::reldb().conn(),
+        &TardisFuns::inst_with_db_conn(""),
     )
     .await?
     .unwrap();

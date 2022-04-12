@@ -2,29 +2,31 @@ use std::env;
 
 use tardis::basic::config::NoneConfig;
 use tardis::basic::result::TardisResult;
-use tardis::test::test_container::TardisTestContainer;
 use tardis::TardisFuns;
+use tardis::test::test_container::TardisTestContainer;
+use tardis::testcontainers::clients::Cli;
+use tardis::testcontainers::Container;
+use tardis::testcontainers::images::generic::GenericImage;
+use tardis::testcontainers::images::redis::Redis;
+
 use testcontainers::clients::Cli;
+use testcontainers::Container;
 use testcontainers::images::generic::GenericImage;
 use testcontainers::images::redis::Redis;
-use testcontainers::Container;
 
 pub struct LifeHold<'a> {
-    pub mysql: Container<'a, Cli, GenericImage>,
-    pub redis: Container<'a, Cli, Redis>,
+    pub mysql: Container<'a, GenericImage>,
+    pub redis: Container<'a, Redis>,
 }
 
-pub async fn init<'a>(docker: &'a Cli) -> TardisResult<LifeHold<'a>> {
-    env::set_var("TARDIS_CACHE.ENABLED", "false");
-    env::set_var("TARDIS_MQ.ENABLED", "false");
-
+pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     let mysql_container = TardisTestContainer::mysql_custom(None, &docker);
-    let port = mysql_container.get_host_port(3306).expect("Test port acquisition error");
+    let port = mysql_container.get_host_port(3306);
     let url = format!("mysql://root:123456@localhost:{}/test", port);
     env::set_var("TARDIS_DB.URL", url);
 
     let redis_container = TardisTestContainer::redis_custom(&docker);
-    let port = redis_container.get_host_port(6379).expect("Test port acquisition error");
+    let port = redis_container.get_host_port(6379);
     let url = format!("redis://127.0.0.1:{}/0", port);
     env::set_var("TARDIS_CACHE.URL", url);
     //
@@ -34,7 +36,7 @@ pub async fn init<'a>(docker: &'a Cli) -> TardisResult<LifeHold<'a>> {
     // env::set_var("TARDIS_MQ.URL", url);
 
     env::set_var("RUST_LOG", "debug");
-    TardisFuns::init::<NoneConfig>("").await?;
+    TardisFuns::init("tests/config").await?;
 
     bios_iam::iam_initializer::init_db().await?;
 

@@ -1,11 +1,10 @@
-use tardis::basic::dto::TardisContext;
+use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelEnvAggAddReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
-use bios_basic::rbum::rbum_enumeration::RbumRelEnvKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
@@ -26,6 +25,8 @@ impl<'a> IamRelServ {
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: rel_kind.to_string(),
+                note: None,
+                from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
                 to_own_paths: cxt.own_paths.to_string(),
@@ -42,7 +43,7 @@ impl<'a> IamRelServ {
                 vec![]
             },
         };
-        RbumRelServ::add_rel(req, db, cxt).await?;
+        RbumRelServ::add_rel(req, funs, cxt).await?;
         Ok(())
     }
 
@@ -58,12 +59,13 @@ impl<'a> IamRelServ {
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         RbumRelServ::paginate_from_rels(
             &rel_kind.to_string(),
+            &RbumRelFromKind::Item,
             from_iam_item_id,
             page_number,
             page_size,
             desc_sort_by_create,
             desc_sort_by_update,
-            db,
+            funs,
             cxt,
         )
         .await
@@ -86,7 +88,7 @@ impl<'a> IamRelServ {
             page_size,
             desc_sort_by_create,
             desc_sort_by_update,
-            db,
+            funs,
             cxt,
         )
         .await
@@ -96,15 +98,16 @@ impl<'a> IamRelServ {
         let id = RbumRelServ::find_rel_id(
             &RbumRelFindReq {
                 tag: rel_kind.to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
             },
-            db,
+            funs,
             cxt,
         )
         .await?;
         if let Some(id) = id {
-            RbumRelServ::delete_rbum(&id, db, cxt).await?;
+            RbumRelServ::delete_rbum(&id, funs, cxt).await?;
         }
         Ok(())
     }
