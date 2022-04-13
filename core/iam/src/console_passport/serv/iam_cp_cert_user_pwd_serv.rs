@@ -5,7 +5,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertModifyReq;
-use crate::basic::enumeration::{IamCertKind, IamCertTokenKind};
+use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;

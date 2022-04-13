@@ -33,7 +33,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_rbum_rel】 : Prepare Kind : RbumKindServ::add_rbum");
@@ -245,7 +245,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_rbum_rel_attr】 : Prepare Kind : RbumKindServ::add_rbum");
@@ -466,7 +466,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_rbum_rel_env】 : Prepare Kind : RbumKindServ::add_rbum");
@@ -645,7 +645,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_rbum_rel_use】 : Prepare Kind : RbumKindServ::add_rbum");

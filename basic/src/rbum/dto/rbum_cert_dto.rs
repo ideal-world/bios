@@ -15,6 +15,8 @@ pub struct RbumCertAddReq {
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub conn_uri: Option<String>,
     pub status: RbumCertStatusKind,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -30,6 +32,8 @@ pub struct RbumCertModifyReq {
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub conn_uri: Option<String>,
     pub status: Option<RbumCertStatusKind>,
 }
 
@@ -56,6 +60,7 @@ pub struct RbumCertDetailResp {
     pub ext: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
+    pub conn_uri: String,
     pub status: RbumCertStatusKind,
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,

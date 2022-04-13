@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use std::default::Default;
 use tardis::web::poem_openapi::Object;
 
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 
-#[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(Object, Serialize, Deserialize, Debug, Clone,Default)]
 #[serde(default)]
 pub struct RbumBasicFilterReq {
     pub ignore_scope: bool,
@@ -17,23 +18,6 @@ pub struct RbumBasicFilterReq {
     pub code: Option<String>,
     pub rbum_kind_id: Option<String>,
     pub rbum_domain_id: Option<String>,
-}
-
-impl Default for RbumBasicFilterReq {
-    fn default() -> Self {
-        Self {
-            ignore_scope: false,
-            rel_cxt_owner: false,
-            own_paths: None,
-            ids: None,
-            scope_level: None,
-            enabled: None,
-            name: None,
-            code: None,
-            rbum_kind_id: None,
-            rbum_domain_id: None,
-        }
-    }
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

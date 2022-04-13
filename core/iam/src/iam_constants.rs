@@ -1,4 +1,6 @@
+use tardis::basic::dto::TardisFunsInst;
 use tardis::basic::result::TardisResult;
+use tardis::TardisFuns;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
@@ -57,4 +59,8 @@ pub fn get_rbum_basic_info() -> &'static BasicInfoPub {
             None => panic!("Basic info not set"),
         }
     }
+}
+
+pub fn get_tardis_inst<'a>() -> TardisFunsInst<'a> {
+    TardisFuns::inst_with_db_conn(bios_basic::Components::Iam.to_string())
 }

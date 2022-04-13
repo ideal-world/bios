@@ -1,15 +1,14 @@
-use bios_basic::Components;
-use tardis::basic::dto::TardisFunsInst;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
-use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumItemFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 
+use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantDetailResp, IamTenantSummaryResp};
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
 use crate::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
+use crate::iam_constants;
 
 pub struct IamCsTenantApi;
 
@@ -19,7 +18,7 @@ impl IamCsTenantApi {
     /// Add Tenant
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
-        let mut funs = TardisFunsInst::conn(&Components::Iam.to_string());
+        let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamCsTenantServ::add_tenant(&mut add_req.0, &funs, &cxt.0).await?.1;
         funs.commit().await?;
@@ -29,17 +28,17 @@ impl IamCsTenantApi {
     /// Modify Tenant By Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCsTenantModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        IamCsTenantServ::modify_tenant(&id.0, &mut modify_req.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCsTenantServ::modify_tenant(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Tenant By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
-        let result = IamCsTenantServ::get_tenant(&id.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCsTenantServ::get_tenant(&id.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -55,15 +54,18 @@ impl IamCsTenantApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamTenantSummaryResp>> {
         let result = IamCsTenantServ::paginate_tenants(
-            &RbumItemFilterReq {
-                name: name.0,
+            &IamTenantFilterReq {
+                basic: RbumBasicFilterReq {
+                    name: name.0,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             page_number.0,
             page_size.0,
             desc_by_create.0,
             desc_by_update.0,
-            &TardisFuns::reldb().conn(),
+            &iam_constants::get_tardis_inst(),
             &cxt.0,
         )
         .await?;
@@ -73,10 +75,10 @@ impl IamCsTenantApi {
     /// Delete Tenant By Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        IamCsTenantServ::delete_tenant(&id.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCsTenantServ::delete_tenant(&id.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 }

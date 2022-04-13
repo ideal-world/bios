@@ -1,20 +1,19 @@
-use std::default::default;
-
-use tardis::basic::dto::{TardisContext, TardisFunsInst};
+use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
 use bios_iam::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
+use bios_iam::iam_constants;
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFunsInst::conn("");
+    let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
     info!("【test_cs_tenant】 : Test Add : IamCsTenantServ::add_tenant");
@@ -62,17 +61,17 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     .0;
 
     info!("【test_cs_tenant】 : Test Get : IamTenantCrudServ::get_item");
-    let tenant = IamTenantServ::get_item(&id1, &IamTenantFilterReq::default(), funs.db(), context).await?;
+    let tenant = IamTenantServ::get_item(&id1, &IamTenantFilterReq::default(), &funs, context).await?;
     assert_eq!(tenant.id, id1);
     assert_eq!(tenant.name, "测试租户1");
     assert_eq!(tenant.contact_phone, "");
-    let tenant = IamTenantServ::get_item(&id2, &IamTenantFilterReq::default(), funs.db(), context).await?;
+    let tenant = IamTenantServ::get_item(&id2, &IamTenantFilterReq::default(), &funs, context).await?;
     assert_eq!(tenant.id, id2);
     assert_eq!(tenant.name, "测试租户2");
     assert_eq!(tenant.contact_phone, "12345678901");
 
     info!("【test_cs_tenant】 : Test Modify : IamCsTenantServ::modify_tenant");
-    IamCsTenantServ::modify_tenant(&id1, &mut IamCsTenantModifyReq { disabled: Some(true) }, funs.db(), context).await?;
+    IamCsTenantServ::modify_tenant(&id1, &mut IamCsTenantModifyReq { disabled: Some(true) }, &funs, context).await?;
 
     info!("【test_cs_tenant】 : Test Modify : IamTenantCrudServ::modify_item");
     IamTenantServ::modify_item(
@@ -85,7 +84,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             scope_level: None,
         },
-        funs.db(),
+        &funs,
         context,
     )
     .await?;
@@ -103,7 +102,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
         10,
         None,
         None,
-        funs.db(),
+        &funs,
         context,
     )
     .await?;
@@ -113,7 +112,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     assert!(tenants.records.iter().any(|r| r.disabled));
 
     info!("【test_cs_tenant】 : Test Delete : IamTenantCrudServ::delete_item");
-    assert!(IamTenantServ::delete_item(&id1, funs.db(), context).await.is_err());
+    assert!(IamTenantServ::delete_item(&id1, &funs, context).await.is_err());
 
     funs.rollback().await?;
 

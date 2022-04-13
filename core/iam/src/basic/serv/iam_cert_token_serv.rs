@@ -8,9 +8,9 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
-use crate::basic::constants;
+use crate::iam_constants;
 use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamTokenCertConfModifyReq};
-use crate::basic::enumeration::IamCertTokenKind;
+use crate::iam_enumeration::IamCertTokenKind;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 
 pub struct IamCertTokenServ;
@@ -40,7 +40,7 @@ impl<'a> IamCertTokenServ {
                 expire_sec: add_req.expire_sec,
                 coexist_num: Some(add_req.coexist_num),
                 conn_uri: None,
-                rel_rbum_domain_id: constants::get_rbum_basic_info().domain_iam_id.to_string(),
+                rel_rbum_domain_id: iam_constants::get_rbum_basic_info().domain_iam_id.to_string(),
                 rel_rbum_item_id: rel_iam_tenant_id,
             },
             funs,

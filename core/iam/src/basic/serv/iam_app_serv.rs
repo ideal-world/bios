@@ -11,8 +11,8 @@ use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::constants;
-use crate::basic::constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
+use crate::iam_constants;
+use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
@@ -26,11 +26,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 
     fn get_rbum_kind_id() -> String {
-        constants::get_rbum_basic_info().kind_app_id.clone()
+        iam_constants::get_rbum_basic_info().kind_app_id.clone()
     }
 
     fn get_rbum_domain_id() -> String {
-        constants::get_rbum_basic_info().domain_iam_id.clone()
+        iam_constants::get_rbum_basic_info().domain_iam_id.clone()
     }
 
     async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {

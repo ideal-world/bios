@@ -5,10 +5,10 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::constants;
+use crate::iam_constants;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
-use crate::basic::enumeration::IAMRelKind;
+use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -26,7 +26,7 @@ impl<'a> IamCtAppServ {
                 sort: None,
                 contact_phone: add_req.contact_phone.clone(),
                 disabled: add_req.disabled,
-                scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
             },
             &IAMRelKind::IamAppTenant.to_string(),
             &IamTenantServ::get_id_by_cxt(cxt)?,

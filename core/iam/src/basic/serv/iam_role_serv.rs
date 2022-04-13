@@ -3,7 +3,6 @@ use sea_orm::EntityName;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisRelDBlConnection;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 
@@ -13,11 +12,11 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::constants;
+use crate::iam_constants;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
-use crate::basic::enumeration::IAMRelKind;
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamRoleServ;
 
@@ -28,11 +27,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     }
 
     fn get_rbum_kind_id() -> String {
-        constants::get_rbum_basic_info().kind_role_id.clone()
+        iam_constants::get_rbum_basic_info().kind_role_id.clone()
     }
 
     fn get_rbum_domain_id() -> String {
-        constants::get_rbum_basic_info().domain_iam_id.clone()
+        iam_constants::get_rbum_basic_info().domain_iam_id.clone()
     }
 
     async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
@@ -76,7 +75,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
             ..Default::default()
         };
         if let Some(icon) = &modify_req.icon {
-            iam_role.icon = Set(icon.0.to_string());
+            iam_role.icon = Set(icon.to_string());
         }
         if let Some(sort) = modify_req.sort {
             iam_role.sort = Set(sort);
@@ -93,15 +92,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
 
 impl IamRoleServ {
     pub async fn need_sys_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::need_role(&constants::get_rbum_basic_info().role_sys_admin_id, funs, cxt).await
+        Self::need_role(&iam_constants::get_rbum_basic_info().role_sys_admin_id, funs, cxt).await
     }
 
     pub async fn need_tenant_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::need_role(&constants::get_rbum_basic_info().role_tenant_admin_id, funs, cxt).await
+        Self::need_role(&iam_constants::get_rbum_basic_info().role_tenant_admin_id, funs, cxt).await
     }
 
     pub async fn need_app_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::need_role(&constants::get_rbum_basic_info().role_app_admin_id, funs, cxt).await
+        Self::need_role(&iam_constants::get_rbum_basic_info().role_app_admin_id, funs, cxt).await
     }
 
     pub async fn need_role<'a>(iam_role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
