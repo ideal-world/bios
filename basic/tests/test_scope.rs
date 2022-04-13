@@ -11,7 +11,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
 pub async fn test() -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_scope】 : Prepare");

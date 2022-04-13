@@ -6,10 +6,10 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::constants;
+use crate::iam_constants;
 use crate::basic::dto::iam_filer_dto::IamHttpResFilterReq;
 use crate::basic::dto::iam_http_res_dto::{IamHttpResAddReq, IamHttpResDetailResp, IamHttpResModifyReq, IamHttpResSummaryResp};
-use crate::basic::enumeration::IAMRelKind;
+use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_http_res_serv::IamHttpResServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
@@ -27,7 +27,7 @@ impl<'a> IamCtHttpResServ {
                 code: add_req.code.clone(),
                 icon: add_req.icon.clone(),
                 disabled: add_req.disabled,
-                scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
                 sort: add_req.sort,
                 method: add_req.method.clone(),
             },

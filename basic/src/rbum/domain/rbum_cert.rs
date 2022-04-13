@@ -16,6 +16,7 @@ pub struct Model {
     pub ext: String,
     pub start_time: DateTime,
     pub end_time: DateTime,
+    pub conn_uri: String,
     pub status: String,
     pub rel_rbum_cert_conf_id: String,
     pub rel_rbum_kind: u8,
@@ -46,6 +47,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::StartTime).not_null().date_time())
             .col(ColumnDef::new(Column::EndTime).not_null().date_time())
+            .col(ColumnDef::new(Column::ConnUri).not_null().string())
             .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKind).not_null().tiny_unsigned())

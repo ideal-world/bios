@@ -1,11 +1,11 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
-use tardis::TardisFuns;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSummaryResp};
 use crate::console_system::dto::iam_cs_account_dto::IamCsAccountModifyReq;
 use crate::console_system::serv::iam_cs_account_serv::IamCsAccountServ;
+use crate::iam_constants;
 
 pub struct IamCsAccountApi;
 
@@ -15,17 +15,17 @@ impl IamCsAccountApi {
     /// Modify Account By Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCsAccountModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        IamCsAccountServ::modify_account(&id.0, &mut modify_req.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCsAccountServ::modify_account(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Account By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
-        let result = IamCsAccountServ::get_account(&id.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCsAccountServ::get_account(&id.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -48,7 +48,7 @@ impl IamCsAccountApi {
             page_size.0,
             desc_by_create.0,
             desc_by_update.0,
-            &TardisFuns::reldb().conn(),
+            &iam_constants::get_tardis_inst(),
             &cxt.0,
         )
         .await?;

@@ -23,7 +23,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_rbum_item】 : Prepare Kind : RbumKindServ::add_rbum");
@@ -172,7 +172,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     info!("【test_rbum_item_attr】 : Prepare Kind : RbumKindServ::add_rbum");

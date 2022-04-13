@@ -8,7 +8,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::enumeration::IAMRelKind;
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamRelServ;
 

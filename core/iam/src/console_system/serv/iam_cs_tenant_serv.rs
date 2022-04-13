@@ -5,13 +5,13 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::constants;
+use crate::iam_constants;
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
-use crate::basic::enumeration::{IAMRelKind, IamCertTokenKind};
+use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -35,7 +35,7 @@ impl<'a> IamCsTenantServ {
                 sort: None,
                 contact_phone: add_req.tenant_contact_phone.clone(),
                 disabled: add_req.disabled,
-                scope_level: constants::RBUM_SCOPE_LEVEL_GLOBAL,
+                scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
             },
             funs,
             cxt,
@@ -47,7 +47,7 @@ impl<'a> IamCsTenantServ {
                 name: add_req.admin_name.clone(),
                 icon: None,
                 disabled: add_req.disabled,
-                scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
             },
             &IAMRelKind::IamAccountTenant.to_string(),
             &tenant_id,
@@ -59,7 +59,7 @@ impl<'a> IamCsTenantServ {
         IamRelServ::add_rel(
             IAMRelKind::IamAccountTenant,
             &account_id,
-            &constants::get_rbum_basic_info().role_tenant_admin_id,
+            &iam_constants::get_rbum_basic_info().role_tenant_admin_id,
             None,
             None,
             funs,
@@ -100,8 +100,8 @@ impl<'a> IamCsTenantServ {
         IamCertTokenServ::add_cert_conf(
             &mut IamTokenCertConfAddReq {
                 name: TrimString(IamCertTokenKind::TokenDefault.to_string()),
-                coexist_num: constants::RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM,
-                expire_sec: Some(constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
+                coexist_num: iam_constants::RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM,
+                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenDefault,
             Some(tenant_id.to_string()),
@@ -114,7 +114,7 @@ impl<'a> IamCsTenantServ {
             &mut IamTokenCertConfAddReq {
                 name: TrimString(IamCertTokenKind::TokenPc.to_string()),
                 coexist_num: 1,
-                expire_sec: Some(constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
+                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPc,
             Some(tenant_id.to_string()),
@@ -127,7 +127,7 @@ impl<'a> IamCsTenantServ {
             &mut IamTokenCertConfAddReq {
                 name: TrimString(IamCertTokenKind::TokenPhone.to_string()),
                 coexist_num: 1,
-                expire_sec: Some(constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
+                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPhone,
             Some(tenant_id.to_string()),
@@ -140,7 +140,7 @@ impl<'a> IamCsTenantServ {
             &mut IamTokenCertConfAddReq {
                 name: TrimString(IamCertTokenKind::TokenPad.to_string()),
                 coexist_num: 1,
-                expire_sec: Some(constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
+                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPad,
             Some(tenant_id.to_string()),

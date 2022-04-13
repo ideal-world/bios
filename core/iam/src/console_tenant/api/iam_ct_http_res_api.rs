@@ -1,13 +1,13 @@
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
-use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 
 use crate::basic::dto::iam_http_res_dto::{IamHttpResDetailResp, IamHttpResSummaryResp};
 use crate::console_tenant::dto::iam_ct_http_res_dto::{IamCtHttpResAddReq, IamCtHttpResModifyReq};
 use crate::console_tenant::serv::iam_ct_http_res_serv::IamCtHttpResServ;
+use crate::iam_constants;
 
 pub struct IamCtHttpResApi;
 
@@ -17,27 +17,27 @@ impl IamCtHttpResApi {
     /// Add http Res
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamCtHttpResAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        let result = IamCtHttpResServ::add_http_res(&mut add_req.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = IamCtHttpResServ::add_http_res(&mut add_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify http Res By Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCtHttpResModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        IamCtHttpResServ::modify_http_res(&id.0, &mut modify_req.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCtHttpResServ::modify_http_res(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get http Res By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamHttpResDetailResp> {
-        let result = IamCtHttpResServ::get_http_res(&id.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCtHttpResServ::get_http_res(&id.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -52,17 +52,26 @@ impl IamCtHttpResApi {
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamHttpResSummaryResp>> {
-        let result = IamCtHttpResServ::paginate_http_res(name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCtHttpResServ::paginate_http_res(
+            name.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &iam_constants::get_tardis_inst(),
+            &cxt.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 
     /// Delete http Res By Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut tx = TardisFuns::reldb().conn();
-        tx.begin().await?;
-        IamCtHttpResServ::delete_http_res(&id.0, &tx, &cxt.0).await?;
-        tx.commit().await?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCtHttpResServ::delete_http_res(&id.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
@@ -77,7 +86,16 @@ impl IamCtHttpResApi {
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
-        let result = IamCtHttpResServ::paginate_rel_roles(&id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &TardisFuns::reldb().conn(), &cxt.0).await?;
+        let result = IamCtHttpResServ::paginate_rel_roles(
+            &id.0,
+            page_number.0,
+            page_size.0,
+            desc_by_create.0,
+            desc_by_update.0,
+            &iam_constants::get_tardis_inst(),
+            &cxt.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 }

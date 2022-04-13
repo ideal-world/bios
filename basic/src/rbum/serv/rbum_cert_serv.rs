@@ -225,6 +225,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now).naive_utc()),
             end_time: Set(add_req.end_time.unwrap_or_else(Utc::now).naive_utc()),
+            conn_uri: Set(add_req.conn_uri.unwrap_or_else("".to_string()).to_string()),
             status: Set(add_req.status.to_string()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_kind: Set(add_req.rel_rbum_kind.to_int()),
@@ -304,6 +305,9 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         if let Some(status) = &modify_req.status {
             rbum_cert.status = Set(status.to_string());
         }
+        if let Some(conn_uri) = &modify_req.conn_uri {
+            rbum_cert.conn_uri = Set(conn_uri.to_string());
+        }
         Ok(rbum_cert)
     }
 
@@ -316,6 +320,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 (rbum_cert::Entity, rbum_cert::Column::Ext),
                 (rbum_cert::Entity, rbum_cert::Column::StartTime),
                 (rbum_cert::Entity, rbum_cert::Column::EndTime),
+                (rbum_cert::Entity, rbum_cert::Column::ConnUri),
                 (rbum_cert::Entity, rbum_cert::Column::Status),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
                 (rbum_cert::Entity, rbum_cert::Column::RelRbumKind),

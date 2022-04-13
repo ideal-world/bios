@@ -59,7 +59,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
 }
 
 pub async fn init_test_data() -> TardisResult<TardisContext> {
-    let mut funs = TardisFuns::inst_with_db_conn("");
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
     let cxt = TardisContext {

@@ -6,10 +6,10 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::constants;
+use crate::iam_constants;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
-use crate::basic::enumeration::IAMRelKind;
+use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -25,7 +25,7 @@ impl<'a> IamCtRoleServ {
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
                 disabled: add_req.disabled,
-                scope_level: constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
                 sort: add_req.sort,
             },
             &IAMRelKind::IamRoleTenant.to_string(),
