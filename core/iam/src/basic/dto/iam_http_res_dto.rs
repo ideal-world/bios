@@ -6,6 +6,7 @@ use tardis::web::poem_openapi::Object;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamHttpResAddReq {
     pub name: TrimString,
     pub code: TrimString,
@@ -19,6 +20,7 @@ pub struct IamHttpResAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamHttpResModifyReq {
     pub name: Option<TrimString>,
     pub code: Option<TrimString>,
@@ -32,6 +34,7 @@ pub struct IamHttpResModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamHttpResSummaryResp {
     pub id: String,
     pub code: String,
@@ -49,6 +52,7 @@ pub struct IamHttpResSummaryResp {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamHttpResDetailResp {
     pub id: String,
     pub code: String,

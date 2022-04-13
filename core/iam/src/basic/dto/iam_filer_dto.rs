@@ -4,6 +4,7 @@ use tardis::web::poem_openapi::Object;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[oai(rename_all = "camelCase")]
 #[serde(default)]
 pub struct IamAccountFilterReq {
     pub basic: RbumBasicFilterReq,
@@ -106,6 +107,7 @@ impl RbumBasicFilterFetcher for IamHttpResFilterReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[oai(rename_all = "camelCase")]
 #[serde(default)]
 pub struct IamRoleFilterReq {
     pub basic: RbumBasicFilterReq,
