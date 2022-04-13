@@ -6,6 +6,7 @@ use tardis::web::poem_openapi::Object;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamRoleAddReq {
     pub name: TrimString,
 
@@ -17,6 +18,7 @@ pub struct IamRoleAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamRoleModifyReq {
     pub name: Option<TrimString>,
 
@@ -28,6 +30,7 @@ pub struct IamRoleModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamRoleSummaryResp {
     pub id: String,
     pub name: String,
@@ -43,6 +46,7 @@ pub struct IamRoleSummaryResp {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamRoleDetailResp {
     pub id: String,
     pub name: String,

@@ -3,12 +3,14 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::FromQueryResult;
 use tardis::web::poem_openapi::Object;
+
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamAppAddReq {
     pub name: TrimString,
-    
+
     pub scope_level: RbumScopeLevelKind,
     pub disabled: Option<bool>,
 
@@ -17,7 +19,8 @@ pub struct IamAppAddReq {
     pub contact_phone: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamAppModifyReq {
     pub name: Option<TrimString>,
 
@@ -30,6 +33,7 @@ pub struct IamAppModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamAppSummaryResp {
     pub id: String,
     pub name: String,
@@ -46,6 +50,7 @@ pub struct IamAppSummaryResp {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[oai(rename_all = "camelCase")]
 pub struct IamAppDetailResp {
     pub id: String,
     pub name: String,
