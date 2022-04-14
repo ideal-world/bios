@@ -7,7 +7,6 @@ use tardis::web::poem_openapi::Object;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamTenantAddReq {
     pub name: TrimString,
 
@@ -20,7 +19,6 @@ pub struct IamTenantAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamTenantModifyReq {
     pub name: Option<TrimString>,
 
@@ -33,7 +31,6 @@ pub struct IamTenantModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamTenantSummaryResp {
     pub id: String,
     pub name: String,
@@ -50,7 +47,6 @@ pub struct IamTenantSummaryResp {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamTenantDetailResp {
     pub id: String,
     pub name: String,

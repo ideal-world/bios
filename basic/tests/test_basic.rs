@@ -13,6 +13,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
+use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -50,7 +51,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     env::set_var("RUST_LOG", "debug");
     TardisFuns::init("tests/config").await?;
 
-    bios_basic::rbum::rbum_initializer::init_db().await?;
+    bios_basic::rbum::rbum_initializer::init("", RbumConfig::default()).await?;
 
     Ok(LifeHold {
         mysql: mysql_container,

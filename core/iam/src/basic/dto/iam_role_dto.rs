@@ -3,10 +3,10 @@ use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::FromQueryResult;
 use tardis::web::poem_openapi::Object;
+
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
-#[derive(Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAddReq {
     pub name: TrimString,
 
@@ -17,8 +17,7 @@ pub struct IamRoleAddReq {
     pub sort: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleModifyReq {
     pub name: Option<TrimString>,
 
@@ -30,7 +29,6 @@ pub struct IamRoleModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamRoleSummaryResp {
     pub id: String,
     pub name: String,
@@ -46,7 +44,6 @@ pub struct IamRoleSummaryResp {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamRoleDetailResp {
     pub id: String,
     pub name: String,

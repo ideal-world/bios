@@ -8,6 +8,8 @@ use tardis::testcontainers::images::redis::Redis;
 use tardis::testcontainers::Container;
 use tardis::TardisFuns;
 
+use bios_iam::iam_constants;
+
 pub struct LifeHold<'a> {
     pub mysql: Container<'a, GenericImage>,
     pub redis: Container<'a, Redis>,
@@ -25,14 +27,15 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     env::set_var("TARDIS_FW.CACHE.URL", url);
     //
     // let rabbit_container = TardisTestContainer::rabbit_custom(docker);
-    // let port = rabbit_container.get_host_port(5672).expect("Test port acquisition error");
+    // let port = rabbit_container.get_host_port(5672);
     // let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
     // env::set_var("TARDIS_FW.MQ.URL", url);
 
     env::set_var("RUST_LOG", "debug");
     TardisFuns::init("tests/config").await?;
 
-    bios_iam::iam_initializer::init_db().await?;
+    let funs = iam_constants::get_tardis_inst();
+    bios_iam::iam_initializer::init_db(funs).await?;
 
     Ok(LifeHold {
         mysql: mysql_container,

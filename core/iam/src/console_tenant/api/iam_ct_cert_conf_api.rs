@@ -11,7 +11,7 @@ use crate::iam_constants;
 pub struct IamCtCertConfApi;
 
 /// Tenant Console Cert Config API
-#[OpenApi(prefix_path = "/ct/app", tag = "bios_basic::Components::Iam")]
+#[OpenApi(prefix_path = "/ct/cert-conf", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtCertConfApi {
     /// Add Cert Config By UserPwd Kind
     #[oai(path = "/user-pwd", method = "post")]

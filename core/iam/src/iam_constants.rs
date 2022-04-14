@@ -1,5 +1,4 @@
 use tardis::basic::dto::TardisFunsInst;
-use tardis::basic::result::TardisResult;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -24,42 +23,6 @@ pub const RBUM_SCOPE_LEVEL_APP: RbumScopeLevelKind = RbumScopeLevelKind::L2;
 
 pub const RBUM_CERT_CONF_TOKEN_EXPIRE_SEC: u32 = 60 * 60 * 24 * 7;
 pub const RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM: u32 = 5;
-
-static mut BASIC_INFO: BasicInfo = BasicInfo { info: None };
-
-#[derive(Debug)]
-struct BasicInfo {
-    pub info: Option<BasicInfoPub>,
-}
-
-#[derive(Debug)]
-pub struct BasicInfoPub {
-    pub kind_tenant_id: String,
-    pub kind_app_id: String,
-    pub kind_account_id: String,
-    pub kind_role_id: String,
-    pub kind_http_res_id: String,
-    pub domain_iam_id: String,
-    pub role_sys_admin_id: String,
-    pub role_tenant_admin_id: String,
-    pub role_app_admin_id: String,
-}
-
-pub fn set_basic_info(basic_info: BasicInfoPub) -> TardisResult<()> {
-    unsafe {
-        BASIC_INFO.info = Some(basic_info);
-    }
-    Ok(())
-}
-
-pub fn get_rbum_basic_info() -> &'static BasicInfoPub {
-    unsafe {
-        match BASIC_INFO.info {
-            Some(ref info) => info,
-            None => panic!("Basic info not set"),
-        }
-    }
-}
 
 pub fn get_tardis_inst<'a>() -> TardisFunsInst<'a> {
     TardisFuns::inst_with_db_conn(bios_basic::Components::Iam.to_string())

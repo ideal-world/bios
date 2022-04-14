@@ -7,10 +7,10 @@ use tardis::db::sea_query::SelectStatement;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::iam_config::IamBasicInfoManager;
 
 pub struct IamAccountServ;
 
@@ -23,11 +23,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
     }
 
     fn get_rbum_kind_id() -> String {
-        iam_constants::get_rbum_basic_info().kind_account_id.clone()
+        IamBasicInfoManager::get().kind_account_id.clone()
     }
 
     fn get_rbum_domain_id() -> String {
-        iam_constants::get_rbum_basic_info().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id.clone()
     }
 
     async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {

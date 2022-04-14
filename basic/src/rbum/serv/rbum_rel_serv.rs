@@ -357,9 +357,7 @@ impl<'a> RbumRelServ {
                 )
                 .await?;
             for rbum_rel_env in rbum_rel_envs {
-                let kind = RbumRelEnvKind::from_str(rbum_rel_env.kind.as_str())
-                    .map_err(|_| TardisError::FormatError(format!("rel env kind convert error {}", rbum_rel_env.kind.as_str())))?;
-                match kind {
+                match rbum_rel_env.kind {
                     RbumRelEnvKind::DatetimeRange => {
                         if i64::from_str(rbum_rel_env.value1.as_str())? > Utc::now().timestamp() || i64::from_str(rbum_rel_env.value2.as_str())? < Utc::now().timestamp() {
                             return Ok(false);
@@ -473,7 +471,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
     async fn package_add(add_req: &RbumRelEnvAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_rel_env::ActiveModel> {
         Ok(rbum_rel_env::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
-            kind: Set(add_req.kind.to_string()),
+            kind: Set(add_req.kind.to_int()),
             value1: Set(add_req.value1.to_string()),
             value2: Set(add_req.value2.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_rel_id: Set(add_req.rel_rbum_rel_id.to_string()),
@@ -526,7 +524,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
 
 #[derive(Debug, FromQueryResult)]
 struct KindAndValueResp {
-    pub kind: String,
+    pub kind: RbumRelEnvKind,
     pub value1: String,
     pub value2: String,
 }

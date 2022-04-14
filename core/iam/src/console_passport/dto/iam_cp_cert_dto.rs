@@ -1,9 +1,18 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
+pub struct LoginResp {
+    pub name: String,
+    pub token: String,
+    pub roles: HashMap<String, String>,
+    pub groups: HashMap<String, String>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamCpUserPwdLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,
@@ -16,7 +25,6 @@ pub struct IamCpUserPwdLoginReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamCpMailVCodeLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,
@@ -27,7 +35,6 @@ pub struct IamCpMailVCodeLoginReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamCpPhoneVCodeLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,

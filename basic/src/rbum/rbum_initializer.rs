@@ -9,8 +9,10 @@ use tardis::TardisFuns;
 use crate::rbum::domain::{
     rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate, rbum_set_item,
 };
+use crate::rbum::rbum_config::{RbumConfig, RbumConfigManager};
 
-pub async fn init_db() -> TardisResult<()> {
+pub async fn init(code: &str, config: RbumConfig) -> TardisResult<()> {
+    RbumConfigManager::add(code, config)?;
     let db_kind = TardisFuns::reldb().backend();
     let mut tx = TardisFuns::reldb().conn();
     tx.begin().await?;

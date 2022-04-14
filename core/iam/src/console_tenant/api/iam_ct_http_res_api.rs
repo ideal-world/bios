@@ -12,7 +12,7 @@ use crate::iam_constants;
 pub struct IamCtHttpResApi;
 
 /// Tenant Console http Res API
-#[OpenApi(prefix_path = "/ct/http-res", tag = "bios_basic::Components::Iam")]
+#[OpenApi(prefix_path = "/ct/http-res", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtHttpResApi {
     /// Add http Res
     #[oai(path = "/", method = "post")]

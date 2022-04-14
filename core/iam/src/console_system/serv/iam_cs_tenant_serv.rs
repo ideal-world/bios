@@ -5,13 +5,11 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
-use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -22,6 +20,9 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
+use crate::iam_config::IamBasicInfoManager;
+use crate::iam_constants;
+use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 
 pub struct IamCsTenantServ;
 
@@ -59,7 +60,7 @@ impl<'a> IamCsTenantServ {
         IamRelServ::add_rel(
             IAMRelKind::IamAccountTenant,
             &account_id,
-            &iam_constants::get_rbum_basic_info().role_tenant_admin_id,
+            &IamBasicInfoManager::get().role_tenant_admin_id,
             None,
             None,
             funs,

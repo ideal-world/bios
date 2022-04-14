@@ -15,7 +15,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
-tardis = { path = "../../../tardis", features = ["web-server"] }
+tardis = { path = "../../../tardis", features = ["web-server", "test"] }
 
 serde = { version = "^1", features = ["derive"] }
 

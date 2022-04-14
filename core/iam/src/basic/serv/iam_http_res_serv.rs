@@ -7,10 +7,10 @@ use tardis::db::sea_query::{Expr, SelectStatement};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::domain::iam_http_res;
 use crate::basic::dto::iam_filer_dto::IamHttpResFilterReq;
 use crate::basic::dto::iam_http_res_dto::{IamHttpResAddReq, IamHttpResDetailResp, IamHttpResModifyReq, IamHttpResSummaryResp};
+use crate::iam_config::IamBasicInfoManager;
 
 pub struct IamHttpResServ;
 
@@ -23,11 +23,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
     }
 
     fn get_rbum_kind_id() -> String {
-        iam_constants::get_rbum_basic_info().kind_http_res_id.clone()
+        IamBasicInfoManager::get().kind_http_res_id.clone()
     }
 
     fn get_rbum_domain_id() -> String {
-        iam_constants::get_rbum_basic_info().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id.clone()
     }
 
     async fn package_item_add(add_req: &IamHttpResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {

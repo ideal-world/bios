@@ -4,6 +4,19 @@ use derive_more::Display;
 use sea_orm::strum::EnumString;
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi::Enum;
+use tardis::web::poem_openapi::Tags;
+
+#[derive(Tags, Display, Debug)]
+pub enum Tag {
+    #[oai(rename = "Tenant Console")]
+    Tenant,
+    #[oai(rename = "App Console")]
+    App,
+    #[oai(rename = "System Console")]
+    System,
+    #[oai(rename = "Passport")]
+    Passport,
+}
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
 pub enum IamCertKind {

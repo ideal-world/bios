@@ -11,11 +11,11 @@ use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
-use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
+use crate::iam_config::IamBasicInfoManager;
+use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 
 pub struct IamTenantServ;
 
@@ -26,11 +26,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 
     fn get_rbum_kind_id() -> String {
-        iam_constants::get_rbum_basic_info().kind_tenant_id.clone()
+        IamBasicInfoManager::get().kind_tenant_id.clone()
     }
 
     fn get_rbum_domain_id() -> String {
-        iam_constants::get_rbum_basic_info().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id.clone()
     }
 
     async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
