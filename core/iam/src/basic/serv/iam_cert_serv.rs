@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -9,15 +11,21 @@ use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCert
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::console_passport::dto::iam_cp_cert_dto::LoginResp;
+use crate::iam_config::IamBasicInfoManager;
+use crate::iam_constants;
+use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 
 pub struct IamCertServ;
 
@@ -105,7 +113,7 @@ impl<'a> IamCertServ {
         RbumCertConfServ::get_rbum(
             id,
             &RbumCertConfFilterReq {
-                rel_rbum_domain_id: Some(iam_constants::get_rbum_basic_info().domain_iam_id.to_string()),
+                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
                 rel_rbum_item_id: rbum_item_id,
                 ..Default::default()
             },
@@ -131,7 +139,7 @@ impl<'a> IamCertServ {
                     name: q_name,
                     ..Default::default()
                 },
-                rel_rbum_domain_id: Some(iam_constants::get_rbum_basic_info().domain_iam_id.to_string()),
+                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
                 rel_rbum_item_id: rbum_item_id,
                 ..Default::default()
             },
@@ -154,12 +162,12 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_id_by_code(code: &str, rel_iam_tenant_id: Option<&str>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &iam_constants::get_rbum_basic_info().domain_iam_id, rel_iam_tenant_id.unwrap_or(""), funs)
+        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &IamBasicInfoManager::get().domain_iam_id, rel_iam_tenant_id.unwrap_or(""), funs)
             .await?
             .ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
     }
 
-    pub async fn get_tardis_context(
+    pub async fn package_tardis_context(
         iam_tenant_id: Option<&str>,
         iam_app_id: Option<&str>,
         ak: &str,
@@ -195,5 +203,34 @@ impl<'a> IamCertServ {
             .collect::<Vec<String>>();
         context.roles = roles;
         Ok(context)
+    }
+
+    pub async fn package_login_resp_from_context(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<LoginResp> {
+        let name = IamAccountServ::get_item(&cxt.owner, &IamAccountFilterReq::default(), funs, cxt).await?.name;
+        let roles = IamRoleServ::find_items(
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(cxt.roles.clone()),
+                    ..Default::default()
+                },
+                icon: None,
+                sort: None,
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?
+        .iter()
+        .map(|i| (i.id.clone(), i.name.clone()))
+        .collect::<HashMap<String, String>>();
+        Ok(LoginResp {
+            name,
+            token: cxt.token.clone(),
+            roles,
+            // TODO
+            groups: HashMap::new(),
+        })
     }
 }

@@ -10,7 +10,7 @@ use crate::iam_constants;
 pub struct IamCtAppApi;
 
 /// Tenant Console App API
-#[OpenApi(prefix_path = "/ct/app", tag = "bios_basic::Components::Iam")]
+#[OpenApi(prefix_path = "/ct/app", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtAppApi {
     /// Add App
     #[oai(path = "/", method = "post")]

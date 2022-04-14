@@ -3,7 +3,6 @@ use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamUserPwdCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -18,7 +17,6 @@ pub struct IamUserPwdCertConfAddOrModifyReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamMailVCodeCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -27,7 +25,6 @@ pub struct IamMailVCodeCertConfAddOrModifyReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamPhoneVCodeCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -36,7 +33,6 @@ pub struct IamPhoneVCodeCertConfAddOrModifyReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamTokenCertConfAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
@@ -45,7 +41,6 @@ pub struct IamTokenCertConfAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamTokenCertConfModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,

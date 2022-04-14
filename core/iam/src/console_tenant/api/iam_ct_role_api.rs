@@ -12,7 +12,7 @@ use crate::iam_constants;
 pub struct IamCtRoleApi;
 
 /// Tenant Console Role API
-#[OpenApi(prefix_path = "/ct/role", tag = "bios_basic::Components::Iam")]
+#[OpenApi(prefix_path = "/ct/role", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]

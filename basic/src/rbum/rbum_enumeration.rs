@@ -116,34 +116,72 @@ impl TryGetable for RbumRelFromKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
 pub enum RbumCertStatusKind {
-    Pending,
-    Enabled,
     Disabled,
+    Enabled,
+    Pending,
+}
+
+impl RbumCertStatusKind {
+    pub fn from_int(s: u8) -> TardisResult<RbumCertStatusKind> {
+        match s {
+            0 => Ok(RbumCertStatusKind::Disabled),
+            1 => Ok(RbumCertStatusKind::Enabled),
+            2 => Ok(RbumCertStatusKind::Pending),
+            _ => Err(TardisError::FormatError(format!("Invalid RbumCertStatusKind: {}", s))),
+        }
+    }
+
+    pub fn to_int(&self) -> u8 {
+        match self {
+            RbumCertStatusKind::Disabled => 0,
+            RbumCertStatusKind::Enabled => 1,
+            RbumCertStatusKind::Pending => 2,
+        }
+    }
 }
 
 #[cfg(feature = "default")]
 impl TryGetable for RbumCertStatusKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = String::try_get(res, pre, col)?;
-        RbumCertStatusKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        let s = u8::try_get(res, pre, col)?;
+        RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
 pub enum RbumRelEnvKind {
     DatetimeRange,
     TimeRange,
     Ips,
 }
 
+impl RbumRelEnvKind {
+    pub fn from_int(s: u8) -> TardisResult<RbumRelEnvKind> {
+        match s {
+            0 => Ok(RbumRelEnvKind::DatetimeRange),
+            1 => Ok(RbumRelEnvKind::TimeRange),
+            2 => Ok(RbumRelEnvKind::Ips),
+            _ => Err(TardisError::FormatError(format!("Invalid RbumRelEnvKind: {}", s))),
+        }
+    }
+
+    pub fn to_int(&self) -> u8 {
+        match self {
+            RbumRelEnvKind::DatetimeRange => 0,
+            RbumRelEnvKind::TimeRange => 1,
+            RbumRelEnvKind::Ips => 2,
+        }
+    }
+}
+
 #[cfg(feature = "default")]
 impl TryGetable for RbumRelEnvKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = String::try_get(res, pre, col)?;
-        RbumRelEnvKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        let s = u8::try_get(res, pre, col)?;
+        RbumRelEnvKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
 

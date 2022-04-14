@@ -1,5 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSummaryResp};
@@ -10,7 +10,7 @@ use crate::iam_constants;
 pub struct IamCsAccountApi;
 
 /// System Console Account API
-#[OpenApi(prefix_path = "/cs/account", tag = "bios_basic::Components::Iam")]
+#[OpenApi(prefix_path = "/cs/account", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsAccountApi {
     /// Modify Account By Id
     #[oai(path = "/:id", method = "put")]

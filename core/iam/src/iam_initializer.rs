@@ -28,11 +28,18 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_conf_api, iam_ct_http_res_api, iam_ct_role_api, iam_ct_tenant_api};
+use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::*;
 use crate::iam_enumeration::IAMRelKind;
 
-pub async fn init_api(web_server: &mut TardisWebServer) -> TardisResult<()> {
+pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
+    let funs = iam_constants::get_tardis_inst();
+    init_db(funs).await?;
+    init_api(web_server).await
+}
+
+async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             &bios_basic::Components::Iam.to_string(),
@@ -53,9 +60,8 @@ pub async fn init_api(web_server: &mut TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init_db() -> TardisResult<()> {
-    bios_basic::rbum::rbum_initializer::init_db().await?;
-    let mut funs = iam_constants::get_tardis_inst();
+pub async fn init_db<'a>(mut funs: TardisFunsInst<'a>) -> TardisResult<()> {
+    bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let cxt = get_first_account_context(RBUM_KIND_SCHEME_IAM_ACCOUNT, &bios_basic::Components::Iam.to_string(), &funs).await?;
     if let Some(cxt) = cxt {
@@ -127,7 +133,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> 
         .map(|r| r.id.clone())
         .ok_or_else(|| TardisError::NotFound("Initialization error, app admin role not found".to_string()))?;
 
-    set_basic_info(BasicInfoPub {
+    IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
         kind_app_id,
         kind_account_id,
@@ -162,7 +168,7 @@ async fn init_rbum_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
 
     let domain_iam_id = add_domain(funs, &cxt).await?;
 
-    set_basic_info(BasicInfoPub {
+    IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id: kind_tenant_id.to_string(),
         kind_app_id: kind_app_id.to_string(),
         kind_account_id: kind_account_id.to_string(),
@@ -211,7 +217,7 @@ async fn init_rbum_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
     )
     .await?;
 
-    set_basic_info(BasicInfoPub {
+    IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
         kind_app_id,
         kind_account_id,

@@ -11,7 +11,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     // Specific
-    pub kind: String,
+    pub kind: u8,
     pub value1: String,
     pub value2: String,
     pub rel_rbum_rel_id: String,
@@ -36,7 +36,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Kind).not_null().string())
+            .col(ColumnDef::new(Column::Kind).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::Value1).not_null().string())
             .col(ColumnDef::new(Column::Value2).not_null().string())
             .col(ColumnDef::new(Column::RelRbumRelId).not_null().string())

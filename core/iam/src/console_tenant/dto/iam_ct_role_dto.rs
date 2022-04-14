@@ -3,7 +3,6 @@ use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamCtRoleAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
@@ -15,7 +14,6 @@ pub struct IamCtRoleAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-#[oai(rename_all = "camelCase")]
 pub struct IamCtRoleModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,

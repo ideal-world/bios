@@ -1,10 +1,7 @@
 use derive_more::Display;
-use tardis::db::sea_orm::strum::EnumString;
-use tardis::web::poem_openapi::Tags;
 
-#[derive(Tags, Display, EnumString, Debug)]
+#[derive(Display,  Debug)]
 pub enum Components {
     /// IAM Component
-    #[oai(rename = "iam")]
     Iam,
 }

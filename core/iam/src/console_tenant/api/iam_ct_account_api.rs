@@ -1,5 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
@@ -12,7 +12,7 @@ use crate::iam_constants;
 pub struct IamCtAccountApi;
 
 /// Tenant Console Account API
-#[OpenApi(prefix_path = "/ct/account", tag = "bios_basic::Components::Iam")]
+#[OpenApi(prefix_path = "/ct/account", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtAccountApi {
     /// Add Account
     #[oai(path = "/", method = "post")]

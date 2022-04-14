@@ -225,8 +225,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now).naive_utc()),
             end_time: Set(add_req.end_time.unwrap_or_else(Utc::now).naive_utc()),
-            conn_uri: Set(add_req.conn_uri.unwrap_or_else("".to_string()).to_string()),
-            status: Set(add_req.status.to_string()),
+            conn_uri: Set(add_req.conn_uri.as_ref().unwrap_or(&"".to_string()).to_string()),
+            status: Set(add_req.status.to_int()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_kind: Set(add_req.rel_rbum_kind.to_int()),
             rel_rbum_id: Set(add_req.rel_rbum_kind.to_string()),
@@ -303,7 +303,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             rbum_cert.end_time = Set(end_time.naive_utc());
         }
         if let Some(status) = &modify_req.status {
-            rbum_cert.status = Set(status.to_string());
+            rbum_cert.status = Set(status.to_int());
         }
         if let Some(conn_uri) = &modify_req.conn_uri {
             rbum_cert.conn_uri = Set(conn_uri.to_string());
@@ -380,7 +380,7 @@ impl<'a> RbumCertServ {
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
             .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", own_paths).as_str()))
-            .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_string()))
+            .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;

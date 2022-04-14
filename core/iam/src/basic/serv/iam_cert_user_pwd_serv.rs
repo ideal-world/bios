@@ -10,11 +10,11 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq};
-use crate::iam_enumeration::IamCertKind;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::iam_config::IamBasicInfoManager;
+use crate::iam_enumeration::IamCertKind;
 
 pub struct IamCertUserPwdServ;
 
@@ -42,7 +42,7 @@ impl<'a> IamCertUserPwdServ {
                 expire_sec: add_req.expire_sec,
                 coexist_num: Some(1),
                 conn_uri: None,
-                rel_rbum_domain_id: iam_constants::get_rbum_basic_info().domain_iam_id.to_string(),
+                rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
                 rel_rbum_item_id: rel_iam_tenant_id,
             },
             funs,
@@ -92,6 +92,7 @@ impl<'a> IamCertUserPwdServ {
                 ext: None,
                 start_time: None,
                 end_time: None,
+                conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
                 rel_rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(IamCertKind::UserPwd.to_string().as_str(), rel_iam_tenant_id, funs).await?),
                 rel_rbum_kind: RbumCertRelKind::Item,
