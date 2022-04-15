@@ -1,13 +1,12 @@
 use async_trait::async_trait;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
-use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -26,22 +25,20 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_tenant_id.clone()
+        IamBasicInfoManager::get().kind_tenant_id
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id
     }
 
-    async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
-        Ok(RbumItemAddReq {
-            id: Some(TrimString(IamTenantServ::get_new_id())),
+    async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        Ok(RbumItemKernelAddReq {
+            id: add_req.id.clone(),
             code: None,
             name: add_req.name.clone(),
             scope_level: add_req.scope_level.clone(),
             disabled: add_req.disabled,
-            rel_rbum_kind_id: "".to_string(),
-            rel_rbum_domain_id: "".to_string(),
         })
     }
 
@@ -86,7 +83,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         Ok(Some(iam_tenant))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, _: bool, filter: &IamTenantFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamTenantFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_tenant::Entity, iam_tenant::Column::Icon));
         query.column((iam_tenant::Entity, iam_tenant::Column::Sort));
         query.column((iam_tenant::Entity, iam_tenant::Column::ContactPhone));
@@ -103,7 +100,9 @@ impl IamTenantServ {
     }
 
     pub fn get_id_by_cxt(cxt: &TardisContext) -> TardisResult<String> {
-        if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &cxt.own_paths) {
+        if cxt.own_paths.is_empty() {
+            Ok("".to_string())
+        } else if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &cxt.own_paths) {
             Ok(id)
         } else {
             Err(TardisError::Unauthorized(format!("tenant id not found in tardis content {}", cxt.own_paths)))

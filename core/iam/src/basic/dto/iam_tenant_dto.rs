@@ -8,6 +8,7 @@ use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAddReq {
+    pub id: Option<TrimString>,
     pub name: TrimString,
 
     pub scope_level: RbumScopeLevelKind,

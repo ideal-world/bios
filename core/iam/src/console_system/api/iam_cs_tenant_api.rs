@@ -1,10 +1,7 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-
-use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantDetailResp, IamTenantSummaryResp};
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
 use crate::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
@@ -46,6 +43,7 @@ impl IamCsTenantApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
+        id: Query<Option<String>>,
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
@@ -54,13 +52,8 @@ impl IamCsTenantApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamTenantSummaryResp>> {
         let result = IamCsTenantServ::paginate_tenants(
-            &IamTenantFilterReq {
-                basic: RbumBasicFilterReq {
-                    name: name.0,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            id.0,
+            name.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -70,15 +63,5 @@ impl IamCsTenantApi {
         )
         .await?;
         TardisResp::ok(result)
-    }
-
-    /// Delete Tenant By Id
-    #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamCsTenantServ::delete_tenant(&id.0, &funs, &cxt.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
     }
 }

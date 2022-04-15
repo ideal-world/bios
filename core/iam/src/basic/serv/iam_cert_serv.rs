@@ -14,14 +14,13 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq};
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::console_passport::dto::iam_cp_cert_dto::LoginResp;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
@@ -141,7 +140,6 @@ impl<'a> IamCertServ {
                 },
                 rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
                 rel_rbum_item_id: rbum_item_id,
-                ..Default::default()
             },
             page_number,
             page_size,
@@ -167,7 +165,7 @@ impl<'a> IamCertServ {
             .ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
     }
 
-    pub async fn package_tardis_context(
+    pub async fn package_tardis_context_and_resp(
         iam_tenant_id: Option<&str>,
         iam_app_id: Option<&str>,
         ak: &str,
@@ -175,7 +173,7 @@ impl<'a> IamCertServ {
         token: Option<&str>,
         token_kind: Option<&str>,
         funs: &TardisFunsInst<'a>,
-    ) -> TardisResult<TardisContext> {
+    ) -> TardisResult<(TardisContext, LoginResp)> {
         let own_paths = if let Some(iam_tenant_id) = iam_tenant_id {
             if let Some(iam_app_id) = iam_app_id {
                 format!("{}/{}", iam_tenant_id, iam_app_id)
@@ -195,42 +193,17 @@ impl<'a> IamCertServ {
             // TODO
             groups: vec![],
         };
-        let roles = IamRelServ::paginate_to_rels(IAMRelKind::IamRoleAccount, account_id, 1, u64::MAX, Some(true), None, funs, &context)
-            .await?
-            .records
-            .iter()
-            .map(|i| i.rel.id.to_string())
-            .collect::<Vec<String>>();
-        context.roles = roles;
-        Ok(context)
-    }
+        let roles = IamRelServ::paginate_to_rels(IAMRelKind::IamRoleAccount, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
+        context.roles = roles.iter().map(|i| i.rel.from_rbum_id.to_string()).collect();
 
-    pub async fn package_login_resp_from_context(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<LoginResp> {
-        let name = IamAccountServ::get_item(&cxt.owner, &IamAccountFilterReq::default(), funs, cxt).await?.name;
-        let roles = IamRoleServ::find_items(
-            &IamRoleFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(cxt.roles.clone()),
-                    ..Default::default()
-                },
-                icon: None,
-                sort: None,
-            },
-            None,
-            None,
-            funs,
-            cxt,
-        )
-        .await?
-        .iter()
-        .map(|i| (i.id.clone(), i.name.clone()))
-        .collect::<HashMap<String, String>>();
-        Ok(LoginResp {
-            name,
-            token: cxt.token.clone(),
-            roles,
+        let resp = LoginResp {
+            id: context.owner.clone(),
+            name: IamAccountServ::get_item(&context.owner, &IamAccountFilterReq::default(), funs, &context).await?.name,
+            token: context.token.clone(),
+            roles: roles.iter().map(|i| (i.rel.from_rbum_id.to_string(), i.rel.from_rbum_item_name.to_string())).collect(),
             // TODO
             groups: HashMap::new(),
-        })
+        };
+        Ok((context, resp))
     }
 }

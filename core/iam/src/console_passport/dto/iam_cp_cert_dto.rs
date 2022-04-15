@@ -6,6 +6,7 @@ use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct LoginResp {
+    pub id: String,
     pub name: String,
     pub token: String,
     pub roles: HashMap<String, String>,
@@ -19,7 +20,7 @@ pub struct IamCpUserPwdLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tenant_id: String,
+    pub tenant_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub flag: Option<String>,
 }

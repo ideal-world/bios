@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_account;
@@ -23,21 +23,19 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_account_id.clone()
+        IamBasicInfoManager::get().kind_account_id
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id
     }
 
-    async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
-        Ok(RbumItemAddReq {
+    async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
             code: None,
             name: add_req.name.clone(),
             disabled: add_req.disabled,
-            rel_rbum_kind_id: "".to_string(),
-            rel_rbum_domain_id: "".to_string(),
             scope_level: add_req.scope_level.clone(),
         })
     }
@@ -75,7 +73,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         Ok(Some(iam_account))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, _: bool, _: &IamAccountFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, _: &IamAccountFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
         Ok(())
     }
