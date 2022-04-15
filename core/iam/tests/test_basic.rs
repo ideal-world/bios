@@ -1,14 +1,12 @@
 use std::env;
 
 use tardis::basic::result::TardisResult;
+use tardis::TardisFuns;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::testcontainers::clients::Cli;
+use tardis::testcontainers::Container;
 use tardis::testcontainers::images::generic::GenericImage;
 use tardis::testcontainers::images::redis::Redis;
-use tardis::testcontainers::Container;
-use tardis::TardisFuns;
-
-use bios_iam::iam_constants;
 
 pub struct LifeHold<'a> {
     pub mysql: Container<'a, GenericImage>,
@@ -33,9 +31,6 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
 
     env::set_var("RUST_LOG", "debug");
     TardisFuns::init("tests/config").await?;
-
-    let funs = iam_constants::get_tardis_inst();
-    bios_iam::iam_initializer::init_db(funs).await?;
 
     Ok(LifeHold {
         mysql: mysql_container,

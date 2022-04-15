@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
 
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_http_res;
@@ -23,21 +23,19 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_http_res_id.clone()
+        IamBasicInfoManager::get().kind_http_res_id
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id
     }
 
-    async fn package_item_add(add_req: &IamHttpResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
-        Ok(RbumItemAddReq {
+    async fn package_item_add(add_req: &IamHttpResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        Ok(RbumItemKernelAddReq {
             id: None,
             code: Some(add_req.code.clone()),
             name: add_req.name.clone(),
             disabled: add_req.disabled,
-            rel_rbum_kind_id: "".to_string(),
-            rel_rbum_domain_id: "".to_string(),
             scope_level: add_req.scope_level.clone(),
         })
     }
@@ -83,7 +81,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
         Ok(Some(iam_http_res))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, _: bool, filter: &IamHttpResFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamHttpResFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_http_res::Entity, iam_http_res::Column::Icon));
         query.column((iam_http_res::Entity, iam_http_res::Column::Sort));
         query.column((iam_http_res::Entity, iam_http_res::Column::Method));

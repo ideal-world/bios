@@ -7,7 +7,7 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -26,21 +26,19 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_app_id.clone()
+        IamBasicInfoManager::get().kind_app_id
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id.clone()
+        IamBasicInfoManager::get().domain_iam_id
     }
 
-    async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemAddReq> {
-        Ok(RbumItemAddReq {
+    async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        Ok(RbumItemKernelAddReq {
             id: Some(TrimString(IamAppServ::get_new_id())),
             code: None,
             name: add_req.name.clone(),
             disabled: add_req.disabled,
-            rel_rbum_kind_id: "".to_string(),
-            rel_rbum_domain_id: "".to_string(),
             scope_level: add_req.scope_level.clone(),
         })
     }
@@ -86,7 +84,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn package_item_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         query.column((iam_app::Entity, iam_app::Column::Icon));
         query.column((iam_app::Entity, iam_app::Column::Sort));

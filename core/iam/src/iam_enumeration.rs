@@ -38,7 +38,7 @@ impl IamCertTokenKind {
         if let Some(kind) = kind {
             IamCertTokenKind::from_str(kind).unwrap_or(IamCertTokenKind::TokenDefault)
         } else {
-            return IamCertTokenKind::TokenDefault;
+            IamCertTokenKind::TokenDefault
         }
     }
 }

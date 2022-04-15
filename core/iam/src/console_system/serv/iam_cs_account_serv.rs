@@ -49,6 +49,7 @@ impl<'a> IamCsAccountServ {
 
     pub async fn paginate_accounts(
         tenant_id: String,
+        q_id: Option<String>,
         q_name: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -62,6 +63,7 @@ impl<'a> IamCsAccountServ {
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
+                    ids:q_id.map(|id| vec![id]),
                     name: q_name,
                     own_paths: Some(tenant_id),
                     ..Default::default()

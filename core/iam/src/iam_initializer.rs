@@ -4,8 +4,8 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::log::info;
-use tardis::web::web_server::TardisWebServer;
 use tardis::TardisFuns;
+use tardis::web::web_server::TardisWebServer;
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -60,22 +60,24 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init_db<'a>(mut funs: TardisFunsInst<'a>) -> TardisResult<()> {
+pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(String,String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let cxt = get_first_account_context(RBUM_KIND_SCHEME_IAM_ACCOUNT, &bios_basic::Components::Iam.to_string(), &funs).await?;
-    if let Some(cxt) = cxt {
+    let sysadmin_info=if let Some(cxt) = cxt {
         init_basic_info(&funs, &cxt).await?;
+        None
     } else {
         funs.db().create_table_and_index(&iam_tenant::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         funs.db().create_table_and_index(&iam_app::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         funs.db().create_table_and_index(&iam_role::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         funs.db().create_table_and_index(&iam_account::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         funs.db().create_table_and_index(&iam_http_res::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
-        init_rbum_data(&funs).await?;
-    }
+        let (name,password) = init_rbum_data(&funs).await?;
+        Some((name,password))
+    };
     funs.commit().await?;
-    Ok(())
+    Ok(sysadmin_info)
 }
 
 async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -147,7 +149,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> 
     Ok(())
 }
 
-async fn init_rbum_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String,String)> {
     let default_account_id = TardisFuns::field.nanoid();
 
     let cxt = TardisContext {
@@ -245,6 +247,7 @@ async fn init_rbum_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
     .await?;
 
     RbumRelServ::add_simple_rel(&IAMRelKind::IamRoleAccount.to_string(), &role_sys_admin_id, &account_sys_admin_id, funs, &cxt).await?;
+    
     let pwd = IamCertServ::get_new_pwd();
     IamCertUserPwdServ::add_cert(
         &mut IamUserPwdCertAddReq {
@@ -265,7 +268,7 @@ System administrator name: {} ,Initial password: {}
 -----------",
         RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, pwd
     );
-    Ok(())
+    Ok((RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string(), pwd))
 }
 
 async fn add_kind<'a>(scheme: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {

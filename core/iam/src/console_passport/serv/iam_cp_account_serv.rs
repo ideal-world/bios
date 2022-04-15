@@ -10,7 +10,6 @@ use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::console_passport::dto::iam_cp_account_dto::IamCpAccountModifyReq;
 
 pub struct IamCpAccountServ;
@@ -47,7 +46,6 @@ impl<'a> IamCpAccountServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamRelServ::paginate_to_rels(
             IAMRelKind::IamRoleAccount,
             &cxt.owner,

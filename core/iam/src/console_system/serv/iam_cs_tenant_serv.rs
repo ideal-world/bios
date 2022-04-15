@@ -2,7 +2,9 @@ use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
@@ -29,8 +31,21 @@ pub struct IamCsTenantServ;
 impl<'a> IamCsTenantServ {
     pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<(String, String)> {
         IamRoleServ::need_sys_admin(funs, cxt).await?;
-        let tenant_id = IamTenantServ::add_item(
+
+        let tenant_admin_id = TardisFuns::field.nanoid();
+        let tenant_id = IamTenantServ::get_new_id();
+        let cxt = TardisContext {
+            own_paths: tenant_id.clone(),
+            ak: "".to_string(),
+            token: "".to_string(),
+            token_kind: "".to_string(),
+            roles: vec![],
+            groups: vec![],
+            owner: tenant_admin_id.to_string(),
+        };
+        IamTenantServ::add_item(
             &mut IamTenantAddReq {
+                id: Some(TrimString(tenant_id.clone())),
                 name: add_req.tenant_name.clone(),
                 icon: add_req.tenant_icon.clone(),
                 sort: None,
@@ -39,12 +54,12 @@ impl<'a> IamCsTenantServ {
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
             },
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
-        let account_id = IamAccountServ::add_item_with_simple_rel(
+        IamAccountServ::add_item_with_simple_rel(
             &mut IamAccountAddReq {
-                id: None,
+                id: Some(TrimString(tenant_admin_id.clone())),
                 name: add_req.admin_name.clone(),
                 icon: None,
                 disabled: add_req.disabled,
@@ -53,18 +68,18 @@ impl<'a> IamCsTenantServ {
             &IAMRelKind::IamAccountTenant.to_string(),
             &tenant_id,
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
-        let pwd = IamCertServ::get_new_pwd();
+
         IamRelServ::add_rel(
-            IAMRelKind::IamAccountTenant,
-            &account_id,
+            IAMRelKind::IamRoleAccount,
             &IamBasicInfoManager::get().role_tenant_admin_id,
+            &tenant_admin_id,
             None,
             None,
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
         IamCertUserPwdServ::add_cert_conf(
@@ -78,7 +93,7 @@ impl<'a> IamCsTenantServ {
             },
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
@@ -86,7 +101,7 @@ impl<'a> IamCsTenantServ {
             &mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
@@ -94,7 +109,7 @@ impl<'a> IamCsTenantServ {
             &mut IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
@@ -107,7 +122,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenDefault,
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
@@ -120,7 +135,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenPc,
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
@@ -133,7 +148,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenPhone,
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
@@ -146,19 +161,20 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenPad,
             Some(tenant_id.to_string()),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
 
+        let pwd = IamCertServ::get_new_pwd();
         IamCertUserPwdServ::add_cert(
             &mut IamUserPwdCertAddReq {
                 ak: TrimString(add_req.admin_username.0.to_string()),
                 sk: TrimString(pwd.to_string()),
             },
-            &account_id,
+            &tenant_admin_id,
             Some(&tenant_id),
             funs,
-            cxt,
+            &cxt,
         )
         .await?;
         Ok((tenant_id, pwd))
@@ -188,7 +204,8 @@ impl<'a> IamCsTenantServ {
     }
 
     pub async fn paginate_tenants(
-        filter: &IamTenantFilterReq,
+        q_id: Option<String>,
+        q_name: Option<String>,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -197,11 +214,22 @@ impl<'a> IamCsTenantServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamTenantSummaryResp>> {
         IamRoleServ::need_sys_admin(funs, cxt).await?;
-        IamTenantServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
-    }
-
-    pub async fn delete_tenant(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamRoleServ::need_sys_admin(funs, cxt).await?;
-        IamTenantServ::delete_item(id, funs, cxt).await
+        IamTenantServ::paginate_items(
+            &IamTenantFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: q_id.map(|id| vec![id]),
+                    name: q_name,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
     }
 }
