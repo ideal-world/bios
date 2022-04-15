@@ -229,7 +229,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             status: Set(add_req.status.to_int()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_kind: Set(add_req.rel_rbum_kind.to_int()),
-            rel_rbum_id: Set(add_req.rel_rbum_kind.to_string()),
+            rel_rbum_id: Set(add_req.rel_rbum_id.to_string()),
             ..Default::default()
         })
     }

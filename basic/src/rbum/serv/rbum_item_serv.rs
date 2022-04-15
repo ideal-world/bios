@@ -13,7 +13,7 @@ use tardis::TardisFuns;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
-use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemModifyReq, RbumItemSummaryResp};
+use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
@@ -32,9 +32,34 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         rbum_item::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumItemAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
+    async fn package_add(add_req: &RbumItemAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
         let id = if let Some(id) = &add_req.id { id.0.clone() } else { TardisFuns::field.nanoid() };
-        let code = if let Some(code) = &add_req.code { code.0.clone() } else { id.clone() };
+        let code = if let Some(code) = &add_req.code {
+            if funs
+                .db()
+                .count(
+                    Query::select()
+                        .column(rbum_item::Column::Id)
+                        .from(rbum_item::Entity)
+                        .inner_join(
+                            rbum_domain::Entity,
+                            Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+                        )
+                        .inner_join(
+                            rbum_kind::Entity,
+                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind::Entity, rbum_item::Column::RelRbumKindId),
+                        )
+                        .and_where(Expr::col(rbum_item::Column::Code).eq(code.0.as_str())),
+                )
+                .await?
+                > 0
+            {
+                return Err(TardisError::BadRequest(format!("code {} already exists", code)));
+            }
+            code.0.clone()
+        } else {
+            id.clone()
+        };
         Ok(rbum_item::ActiveModel {
             id: Set(id),
             code: Set(code),
@@ -53,12 +78,34 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumItemModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumItemModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
         let mut rbum_item = rbum_item::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
         };
         if let Some(code) = &modify_req.code {
+            if funs
+                .db()
+                .count(
+                    Query::select()
+                        .column(rbum_item::Column::Id)
+                        .from(rbum_item::Entity)
+                        .inner_join(
+                            rbum_domain::Entity,
+                            Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+                        )
+                        .inner_join(
+                            rbum_kind::Entity,
+                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind::Entity, rbum_item::Column::RelRbumKindId),
+                        )
+                        .and_where(Expr::col(rbum_item::Column::Code).eq(code.0.as_str()))
+                        .and_where(Expr::col(rbum_item::Column::Id).ne(id)),
+                )
+                .await?
+                > 0
+            {
+                return Err(TardisError::BadRequest(format!("code {} already exists", code)));
+            }
             rbum_item.code = Set(code.to_string());
         }
         if let Some(name) = &modify_req.name {
@@ -145,19 +192,11 @@ where
     fn get_rbum_kind_id() -> String;
     fn get_rbum_domain_id() -> String;
 
-    async fn package_item_add(add_req: &AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumItemAddReq>;
+    // ----------------------------- Add -------------------------------
+
+    async fn package_item_add(add_req: &AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumItemKernelAddReq>;
 
     async fn package_ext_add(id: &str, add_req: &AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<EXT>;
-
-    async fn package_item_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>>;
-
-    async fn package_ext_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<EXT>>;
-
-    async fn package_delete(id: &str, _funs: &TardisFunsInst<'a>, _cxt: &TardisContext) -> TardisResult<Select<EXT::Entity>> {
-        Ok(EXT::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
-    }
-
-    async fn package_item_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
 
     async fn before_add_item(_: &mut AddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
@@ -165,6 +204,25 @@ where
 
     async fn after_add_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
+    }
+
+    async fn add_item(add_req: &mut AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        Self::before_add_item(add_req, funs, cxt).await?;
+        let item_add_req = Self::package_item_add(add_req, funs, cxt).await?;
+        let mut item_add_req = RbumItemAddReq {
+            id: item_add_req.id.clone(),
+            code: item_add_req.code.clone(),
+            name: item_add_req.name.clone(),
+            rel_rbum_kind_id: Self::get_rbum_kind_id(),
+            rel_rbum_domain_id: Self::get_rbum_domain_id(),
+            scope_level: item_add_req.scope_level.clone(),
+            disabled: item_add_req.disabled.clone(),
+        };
+        let id = RbumItemServ::add_rbum(&mut item_add_req, funs, cxt).await?;
+        let ext_domain = Self::package_ext_add(&id, add_req, funs, cxt).await?;
+        funs.db().insert_one(ext_domain, cxt).await?;
+        Self::after_add_item(&id, funs, cxt).await?;
+        Ok(id)
     }
 
     async fn add_item_with_simple_rel(add_req: &mut AddReq, tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
@@ -186,17 +244,11 @@ where
         Ok(id)
     }
 
-    async fn add_item(add_req: &mut AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        Self::before_add_item(add_req, funs, cxt).await?;
-        let mut item_add_resp = Self::package_item_add(add_req, funs, cxt).await?;
-        item_add_resp.rel_rbum_kind_id = Self::get_rbum_kind_id();
-        item_add_resp.rel_rbum_domain_id = Self::get_rbum_domain_id();
-        let id = RbumItemServ::add_rbum(&mut item_add_resp, funs, cxt).await?;
-        let ext_domain = Self::package_ext_add(&id, add_req, funs, cxt).await?;
-        funs.db().insert_one(ext_domain, cxt).await?;
-        Self::after_add_item(&id, funs, cxt).await?;
-        Ok(id)
-    }
+    // ----------------------------- Modify -------------------------------
+
+    async fn package_item_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>>;
+
+    async fn package_ext_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<EXT>>;
 
     async fn before_modify_item(_: &str, _: &mut ModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
@@ -208,15 +260,21 @@ where
 
     async fn modify_item(id: &str, modify_req: &mut ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::before_modify_item(id, modify_req, funs, cxt).await?;
-        let item_modify_resp = Self::package_item_modify(id, modify_req, funs, cxt).await?;
-        if let Some(mut item_modify_resp) = item_modify_resp {
-            RbumItemServ::modify_rbum(id, &mut item_modify_resp, funs, cxt).await?;
+        let item_modify_req = Self::package_item_modify(id, modify_req, funs, cxt).await?;
+        if let Some(mut item_modify_req) = item_modify_req {
+            RbumItemServ::modify_rbum(id, &mut item_modify_req, funs, cxt).await?;
         }
         let ext_domain = Self::package_ext_modify(id, modify_req, funs, cxt).await?;
         if let Some(ext_domain) = ext_domain {
             funs.db().update_one(ext_domain, cxt).await?;
         }
         Self::after_modify_item(id, modify_req, funs, cxt).await
+    }
+
+    // ----------------------------- Delete -------------------------------
+
+    async fn package_delete(id: &str, _funs: &TardisFunsInst<'a>, _cxt: &TardisContext) -> TardisResult<Select<EXT::Entity>> {
+        Ok(EXT::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
     async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
@@ -236,13 +294,21 @@ where
         Ok(delete_records)
     }
 
+    // ----------------------------- Query -------------------------------
+
+    async fn package_item_query(is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+        RbumItemServ::package_query(is_detail, &filter.basic(), funs, cxt).await
+    }
+
+    async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
+
     async fn get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
-        let mut query = Self::package_query(true, filter, funs, cxt).await?;
+        let mut query = Self::package_item_query(true, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
             Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
         );
-        Self::package_item_query(&mut query, true, filter, funs, cxt).await?;
+        Self::package_ext_query(&mut query, true, filter, funs, cxt).await?;
         query.and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
@@ -261,12 +327,12 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<SummaryResp>> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
             Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
         );
-        Self::package_item_query(&mut query, false, filter, funs, cxt).await?;
+        Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -289,12 +355,12 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<SummaryResp>> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
             Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
         );
-        Self::package_item_query(&mut query, false, filter, funs, cxt).await?;
+        Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -305,13 +371,9 @@ where
     }
 
     async fn count_items(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
-        Self::package_item_query(&mut query, false, filter, funs, cxt).await?;
+        let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
+        Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
         funs.db().count(&query).await
-    }
-
-    async fn package_query(is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
-        RbumItemServ::package_query(is_detail, &filter.basic(), funs, cxt).await
     }
 }
 

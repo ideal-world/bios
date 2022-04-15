@@ -11,7 +11,7 @@ use tardis::db::sea_query::*;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
-use crate::rbum::domain::{rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env};
+use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq};
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
@@ -83,6 +83,8 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
     }
 
     async fn package_query(_: bool, filter: &RbumRelFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+        let from_rbum_item_table = Alias::new("fromRbumItem");
+        let to_rbum_item_table = Alias::new("toRbumItem");
         let mut query = Query::select();
         query
             .columns(vec![
@@ -99,7 +101,43 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 (rbum_rel::Entity, rbum_rel::Column::CreateTime),
                 (rbum_rel::Entity, rbum_rel::Column::UpdateTime),
             ])
-            .from(rbum_rel::Entity);
+            .expr_as(
+                Expr::tbl(from_rbum_item_table.clone(), rbum_item::Column::Name).if_null(""),
+                Alias::new("from_rbum_item_name"),
+            )
+            .expr_as(Expr::tbl(rbum_set::Entity, rbum_set::Column::Name).if_null(""), Alias::new("from_rbum_set_name"))
+            .expr_as(
+                Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Name).if_null(""),
+                Alias::new("from_rbum_set_cate_name"),
+            )
+            .expr_as(Expr::tbl(to_rbum_item_table.clone(), rbum_item::Column::Name).if_null(""), Alias::new("to_rbum_item_name"))
+            .from(rbum_rel::Entity)
+            .join_as(
+                JoinType::LeftJoin,
+                rbum_item::Entity,
+                from_rbum_item_table.clone(),
+                Cond::all()
+                    .add(Expr::tbl(from_rbum_item_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::FromRbumId))
+                    .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Item.to_int())),
+            )
+            .left_join(
+                rbum_set::Entity,
+                Cond::all()
+                    .add(Expr::tbl(rbum_set::Entity, rbum_set::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::FromRbumId))
+                    .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Set.to_int())),
+            )
+            .left_join(
+                rbum_set_cate::Entity,
+                Cond::all()
+                    .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::FromRbumId))
+                    .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::SetCate.to_int())),
+            )
+            .join_as(
+                JoinType::LeftJoin,
+                rbum_item::Entity,
+                to_rbum_item_table.clone(),
+                Expr::tbl(to_rbum_item_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
+            );
 
         if let Some(tag) = &filter.tag {
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Tag).eq(tag.to_string()));
@@ -192,7 +230,6 @@ impl<'a> RbumRelServ {
                 from_rbum_id: Some(from_rbum_id.to_string()),
                 to_rbum_item_id: None,
                 to_own_paths: None,
-                ..Default::default()
             },
             page_number,
             page_size,
@@ -225,7 +262,6 @@ impl<'a> RbumRelServ {
                 from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 to_own_paths: Some(cxt.own_paths.to_string()),
-                ..Default::default()
             },
             page_number,
             page_size,
@@ -255,8 +291,8 @@ impl<'a> RbumRelServ {
                 rel: record,
                 attrs: RbumRelAttrServ::find_rbums(
                     &RbumRelExtFilterReq {
+                        basic: filter.basic.clone(),
                         rel_rbum_rel_id: Some(rbum_rel_id.clone()),
-                        ..Default::default()
                     },
                     None,
                     None,
@@ -266,8 +302,8 @@ impl<'a> RbumRelServ {
                 .await?,
                 envs: RbumRelEnvServ::find_rbums(
                     &RbumRelExtFilterReq {
+                        basic: filter.basic.clone(),
                         rel_rbum_rel_id: Some(rbum_rel_id.clone()),
-                        ..Default::default()
                     },
                     None,
                     None,

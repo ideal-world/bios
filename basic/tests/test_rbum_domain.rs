@@ -41,7 +41,6 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     RbumDomainServ::modify_rbum(
         &id,
         &mut RbumDomainModifyReq {
-            code: None,
             name: None,
             note: None,
             icon: Some(".".to_string()),

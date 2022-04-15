@@ -54,9 +54,6 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             id: Set(id.to_string()),
             ..Default::default()
         };
-        if let Some(code) = &modify_req.code {
-            rbum_domain.code = Set(code.to_string());
-        }
         if let Some(name) = &modify_req.name {
             rbum_domain.name = Set(name.to_string());
         }
