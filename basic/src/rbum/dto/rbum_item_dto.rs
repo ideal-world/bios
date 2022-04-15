@@ -23,6 +23,19 @@ pub struct RbumItemAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct RbumItemKernelAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub id: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
+
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: Option<bool>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumItemModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
