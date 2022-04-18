@@ -3,7 +3,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelEnvAggAddReq};
-use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -94,21 +94,8 @@ impl<'a> IamRelServ {
         .await
     }
 
-    pub async fn delete_rel(rel_kind: IAMRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let id = RbumRelServ::find_rel_id(
-            &RbumRelFindReq {
-                tag: rel_kind.to_string(),
-                from_rbum_kind: RbumRelFromKind::Item,
-                from_rbum_id: from_iam_item_id.to_string(),
-                to_rbum_item_id: to_iam_item_id.to_string(),
-            },
-            funs,
-            cxt,
-        )
-        .await?;
-        if let Some(id) = id {
-            RbumRelServ::delete_rbum(&id, funs, cxt).await?;
-        }
+    pub async fn delete_rel(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        RbumRelServ::delete_rbum(&id, funs, cxt).await?;
         Ok(())
     }
 }

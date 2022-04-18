@@ -21,7 +21,7 @@ pub struct IamCtHttpResServ;
 impl<'a> IamCtHttpResServ {
     pub async fn add_http_res(add_req: &mut IamCtHttpResAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamHttpResServ::add_item_with_simple_rel(
+        IamHttpResServ::add_item_with_simple_rel_by_to(
             &mut IamHttpResAddReq {
                 name: add_req.name.clone(),
                 code: add_req.code.clone(),
@@ -31,7 +31,7 @@ impl<'a> IamCtHttpResServ {
                 sort: add_req.sort,
                 method: add_req.method.clone(),
             },
-            &IAMRelKind::IamHttpResTenant.to_string(),
+            &IAMRelKind::IamTenantHttpRes.to_string(),
             &IamTenantServ::get_id_by_cxt(cxt)?,
             funs,
             cxt,
@@ -64,6 +64,7 @@ impl<'a> IamCtHttpResServ {
     }
 
     pub async fn paginate_http_res(
+        q_id: Option<String>,
         q_name: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -76,6 +77,7 @@ impl<'a> IamCtHttpResServ {
         IamHttpResServ::paginate_items(
             &IamHttpResFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids: q_id.map(|id| vec![id]),
                     name: q_name,
                     own_paths: Some(IamTenantServ::get_id_by_cxt(cxt)?),
                     ..Default::default()
@@ -102,8 +104,8 @@ impl<'a> IamCtHttpResServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRelServ::paginate_to_rels(
-            IAMRelKind::IamRoleHttpRes,
+        IamRelServ::paginate_from_rels(
+            IAMRelKind::IamHttpResRole,
             iam_http_res_id,
             page_number,
             page_size,

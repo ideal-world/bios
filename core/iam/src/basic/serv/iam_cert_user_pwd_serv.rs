@@ -24,8 +24,8 @@ impl<'a> IamCertUserPwdServ {
         rel_iam_tenant_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
-    ) -> TardisResult<()> {
-        RbumCertConfServ::add_rbum(
+    ) -> TardisResult<String> {
+        let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKind::UserPwd.to_string()),
                 name: TrimString(IamCertKind::UserPwd.to_string()),
@@ -49,7 +49,7 @@ impl<'a> IamCertUserPwdServ {
             cxt,
         )
         .await?;
-        Ok(())
+        Ok(id)
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {

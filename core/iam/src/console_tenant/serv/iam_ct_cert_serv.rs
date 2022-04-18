@@ -15,7 +15,8 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 pub struct IamCtCertServ;
 
 impl<'a> IamCtCertServ {
-    pub async fn add_cert_conf_user_pwd(add_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert_conf_user_pwd(add_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: 
+    &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamCertUserPwdServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), funs, cxt).await
     }
@@ -25,7 +26,7 @@ impl<'a> IamCtCertServ {
         IamCertUserPwdServ::modify_cert_conf(id, modify_req, funs, cxt).await
     }
 
-    pub async fn add_cert_conf_mail_vcode(add_req: &mut IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert_conf_mail_vcode(add_req: &mut IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamCertMailVCodeServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), funs, cxt).await
     }
@@ -35,7 +36,7 @@ impl<'a> IamCtCertServ {
         IamCertMailVCodeServ::modify_cert_conf(id, modify_req, funs, cxt).await
     }
 
-    pub async fn add_cert_conf_phone_vcode(add_req: &mut IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert_conf_phone_vcode(add_req: &mut IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamCertPhoneVCodeServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), funs, cxt).await
     }
@@ -51,6 +52,7 @@ impl<'a> IamCtCertServ {
     }
 
     pub async fn paginate_cert_conf(
+        q_id: Option<String>,
         q_name: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -61,6 +63,7 @@ impl<'a> IamCtCertServ {
     ) -> TardisResult<TardisPage<RbumCertConfSummaryResp>> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamCertServ::paginate_cert_conf(
+            q_id,
             q_name,
             Some(IamTenantServ::get_id_by_cxt(cxt)?),
             page_number,

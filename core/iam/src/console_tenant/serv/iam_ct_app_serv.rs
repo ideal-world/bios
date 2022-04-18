@@ -19,7 +19,7 @@ pub struct IamCtAppServ;
 impl<'a> IamCtAppServ {
     pub async fn add_app(add_req: &mut IamCtAppAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamAppServ::add_item_with_simple_rel(
+        IamAppServ::add_item_with_simple_rel_by_to(
             &mut IamAppAddReq {
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
@@ -28,7 +28,7 @@ impl<'a> IamCtAppServ {
                 disabled: add_req.disabled,
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
             },
-            &IAMRelKind::IamAppTenant.to_string(),
+            &IAMRelKind::IamTenantApp.to_string(),
             &IamTenantServ::get_id_by_cxt(cxt)?,
             funs,
             cxt,
@@ -60,6 +60,7 @@ impl<'a> IamCtAppServ {
     }
 
     pub async fn paginate_apps(
+        q_id: Option<String>,
         q_name: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -72,6 +73,7 @@ impl<'a> IamCtAppServ {
         IamAppServ::paginate_items(
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids:q_id.map(|id| vec![id]),
                     name: q_name,
                     own_paths: Some(cxt.own_paths.clone()),
                     ..Default::default()

@@ -6,21 +6,21 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
-use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_tenant::dto::iam_ct_role_dto::{IamCtRoleAddReq, IamCtRoleModifyReq};
+use crate::iam_constants;
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamCtRoleServ;
 
 impl<'a> IamCtRoleServ {
     pub async fn add_role(add_req: &mut IamCtRoleAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRoleServ::add_item_with_simple_rel(
+        IamRoleServ::add_item_with_simple_rel_by_to(
             &mut IamRoleAddReq {
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
@@ -28,7 +28,7 @@ impl<'a> IamCtRoleServ {
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
                 sort: add_req.sort,
             },
-            &IAMRelKind::IamRoleTenant.to_string(),
+            &IAMRelKind::IamTenantRole.to_string(),
             &IamTenantServ::get_id_by_cxt(cxt)?,
             funs,
             cxt,
@@ -59,6 +59,7 @@ impl<'a> IamCtRoleServ {
     }
 
     pub async fn paginate_roles(
+        q_id: Option<String>,
         q_name: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -71,6 +72,7 @@ impl<'a> IamCtRoleServ {
         IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids: q_id.map(|id| vec![id]),
                     name: q_name,
                     own_paths: Some(IamTenantServ::get_id_by_cxt(cxt)?),
                     ..Default::default()
@@ -101,7 +103,7 @@ impl<'a> IamCtRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRelServ::add_rel(IAMRelKind::IamRoleAccount, iam_role_id, iam_account_id, start_timestamp, end_timestamp, funs, cxt).await
+        IamRelServ::add_rel(IAMRelKind::IamAccountRole, iam_account_id, iam_role_id, start_timestamp, end_timestamp, funs, cxt).await
     }
 
     pub async fn paginate_rel_accounts(
@@ -113,8 +115,8 @@ impl<'a> IamCtRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_from_rels(
-            IAMRelKind::IamRoleAccount,
+        IamRelServ::paginate_to_rels(
+            IAMRelKind::IamAccountRole,
             iam_role_id,
             page_number,
             page_size,
@@ -124,11 +126,6 @@ impl<'a> IamCtRoleServ {
             cxt,
         )
         .await
-    }
-
-    pub async fn delete_rel_account(iam_role_id: &str, iam_account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRelServ::delete_rel(IAMRelKind::IamRoleAccount, iam_role_id, iam_account_id, funs, cxt).await
     }
 
     pub async fn add_rel_http_res(
@@ -140,7 +137,7 @@ impl<'a> IamCtRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRelServ::add_rel(IAMRelKind::IamRoleHttpRes, iam_role_id, iam_http_res_id, start_timestamp, end_timestamp, funs, cxt).await
+        IamRelServ::add_rel(IAMRelKind::IamHttpResRole, iam_http_res_id, iam_role_id, start_timestamp, end_timestamp, funs, cxt).await
     }
 
     pub async fn paginate_rel_http_res(
@@ -152,8 +149,8 @@ impl<'a> IamCtRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_from_rels(
-            IAMRelKind::IamRoleHttpRes,
+        IamRelServ::paginate_to_rels(
+            IAMRelKind::IamHttpResRole,
             iam_role_id,
             page_number,
             page_size,
@@ -165,8 +162,8 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn delete_rel_http_res(iam_role_id: &str, iam_http_res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRelServ::delete_rel(IAMRelKind::IamRoleHttpRes, iam_role_id, iam_http_res_id, funs, cxt).await
+        IamRelServ::delete_rel(id, funs, cxt).await
     }
 }

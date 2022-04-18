@@ -45,7 +45,8 @@ impl IamCtRoleApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        name: Query<Option<String>>,
+        q_id: Query<Option<String>>,
+        q_name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
@@ -53,7 +54,8 @@ impl IamCtRoleApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
         let result = IamCtRoleServ::paginate_roles(
-            name.0,
+            q_id.0,
+            q_name.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -84,17 +86,7 @@ impl IamCtRoleApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-
-    /// Delete Rel Account By Id
-    #[oai(path = "/:id/account/:account_id", method = "delete")]
-    async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamCtRoleServ::delete_rel_account(&id.0, &account_id.0, &funs, &cxt.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
+    
     /// Find Rel Accounts By Role Id
     #[oai(path = "/:id/account", method = "get")]
     async fn paginate_rel_accounts(
@@ -129,16 +121,6 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Rel Http Res By Id
-    #[oai(path = "/:id/http-res/:http_res_id", method = "delete")]
-    async fn delete_rel_http_res(&self, id: Path<String>, http_res_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamCtRoleServ::delete_rel_http_res(&id.0, &http_res_id.0, &funs, &cxt.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
     /// Find Rel Http Res By Role Id
     #[oai(path = "/:id/http-res", method = "get")]
     async fn paginate_rel_http_res(
@@ -161,5 +143,15 @@ impl IamCtRoleApi {
         )
         .await?;
         TardisResp::ok(result)
+    }
+
+    /// Delete Rel By Id
+    #[oai(path = "/:_/rel/:id", method = "delete")]
+    async fn delete_rel_account(&self, id: Path<String>,cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCtRoleServ::delete_rel(&id.0,  &funs, &cxt.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 }

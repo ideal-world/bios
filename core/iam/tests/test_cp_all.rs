@@ -70,6 +70,24 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
     .await
     .is_err());
 
+    // Test1
+    info!("【test_cp_all】 : Login by Username and Password, By tenant admin _________");
+    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+        &mut IamCpUserPwdLoginReq {
+            ak: TrimString("bios".to_string()),
+            sk: TrimString(tenant_admin_pwd.to_string()),
+            tenant_id: Some(tenant_id.clone()),
+            flag: None,
+        },
+        &funs,
+    )
+    .await;
+    if login_resp.is_err() {
+        funs.commit().await?;
+        info!("{:?}", login_resp);
+        return Ok(());
+    }
+
     info!("【test_cp_all】 : Login by Username and Password, By tenant admin");
     let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
@@ -190,8 +208,8 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
     assert_eq!(sysadmin_roles.page_size, 10);
     assert_eq!(sysadmin_roles.total_size, 1);
     assert_eq!(sysadmin_roles.records.len(), 1);
-    assert_eq!(sysadmin_roles.records.get(0).unwrap().rel.from_rbum_item_name, "sys_admin");
-    assert_eq!(sysadmin_roles.records.get(0).unwrap().rel.to_rbum_item_name, "测试系统管理员");
+    assert_eq!(sysadmin_roles.records.get(0).unwrap().rel.from_rbum_item_name, "测试系统管理员");
+    assert_eq!(sysadmin_roles.records.get(0).unwrap().rel.to_rbum_item_name, "sys_admin");
 
     funs.rollback().await?;
 

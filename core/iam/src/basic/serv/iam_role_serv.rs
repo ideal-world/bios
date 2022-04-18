@@ -104,11 +104,11 @@ impl IamRoleServ {
     pub async fn need_role<'a>(iam_role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         // TODO cache
         let exist = RbumRelServ::check_rel(
-            &mut RbumRelCheckReq {
-                tag: IAMRelKind::IamRoleAccount.to_string(),
+            &RbumRelCheckReq {
+                tag: IAMRelKind::IamAccountRole.to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
-                from_rbum_id: iam_role_id.to_string(),
-                to_rbum_item_id: cxt.owner.clone(),
+                from_rbum_id: cxt.owner.clone(),
+                to_rbum_item_id: iam_role_id.to_string(),
                 from_attrs: Default::default(),
                 to_attrs: Default::default(),
             },
