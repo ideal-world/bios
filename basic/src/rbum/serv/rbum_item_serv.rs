@@ -6,9 +6,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
+use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
-use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
@@ -17,7 +17,7 @@ use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumIt
 use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
-use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, RbumCrudOperation, RbumCrudQueryPackage, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -216,7 +216,7 @@ where
             rel_rbum_kind_id: Self::get_rbum_kind_id(),
             rel_rbum_domain_id: Self::get_rbum_domain_id(),
             scope_level: item_add_req.scope_level.clone(),
-            disabled: item_add_req.disabled.clone(),
+            disabled: item_add_req.disabled,
         };
         let id = RbumItemServ::add_rbum(&mut item_add_req, funs, cxt).await?;
         let ext_domain = Self::package_ext_add(&id, add_req, funs, cxt).await?;
@@ -225,7 +225,7 @@ where
         Ok(id)
     }
 
-    async fn add_item_with_simple_rel(add_req: &mut AddReq, tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    async fn add_item_with_simple_rel_by_from(add_req: &mut AddReq, tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let id = Self::add_item(add_req, funs, cxt).await?;
         RbumRelServ::add_rbum(
             &mut RbumRelAddReq {
@@ -234,6 +234,25 @@ where
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
+                to_own_paths: cxt.own_paths.to_string(),
+                ext: None,
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        Ok(id)
+    }
+
+    async fn add_item_with_simple_rel_by_to(add_req: &mut AddReq, tag: &str, from_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        let id = Self::add_item(add_req, funs, cxt).await?;
+        RbumRelServ::add_rbum(
+            &mut RbumRelAddReq {
+                tag: tag.to_string(),
+                note: None,
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: from_rbum_item_id.to_string(),
+                to_rbum_item_id: id.to_string(),
                 to_own_paths: cxt.own_paths.to_string(),
                 ext: None,
             },
