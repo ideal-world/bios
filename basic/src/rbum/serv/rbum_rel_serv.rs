@@ -53,8 +53,9 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             RbumRelFromKind::Set => RbumSetServ::get_table_name(),
             RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
         };
-        Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
-        Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
+        Self::check_ownership_with_table_name(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
+        // TODO It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
+        // Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
         Ok(())
     }
 
