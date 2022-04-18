@@ -29,12 +29,12 @@ use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 pub struct IamCsTenantServ;
 
 impl<'a> IamCsTenantServ {
-    pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<(String, String)> {
-        IamRoleServ::need_sys_admin(funs, cxt).await?;
+    pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>, system_cxt: &TardisContext) -> TardisResult<(String, String)> {
+        IamRoleServ::need_sys_admin(funs, system_cxt).await?;
 
         let tenant_admin_id = TardisFuns::field.nanoid();
         let tenant_id = IamTenantServ::get_new_id();
-        let cxt = TardisContext {
+        let tenant_cxt = TardisContext {
             own_paths: tenant_id.clone(),
             ak: "".to_string(),
             token: "".to_string(),
@@ -54,10 +54,10 @@ impl<'a> IamCsTenantServ {
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
             },
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
-        IamAccountServ::add_item_with_simple_rel(
+        IamAccountServ::add_item_with_simple_rel_by_to(
             &mut IamAccountAddReq {
                 id: Some(TrimString(tenant_admin_id.clone())),
                 name: add_req.admin_name.clone(),
@@ -65,21 +65,21 @@ impl<'a> IamCsTenantServ {
                 disabled: add_req.disabled,
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
             },
-            &IAMRelKind::IamAccountTenant.to_string(),
+            &IAMRelKind::IamTenantAccount.to_string(),
             &tenant_id,
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
         IamRelServ::add_rel(
-            IAMRelKind::IamRoleAccount,
-            &IamBasicInfoManager::get().role_tenant_admin_id,
+            IAMRelKind::IamAccountRole,
             &tenant_admin_id,
+            &IamBasicInfoManager::get().role_tenant_admin_id,
             None,
             None,
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
         IamCertUserPwdServ::add_cert_conf(
@@ -93,7 +93,7 @@ impl<'a> IamCsTenantServ {
             },
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -101,7 +101,7 @@ impl<'a> IamCsTenantServ {
             &mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -109,7 +109,7 @@ impl<'a> IamCsTenantServ {
             &mut IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -122,7 +122,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenDefault,
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -135,7 +135,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenPc,
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -148,7 +148,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenPhone,
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -161,7 +161,7 @@ impl<'a> IamCsTenantServ {
             IamCertTokenKind::TokenPad,
             Some(tenant_id.to_string()),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
 
@@ -174,7 +174,7 @@ impl<'a> IamCsTenantServ {
             &tenant_admin_id,
             Some(&tenant_id),
             funs,
-            &cxt,
+            &tenant_cxt,
         )
         .await?;
         Ok((tenant_id, pwd))

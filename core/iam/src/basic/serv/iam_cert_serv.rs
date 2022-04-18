@@ -123,6 +123,7 @@ impl<'a> IamCertServ {
     }
 
     pub async fn paginate_cert_conf(
+        q_id: Option<String>,
         q_name: Option<String>,
         rbum_item_id: Option<String>,
         page_number: u64,
@@ -135,6 +136,7 @@ impl<'a> IamCertServ {
         RbumCertConfServ::paginate_rbums(
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
+                    ids: q_id.map(|id| vec![id]),
                     name: q_name,
                     ..Default::default()
                 },
@@ -193,14 +195,14 @@ impl<'a> IamCertServ {
             // TODO
             groups: vec![],
         };
-        let roles = IamRelServ::paginate_to_rels(IAMRelKind::IamRoleAccount, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
-        context.roles = roles.iter().map(|i| i.rel.from_rbum_id.to_string()).collect();
+        let roles = IamRelServ::paginate_from_rels(IAMRelKind::IamAccountRole, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
+        context.roles = roles.iter().map(|i| i.rel.to_rbum_item_id.to_string()).collect();
 
         let resp = LoginResp {
             id: context.owner.clone(),
             name: IamAccountServ::get_item(&context.owner, &IamAccountFilterReq::default(), funs, &context).await?.name,
             token: context.token.clone(),
-            roles: roles.iter().map(|i| (i.rel.from_rbum_id.to_string(), i.rel.from_rbum_item_name.to_string())).collect(),
+            roles: roles.iter().map(|i| (i.rel.to_rbum_item_id.to_string(), i.rel.to_rbum_item_name.to_string())).collect(),
             // TODO
             groups: HashMap::new(),
         };

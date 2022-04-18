@@ -18,8 +18,8 @@ impl<'a> IamCertMailVCodeServ {
         rel_iam_tenant_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
-    ) -> TardisResult<()> {
-        RbumCertConfServ::add_rbum(
+    ) -> TardisResult<String> {
+        let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKind::MailVCode.to_string()),
                 name: TrimString(IamCertKind::MailVCode.to_string()),
@@ -43,7 +43,7 @@ impl<'a> IamCertMailVCodeServ {
             cxt,
         )
         .await?;
-        Ok(())
+        Ok(id)
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &mut IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {

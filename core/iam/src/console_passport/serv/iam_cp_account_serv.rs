@@ -46,8 +46,8 @@ impl<'a> IamCpAccountServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_to_rels(
-            IAMRelKind::IamRoleAccount,
+        IamRelServ::paginate_from_rels(
+            IAMRelKind::IamAccountRole,
             &cxt.owner,
             page_number,
             page_size,

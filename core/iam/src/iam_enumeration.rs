@@ -45,10 +45,10 @@ impl IamCertTokenKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
 pub enum IAMRelKind {
-    IamAppTenant,
-    IamAccountTenant,
-    IamRoleTenant,
-    IamRoleAccount,
-    IamHttpResTenant,
-    IamRoleHttpRes,
+    IamTenantApp,
+    IamTenantAccount,
+    IamTenantRole,
+    IamAccountRole,
+    IamTenantHttpRes,
+    IamHttpResRole,
 }

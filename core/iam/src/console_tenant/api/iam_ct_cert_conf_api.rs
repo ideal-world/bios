@@ -89,7 +89,8 @@ impl IamCtCertConfApi {
     #[oai(path = "/", method = "get")]
     async fn paginate_cert_conf(
         &self,
-        name: Query<Option<String>>,
+        q_id: Query<Option<String>>,
+        q_name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
@@ -97,7 +98,8 @@ impl IamCtCertConfApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumCertConfSummaryResp>> {
         let result = IamCtCertServ::paginate_cert_conf(
-            name.0,
+            q_id.0,
+            q_name.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,

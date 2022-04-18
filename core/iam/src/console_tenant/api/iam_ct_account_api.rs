@@ -1,5 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
@@ -45,15 +45,17 @@ impl IamCtAccountApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        name: Query<Option<String>>,
-        desc_by_create: Query<Option<bool>>,
-        desc_by_update: Query<Option<bool>>,
+        q_id: Query<Option<String>>,
+        q_name: Query<Option<String>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
         let result = IamCtAccountServ::paginate_accounts(
-            name.0,
+            q_id.0,
+            q_name.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,
