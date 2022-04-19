@@ -1,7 +1,9 @@
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::tokio::time::sleep;
 
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -14,7 +16,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    info!("【test_ct】 : Prepare Kind : IamCsTenantServ::add_tenant");
+    info!("【test_ct】 : Prepare : IamCsTenantServ::add_tenant");
     let (tenant_id, tenant_admin_pwd) = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
             tenant_name: TrimString("测试租户1".to_string()),
@@ -28,6 +30,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
         context,
     )
     .await?;
+    sleep(Duration::from_secs(1)).await;
 
     let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
@@ -63,6 +66,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
         context,
     )
     .await?;
+    sleep(Duration::from_secs(1)).await;
 
     let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {

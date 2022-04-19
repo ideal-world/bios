@@ -15,11 +15,6 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 pub struct IamCtCertServ;
 
 impl<'a> IamCtCertServ {
-    pub async fn add_cert_conf_user_pwd(add_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: 
-    &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamCertUserPwdServ::add_cert_conf(add_req, Some(IamTenantServ::get_id_by_cxt(cxt)?), funs, cxt).await
-    }
 
     pub async fn modify_cert_conf_user_pwd(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;

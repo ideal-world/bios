@@ -20,7 +20,7 @@ pub struct IamCtRoleServ;
 impl<'a> IamCtRoleServ {
     pub async fn add_role(add_req: &mut IamCtRoleAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRoleServ::add_item_with_simple_rel_by_to(
+        IamRoleServ::add_item(
             &mut IamRoleAddReq {
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
@@ -28,8 +28,6 @@ impl<'a> IamCtRoleServ {
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
                 sort: add_req.sort,
             },
-            &IAMRelKind::IamTenantRole.to_string(),
-            &IamTenantServ::get_id_by_cxt(cxt)?,
             funs,
             cxt,
         )
@@ -91,7 +89,7 @@ impl<'a> IamCtRoleServ {
 
     pub async fn delete_role(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRoleServ::delete_item(id, funs, cxt).await
+        IamRoleServ::delete_item_with_all_rels(id, funs, cxt).await
     }
 
     pub async fn add_rel_account(

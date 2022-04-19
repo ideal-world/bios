@@ -1,7 +1,9 @@
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::tokio::time::sleep;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -30,6 +32,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
+    sleep(Duration::from_secs(1)).await;
 
     IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
@@ -44,6 +47,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
+    sleep(Duration::from_secs(1)).await;
 
     let tenant_id2 = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {

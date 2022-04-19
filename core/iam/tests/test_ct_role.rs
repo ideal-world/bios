@@ -82,15 +82,15 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     assert!(roles.records.iter().any(|i| i.name == "角色"));
 
     info!("【test_ct_role】 : Delete Role By Id, with err");
-    assert!(IamCtRoleServ::delete_role("11111", &funs, &context1).await.is_err());
+    assert!(IamCtRoleServ::delete_role("11111", &funs, context1).await.is_err());
     info!("【test_ct_role】 : Delete Role By Id, with err");
-    assert!(IamCtRoleServ::delete_role(&role_id1, &funs, &context2).await.is_err());
+    assert!(IamCtRoleServ::delete_role(&role_id1, &funs, context2).await.is_err());
     info!("【test_ct_role】 : Delete Role By Id");
     assert_eq!(
         IamCtRoleServ::paginate_roles(Some(role_id1.clone()), None, 1, 10, None, None, &funs, context1).await?.total_size,
         1
     );
-    IamCtRoleServ::delete_role(&role_id1, &funs, &context1).await?;
+    IamCtRoleServ::delete_role(&role_id1, &funs, context1).await?;
     assert_eq!(
         IamCtRoleServ::paginate_roles(Some(role_id1.clone()), None, 1, 10, None, None, &funs, context1).await?.total_size,
         0
@@ -110,8 +110,8 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     info!("【test_ct_role】 : Find Rel Accounts By Role Id");
     let rel_accounts = IamCtRoleServ::paginate_rel_accounts(&role_id2, 1, 10, None, None, &funs, context2).await?;
     assert_eq!(rel_accounts.total_size, 1);
-    assert_eq!(rel_accounts.records.get(0).unwrap().rel.from_rbum_item_name, "角色2");
-    assert_eq!(rel_accounts.records.get(0).unwrap().rel.to_rbum_item_name, "测试管理员2");
+    assert_eq!(rel_accounts.records.get(0).unwrap().rel.from_rbum_item_name, "测试管理员2");
+    assert_eq!(rel_accounts.records.get(0).unwrap().rel.to_rbum_item_name, "角色2");
 
     info!("【test_ct_role】 : Delete Rel By Id");
     IamCtRoleServ::delete_rel(&rel_accounts.records.get(0).unwrap().rel.id, &funs, context2).await?;
@@ -129,7 +129,7 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
             disabled: None,
         },
         &funs,
-        context1,
+        context2,
     )
     .await?;
 
@@ -145,8 +145,8 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     info!("【test_ct_role】 : Find Rel Http Res By Role Id");
     let rel_http_res = IamCtRoleServ::paginate_rel_http_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
     assert_eq!(rel_http_res.total_size, 1);
-    assert_eq!(rel_http_res.records.get(0).unwrap().rel.from_rbum_item_name, "角色2");
-    assert_eq!(rel_http_res.records.get(0).unwrap().rel.to_rbum_item_name, "测试资源");
+    assert_eq!(rel_http_res.records.get(0).unwrap().rel.from_rbum_item_name, "测试资源");
+    assert_eq!(rel_http_res.records.get(0).unwrap().rel.to_rbum_item_name, "角色2");
 
     info!("【test_ct_role】 : Delete Rel By Id");
     IamCtRoleServ::delete_rel(&rel_http_res.records.get(0).unwrap().rel.id, &funs, context2).await?;

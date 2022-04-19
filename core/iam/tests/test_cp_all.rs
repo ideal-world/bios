@@ -1,7 +1,9 @@
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::tokio::time::sleep;
 
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertModifyReq;
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountModifyReq;
@@ -16,7 +18,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    info!("【test_cp_all】 : Prepare Kind : IamCsTenantServ::add_tenant");
+    info!("【test_cp_all】 : Prepare : IamCsTenantServ::add_tenant");
     let (tenant_id, tenant_admin_pwd) = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
             tenant_name: TrimString("测试租户1".to_string()),
@@ -30,6 +32,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
         context,
     )
     .await?;
+    sleep(Duration::from_secs(1)).await;
 
     info!("【test_cp_all】 : Login by Username and Password, Password error");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
@@ -69,24 +72,6 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
     )
     .await
     .is_err());
-
-    // Test1
-    info!("【test_cp_all】 : Login by Username and Password, By tenant admin _________");
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
-            ak: TrimString("bios".to_string()),
-            sk: TrimString(tenant_admin_pwd.to_string()),
-            tenant_id: Some(tenant_id.clone()),
-            flag: None,
-        },
-        &funs,
-    )
-    .await;
-    if login_resp.is_err() {
-        funs.commit().await?;
-        info!("{:?}", login_resp);
-        return Ok(());
-    }
 
     info!("【test_cp_all】 : Login by Username and Password, By tenant admin");
     let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(

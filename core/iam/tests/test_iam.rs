@@ -27,7 +27,7 @@ async fn test_iam() -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
     let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
 
-    sleep(Duration::from_secs(5)).await;
+    sleep(Duration::from_secs(1)).await;
 
     let cxt = get_first_account_context(
         iam_constants::RBUM_KIND_SCHEME_IAM_ACCOUNT,

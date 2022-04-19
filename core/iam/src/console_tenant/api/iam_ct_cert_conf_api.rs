@@ -13,15 +13,6 @@ pub struct IamCtCertConfApi;
 /// Tenant Console Cert Config API
 #[OpenApi(prefix_path = "/ct/cert-conf", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtCertConfApi {
-    /// Add Cert Config By UserPwd Kind
-    #[oai(path = "/user-pwd", method = "post")]
-    async fn add_cert_conf_user_pwd(&self, mut add_req: Json<IamUserPwdCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamCtCertServ::add_cert_conf_user_pwd(&mut add_req.0, &funs, &cxt.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
 
     /// Modify Cert Config By UserPwd Kind
     #[oai(path = "/:id/user-pwd", method = "put")]
