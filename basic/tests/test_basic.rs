@@ -30,6 +30,7 @@ const RBUM_ITEM_NAME_DEFAULT_ACCOUNT: &str = "sys_admin";
 pub struct LifeHold<'a> {
     pub mysql: Container<'a, GenericImage>,
     pub redis: Container<'a, Redis>,
+    pub rabbit: Container<'a, GenericImage>,
 }
 
 pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
@@ -42,11 +43,11 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     let port = redis_container.get_host_port(6379);
     let url = format!("redis://127.0.0.1:{}/0", port);
     env::set_var("TARDIS_FW.CACHE.URL", url);
-    //
-    // let rabbit_container = TardisTestContainer::rabbit_custom(docker);
-    // let port = rabbit_container.get_host_port(5672);
-    // let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
-    // env::set_var("TARDIS_FW.MQ.URL", url);
+
+    let rabbit_container = TardisTestContainer::rabbit_custom(docker);
+    let port = rabbit_container.get_host_port(5672);
+    let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
+    env::set_var("TARDIS_FW.MQ.URL", url);
 
     env::set_var("RUST_LOG", "debug");
     TardisFuns::init("tests/config").await?;
@@ -56,6 +57,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     Ok(LifeHold {
         mysql: mysql_container,
         redis: redis_container,
+        rabbit: rabbit_container,
     })
 }
 

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use serde::Serialize;
+use std::collections::HashMap;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -15,6 +16,7 @@ use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterRe
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
+use crate::rbum::rbum_config::RbumConfigManager;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
@@ -308,9 +310,22 @@ where
         Self::before_delete_item(id, funs, cxt).await?;
         RbumItemServ::delete_rbum(id, funs, cxt).await?;
         let select = Self::package_delete(id, funs, cxt).await?;
-        let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
-        Self::after_delete_item(id, funs, cxt).await?;
-        Ok(delete_records)
+        #[cfg(feature = "with-mq")]
+        {
+            let delete_records = funs.db().soft_delete_custom(select, "id").await?;
+            let mq_topic_entity_deleted = &RbumConfigManager::get(funs.module_code())?.mq_topic_entity_deleted;
+            let mq_header = HashMap::from([(RbumConfigManager::get(funs.module_code())?.mq_header_name_operator, cxt.owner.clone())]);
+            for delete_record in &delete_records {
+                funs.mq().request(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
+            }
+            Self::after_delete_item(id, funs, cxt).await?;
+            Ok(delete_records.len() as u64)
+        }
+        #[cfg(not(feature = "with-mq"))]
+        {
+            let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
+            Ok(delete_records)
+        }
     }
 
     async fn delete_item_with_all_rels(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
