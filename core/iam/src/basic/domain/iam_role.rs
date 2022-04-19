@@ -10,16 +10,25 @@ pub struct Model {
     pub id: String,
     pub icon: String,
     pub sort: u32,
+
+    pub own_paths: String,
 }
 
 impl TardisActiveModel for ActiveModel {
-    fn fill_cxt(&mut self, _: &TardisContext, _: bool) {}
+    fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
+        if is_insert {
+            self.own_paths = Set(cxt.own_paths.to_string());
+        }
+    }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
-        Table::create().table(Entity.table_ref()).if_not_exists()
+        Table::create()
+            .table(Entity.table_ref())
+            .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .to_owned()
     }
 

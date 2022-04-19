@@ -46,6 +46,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_http_res::ActiveModel, IamHttpResAddReq, 
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             method: Set(add_req.code.0.to_string()),
+            ..Default::default()
         })
     }
 
