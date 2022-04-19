@@ -178,22 +178,6 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     .await
     .is_err());
 
-    assert!(RbumRelServ::add_rbum(
-        &mut RbumRelAddReq {
-            tag: "bind".to_string(),
-            note: None,
-            from_rbum_kind: RbumRelFromKind::Item,
-            from_rbum_id: item_reldb_inst1_id.to_string(),
-            to_rbum_item_id: "".to_string(),
-            to_own_paths: context.own_paths.to_string(),
-            ext: None
-        },
-        &funs,
-        context,
-    )
-    .await
-    .is_err());
-
     let id = RbumRelServ::add_rbum(
         &mut RbumRelAddReq {
             tag: "bind".to_string(),

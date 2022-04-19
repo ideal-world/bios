@@ -54,6 +54,9 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
         };
         Self::check_ownership_with_table_name(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
+        if add_req.to_rbum_item_id.is_empty() {
+            return Err(TardisError::BadRequest("to_rbum_item_id is empty".to_string()));
+        }
         // TODO It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
         // Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
         Ok(())
@@ -369,6 +372,7 @@ impl<'a> RbumRelServ {
         )
         .await?;
         for rbum_rel_id in rbum_rel_ids {
+            let mut found = true;
             let rbum_rel_attrs = funs
                 .db()
                 .find_dtos::<NameAndValueResp>(
@@ -385,17 +389,21 @@ impl<'a> RbumRelServ {
                 if rbum_rel_attr.is_from {
                     if let Some(value) = check_req.from_attrs.get(&rbum_rel_attr.name) {
                         if value != rbum_rel_attr.value.as_str() {
-                            return Ok(false);
+                            found = false;
+                            break;
                         }
                     } else {
-                        return Ok(false);
+                        found = false;
+                        break;
                     }
                 } else if let Some(value) = check_req.to_attrs.get(&rbum_rel_attr.name) {
                     if value != rbum_rel_attr.value.as_str() {
-                        return Ok(false);
+                        found = false;
+                        break;
                     }
                 } else {
-                    return Ok(false);
+                    found = false;
+                    break;
                 }
             }
             let rbum_rel_envs = funs
@@ -413,7 +421,8 @@ impl<'a> RbumRelServ {
                 match rbum_rel_env.kind {
                     RbumRelEnvKind::DatetimeRange => {
                         if i64::from_str(rbum_rel_env.value1.as_str())? > Utc::now().timestamp() || i64::from_str(rbum_rel_env.value2.as_str())? < Utc::now().timestamp() {
-                            return Ok(false);
+                            found = false;
+                            break;
                         }
                     }
                     RbumRelEnvKind::TimeRange => {
@@ -424,7 +433,9 @@ impl<'a> RbumRelServ {
                     }
                 }
             }
-            return Ok(true);
+            if found {
+                return Ok(true);
+            }
         }
         Ok(false)
     }
