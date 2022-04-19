@@ -19,6 +19,12 @@ pub struct IamUserPwdCertModifyReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamUserPwdCertRestReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub new_sk: TrimString,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamMailVCodeCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,
