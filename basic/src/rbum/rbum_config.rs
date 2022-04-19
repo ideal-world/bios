@@ -11,11 +11,17 @@ use tardis::basic::result::TardisResult;
 #[serde(default)]
 pub struct RbumConfig {
     pub set_cate_sys_code_node_len: usize,
+    pub mq_topic_entity_deleted: String,
+    pub mq_header_name_operator: String,
 }
 
 impl Default for RbumConfig {
     fn default() -> Self {
-        RbumConfig { set_cate_sys_code_node_len: 4 }
+        RbumConfig {
+            set_cate_sys_code_node_len: 4,
+            mq_topic_entity_deleted: "entity_deleted".to_string(),
+            mq_header_name_operator: "OP".to_string(),
+        }
     }
 }
 
