@@ -5,21 +5,19 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
-use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_tenant::dto::iam_ct_app_dto::{IamCtAppAddReq, IamCtAppModifyReq};
+use crate::iam_constants;
 
 pub struct IamCtAppServ;
 
 impl<'a> IamCtAppServ {
     pub async fn add_app(add_req: &mut IamCtAppAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamAppServ::add_item_with_simple_rel_by_to(
+        IamAppServ::add_item(
             &mut IamAppAddReq {
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
@@ -28,8 +26,6 @@ impl<'a> IamCtAppServ {
                 disabled: add_req.disabled,
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
             },
-            &IAMRelKind::IamTenantApp.to_string(),
-            &IamTenantServ::get_id_by_cxt(cxt)?,
             funs,
             cxt,
         )
@@ -73,7 +69,7 @@ impl<'a> IamCtAppServ {
         IamAppServ::paginate_items(
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids:q_id.map(|id| vec![id]),
+                    ids: q_id.map(|id| vec![id]),
                     name: q_name,
                     own_paths: Some(cxt.own_paths.clone()),
                     ..Default::default()
@@ -92,6 +88,6 @@ impl<'a> IamCtAppServ {
 
     pub async fn delete_app(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamAppServ::delete_item(id, funs, cxt).await
+        IamAppServ::delete_item_with_all_rels(id, funs, cxt).await
     }
 }

@@ -8,13 +8,11 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
-use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -57,7 +55,7 @@ impl<'a> IamCsTenantServ {
             &tenant_cxt,
         )
         .await?;
-        IamAccountServ::add_item_with_simple_rel_by_to(
+        IamAccountServ::add_item(
             &mut IamAccountAddReq {
                 id: Some(TrimString(tenant_admin_id.clone())),
                 name: add_req.admin_name.clone(),
@@ -65,8 +63,6 @@ impl<'a> IamCsTenantServ {
                 disabled: add_req.disabled,
                 scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
             },
-            &IAMRelKind::IamTenantAccount.to_string(),
-            &tenant_id,
             funs,
             &tenant_cxt,
         )
@@ -91,22 +87,6 @@ impl<'a> IamCsTenantServ {
                 repeatable: Some(true),
                 expire_sec: None,
             },
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
-
-        IamCertMailVCodeServ::add_cert_conf(
-            &mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
-
-        IamCertPhoneVCodeServ::add_cert_conf(
-            &mut IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
             Some(tenant_id.to_string()),
             funs,
             &tenant_cxt,

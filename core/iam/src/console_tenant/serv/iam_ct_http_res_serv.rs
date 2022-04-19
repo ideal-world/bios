@@ -6,22 +6,22 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::iam_constants;
 use crate::basic::dto::iam_filer_dto::IamHttpResFilterReq;
 use crate::basic::dto::iam_http_res_dto::{IamHttpResAddReq, IamHttpResDetailResp, IamHttpResModifyReq, IamHttpResSummaryResp};
-use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_http_res_serv::IamHttpResServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_tenant::dto::iam_ct_http_res_dto::{IamCtHttpResAddReq, IamCtHttpResModifyReq};
+use crate::iam_constants;
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamCtHttpResServ;
 
 impl<'a> IamCtHttpResServ {
     pub async fn add_http_res(add_req: &mut IamCtHttpResAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamHttpResServ::add_item_with_simple_rel_by_to(
+        IamHttpResServ::add_item(
             &mut IamHttpResAddReq {
                 name: add_req.name.clone(),
                 code: add_req.code.clone(),
@@ -31,8 +31,6 @@ impl<'a> IamCtHttpResServ {
                 sort: add_req.sort,
                 method: add_req.method.clone(),
             },
-            &IAMRelKind::IamTenantHttpRes.to_string(),
-            &IamTenantServ::get_id_by_cxt(cxt)?,
             funs,
             cxt,
         )
@@ -119,6 +117,6 @@ impl<'a> IamCtHttpResServ {
 
     pub async fn delete_http_res(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamHttpResServ::delete_item(id, funs, cxt).await
+        IamHttpResServ::delete_item_with_all_rels(id, funs, cxt).await
     }
 }

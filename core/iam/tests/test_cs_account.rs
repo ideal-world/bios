@@ -1,7 +1,9 @@
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::tokio::time::sleep;
 
 use bios_iam::console_system::dto::iam_cs_account_dto::IamCsAccountModifyReq;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
@@ -13,7 +15,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    info!("【test_cs_account】 : Prepare Kind : IamCsTenantServ::add_tenant");
+    info!("【test_cs_account】 : Prepare : IamCsTenantServ::add_tenant");
     let (tenant_id, _) = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
             tenant_name: TrimString("测试租户1".to_string()),
@@ -27,6 +29,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
+    sleep(Duration::from_secs(1)).await;
 
     info!("【test_cs_account】 : Modify Account By Id");
     assert!(IamCsAccountServ::modify_account("1111111", &mut IamCsAccountModifyReq { disabled: Some(true) }, &funs, context).await.is_err());

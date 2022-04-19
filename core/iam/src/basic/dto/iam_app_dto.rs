@@ -56,7 +56,7 @@ pub struct IamAppDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub scope_level: i32,
+    pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
     pub icon: String,
