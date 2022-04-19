@@ -1,8 +1,8 @@
 use std::time::Duration;
 
+use tardis::{TardisFuns, testcontainers, tokio};
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
-use tardis::{testcontainers, tokio, TardisFuns};
 
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_iam::iam_constants;
@@ -15,6 +15,7 @@ mod test_ct_account;
 mod test_ct_app;
 mod test_ct_basic;
 mod test_ct_cert_conf;
+mod test_ct_cert;
 mod test_ct_http_res;
 mod test_ct_role;
 mod test_ct_tenant;
@@ -46,5 +47,6 @@ async fn test_iam() -> TardisResult<()> {
     test_ct_account::test(&context1, &context2).await?;
     test_ct_http_res::test(&context1, &context2).await?;
     test_ct_cert_conf::test(&context1, &context2).await?;
+    test_ct_cert::test(&context1, &context2).await?;
     Ok(())
 }

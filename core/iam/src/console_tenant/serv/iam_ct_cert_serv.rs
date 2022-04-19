@@ -5,6 +5,7 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
 
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use crate::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -15,7 +16,6 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 pub struct IamCtCertServ;
 
 impl<'a> IamCtCertServ {
-
     pub async fn modify_cert_conf_user_pwd(id: &str, modify_req: &mut IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamCertUserPwdServ::modify_cert_conf(id, modify_req, funs, cxt).await
@@ -74,5 +74,10 @@ impl<'a> IamCtCertServ {
     pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamCertServ::delete_cert_conf(id, funs, cxt).await
+    }
+
+    pub async fn rest_password(account_id: &str, modify_req: &mut IamUserPwdCertRestReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamCertUserPwdServ::reset_sk(modify_req, account_id, &IamTenantServ::get_id_by_cxt(cxt)?, funs, cxt).await
     }
 }

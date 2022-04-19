@@ -11,7 +11,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
-use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::IamCertKind;
@@ -130,6 +130,30 @@ impl<'a> IamCertUserPwdServ {
         }
         if let Some(cert) = certs.get(0) {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
+        } else {
+            Err(TardisError::NotFound(format!("cannot find credential of kind {}", IamCertKind::UserPwd)))
+        }
+    }
+
+    pub async fn reset_sk(modify_req: &mut IamUserPwdCertRestReq, iam_item_id: &str, rel_iam_tenant_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let certs = RbumCertServ::find_rbums(
+            &RbumCertFilterReq {
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_id: Some(iam_item_id.to_string()),
+                rel_rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(rel_iam_tenant_id), funs).await?),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?;
+        if certs.len() > 1 {
+            return Err(TardisError::NotFound(format!("there are multiple credentials of kind {}", IamCertKind::UserPwd)));
+        }
+        if let Some(cert) = certs.get(0) {
+            RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {}", IamCertKind::UserPwd)))
         }
