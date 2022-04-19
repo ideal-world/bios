@@ -49,12 +49,12 @@ pub struct RbumRelCheckReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct RbumRelFindReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tag: String,
-    pub from_rbum_kind: RbumRelFromKind,
+    pub tag: Option<String>,
+    pub from_rbum_kind: Option<RbumRelFromKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub from_rbum_id: String,
+    pub from_rbum_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub to_rbum_item_id: String,
+    pub to_rbum_item_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
