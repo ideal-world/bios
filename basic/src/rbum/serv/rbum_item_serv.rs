@@ -6,18 +6,18 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
-use crate::rbum::dto::rbum_rel_dto::RbumRelAddReq;
+use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
-use crate::rbum::serv::rbum_crud_serv::{CREATE_TIME_FIELD, ID_FIELD, RbumCrudOperation, RbumCrudQueryPackage, UPDATE_TIME_FIELD};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -39,7 +39,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                 .db()
                 .count(
                     Query::select()
-                        .column(rbum_item::Column::Id)
+                        .column((rbum_item::Entity, rbum_item::Column::Id))
                         .from(rbum_item::Entity)
                         .inner_join(
                             rbum_domain::Entity,
@@ -47,9 +47,9 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                         )
                         .inner_join(
                             rbum_kind::Entity,
-                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind::Entity, rbum_item::Column::RelRbumKindId),
+                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
                         )
-                        .and_where(Expr::col(rbum_item::Column::Code).eq(code.0.as_str())),
+                        .and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Code).eq(code.0.as_str())),
                 )
                 .await?
                 > 0
@@ -88,7 +88,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                 .db()
                 .count(
                     Query::select()
-                        .column(rbum_item::Column::Id)
+                        .column((rbum_item::Entity, rbum_item::Column::Id))
                         .from(rbum_item::Entity)
                         .inner_join(
                             rbum_domain::Entity,
@@ -96,10 +96,10 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                         )
                         .inner_join(
                             rbum_kind::Entity,
-                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind::Entity, rbum_item::Column::RelRbumKindId),
+                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
                         )
-                        .and_where(Expr::col(rbum_item::Column::Code).eq(code.0.as_str()))
-                        .and_where(Expr::col(rbum_item::Column::Id).ne(id)),
+                        .and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Code).eq(code.0.as_str()))
+                        .and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).ne(id)),
                 )
                 .await?
                 > 0
@@ -311,6 +311,38 @@ where
         let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
         Self::after_delete_item(id, funs, cxt).await?;
         Ok(delete_records)
+    }
+
+    async fn delete_item_with_all_rels(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        let rel_ids = RbumRelServ::find_rel_ids(
+            &RbumRelFindReq {
+                tag: None,
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(id.to_string()),
+                to_rbum_item_id: None,
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        for rel_id in rel_ids {
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, cxt).await?;
+        }
+        let rel_ids = RbumRelServ::find_rel_ids(
+            &RbumRelFindReq {
+                tag: None,
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: None,
+                to_rbum_item_id: Some(id.to_string()),
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        for rel_id in rel_ids {
+            RbumRelServ::delete_rel_with_ext(&rel_id, funs, cxt).await?;
+        }
+        Self::delete_item(id, funs, cxt).await
     }
 
     // ----------------------------- Query -------------------------------

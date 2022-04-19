@@ -91,7 +91,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
-    info!("【test_rbum_kind_attr】 : Prepare Kind : RbumKindServ::add_rbum");
+    info!("【test_rbum_kind_attr】 : Prepare : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),

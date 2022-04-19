@@ -77,7 +77,17 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
     }
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership(id, funs, cxt).await?;
+        let mut query = Query::select();
+        query.column(rbum_rel::Column::Id).from(rbum_rel::Entity).and_where(Expr::col(rbum_rel::Column::Id).eq(id)).cond_where(
+            Cond::all().add(
+                Cond::any()
+                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str()))
+                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
+            ),
+        );
+        if funs.db().count(&query).await? == 0 {
+            return Err(TardisError::NotFound(format!("The ownership of {}.{} is illegal", Self::get_table_name(), id)));
+        }
         Self::check_exist_before_delete(id, RbumRelAttrServ::get_table_name(), rbum_rel_attr::Column::RelRbumRelId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumRelEnvServ::get_table_name(), rbum_rel_env::Column::RelRbumRelId.as_str(), funs).await?;
         Ok(())
@@ -323,36 +333,42 @@ impl<'a> RbumRelServ {
         })
     }
 
-    pub async fn find_rel_id(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<String>> {
+    pub async fn find_rel_ids(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<String>> {
         let mut query = Query::select();
-        query
-            .column(rbum_rel::Column::Id)
-            .from(rbum_rel::Entity)
-            .and_where(Expr::col(rbum_rel::Column::Tag).eq(find_req.tag.as_str()))
-            .and_where(Expr::col(rbum_rel::Column::FromRbumKind).eq(find_req.from_rbum_kind.to_int()))
-            .and_where(Expr::col(rbum_rel::Column::FromRbumId).eq(find_req.from_rbum_id.as_str()))
-            .and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(find_req.to_rbum_item_id.as_str()))
-            .cond_where(
-                Cond::all()
-                    .add(Cond::any().add(Expr::col(rbum_rel::Column::OwnPaths).eq(cxt.own_paths.as_str())).add(Expr::col(rbum_rel::Column::ToOwnPaths).eq(cxt.own_paths.as_str()))),
-            );
-        let id = funs.db().get_dto::<IdResp>(&query).await?;
-        Ok(id.map(|resp| resp.id))
+        query.column(rbum_rel::Column::Id).from(rbum_rel::Entity);
+        if let Some(tag) = &find_req.tag {
+            query.and_where(Expr::col(rbum_rel::Column::Tag).eq(tag.to_string()));
+        }
+        if let Some(from_rbum_kind) = &find_req.from_rbum_kind {
+            query.and_where(Expr::col(rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+        }
+        if let Some(from_rbum_id) = &find_req.from_rbum_id {
+            query.and_where(Expr::col(rbum_rel::Column::FromRbumId).eq(from_rbum_id.to_string()));
+        }
+        if let Some(to_rbum_item_id) = &find_req.to_rbum_item_id {
+            query.and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(to_rbum_item_id.to_string()));
+        }
+        query.cond_where(
+            Cond::all()
+                .add(Cond::any().add(Expr::col(rbum_rel::Column::OwnPaths).eq(cxt.own_paths.as_str())).add(Expr::col(rbum_rel::Column::ToOwnPaths).eq(cxt.own_paths.as_str()))),
+        );
+        let ids = funs.db().find_dtos::<IdResp>(&query).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
+        Ok(ids)
     }
 
     pub async fn check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
-        let rbum_rel_id = Self::find_rel_id(
+        let rbum_rel_ids = Self::find_rel_ids(
             &RbumRelFindReq {
-                tag: check_req.tag.clone(),
-                from_rbum_kind: check_req.from_rbum_kind.clone(),
-                from_rbum_id: check_req.from_rbum_id.clone(),
-                to_rbum_item_id: check_req.to_rbum_item_id.clone(),
+                tag: Some(check_req.tag.clone()),
+                from_rbum_kind: Some(check_req.from_rbum_kind.clone()),
+                from_rbum_id: Some(check_req.from_rbum_id.clone()),
+                to_rbum_item_id: Some(check_req.to_rbum_item_id.clone()),
             },
             funs,
             cxt,
         )
         .await?;
-        if let Some(rbum_rel_id) = rbum_rel_id {
+        for rbum_rel_id in rbum_rel_ids {
             let rbum_rel_attrs = funs
                 .db()
                 .find_dtos::<NameAndValueResp>(
@@ -408,10 +424,47 @@ impl<'a> RbumRelServ {
                     }
                 }
             }
-            Ok(true)
-        } else {
-            Ok(false)
+            return Ok(true);
         }
+        Ok(false)
+    }
+
+    pub async fn delete_rel_with_ext(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        let rbum_rel_env_ids = RbumRelEnvServ::find_rbums(
+            &RbumRelExtFilterReq {
+                basic: Default::default(),
+                rel_rbum_rel_id: Some(id.to_string()),
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?
+        .iter()
+        .map(|rbum_rel_env| rbum_rel_env.id.clone())
+        .collect::<Vec<String>>();
+        let rbum_rel_attr_ids = RbumRelAttrServ::find_rbums(
+            &RbumRelExtFilterReq {
+                basic: Default::default(),
+                rel_rbum_rel_id: Some(id.to_string()),
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?
+        .iter()
+        .map(|rbum_rel_attr| rbum_rel_attr.id.clone())
+        .collect::<Vec<String>>();
+        for rbum_rel_env_id in rbum_rel_env_ids {
+            RbumRelEnvServ::delete_rbum(&rbum_rel_env_id, funs, cxt).await?;
+        }
+        for rbum_rel_attr_id in rbum_rel_attr_ids {
+            RbumRelAttrServ::delete_rbum(&rbum_rel_attr_id, funs, cxt).await?;
+        }
+        RbumRelServ::delete_rbum(id, funs, cxt).await
     }
 }
 
