@@ -246,8 +246,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 
         if let Some(rel_rbum_cert_conf_id) = &add_req.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::get_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
-            // Encrypt Sk
             RbumCertServ::check_cert_conf_constraint_by_add(add_req, &rbum_cert_conf, funs, cxt).await?;
+            // Encrypt Sk
             if rbum_cert_conf.sk_encrypted {
                 if let Some(sk) = &add_req.sk {
                     let sk = Self::encrypt_sk(sk.0.as_str(), add_req.ak.0.as_str())?;
@@ -273,7 +273,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                     },
                     // Skip normal records
                     2,
-                    rbum_cert_conf.coexist_num as u64,
+                    rbum_cert_conf.coexist_num as u64 - 1,
                     Some(true),
                     None,
                     funs,
@@ -379,7 +379,7 @@ impl<'a> RbumCertServ {
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
-            .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", own_paths).as_str()))
+            .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
