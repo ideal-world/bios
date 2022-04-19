@@ -11,10 +11,16 @@ pub struct Model {
     pub icon: String,
     pub sort: u32,
     pub contact_phone: String,
+
+    pub own_paths: String,
 }
 
 impl TardisActiveModel for ActiveModel {
-    fn fill_cxt(&mut self, _: &TardisContext, _: bool) {}
+    fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
+        if is_insert {
+            self.own_paths = Set(cxt.own_paths.to_string());
+        }
+    }
 
     fn create_table_statement(_: DbBackend) -> TableCreateStatement {
         Table::create()
@@ -24,6 +30,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::ContactPhone).not_null().string())
+            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .to_owned()
     }
 
