@@ -12,7 +12,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
@@ -21,10 +21,12 @@ use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
-use crate::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetServ};
+use crate::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
 
 pub struct RbumRelServ;
+
 pub struct RbumRelAttrServ;
+
 pub struct RbumRelEnvServ;
 
 #[async_trait]
@@ -57,7 +59,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         if add_req.to_rbum_item_id.is_empty() {
             return Err(TardisError::BadRequest("to_rbum_item_id is empty".to_string()));
         }
-        // TODO It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
+        // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
         // Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
         Ok(())
     }
@@ -359,7 +361,74 @@ impl<'a> RbumRelServ {
         Ok(ids)
     }
 
-    pub async fn check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+    pub async fn check_rel(check_req: &mut RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+        if Self::do_check_rel(check_req, funs, cxt).await? {
+            return Ok(true);
+        }
+        let rel_rbum_set_cate_ids = if check_req.from_rbum_kind == RbumRelFromKind::Item {
+            // check set category
+            RbumSetItemServ::find_rbums(
+                &RbumSetItemFilterReq {
+                    basic: Default::default(),
+                    rel_rbum_set_id: None,
+                    rel_rbum_set_cate_id: None,
+                    rel_rbum_item_id: Some(check_req.from_rbum_id.clone()),
+                },
+                None,
+                None,
+                funs,
+                cxt,
+            )
+            .await?
+            .into_iter()
+            .map(|i| i.rel_rbum_set_cate_id)
+            .collect::<Vec<String>>()
+        } else if check_req.from_rbum_kind == RbumRelFromKind::SetCate {
+            vec![check_req.from_rbum_id.clone()]
+        } else {
+            return Ok(false);
+        };
+        for rel_rbum_set_cate_id in rel_rbum_set_cate_ids {
+            let rbum_set_cate_base = RbumSetCateServ::peek_rbum(&rel_rbum_set_cate_id, &RbumSetCateFilterReq::default(), funs, cxt).await?;
+            if check_req.from_rbum_kind != RbumRelFromKind::SetCate {
+                check_req.from_rbum_kind = RbumRelFromKind::SetCate;
+                check_req.from_rbum_id = rbum_set_cate_base.id.clone();
+                // Check directly related records
+                if Self::do_check_rel(check_req, funs, cxt).await? {
+                    return Ok(true);
+                }
+            }
+            check_req.from_rbum_kind = RbumRelFromKind::Set;
+            check_req.from_rbum_id = rbum_set_cate_base.rel_rbum_set_id.clone();
+            if Self::do_check_rel(check_req, funs, cxt).await? {
+                return Ok(true);
+            }
+            let rbum_set_cate_with_rels = RbumSetCateServ::find_rbums(
+                &RbumSetCateFilterReq {
+                    basic: Default::default(),
+                    rel_rbum_set_id: Some(rbum_set_cate_base.rel_rbum_set_id.clone()),
+                    sys_code: Some(rbum_set_cate_base.sys_code.clone()),
+                    find_parent: Some(true),
+                },
+                None,
+                None,
+                funs,
+                cxt,
+            )
+            .await?;
+            for rbum_set_cate in rbum_set_cate_with_rels {
+                check_req.from_rbum_kind = RbumRelFromKind::SetCate;
+                check_req.from_rbum_id = rbum_set_cate.id.clone();
+                // Check indirectly related records
+                if Self::do_check_rel(check_req, funs, cxt).await? {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    async fn do_check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
         let rbum_rel_ids = Self::find_rel_ids(
             &RbumRelFindReq {
                 tag: Some(check_req.tag.clone()),
@@ -437,7 +506,6 @@ impl<'a> RbumRelServ {
                 return Ok(true);
             }
         }
-        // TODO if rbum_from_kind != Set then check more: item  -> set_cate -> set_cate(parent) -> set
         Ok(false)
     }
 

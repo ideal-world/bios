@@ -17,15 +17,20 @@ use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAttrAggAd
 use bios_basic::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelModifyReq};
 use bios_basic::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvModifyReq};
+use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemAddReq;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumRelEnvKind, RbumRelFromKind, RbumScopeLevelKind, RbumWidgetTypeKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use bios_basic::rbum::serv::rbum_rel_serv::{RbumRelAttrServ, RbumRelEnvServ, RbumRelServ};
+use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_rel(context).await?;
+    test_rbum_rel_with_set(context).await?;
     test_rbum_rel_attr(context).await?;
     test_rbum_rel_env(context).await?;
     test_rbum_rel_use(context).await?;
@@ -222,6 +227,194 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel】 : Test Delete : RbumRelServ::delete_rbum");
     RbumRelServ::delete_rbum(&id, &funs, context).await?;
     assert!(RbumRelServ::get_rbum(&id, &RbumRelFilterReq::default(), &funs, context).await.is_err());
+
+    funs.rollback().await?;
+
+    Ok(())
+}
+
+async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    funs.begin().await?;
+
+    info!("【test_rbum_rel】 : Prepare : RbumKindServ::add_rbum");
+    let set_id = RbumSetServ::add_rbum(
+        &mut RbumSetAddReq {
+            code: TrimString("set_test".to_string()),
+            name: TrimString(" 测试集合 ".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: RbumScopeLevelKind::L2,
+            ext: None,
+            disabled: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let set_cat_l1_id = RbumSetCateServ::add_rbum(
+        &mut RbumSetCateAddReq {
+            bus_code: TrimString("".to_string()),
+            name: TrimString("l1".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: None,
+            scope_level: RbumScopeLevelKind::L2,
+            rel_rbum_set_id: set_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let set_cat_l1_l1_id = RbumSetCateServ::add_rbum(
+        &mut RbumSetCateAddReq {
+            bus_code: TrimString("".to_string()),
+            name: TrimString("l1_1".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: Some(set_cat_l1_id.to_string()),
+            scope_level: RbumScopeLevelKind::L2,
+            rel_rbum_set_id: set_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let set_cat_l1_l1_l1_id = RbumSetCateServ::add_rbum(
+        &mut RbumSetCateAddReq {
+            bus_code: TrimString("".to_string()),
+            name: TrimString("l2_1_1".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: Some(set_cat_l1_l1_id.to_string()),
+            scope_level: RbumScopeLevelKind::L2,
+            rel_rbum_set_id: set_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    RbumSetItemServ::add_rbum(
+        &mut RbumSetItemAddReq {
+            sort: 0,
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: set_cat_l1_l1_l1_id.to_string(),
+            rel_rbum_item_id: context.owner.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    // -----------------------------------
+
+    assert!(
+        !RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: context.owner.to_string(),
+                to_rbum_item_id: "xxxx".to_string(),
+                from_attrs: Default::default(),
+                to_attrs: Default::default()
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    info!("【test_rbum_rel】 : Test Rel with set");
+
+    let rel_set_id = RbumRelServ::add_rbum(
+        &mut RbumRelAddReq {
+            tag: "bind".to_string(),
+            note: None,
+            from_rbum_kind: RbumRelFromKind::Set,
+            from_rbum_id: set_id.to_string(),
+            to_rbum_item_id: "xxxx".to_string(),
+            to_own_paths: context.own_paths.to_string(),
+            ext: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    assert!(
+        RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: context.owner.to_string(),
+                to_rbum_item_id: "xxxx".to_string(),
+                from_attrs: Default::default(),
+                to_attrs: Default::default()
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    info!("【test_rbum_rel】 : Test Rel with set Cate");
+
+    RbumRelServ::delete_rbum(&rel_set_id, &funs, context).await?;
+
+    assert!(
+        !RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: context.owner.to_string(),
+                to_rbum_item_id: "xxxx".to_string(),
+                from_attrs: Default::default(),
+                to_attrs: Default::default()
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
+
+    let _rel_set_id = RbumRelServ::add_rbum(
+        &mut RbumRelAddReq {
+            tag: "bind".to_string(),
+            note: None,
+            from_rbum_kind: RbumRelFromKind::SetCate,
+            from_rbum_id: set_cat_l1_id.to_string(),
+            to_rbum_item_id: "xxxx".to_string(),
+            to_own_paths: context.own_paths.to_string(),
+            ext: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    assert!(
+        RbumRelServ::check_rel(
+            &mut RbumRelCheckReq {
+                tag: "bind".to_string(),
+                from_rbum_kind: RbumRelFromKind::Item,
+                from_rbum_id: context.owner.to_string(),
+                to_rbum_item_id: "xxxx".to_string(),
+                from_attrs: Default::default(),
+                to_attrs: Default::default()
+            },
+            &funs,
+            context
+        )
+        .await?
+    );
 
     funs.rollback().await?;
 
@@ -819,7 +1012,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_use】 : Test Check Rel : RbumRelServ::check_rel");
     assert!(
         !RbumRelServ::check_rel(
-            &RbumRelCheckReq {
+            &mut RbumRelCheckReq {
                 tag: "".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: "".to_string(),
@@ -835,7 +1028,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         !RbumRelServ::check_rel(
-            &RbumRelCheckReq {
+            &mut RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
@@ -851,7 +1044,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         !RbumRelServ::check_rel(
-            &RbumRelCheckReq {
+            &mut RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
@@ -867,7 +1060,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         RbumRelServ::check_rel(
-            &RbumRelCheckReq {
+            &mut RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),
@@ -885,7 +1078,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
 
     assert!(
         !RbumRelServ::check_rel(
-            &RbumRelCheckReq {
+            &mut RbumRelCheckReq {
                 tag: "bind".to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: item_reldb_inst1_id.to_string(),

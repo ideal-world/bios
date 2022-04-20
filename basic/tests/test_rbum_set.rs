@@ -5,7 +5,7 @@ use tardis::log::info;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
@@ -239,7 +239,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_set_cate】 : Test Get : RbumSetCateServ::get_rbum");
-    let rbum = RbumSetCateServ::get_rbum(&l2_1_2_id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    let rbum = RbumSetCateServ::get_rbum(&l2_1_2_id, &RbumSetCateFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, l2_1_2_id);
     assert_eq!(rbum.name, "l2_1_2");
 
@@ -261,8 +261,11 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_set_cate】 : Test Find : RbumSetCateServ::paginate_rbums");
     let rbums = RbumSetCateServ::paginate_rbums(
-        &RbumBasicFilterReq {
-            name: Some("l2_1_2".to_string()),
+        &RbumSetCateFilterReq {
+            basic: RbumBasicFilterReq {
+                name: Some("l2_1_2".to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         },
         1,
@@ -319,7 +322,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_cate】 : Test Delete : RbumSetCateServ::delete_rbum");
     assert!(RbumSetCateServ::delete_rbum(&l2_1_id, &funs, context).await.is_err());
     RbumSetCateServ::delete_rbum(&l2_1_2_id, &funs, context).await?;
-    assert!(RbumSetCateServ::get_rbum(&l2_1_2_id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumSetCateServ::get_rbum(&l2_1_2_id, &RbumSetCateFilterReq::default(), &funs, context).await.is_err());
 
     funs.rollback().await?;
 
@@ -470,8 +473,9 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         &id,
         &RbumSetItemFilterReq {
             basic: Default::default(),
-            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_id: Some(set_id.to_string()),
             rel_rbum_set_cate_id: None,
+            rel_rbum_item_id: None,
         },
         &funs,
         context,
@@ -489,8 +493,9 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     let rbums = RbumSetItemServ::paginate_rbums(
         &RbumSetItemFilterReq {
             basic: Default::default(),
-            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_id: Some(set_id.to_string()),
             rel_rbum_set_cate_id: None,
+            rel_rbum_item_id: None,
         },
         1,
         10,
@@ -511,8 +516,9 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         &id,
         &RbumSetItemFilterReq {
             basic: Default::default(),
-            rel_rbum_set_id: set_id.to_string(),
-            rel_rbum_set_cate_id: None
+            rel_rbum_set_id: Some(set_id.to_string()),
+            rel_rbum_set_cate_id: None,
+            rel_rbum_item_id: None,
         },
         &funs,
         context

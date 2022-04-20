@@ -139,8 +139,9 @@ impl<'a> IamSetServ {
         RbumSetItemServ::find_rbums(
             &RbumSetItemFilterReq {
                 basic: Default::default(),
-                rel_rbum_set_id: id,
+                rel_rbum_set_id: Some(id),
                 rel_rbum_set_cate_id: Some(set_cate_id.to_string()),
+                rel_rbum_item_id: None,
             },
             None,
             None,
