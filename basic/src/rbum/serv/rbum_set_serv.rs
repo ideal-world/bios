@@ -153,11 +153,13 @@ impl<'a> RbumSetServ {
             .into_iter()
             .map(|r| RbumSetCateSummaryResp {
                 id: r.id.to_string(),
+                sys_code: r.sys_code.to_string(),
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
                 icon: r.icon.to_string(),
                 sort: r.sort,
                 ext: r.ext.to_string(),
+                rel_rbum_set_id: rbum_set_id.to_string(),
                 own_paths: r.own_paths.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
@@ -294,7 +296,22 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         {
             return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are rbum_set_item".to_string()));
         }
-        // TODO check parent
+        let set = Self::peek_rbum(id, &RbumBasicFilterReq::default(), funs, cxt).await?;
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column(rbum_set_cate::Column::Id)
+                    .from(rbum_set_cate::Entity)
+                    .and_where(Expr::col(rbum_set_cate::Column::Id).ne(id))
+                    .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(set.rel_rbum_set_id.as_str()))
+                    .and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", set.sys_code.as_str()).as_str())),
+            )
+            .await?
+            > 0
+        {
+            return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are sub rbum_set_cate".to_string()));
+        }
         Ok(())
     }
 
@@ -303,11 +320,13 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         query
             .columns(vec![
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Id),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::SysCode),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::BusCode),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Name),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Icon),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Sort),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Ext),
+                (rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::OwnPaths),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::Owner),
                 (rbum_set_cate::Entity, rbum_set_cate::Column::CreateTime),
@@ -364,9 +383,7 @@ impl<'a> RbumSetCateServ {
             Ok(String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?)
         }
     }
-}
 
-impl<'a> RbumSetCateServ {
     async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         Self::check_ownership(rbum_set_cate_id, funs, cxt).await?;
         let sys_code = funs
