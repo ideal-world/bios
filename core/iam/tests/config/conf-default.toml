@@ -2,6 +2,3 @@
 [cs.iam]
 [cs.iam.rbum]
 set_cate_sys_code_node_len = 4
-
-[fw.mq]
-enabled = false

@@ -19,6 +19,7 @@ mod test_ct_cert;
 mod test_ct_http_res;
 mod test_ct_role;
 mod test_ct_tenant;
+mod test_ct_set;
 
 #[tokio::test]
 async fn test_iam() -> TardisResult<()> {
@@ -48,5 +49,6 @@ async fn test_iam() -> TardisResult<()> {
     test_ct_http_res::test(&context1, &context2).await?;
     test_ct_cert_conf::test(&context1, &context2).await?;
     test_ct_cert::test(&context1, &context2).await?;
+    test_ct_set::test(&context1, &context2).await?;
     Ok(())
 }
