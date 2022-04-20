@@ -5,7 +5,7 @@ use tardis::log::info;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
@@ -116,7 +116,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: None,
             rbum_parent_cate_id: None,
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: "".to_string()
@@ -134,7 +133,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: None,
             rbum_parent_cate_id: None,
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -151,7 +149,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: Some(l1_id.to_string()),
             rbum_parent_cate_id: None,
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -168,7 +165,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: Some(l1_id.to_string()),
             rbum_parent_cate_id: None,
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -185,7 +181,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: None,
             rbum_parent_cate_id: Some(l1_id.to_string()),
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -202,7 +197,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: None,
             rbum_parent_cate_id: Some(l2_id.to_string()),
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -219,7 +213,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: None,
             rbum_parent_cate_id: Some(l2_1_id.to_string()),
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -236,8 +229,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: Some(l2_1_1_id.to_string()),
-            rbum_parent_cate_id: None,
+            rbum_parent_cate_id: Some(l2_1_id.to_string()),
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
         },
@@ -409,7 +401,6 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             icon: None,
             sort: None,
             ext: None,
-            rbum_sibling_cate_id: None,
             rbum_parent_cate_id: None,
             scope_level: RbumScopeLevelKind::L2,
             rel_rbum_set_id: set_id.to_string(),
@@ -474,7 +465,17 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::get_rbum");
-    let rbum = RbumSetItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    let rbum = RbumSetItemServ::get_rbum(
+        &id,
+        &RbumSetItemFilterReq {
+            basic: Default::default(),
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.sort, 0);
     assert_eq!(rbum.rel_rbum_set_cate_name, "l1");
@@ -484,7 +485,20 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;
 
     info!("【test_rbum_set_item】 : Test Find : RbumSetItemServ::paginate_rbums");
-    let rbums = RbumSetItemServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    let rbums = RbumSetItemServ::paginate_rbums(
+        &RbumSetItemFilterReq {
+            basic: Default::default(),
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: None,
+        },
+        1,
+        10,
+        None,
+        None,
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
@@ -492,7 +506,18 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_set_item】 : Test Delete : RbumSetItemServ::delete_rbum");
     RbumSetItemServ::delete_rbum(&id, &funs, context).await?;
-    assert!(RbumSetItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumSetItemServ::get_rbum(
+        &id,
+        &RbumSetItemFilterReq {
+            basic: Default::default(),
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: None
+        },
+        &funs,
+        context
+    )
+    .await
+    .is_err());
 
     funs.rollback().await?;
 

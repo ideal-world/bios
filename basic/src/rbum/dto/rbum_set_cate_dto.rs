@@ -17,8 +17,6 @@ pub struct RbumSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub rbum_sibling_cate_id: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rbum_parent_cate_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub rel_rbum_set_id: String,
