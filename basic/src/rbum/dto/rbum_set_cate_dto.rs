@@ -1,39 +1,40 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::web::poem_openapi::Object;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumSetCateAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub bus_code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub rbum_parent_cate_id: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_set_id: String,
 
     pub scope_level: RbumScopeLevelKind,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumSetCateModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub bus_code: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,

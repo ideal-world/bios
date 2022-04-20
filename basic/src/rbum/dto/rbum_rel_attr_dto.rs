@@ -1,26 +1,27 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
-use tardis::web::poem_openapi::Object;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumRelAttrAddReq {
     pub is_from: bool,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub value: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: String,
     pub record_only: bool,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_kind_attr_id: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_rel_id: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumRelAttrModifyReq {
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub value: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: Option<String>,
 }
 

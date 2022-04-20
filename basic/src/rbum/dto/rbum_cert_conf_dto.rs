@@ -1,64 +1,65 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::web::poem_openapi::Object;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumCertConfAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak_note: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak_rule: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_note: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_rule: Option<String>,
     pub sk_need: Option<bool>,
     pub sk_encrypted: Option<bool>,
     pub repeatable: Option<bool>,
     pub is_basic: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
     pub expire_sec: Option<u32>,
     pub coexist_num: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_domain_id: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_item_id: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumCertConfModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak_note: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak_rule: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_note: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_rule: Option<String>,
     pub sk_need: Option<bool>,
     pub sk_encrypted: Option<bool>,
     pub repeatable: Option<bool>,
     pub is_basic: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
     pub expire_sec: Option<u32>,
     pub coexist_num: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
 }
 

@@ -1,17 +1,17 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::web::poem_openapi::Object;
 
 use crate::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumKindAttrAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub label: String,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
     pub sort: Option<u32>,
     pub main_column: Option<bool>,
@@ -20,28 +20,29 @@ pub struct RbumKindAttrAddReq {
     pub overload: Option<bool>,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub default_value: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub options: Option<String>,
     pub required: Option<bool>,
     pub min_length: Option<u32>,
     pub max_length: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub action: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_kind_id: String,
 
     pub scope_level: RbumScopeLevelKind,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumKindAttrModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub label: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
     pub sort: Option<u32>,
     pub main_column: Option<bool>,
@@ -50,14 +51,14 @@ pub struct RbumKindAttrModifyReq {
     pub overload: Option<bool>,
     pub data_type: Option<RbumDataTypeKind>,
     pub widget_type: Option<RbumWidgetTypeKind>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub default_value: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub options: Option<String>,
     pub required: Option<bool>,
     pub min_length: Option<u32>,
     pub max_length: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub action: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
