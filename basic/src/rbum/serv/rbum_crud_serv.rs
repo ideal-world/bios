@@ -221,6 +221,17 @@ where
 
     async fn package_query(is_detail: bool, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement>;
 
+    async fn peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
+        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
+        let query = funs.db().get_dto(&query).await?;
+        match query {
+            Some(resp) => Ok(resp),
+            // TODO
+            None => Err(TardisError::NotFound("".to_string())),
+        }
+    }
+
     async fn get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_query(true, filter, funs, cxt).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
