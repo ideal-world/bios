@@ -8,7 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateSummaryWithPidResp};
 use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetSummaryResp};
 use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
@@ -216,7 +216,7 @@ impl<'a> RbumSetServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateDetailResp, RbumBasicFilterReq>
+impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateDetailResp, RbumSetCateFilterReq>
     for RbumSetCateServ
 {
     fn get_table_name() -> &'static str {
@@ -296,7 +296,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         {
             return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are rbum_set_item".to_string()));
         }
-        let set = Self::peek_rbum(id, &RbumBasicFilterReq::default(), funs, cxt).await?;
+        let set = Self::peek_rbum(id, &RbumSetCateFilterReq::default(), funs, cxt).await?;
         if funs
             .db()
             .count(
@@ -315,7 +315,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         Ok(())
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetCateFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -334,12 +334,37 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 (rbum_set_cate::Entity, rbum_set_cate::Column::ScopeLevel),
             ])
             .from(rbum_set_cate::Entity);
-        query.with_filter(Self::get_table_name(), filter, is_detail, true, cxt);
+        if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
+            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
+        }
+        if let Some(sys_code) = &filter.sys_code {
+            if filter.find_parent.is_some() {
+                let parent_sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
+                query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
+            } else {
+                query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+            }
+        }
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);
         Ok(query)
     }
 }
 
 impl<'a> RbumSetCateServ {
+    fn get_parent_sys_codes(sys_code: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Vec<String>> {
+        let set_cate_sys_code_node_len = RbumConfigManager::get(funs.module_code())?.set_cate_sys_code_node_len;
+        let mut level = sys_code.len() / set_cate_sys_code_node_len - 1;
+        if level == 0 {
+            return Ok(vec![]);
+        }
+        let mut sys_code_item = Vec::with_capacity(level);
+        while level != 0 {
+            sys_code_item.push(sys_code[..set_cate_sys_code_node_len * level].to_string());
+            level -= 1;
+        }
+        Ok(sys_code_item)
+    }
+
     async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         if let Some(rbum_set_parent_cate_id) = rbum_set_parent_cate_id {
             let rel_parent_sys_code = Self::get_sys_code(rbum_set_parent_cate_id, funs, cxt).await?;
@@ -365,7 +390,7 @@ impl<'a> RbumSetCateServ {
         let max_sys_code = funs.db().get_dto::<SysCodeResp>(&query).await?.map(|r| r.sys_code);
         if let Some(max_sys_code) = max_sys_code {
             if max_sys_code.len() != set_cate_sys_code_node_len {
-                // if level N (N!-1) not empty
+                // if level N (N!=1) not empty
                 let curr_level_sys_code = max_sys_code[max_sys_code.len() - set_cate_sys_code_node_len..].to_string();
                 let parent_sys_code = max_sys_code[..max_sys_code.len() - set_cate_sys_code_node_len].to_string();
                 let curr_level_sys_code =
@@ -461,9 +486,14 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 rel_item_table.clone(),
                 Expr::tbl(rel_item_table, rbum_item::Column::Id).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
             );
-        query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId).eq(filter.rel_rbum_set_id.as_str()));
+        if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
+            query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
+        }
         if let Some(rel_rbum_set_cate_id) = &filter.rel_rbum_set_cate_id {
             query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).eq(rel_rbum_set_cate_id.to_string()));
+        }
+        if let Some(rel_rbum_item_id) = &filter.rel_rbum_item_id {
+            query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId).eq(rel_rbum_item_id.to_string()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
         Ok(query)

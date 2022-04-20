@@ -105,10 +105,42 @@ impl Default for RbumRelExtFilterReq {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+pub struct RbumSetCateFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel_rbum_set_id: Option<String>,
+    pub sys_code: Option<String>,
+    pub find_parent: Option<bool>,
+}
+
+impl Default for RbumSetCateFilterReq {
+    fn default() -> Self {
+        Self {
+            basic: Default::default(),
+            rel_rbum_set_id: None,
+            sys_code: None,
+            find_parent: None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumSetItemFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub rel_rbum_set_id: String,
+    pub rel_rbum_set_id: Option<String>,
     pub rel_rbum_set_cate_id: Option<String>,
+    pub rel_rbum_item_id: Option<String>,
+}
+
+impl Default for RbumSetItemFilterReq {
+    fn default() -> Self {
+        Self {
+            basic: Default::default(),
+            rel_rbum_set_id: None,
+            rel_rbum_set_cate_id: None,
+            rel_rbum_item_id: None,
+        }
+    }
 }
 
 pub trait RbumBasicFilterFetcher {
