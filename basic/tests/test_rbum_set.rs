@@ -317,6 +317,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.get(1).unwrap().id, l2_1_2_id);
 
     info!("【test_rbum_set_cate】 : Test Delete : RbumSetCateServ::delete_rbum");
+    assert!(RbumSetCateServ::delete_rbum(&l2_1_id, &funs, context).await.is_err());
     RbumSetCateServ::delete_rbum(&l2_1_2_id, &funs, context).await?;
     assert!(RbumSetCateServ::get_rbum(&l2_1_2_id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
 

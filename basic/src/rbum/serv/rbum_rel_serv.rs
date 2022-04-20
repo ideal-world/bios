@@ -437,6 +437,7 @@ impl<'a> RbumRelServ {
                 return Ok(true);
             }
         }
+        // TODO if rbum_from_kind != Set then check more: item  -> set_cate -> set_cate(parent) -> set
         Ok(false)
     }
 

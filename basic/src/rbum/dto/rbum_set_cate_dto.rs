@@ -44,11 +44,14 @@ pub struct RbumSetCateModifyReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetCateSummaryResp {
     pub id: String,
+    pub sys_code: String,
     pub bus_code: String,
     pub name: String,
     pub icon: String,
     pub sort: u32,
     pub ext: String,
+
+    pub rel_rbum_set_id: String,
 
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
@@ -66,7 +69,7 @@ pub struct RbumSetCateSummaryWithPidResp {
     pub icon: String,
     pub sort: u32,
     pub ext: String,
-
+    
     pub own_paths: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -79,11 +82,14 @@ pub struct RbumSetCateSummaryWithPidResp {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetCateDetailResp {
     pub id: String,
+    pub sys_code: String,
     pub bus_code: String,
     pub name: String,
     pub icon: String,
     pub sort: u32,
     pub ext: String,
+
+    pub rel_rbum_set_id: String,
 
     pub own_paths: String,
     pub owner: String,
