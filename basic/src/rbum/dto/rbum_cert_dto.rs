@@ -1,38 +1,39 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::web::poem_openapi::Object;
 
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumCertAddReq {
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak: TrimString,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
     pub status: RbumCertStatusKind,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_kind: RbumCertRelKind,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_id: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumCertModifyReq {
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
     pub status: Option<RbumCertStatusKind>,
 }
