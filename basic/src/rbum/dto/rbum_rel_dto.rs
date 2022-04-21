@@ -19,6 +19,7 @@ pub struct RbumRelAddReq {
     pub to_rbum_item_id: String,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub to_own_paths: String,
+    pub to_is_outside: bool,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 }

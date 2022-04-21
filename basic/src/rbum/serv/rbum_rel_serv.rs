@@ -55,12 +55,17 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
             RbumRelFromKind::Set => RbumSetServ::get_table_name(),
             RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
         };
-        Self::check_ownership_with_table_name(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
+        // The relationship check is changed from check_ownership to check_scope.
+        // for example, the account corresponding to the tenant can be associated to the app,
+        // where the account belongs to the tenant but scope=1, so it can be used by the application.
+        Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
         if add_req.to_rbum_item_id.is_empty() {
             return Err(TardisError::BadRequest("to_rbum_item_id is empty".to_string()));
         }
         // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
-        // Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
+        if !add_req.to_is_outside {
+            Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
+        }
         Ok(())
     }
 
@@ -185,6 +190,7 @@ impl<'a> RbumRelServ {
                 from_rbum_id: from_rbum_id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
                 to_own_paths: cxt.own_paths.to_string(),
+                to_is_outside: false,
                 ext: None,
             },
             funs,
@@ -354,8 +360,11 @@ impl<'a> RbumRelServ {
             query.and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(to_rbum_item_id.to_string()));
         }
         query.cond_where(
-            Cond::all()
-                .add(Cond::any().add(Expr::col(rbum_rel::Column::OwnPaths).eq(cxt.own_paths.as_str())).add(Expr::col(rbum_rel::Column::ToOwnPaths).eq(cxt.own_paths.as_str()))),
+            Cond::all().add(
+                Cond::any()
+                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str()))
+                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
+            ),
         );
         let ids = funs.db().find_dtos::<IdResp>(&query).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
         Ok(ids)
