@@ -21,8 +21,26 @@ impl<'a> IamCpCertUserPwdServ {
         let (rbum_cert_id, _, rbum_item_id) = RbumCertServ::validate(&login_req.ak.0, &login_req.sk.0, &rbum_cert_conf_id, tenant_id, funs).await?;
         let token = TardisFuns::crypto.key.generate_token()?;
         let token_kind = IamCertTokenKind::parse(&login_req.flag);
-        let (context, resp) =
-            IamCertServ::package_tardis_context_and_resp(Some(tenant_id), None, &login_req.ak.0, &rbum_item_id, Some(&token), Some(&token_kind.to_string()), funs).await?;
+        let (context, resp) = IamCertServ::package_tardis_context_and_resp(
+            login_req.tenant_id.clone(),
+            login_req.app_id.clone(),
+            &login_req.ak.0,
+            &rbum_item_id,
+            Some(&token),
+            Some(&token_kind.to_string()),
+            funs,
+        )
+        .await?;
+        // tmp
+        let context = TardisContext {
+            own_paths: tenant_id.to_string(),
+            ak: context.ak.to_string(),
+            owner: context.owner.to_string(),
+            token: token.clone(),
+            token_kind: context.token_kind.to_string(),
+            roles: vec![],
+            groups: vec![],
+        };
         IamCertTokenServ::add_cert(&token, token_kind, &rbum_item_id, tenant_id, &rbum_cert_id, funs, &context).await?;
         Ok(resp)
     }

@@ -63,9 +63,9 @@ impl<'a> IamCsAccountServ {
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
-                    ids:q_id.map(|id| vec![id]),
+                    ids: q_id.map(|id| vec![id]),
                     name: q_name,
-                    own_paths: Some(tenant_id),
+                    own_paths_with_sub: Some(tenant_id),
                     ..Default::default()
                 },
                 ..Default::default()

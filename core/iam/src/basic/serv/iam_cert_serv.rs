@@ -168,8 +168,8 @@ impl<'a> IamCertServ {
     }
 
     pub async fn package_tardis_context_and_resp(
-        iam_tenant_id: Option<&str>,
-        iam_app_id: Option<&str>,
+        iam_tenant_id: Option<String>,
+        iam_app_id: Option<String>,
         ak: &str,
         account_id: &str,
         token: Option<&str>,

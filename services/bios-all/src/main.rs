@@ -33,6 +33,6 @@ async fn main() -> TardisResult<()> {
     env::set_var("RUST_LOG", "info");
     TardisFuns::init("services/bios-all/config").await?;
     let web_server = TardisFuns::web_server();
-    initializer::init(&web_server).await?;
+    initializer::init(web_server).await?;
     web_server.start().await
 }

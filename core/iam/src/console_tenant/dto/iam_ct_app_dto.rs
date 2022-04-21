@@ -5,13 +5,16 @@ use tardis::web::poem_openapi::Object;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamCtAppAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: TrimString,
+    pub app_name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
-    pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub app_icon: Option<String>,
+    pub app_sort: Option<u32>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub contact_phone: Option<String>,
+    pub app_contact_phone: Option<String>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub admin_id: String,
 
     pub disabled: Option<bool>,
 }

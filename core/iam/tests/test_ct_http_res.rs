@@ -90,15 +90,15 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     assert!(http_res.records.iter().any(|i| i.name == "测试资源"));
 
     info!("【test_ct_http_res】 : Delete Http Res By Id, with err");
-    assert!(IamCtHttpResServ::delete_http_res("11111", &funs, &context1).await.is_err());
+    assert!(IamCtHttpResServ::delete_http_res("11111", &funs, context1).await.is_err());
     info!("【test_ct_http_res】 : Delete Http Res By Id, with err");
-    assert!(IamCtHttpResServ::delete_http_res(&http_res_id1, &funs, &context2).await.is_err());
+    assert!(IamCtHttpResServ::delete_http_res(&http_res_id1, &funs, context2).await.is_err());
     info!("【test_ct_http_res】 : Delete Http Res By Id");
     assert_eq!(
         IamCtHttpResServ::paginate_http_res(Some(http_res_id1.clone()), None, 1, 10, None, None, &funs, context1).await?.total_size,
         1
     );
-    IamCtHttpResServ::delete_http_res(&http_res_id1, &funs, &context1).await?;
+    IamCtHttpResServ::delete_http_res(&http_res_id1, &funs, context1).await?;
     assert_eq!(
         IamCtHttpResServ::paginate_http_res(Some(http_res_id1.clone()), None, 1, 10, None, None, &funs, context1).await?.total_size,
         0

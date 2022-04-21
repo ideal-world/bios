@@ -1,8 +1,8 @@
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFuns;
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -23,7 +23,8 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertTokenKind, IAMRelKind};
+use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
+use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 
 pub struct IamCsTenantServ;
 
@@ -79,6 +80,7 @@ impl<'a> IamCsTenantServ {
             &tenant_cxt,
         )
         .await?;
+
         IamCertUserPwdServ::add_cert_conf(
             &mut IamUserPwdCertConfAddOrModifyReq {
                 ak_note: None,
@@ -158,10 +160,10 @@ impl<'a> IamCsTenantServ {
             &tenant_cxt,
         )
         .await?;
-        
-        IamSetServ::init_set(true,funs, &tenant_cxt).await?;
-        IamSetServ::init_set(false,funs, &tenant_cxt).await?;
-        
+
+        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
+        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
+
         Ok((tenant_id, pwd))
     }
 

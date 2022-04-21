@@ -30,6 +30,7 @@ impl<'a> IamRelServ {
                 from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
                 to_own_paths: cxt.own_paths.to_string(),
+                to_is_outside: false,
                 ext: None,
             },
             attrs: vec![],

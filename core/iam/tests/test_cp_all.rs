@@ -40,6 +40,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString("123456".to_string()),
             tenant_id: None,
+            app_id: None,
             flag: None
         },
         &funs,
@@ -53,6 +54,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: Some(tenant_id.clone()),
+            app_id: None,
             flag: None
         },
         &funs,
@@ -66,6 +68,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd.to_string()),
             tenant_id: None,
+            app_id: None,
             flag: None
         },
         &funs,
@@ -79,6 +82,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd.to_string()),
             tenant_id: Some(tenant_id),
+            app_id: None,
             flag: None,
         },
         &funs,
@@ -96,6 +100,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: None,
+            app_id: None,
             flag: None,
         },
         &funs,
@@ -146,6 +151,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: None,
+            app_id: None,
             flag: None
         },
         &funs,
@@ -158,6 +164,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString("123456".to_string()),
             tenant_id: None,
+            app_id: None,
             flag: None,
         },
         &funs,

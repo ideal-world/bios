@@ -14,11 +14,12 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     info!("【test_ct_app】 : Add App");
     let app_id1 = IamCtAppServ::add_app(
         &mut IamCtAppAddReq {
-            name: TrimString("测试应用1".to_string()),
-            icon: None,
-            sort: None,
-            contact_phone: None,
+            app_name: TrimString("测试应用1".to_string()),
+            app_icon: None,
+            app_sort: None,
+            app_contact_phone: None,
             disabled: None,
+            admin_id: context1.owner.to_string(),
         },
         &funs,
         context1,
@@ -27,11 +28,12 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
 
     IamCtAppServ::add_app(
         &mut IamCtAppAddReq {
-            name: TrimString("测试应用2".to_string()),
-            icon: None,
-            sort: None,
-            contact_phone: None,
+            app_name: TrimString("测试应用2".to_string()),
+            app_icon: None,
+            app_sort: None,
+            app_contact_phone: None,
             disabled: None,
+            admin_id: context2.owner.to_string(),
         },
         &funs,
         context2,
