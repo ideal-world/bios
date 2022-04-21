@@ -310,6 +310,9 @@ impl RbumCrudQueryPackage for SelectStatement {
         if let Some(own_paths) = &filter.own_paths {
             self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(own_paths.to_string()));
         }
+        if let Some(own_paths_with_sub) = &filter.own_paths_with_sub {
+            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", own_paths_with_sub).as_str()));
+        }
         if let Some(ids) = &filter.ids {
             self.and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).is_in(ids.clone()));
         }

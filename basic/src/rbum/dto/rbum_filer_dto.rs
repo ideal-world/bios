@@ -12,6 +12,7 @@ pub struct RbumBasicFilterReq {
     pub rel_cxt_owner: bool,
 
     pub own_paths: Option<String>,
+    pub own_paths_with_sub: Option<String>,
     pub ids: Option<Vec<String>>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub enabled: Option<bool>,
@@ -21,7 +22,7 @@ pub struct RbumBasicFilterReq {
     pub rbum_domain_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
 pub struct RbumCertConfFilterReq {
@@ -30,17 +31,7 @@ pub struct RbumCertConfFilterReq {
     pub rel_rbum_item_id: Option<String>,
 }
 
-impl Default for RbumCertConfFilterReq {
-    fn default() -> Self {
-        Self {
-            basic: Default::default(),
-            rel_rbum_domain_id: None,
-            rel_rbum_item_id: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
 pub struct RbumCertFilterReq {
@@ -50,18 +41,7 @@ pub struct RbumCertFilterReq {
     pub rel_rbum_cert_conf_id: Option<String>,
 }
 
-impl Default for RbumCertFilterReq {
-    fn default() -> Self {
-        Self {
-            basic: Default::default(),
-            rel_rbum_kind: None,
-            rel_rbum_id: None,
-            rel_rbum_cert_conf_id: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
 pub struct RbumRelFilterReq {
@@ -73,20 +53,7 @@ pub struct RbumRelFilterReq {
     pub to_own_paths: Option<String>,
 }
 
-impl Default for RbumRelFilterReq {
-    fn default() -> Self {
-        Self {
-            basic: Default::default(),
-            tag: None,
-            from_rbum_kind: None,
-            from_rbum_id: None,
-            to_rbum_item_id: None,
-            to_own_paths: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
 pub struct RbumRelExtFilterReq {
@@ -94,16 +61,7 @@ pub struct RbumRelExtFilterReq {
     pub rel_rbum_rel_id: Option<String>,
 }
 
-impl Default for RbumRelExtFilterReq {
-    fn default() -> Self {
-        Self {
-            basic: Default::default(),
-            rel_rbum_rel_id: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumSetCateFilterReq {
     pub basic: RbumBasicFilterReq,
@@ -112,18 +70,7 @@ pub struct RbumSetCateFilterReq {
     pub find_parent: Option<bool>,
 }
 
-impl Default for RbumSetCateFilterReq {
-    fn default() -> Self {
-        Self {
-            basic: Default::default(),
-            rel_rbum_set_id: None,
-            sys_code: None,
-            find_parent: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumSetItemFilterReq {
     pub basic: RbumBasicFilterReq,
@@ -132,32 +79,15 @@ pub struct RbumSetItemFilterReq {
     pub rel_rbum_item_id: Option<String>,
 }
 
-impl Default for RbumSetItemFilterReq {
-    fn default() -> Self {
-        Self {
-            basic: Default::default(),
-            rel_rbum_set_id: None,
-            rel_rbum_set_cate_id: None,
-            rel_rbum_item_id: None,
-        }
-    }
-}
-
 pub trait RbumBasicFilterFetcher {
     fn basic(&self) -> &RbumBasicFilterReq;
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
 pub struct RbumItemFilterReq {
     pub basic: RbumBasicFilterReq,
-}
-
-impl Default for RbumItemFilterReq {
-    fn default() -> Self {
-        Self { basic: Default::default() }
-    }
 }
 
 impl RbumBasicFilterFetcher for RbumItemFilterReq {
