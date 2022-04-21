@@ -11,22 +11,21 @@ use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::console_tenant::dto::iam_ct_account_dto::{IamCtAccountAddReq, IamCtAccountModifyReq};
-use crate::iam_constants;
+use crate::console_app::dto::iam_ca_account_dto::{IamCaAccountAddReq, IamCaAccountModifyReq};
 use crate::iam_enumeration::IAMRelKind;
 
-pub struct IamCtAccountServ;
+pub struct IamCaAccountServ;
 
-impl<'a> IamCtAccountServ {
-    pub async fn add_account(add_req: &mut IamCtAccountAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+impl<'a> IamCaAccountServ {
+    pub async fn add_account(add_req: &mut IamCaAccountAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamAccountServ::add_item(
             &mut IamAccountAddReq {
                 id: None,
                 name: add_req.name.clone(),
                 icon: add_req.icon.clone(),
                 disabled: add_req.disabled,
-                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: add_req.scope_level.clone(),
             },
             funs,
             cxt,
@@ -34,15 +33,15 @@ impl<'a> IamCtAccountServ {
         .await
     }
 
-    pub async fn modify_account(id: &str, modify_req: &mut IamCtAccountModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+    pub async fn modify_account(id: &str, modify_req: &mut IamCaAccountModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamAccountServ::modify_item(
             id,
             &mut IamAccountModifyReq {
                 name: modify_req.name.clone(),
                 icon: modify_req.icon.clone(),
                 disabled: modify_req.disabled,
-                scope_level: None,
+                scope_level: modify_req.scope_level.clone(),
             },
             funs,
             cxt,
@@ -51,7 +50,7 @@ impl<'a> IamCtAccountServ {
     }
 
     pub async fn get_account(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamAccountDetailResp> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamAccountServ::get_item(id, &IamAccountFilterReq::default(), funs, cxt).await
     }
 
@@ -65,13 +64,13 @@ impl<'a> IamCtAccountServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamAccountSummaryResp>> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamAccountServ::paginate_items(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: q_id.map(|id| vec![id]),
                     name: q_name,
-                    own_paths_with_sub: Some(cxt.own_paths.clone()),
+                    own_paths: Some(cxt.own_paths.clone()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -87,7 +86,7 @@ impl<'a> IamCtAccountServ {
     }
 
     pub async fn delete_account(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamAccountServ::delete_item_with_all_rels(id, funs, cxt).await
     }
 
@@ -100,7 +99,7 @@ impl<'a> IamCtAccountServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamRelServ::paginate_from_rels(
             IAMRelKind::IamAccountRole,
             iam_account_id,

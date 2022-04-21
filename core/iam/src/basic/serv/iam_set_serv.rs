@@ -16,7 +16,7 @@ use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamS
 pub struct IamSetServ;
 
 impl<'a> IamSetServ {
-    pub async fn init_set(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let code = if is_org { Self::get_org_code(cxt) } else { Self::get_http_res_code(cxt) };
         RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
@@ -26,7 +26,7 @@ impl<'a> IamSetServ {
                 icon: None,
                 sort: None,
                 ext: None,
-                scope_level: RbumScopeLevelKind::Root,
+                scope_level,
                 disabled: None,
             },
             funs,
@@ -39,16 +39,8 @@ impl<'a> IamSetServ {
         let code = if is_org { Self::get_org_code(cxt) } else { Self::get_http_res_code(cxt) };
         let resp = RbumSetServ::find_rbums(
             &RbumBasicFilterReq {
-                ignore_scope: false,
-                rel_cxt_owner: false,
-                own_paths: None,
-                ids: None,
-                scope_level: None,
-                enabled: None,
-                name: None,
                 code: Some(code.clone()),
-                rbum_kind_id: None,
-                rbum_domain_id: None,
+                ..Default::default()
             },
             None,
             None,

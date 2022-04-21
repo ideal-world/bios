@@ -22,6 +22,9 @@ pub struct IamCpUserPwdLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub tenant_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
+    // TODO tmp
+    pub app_id: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub flag: Option<String>,
 }
 

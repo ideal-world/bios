@@ -1,13 +1,12 @@
 use std::time::Duration;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
@@ -65,11 +64,11 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     .0;
 
     info!("【test_cs_tenant】 : Get Tenant By Id");
-    let tenant = IamTenantServ::get_item(&tenant_id, &IamTenantFilterReq::default(), &funs, context).await?;
+    let tenant = IamCsTenantServ::get_tenant(&tenant_id, &funs, context).await?;
     assert_eq!(tenant.id, tenant_id);
     assert_eq!(tenant.name, "测试租户1");
     assert_eq!(tenant.contact_phone, "");
-    let tenant = IamTenantServ::get_item(&tenant_id2, &IamTenantFilterReq::default(), &funs, context).await?;
+    let tenant = IamCsTenantServ::get_tenant(&tenant_id2, &funs, context).await?;
     assert_eq!(tenant.id, tenant_id2);
     assert_eq!(tenant.name, "测试租户2");
     assert_eq!(tenant.contact_phone, "12345678901");
@@ -93,22 +92,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_cs_tenant】 : Find Tenants");
-    let tenants = IamTenantServ::paginate_items(
-        &IamTenantFilterReq {
-            basic: RbumBasicFilterReq {
-                name: Some("测试租户%".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        1,
-        10,
-        None,
-        None,
-        &funs,
-        context,
-    )
-    .await?;
+    let tenants = IamCsTenantServ::paginate_tenants(None, None, 1, 10, None, None, &funs, context).await?;
     assert_eq!(tenants.page_number, 1);
     assert_eq!(tenants.page_size, 10);
     assert!(tenants.records.iter().any(|r| r.contact_phone == "xxxx"));

@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
-use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
@@ -35,7 +34,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
 
     async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
-            id: Some(TrimString(IamAppServ::get_new_id())),
+            id: add_req.id.clone(),
             code: None,
             name: add_req.name.clone(),
             disabled: add_req.disabled,

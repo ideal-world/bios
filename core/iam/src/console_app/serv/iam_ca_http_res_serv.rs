@@ -11,22 +11,22 @@ use crate::basic::dto::iam_http_res_dto::{IamHttpResAddReq, IamHttpResDetailResp
 use crate::basic::serv::iam_http_res_serv::IamHttpResServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::console_tenant::dto::iam_ct_http_res_dto::{IamCtHttpResAddReq, IamCtHttpResModifyReq};
+use crate::console_app::dto::iam_ca_http_res_dto::{IamCaHttpResAddReq, IamCaHttpResModifyReq};
 use crate::iam_constants;
 use crate::iam_enumeration::IAMRelKind;
 
-pub struct IamCtHttpResServ;
+pub struct IamCaHttpResServ;
 
-impl<'a> IamCtHttpResServ {
-    pub async fn add_http_res(add_req: &mut IamCtHttpResAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+impl<'a> IamCaHttpResServ {
+    pub async fn add_http_res(add_req: &mut IamCaHttpResAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamHttpResServ::add_item(
             &mut IamHttpResAddReq {
                 name: add_req.name.clone(),
                 code: add_req.code.clone(),
                 icon: add_req.icon.clone(),
                 disabled: add_req.disabled,
-                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: iam_constants::RBUM_SCOPE_LEVEL_APP,
                 sort: add_req.sort,
                 method: add_req.method.clone(),
             },
@@ -36,8 +36,8 @@ impl<'a> IamCtHttpResServ {
         .await
     }
 
-    pub async fn modify_http_res(id: &str, modify_req: &mut IamCtHttpResModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+    pub async fn modify_http_res(id: &str, modify_req: &mut IamCaHttpResModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamHttpResServ::modify_item(
             id,
             &mut IamHttpResModifyReq {
@@ -56,7 +56,7 @@ impl<'a> IamCtHttpResServ {
     }
 
     pub async fn get_http_res(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamHttpResDetailResp> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamHttpResServ::get_item(id, &IamHttpResFilterReq::default(), funs, cxt).await
     }
 
@@ -70,7 +70,7 @@ impl<'a> IamCtHttpResServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<IamHttpResSummaryResp>> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamHttpResServ::paginate_items(
             &IamHttpResFilterReq {
                 basic: RbumBasicFilterReq {
@@ -100,7 +100,7 @@ impl<'a> IamCtHttpResServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamRelServ::paginate_from_rels(
             IAMRelKind::IamHttpResRole,
             iam_http_res_id,
@@ -115,7 +115,7 @@ impl<'a> IamCtHttpResServ {
     }
 
     pub async fn delete_http_res(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamRoleServ::need_tenant_admin(funs, cxt).await?;
+        IamRoleServ::need_app_admin(funs, cxt).await?;
         IamHttpResServ::delete_item_with_all_rels(id, funs, cxt).await
     }
 }
