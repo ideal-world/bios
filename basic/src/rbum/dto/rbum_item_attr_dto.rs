@@ -30,6 +30,8 @@ pub struct RbumItemAttrSummaryResp {
     pub rel_rbum_kind_attr_id: String,
     pub rel_rbum_kind_attr_name: String,
 
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

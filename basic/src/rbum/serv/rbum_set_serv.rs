@@ -134,6 +134,7 @@ impl<'a> RbumSetServ {
                 sort: r.sort,
                 ext: r.ext.to_string(),
                 own_paths: r.own_paths.to_string(),
+                owner: r.owner.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_level: r.scope_level.clone(),
@@ -161,6 +162,7 @@ impl<'a> RbumSetServ {
                 ext: r.ext.to_string(),
                 rel_rbum_set_id: rbum_set_id.to_string(),
                 own_paths: r.own_paths.to_string(),
+                owner: r.owner.to_string(),
                 create_time: r.create_time,
                 update_time: r.update_time,
                 scope_level: r.scope_level,
@@ -516,6 +518,7 @@ struct RbumSetCateWithLevelResp {
     pub ext: String,
 
     pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
