@@ -12,7 +12,7 @@ pub struct RbumBasicFilterReq {
     pub rel_cxt_owner: bool,
 
     pub own_paths: Option<String>,
-    pub own_paths_with_sub: Option<String>,
+    pub with_sub_own_paths: bool,
     pub ids: Option<Vec<String>>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub enabled: Option<bool>,
