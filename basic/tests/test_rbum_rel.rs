@@ -987,7 +987,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_rel_use】 : Test Find From Rels : RbumRelServ::find_from_rels");
-    let rbums = RbumRelServ::paginate_from_rels("bind", &RbumRelFromKind::Item, item_reldb_inst1_id.as_str(), 1, 10, None, None, &funs, context).await?;
+    let rbums = RbumRelServ::paginate_from_rels("bind", &RbumRelFromKind::Item, false, item_reldb_inst1_id.as_str(), 1, 10, None, None, &funs, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);

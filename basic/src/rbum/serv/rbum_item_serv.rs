@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use serde::Serialize;
-use std::collections::HashMap;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -365,7 +366,33 @@ where
     // ----------------------------- Query -------------------------------
 
     async fn package_item_query(is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
-        RbumItemServ::package_query(is_detail, &filter.basic(), funs, cxt).await
+        RbumItemServ::package_query(
+            is_detail,
+            &RbumBasicFilterReq {
+                ignore_scope: filter.basic().ignore_scope,
+                rel_cxt_owner: filter.basic().rel_cxt_owner,
+                own_paths: filter.basic().own_paths.clone(),
+                with_sub_own_paths: filter.basic().with_sub_own_paths,
+                ids: filter.basic().ids.clone(),
+                scope_level: filter.basic().scope_level.clone(),
+                enabled: filter.basic().enabled,
+                name: filter.basic().name.clone(),
+                code: filter.basic().code.clone(),
+                rbum_kind_id: if filter.basic().rbum_kind_id.is_some() {
+                    filter.basic().rbum_kind_id.clone()
+                } else {
+                    Some(Self::get_rbum_kind_id())
+                },
+                rbum_domain_id: if filter.basic().rbum_domain_id.is_some() {
+                    filter.basic().rbum_domain_id.clone()
+                } else {
+                    Some(Self::get_rbum_domain_id())
+                },
+            },
+            funs,
+            cxt,
+        )
+        .await
     }
 
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
