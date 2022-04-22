@@ -65,7 +65,8 @@ impl<'a> IamCsAccountServ {
                     ignore_scope: true,
                     ids: q_id.map(|id| vec![id]),
                     name: q_name,
-                    own_paths_with_sub: Some(tenant_id),
+                    own_paths: Some(tenant_id),
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()

@@ -7,10 +7,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::iam_enumeration::IAMRelKind;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::console_passport::dto::iam_cp_account_dto::IamCpAccountModifyReq;
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamCpAccountServ;
 
@@ -48,6 +48,7 @@ impl<'a> IamCpAccountServ {
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRelServ::paginate_from_rels(
             IAMRelKind::IamAccountRole,
+            false,
             &cxt.owner,
             page_number,
             page_size,

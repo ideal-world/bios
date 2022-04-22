@@ -105,7 +105,8 @@ impl<'a> IamCtAppServ {
                 basic: RbumBasicFilterReq {
                     ids: q_id.map(|id| vec![id]),
                     name: q_name,
-                    own_paths_with_sub: Some(cxt.own_paths.clone()),
+                    own_paths: Some(cxt.own_paths.clone()),
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()

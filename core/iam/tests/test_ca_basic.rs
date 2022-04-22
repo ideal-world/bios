@@ -6,7 +6,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 
-use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
+use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertAddReq};
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
@@ -18,7 +18,6 @@ use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use bios_iam::console_tenant::serv::iam_ct_account_serv::IamCtAccountServ;
 use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_constants;
-use bios_iam::iam_enumeration::IamCertTokenKind;
 
 pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, TardisContext)> {
     let mut funs = iam_constants::get_tardis_inst();
@@ -40,27 +39,24 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
     .await?;
     sleep(Duration::from_secs(1)).await;
 
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd),
             tenant_id: Some(tenant_id.clone()),
-            app_id: None,
             flag: None,
         },
         &funs,
     )
     .await?;
-    let tenant_context = TardisContext {
-        own_paths: tenant_id.to_string(),
-        ak: "bios".to_string(),
-        owner: login_resp.id.to_string(),
-        token: login_resp.token.to_string(),
-        token_kind: IamCertTokenKind::TokenDefault.to_string(),
-        roles: login_resp.roles.iter().map(|i| i.0.to_string()).collect(),
-        // TODO
-        groups: vec![],
-    };
+    let tenant_context = IamCertServ::fetch_context(
+        &IamContextFetchReq {
+            token: account_resp.token.to_string(),
+            app_id: None,
+        },
+        &funs,
+    )
+    .await?;
 
     let pwd = IamCertServ::get_new_pwd();
 
@@ -136,49 +132,43 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
     )
     .await?;
 
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
             ak: TrimString("app_admin1".to_string()),
             sk: TrimString(pwd.clone()),
             tenant_id: Some(tenant_id.clone()),
-            app_id: Some(app_id1.clone()),
             flag: None,
         },
         &funs,
     )
     .await?;
-    let app_context1 = TardisContext {
-        own_paths: format!("{}/{}", tenant_id, app_id1),
-        ak: "app_admin1".to_string(),
-        owner: login_resp.id.to_string(),
-        token: login_resp.token.to_string(),
-        token_kind: IamCertTokenKind::TokenDefault.to_string(),
-        roles: login_resp.roles.iter().map(|i| i.0.to_string()).collect(),
-        // TODO
-        groups: vec![],
-    };
+    let app_context1 = IamCertServ::fetch_context(
+        &IamContextFetchReq {
+            token: account_resp.token.to_string(),
+            app_id: Some(app_id1.clone()),
+        },
+        &funs,
+    )
+    .await?;
 
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
             ak: TrimString("app_admin2".to_string()),
             sk: TrimString(pwd),
             tenant_id: Some(tenant_id.clone()),
-            app_id: Some(app_id2.clone()),
             flag: None,
         },
         &funs,
     )
     .await?;
-    let app_context2 = TardisContext {
-        own_paths: format!("{}/{}", tenant_id, app_id2),
-        ak: "app_admin2".to_string(),
-        owner: login_resp.id.to_string(),
-        token: login_resp.token.to_string(),
-        token_kind: IamCertTokenKind::TokenDefault.to_string(),
-        roles: login_resp.roles.iter().map(|i| i.0.to_string()).collect(),
-        // TODO
-        groups: vec![],
-    };
+    let app_context2 = IamCertServ::fetch_context(
+        &IamContextFetchReq {
+            token: account_resp.token.to_string(),
+            app_id: Some(app_id2.clone()),
+        },
+        &funs,
+    )
+    .await?;
 
     funs.commit().await?;
 

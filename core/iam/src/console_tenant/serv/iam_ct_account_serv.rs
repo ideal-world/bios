@@ -71,7 +71,8 @@ impl<'a> IamCtAccountServ {
                 basic: RbumBasicFilterReq {
                     ids: q_id.map(|id| vec![id]),
                     name: q_name,
-                    own_paths_with_sub: Some(cxt.own_paths.clone()),
+                    own_paths: Some(cxt.own_paths.clone()),
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -103,6 +104,7 @@ impl<'a> IamCtAccountServ {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamRelServ::paginate_from_rels(
             IAMRelKind::IamAccountRole,
+            false,
             iam_account_id,
             page_number,
             page_size,

@@ -12,11 +12,25 @@ use bios_basic::rbum::rbum_config::RbumConfig;
 #[serde(default)]
 pub struct IamConfig {
     pub rbum: RbumConfig,
+    // token -> token_kind, account_id
+    pub cache_key_token_info_: String,
+    // account_id -> [token]
+    pub cache_key_account_rel_: String,
+    // account_id -> {
+    //     _: system or tenant context,
+    //     <app_id>: app context,
+    // }
+    pub cache_key_account_info_: String,
 }
 
 impl Default for IamConfig {
     fn default() -> Self {
-        IamConfig { rbum: Default::default() }
+        IamConfig {
+            rbum: Default::default(),
+            cache_key_token_info_: "iam:cache:token:info:".to_string(),
+            cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
+            cache_key_account_info_: "iam:cache:account:info:".to_string(),
+        }
     }
 }
 

@@ -4,13 +4,14 @@ use tardis::basic::result::TardisResult;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamTokenCertConfModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::IamCertTokenKind;
 
 pub struct IamCertTokenServ;
@@ -78,15 +79,14 @@ impl<'a> IamCertTokenServ {
 
     pub async fn add_cert(
         token: &str,
-        token_kind: IamCertTokenKind,
+        token_kind: &IamCertTokenKind,
         iam_item_id: &str,
         rel_iam_tenant_id: &str,
         from_cert_id: &str,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
-        // TODO cache
-        RbumCertServ::add_rbum(
+        let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: TrimString(token.to_string()),
                 sk: None,
@@ -103,6 +103,25 @@ impl<'a> IamCertTokenServ {
             cxt,
         )
         .await?;
+        let cert = RbumCertServ::get_rbum(&id, &RbumCertFilterReq::default(), funs, cxt).await?;
+        let expire_sec = (cert.end_time - cert.start_time).num_seconds() as usize;
+        funs.cache()
+            .set_ex(
+                format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
+                format!("{},{}", token_kind.to_string(), iam_item_id).as_str(),
+                expire_sec,
+            )
+            .await?;
+        funs.cache().hset(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), &token, "").await?;
+        Ok(())
+    }
+
+    pub async fn remove_cert(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
+            let iam_item_id = token_info.split(",").nth(1).unwrap_or("");
+            funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
+            funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), &token).await?;
+        }
         Ok(())
     }
 }

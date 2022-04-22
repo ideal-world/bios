@@ -3,6 +3,14 @@ use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamContextFetchReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub token: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub app_id: Option<String>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamUserPwdCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,

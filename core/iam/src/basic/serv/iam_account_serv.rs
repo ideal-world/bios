@@ -10,7 +10,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::{IamBasicInfoManager, IamConfig};
 
 pub struct IamAccountServ;
 
@@ -74,8 +74,31 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         Ok(Some(iam_account))
     }
 
+    async fn after_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        Self::delete_cache(id, funs).await?;
+        Ok(())
+    }
+
+    async fn after_delete_item(id: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        Self::delete_cache(id, funs).await?;
+        Ok(())
+    }
+
     async fn package_ext_query(query: &mut SelectStatement, _: bool, _: &IamAccountFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
+        Ok(())
+    }
+}
+
+impl<'a> IamAccountServ {
+    pub async fn delete_cache(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        // TODO change cert role group
+        let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
+        for (token, _) in tokens.iter() {
+            funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
+        }
+        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
+        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
         Ok(())
     }
 }

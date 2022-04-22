@@ -29,7 +29,6 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
             ak: TrimString("bios".to_string()),
             sk: TrimString("sssssssssss".to_string()),
             tenant_id: Some(context1.own_paths.clone()),
-            app_id: None,
             flag: None
         },
         &funs,
@@ -52,7 +51,6 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
             ak: TrimString("bios".to_string()),
             sk: TrimString("sssssssssss".to_string()),
             tenant_id: Some(context1.own_paths.clone()),
-            app_id: None,
             flag: None,
         },
         &funs,

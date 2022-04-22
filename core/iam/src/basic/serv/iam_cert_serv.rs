@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -13,16 +11,18 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use crate::basic::dto::iam_account_dto::{AccountAppInfoResp, AccountInfoResp};
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::console_passport::dto::iam_cp_cert_dto::LoginResp;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
 
@@ -169,43 +169,127 @@ impl<'a> IamCertServ {
 
     pub async fn package_tardis_context_and_resp(
         iam_tenant_id: Option<String>,
-        iam_app_id: Option<String>,
         ak: &str,
         account_id: &str,
-        token: Option<&str>,
-        token_kind: Option<&str>,
+        rbum_cert_id: &str,
+        token_kind: Option<String>,
         funs: &TardisFunsInst<'a>,
-    ) -> TardisResult<(TardisContext, LoginResp)> {
-        let own_paths = if let Some(iam_tenant_id) = iam_tenant_id {
-            if let Some(iam_app_id) = iam_app_id {
-                format!("{}/{}", iam_tenant_id, iam_app_id)
-            } else {
-                iam_tenant_id.to_string()
-            }
-        } else {
-            "".to_string()
-        };
-        let mut context = TardisContext {
-            own_paths,
+    ) -> TardisResult<AccountInfoResp> {
+        let token_kind = IamCertTokenKind::parse(&token_kind);
+        let iam_tenant_id = if let Some(iam_tenant_id) = iam_tenant_id { iam_tenant_id } else { "".to_string() };
+        let context = TardisContext {
+            own_paths: iam_tenant_id.clone(),
             ak: ak.to_string(),
             owner: account_id.to_string(),
-            token: token.unwrap_or("").to_string(),
-            token_kind: token_kind.unwrap_or("").to_string(),
+            token: TardisFuns::crypto.key.generate_token()?,
+            token_kind: token_kind.to_string(),
             roles: vec![],
-            // TODO
             groups: vec![],
         };
-        let roles = IamRelServ::paginate_from_rels(IAMRelKind::IamAccountRole, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
-        context.roles = roles.iter().map(|i| i.rel.to_rbum_item_id.to_string()).collect();
+        IamCertTokenServ::add_cert(&context.token, &token_kind, account_id, &iam_tenant_id, rbum_cert_id, funs, &context).await?;
 
-        let resp = LoginResp {
-            id: context.owner.clone(),
-            name: IamAccountServ::get_item(&context.owner, &IamAccountFilterReq::default(), funs, &context).await?.name,
-            token: context.token.clone(),
-            roles: roles.iter().map(|i| (i.rel.to_rbum_item_id.to_string(), i.rel.to_rbum_item_name.to_string())).collect(),
-            // TODO
-            groups: HashMap::new(),
+        let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
+        let enabled_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: false,
+                    rel_cxt_owner: false,
+                    own_paths: None,
+                    with_sub_own_paths: true,
+                    ids: None,
+                    scope_level: None,
+                    enabled: Some(true),
+                    name: None,
+                    code: None,
+                    rbum_kind_id: None,
+                    rbum_domain_id: None,
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            &context,
+        )
+        .await?;
+        let roles = IamRelServ::paginate_from_rels(IAMRelKind::IamAccountRole, true, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
+        let roles_infos = enabled_apps
+            .into_iter()
+            .map(|app| {
+                AccountAppInfoResp {
+                    app_id: app.id,
+                    app_name: app.name,
+                    roles: roles.iter().filter(|r| r.rel.own_paths == app.own_paths).map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string())).collect(),
+                    // TODO
+                    groups: Default::default(),
+                }
+            })
+            .collect();
+
+        let account_info = AccountInfoResp {
+            account_id: account_id.to_string(),
+            account_name: account_name.to_string(),
+            token: context.token.to_string(),
+            roles: roles.iter().filter(|r| r.rel.own_paths == context.own_paths).map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string())).collect(),
+            groups: Default::default(),
+            apps: roles_infos,
         };
-        Ok((context, resp))
+
+        Self::add_cached_contexts(&account_info, ak, &token_kind.to_string(), &iam_tenant_id, funs).await?;
+
+        Ok(account_info)
+    }
+
+    pub async fn add_cached_contexts(account_info: &AccountInfoResp, ak: &str, token_kind: &str, iam_tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        funs.cache()
+            .hset(
+                format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
+                "",
+                &TardisFuns::json.obj_to_string(&TardisContext {
+                    own_paths: iam_tenant_id.to_string(),
+                    ak: ak.to_string(),
+                    owner: account_info.account_id.to_string(),
+                    token: account_info.token.to_string(),
+                    token_kind: token_kind.to_string(),
+                    roles: account_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
+                    groups: account_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
+                })?,
+            )
+            .await?;
+        for account_app_info in &account_info.apps {
+            funs.cache()
+                .hset(
+                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
+                    &account_app_info.app_id,
+                    &TardisFuns::json.obj_to_string(&TardisContext {
+                        own_paths: format!("{}/{}", iam_tenant_id, account_app_info.app_id).to_string(),
+                        ak: ak.to_string(),
+                        owner: account_info.account_id.to_string(),
+                        token: account_info.token.to_string(),
+                        token_kind: token_kind.to_string(),
+                        roles: account_app_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
+                        groups: account_app_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
+                    })?,
+                )
+                .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn fetch_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
+        if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
+            let iam_account_id = token_info.split(",").nth(1).unwrap_or("");
+            if let Some(context) = funs
+                .cache()
+                .hget(
+                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, iam_account_id).as_str(),
+                    fetch_req.app_id.as_ref().unwrap_or(&"".to_string()),
+                )
+                .await?
+            {
+                return TardisFuns::json.str_to_obj(&context);
+            }
+        }
+        return Err(TardisError::NotFound("context not found".to_string()));
     }
 }

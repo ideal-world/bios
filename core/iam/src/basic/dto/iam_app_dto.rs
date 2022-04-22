@@ -36,6 +36,8 @@ pub struct IamAppSummaryResp {
     pub id: String,
     pub name: String,
 
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -52,6 +54,7 @@ pub struct IamAppDetailResp {
     pub id: String,
     pub name: String,
 
+    pub own_paths: String,
     pub owner: String,
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
