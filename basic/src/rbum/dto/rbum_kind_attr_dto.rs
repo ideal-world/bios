@@ -75,6 +75,12 @@ pub struct RbumKindAttrSummaryResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+
+    pub own_paths: String,
+    pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+
 }
 
 #[derive(Serialize, Deserialize, Debug)]

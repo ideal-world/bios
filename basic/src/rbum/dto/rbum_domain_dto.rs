@@ -43,6 +43,7 @@ pub struct RbumDomainSummaryResp {
     pub sort: u32,
 
     pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 

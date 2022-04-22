@@ -54,6 +54,7 @@ pub struct RbumSetCateSummaryResp {
     pub rel_rbum_set_id: String,
 
     pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -69,8 +70,9 @@ pub struct RbumSetCateSummaryWithPidResp {
     pub icon: String,
     pub sort: u32,
     pub ext: String,
-    
+
     pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 

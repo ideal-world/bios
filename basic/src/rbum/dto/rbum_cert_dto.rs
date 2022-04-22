@@ -49,6 +49,7 @@ pub struct RbumCertSummaryResp {
     pub rel_rbum_id: String,
 
     pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }

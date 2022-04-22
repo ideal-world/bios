@@ -51,6 +51,7 @@ pub struct RbumSetSummaryResp {
     pub ext: String,
 
     pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
