@@ -1,9 +1,12 @@
+use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{payload::Json, OpenApi};
+use tardis::web::poem_openapi::{OpenApi, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_cert_dto::IamUserPwdCertModifyReq;
-use crate::console_passport::dto::iam_cp_cert_dto::{IamCpUserPwdLoginReq, LoginResp};
+use crate::basic::dto::iam_account_dto::AccountInfoResp;
+use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq};
+use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
 
@@ -14,11 +17,19 @@ pub struct IamCpAccountApi;
 impl IamCpAccountApi {
     /// Login by Username and Password
     #[oai(path = "/login", method = "put")]
-    async fn login(&self, mut login_req: Json<IamCpUserPwdLoginReq>) -> TardisApiResult<LoginResp> {
+    async fn login(&self, login_req: Json<IamCpUserPwdLoginReq>) -> TardisApiResult<AccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let cxt = IamCpCertUserPwdServ::login_by_user_pwd(&mut login_req.0, &funs).await?;
+        let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, &funs).await?;
         funs.commit().await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Fetch TardisContext By Token
+    #[oai(path = "/cp/context", method = "get")]
+    async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {
+        let funs = iam_constants::get_tardis_inst();
+        let cxt = IamCertServ::fetch_context(&fetch_req.0, &funs).await?;
         TardisResp::ok(cxt)
     }
 

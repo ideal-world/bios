@@ -50,6 +50,7 @@ impl<'a> IamRelServ {
 
     pub async fn paginate_from_rels(
         rel_kind: IAMRelKind,
+        with_sub_own_paths: bool,
         from_iam_item_id: &str,
         page_number: u64,
         page_size: u64,
@@ -61,6 +62,7 @@ impl<'a> IamRelServ {
         RbumRelServ::paginate_from_rels(
             &rel_kind.to_string(),
             &RbumRelFromKind::Item,
+            with_sub_own_paths,
             from_iam_item_id,
             page_number,
             page_size,

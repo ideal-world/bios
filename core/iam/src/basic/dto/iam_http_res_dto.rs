@@ -38,6 +38,8 @@ pub struct IamHttpResSummaryResp {
     pub code: String,
     pub name: String,
 
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -55,6 +57,7 @@ pub struct IamHttpResDetailResp {
     pub code: String,
     pub name: String,
 
+    pub own_paths: String,
     pub owner: String,
     pub owner_name: String,
     pub create_time: DateTime<Utc>,

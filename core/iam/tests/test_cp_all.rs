@@ -40,7 +40,6 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString("123456".to_string()),
             tenant_id: None,
-            app_id: None,
             flag: None
         },
         &funs,
@@ -54,7 +53,6 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: Some(tenant_id.clone()),
-            app_id: None,
             flag: None
         },
         &funs,
@@ -68,7 +66,6 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd.to_string()),
             tenant_id: None,
-            app_id: None,
             flag: None
         },
         &funs,
@@ -77,40 +74,38 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
     .is_err());
 
     info!("【test_cp_all】 : Login by Username and Password, By tenant admin");
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd.to_string()),
             tenant_id: Some(tenant_id),
-            app_id: None,
             flag: None,
         },
         &funs,
     )
     .await?;
 
-    assert_eq!(login_resp.name, "测试管理员");
-    assert_eq!(login_resp.roles.len(), 1);
-    assert!(login_resp.roles.iter().any(|i| i.1 == "tenant_admin"));
-    assert!(!login_resp.token.is_empty());
+    assert_eq!(account_resp.account_name, "测试管理员");
+    assert_eq!(account_resp.roles.len(), 1);
+    assert!(account_resp.roles.iter().any(|i| i.1 == "tenant_admin"));
+    assert!(!account_resp.token.is_empty());
 
     info!("【test_cp_all】 : Login by Username and Password, By sys admin");
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: None,
-            app_id: None,
             flag: None,
         },
         &funs,
     )
     .await?;
 
-    assert_eq!(login_resp.name, "bios");
-    assert_eq!(login_resp.roles.len(), 1);
-    assert!(login_resp.roles.iter().any(|i| i.1 == "sys_admin"));
-    assert!(!login_resp.token.is_empty());
+    assert_eq!(account_resp.account_name, "bios");
+    assert_eq!(account_resp.roles.len(), 1);
+    assert!(account_resp.roles.iter().any(|i| i.1 == "sys_admin"));
+    assert!(!account_resp.token.is_empty());
 
     let context = TardisContext {
         own_paths: context.own_paths.to_string(),
@@ -118,7 +113,7 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
         owner: context.owner.to_string(),
         token: context.token.to_string(),
         token_kind: context.token_kind.to_string(),
-        roles: login_resp.roles.iter().map(|i| i.0.to_string()).collect(),
+        roles: account_resp.roles.iter().map(|i| i.0.to_string()).collect(),
         // TODO
         groups: vec![],
     };
@@ -151,7 +146,6 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: None,
-            app_id: None,
             flag: None
         },
         &funs,
@@ -159,22 +153,21 @@ pub async fn test(sysadmin_info: (&str, &str), context: &TardisContext) -> Tardi
     .await
     .is_err());
 
-    let login_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &mut IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString("123456".to_string()),
             tenant_id: None,
-            app_id: None,
             flag: None,
         },
         &funs,
     )
     .await?;
 
-    assert_eq!(login_resp.name, "bios");
-    assert_eq!(login_resp.roles.len(), 1);
-    assert!(login_resp.roles.iter().any(|i| i.1 == "sys_admin"));
-    assert!(!login_resp.token.is_empty());
+    assert_eq!(account_resp.account_name, "bios");
+    assert_eq!(account_resp.roles.len(), 1);
+    assert!(account_resp.roles.iter().any(|i| i.1 == "sys_admin"));
+    assert!(!account_resp.token.is_empty());
 
     info!("【test_cp_all】 : Modify Current Account");
     IamCpAccountServ::modify_account(

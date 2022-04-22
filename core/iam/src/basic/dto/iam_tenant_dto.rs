@@ -36,6 +36,8 @@ pub struct IamTenantSummaryResp {
     pub id: String,
     pub name: String,
 
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -52,11 +54,12 @@ pub struct IamTenantDetailResp {
     pub id: String,
     pub name: String,
 
+    pub own_paths: String,
     pub owner: String,
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-
+    
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 

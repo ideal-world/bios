@@ -1,5 +1,6 @@
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::FromQueryResult;
@@ -28,6 +29,9 @@ pub struct IamAccountModifyReq {
 pub struct IamAccountSummaryResp {
     pub id: String,
     pub name: String,
+
+    pub own_paths: String,
+    pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
@@ -42,6 +46,7 @@ pub struct IamAccountDetailResp {
     pub id: String,
     pub name: String,
 
+    pub own_paths: String,
     pub owner: String,
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
@@ -51,4 +56,22 @@ pub struct IamAccountDetailResp {
     pub disabled: bool,
 
     pub icon: String,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct AccountInfoResp {
+    pub account_id: String,
+    pub account_name: String,
+    pub token: String,
+    pub roles: HashMap<String, String>,
+    pub groups: HashMap<String, String>,
+    pub apps: Vec<AccountAppInfoResp>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct AccountAppInfoResp {
+    pub app_id: String,
+    pub app_name: String,
+    pub roles: HashMap<String, String>,
+    pub groups: HashMap<String, String>,
 }
