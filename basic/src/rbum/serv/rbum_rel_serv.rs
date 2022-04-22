@@ -236,6 +236,7 @@ impl<'a> RbumRelServ {
     pub async fn paginate_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
+        with_sub_own_paths: bool,
         from_rbum_id: &str,
         page_number: u64,
         page_size: u64,
@@ -246,7 +247,10 @@ impl<'a> RbumRelServ {
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         Self::paginate_rels(
             &RbumRelFilterReq {
-                basic: Default::default(),
+                basic: RbumBasicFilterReq{
+                    with_sub_own_paths,
+                    ..Default::default()
+                },
                 tag: Some(tag.to_string()),
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_string()),

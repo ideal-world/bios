@@ -9,9 +9,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Alias, Cond, Expr, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
+use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
-use tardis::TardisFuns;
 
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -306,13 +306,6 @@ impl RbumCrudQueryPackage for SelectStatement {
         if filter.rel_cxt_owner {
             self.and_where(Expr::tbl(Alias::new(table_name), OWNER_FIELD.clone()).eq(cxt.owner.as_str()));
         }
-
-        if let Some(own_paths) = &filter.own_paths {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(own_paths.to_string()));
-        }
-        if let Some(own_paths_with_sub) = &filter.own_paths_with_sub {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", own_paths_with_sub).as_str()));
-        }
         if let Some(ids) = &filter.ids {
             self.and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).is_in(ids.clone()));
         }
@@ -345,10 +338,21 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Expr::tbl(OWNER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), OWNER_FIELD.clone()),
             );
         }
+        if let Some(own_paths) = &filter.own_paths {
+            if filter.with_sub_own_paths {
+                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", own_paths).as_str()));
+            } else {
+                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(own_paths.to_string()));
+            }
+        }
         if has_scope && !filter.ignore_scope {
             self.with_scope(table_name, cxt);
         } else if !has_scope && !filter.ignore_scope {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
+            if filter.with_sub_own_paths {
+                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", cxt.own_paths).as_str()));
+            } else {
+                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
+            }
         }
         self
     }
