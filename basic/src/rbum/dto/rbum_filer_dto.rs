@@ -20,6 +20,8 @@ pub struct RbumBasicFilterReq {
     pub code: Option<String>,
     pub rbum_kind_id: Option<String>,
     pub rbum_domain_id: Option<String>,
+
+    pub desc_by_sort: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

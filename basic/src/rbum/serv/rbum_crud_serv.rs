@@ -9,9 +9,9 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Alias, Cond, Expr, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
-use tardis::TardisFuns;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -27,6 +27,7 @@ lazy_static! {
     pub static ref UPDATE_TIME_FIELD: Alias = Alias::new("update_time");
     pub static ref CODE_FIELD: Alias = Alias::new("code");
     pub static ref NAME_FIELD: Alias = Alias::new("name");
+    pub static ref SORT_FIELD: Alias = Alias::new("sort");
     pub static ref SCOPE_LEVEL_FIELD: Alias = Alias::new("scope_level");
     pub static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_rbum_kind_id");
     pub static ref REL_DOMAIN_ID_FIELD: Alias = Alias::new("rel_rbum_domain_id");
@@ -353,6 +354,9 @@ impl RbumCrudQueryPackage for SelectStatement {
             } else {
                 self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
             }
+        }
+        if let Some(desc_by_sort) = filter.desc_by_sort {
+            self.order_by((Alias::new(table_name), SORT_FIELD.clone()), if desc_by_sort { Order::Desc } else { Order::Asc });
         }
         self
     }
