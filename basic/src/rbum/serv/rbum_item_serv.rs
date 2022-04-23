@@ -388,6 +388,7 @@ where
                 } else {
                     Some(Self::get_rbum_domain_id())
                 },
+                desc_by_sort: filter.basic().desc_by_sort,
             },
             funs,
             cxt,

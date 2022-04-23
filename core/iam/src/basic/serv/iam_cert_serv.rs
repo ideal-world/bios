@@ -194,15 +194,9 @@ impl<'a> IamCertServ {
                 basic: RbumBasicFilterReq {
                     ignore_scope: false,
                     rel_cxt_owner: false,
-                    own_paths: None,
                     with_sub_own_paths: true,
-                    ids: None,
-                    scope_level: None,
                     enabled: Some(true),
-                    name: None,
-                    code: None,
-                    rbum_kind_id: None,
-                    rbum_domain_id: None,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
