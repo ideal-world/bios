@@ -18,6 +18,7 @@ pub struct Model {
     pub sk_note: String,
     pub sk_rule: String,
     pub sk_need: bool,
+    pub sk_dynamic: bool,
     pub sk_encrypted: bool,
     pub repeatable: bool,
     pub is_basic: bool,
@@ -56,6 +57,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::SkNote).not_null().string())
             .col(ColumnDef::new(Column::SkRule).not_null().string())
             .col(ColumnDef::new(Column::SkNeed).not_null().boolean())
+            .col(ColumnDef::new(Column::SkDynamic).not_null().boolean())
             .col(ColumnDef::new(Column::SkEncrypted).not_null().boolean())
             .col(ColumnDef::new(Column::Repeatable).not_null().boolean())
             .col(ColumnDef::new(Column::IsBasic).not_null().boolean())

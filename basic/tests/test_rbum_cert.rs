@@ -17,7 +17,8 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_cert_conf(context).await?;
-    test_rbum_cert(context).await?;
+    test_rbum_cert_basic(context).await?;
+    test_rbum_cert_sk_dynamic(context).await?;
     Ok(())
 }
 
@@ -53,6 +54,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_note: None,
             sk_rule: None,
             sk_need: None,
+            sk_dynamic: None,
             sk_encrypted: None,
             repeatable: None,
             is_basic: None,
@@ -79,6 +81,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_note: None,
             sk_rule: None,
             sk_need: None,
+            sk_dynamic: None,
             sk_encrypted: None,
             repeatable: None,
             is_basic: None,
@@ -105,6 +108,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_note: None,
             sk_rule: Some("^.{8,40}$".to_string()),
             sk_need: Some(true),
+            sk_dynamic: None,
             sk_encrypted: Some(true),
             repeatable: None,
             is_basic: None,
@@ -130,6 +134,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_note: None,
             sk_rule: Some("^.{8,40}$".to_string()),
             sk_need: Some(true),
+            sk_dynamic: None,
             sk_encrypted: Some(true),
             repeatable: None,
             is_basic: None,
@@ -207,7 +212,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     Ok(())
 }
 
-async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
+async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
@@ -251,6 +256,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             sk_note: None,
             sk_rule: Some("^.{8,40}$".to_string()),
             sk_need: Some(true),
+            sk_dynamic: None,
             sk_encrypted: Some(true),
             repeatable: None,
             is_basic: Some(true),
@@ -276,6 +282,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             sk_note: None,
             sk_rule: None,
             sk_need: Some(true),
+            sk_dynamic: None,
             sk_encrypted: Some(false),
             repeatable: None,
             is_basic: Some(false),
@@ -299,6 +306,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ak: TrimString("gdxr".to_string()),
             sk: None,
             ext: None,
+            vcode: None,
             start_time: None,
             end_time: None,
             conn_uri: None,
@@ -319,6 +327,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
             ak: TrimString("gudaoxuri".to_string()),
             sk: None,
             ext: None,
+            vcode: None,
             start_time: None,
             end_time: None,
             conn_uri: None,
@@ -338,6 +347,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("aa".to_string())),
+            vcode: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -358,6 +368,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            vcode: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -378,6 +389,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            vcode: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -397,6 +409,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            vcode: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -416,6 +429,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("gudaoxuri".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            vcode: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -435,6 +449,7 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
         &mut RbumCertAddReq {
             ak: TrimString("root".to_string()),
             sk: Some(TrimString("12345678".to_string())),
+            vcode: None,
             ext: None,
             start_time: None,
             end_time: None,
@@ -540,6 +555,99 @@ async fn test_rbum_cert(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumCertServ::get_rbum(&cert_gudaoxuri_id, &RbumCertFilterReq::default(), &funs, context).await.is_err());
     RbumCertServ::delete_rbum(&cert_root_id, &funs, context).await?;
     assert!(RbumCertServ::get_rbum(&cert_root_id, &RbumCertFilterReq::default(), &funs, context).await.is_err());
+
+    funs.rollback().await?;
+
+    Ok(())
+}
+
+async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    funs.begin().await?;
+
+    info!("【test_rbum_cert】 : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_iam_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("iam2".to_string()),
+            name: TrimString("IAM".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: RbumScopeLevelKind::L2,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_cert】 : Prepare Cert Conf : RbumCertConfServ::add_rbum");
+    let cert_conf_mail_vcode_id = RbumCertConfServ::add_rbum(
+        &mut RbumCertConfAddReq {
+            code: TrimString("MailVCode".to_string()),
+            name: TrimString("邮箱+验证码".to_string()),
+            note: None,
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            sk_need: Some(false),
+            sk_dynamic: Some(true),
+            sk_encrypted: Some(false),
+            repeatable: None,
+            is_basic: Some(false),
+            rest_by_kinds: None,
+            expire_sec: Some(2),
+            coexist_num: None,
+            conn_uri: None,
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    // -----------------------------------
+    info!("【test_rbum_cert】 : Test Add : RbumCertServ::add_rbum with sk_dynamic");
+    RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: TrimString("i@sunisle.org".to_string()),
+            sk: None,
+            vcode: Some(TrimString("123456".to_string())),
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(cert_conf_mail_vcode_id.to_string()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    tardis::tokio::time::sleep(Duration::from_secs(1)).await;
+    info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic");
+    RbumCertServ::validate("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await?;
+    assert!(RbumCertServ::validate("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await.is_err());
+
+    info!("【test_rbum_cert】 : Test Add : RbumCertServ::get_and_delete_vcode_in_cache");
+    assert!(RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?.is_none());
+    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "qqqqq", &context.own_paths, &funs).await?;
+    assert_eq!(
+        RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?.unwrap(),
+        "qqqqq"
+    );
+
+    info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic");
+    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
+    RbumCertServ::validate("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await?;
+
+    info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic & expire");
+    RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
+    tardis::tokio::time::sleep(Duration::from_secs(3)).await;
+    assert!(RbumCertServ::validate("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await.is_err());
 
     funs.rollback().await?;
 

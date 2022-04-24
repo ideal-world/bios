@@ -13,6 +13,9 @@ pub struct RbumConfig {
     pub set_cate_sys_code_node_len: usize,
     pub mq_topic_entity_deleted: String,
     pub mq_header_name_operator: String,
+    // own_paths:ak -> vcode
+    pub cache_key_cert_vcode_info_: String,
+    pub cache_key_cert_vcode_expire_sec: usize,
 }
 
 impl Default for RbumConfig {
@@ -21,6 +24,8 @@ impl Default for RbumConfig {
             set_cate_sys_code_node_len: 4,
             mq_topic_entity_deleted: "entity_deleted".to_string(),
             mq_header_name_operator: "OP".to_string(),
+            cache_key_cert_vcode_info_: "rbum:cache:cert:vcode:".to_string(),
+            cache_key_cert_vcode_expire_sec: 2,
         }
     }
 }
