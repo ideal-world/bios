@@ -92,7 +92,7 @@ impl<'a> IamCaHttpResServ {
     }
 
     pub async fn paginate_rel_roles(
-        iam_http_res_id: &str,
+        http_res_id: &str,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -104,7 +104,7 @@ impl<'a> IamCaHttpResServ {
         IamRelServ::paginate_from_rels(
             IAMRelKind::IamHttpResRole,
             false,
-            iam_http_res_id,
+            http_res_id,
             page_number,
             page_size,
             desc_sort_by_create,

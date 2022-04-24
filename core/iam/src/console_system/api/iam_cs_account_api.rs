@@ -33,7 +33,7 @@ impl IamCsAccountApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        iam_tenant_id: Query<String>,
+        tenant_id: Query<String>,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
@@ -43,7 +43,7 @@ impl IamCsAccountApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
         let result = IamCsAccountServ::paginate_accounts(
-            iam_tenant_id.0,
+            tenant_id.0,
             id.0,
             name.0,
             page_number.0,

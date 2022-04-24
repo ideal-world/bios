@@ -94,22 +94,22 @@ impl<'a> IamCaRoleServ {
     }
 
     pub async fn add_rel_account(
-        iam_role_id: &str,
-        iam_account_id: &str,
+        role_id: &str,
+        account_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_app_admin(funs, cxt).await?;
-        if IamBasicInfoManager::get().role_sys_admin_id == iam_role_id || IamBasicInfoManager::get().role_tenant_admin_id == iam_role_id {
+        if IamBasicInfoManager::get().role_sys_admin_id == role_id || IamBasicInfoManager::get().role_tenant_admin_id == role_id {
             return Err(TardisError::BadRequest("The associated role is invalid.".to_string()));
         }
-        IamRelServ::add_rel(IAMRelKind::IamAccountRole, iam_account_id, iam_role_id, start_timestamp, end_timestamp, funs, cxt).await
+        IamRelServ::add_rel(IAMRelKind::IamAccountRole, account_id, role_id, start_timestamp, end_timestamp, funs, cxt).await
     }
 
     pub async fn paginate_rel_accounts(
-        iam_role_id: &str,
+        role_id: &str,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -120,7 +120,7 @@ impl<'a> IamCaRoleServ {
         IamRoleServ::need_app_admin(funs, cxt).await?;
         IamRelServ::paginate_to_rels(
             IAMRelKind::IamAccountRole,
-            iam_role_id,
+            role_id,
             page_number,
             page_size,
             desc_sort_by_create,
@@ -132,19 +132,19 @@ impl<'a> IamCaRoleServ {
     }
 
     pub async fn add_rel_http_res(
-        iam_role_id: &str,
-        iam_http_res_id: &str,
+        role_id: &str,
+        http_res_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_app_admin(funs, cxt).await?;
-        IamRelServ::add_rel(IAMRelKind::IamHttpResRole, iam_http_res_id, iam_role_id, start_timestamp, end_timestamp, funs, cxt).await
+        IamRelServ::add_rel(IAMRelKind::IamHttpResRole, http_res_id, role_id, start_timestamp, end_timestamp, funs, cxt).await
     }
 
     pub async fn paginate_rel_http_res(
-        iam_role_id: &str,
+        role_id: &str,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -155,7 +155,7 @@ impl<'a> IamCaRoleServ {
         IamRoleServ::need_app_admin(funs, cxt).await?;
         IamRelServ::paginate_to_rels(
             IAMRelKind::IamHttpResRole,
-            iam_role_id,
+            role_id,
             page_number,
             page_size,
             desc_sort_by_create,

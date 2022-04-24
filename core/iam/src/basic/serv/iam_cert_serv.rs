@@ -168,7 +168,7 @@ impl<'a> IamCertServ {
     }
 
     pub async fn package_tardis_context_and_resp(
-        iam_tenant_id: Option<String>,
+        tenant_id: Option<String>,
         ak: &str,
         account_id: &str,
         rbum_cert_id: &str,
@@ -176,9 +176,9 @@ impl<'a> IamCertServ {
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<AccountInfoResp> {
         let token_kind = IamCertTokenKind::parse(&token_kind);
-        let iam_tenant_id = if let Some(iam_tenant_id) = iam_tenant_id { iam_tenant_id } else { "".to_string() };
+        let tenant_id = if let Some(tenant_id) = tenant_id { tenant_id } else { "".to_string() };
         let context = TardisContext {
-            own_paths: iam_tenant_id.clone(),
+            own_paths: tenant_id.clone(),
             ak: ak.to_string(),
             owner: account_id.to_string(),
             token: TardisFuns::crypto.key.generate_token()?,
@@ -186,7 +186,7 @@ impl<'a> IamCertServ {
             roles: vec![],
             groups: vec![],
         };
-        IamCertTokenServ::add_cert(&context.token, &token_kind, account_id, &iam_tenant_id, rbum_cert_id, funs, &context).await?;
+        IamCertTokenServ::add_cert(&context.token, &token_kind, account_id, &tenant_id, rbum_cert_id, funs, &context).await?;
 
         let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
         let enabled_apps = IamAppServ::find_items(
@@ -229,18 +229,18 @@ impl<'a> IamCertServ {
             apps: roles_infos,
         };
 
-        Self::add_cached_contexts(&account_info, ak, &token_kind.to_string(), &iam_tenant_id, funs).await?;
+        Self::add_cached_contexts(&account_info, ak, &token_kind.to_string(), &tenant_id, funs).await?;
 
         Ok(account_info)
     }
 
-    pub async fn add_cached_contexts(account_info: &AccountInfoResp, ak: &str, token_kind: &str, iam_tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn add_cached_contexts(account_info: &AccountInfoResp, ak: &str, token_kind: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         funs.cache()
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
                 "",
                 &TardisFuns::json.obj_to_string(&TardisContext {
-                    own_paths: iam_tenant_id.to_string(),
+                    own_paths: tenant_id.to_string(),
                     ak: ak.to_string(),
                     owner: account_info.account_id.to_string(),
                     token: account_info.token.to_string(),
@@ -256,7 +256,7 @@ impl<'a> IamCertServ {
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
                     &account_app_info.app_id,
                     &TardisFuns::json.obj_to_string(&TardisContext {
-                        own_paths: format!("{}/{}", iam_tenant_id, account_app_info.app_id).to_string(),
+                        own_paths: format!("{}/{}", tenant_id, account_app_info.app_id).to_string(),
                         ak: ak.to_string(),
                         owner: account_info.account_id.to_string(),
                         token: account_info.token.to_string(),
@@ -272,11 +272,11 @@ impl<'a> IamCertServ {
 
     pub async fn fetch_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
-            let iam_account_id = token_info.split(",").nth(1).unwrap_or("");
+            let account_id = token_info.split(",").nth(1).unwrap_or("");
             if let Some(context) = funs
                 .cache()
                 .hget(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, iam_account_id).as_str(),
+                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),
                     fetch_req.app_id.as_ref().unwrap_or(&"".to_string()),
                 )
                 .await?
