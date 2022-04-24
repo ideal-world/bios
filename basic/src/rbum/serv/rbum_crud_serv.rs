@@ -135,7 +135,7 @@ where
         Ok(())
     }
 
-    async fn after_add_rbum(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_add_rbum(_: &str, _: &AddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
@@ -155,7 +155,7 @@ where
             _ => None,
         };
         if let Some(id) = id {
-            Self::after_add_rbum(&id, funs, cxt).await?;
+            Self::after_add_rbum(&id, add_req, funs, cxt).await?;
             Ok(id)
         } else {
             return Err(TardisError::InternalError(
