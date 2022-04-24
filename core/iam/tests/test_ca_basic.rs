@@ -19,7 +19,7 @@ use bios_iam::console_tenant::serv::iam_ct_account_serv::IamCtAccountServ;
 use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_constants;
 
-pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, TardisContext)> {
+pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, TardisContext, TardisContext)> {
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
@@ -172,5 +172,5 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
 
     funs.commit().await?;
 
-    Ok((app_context1, app_context2))
+    Ok((app_context1, app_context2, tenant_context))
 }

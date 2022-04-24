@@ -93,7 +93,7 @@ impl<'a> IamCtAccountServ {
     }
 
     pub async fn paginate_rel_roles(
-        iam_account_id: &str,
+        account_id: &str,
         page_number: u64,
         page_size: u64,
         desc_sort_by_create: Option<bool>,
@@ -105,7 +105,7 @@ impl<'a> IamCtAccountServ {
         IamRelServ::paginate_from_rels(
             IAMRelKind::IamAccountRole,
             false,
-            iam_account_id,
+            account_id,
             page_number,
             page_size,
             desc_sort_by_create,
