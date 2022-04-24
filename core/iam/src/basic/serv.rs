@@ -10,3 +10,4 @@ pub mod iam_rel_serv;
 pub mod iam_role_serv;
 pub mod iam_tenant_serv;
 pub mod iam_set_serv;
+pub mod iam_attr_serv;
