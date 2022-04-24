@@ -1,8 +1,8 @@
 use sea_orm::EntityName;
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -62,8 +62,12 @@ impl TardisActiveModel for ActiveModel {
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::OwnPaths.to_string())).table(Entity).col(Column::OwnPaths).to_owned(),
-            Index::create().name(&format!("idx-{}-ak", Entity.table_name())).table(Entity).col(Column::RelRbumCertConfId).col(Column::Ak).to_owned(),
+            Index::create().name(&format!("idx-{}-ak", Entity.table_name())).table(Entity)
+                .col(Column::OwnPaths)
+                .col(Column::RelRbumCertConfId)
+                .col(Column::Ak)
+                .unique()
+                .to_owned(),
             Index::create()
                 .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKind.to_string()))
                 .table(Entity)
