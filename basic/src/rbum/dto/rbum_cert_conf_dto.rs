@@ -20,6 +20,7 @@ pub struct RbumCertConfAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_rule: Option<String>,
     pub sk_need: Option<bool>,
+    pub sk_dynamic: Option<bool>,
     pub sk_encrypted: Option<bool>,
     pub repeatable: Option<bool>,
     pub is_basic: Option<bool>,
@@ -89,6 +90,7 @@ pub struct RbumCertConfDetailResp {
     pub sk_note: String,
     pub sk_rule: String,
     pub sk_need: bool,
+    pub sk_dynamic: bool,
     pub sk_encrypted: bool,
     pub repeatable: bool,
     pub is_basic: bool,

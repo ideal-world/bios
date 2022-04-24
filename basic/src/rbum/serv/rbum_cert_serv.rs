@@ -14,6 +14,7 @@ use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
 use crate::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use crate::rbum::rbum_config::RbumConfigManager;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -22,6 +23,7 @@ use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetServ;
 
 pub struct RbumCertConfServ;
+
 pub struct RbumCertServ;
 
 #[async_trait]
@@ -42,6 +44,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             ak_rule: Set(add_req.ak_rule.as_ref().unwrap_or(&"".to_string()).to_string()),
             sk_note: Set(add_req.sk_note.as_ref().unwrap_or(&"".to_string()).to_string()),
             sk_rule: Set(add_req.sk_rule.as_ref().unwrap_or(&"".to_string()).to_string()),
+            sk_dynamic: Set(add_req.sk_dynamic.unwrap_or(false)),
             sk_need: Set(add_req.sk_need.unwrap_or(true)),
             sk_encrypted: Set(add_req.sk_encrypted.unwrap_or(false)),
             repeatable: Set(add_req.repeatable.unwrap_or(true)),
@@ -154,6 +157,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkNote),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkRule),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkNeed),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkDynamic),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkEncrypted),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Repeatable),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic),
@@ -193,8 +197,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
     }
 }
 
-impl RbumCertConfServ {
-    pub async fn get_rbum_cert_conf_id_by_code<'a>(code: &str, rbum_domain_id: &str, rbum_item_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+impl<'a> RbumCertConfServ {
+    pub async fn get_rbum_cert_conf_id_by_code(code: &str, rbum_domain_id: &str, rbum_item_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
         let resp = funs
             .db()
             .get_dto::<IdResp>(
@@ -224,7 +228,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now).naive_utc()),
-            end_time: Set(add_req.end_time.unwrap_or_else(Utc::now).naive_utc()),
+            end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::days(365 * 100)).naive_utc()),
             conn_uri: Set(add_req.conn_uri.as_ref().unwrap_or(&"".to_string()).to_string()),
             status: Set(add_req.status.to_int()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -235,6 +239,9 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
     }
 
     async fn before_add_rbum(add_req: &mut RbumCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        if add_req.sk.is_some() && add_req.vcode.is_some() {
+            return Err(TardisError::BadRequest("sk and vcode can only have one".to_string()));
+        }
         if let Some(rel_rbum_cert_conf_id) = &add_req.rel_rbum_cert_conf_id {
             Self::check_ownership_with_table_name(rel_rbum_cert_conf_id, RbumCertConfServ::get_table_name(), funs, cxt).await?;
         }
@@ -262,6 +269,9 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 add_req.start_time = Some(now);
                 add_req.end_time = Some(now + Duration::seconds(rbum_cert_conf.expire_sec as i64));
             }
+            if rbum_cert_conf.sk_dynamic {
+                add_req.end_time = None;
+            }
             // Delete Old Certs
             if rbum_cert_conf.coexist_num != 0 {
                 let need_delete_rbum_certs = Self::paginate_rbums(
@@ -284,6 +294,13 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                     Self::delete_rbum(&need_delete_rbum_cert.id, funs, cxt).await?;
                 }
             }
+        }
+        Ok(())
+    }
+
+    async fn after_add_rbum(_: &str, add_req: &RbumCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        if let Some(vcode) = &add_req.vcode {
+            Self::add_vcode_to_cache(add_req.ak.0.as_str(), vcode.0.as_str(), &cxt.own_paths, funs).await?;
         }
         Ok(())
     }
@@ -354,9 +371,30 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 }
 
 impl<'a> RbumCertServ {
+    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let config = RbumConfigManager::get(funs.module_code())?;
+        funs.cache()
+            .set_ex(
+                format!("{}{}:{}", config.cache_key_cert_vcode_info_, own_paths, ak).as_str(),
+                vcode.to_string().as_str(),
+                config.cache_key_cert_vcode_expire_sec,
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_and_delete_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+        let config = RbumConfigManager::get(funs.module_code())?;
+        let vcode = funs.cache().get(format!("{}{}:{}", config.cache_key_cert_vcode_info_, own_paths, ak).as_str()).await?;
+        if vcode.is_some() {
+            funs.cache().del(format!("{}{}:{}", config.cache_key_cert_vcode_info_, own_paths, ak).as_str()).await?;
+        }
+        Ok(vcode)
+    }
+
     // TODO find cert
 
-    pub async fn validate(ak: &str, sk: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<(String, RbumCertRelKind, String)> {
+    pub async fn validate(ak: &str, input_sk: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
@@ -366,8 +404,9 @@ impl<'a> RbumCertServ {
         }
 
         #[derive(Debug, FromQueryResult)]
-        struct SkEncryptedResp {
+        struct CertConfPeekResp {
             pub sk_encrypted: bool,
+            pub sk_dynamic: bool,
         }
 
         let mut query = Query::select();
@@ -385,15 +424,39 @@ impl<'a> RbumCertServ {
             .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
-            let sk_encrypted_resp = funs
+            let cert_conf_peek_resp = funs
                 .db()
-                .get_dto::<SkEncryptedResp>(
-                    Query::select().column(rbum_cert_conf::Column::SkEncrypted).from(rbum_cert_conf::Entity).and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id)),
+                .get_dto::<CertConfPeekResp>(
+                    Query::select()
+                        .column(rbum_cert_conf::Column::SkEncrypted)
+                        .column(rbum_cert_conf::Column::SkDynamic)
+                        .from(rbum_cert_conf::Entity)
+                        .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id)),
                 )
                 .await?
                 .ok_or_else(|| TardisError::NotFound("cert conf not found".to_string()))?;
-            let sk = if sk_encrypted_resp.sk_encrypted { Self::encrypt_sk(sk, ak)? } else { sk.to_string() };
-            if rbum_cert.sk == sk {
+            let input_sk = if cert_conf_peek_resp.sk_encrypted {
+                Self::encrypt_sk(input_sk, ak)?
+            } else {
+                input_sk.to_string()
+            };
+            let storage_sk = if cert_conf_peek_resp.sk_dynamic {
+                if let Some(cached_vcode) = Self::get_and_delete_vcode_in_cache(ak, own_paths, funs).await? {
+                    cached_vcode
+                } else {
+                    tardis::log::warn!(
+                        "validation error [vcode is not exist] by ak {},rbum_cert_conf_id {}, \
+                    own_paths {}",
+                        ak,
+                        rbum_cert_conf_id,
+                        own_paths
+                    );
+                    return Err(TardisError::Unauthorized("validation error".to_string()));
+                }
+            } else {
+                rbum_cert.sk
+            };
+            if storage_sk == input_sk {
                 Ok((rbum_cert.id, rbum_cert.rel_rbum_kind, rbum_cert.rel_rbum_id))
             } else {
                 tardis::log::warn!(
@@ -518,6 +581,12 @@ impl<'a> RbumCertServ {
     ) -> TardisResult<()> {
         if rbum_cert_conf.sk_need && add_req.sk.is_none() {
             return Err(TardisError::BadRequest("sk is required".to_string()));
+        }
+        if rbum_cert_conf.sk_dynamic && add_req.sk.is_some() {
+            return Err(TardisError::BadRequest("sk should be empty when dynamic model".to_string()));
+        }
+        if rbum_cert_conf.sk_dynamic && add_req.vcode.is_none() {
+            return Err(TardisError::BadRequest("vcode is required when dynamic model".to_string()));
         }
         if !rbum_cert_conf.ak_rule.is_empty() && !Regex::new(&rbum_cert_conf.ak_rule)?.is_match(&add_req.ak.to_string()) {
             return Err(TardisError::BadRequest(format!("ak {} is not match ak rule", add_req.ak)));
