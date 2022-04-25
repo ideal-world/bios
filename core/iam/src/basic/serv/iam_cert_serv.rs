@@ -161,8 +161,8 @@ impl<'a> IamCertServ {
         RbumCertServ::delete_rbum(id, funs, cxt).await
     }
 
-    pub async fn get_id_by_code(code: &str, rel_iam_tenant_id: Option<&str>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &IamBasicInfoManager::get().domain_iam_id, rel_iam_tenant_id.unwrap_or(""), funs)
+    pub async fn get_cert_conf_id_by_code(code: &str, rel_tenant_id: Option<&str>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &IamBasicInfoManager::get().domain_iam_id, rel_tenant_id.unwrap_or(""), funs)
             .await?
             .ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
     }
