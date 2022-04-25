@@ -2,7 +2,7 @@ use std::default::Default;
 
 use serde::{Deserialize, Serialize};
 
-use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
+use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
@@ -38,6 +38,8 @@ pub struct RbumCertConfFilterReq {
 #[serde(default)]
 pub struct RbumCertFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub ak: Option<String>,
+    pub status: Option<RbumCertStatusKind>,
     pub rel_rbum_kind: Option<RbumCertRelKind>,
     pub rel_rbum_id: Option<String>,
     pub rel_rbum_cert_conf_id: Option<String>,
