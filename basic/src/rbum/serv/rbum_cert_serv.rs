@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use tardis::{log, TardisFuns};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -8,7 +9,6 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::regex::Regex;
-use tardis::{log, TardisFuns};
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -356,6 +356,12 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 rbum_cert_conf::Entity,
                 Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Id).equals(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
             );
+        if let Some(ak) = &filter.ak {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).eq(ak.to_string()));
+        }
+        if let Some(status) = &filter.status {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Status).eq(status.to_int()));
+        }
         if let Some(rel_rbum_cert_conf_id) = &filter.rel_rbum_cert_conf_id {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).eq(rel_rbum_cert_conf_id.to_string()));
         }
@@ -381,6 +387,12 @@ impl<'a> RbumCertServ {
             )
             .await?;
         Ok(())
+    }
+
+    pub async fn get_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+        let config = RbumConfigManager::get(funs.module_code())?;
+        let vcode = funs.cache().get(format!("{}{}:{}", config.cache_key_cert_vcode_info_, own_paths, ak).as_str()).await?;
+        Ok(vcode)
     }
 
     pub async fn get_and_delete_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
