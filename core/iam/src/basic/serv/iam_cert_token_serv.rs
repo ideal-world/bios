@@ -18,9 +18,9 @@ pub struct IamCertTokenServ;
 
 impl<'a> IamCertTokenServ {
     pub async fn add_cert_conf(
-        add_req: &mut IamTokenCertConfAddReq,
+        add_req: &IamTokenCertConfAddReq,
         token_kind: IamCertTokenKind,
-        rel_iam_tenant_id: Option<String>,
+        rel_tenant_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
@@ -34,6 +34,7 @@ impl<'a> IamCertTokenServ {
                 sk_note: None,
                 sk_rule: None,
                 sk_need: Some(false),
+                sk_dynamic: None,
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
@@ -42,7 +43,7 @@ impl<'a> IamCertTokenServ {
                 coexist_num: Some(add_req.coexist_num),
                 conn_uri: None,
                 rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
-                rel_rbum_item_id: rel_iam_tenant_id,
+                rel_rbum_item_id: rel_tenant_id,
             },
             funs,
             cxt,
@@ -51,7 +52,7 @@ impl<'a> IamCertTokenServ {
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamTokenCertConfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamTokenCertConfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -81,7 +82,7 @@ impl<'a> IamCertTokenServ {
         token: &str,
         token_kind: &IamCertTokenKind,
         iam_item_id: &str,
-        rel_iam_tenant_id: &str,
+        rel_tenant_id: &str,
         from_cert_id: &str,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
@@ -90,12 +91,13 @@ impl<'a> IamCertTokenServ {
             &mut RbumCertAddReq {
                 ak: TrimString(token.to_string()),
                 sk: None,
+                vcode: None,
                 ext: Some(from_cert_id.to_string()),
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: Some(IamCertServ::get_id_by_code(token_kind.to_string().as_str(), Some(rel_iam_tenant_id), funs).await?),
+                rel_rbum_cert_conf_id: Some(IamCertServ::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(rel_tenant_id), funs).await?),
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: iam_item_id.to_string(),
             },

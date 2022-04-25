@@ -34,24 +34,26 @@ pub struct IamUserPwdCertRestReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamMailVCodeCertAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub ak: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
+    pub mail: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamMailVCodeCertModifyReq {
+pub struct IamMailVCodeCertResendActivationReq {
+    #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
+    pub mail: String,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamMailVCodeCertActivateReq {
+    #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
+    pub mail: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub ak: TrimString,
+    pub vcode: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamPhoneVCodeCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub ak: TrimString,
-}
-
-#[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamPhoneVCodeCertModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub ak: TrimString,
+    pub phone: TrimString,
 }

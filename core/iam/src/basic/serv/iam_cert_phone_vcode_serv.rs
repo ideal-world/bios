@@ -14,8 +14,8 @@ pub struct IamCertPhoneVCodeServ;
 
 impl<'a> IamCertPhoneVCodeServ {
     pub async fn add_cert_conf(
-        add_req: &mut IamPhoneVCodeCertConfAddOrModifyReq,
-        rel_iam_tenant_id: Option<String>,
+        add_req: &IamPhoneVCodeCertConfAddOrModifyReq,
+        rel_tenant_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<String> {
@@ -29,6 +29,7 @@ impl<'a> IamCertPhoneVCodeServ {
                 sk_note: None,
                 sk_rule: None,
                 sk_need: Some(false),
+                sk_dynamic: None,
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
@@ -37,7 +38,7 @@ impl<'a> IamCertPhoneVCodeServ {
                 coexist_num: Some(1),
                 conn_uri: None,
                 rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
-                rel_rbum_item_id: rel_iam_tenant_id,
+                rel_rbum_item_id: rel_tenant_id,
             },
             funs,
             cxt,
@@ -46,7 +47,7 @@ impl<'a> IamCertPhoneVCodeServ {
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &mut IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
