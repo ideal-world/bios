@@ -59,7 +59,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         // for example, the account corresponding to the tenant can be associated to the app,
         // where the account belongs to the tenant but scope=1, so it can be used by the application.
         Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
-        if add_req.to_rbum_item_id.is_empty() {
+        if add_req.to_rbum_item_id.trim().is_empty() {
             return Err(TardisError::BadRequest("to_rbum_item_id is empty".to_string()));
         }
         // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
@@ -247,7 +247,7 @@ impl<'a> RbumRelServ {
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         Self::paginate_rels(
             &RbumRelFilterReq {
-                basic: RbumBasicFilterReq{
+                basic: RbumBasicFilterReq {
                     with_sub_own_paths,
                     ..Default::default()
                 },
