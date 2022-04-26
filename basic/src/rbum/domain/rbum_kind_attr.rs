@@ -82,7 +82,13 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        vec![Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string())).table(Entity).col(Column::RelRbumKindId).to_owned()]
+        vec![Index::create()
+            .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string()))
+            .table(Entity)
+            .col(Column::RelRbumKindId)
+            .col(Column::Name)
+            .unique()
+            .to_owned()]
     }
 }
 

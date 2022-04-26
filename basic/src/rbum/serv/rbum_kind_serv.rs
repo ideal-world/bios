@@ -8,7 +8,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
-use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
@@ -113,7 +113,7 @@ impl<'a> RbumKindServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp, RbumBasicFilterReq>
+impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp, RbumKindAttrFilterReq>
     for RbumKindAttrServ
 {
     fn get_table_name() -> &'static str {
@@ -148,7 +148,22 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
     }
 
     async fn before_add_rbum(add_req: &mut RbumKindAttrAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), funs, cxt).await
+        Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), funs, cxt).await?;
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column(rbum_kind_attr::Column::Id)
+                    .from(rbum_kind_attr::Entity)
+                    .and_where(Expr::col(rbum_kind_attr::Column::Name).eq(add_req.name.0.as_str()))
+                    .and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(add_req.rel_rbum_kind_id.as_str())),
+            )
+            .await?
+            > 0
+        {
+            return Err(TardisError::BadRequest(format!("name {} already exists", add_req.name)));
+        }
+        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumKindAttrModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
@@ -223,7 +238,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         Ok(())
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumKindAttrFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -261,7 +276,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
             );
         }
-        query.with_filter(Self::get_table_name(), filter, is_detail, true, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);
         Ok(query)
     }
 }

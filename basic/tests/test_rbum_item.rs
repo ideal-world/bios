@@ -1,12 +1,18 @@
+use std::collections::HashMap;
+
+use sea_orm::sea_query::Query;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm::*;
+use tardis::db::sea_query::Expr;
 use tardis::log::info;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrModifyReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemAttrFilterReq, RbumKindAttrFilterReq};
+use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrModifyReq, RbumItemAttrsAddOrModifyReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
@@ -19,6 +25,7 @@ use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_item(context).await?;
     test_rbum_item_attr(context).await?;
+    test_rbum_item_attr_has_main_table(context).await?;
     Ok(())
 }
 
@@ -301,7 +308,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_item_attr】 : Test Get : RbumItemAttrServ::get_rbum");
-    let rbum = RbumItemAttrServ::get_rbum(&item_attr_id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    let rbum = RbumItemAttrServ::get_rbum(&item_attr_id, &RbumItemAttrFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, item_attr_id);
     assert_eq!(rbum.value, "数据1");
     assert_eq!(rbum.rel_rbum_item_id, item_id.to_string());
@@ -314,7 +321,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     RbumItemAttrServ::modify_rbum(&item_attr_id, &mut RbumItemAttrModifyReq { value: "数据3".to_string() }, &funs, context).await?;
 
     info!("【test_rbum_item_attr】 : Test Find : RbumItemAttrServ::paginate_rbums");
-    let rbums = RbumItemAttrServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    let rbums = RbumItemAttrServ::paginate_rbums(&RbumItemAttrFilterReq::default(), 1, 10, None, None, &funs, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
@@ -322,9 +329,322 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_item_attr】 : Test Delete : RbumItemAttrServ::delete_rbum");
     RbumItemAttrServ::delete_rbum(&item_attr_id, &funs, context).await?;
-    assert!(RbumItemAttrServ::get_rbum(&item_attr_id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumItemAttrServ::get_rbum(&item_attr_id, &RbumItemAttrFilterReq::default(), &funs, context).await.is_err());
 
     funs.rollback().await?;
 
     Ok(())
+}
+
+async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    funs.begin().await?;
+
+    TardisFuns::inst_with_db_conn("".to_string())
+        .db()
+        .create_table_and_index(&test_iam_account::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend()))
+        .await?;
+
+    info!("【test_rbum_item_attr】 : Prepare : RbumKindServ::add_rbum");
+    let kind_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("account".to_string()),
+            name: TrimString("账号".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some("iam_account".to_string()),
+            scope_level: RbumScopeLevelKind::L2,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_item_attr】 : Prepare Kind Attr : RbumKindAttrServ::add_rbum");
+    RbumKindAttrServ::add_rbum(
+        &mut RbumKindAttrAddReq {
+            name: TrimString("ext2".to_string()),
+            label: "图标".to_string(),
+            data_type: RbumDataTypeKind::String,
+            widget_type: RbumWidgetTypeKind::InputTxt,
+            note: None,
+            sort: None,
+            main_column: Some(true),
+            position: None,
+            capacity: None,
+            overload: None,
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            ext: None,
+            rel_rbum_kind_id: kind_id.to_string(),
+            scope_level: RbumScopeLevelKind::L2,
+            idx: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    RbumKindAttrServ::add_rbum(
+        &mut RbumKindAttrAddReq {
+            name: TrimString("ext1_idx".to_string()),
+            label: "是否临时账号".to_string(),
+            data_type: RbumDataTypeKind::Boolean,
+            widget_type: RbumWidgetTypeKind::Checkbox,
+            note: None,
+            sort: None,
+            main_column: Some(true),
+            position: None,
+            capacity: None,
+            overload: None,
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            ext: None,
+            rel_rbum_kind_id: kind_id.to_string(),
+            scope_level: RbumScopeLevelKind::L2,
+            idx: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    RbumKindAttrServ::add_rbum(
+        &mut RbumKindAttrAddReq {
+            name: TrimString("addr".to_string()),
+            label: "住址".to_string(),
+            data_type: RbumDataTypeKind::String,
+            widget_type: RbumWidgetTypeKind::InputTxt,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: None,
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            ext: None,
+            rel_rbum_kind_id: kind_id.to_string(),
+            scope_level: RbumScopeLevelKind::L2,
+            idx: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_item_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("test_iam".to_string()),
+            name: TrimString("IAM".to_string()),
+            note: Some("...".to_string()),
+            icon: Some("...".to_string()),
+            sort: None,
+            scope_level: RbumScopeLevelKind::L2,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let item_id = RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            id: None,
+            code: None,
+            name: TrimString("用户1".to_string()),
+            disabled: None,
+            rel_rbum_kind_id: kind_id.to_string(),
+            rel_rbum_domain_id: domain_id.to_string(),
+            scope_level: RbumScopeLevelKind::L2,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    funs.db()
+        .execute(
+            Query::insert()
+                .into_table(test_iam_account::Entity)
+                .columns(vec![test_iam_account::Column::Id, test_iam_account::Column::Ext1Idx, test_iam_account::Column::Ext2])
+                .values_panic(vec![item_id.clone().into(), "".into(), "".into()]),
+        )
+        .await?;
+
+    // -----------------------------------
+
+    info!("【test_rbum_item_attr】 : Test RbumItemAttrServ::find_item_attr_defs");
+    let attr_defs = RbumKindAttrServ::find_rbums(
+        &RbumKindAttrFilterReq {
+            basic: RbumBasicFilterReq {
+                rbum_kind_id: Some(kind_id.to_string()),
+                desc_by_sort: Some(true),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        None,
+        None,
+        &funs,
+        context,
+    )
+    .await?;
+
+    assert_eq!(attr_defs.len(), 3);
+
+    info!("【test_rbum_item_attr】 : Test Add : RbumItemAttrServ::add_or_modify_item_attrs");
+    RbumItemAttrServ::add_or_modify_item_attrs(
+        &RbumItemAttrsAddOrModifyReq {
+            values: HashMap::from([
+                ("ext1_idx".to_string(), "true".to_string()),
+                ("ext2".to_string(), "/c/c/d/".to_string()),
+                ("addr".to_string(), "中国杭州".to_string()),
+            ]),
+            rel_rbum_item_id: item_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let ext_values = RbumItemAttrServ::find_rbums(
+        &RbumItemAttrFilterReq {
+            basic: Default::default(),
+            rel_rbum_item_id: Some(item_id.to_string()),
+            ..Default::default()
+        },
+        None,
+        None,
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(ext_values.len(), 1);
+    assert_eq!(ext_values.get(0).unwrap().value, "中国杭州");
+
+    let main_values = funs
+        .db()
+        .get_dto::<IamAccountResp>(
+            &Query::select()
+                .column(test_iam_account::Column::Id)
+                .column(test_iam_account::Column::Ext1Idx)
+                .column(test_iam_account::Column::Ext2)
+                .from(test_iam_account::Entity)
+                .and_where(Expr::col(test_iam_account::Column::Id).eq(item_id.as_str())),
+        )
+        .await?
+        .unwrap();
+    assert_eq!(main_values.ext1_idx, "true");
+    assert_eq!(main_values.ext2, "/c/c/d/");
+
+    info!("【test_rbum_item_attr】 : Test Modify : RbumItemAttrServ::add_or_modify_item_attrs");
+    RbumItemAttrServ::add_or_modify_item_attrs(
+        &RbumItemAttrsAddOrModifyReq {
+            values: HashMap::from([("ext1_idx".to_string(), "false".to_string()), ("addr".to_string(), "杭州".to_string())]),
+            rel_rbum_item_id: item_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let ext_values = RbumItemAttrServ::find_rbums(
+        &RbumItemAttrFilterReq {
+            basic: Default::default(),
+            rel_rbum_item_id: Some(item_id.to_string()),
+            ..Default::default()
+        },
+        None,
+        None,
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(ext_values.len(), 1);
+    assert_eq!(ext_values.get(0).unwrap().value, "杭州");
+
+    let main_values = funs
+        .db()
+        .get_dto::<IamAccountResp>(
+            &Query::select()
+                .column(test_iam_account::Column::Id)
+                .column(test_iam_account::Column::Ext1Idx)
+                .column(test_iam_account::Column::Ext2)
+                .from(test_iam_account::Entity)
+                .and_where(Expr::col(test_iam_account::Column::Id).eq(item_id.as_str())),
+        )
+        .await?
+        .unwrap();
+    assert_eq!(main_values.ext1_idx, "false");
+    assert_eq!(main_values.ext2, "/c/c/d/");
+
+    funs.rollback().await?;
+
+    Ok(())
+}
+
+#[derive(Debug, FromQueryResult)]
+pub struct IamAccountResp {
+    pub id: String,
+    pub ext1_idx: String,
+    pub ext2: String,
+}
+
+mod test_iam_account {
+    use tardis::basic::dto::TardisContext;
+    use tardis::db::reldb_client::TardisActiveModel;
+    use tardis::db::sea_orm::*;
+    use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "iam_account")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: String,
+        pub ext1_idx: String,
+        pub ext2: String,
+
+        pub own_paths: String,
+    }
+
+    impl TardisActiveModel for ActiveModel {
+        fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
+            if is_insert {
+                self.own_paths = Set(cxt.own_paths.to_string());
+            }
+        }
+
+        fn create_table_statement(_: DbBackend) -> TableCreateStatement {
+            Table::create()
+                .table(Entity.table_ref())
+                .if_not_exists()
+                .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
+                .col(ColumnDef::new(Column::Ext1Idx).not_null().string())
+                .col(ColumnDef::new(Column::Ext2).not_null().string())
+                .to_owned()
+        }
+
+        fn create_index_statement() -> Vec<IndexCreateStatement> {
+            vec![Index::create().name(&format!("idx-{}-idx1", Entity.table_name())).table(Entity).col(Column::Ext1Idx).to_owned()]
+        }
+    }
+
+    impl ActiveModelBehavior for ActiveModel {}
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
 }

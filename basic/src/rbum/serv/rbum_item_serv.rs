@@ -13,9 +13,10 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
-use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq, RbumItemAttrFilterReq, RbumKindAttrFilterReq};
+use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
+use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
 use crate::rbum::rbum_config::RbumConfigManager;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
@@ -474,7 +475,7 @@ where
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrDetailResp, RbumBasicFilterReq>
+impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrDetailResp, RbumItemAttrFilterReq>
     for RbumItemAttrServ
 {
     fn get_table_name() -> &'static str {
@@ -493,7 +494,17 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
 
     async fn before_add_rbum(add_req: &mut RbumItemAttrAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
-        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, cxt).await
+        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, cxt).await?;
+        let rbum_kind_attr = RbumKindAttrServ::peek_rbum(&add_req.rel_rbum_kind_attr_id, &RbumKindAttrFilterReq::default(), funs, cxt).await?;
+        if rbum_kind_attr.main_column {
+            return Err(TardisError::BadRequest(
+                "Extension fields located in main table cannot be added using this function".to_string().to_string(),
+            ));
+        }
+        if rbum_kind_attr.idx {
+            return Err(TardisError::BadRequest("Indexed extension fields cannot be added using this function".to_string()));
+        }
+        Ok(())
     }
 
     async fn package_modify(id: &str, modify_req: &RbumItemAttrModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_item_attr::ActiveModel> {
@@ -504,7 +515,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
         })
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumItemAttrFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -528,8 +539,91 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
                 rbum_kind_attr::Entity,
                 Expr::tbl(rbum_kind_attr::Entity, rbum_kind_attr::Column::Id).equals(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId),
             );
-        query.with_filter(Self::get_table_name(), filter, is_detail, false, cxt);
+        if let Some(rel_rbum_item_id) = &filter.rel_rbum_item_id {
+            query.and_where(Expr::tbl(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId).eq(rel_rbum_item_id.to_string()));
+        }
+        if let Some(rel_rbum_kind_attr_id) = &filter.rel_rbum_kind_attr_id {
+            query.and_where(Expr::tbl(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId).eq(rel_rbum_kind_attr_id.to_string()));
+        }
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
         Ok(query)
+    }
+}
+
+impl<'a> RbumItemAttrServ {
+    pub async fn find_item_attr_defs_by_item_id(rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
+        let rel_rbum_kind_id = RbumItemServ::peek_rbum(rbum_item_id, &RbumBasicFilterReq::default(), funs, cxt).await?.rel_rbum_kind_id;
+        RbumKindAttrServ::find_rbums(
+            &RbumKindAttrFilterReq {
+                basic: RbumBasicFilterReq {
+                    rbum_kind_id: Some(rel_rbum_kind_id),
+                    ..Default::default()
+                },
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
+    pub async fn add_or_modify_item_attrs(add_req: &RbumItemAttrsAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        // Implicit rel_rbum_kind_attr scope check
+        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(&add_req.rel_rbum_item_id, funs, cxt).await?;
+        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+
+        if !in_main_table_attrs.is_empty() {
+            // Implicit rel_rbum_item scope check
+            let rel_rbum_kind_id = RbumItemServ::peek_rbum(&add_req.rel_rbum_item_id, &RbumBasicFilterReq::default(), funs, cxt).await?.rel_rbum_kind_id;
+            let main_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumBasicFilterReq::default(), funs, cxt).await?.ext_table_name;
+
+            let mut update_statement = Query::update();
+            update_statement.table(Alias::new(&main_table_name));
+
+            for in_main_table_attr in in_main_table_attrs {
+                let column_name = Alias::new(&in_main_table_attr.name);
+                let column_val = add_req.values.get(&in_main_table_attr.name).unwrap().clone();
+                update_statement.value(column_name, column_val.into());
+            }
+            update_statement.and_where(Expr::col(ID_FIELD.clone()).eq(add_req.rel_rbum_item_id.as_str()));
+            funs.db().execute(&update_statement).await?;
+        }
+
+        if !in_ext_table_attrs.is_empty() {
+            for in_ext_table_attr in in_ext_table_attrs {
+                let column_val = add_req.values.get(&in_ext_table_attr.name).unwrap().clone();
+                let exist_item_attr = Self::find_rbums(
+                    &RbumItemAttrFilterReq {
+                        basic: Default::default(),
+                        rel_rbum_item_id: Some(add_req.rel_rbum_item_id.to_string()),
+                        rel_rbum_kind_attr_id: Some(in_ext_table_attr.id.to_string()),
+                    },
+                    None,
+                    None,
+                    funs,
+                    cxt,
+                )
+                .await?;
+                if exist_item_attr.is_empty() {
+                    Self::add_rbum(
+                        &mut RbumItemAttrAddReq {
+                            value: column_val,
+                            rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
+                            rel_rbum_kind_attr_id: in_ext_table_attr.id.to_string(),
+                        },
+                        funs,
+                        cxt,
+                    )
+                    .await?;
+                } else {
+                    Self::modify_rbum(&exist_item_attr.get(0).unwrap().id, &mut RbumItemAttrModifyReq { value: column_val }, funs, cxt).await?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

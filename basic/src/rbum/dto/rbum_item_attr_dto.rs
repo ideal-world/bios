@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
 
@@ -11,6 +13,16 @@ pub struct RbumItemAttrAddReq {
     pub rel_rbum_item_id: String,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_kind_attr_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+pub struct RbumItemAttrsAddOrModifyReq {
+    // name -> value
+    pub values: HashMap<String, String>,
+
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub rel_rbum_item_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
