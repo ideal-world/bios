@@ -131,6 +131,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             position: Set(add_req.position.unwrap_or(false)),
             capacity: Set(add_req.capacity.unwrap_or(false)),
             overload: Set(add_req.overload.unwrap_or(false)),
+            idx: Set(add_req.idx.unwrap_or(false)),
             data_type: Set(add_req.data_type.to_string()),
             widget_type: Set(add_req.widget_type.to_string()),
             default_value: Set(add_req.default_value.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -139,6 +140,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             min_length: Set(add_req.min_length.unwrap_or(0)),
             max_length: Set(add_req.max_length.unwrap_or(0)),
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
+            ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
             scope_level: Set(add_req.scope_level.to_int()),
             ..Default::default()
@@ -178,6 +180,9 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         if let Some(overload) = modify_req.overload {
             rbum_kind_attr.overload = Set(overload);
         }
+        if let Some(idx) = modify_req.idx {
+            rbum_kind_attr.idx = Set(idx);
+        }
         if let Some(data_type) = &modify_req.data_type {
             rbum_kind_attr.data_type = Set(data_type.to_string());
         }
@@ -200,7 +205,10 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             rbum_kind_attr.max_length = Set(max_length);
         }
         if let Some(action) = &modify_req.action {
-            rbum_kind_attr.default_value = Set(action.to_string());
+            rbum_kind_attr.action = Set(action.to_string());
+        }
+        if let Some(ext) = &modify_req.ext {
+            rbum_kind_attr.ext = Set(ext.to_string());
         }
         if let Some(scope_level) = &modify_req.scope_level {
             rbum_kind_attr.scope_level = Set(scope_level.to_int());
@@ -228,6 +236,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Position),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Capacity),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Overload),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::Idx),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::DataType),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::WidgetType),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::DefaultValue),
@@ -236,6 +245,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::MinLength),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::MaxLength),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Action),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::Ext),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::OwnPaths),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Owner),

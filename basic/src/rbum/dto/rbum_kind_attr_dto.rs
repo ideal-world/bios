@@ -18,6 +18,7 @@ pub struct RbumKindAttrAddReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub idx: Option<bool>,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
@@ -29,6 +30,8 @@ pub struct RbumKindAttrAddReq {
     pub max_length: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub action: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ext: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_kind_id: String,
 
@@ -49,6 +52,7 @@ pub struct RbumKindAttrModifyReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub idx: Option<bool>,
     pub data_type: Option<RbumDataTypeKind>,
     pub widget_type: Option<RbumWidgetTypeKind>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
@@ -60,6 +64,8 @@ pub struct RbumKindAttrModifyReq {
     pub max_length: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub action: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ext: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
 }
@@ -75,12 +81,14 @@ pub struct RbumKindAttrSummaryResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+    pub idx: bool,
+    pub action: String,
+    pub ext: String,
 
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -95,6 +103,7 @@ pub struct RbumKindAttrDetailResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+    pub idx: bool,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
     pub default_value: String,
@@ -103,6 +112,7 @@ pub struct RbumKindAttrDetailResp {
     pub min_length: u32,
     pub max_length: u32,
     pub action: String,
+    pub ext: String,
     pub rel_rbum_kind_id: String,
     pub rel_rbum_kind_name: String,
 
