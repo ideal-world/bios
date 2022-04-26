@@ -76,19 +76,30 @@ pub struct RbumKindAttrSummaryResp {
     pub id: String,
     pub name: String,
     pub label: String,
+    pub note: String,
     pub sort: u32,
     pub main_column: bool,
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
     pub idx: bool,
+    pub data_type: RbumDataTypeKind,
+    pub widget_type: RbumWidgetTypeKind,
+    pub default_value: String,
+    pub options: String,
+    pub required: bool,
+    pub min_length: u32,
+    pub max_length: u32,
     pub action: String,
     pub ext: String,
+    pub rel_rbum_kind_id: String,
 
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+
+    pub scope_level: RbumScopeLevelKind,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

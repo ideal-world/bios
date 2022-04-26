@@ -54,6 +54,8 @@ pub struct RbumItemSummaryResp {
     pub id: String,
     pub code: String,
     pub name: String,
+    pub rel_rbum_kind_id: String,
+    pub rel_rbum_domain_id: String,
 
     pub own_paths: String,
     pub owner: String,

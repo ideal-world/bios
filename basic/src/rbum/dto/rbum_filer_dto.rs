@@ -48,6 +48,22 @@ pub struct RbumCertFilterReq {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
+pub struct RbumKindAttrFilterReq {
+    pub basic: RbumBasicFilterReq,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[serde(default)]
+pub struct RbumItemAttrFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel_rbum_item_id: Option<String>,
+    pub rel_rbum_kind_attr_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[serde(default)]
 pub struct RbumRelFilterReq {
     pub basic: RbumBasicFilterReq,
     pub tag: Option<String>,

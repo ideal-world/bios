@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq};
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
@@ -197,7 +197,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_kind_attr】 : Test Get : RbumKindAttrServ::get_rbum");
-    let rbum = RbumKindAttrServ::get_rbum(&kind_attr_id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    let rbum = RbumKindAttrServ::get_rbum(&kind_attr_id, &RbumKindAttrFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, kind_attr_id);
     assert_eq!(rbum.name, "db_type");
     assert_eq!(rbum.label, "数据库类型");
@@ -264,7 +264,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_kind_attr】 : Test Find : RbumKindAttrServ::paginate_rbums");
-    let rbums = RbumKindAttrServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    let rbums = RbumKindAttrServ::paginate_rbums(&RbumKindAttrFilterReq::default(), 1, 10, None, None, &funs, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
@@ -272,7 +272,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_kind_attr】 : Test Delete : RbumKindAttrServ::delete_rbum");
     RbumKindAttrServ::delete_rbum(&kind_attr_id, &funs, context).await?;
-    assert!(RbumKindAttrServ::get_rbum(&kind_attr_id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumKindAttrServ::get_rbum(&kind_attr_id, &RbumKindAttrFilterReq::default(), &funs, context).await.is_err());
 
     funs.rollback().await?;
 
