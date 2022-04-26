@@ -18,6 +18,7 @@ pub struct Model {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+    pub idx: bool,
     pub data_type: String,
     pub widget_type: String,
     pub default_value: String,
@@ -26,6 +27,7 @@ pub struct Model {
     pub min_length: u32,
     pub max_length: u32,
     pub action: String,
+    pub ext: String,
     pub rel_rbum_kind_id: String,
     // Basic
     pub own_paths: String,
@@ -58,6 +60,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Position).not_null().boolean())
             .col(ColumnDef::new(Column::Capacity).not_null().boolean())
             .col(ColumnDef::new(Column::Overload).not_null().boolean())
+            .col(ColumnDef::new(Column::Idx).not_null().boolean())
             .col(ColumnDef::new(Column::DataType).not_null().string())
             .col(ColumnDef::new(Column::WidgetType).not_null().string())
             .col(ColumnDef::new(Column::DefaultValue).not_null().string())
@@ -66,6 +69,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::MinLength).not_null().unsigned())
             .col(ColumnDef::new(Column::MaxLength).not_null().unsigned())
             .col(ColumnDef::new(Column::Action).not_null().string())
+            .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::RelRbumKindId).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())

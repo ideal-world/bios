@@ -128,8 +128,10 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
+            ext: None,
             rel_rbum_kind_id: "".to_string(),
             scope_level: RbumScopeLevelKind::L2,
+            idx: None
         },
         &funs,
         context,
@@ -155,8 +157,10 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
+            ext: None,
             rel_rbum_kind_id: "11".to_string(),
             scope_level: RbumScopeLevelKind::L2,
+            idx: None
         },
         &funs,
         context,
@@ -182,8 +186,10 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
+            ext: None,
             rel_rbum_kind_id: kind_id.to_string(),
             scope_level: RbumScopeLevelKind::L2,
+            idx: None,
         },
         &funs,
         context,
@@ -219,7 +225,9 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
-            scope_level: None
+            ext: None,
+            scope_level: None,
+            idx: None
         },
         &funs,
         context
@@ -246,7 +254,9 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             min_length: None,
             max_length: None,
             action: None,
+            ext: None,
             scope_level: None,
+            idx: None,
         },
         &funs,
         context,
