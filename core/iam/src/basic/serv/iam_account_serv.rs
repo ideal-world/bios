@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::SelectStatement;
+use tardis::db::sea_query::{Expr, SelectStatement};
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -44,6 +44,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         Ok(iam_account::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+            ext1_idx: Set("".to_string()),
+            ext2_idx: Set("".to_string()),
+            ext3_idx: Set("".to_string()),
+            ext4: Set("".to_string()),
+            ext5: Set("".to_string()),
+            ext6: Set("".to_string()),
+            ext7: Set("".to_string()),
+            ext8: Set("".to_string()),
+            ext9: Set("".to_string()),
             ..Default::default()
         })
     }
@@ -84,8 +93,20 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         Ok(())
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, _: &IamAccountFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAccountFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
+        query.column((iam_account::Entity, iam_account::Column::Ext1Idx));
+        query.column((iam_account::Entity, iam_account::Column::Ext2Idx));
+        query.column((iam_account::Entity, iam_account::Column::Ext3Idx));
+        query.column((iam_account::Entity, iam_account::Column::Ext4));
+        query.column((iam_account::Entity, iam_account::Column::Ext5));
+        query.column((iam_account::Entity, iam_account::Column::Ext6));
+        query.column((iam_account::Entity, iam_account::Column::Ext7));
+        query.column((iam_account::Entity, iam_account::Column::Ext8));
+        query.column((iam_account::Entity, iam_account::Column::Ext9));
+        if let Some(icon) = &filter.icon {
+            query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
+        }
         Ok(())
     }
 }

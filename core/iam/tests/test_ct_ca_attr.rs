@@ -114,6 +114,7 @@ fn package_test_attr_add_req(name: &str) -> IamKindAttrAddReq {
         position: None,
         capacity: None,
         overload: None,
+        idx: None,
         data_type: RbumDataTypeKind::String,
         widget_type: RbumWidgetTypeKind::Input,
         default_value: None,
@@ -122,6 +123,7 @@ fn package_test_attr_add_req(name: &str) -> IamKindAttrAddReq {
         min_length: None,
         max_length: None,
         action: None,
+        ext: None,
     }
 }
 
@@ -135,6 +137,7 @@ fn package_test_attr_modify_req(name: &str) -> RbumKindAttrModifyReq {
         position: None,
         capacity: None,
         overload: None,
+        idx: None,
         data_type: None,
         widget_type: None,
         default_value: None,
@@ -143,6 +146,7 @@ fn package_test_attr_modify_req(name: &str) -> RbumKindAttrModifyReq {
         min_length: None,
         max_length: None,
         action: None,
+        ext: None,
         scope_level: None,
     }
 }

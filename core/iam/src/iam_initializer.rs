@@ -30,7 +30,10 @@ use crate::console_system::api::{iam_cs_account_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_conf_api, iam_ct_http_res_api, iam_ct_role_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_constants::*;
+use crate::iam_constants::{
+    RBUM_ITEM_NAME_APP_ADMIN_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_SCHEME_IAM_ACCOUNT,
+    RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES_HTTP, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT,
+};
 use crate::iam_enumeration::IAMRelKind;
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {

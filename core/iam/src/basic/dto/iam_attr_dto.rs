@@ -17,6 +17,7 @@ pub struct IamKindAttrAddReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub idx: Option<bool>,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -28,6 +29,8 @@ pub struct IamKindAttrAddReq {
     pub max_length: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub ext: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
