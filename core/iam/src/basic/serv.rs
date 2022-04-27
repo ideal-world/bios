@@ -5,7 +5,7 @@ pub mod iam_cert_phone_vcode_serv;
 pub mod iam_cert_serv;
 pub mod iam_cert_token_serv;
 pub mod iam_cert_user_pwd_serv;
-pub mod iam_http_res_serv;
+pub mod iam_res_serv;
 pub mod iam_rel_serv;
 pub mod iam_role_serv;
 pub mod iam_tenant_serv;

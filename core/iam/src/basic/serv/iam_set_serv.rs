@@ -17,8 +17,8 @@ pub struct IamSetServ;
 
 impl<'a> IamSetServ {
     pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let code = if is_org { Self::get_org_code(cxt) } else { Self::get_http_res_code(cxt) };
-        RbumSetServ::add_rbum(
+        let code = if is_org { Self::get_org_code(cxt) } else { Self::get_res_code(cxt) };
+        let set_id = RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
                 code: TrimString(code.clone()),
                 name: TrimString(code),
@@ -26,17 +26,50 @@ impl<'a> IamSetServ {
                 icon: None,
                 sort: None,
                 ext: None,
-                scope_level,
+                scope_level: scope_level.clone(),
                 disabled: None,
             },
             funs,
             cxt,
         )
-        .await
+        .await?;
+        if !is_org {
+            RbumSetCateServ::add_rbum(
+                &mut RbumSetCateAddReq {
+                    name: TrimString("Menus".to_string()),
+                    bus_code: TrimString("".to_string()),
+                    icon: None,
+                    sort: None,
+                    ext: None,
+                    rbum_parent_cate_id: None,
+                    rel_rbum_set_id: set_id.clone(),
+                    scope_level: scope_level.clone(),
+                },
+                funs,
+                cxt,
+            )
+            .await?;
+            RbumSetCateServ::add_rbum(
+                &mut RbumSetCateAddReq {
+                    name: TrimString("Apis".to_string()),
+                    bus_code: TrimString("".to_string()),
+                    icon: None,
+                    sort: None,
+                    ext: None,
+                    rbum_parent_cate_id: None,
+                    rel_rbum_set_id: set_id.clone(),
+                    scope_level: scope_level.clone(),
+                },
+                funs,
+                cxt,
+            )
+            .await?;
+        }
+        Ok(set_id)
     }
 
     async fn get_set(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let code = if is_org { Self::get_org_code(cxt) } else { Self::get_http_res_code(cxt) };
+        let code = if is_org { Self::get_org_code(cxt) } else { Self::get_res_code(cxt) };
         let resp = RbumSetServ::find_rbums(
             &RbumBasicFilterReq {
                 code: Some(code.clone()),
@@ -56,8 +89,8 @@ impl<'a> IamSetServ {
         let id = Self::get_set(is_org, funs, cxt).await?;
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
-                bus_code: add_req.bus_code.clone(),
                 name: add_req.name.clone(),
+                bus_code: add_req.bus_code.clone(),
                 icon: add_req.icon.clone(),
                 sort: add_req.sort,
                 ext: add_req.ext.clone(),
@@ -143,8 +176,8 @@ impl<'a> IamSetServ {
         .await
     }
 
-    fn get_http_res_code(cxt: &TardisContext) -> String {
-        format!("{}:{}", cxt.own_paths, "http_res")
+    fn get_res_code(cxt: &TardisContext) -> String {
+        format!("{}:{}", cxt.own_paths, "res")
     }
 
     fn get_org_code(cxt: &TardisContext) -> String {

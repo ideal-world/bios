@@ -111,19 +111,19 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Add Rel Http Res By Id
-    #[oai(path = "/:id/http-res/:http_res_id", method = "put")]
-    async fn add_rel_http_res(&self, id: Path<String>, http_res_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    /// Add Rel Res By Id
+    #[oai(path = "/:id/res/:res_id", method = "put")]
+    async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCtRoleServ::add_rel_http_res(&id.0, &http_res_id.0, None, None, &funs, &cxt.0).await?;
+        IamCtRoleServ::add_rel_res(&id.0, &res_id.0, None, None, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Find Rel Http Res By Role Id
-    #[oai(path = "/:id/http-res", method = "get")]
-    async fn paginate_rel_http_res(
+    /// Find Rel Res By Role Id
+    #[oai(path = "/:id/res", method = "get")]
+    async fn paginate_rel_res(
         &self,
         id: Path<String>,
         desc_by_create: Query<Option<bool>>,
@@ -132,7 +132,7 @@ impl IamCtRoleApi {
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
-        let result = IamCtRoleServ::paginate_rel_http_res(
+        let result = IamCtRoleServ::paginate_rel_res(
             &id.0,
             page_number.0,
             page_size.0,

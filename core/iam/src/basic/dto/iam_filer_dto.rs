@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi::Object;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq};
+use crate::iam_enumeration::IamResKind;
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone,Default)]
 #[serde(default)]
@@ -50,14 +51,15 @@ impl RbumBasicFilterFetcher for IamTenantFilterReq {
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone,Default)]
 #[serde(default)]
-pub struct IamHttpResFilterReq {
+pub struct IamResFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub kind: Option<IamResKind>,
     pub icon: Option<String>,
     pub sort: Option<u32>,
     pub method: Option<String>,
 }
 
-impl RbumBasicFilterFetcher for IamHttpResFilterReq {
+impl RbumBasicFilterFetcher for IamResFilterReq {
     fn basic(&self) -> &RbumBasicFilterReq {
         &self.basic
     }

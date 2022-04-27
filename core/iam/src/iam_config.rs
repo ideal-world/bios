@@ -48,7 +48,7 @@ pub struct BasicInfo {
     pub kind_app_id: String,
     pub kind_account_id: String,
     pub kind_role_id: String,
-    pub kind_http_res_id: String,
+    pub kind_res_id: String,
     pub domain_iam_id: String,
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,

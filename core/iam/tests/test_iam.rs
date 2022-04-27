@@ -11,7 +11,7 @@ mod test_basic;
 mod test_ca_account;
 mod test_ca_app;
 mod test_ca_basic;
-mod test_ca_http_res;
+mod test_ca_res;
 mod test_ca_role;
 mod test_ca_set;
 mod test_cp_all;
@@ -23,7 +23,7 @@ mod test_ct_basic;
 mod test_ct_ca_attr;
 mod test_ct_cert;
 mod test_ct_cert_conf;
-mod test_ct_http_res;
+mod test_ct_res;
 mod test_ct_role;
 mod test_ct_set;
 mod test_ct_tenant;
@@ -54,7 +54,7 @@ async fn test_iam() -> TardisResult<()> {
     test_ct_role::test(&tenant1_admin_context, &tenant2_admin_context).await?;
     test_ct_app::test(&tenant1_admin_context, &tenant2_admin_context).await?;
     test_ct_account::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    test_ct_http_res::test(&tenant1_admin_context, &tenant2_admin_context).await?;
+    test_ct_res::test(&tenant1_admin_context, &tenant2_admin_context).await?;
     test_ct_cert_conf::test(&tenant1_admin_context, &tenant2_admin_context).await?;
     test_ct_cert::test(&tenant1_admin_context, &tenant2_admin_context).await?;
     test_ct_set::test(&tenant1_admin_context, &tenant2_admin_context).await?;
@@ -63,7 +63,7 @@ async fn test_iam() -> TardisResult<()> {
     test_ca_role::test(&app1_admin_context, &app2_admin_context).await?;
     test_ca_app::test(&app1_admin_context, &app2_admin_context).await?;
     test_ca_account::test(&app1_admin_context, &app2_admin_context).await?;
-    test_ca_http_res::test(&app1_admin_context, &app2_admin_context).await?;
+    test_ca_res::test(&app1_admin_context, &app2_admin_context).await?;
     test_ca_set::test(&app1_admin_context, &app2_admin_context).await?;
 
     test_ct_ca_attr::test(&tenant3_admin_context, &app1_admin_context, &app2_admin_context, &tenant2_admin_context).await?;

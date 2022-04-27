@@ -17,7 +17,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::domain::{iam_account, iam_app, iam_http_res, iam_role, iam_tenant};
+use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
@@ -27,12 +27,12 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_tenant_api};
-use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_conf_api, iam_ct_http_res_api, iam_ct_role_api, iam_ct_tenant_api};
+use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_conf_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{
     RBUM_ITEM_NAME_APP_ADMIN_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_SCHEME_IAM_ACCOUNT,
-    RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES_HTTP, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT,
+    RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT,
 };
 use crate::iam_enumeration::IAMRelKind;
 
@@ -56,7 +56,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 iam_ct_app_api::IamCtAppApi,
                 iam_ct_role_api::IamCtRoleApi,
                 iam_ct_cert_conf_api::IamCtCertConfApi,
-                iam_ct_http_res_api::IamCtHttpResApi,
+                iam_ct_res_api::IamCtResApi,
             ),
         )
         .await;
@@ -75,7 +75,7 @@ pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(Strin
         funs.db().create_table_and_index(&iam_app::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         funs.db().create_table_and_index(&iam_role::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         funs.db().create_table_and_index(&iam_account::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
-        funs.db().create_table_and_index(&iam_http_res::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
+        funs.db().create_table_and_index(&iam_res::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
         let (name, password) = init_rbum_data(&funs).await?;
         Some((name, password))
     };
@@ -96,9 +96,9 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> 
     let kind_account_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_ACCOUNT, funs)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, account kind not found".to_string()))?;
-    let kind_http_res_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_RES_HTTP, funs)
+    let kind_res_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_SCHEME_IAM_RES, funs)
         .await?
-        .ok_or_else(|| TardisError::NotFound("Initialization error, http res kind not found".to_string()))?;
+        .ok_or_else(|| TardisError::NotFound("Initialization error, res kind not found".to_string()))?;
 
     let domain_iam_id = RbumDomainServ::get_rbum_domain_id_by_code(&bios_basic::Components::Iam.to_string(), funs)
         .await?
@@ -143,7 +143,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> 
         kind_app_id,
         kind_account_id,
         kind_role_id,
-        kind_http_res_id,
+        kind_res_id,
         domain_iam_id,
         role_sys_admin_id,
         role_tenant_admin_id,
@@ -169,7 +169,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     let kind_app_id = add_kind(RBUM_KIND_SCHEME_IAM_APP, funs, &cxt).await?;
     let kind_role_id = add_kind(RBUM_KIND_SCHEME_IAM_ROLE, funs, &cxt).await?;
     let kind_account_id = add_kind(RBUM_KIND_SCHEME_IAM_ACCOUNT, funs, &cxt).await?;
-    let kind_http_res_id = add_kind(RBUM_KIND_SCHEME_IAM_RES_HTTP, funs, &cxt).await?;
+    let kind_res_id = add_kind(RBUM_KIND_SCHEME_IAM_RES, funs, &cxt).await?;
 
     let domain_iam_id = add_domain(funs, &cxt).await?;
 
@@ -178,7 +178,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         kind_app_id: kind_app_id.to_string(),
         kind_account_id: kind_account_id.to_string(),
         kind_role_id: kind_role_id.to_string(),
-        kind_http_res_id: kind_http_res_id.to_string(),
+        kind_res_id: kind_res_id.to_string(),
         domain_iam_id: domain_iam_id.to_string(),
         role_sys_admin_id: "".to_string(),
         role_tenant_admin_id: "".to_string(),
@@ -227,7 +227,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         kind_app_id,
         kind_account_id,
         kind_role_id,
-        kind_http_res_id,
+        kind_res_id,
         domain_iam_id,
         role_sys_admin_id: role_sys_admin_id.clone(),
         role_tenant_admin_id,

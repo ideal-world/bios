@@ -5,9 +5,9 @@ use tardis::web::poem_openapi::Object;
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub bus_code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub bus_code: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
@@ -20,9 +20,9 @@ pub struct IamSetCateAddReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub bus_code: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub bus_code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
