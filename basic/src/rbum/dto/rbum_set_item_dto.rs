@@ -22,6 +22,21 @@ pub struct RbumSetItemModifyReq {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+pub struct RbumSetItemSummaryResp {
+    pub id: String,
+    pub sort: u32,
+    pub rel_rbum_set_cate_id: String,
+    pub rel_rbum_item_id: String,
+    pub rel_rbum_item_name: String,
+
+    pub own_paths: String,
+    pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetItemDetailResp {
     pub id: String,
     pub sort: u32,

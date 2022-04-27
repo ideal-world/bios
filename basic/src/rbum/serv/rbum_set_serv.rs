@@ -9,9 +9,9 @@ use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
-use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetCateSummaryWithPidResp};
+use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetItemInfoResp, RbumSetTreeResp};
 use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetSummaryResp};
-use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
+use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use crate::rbum::rbum_config::RbumConfigManager;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::RbumCertServ;
@@ -119,14 +119,29 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 }
 
 impl<'a> RbumSetServ {
-    pub async fn get_tree_all(rbum_set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetCateSummaryWithPidResp>> {
+    pub async fn get_tree_all(rbum_set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         let set_cate_sys_code_node_len = RbumConfigManager::get(funs.module_code())?.set_cate_sys_code_node_len;
         let mut resp = Self::do_get_tree(rbum_set_id, None, true, funs, cxt).await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
+        let rbum_set_items = RbumSetItemServ::find_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    desc_by_sort: Some(true),
+                    ..Default::default()
+                },
+                rel_rbum_set_id: Some(rbum_set_id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?;
         Ok(resp
             .iter()
-            .map(|r| RbumSetCateSummaryWithPidResp {
+            .map(|r| RbumSetTreeResp {
                 id: r.id.to_string(),
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
@@ -135,10 +150,20 @@ impl<'a> RbumSetServ {
                 ext: r.ext.to_string(),
                 own_paths: r.own_paths.to_string(),
                 owner: r.owner.to_string(),
-                create_time: r.create_time,
-                update_time: r.update_time,
                 scope_level: r.scope_level.clone(),
                 pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - set_cate_sys_code_node_len]).map(|i| i.id.to_string()),
+                rbum_set_items: rbum_set_items
+                    .iter()
+                    .filter(|i| i.rel_rbum_set_cate_id == r.id)
+                    .map(|i| RbumSetItemInfoResp {
+                        id: i.id.to_string(),
+                        sort: i.sort,
+                        rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
+                        rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
+                        own_paths: i.own_paths.to_string(),
+                        owner: i.owner.to_string(),
+                    })
+                    .collect(),
             })
             .collect())
     }
@@ -426,7 +451,7 @@ impl<'a> RbumSetCateServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemDetailResp, RbumSetItemDetailResp, RbumSetItemFilterReq>
+impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp, RbumSetItemDetailResp, RbumSetItemFilterReq>
     for RbumSetItemServ
 {
     fn get_table_name() -> &'static str {
@@ -460,7 +485,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         })
     }
 
-    async fn package_query(_: bool, filter: &RbumSetItemFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
 
         let mut query = Query::select();
@@ -497,7 +522,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         if let Some(rel_rbum_item_id) = &filter.rel_rbum_item_id {
             query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId).eq(rel_rbum_item_id.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
         Ok(query)
     }
 }

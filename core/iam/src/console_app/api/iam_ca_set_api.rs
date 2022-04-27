@@ -1,9 +1,9 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateSummaryWithPidResp;
-use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemDetailResp, RbumSetItemModifyReq};
+use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemModifyReq, RbumSetItemSummaryResp};
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -37,7 +37,7 @@ impl IamCtSetApi {
 
     /// Find Set Categories
     #[oai(path = "/cate", method = "get")]
-    async fn find_cates(&self, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetCateSummaryWithPidResp>> {
+    async fn find_cates(&self, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let result = IamSetServ::find_set_cates(is_org.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
         TardisResp::ok(result)
     }
@@ -74,7 +74,7 @@ impl IamCtSetApi {
 
     /// Find Set Items
     #[oai(path = "/cate/:cate_id/item", method = "get")]
-    async fn find_items(&self, cate_id: Path<String>, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
+    async fn find_items(&self, cate_id: Path<String>, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemSummaryResp>> {
         let result = IamSetServ::find_set_items(&cate_id.0, is_org.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
         TardisResp::ok(result)
     }
