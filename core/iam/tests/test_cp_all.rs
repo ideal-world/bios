@@ -42,7 +42,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Login by Username and Password, Password error");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString("123456".to_string()),
             tenant_id: None,
@@ -55,7 +55,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Login by Username and Password, Tenant error");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: Some(tenant_id.clone()),
@@ -68,7 +68,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Login by Username and Password, Tenant error");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd.to_string()),
             tenant_id: None,
@@ -81,7 +81,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Login by Username and Password, By tenant admin");
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd.to_string()),
             tenant_id: Some(tenant_id.clone()),
@@ -106,7 +106,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Login by Username and Password, By sys admin");
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: None,
@@ -156,7 +156,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     .await?;
 
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(sysadmin_info.1.to_string()),
             tenant_id: None,
@@ -168,7 +168,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     .is_err());
 
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString("123456".to_string()),
             tenant_id: None,
@@ -187,7 +187,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Add Mail-VCode Cert");
     IamCertMailVCodeServ::add_cert_conf(
-        &mut IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
+        &IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
         Some(tenant_id.clone()),
         &funs,
         &tenant_admin_context,
@@ -226,6 +226,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
 
+    sleep(Duration::from_secs(1)).await;
     info!("【test_cp_all】 : Login by Mail And Vcode");
     IamCpCertMailVCodeServ::login_by_mail_vocde(
         &IamCpMailVCodeLoginReq {

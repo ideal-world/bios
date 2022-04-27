@@ -10,7 +10,6 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFil
 pub struct IamAccountFilterReq {
     pub basic: RbumBasicFilterReq,
     pub icon: Option<String>,
-    pub contact_phone: Option<String>,
 }
 
 impl RbumBasicFilterFetcher for IamAccountFilterReq {
