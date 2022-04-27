@@ -3,11 +3,12 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
-use bios_iam::console_tenant::dto::iam_ct_http_res_dto::IamCtHttpResAddReq;
+use bios_iam::console_tenant::dto::iam_ct_res_dto::IamCtResAddReq;
 use bios_iam::console_tenant::dto::iam_ct_role_dto::{IamCtRoleAddReq, IamCtRoleModifyReq};
-use bios_iam::console_tenant::serv::iam_ct_http_res_serv::IamCtHttpResServ;
+use bios_iam::console_tenant::serv::iam_ct_res_serv::IamCtResServ;
 use bios_iam::console_tenant::serv::iam_ct_role_serv::IamCtRoleServ;
 use bios_iam::iam_constants;
+use bios_iam::iam_enumeration::IamResKind;
 
 pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisResult<()> {
     let mut funs = iam_constants::get_tardis_inst();
@@ -118,40 +119,43 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     let rel_accounts = IamCtRoleServ::paginate_rel_accounts(&role_id2, 1, 10, None, None, &funs, context2).await?;
     assert_eq!(rel_accounts.total_size, 0);
 
-    // ----------------------- Rel Http Res -----------------------
-    let http_res_id = IamCtHttpResServ::add_http_res(
-        &mut IamCtHttpResAddReq {
+    // ----------------------- Rel Res -----------------------
+    let res_id = IamCtResServ::add_res(
+        &mut IamCtResAddReq {
             name: TrimString("测试资源".to_string()),
             code: TrimString("test_code".to_string()),
             method: TrimString("GET".to_string()),
+            hide: None,
             sort: None,
             icon: None,
             disabled: None,
+            kind: IamResKind::API,
+            action: None,
         },
         &funs,
         context2,
     )
     .await?;
 
-    info!("【test_ct_role】 : Find Rel Http Res By Role Id, is empty");
-    let rel_http_res = IamCtRoleServ::paginate_rel_http_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
-    assert_eq!(rel_http_res.total_size, 0);
+    info!("【test_ct_role】 : Find Rel Res By Role Id, is empty");
+    let rel_res = IamCtRoleServ::paginate_rel_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
+    assert_eq!(rel_res.total_size, 0);
 
-    info!("【test_ct_role】 : Add Rel Http Res By Id, with err");
-    assert!(IamCtRoleServ::add_rel_http_res(&role_id1, "xxxx", None, None, &funs, context2).await.is_err());
-    info!("【test_ct_role】 : Add Rel Http Res By Id");
-    IamCtRoleServ::add_rel_http_res(&role_id2, &http_res_id, None, None, &funs, context2).await?;
+    info!("【test_ct_role】 : Add Rel Res By Id, with err");
+    assert!(IamCtRoleServ::add_rel_res(&role_id1, "xxxx", None, None, &funs, context2).await.is_err());
+    info!("【test_ct_role】 : Add Rel Res By Id");
+    IamCtRoleServ::add_rel_res(&role_id2, &res_id, None, None, &funs, context2).await?;
 
-    info!("【test_ct_role】 : Find Rel Http Res By Role Id");
-    let rel_http_res = IamCtRoleServ::paginate_rel_http_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
-    assert_eq!(rel_http_res.total_size, 1);
-    assert_eq!(rel_http_res.records.get(0).unwrap().rel.from_rbum_item_name, "测试资源");
-    assert_eq!(rel_http_res.records.get(0).unwrap().rel.to_rbum_item_name, "角色2");
+    info!("【test_ct_role】 : Find Rel Res By Role Id");
+    let rel_res = IamCtRoleServ::paginate_rel_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
+    assert_eq!(rel_res.total_size, 1);
+    assert_eq!(rel_res.records.get(0).unwrap().rel.from_rbum_item_name, "测试资源");
+    assert_eq!(rel_res.records.get(0).unwrap().rel.to_rbum_item_name, "角色2");
 
     info!("【test_ct_role】 : Delete Rel By Id");
-    IamCtRoleServ::delete_rel(&rel_http_res.records.get(0).unwrap().rel.id, &funs, context2).await?;
-    let rel_http_res = IamCtRoleServ::paginate_rel_http_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
-    assert_eq!(rel_http_res.total_size, 0);
+    IamCtRoleServ::delete_rel(&rel_res.records.get(0).unwrap().rel.id, &funs, context2).await?;
+    let rel_res = IamCtRoleServ::paginate_rel_res(&role_id2, 1, 10, None, None, &funs, context2).await?;
+    assert_eq!(rel_res.total_size, 0);
 
     funs.rollback().await?;
 

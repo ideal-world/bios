@@ -131,19 +131,19 @@ impl<'a> IamCtRoleServ {
         .await
     }
 
-    pub async fn add_rel_http_res(
+    pub async fn add_rel_res(
         role_id: &str,
-        http_res_id: &str,
+        res_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
-        IamRelServ::add_rel(IAMRelKind::IamHttpResRole, http_res_id, role_id, start_timestamp, end_timestamp, funs, cxt).await
+        IamRelServ::add_rel(IAMRelKind::IamResRole, res_id, role_id, start_timestamp, end_timestamp, funs, cxt).await
     }
 
-    pub async fn paginate_rel_http_res(
+    pub async fn paginate_rel_res(
         role_id: &str,
         page_number: u64,
         page_size: u64,
@@ -154,7 +154,7 @@ impl<'a> IamCtRoleServ {
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRoleServ::need_tenant_admin(funs, cxt).await?;
         IamRelServ::paginate_to_rels(
-            IAMRelKind::IamHttpResRole,
+            IAMRelKind::IamResRole,
             role_id,
             page_number,
             page_size,

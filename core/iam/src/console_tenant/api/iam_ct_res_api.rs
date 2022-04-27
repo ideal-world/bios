@@ -1,52 +1,52 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 
-use crate::basic::dto::iam_http_res_dto::{IamHttpResDetailResp, IamHttpResSummaryResp};
-use crate::console_app::dto::iam_ca_http_res_dto::{IamCaHttpResAddReq, IamCaHttpResModifyReq};
-use crate::console_app::serv::iam_ca_http_res_serv::IamCaHttpResServ;
+use crate::basic::dto::iam_res_dto::{IamResDetailResp, IamResSummaryResp};
+use crate::console_tenant::dto::iam_ct_res_dto::{IamCtResAddReq, IamCtResModifyReq};
+use crate::console_tenant::serv::iam_ct_res_serv::IamCtResServ;
 use crate::iam_constants;
+use crate::iam_enumeration::IamResKind;
 
-pub struct IamCtHttpResApi;
+pub struct IamCtResApi;
 
-/// App Console Http Res API
-#[OpenApi(prefix_path = "/ca/http-res", tag = "crate::iam_enumeration::Tag::App")]
-impl IamCtHttpResApi {
-    /// Add Http Res
+/// Tenant Console Res API
+#[OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
+impl IamCtResApi {
+    /// Add Res
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamCaHttpResAddReq>, cxt: TardisContextExtractor) -> 
-                                                                                            TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamCtResAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCaHttpResServ::add_http_res(&mut add_req.0, &funs, &cxt.0).await?;
+        let result = IamCtResServ::add_res(&mut add_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
-    /// Modify Http Res By Id
+    /// Modify Res By Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCaHttpResModifyReq>, cxt: 
-    TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCtResModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCaHttpResServ::modify_http_res(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamCtResServ::modify_res(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Get Http Res By Id
+    /// Get Res By Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamHttpResDetailResp> {
-        let result = IamCaHttpResServ::get_http_res(&id.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
+    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamResDetailResp> {
+        let result = IamCtResServ::get_res(&id.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
         TardisResp::ok(result)
     }
 
-    /// Find Http Res
+    /// Find Res
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
+        q_kind: Query<IamResKind>,
         q_id: Query<Option<String>>,
         q_name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
@@ -54,8 +54,9 @@ impl IamCtHttpResApi {
         page_number: Query<u64>,
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<IamHttpResSummaryResp>> {
-        let result = IamCaHttpResServ::paginate_http_res(
+    ) -> TardisApiResult<TardisPage<IamResSummaryResp>> {
+        let result = IamCtResServ::paginate_res(
+            q_kind.0,
             q_id.0,
             q_name.0,
             page_number.0,
@@ -69,17 +70,17 @@ impl IamCtHttpResApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Http Res By Id
+    /// Delete Res By Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCaHttpResServ::delete_http_res(&id.0, &funs, &cxt.0).await?;
+        IamCtResServ::delete_res(&id.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Find Rel Roles By Http Res Id
+    /// Find Rel Roles By Res Id
     #[oai(path = "/:id/roles", method = "get")]
     async fn paginate_rel_roles(
         &self,
@@ -90,7 +91,7 @@ impl IamCtHttpResApi {
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
-        let result = IamCaHttpResServ::paginate_rel_roles(
+        let result = IamCtResServ::paginate_rel_roles(
             &id.0,
             page_number.0,
             page_size.0,
