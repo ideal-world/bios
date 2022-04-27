@@ -19,9 +19,8 @@ name = "bios_basic"
 path = "src/lib.rs"
 
 [features]
-default = ["tardis", "tardis/crypto", "tardis/web-server", "tardis/web-client", "tardis/reldb", "poem-openapi", "sea-orm"]
+default = ["tardis", "tardis/crypto", "tardis/web-server", "tardis/web-client", "tardis/reldb", "tardis/cache", "poem-openapi", "sea-orm"]
 with-mq = ["tardis/mq"]
-with-cache = ["tardis/cache"]
 sdk = ["tardis", "tardis/web-client", "poem-openapi"]
 
 [dependencies]
@@ -42,4 +41,4 @@ sea-orm = { version = "^0.7", features = ["macros"] }
 
 [[test]]
 name = "test_rbum"
-required-features = ["default", "with-mq", "with-cache"]
+required-features = ["default", "with-mq"]
