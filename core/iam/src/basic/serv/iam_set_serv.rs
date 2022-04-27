@@ -4,9 +4,9 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
-use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryWithPidResp};
+use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
-use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
+use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
@@ -131,7 +131,7 @@ impl<'a> IamSetServ {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, cxt).await
     }
 
-    pub async fn find_set_cates(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetCateSummaryWithPidResp>> {
+    pub async fn find_set_cates(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         let id = Self::get_set(is_org, funs, cxt).await?;
         RbumSetServ::get_tree_all(&id, funs, cxt).await
     }
@@ -159,7 +159,7 @@ impl<'a> IamSetServ {
         RbumSetItemServ::delete_rbum(set_item_id, funs, cxt).await
     }
 
-    pub async fn find_set_items(set_cate_id: &str, is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetItemDetailResp>> {
+    pub async fn find_set_items(set_cate_id: &str, is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
         let id = Self::get_set(is_org, funs, cxt).await?;
         RbumSetItemServ::find_rbums(
             &RbumSetItemFilterReq {
