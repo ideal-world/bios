@@ -24,7 +24,7 @@ derive_more = { version = "^0" }
 async-trait = { version = "^0" }
 lazy_static = { version = "^1" }
 
-bios-basic = { path = "../../basic", features = ["default", "with-mq", "with-cache"] }
+bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
 # TODO
 tardis = { path = "../../../tardis", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
 poem-openapi = { version = "^1.3", features = ["chrono"] }
