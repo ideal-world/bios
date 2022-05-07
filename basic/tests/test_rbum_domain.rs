@@ -22,7 +22,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
             sort: None,
-            scope_level: RbumScopeLevelKind::L2,
+            scope_level: Some(RbumScopeLevelKind::L2),
         },
         &funs,
         context,

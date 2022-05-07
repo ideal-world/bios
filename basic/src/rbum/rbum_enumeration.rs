@@ -10,6 +10,7 @@ use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
 pub enum RbumScopeLevelKind {
+    Private,
     Root,
     L1,
     L2,
@@ -17,8 +18,9 @@ pub enum RbumScopeLevelKind {
 }
 
 impl RbumScopeLevelKind {
-    pub fn from_int(s: u8) -> TardisResult<RbumScopeLevelKind> {
+    pub fn from_int(s: i8) -> TardisResult<RbumScopeLevelKind> {
         match s {
+            -1 => Ok(RbumScopeLevelKind::Private),
             0 => Ok(RbumScopeLevelKind::Root),
             1 => Ok(RbumScopeLevelKind::L1),
             2 => Ok(RbumScopeLevelKind::L2),
@@ -27,8 +29,9 @@ impl RbumScopeLevelKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i8 {
         match self {
+            RbumScopeLevelKind::Private => -1,
             RbumScopeLevelKind::Root => 0,
             RbumScopeLevelKind::L1 => 1,
             RbumScopeLevelKind::L2 => 2,
@@ -40,7 +43,7 @@ impl RbumScopeLevelKind {
 #[cfg(feature = "default")]
 impl TryGetable for RbumScopeLevelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i8::try_get(res, pre, col)?;
         RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }

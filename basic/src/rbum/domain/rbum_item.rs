@@ -20,7 +20,7 @@ pub struct Model {
     pub create_time: DateTime,
     pub update_time: DateTime,
     // With Scope
-    pub scope_level: u8,
+    pub scope_level: i8,
     // With Status
     pub disabled: bool,
 }
@@ -49,7 +49,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
             .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_unsigned())
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_integer())
             // With Status
             .col(ColumnDef::new(Column::Disabled).not_null().boolean())
             .to_owned()

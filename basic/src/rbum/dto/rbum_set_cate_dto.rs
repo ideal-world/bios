@@ -21,7 +21,7 @@ pub struct RbumSetCateAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_set_id: String,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -11,6 +11,7 @@ use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, 
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
+use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelAttrServ;
@@ -33,7 +34,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             ext_table_name: Set(add_req.ext_table_name.as_ref().unwrap_or(&"".to_string()).to_string()),
-            scope_level: Set(add_req.scope_level.to_int()),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
         })
     }
@@ -142,7 +143,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
-            scope_level: Set(add_req.scope_level.to_int()),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
         })
     }

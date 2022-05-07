@@ -16,7 +16,7 @@ pub struct RbumDomainAddReq {
     pub icon: Option<String>,
     pub sort: Option<u32>,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
