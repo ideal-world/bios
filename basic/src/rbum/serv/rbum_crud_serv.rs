@@ -344,8 +344,7 @@ impl RbumCrudQueryPackage for SelectStatement {
             } else {
                 self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(own_paths.to_string()));
             }
-        }
-        if has_scope && !filter.ignore_scope {
+        } else if has_scope && !filter.ignore_scope {
             self.with_scope(table_name, cxt);
         } else if !has_scope && !filter.ignore_scope {
             if filter.with_sub_own_paths {
@@ -364,6 +363,11 @@ impl RbumCrudQueryPackage for SelectStatement {
         self.cond_where(
             Cond::all().add(
                 Cond::any()
+                    .add(
+                        Cond::all()
+                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(-1))
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str())),
+                    )
                     .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0))
                     .add(
                         Cond::all()
