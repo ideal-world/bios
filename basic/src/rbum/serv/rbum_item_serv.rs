@@ -16,7 +16,7 @@ use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetai
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
-use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind};
+use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -67,7 +67,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
             name: Set(add_req.name.to_string()),
             rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
             rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
-            scope_level: Set(add_req.scope_level.to_int()),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             disabled: Set(add_req.disabled.unwrap_or(false)),
             ..Default::default()
         })
@@ -285,6 +285,8 @@ where
         let item_modify_req = Self::package_item_modify(id, modify_req, funs, cxt).await?;
         if let Some(mut item_modify_req) = item_modify_req {
             RbumItemServ::modify_rbum(id, &mut item_modify_req, funs, cxt).await?;
+        } else {
+            RbumItemServ::check_ownership(id, funs, cxt).await?;
         }
         let ext_domain = Self::package_ext_modify(id, modify_req, funs, cxt).await?;
         if let Some(ext_domain) = ext_domain {

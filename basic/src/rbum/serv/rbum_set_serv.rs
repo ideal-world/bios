@@ -38,7 +38,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
-            scope_level: Set(add_req.scope_level.to_int()),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             disabled: Set(add_req.disabled.unwrap_or(false)),
             ..Default::default()
         })
@@ -265,7 +265,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             sort: Set(add_req.sort.unwrap_or(0)),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
-            scope_level: Set(add_req.scope_level.to_int()),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
         })
     }

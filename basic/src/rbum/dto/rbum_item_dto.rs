@@ -18,7 +18,7 @@ pub struct RbumItemAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_domain_id: String,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 }
 
@@ -32,7 +32,7 @@ pub struct RbumItemKernelAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 }
 

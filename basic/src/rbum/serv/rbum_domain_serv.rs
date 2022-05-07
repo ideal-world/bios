@@ -10,6 +10,7 @@ use tardis::TardisFuns;
 use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 use crate::rbum::serv::rbum_cert_serv::RbumCertConfServ;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -32,7 +33,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
-            scope_level: Set(add_req.scope_level.to_int()),
+            scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
         })
     }

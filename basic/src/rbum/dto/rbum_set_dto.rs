@@ -19,7 +19,7 @@ pub struct RbumSetAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 }
 
