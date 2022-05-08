@@ -3,14 +3,18 @@ use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
+use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_account;
-use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSummaryResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamAccountServ;
 
@@ -112,6 +116,44 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
 }
 
 impl<'a> IamAccountServ {
+    pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamAccountServ::modify_item(
+            &cxt.owner,
+            &mut IamAccountModifyReq {
+                name: modify_req.name.clone(),
+                icon: modify_req.icon.clone(),
+                disabled: modify_req.disabled,
+                scope_level: None,
+            },
+            funs,
+            cxt,
+        )
+        .await
+    }
+
+    pub async fn paginate_rel_roles(
+        account_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        IamRelServ::paginate_from_rels(
+            IAMRelKind::IamAccountRole,
+            false,
+            account_id,
+            page_number,
+            page_size,
+            desc_by_create,
+            desc_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
     pub async fn delete_cache(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         // TODO change cert role group
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;

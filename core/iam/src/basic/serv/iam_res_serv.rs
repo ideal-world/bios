@@ -3,14 +3,18 @@ use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
+use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
+use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamResServ;
 
@@ -104,4 +108,31 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         }
         Ok(())
     }
+}
+
+impl<'a> IamResServ {
+
+    pub async fn paginate_rel_roles(
+        res_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        IamRelServ::paginate_from_rels(
+            IAMRelKind::IamResRole,
+            false,
+            res_id,
+            page_number,
+            page_size,
+            desc_by_create,
+            desc_by_update,
+            funs,
+            cxt,
+        )
+            .await
+    }
+    
 }

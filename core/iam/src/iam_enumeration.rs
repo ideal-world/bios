@@ -11,6 +11,8 @@ use tardis::web::poem_openapi::Tags;
 
 #[derive(Tags, Display, Debug)]
 pub enum Tag {
+    #[oai(rename = "Common Console")]
+    Common,
     #[oai(rename = "Tenant Console")]
     Tenant,
     #[oai(rename = "App Console")]

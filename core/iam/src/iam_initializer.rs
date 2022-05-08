@@ -25,9 +25,11 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::console_app::api::iam_ca_app_api;
+use crate::console_common::api::{iam_cc_account_api, iam_cc_account_attr_api, iam_cc_cert_api, iam_cc_cert_conf_api, iam_cc_res_api, iam_cc_role_api, iam_cc_set_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api};
-use crate::console_system::api::{iam_cs_account_api, iam_cs_tenant_api};
-use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_conf_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api};
+use crate::console_system::api::iam_cs_tenant_api;
+use crate::console_tenant::api::{iam_ct_app_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{
@@ -48,15 +50,18 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
             &bios_basic::Components::Iam.to_string(),
             (
                 iam_cp_account_api::IamCpAccountApi,
-                iam_cp_cert_api::IamCpAccountApi,
+                iam_cp_cert_api::IamCpCertApi,
+                iam_cc_account_api::IamCcAccountApi,
+                iam_cc_account_attr_api::IamCcAccountAttrApi,
+                iam_cc_cert_api::IamCcCertApi,
+                iam_cc_cert_conf_api::IamCcCertConfApi,
+                iam_cc_res_api::IamCcResApi,
+                iam_cc_role_api::IamCcRoleApi,
+                iam_cc_set_api::IamCcSetApi,
                 iam_cs_tenant_api::IamCsTenantApi,
-                iam_cs_account_api::IamCsAccountApi,
                 iam_ct_tenant_api::IamCtTenantApi,
-                iam_ct_account_api::IamCtAccountApi,
                 iam_ct_app_api::IamCtAppApi,
-                iam_ct_role_api::IamCtRoleApi,
-                iam_ct_cert_conf_api::IamCtCertConfApi,
-                iam_ct_res_api::IamCtResApi,
+                iam_ca_app_api::IamCtAppApi,
             ),
         )
         .await;
@@ -190,7 +195,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
             disabled: None,
         },
         funs,
@@ -202,7 +207,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
             disabled: None,
         },
         funs,
@@ -214,7 +219,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
             disabled: None,
         },
         funs,
@@ -234,7 +239,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         role_app_admin_id,
     })?;
 
-    IamCertServ::init_global_ident_conf(funs, &cxt).await?;
+    let rbum_cert_conf_user_pwd_id = IamCertServ::init_global_ident_conf(funs, &cxt).await?;
 
     let account_sys_admin_id = IamAccountServ::add_item(
         &mut IamAccountAddReq {
@@ -242,7 +247,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
             icon: None,
             disabled: None,
-            scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            scope_level: None,
         },
         funs,
         &cxt,
@@ -258,7 +263,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             sk: TrimString(pwd.clone()),
         },
         &account_sys_admin_id,
-        None,
+        Some(rbum_cert_conf_user_pwd_id),
         funs,
         &cxt,
     )
@@ -283,7 +288,7 @@ async fn add_kind<'a>(scheme: &str, funs: &TardisFunsInst<'a>, cxt: &TardisConte
             icon: None,
             sort: None,
             ext_table_name: Some(scheme.to_string().to_lowercase()),
-            scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
         },
         funs,
         cxt,
@@ -299,7 +304,7 @@ async fn add_domain<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> Tardi
             note: None,
             icon: None,
             sort: None,
-            scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
         },
         funs,
         cxt,

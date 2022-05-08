@@ -24,7 +24,7 @@ use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTena
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
-use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
+use crate::iam_enumeration::{IAMRelKind, IamCertKind, IamCertTokenKind};
 
 pub struct IamCsTenantServ;
 
@@ -51,7 +51,7 @@ impl<'a> IamCsTenantServ {
                 sort: None,
                 contact_phone: add_req.tenant_contact_phone.clone(),
                 disabled: add_req.disabled,
-                scope_level: iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
             },
             funs,
             &tenant_cxt,
@@ -63,7 +63,7 @@ impl<'a> IamCsTenantServ {
                 name: add_req.admin_name.clone(),
                 icon: None,
                 disabled: add_req.disabled,
-                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
             },
             funs,
             &tenant_cxt,
@@ -149,13 +149,14 @@ impl<'a> IamCsTenantServ {
         .await?;
 
         let pwd = IamCertServ::get_new_pwd();
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
         IamCertUserPwdServ::add_cert(
             &mut IamUserPwdCertAddReq {
                 ak: TrimString(add_req.admin_username.0.to_string()),
                 sk: TrimString(pwd.to_string()),
             },
             &tenant_admin_id,
-            Some(&tenant_id),
+            Some(rbum_cert_conf_id),
             funs,
             &tenant_cxt,
         )

@@ -12,11 +12,11 @@ use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCo
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
 
-pub struct IamCpAccountApi;
+pub struct IamCpCertApi;
 
 /// Personal Console Cert API
 #[OpenApi(prefix_path = "/cp/cert", tag = "crate::iam_enumeration::Tag::Passport")]
-impl IamCpAccountApi {
+impl IamCpCertApi {
     /// Fetch TardisContext By Token
     #[oai(path = "/cp/context", method = "get")]
     async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {

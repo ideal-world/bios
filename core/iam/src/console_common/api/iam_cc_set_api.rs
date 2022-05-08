@@ -8,19 +8,18 @@ use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemModifyReq, RbumSetItem
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 
-pub struct IamCtSetApi;
+pub struct IamCcSetApi;
 
-/// App Console Set API
-#[OpenApi(prefix_path = "/ca/set", tag = "crate::iam_enumeration::Tag::App")]
-impl IamCtSetApi {
+/// Common Console Set API
+#[OpenApi(prefix_path = "/cc/set", tag = "crate::iam_enumeration::Tag::Common")]
+impl IamCcSetApi {
     /// Add Set Category
     #[oai(path = "/cate", method = "post")]
     async fn add_set_cate(&self, add_req: Json<IamSetCateAddReq>, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamSetServ::add_set_cate(&add_req.0, is_org.0, RBUM_SCOPE_LEVEL_APP, &funs, &cxt.0).await?;
+        let result = IamSetServ::add_set_cate(&add_req.0, is_org.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -38,7 +37,8 @@ impl IamCtSetApi {
     /// Find Set Categories
     #[oai(path = "/cate", method = "get")]
     async fn find_cates(&self, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
-        let result = IamSetServ::find_set_cates(is_org.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamSetServ::find_set_cates(is_org.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -75,7 +75,8 @@ impl IamCtSetApi {
     /// Find Set Items
     #[oai(path = "/cate/:cate_id/item", method = "get")]
     async fn find_items(&self, cate_id: Path<String>, is_org: Query<bool>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemSummaryResp>> {
-        let result = IamSetServ::find_set_items(&cate_id.0, is_org.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamSetServ::find_set_items(&cate_id.0, is_org.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

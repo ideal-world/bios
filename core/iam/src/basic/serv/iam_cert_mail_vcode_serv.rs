@@ -27,7 +27,7 @@ pub struct IamCertMailVCodeServ;
 impl<'a> IamCertMailVCodeServ {
     pub async fn add_cert_conf(
         add_req: &IamMailVCodeCertConfAddOrModifyReq,
-        rel_tenant_id: Option<String>,
+        rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<String> {
@@ -50,7 +50,7 @@ impl<'a> IamCertMailVCodeServ {
                 coexist_num: Some(1),
                 conn_uri: None,
                 rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
-                rel_rbum_item_id: rel_tenant_id,
+                rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
             cxt,
@@ -85,7 +85,7 @@ impl<'a> IamCertMailVCodeServ {
         Ok(())
     }
 
-    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_tenant_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let vcode = Self::get_vcode();
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -97,7 +97,7 @@ impl<'a> IamCertMailVCodeServ {
                 end_time: None,
                 conn_uri: None,
                 status: RbumCertStatusKind::Pending,
-                rel_rbum_cert_conf_id: Some(IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(rel_tenant_id), funs).await?),
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: account_id.to_string(),
             },
@@ -147,7 +147,7 @@ impl<'a> IamCertMailVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_id: Some(
-                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(&IamTenantServ::get_id_by_cxt(cxt)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_cxt(cxt)?), funs).await?,
                         ),
                         ..Default::default()
                     },
@@ -183,9 +183,9 @@ impl<'a> IamCertMailVCodeServ {
         return Err(TardisError::Unauthorized("Email or verification code error".to_string()));
     }
 
-    pub async fn send_login_mail(mail: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, tenant_id, funs).await?;
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, own_paths, funs).await?;
         let mut subject = funs.conf::<IamConfig>().mail_template_cert_login_title.clone();
         let mut content = funs.conf::<IamConfig>().mail_template_cert_login_content.clone();
         subject = subject.replace("{vcode}", &vcode);

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
-use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
+use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamKindAttrAddReq {
@@ -31,6 +31,8 @@ pub struct IamKindAttrAddReq {
     pub action: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
+
+    pub scope_level: Option<RbumScopeLevelKind>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

@@ -6,7 +6,6 @@ use tardis::basic::result::TardisResult;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemAttrFilterReq, RbumKindAttrFilterReq};
 use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemAttrServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
@@ -17,7 +16,7 @@ use crate::iam_config::IamBasicInfoManager;
 pub struct IamAttrServ;
 
 impl<'a> IamAttrServ {
-    pub async fn add_account_attr(add_req: &IamKindAttrAddReq, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_account_attr(add_req: &IamKindAttrAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         RbumKindAttrServ::add_rbum(
             &mut RbumKindAttrAddReq {
                 name: add_req.name.clone(),
@@ -39,7 +38,7 @@ impl<'a> IamAttrServ {
                 action: add_req.action.clone(),
                 ext: add_req.ext.clone(),
                 rel_rbum_kind_id: IamBasicInfoManager::get().kind_account_id,
-                scope_level,
+                scope_level: add_req.scope_level.clone(),
             },
             funs,
             cxt,
@@ -51,15 +50,14 @@ impl<'a> IamAttrServ {
         RbumKindAttrServ::modify_rbum(id, modify_req, funs, cxt).await
     }
 
-    pub async fn get_account_attr(id: &str, with_sub_own_paths: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumKindAttrDetailResp> {
+    pub async fn get_account_attr(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumKindAttrDetailResp> {
         RbumKindAttrServ::get_rbum(
             id,
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths,
+                    rbum_kind_id: Some(IamBasicInfoManager::get().kind_account_id),
                     ..Default::default()
                 },
-                ..Default::default()
             },
             funs,
             cxt,
@@ -67,16 +65,14 @@ impl<'a> IamAttrServ {
         .await
     }
 
-    pub async fn find_account_attrs(with_sub_own_paths: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
+    pub async fn find_account_attrs(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
         RbumKindAttrServ::find_rbums(
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths,
                     rbum_kind_id: Some(IamBasicInfoManager::get().kind_account_id),
                     desc_by_sort: Some(true),
                     ..Default::default()
                 },
-                ..Default::default()
             },
             None,
             None,
@@ -138,13 +134,13 @@ impl<'a> IamAttrServ {
         .await
     }
 
-    pub async fn modify_account_attr_value(attr_id: &str, value: String, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        RbumItemAttrServ::modify_rbum(attr_id, &mut RbumItemAttrModifyReq { value }, funs, cxt).await
+    pub async fn modify_account_attr_value(attr_value_id: &str, value: String, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        RbumItemAttrServ::modify_rbum(attr_value_id, &mut RbumItemAttrModifyReq { value }, funs, cxt).await
     }
 
-    pub async fn get_account_attr_value(attr_id: &str, with_sub_own_paths: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumItemAttrDetailResp> {
+    pub async fn get_account_attr_value(attr_value_id: &str, with_sub_own_paths: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumItemAttrDetailResp> {
         RbumItemAttrServ::get_rbum(
-            attr_id,
+            attr_value_id,
             &RbumItemAttrFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths,
@@ -158,7 +154,7 @@ impl<'a> IamAttrServ {
         .await
     }
 
-    pub async fn delete_account_attr_value(attr_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumItemAttrServ::delete_rbum(attr_id, funs, cxt).await
+    pub async fn delete_account_attr_value(attr_value_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        RbumItemAttrServ::delete_rbum(attr_value_id, funs, cxt).await
     }
 }

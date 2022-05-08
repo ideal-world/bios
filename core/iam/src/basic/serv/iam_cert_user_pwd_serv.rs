@@ -12,14 +12,18 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
-use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::IamCertKind;
 
 pub struct IamCertUserPwdServ;
 
 impl<'a> IamCertUserPwdServ {
-    pub async fn add_cert_conf(add_req: &IamUserPwdCertConfAddOrModifyReq, rel_tenant_id: Option<String>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert_conf(
+        add_req: &IamUserPwdCertConfAddOrModifyReq,
+        rel_iam_item_id: Option<String>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKind::UserPwd.to_string()),
@@ -39,7 +43,7 @@ impl<'a> IamCertUserPwdServ {
                 coexist_num: Some(1),
                 conn_uri: None,
                 rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
-                rel_rbum_item_id: rel_tenant_id,
+                rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
             cxt,
@@ -74,7 +78,13 @@ impl<'a> IamCertUserPwdServ {
         Ok(())
     }
 
-    pub async fn add_cert(add_req: &IamUserPwdCertAddReq, iam_item_id: &str, rel_tenant_id: Option<&str>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_cert(
+        add_req: &IamUserPwdCertAddReq,
+        rel_iam_item_id: &str,
+        rel_rbum_cert_conf_id: Option<String>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<()> {
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
@@ -85,9 +95,9 @@ impl<'a> IamCertUserPwdServ {
                 end_time: None,
                 conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: Some(IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), rel_tenant_id, funs).await?),
+                rel_rbum_cert_conf_id,
                 rel_rbum_kind: RbumCertRelKind::Item,
-                rel_rbum_id: iam_item_id.to_string(),
+                rel_rbum_id: rel_iam_item_id.to_string(),
             },
             funs,
             cxt,
@@ -96,12 +106,18 @@ impl<'a> IamCertUserPwdServ {
         Ok(())
     }
 
-    pub async fn modify_cert(modify_req: &IamUserPwdCertModifyReq, iam_item_id: &str, rel_tenant_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert(
+        modify_req: &IamUserPwdCertModifyReq,
+        rel_iam_item_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<()> {
         let certs = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_id: Some(iam_item_id.to_string()),
-                rel_rbum_cert_conf_id: Some(IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(rel_tenant_id), funs).await?),
+                rel_rbum_id: Some(rel_iam_item_id.to_string()),
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 ..Default::default()
             },
             None,
@@ -120,12 +136,18 @@ impl<'a> IamCertUserPwdServ {
         }
     }
 
-    pub async fn reset_sk(modify_req: &IamUserPwdCertRestReq, iam_item_id: &str, rel_tenant_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn reset_sk(
+        modify_req: &IamUserPwdCertRestReq,
+        rel_iam_item_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<()> {
         let certs = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_id: Some(iam_item_id.to_string()),
-                rel_rbum_cert_conf_id: Some(IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(rel_tenant_id), funs).await?),
+                rel_rbum_id: Some(rel_iam_item_id.to_string()),
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 ..Default::default()
             },
             None,
