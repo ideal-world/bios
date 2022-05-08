@@ -7,6 +7,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilte
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
+use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
@@ -26,7 +27,7 @@ impl<'a> IamSetServ {
                 icon: None,
                 sort: None,
                 ext: None,
-                scope_level: scope_level.clone(),
+                scope_level: Some(scope_level.clone()),
                 disabled: None,
             },
             funs,
@@ -43,7 +44,7 @@ impl<'a> IamSetServ {
                     ext: None,
                     rbum_parent_cate_id: None,
                     rel_rbum_set_id: set_id.clone(),
-                    scope_level: scope_level.clone(),
+                    scope_level: Some(scope_level.clone()),
                 },
                 funs,
                 cxt,
@@ -58,7 +59,7 @@ impl<'a> IamSetServ {
                     ext: None,
                     rbum_parent_cate_id: None,
                     rel_rbum_set_id: set_id.clone(),
-                    scope_level: scope_level.clone(),
+                    scope_level: Some(scope_level.clone()),
                 },
                 funs,
                 cxt,
@@ -85,7 +86,7 @@ impl<'a> IamSetServ {
         Ok(id)
     }
 
-    pub async fn add_set_cate(add_req: &IamSetCateAddReq, is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_set_cate(add_req: &IamSetCateAddReq, is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let id = Self::get_set(is_org, funs, cxt).await?;
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
@@ -96,7 +97,7 @@ impl<'a> IamSetServ {
                 ext: add_req.ext.clone(),
                 rbum_parent_cate_id: add_req.rbum_parent_cate_id.clone(),
                 rel_rbum_set_id: id,
-                scope_level,
+                scope_level: Some(get_scope_level_by_context(cxt)?),
             },
             funs,
             cxt,

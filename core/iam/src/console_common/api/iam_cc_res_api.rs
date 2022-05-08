@@ -2,35 +2,37 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_res_dto::{IamResDetailResp, IamResSummaryResp};
-use crate::console_app::dto::iam_ca_res_dto::{IamCaResAddReq, IamCaResModifyReq};
-use crate::console_app::serv::iam_ca_res_serv::IamCaResServ;
+use crate::basic::dto::iam_filer_dto::IamResFilterReq;
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
+use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamResKind;
 
-pub struct IamCtResApi;
+pub struct IamCcResApi;
 
-/// App Console Res API
-#[OpenApi(prefix_path = "/ca/res", tag = "crate::iam_enumeration::Tag::App")]
-impl IamCtResApi {
+/// Common Console Res API
+#[OpenApi(prefix_path = "/cc/res", tag = "crate::iam_enumeration::Tag::Common")]
+impl IamCcResApi {
     /// Add Res
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamCaResAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamResAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCaResServ::add_res(&mut add_req.0, &funs, &cxt.0).await?;
+        let result = IamResServ::add_item(&mut add_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify Res By Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamCaResModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCaResServ::modify_res(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamResServ::modify_item(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -38,7 +40,8 @@ impl IamCtResApi {
     /// Get Res By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamResDetailResp> {
-        let result = IamCaResServ::get_res(&id.0, &iam_constants::get_tardis_inst(), &cxt.0).await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamResServ::get_item(&id.0, &IamResFilterReq::default(), &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -49,21 +52,29 @@ impl IamCtResApi {
         q_kind: Query<IamResKind>,
         q_id: Query<Option<String>>,
         q_name: Query<Option<String>>,
-        desc_by_create: Query<Option<bool>>,
-        desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamResSummaryResp>> {
-        let result = IamCaResServ::paginate_res(
-            q_kind.0,
-            q_id.0,
-            q_name.0,
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamResServ::paginate_items(
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: q_id.0.map(|id| vec![id]),
+                    name: q_name.0,
+                    own_paths: Some(cxt.0.own_paths.clone()),
+                    ..Default::default()
+                },
+                kind: Some(q_kind.0),
+                ..Default::default()
+            },
             page_number.0,
             page_size.0,
             desc_by_create.0,
             desc_by_update.0,
-            &iam_constants::get_tardis_inst(),
+            &funs,
             &cxt.0,
         )
         .await?;
@@ -75,7 +86,7 @@ impl IamCtResApi {
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCaResServ::delete_res(&id.0, &funs, &cxt.0).await?;
+        IamResServ::delete_item(&id.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -85,22 +96,14 @@ impl IamCtResApi {
     async fn paginate_rel_roles(
         &self,
         id: Path<String>,
-        desc_by_create: Query<Option<bool>>,
-        desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
-        let result = IamCaResServ::paginate_rel_roles(
-            &id.0,
-            page_number.0,
-            page_size.0,
-            desc_by_create.0,
-            desc_by_update.0,
-            &iam_constants::get_tardis_inst(),
-            &cxt.0,
-        )
-        .await?;
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamResServ::paginate_rel_roles(&id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }

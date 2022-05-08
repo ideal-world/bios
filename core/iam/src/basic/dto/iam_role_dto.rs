@@ -10,7 +10,7 @@ use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 pub struct IamRoleAddReq {
     pub name: TrimString,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
     pub icon: Option<String>,

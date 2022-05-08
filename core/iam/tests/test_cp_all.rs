@@ -7,13 +7,15 @@ use tardis::log::info;
 use tardis::tokio::time::sleep;
 
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_iam::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamMailVCodeCertConfAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamMailVCodeCertAddReq, IamUserPwdCertModifyReq};
+use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
-use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountModifyReq;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::{IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpUserPwdLoginReq};
-use bios_iam::console_passport::serv::iam_cp_account_serv::IamCpAccountServ;
 use bios_iam::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
@@ -245,8 +247,8 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     // ------------------ Mail-VCode Cert Test End ------------------
 
     info!("【test_cp_all】 : Modify Current Account");
-    IamCpAccountServ::modify_account(
-        &mut IamCpAccountModifyReq {
+    IamAccountServ::self_modify_account(
+        &mut IamAccountSelfModifyReq {
             name: Some(TrimString("测试系统管理员".to_string())),
             icon: Some("/static/images/avatar.png".to_string()),
             disabled: Some(true),
@@ -257,13 +259,13 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     .await?;
 
     info!("【test_cp_all】 : Get Current Account");
-    let sysadmin = IamCpAccountServ::get_account(&funs, &system_admin_context).await?;
+    let sysadmin = IamAccountServ::get_item(&system_admin_context.owner, &IamAccountFilterReq::default(), &funs, &system_admin_context).await?;
     assert_eq!(sysadmin.name, "测试系统管理员");
     assert_eq!(sysadmin.icon, "/static/images/avatar.png");
     assert!(sysadmin.disabled);
 
     info!("【test_cp_all】 : Find Rel Roles By Current Account");
-    let sysadmin_roles = IamCpAccountServ::paginate_rel_roles(1, 10, None, None, &funs, &system_admin_context).await?;
+    let sysadmin_roles = IamAccountServ::paginate_rel_roles(&system_admin_context.owner, 1, 10, None, None, &funs, &system_admin_context).await?;
     assert_eq!(sysadmin_roles.page_number, 1);
     assert_eq!(sysadmin_roles.page_size, 10);
     assert_eq!(sysadmin_roles.total_size, 1);

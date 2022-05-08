@@ -5,9 +5,12 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
+use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelCheckReq;
+use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -15,7 +18,9 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
+use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::IAMRelKind;
 
 pub struct IamRoleServ;
@@ -89,20 +94,59 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     }
 }
 
-impl IamRoleServ {
-    pub async fn need_sys_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+impl<'a> IamRoleServ {
+    pub async fn add_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let basic_info = IamBasicInfoManager::get();
+        let scope_level = get_scope_level_by_context(cxt)?;
+        if scope_level == RBUM_SCOPE_LEVEL_APP && (role_id == basic_info.role_sys_admin_id || role_id == basic_info.role_tenant_admin_id)
+            || scope_level == RBUM_SCOPE_LEVEL_TENANT && role_id == basic_info.role_sys_admin_id
+        {
+            return Err(TardisError::BadRequest("The associated role is invalid.".to_string()));
+        }
+        IamRelServ::add_rel(IAMRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
+    }
+
+    pub async fn paginate_rel_accounts(
+        role_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        IamRelServ::paginate_to_rels(IAMRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_rel(IAMRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
+    }
+
+    pub async fn paginate_rel_res(
+        role_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
+        IamRelServ::paginate_to_rels(IAMRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn need_sys_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::need_role(&IamBasicInfoManager::get().role_sys_admin_id, funs, cxt).await
     }
 
-    pub async fn need_tenant_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_tenant_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::need_role(&IamBasicInfoManager::get().role_tenant_admin_id, funs, cxt).await
     }
 
-    pub async fn need_app_admin<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_app_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::need_role(&IamBasicInfoManager::get().role_app_admin_id, funs, cxt).await
     }
 
-    pub async fn need_role<'a>(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn need_role(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         // TODO cache
         let exist = RbumRelServ::check_rel(
             &mut RbumRelCheckReq {

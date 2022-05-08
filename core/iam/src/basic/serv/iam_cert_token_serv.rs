@@ -10,7 +10,6 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamTokenCertConfModifyReq};
-use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::IamCertTokenKind;
 
@@ -20,7 +19,7 @@ impl<'a> IamCertTokenServ {
     pub async fn add_cert_conf(
         add_req: &IamTokenCertConfAddReq,
         token_kind: IamCertTokenKind,
-        rel_tenant_id: Option<String>,
+        rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
@@ -43,7 +42,7 @@ impl<'a> IamCertTokenServ {
                 coexist_num: Some(add_req.coexist_num),
                 conn_uri: None,
                 rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
-                rel_rbum_item_id: rel_tenant_id,
+                rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
             cxt,
@@ -81,8 +80,8 @@ impl<'a> IamCertTokenServ {
     pub async fn add_cert(
         token: &str,
         token_kind: &IamCertTokenKind,
-        iam_item_id: &str,
-        rel_tenant_id: &str,
+        rel_iam_item_id: &str,
+        rel_rbum_cert_conf_id: &str,
         from_cert_id: &str,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
@@ -97,9 +96,9 @@ impl<'a> IamCertTokenServ {
                 end_time: None,
                 conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: Some(IamCertServ::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(rel_tenant_id), funs).await?),
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 rel_rbum_kind: RbumCertRelKind::Item,
-                rel_rbum_id: iam_item_id.to_string(),
+                rel_rbum_id: rel_iam_item_id.to_string(),
             },
             funs,
             cxt,
@@ -110,11 +109,11 @@ impl<'a> IamCertTokenServ {
         funs.cache()
             .set_ex(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                format!("{},{}", token_kind.to_string(), iam_item_id).as_str(),
+                format!("{},{}", token_kind.to_string(), rel_iam_item_id).as_str(),
                 expire_sec,
             )
             .await?;
-        funs.cache().hset(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), &token, "").await?;
+        funs.cache().hset(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str(), &token, "").await?;
         Ok(())
     }
 

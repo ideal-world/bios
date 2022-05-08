@@ -17,6 +17,7 @@ pub const RBUM_ITEM_NAME_APP_ADMIN_ROLE: &str = "app_admin";
 pub const RBUM_ITEM_ID_TENANT_LEN: u8 = 6;
 pub const RBUM_ITEM_ID_APP_LEN: u8 = 6;
 
+pub const RBUM_SCOPE_LEVEL_PRIVATE: RbumScopeLevelKind = RbumScopeLevelKind::Private;
 pub const RBUM_SCOPE_LEVEL_GLOBAL: RbumScopeLevelKind = RbumScopeLevelKind::Root;
 pub const RBUM_SCOPE_LEVEL_TENANT: RbumScopeLevelKind = RbumScopeLevelKind::L1;
 pub const RBUM_SCOPE_LEVEL_APP: RbumScopeLevelKind = RbumScopeLevelKind::L2;

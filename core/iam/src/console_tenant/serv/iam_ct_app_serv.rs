@@ -42,7 +42,7 @@ impl<'a> IamCtAppServ {
                 sort: add_req.app_sort,
                 contact_phone: add_req.app_contact_phone.clone(),
                 disabled: add_req.disabled,
-                scope_level: iam_constants::RBUM_SCOPE_LEVEL_TENANT,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
             },
             funs,
             &app_cxt,

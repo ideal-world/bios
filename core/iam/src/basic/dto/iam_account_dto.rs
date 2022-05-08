@@ -8,20 +8,35 @@ use tardis::web::poem_openapi::Object;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamAccountAddReq {
+    #[oai(skip = true)]
     pub id: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamAccountModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub icon: Option<String>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountSelfModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: Option<TrimString>,
+    pub disabled: Option<bool>,
+
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 }
 

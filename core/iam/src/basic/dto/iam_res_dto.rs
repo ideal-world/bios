@@ -10,33 +10,41 @@ use crate::iam_enumeration::IamResKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamResAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub kind: IamResKind,
-
-    pub scope_level: RbumScopeLevelKind,
-    pub disabled: Option<bool>,
-
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub method: TrimString,
     pub hide: Option<bool>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub action: Option<String>,
+
+    pub scope_level: Option<RbumScopeLevelKind>,
+    pub disabled: Option<bool>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamResModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub icon: Option<String>,
+    pub sort: Option<u32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub method: Option<TrimString>,
+    pub hide: Option<bool>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub action: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
-
-    pub icon: Option<String>,
-    pub sort: Option<u32>,
-    pub method: Option<TrimString>,
-    pub hide: Option<bool>,
-    pub action: Option<String>,
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]

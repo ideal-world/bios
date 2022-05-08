@@ -15,7 +15,7 @@ pub struct IamCertPhoneVCodeServ;
 impl<'a> IamCertPhoneVCodeServ {
     pub async fn add_cert_conf(
         add_req: &IamPhoneVCodeCertConfAddOrModifyReq,
-        rel_tenant_id: Option<String>,
+        rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<String> {
@@ -38,7 +38,7 @@ impl<'a> IamCertPhoneVCodeServ {
                 coexist_num: Some(1),
                 conn_uri: None,
                 rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
-                rel_rbum_item_id: rel_tenant_id,
+                rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
             cxt,

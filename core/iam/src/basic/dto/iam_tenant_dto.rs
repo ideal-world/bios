@@ -11,7 +11,7 @@ pub struct IamTenantAddReq {
     pub id: Option<TrimString>,
     pub name: TrimString,
 
-    pub scope_level: RbumScopeLevelKind,
+    pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
     pub icon: Option<String>,
