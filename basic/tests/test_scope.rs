@@ -296,7 +296,7 @@ pub async fn test() -> TardisResult<()> {
         s0.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 16);
+    assert_eq!(rbums.len(), 4);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {

@@ -7,8 +7,10 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> String {
     let own_paths = own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
-    if scope_level == 0 || own_paths.is_empty() {
+    if scope_level == 0 && own_paths.is_empty() {
         return "".to_string();
+    } else if own_paths.is_empty() {
+        return "//".to_string();
     }
     let split_items = own_paths.split('/').collect::<Vec<&str>>();
     if split_items.len() < scope_level as usize {
