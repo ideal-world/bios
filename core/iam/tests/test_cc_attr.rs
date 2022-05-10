@@ -3,17 +3,10 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrModifyReq;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountModifyReq};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use bios_iam::basic::dto::iam_role_dto::IamRoleAddReq;
-use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_attr_serv::IamAttrServ;
-use bios_iam::basic::serv::iam_role_serv::IamRoleServ;
 use bios_iam::iam_constants;
 
 pub async fn test(
@@ -175,13 +168,10 @@ pub async fn test_multi_level_by_sys_context(
         "sys_attr2_global_modify"
     );
     assert!(IamAttrServ::get_account_attr(&t2_attr1_id, &funs, sys_context).await.is_err());
-    assert_eq!(IamAttrServ::get_account_attr(&t2_attr2_tenant_id, &funs, sys_context).await?.name, "t2_attr2_tenant_modify");
+    assert!(IamAttrServ::get_account_attr(&t2_attr2_tenant_id, &funs, sys_context).await.is_err());
     assert!(IamAttrServ::get_account_attr(&t2_a1_attr1_id, &funs, sys_context).await.is_err());
-    assert_eq!(IamAttrServ::get_account_attr(&t2_a1_attr2_app_id, &funs, sys_context).await?.name, "t2_a1_attr2_app_modify");
-    assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, &funs, sys_context).await?.name,
-        "t2_a1_attr2_tenant_modify"
-    );
+    assert!(IamAttrServ::get_account_attr(&t2_a1_attr2_app_id, &funs, sys_context).await.is_err());
+    assert!(IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, &funs, sys_context).await.is_err());
     assert_eq!(
         IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, &funs, sys_context).await?.name,
         "t2_a1_attr3_global_modify"
@@ -189,23 +179,21 @@ pub async fn test_multi_level_by_sys_context(
     assert!(IamAttrServ::get_account_attr(&t2_a2_attr1_id, &funs, sys_context).await.is_err());
 
     info!("【test_cc_attr】 : test_multi_level : Find Account Attrs By sys_context");
-    assert_eq!(IamAttrServ::find_account_attrs(&funs, sys_context).await?.len(), 6);
+    assert_eq!(IamAttrServ::find_account_attrs(&funs, sys_context).await?.len(), 3);
 
     info!("【test_cc_attr】 : test_multi_level : Add Account Attr value By sys_context");
     let sys_attr1_value = IamAttrServ::add_account_attr_value("sys_attr1_value".to_string(), &sys_attr1_id, &sys_context.owner, &funs, sys_context).await?;
     let sys_attr2_global_value = IamAttrServ::add_account_attr_value("sys_attr2_global_value".to_string(), &sys_attr2_global_id, &sys_context.owner, &funs, sys_context).await?;
     assert!(IamAttrServ::add_account_attr_value("t2_attr1_value".to_string(), &t2_attr1_id, &sys_context.owner, &funs, sys_context).await.is_err());
-    let t2_attr2_tenant_value = IamAttrServ::add_account_attr_value("t2_attr2_tenant_value".to_string(), &t2_attr2_tenant_id, &sys_context.owner, &funs, sys_context).await?;
+    assert!(IamAttrServ::add_account_attr_value("t2_attr2_tenant_value".to_string(), &t2_attr2_tenant_id, &sys_context.owner, &funs, sys_context).await.is_err());
     assert!(IamAttrServ::add_account_attr_value("t2_a1_attr1_value".to_string(), &t2_a1_attr1_id, &sys_context.owner, &funs, sys_context).await.is_err());
-    let t2_a1_attr2_app_value = IamAttrServ::add_account_attr_value("t2_a1_attr2_app_value".to_string(), &t2_a1_attr2_app_id, &sys_context.owner, &funs, sys_context).await?;
+    assert!(IamAttrServ::add_account_attr_value("t2_a1_attr2_app_value".to_string(), &t2_a1_attr2_app_id, &sys_context.owner, &funs, sys_context).await.is_err());
     let t2_a1_attr3_global_value =
         IamAttrServ::add_account_attr_value("t2_a1_attr3_global_value".to_string(), &t2_a1_attr3_global_id, &sys_context.owner, &funs, sys_context).await?;
 
     info!("【test_cc_attr】 : test_multi_level : Modify Account Attr value By sys_context");
     IamAttrServ::modify_account_attr_value(&sys_attr1_value, "sys_attr1_value_modify".to_string(), &funs, sys_context).await?;
     IamAttrServ::modify_account_attr_value(&sys_attr2_global_value, "sys_attr2_global_value_modify".to_string(), &funs, sys_context).await?;
-    IamAttrServ::modify_account_attr_value(&t2_attr2_tenant_value, "t2_attr2_tenant_value_modify".to_string(), &funs, sys_context).await?;
-    IamAttrServ::modify_account_attr_value(&t2_a1_attr2_app_value, "t2_a1_attr2_app_value_modify".to_string(), &funs, sys_context).await?;
     IamAttrServ::modify_account_attr_value(&t2_a1_attr3_global_value, "t2_a1_attr3_global_value_modify".to_string(), &funs, sys_context).await?;
 
     info!("【test_cc_attr】 : test_multi_level : Get Account Attr value By sys_context");
@@ -218,14 +206,6 @@ pub async fn test_multi_level_by_sys_context(
         "sys_attr2_global_value_modify"
     );
     assert_eq!(
-        IamAttrServ::get_account_attr_value(&t2_attr2_tenant_value, false, &funs, sys_context).await?.value,
-        "t2_attr2_tenant_value_modify"
-    );
-    assert_eq!(
-        IamAttrServ::get_account_attr_value(&t2_a1_attr2_app_value, false, &funs, sys_context).await?.value,
-        "t2_a1_attr2_app_value_modify"
-    );
-    assert_eq!(
         IamAttrServ::get_account_attr_value(&t2_a1_attr3_global_value, false, &funs, sys_context).await?.value,
         "t2_a1_attr3_global_value_modify"
     );
@@ -233,8 +213,6 @@ pub async fn test_multi_level_by_sys_context(
     info!("【test_cc_attr】 : test_multi_level : Delete Account Attr value By sys_context");
     IamAttrServ::delete_account_attr_value(&sys_attr1_value, &funs, sys_context).await?;
     IamAttrServ::delete_account_attr_value(&sys_attr2_global_value, &funs, sys_context).await?;
-    IamAttrServ::delete_account_attr_value(&t2_attr2_tenant_value, &funs, sys_context).await?;
-    IamAttrServ::delete_account_attr_value(&t2_a1_attr2_app_value, &funs, sys_context).await?;
     IamAttrServ::delete_account_attr_value(&t2_a1_attr3_global_value, &funs, sys_context).await?;
 
     info!("【test_cc_attr】 : test_multi_level : Delete Account Attr By sys_context");
