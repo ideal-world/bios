@@ -12,6 +12,7 @@ mod test_ca_app;
 mod test_ca_basic;
 mod test_cc_account;
 mod test_cc_attr;
+mod test_cc_res;
 mod test_cc_role;
 mod test_cp_all;
 mod test_cs_tenant;
@@ -73,20 +74,16 @@ async fn test_iam() -> TardisResult<()> {
         &app1_admin_context,
         &app2_admin_context,
     )
-        .await?;
+    .await?;
 
-    // test_cs_account::test(&system_admin_context).await?;
-    // test_ct_role::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    // test_ct_account::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    // test_ct_res::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    // test_ct_cert_conf::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    // test_ct_cert::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    // test_ct_set::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    // test_ca_role::test(&app1_admin_context, &app2_admin_context).await?;
-    // test_ca_account::test(&app1_admin_context, &app2_admin_context).await?;
-    // test_ca_res::test(&app1_admin_context, &app2_admin_context).await?;
-    // test_ca_set::test(&app1_admin_context, &app2_admin_context).await?;
-    // test_ct_ca_attr::test(&tenant3_admin_context, &app1_admin_context, &app2_admin_context, &tenant2_admin_context).await?;
+    test_cc_res::test(
+        &system_admin_context,
+        &tenant1_admin_context,
+        &tenant3_admin_context,
+        &app1_admin_context,
+        &app2_admin_context,
+    )
+    .await?;
 
     Ok(())
 }

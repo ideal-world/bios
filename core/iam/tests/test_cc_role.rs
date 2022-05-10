@@ -578,6 +578,8 @@ pub async fn test_multi_level_by_tenant_context(
         IamRoleServ::paginate_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
         1
     );
+    assert!(IamRoleServ::add_rel_account(&role_sys_id, &t2_context.owner, &funs, t2_context).await.is_err());
+    assert!(IamRoleServ::add_rel_account(&role_t1_id, &t2_context.owner, &funs, t2_context).await.is_err());
 
     info!("【test_cc_role】 : test_multi_level : Delete Role By tenant_context");
     assert!(IamRoleServ::delete_item_with_all_rels(&role_sys_id, &funs, t2_context).await.is_err());
