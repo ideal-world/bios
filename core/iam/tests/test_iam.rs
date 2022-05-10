@@ -12,6 +12,7 @@ mod test_ca_app;
 mod test_ca_basic;
 mod test_cc_account;
 mod test_cc_attr;
+mod test_cc_role;
 mod test_cp_all;
 mod test_cs_tenant;
 mod test_ct_app;
@@ -64,6 +65,15 @@ async fn test_iam() -> TardisResult<()> {
         &app2_admin_context,
     )
     .await?;
+
+    test_cc_role::test(
+        &system_admin_context,
+        &tenant1_admin_context,
+        &tenant3_admin_context,
+        &app1_admin_context,
+        &app2_admin_context,
+    )
+        .await?;
 
     // test_cs_account::test(&system_admin_context).await?;
     // test_ct_role::test(&tenant1_admin_context, &tenant2_admin_context).await?;

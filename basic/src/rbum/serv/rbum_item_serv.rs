@@ -500,7 +500,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
         let rbum_kind_attr = RbumKindAttrServ::peek_rbum(&add_req.rel_rbum_kind_attr_id, &RbumKindAttrFilterReq::default(), funs, cxt).await?;
         if rbum_kind_attr.main_column {
             return Err(TardisError::BadRequest(
-                "Extension fields located in main table cannot be added using this function".to_string().to_string(),
+                "Extension fields located in main table cannot be added using this function".to_string(),
             ));
         }
         if rbum_kind_attr.idx {
