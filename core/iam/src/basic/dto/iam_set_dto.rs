@@ -1,3 +1,4 @@
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
@@ -6,6 +7,7 @@ use tardis::web::poem_openapi::Object;
 pub struct IamSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
+    pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub bus_code: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -21,6 +23,7 @@ pub struct IamSetCateAddReq {
 pub struct IamSetCateModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
+    pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub bus_code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -32,6 +35,10 @@ pub struct IamSetCateModifyReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamSetItemAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_id: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: String,
     pub sort: u32,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]

@@ -16,7 +16,7 @@ use crate::console_tenant::dto::iam_ct_app_dto::{IamCtAppAddReq, IamCtAppModifyR
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCtAppServ;
 
@@ -50,7 +50,7 @@ impl<'a> IamCtAppServ {
         .await?;
 
         IamRelServ::add_rel(
-            IAMRelKind::IamAccountRole,
+            IamRelKind::IamAccountRole,
             &add_req.admin_id,
             &IamBasicInfoManager::get().role_app_admin_id,
             None,

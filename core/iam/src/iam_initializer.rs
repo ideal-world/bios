@@ -25,6 +25,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::iam_ca_app_api;
 use crate::console_common::api::{iam_cc_account_api, iam_cc_account_attr_api, iam_cc_cert_api, iam_cc_cert_conf_api, iam_cc_res_api, iam_cc_role_api, iam_cc_set_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api};
@@ -34,9 +35,9 @@ use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{
     RBUM_ITEM_NAME_APP_ADMIN_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_SCHEME_IAM_ACCOUNT,
-    RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT,
+    RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT, RBUM_SCOPE_LEVEL_GLOBAL,
 };
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -239,7 +240,9 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         role_app_admin_id,
     })?;
 
-    let rbum_cert_conf_user_pwd_id = IamCertServ::init_global_ident_conf(funs, &cxt).await?;
+    IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
+    IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
+    let rbum_cert_conf_user_pwd_id = IamCertServ::init_default_ident_conf(funs, &cxt).await?;
 
     let account_sys_admin_id = IamAccountServ::add_item(
         &mut IamAccountAddReq {
@@ -254,7 +257,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     )
     .await?;
 
-    RbumRelServ::add_simple_rel(&IAMRelKind::IamAccountRole.to_string(), &account_sys_admin_id, &role_sys_admin_id, funs, &cxt).await?;
+    RbumRelServ::add_simple_rel(&IamRelKind::IamAccountRole.to_string(), &account_sys_admin_id, &role_sys_admin_id, funs, &cxt).await?;
 
     let pwd = IamCertServ::get_new_pwd();
     IamCertUserPwdServ::add_cert(

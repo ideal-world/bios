@@ -10,7 +10,7 @@ use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCpAccountApi;
 
@@ -47,7 +47,7 @@ impl IamCpAccountApi {
     ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamRelServ::paginate_from_rels(
-            IAMRelKind::IamAccountRole,
+            IamRelKind::IamAccountRole,
             false,
             &cxt.0.owner,
             page_number.0,

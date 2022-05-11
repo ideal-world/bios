@@ -12,8 +12,11 @@ mod test_ca_app;
 mod test_ca_basic;
 mod test_cc_account;
 mod test_cc_attr;
+mod test_cc_cert;
+mod test_cc_cert_conf;
 mod test_cc_res;
 mod test_cc_role;
+mod test_cc_set;
 mod test_cp_all;
 mod test_cs_tenant;
 mod test_ct_app;
@@ -21,7 +24,7 @@ mod test_ct_basic;
 mod test_ct_tenant;
 
 #[tokio::test]
-async fn test_iam() -> TardisResult<()> {
+async fn test_iam_serv() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = test_basic::init(&docker).await?;
 
@@ -77,6 +80,33 @@ async fn test_iam() -> TardisResult<()> {
     .await?;
 
     test_cc_res::test(
+        &system_admin_context,
+        &tenant1_admin_context,
+        &tenant3_admin_context,
+        &app1_admin_context,
+        &app2_admin_context,
+    )
+    .await?;
+
+    test_cc_set::test(
+        &system_admin_context,
+        &tenant1_admin_context,
+        &tenant3_admin_context,
+        &app1_admin_context,
+        &app2_admin_context,
+    )
+    .await?;
+
+    test_cc_cert_conf::test(
+        &system_admin_context,
+        &tenant1_admin_context,
+        &tenant3_admin_context,
+        &app1_admin_context,
+        &app2_admin_context,
+    )
+    .await?;
+
+    test_cc_cert::test(
         &system_admin_context,
         &tenant1_admin_context,
         &tenant3_admin_context,

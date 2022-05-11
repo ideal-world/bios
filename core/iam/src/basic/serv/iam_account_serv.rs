@@ -14,7 +14,7 @@ use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp,
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamAccountServ;
 
@@ -141,7 +141,7 @@ impl<'a> IamAccountServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRelServ::paginate_from_rels(
-            IAMRelKind::IamAccountRole,
+            IamRelKind::IamAccountRole,
             false,
             account_id,
             page_number,

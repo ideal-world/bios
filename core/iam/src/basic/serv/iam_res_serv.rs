@@ -14,7 +14,7 @@ use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamResServ;
 
@@ -111,7 +111,6 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 }
 
 impl<'a> IamResServ {
-
     pub async fn paginate_rel_roles(
         res_id: &str,
         page_number: u64,
@@ -121,18 +120,6 @@ impl<'a> IamResServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_from_rels(
-            IAMRelKind::IamResRole,
-            false,
-            res_id,
-            page_number,
-            page_size,
-            desc_by_create,
-            desc_by_update,
-            funs,
-            cxt,
-        )
-            .await
+        IamRelServ::paginate_from_rels(IamRelKind::IamResRole, false, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
-    
 }

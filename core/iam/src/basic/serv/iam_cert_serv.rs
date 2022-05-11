@@ -7,6 +7,7 @@ use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq};
+use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -24,7 +25,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_enumeration::{IAMRelKind, IamCertTokenKind};
+use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 
 pub struct IamCertServ;
 
@@ -33,7 +34,7 @@ impl<'a> IamCertServ {
         TardisFuns::field.nanoid_len(10)
     }
 
-    pub async fn init_global_ident_conf(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn init_default_ident_conf(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(
             &IamUserPwdCertConfAddOrModifyReq {
                 ak_note: None,
@@ -43,15 +44,27 @@ impl<'a> IamCertServ {
                 repeatable: Some(true),
                 expire_sec: None,
             },
-            None,
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
             funs,
             cxt,
         )
         .await?;
 
-        IamCertMailVCodeServ::add_cert_conf(&IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, None, funs, cxt).await?;
+        IamCertMailVCodeServ::add_cert_conf(
+            &IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
+            funs,
+            cxt,
+        )
+        .await?;
 
-        IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, None, funs, cxt).await?;
+        IamCertPhoneVCodeServ::add_cert_conf(
+            &IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
+            funs,
+            cxt,
+        )
+        .await?;
 
         IamCertTokenServ::add_cert_conf(
             &IamTokenCertConfAddReq {
@@ -60,7 +73,7 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenDefault,
-            None,
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
             funs,
             cxt,
         )
@@ -73,7 +86,7 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPc,
-            None,
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
             funs,
             cxt,
         )
@@ -86,7 +99,7 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPhone,
-            None,
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
             funs,
             cxt,
         )
@@ -99,7 +112,7 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPad,
-            None,
+            rbum_scope_helper::get_max_level_id_by_context(cxt),
             funs,
             cxt,
         )
@@ -124,6 +137,7 @@ impl<'a> IamCertServ {
 
     pub async fn paginate_cert_conf(
         q_id: Option<String>,
+        q_code: Option<String>,
         q_name: Option<String>,
         iam_item_id: Option<String>,
         page_number: u64,
@@ -137,6 +151,7 @@ impl<'a> IamCertServ {
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: q_id.map(|id| vec![id]),
+                    code: q_code,
                     name: q_name,
                     ..Default::default()
                 },
@@ -207,7 +222,7 @@ impl<'a> IamCertServ {
             &context,
         )
         .await?;
-        let roles = IamRelServ::paginate_from_rels(IAMRelKind::IamAccountRole, true, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
+        let roles = IamRelServ::paginate_from_rels(IamRelKind::IamAccountRole, true, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
         let roles_infos = enabled_apps
             .into_iter()
             .map(|app| {

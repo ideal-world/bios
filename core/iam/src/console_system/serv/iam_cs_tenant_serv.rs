@@ -8,13 +8,11 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
@@ -24,7 +22,7 @@ use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTena
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
-use crate::iam_enumeration::{IAMRelKind, IamCertKind, IamCertTokenKind};
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCsTenantServ;
 
@@ -71,7 +69,7 @@ impl<'a> IamCsTenantServ {
         .await?;
 
         IamRelServ::add_rel(
-            IAMRelKind::IamAccountRole,
+            IamRelKind::IamAccountRole,
             &tenant_admin_id,
             &IamBasicInfoManager::get().role_tenant_admin_id,
             None,
@@ -81,75 +79,9 @@ impl<'a> IamCsTenantServ {
         )
         .await?;
 
-        IamCertUserPwdServ::add_cert_conf(
-            &mut IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(true),
-                expire_sec: None,
-            },
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
-
-        IamCertTokenServ::add_cert_conf(
-            &mut IamTokenCertConfAddReq {
-                name: TrimString(IamCertTokenKind::TokenDefault.to_string()),
-                coexist_num: iam_constants::RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM,
-                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
-            },
-            IamCertTokenKind::TokenDefault,
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
-
-        IamCertTokenServ::add_cert_conf(
-            &mut IamTokenCertConfAddReq {
-                name: TrimString(IamCertTokenKind::TokenPc.to_string()),
-                coexist_num: 1,
-                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
-            },
-            IamCertTokenKind::TokenPc,
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
-
-        IamCertTokenServ::add_cert_conf(
-            &mut IamTokenCertConfAddReq {
-                name: TrimString(IamCertTokenKind::TokenPhone.to_string()),
-                coexist_num: 1,
-                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
-            },
-            IamCertTokenKind::TokenPhone,
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
-
-        IamCertTokenServ::add_cert_conf(
-            &mut IamTokenCertConfAddReq {
-                name: TrimString(IamCertTokenKind::TokenPad.to_string()),
-                coexist_num: 1,
-                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
-            },
-            IamCertTokenKind::TokenPad,
-            Some(tenant_id.to_string()),
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
+        let rbum_cert_conf_id = IamCertServ::init_default_ident_conf(funs, &tenant_cxt).await?;
 
         let pwd = IamCertServ::get_new_pwd();
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
         IamCertUserPwdServ::add_cert(
             &mut IamUserPwdCertAddReq {
                 ak: TrimString(add_req.admin_username.0.to_string()),
