@@ -7,7 +7,6 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilte
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
-use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
@@ -69,7 +68,7 @@ impl<'a> IamSetServ {
         Ok(set_id)
     }
 
-    async fn get_set(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn get_default_set_id_by_cxt(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let code = if is_org { Self::get_org_code(cxt) } else { Self::get_res_code(cxt) };
         let resp = RbumSetServ::find_rbums(
             &RbumBasicFilterReq {
@@ -86,8 +85,7 @@ impl<'a> IamSetServ {
         Ok(id)
     }
 
-    pub async fn add_set_cate(add_req: &IamSetCateAddReq, is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let id = Self::get_set(is_org, funs, cxt).await?;
+    pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
                 name: add_req.name.clone(),
@@ -96,8 +94,8 @@ impl<'a> IamSetServ {
                 sort: add_req.sort,
                 ext: add_req.ext.clone(),
                 rbum_parent_cate_id: add_req.rbum_parent_cate_id.clone(),
-                rel_rbum_set_id: id,
-                scope_level: Some(get_scope_level_by_context(cxt)?),
+                rel_rbum_set_id: set_id.to_string(),
+                scope_level: add_req.scope_level.clone(),
             },
             funs,
             cxt,
@@ -105,13 +103,7 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn modify_set_cate(
-        set_cate_id: &str,
-        modify_req: &IamSetCateModifyReq,
-        scope_level: Option<RbumScopeLevelKind>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn modify_set_cate(set_cate_id: &str, modify_req: &IamSetCateModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         RbumSetCateServ::modify_rbum(
             set_cate_id,
             &mut RbumSetCateModifyReq {
@@ -120,7 +112,7 @@ impl<'a> IamSetServ {
                 icon: modify_req.icon.clone(),
                 sort: modify_req.sort,
                 ext: modify_req.ext.clone(),
-                scope_level,
+                scope_level: modify_req.scope_level.clone(),
             },
             funs,
             cxt,
@@ -132,18 +124,16 @@ impl<'a> IamSetServ {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, cxt).await
     }
 
-    pub async fn find_set_cates(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
-        let id = Self::get_set(is_org, funs, cxt).await?;
-        RbumSetServ::get_tree_all(&id, funs, cxt).await
+    pub async fn find_set_cates(set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+        RbumSetServ::get_tree_all(set_id, funs, cxt).await
     }
 
-    pub async fn add_set_item(set_cate_id: &str, add_req: &IamSetItemAddReq, is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let id = Self::get_set(is_org, funs, cxt).await?;
+    pub async fn add_set_item(add_req: &IamSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         RbumSetItemServ::add_rbum(
             &mut RbumSetItemAddReq {
                 sort: add_req.sort,
-                rel_rbum_set_id: id,
-                rel_rbum_set_cate_id: set_cate_id.to_string(),
+                rel_rbum_set_id: add_req.set_id.clone(),
+                rel_rbum_set_cate_id: add_req.set_cate_id.clone(),
                 rel_rbum_item_id: add_req.rel_rbum_item_id.clone(),
             },
             funs,
@@ -160,13 +150,12 @@ impl<'a> IamSetServ {
         RbumSetItemServ::delete_rbum(set_item_id, funs, cxt).await
     }
 
-    pub async fn find_set_items(set_cate_id: &str, is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
-        let id = Self::get_set(is_org, funs, cxt).await?;
+    pub async fn find_set_items(set_id: Option<String>, set_cate_id: Option<String>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
         RbumSetItemServ::find_rbums(
             &RbumSetItemFilterReq {
                 basic: Default::default(),
-                rel_rbum_set_id: Some(id),
-                rel_rbum_set_cate_id: Some(set_cate_id.to_string()),
+                rel_rbum_set_id: set_id.clone(),
+                rel_rbum_set_cate_id: set_cate_id.clone(),
                 rel_rbum_item_id: None,
             },
             None,

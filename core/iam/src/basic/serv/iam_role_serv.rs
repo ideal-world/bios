@@ -21,7 +21,7 @@ use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleM
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamRoleServ;
 
@@ -103,7 +103,7 @@ impl<'a> IamRoleServ {
         {
             return Err(TardisError::BadRequest("The associated role is invalid.".to_string()));
         }
-        IamRelServ::add_rel(IAMRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
+        IamRelServ::add_rel(IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
     }
 
     pub async fn paginate_rel_accounts(
@@ -115,11 +115,11 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_to_rels(IAMRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_to_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_rel(IAMRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
+        IamRelServ::add_rel(IamRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
     }
 
     pub async fn paginate_rel_res(
@@ -131,7 +131,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_to_rels(IAMRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_to_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn need_sys_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -150,7 +150,7 @@ impl<'a> IamRoleServ {
         // TODO cache
         let exist = RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
-                tag: IAMRelKind::IamAccountRole.to_string(),
+                tag: IamRelKind::IamAccountRole.to_string(),
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: cxt.owner.clone(),
                 to_rbum_item_id: role_id.to_string(),

@@ -19,55 +19,50 @@ pub struct IamCcCertConfApi;
 impl IamCcCertConfApi {
     /// Modify Cert Config By UserPwd Kind
     #[oai(path = "/:id/user-pwd", method = "put")]
-    async fn modify_cert_conf_user_pwd(&self, id: Path<String>, mut modify_req: Json<IamUserPwdCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_cert_conf_user_pwd(&self, id: Path<String>, modify_req: Json<IamUserPwdCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertUserPwdServ::modify_cert_conf(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamCertUserPwdServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Add Cert Config By MailVCode Kind
     #[oai(path = "/mail-vcode", method = "post")]
-    async fn add_cert_conf_mail_vcode(&self, mut add_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_cert_conf_mail_vcode(&self, add_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertMailVCodeServ::add_cert_conf(&mut add_req.0, get_max_level_id_by_context(&cxt.0), &funs, &cxt.0).await?;
+        IamCertMailVCodeServ::add_cert_conf(&add_req.0, get_max_level_id_by_context(&cxt.0), &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Modify Cert Config By MailVCode Kind
     #[oai(path = "/:id/mail-vcode", method = "put")]
-    async fn modify_cert_conf_mail_vcode(&self, id: Path<String>, mut modify_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_cert_conf_mail_vcode(&self, id: Path<String>, modify_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertMailVCodeServ::modify_cert_conf(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamCertMailVCodeServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Add Cert Config By PhoneVCode Kind
     #[oai(path = "/phone-vcode", method = "post")]
-    async fn add_cert_conf_phone_vcode(&self, mut add_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_cert_conf_phone_vcode(&self, add_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::add_cert_conf(&mut add_req.0, get_max_level_id_by_context(&cxt.0), &funs, &cxt.0).await?;
+        IamCertPhoneVCodeServ::add_cert_conf(&add_req.0, get_max_level_id_by_context(&cxt.0), &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Modify Cert Config By PhoneVCode Kind
     #[oai(path = "/:id/phone-vcode", method = "put")]
-    async fn modify_cert_conf_phone_vcode(
-        &self,
-        id: Path<String>,
-        mut modify_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>,
-        cxt: TardisContextExtractor,
-    ) -> TardisApiResult<Void> {
+    async fn modify_cert_conf_phone_vcode(&self, id: Path<String>, modify_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::modify_cert_conf(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamCertPhoneVCodeServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -85,6 +80,7 @@ impl IamCcCertConfApi {
     async fn paginate_cert_conf(
         &self,
         q_id: Query<Option<String>>,
+        q_code: Query<Option<String>>,
         q_name: Query<Option<String>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
@@ -95,6 +91,7 @@ impl IamCcCertConfApi {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::paginate_cert_conf(
             q_id.0,
+            q_code.0,
             q_name.0,
             get_max_level_id_by_context(&cxt.0),
             page_number.0,

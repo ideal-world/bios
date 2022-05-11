@@ -132,10 +132,10 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert!(!res.disabled);
 
     info!("【test_cc_res】 : test_single_level : Find Res");
-    let ress = IamResServ::paginate_items(&IamResFilterReq::default(), 1, 10, None, None, &funs, context).await?;
-    assert_eq!(ress.page_number, 1);
-    assert_eq!(ress.page_size, 10);
-    assert!(ress.records.iter().any(|i| i.name == "测试资源"));
+    let res = IamResServ::paginate_items(&IamResFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    assert_eq!(res.page_number, 1);
+    assert_eq!(res.page_size, 10);
+    assert!(res.records.iter().any(|i| i.name == "测试资源"));
 
     info!("【test_cc_res】 : test_single_level : Find Rel Roles By Res Id");
     let res_roles = IamResServ::paginate_rel_roles(&res_id1, 1, 10, None, None, &funs, context).await?;

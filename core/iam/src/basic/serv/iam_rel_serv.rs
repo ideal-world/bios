@@ -8,13 +8,13 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::iam_enumeration::IAMRelKind;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamRelServ;
 
 impl<'a> IamRelServ {
     pub async fn add_rel(
-        rel_kind: IAMRelKind,
+        rel_kind: IamRelKind,
         from_iam_item_id: &str,
         to_iam_item_id: &str,
         start_timestamp: Option<i64>,
@@ -49,7 +49,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn paginate_from_rels(
-        rel_kind: IAMRelKind,
+        rel_kind: IamRelKind,
         with_sub_own_paths: bool,
         from_iam_item_id: &str,
         page_number: u64,
@@ -75,7 +75,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn paginate_to_rels(
-        rel_kind: IAMRelKind,
+        rel_kind: IamRelKind,
         to_iam_item_id: &str,
         page_number: u64,
         page_size: u64,
