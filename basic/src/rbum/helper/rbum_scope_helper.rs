@@ -38,11 +38,14 @@ pub fn get_path_item(scope_level: i8, own_paths: &str) -> Option<String> {
 pub fn get_scope_level_by_context(cxt: &TardisContext) -> TardisResult<RbumScopeLevelKind> {
     let own_paths = cxt.own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
-    RbumScopeLevelKind::from_int(own_paths.matches("/").count() as i8)
+    RbumScopeLevelKind::from_int(own_paths.matches('/').count() as i8)
 }
 
 pub fn get_max_level_id_by_context(cxt: &TardisContext) -> Option<String> {
     let own_paths = cxt.own_paths.trim();
+    if own_paths.is_empty() {
+        return None;
+    }
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
     own_paths.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string())
 }
