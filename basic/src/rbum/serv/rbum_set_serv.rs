@@ -323,7 +323,20 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         {
             return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are rbum_set_item".to_string()));
         }
-        let set = Self::peek_rbum(id, &RbumSetCateFilterReq::default(), funs, cxt).await?;
+        let set = Self::peek_rbum(
+            id,
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(cxt.own_paths.clone()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
         if funs
             .db()
             .count(
