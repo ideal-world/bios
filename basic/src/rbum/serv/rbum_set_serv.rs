@@ -437,7 +437,7 @@ impl<'a> RbumSetCateServ {
     }
 
     async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        Self::check_ownership(rbum_set_cate_id, funs, cxt).await?;
+        Self::check_scope(rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
         let sys_code = funs
             .db()
             .get_dto::<SysCodeResp>(
