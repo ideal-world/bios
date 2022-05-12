@@ -9,6 +9,7 @@ use tardis::tokio::time::sleep;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamMailVCodeCertAddReq, IamUserPwdCertModifyReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
@@ -31,9 +32,22 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             tenant_name: TrimString("测试租户1".to_string()),
             tenant_icon: None,
             tenant_contact_phone: None,
+            tenant_note: None,
             admin_username: TrimString("bios".to_string()),
-            disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
+            admin_password: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                repeatable: Some(true),
+                expire_sec: None,
+            },
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+            disabled: None,
         },
         &funs,
         system_admin_context,

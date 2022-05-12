@@ -17,6 +17,7 @@ pub struct IamTenantAddReq {
     pub icon: Option<String>,
     pub sort: Option<u32>,
     pub contact_phone: Option<String>,
+    pub note: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -29,6 +30,7 @@ pub struct IamTenantModifyReq {
     pub icon: Option<String>,
     pub sort: Option<u32>,
     pub contact_phone: Option<String>,
+    pub note: Option<String>,
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
@@ -54,6 +56,7 @@ pub struct IamTenantSummaryResp {
     pub icon: String,
     pub sort: u32,
     pub contact_phone: String,
+    pub note: String,
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
@@ -73,4 +76,5 @@ pub struct IamTenantDetailResp {
     pub icon: String,
     pub sort: u32,
     pub contact_phone: String,
+    pub note: String,
 }

@@ -19,7 +19,7 @@ pub struct IamCpCertApi;
 #[OpenApi(prefix_path = "/cp", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpCertApi {
     /// Fetch TardisContext By Token
-    #[oai(path = "/context", method = "get")]
+    #[oai(path = "/context", method = "put")]
     async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {
         let funs = iam_constants::get_tardis_inst();
         let cxt = IamCertServ::fetch_context(&fetch_req.0, &funs).await?;

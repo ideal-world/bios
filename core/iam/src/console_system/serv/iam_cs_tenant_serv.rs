@@ -47,6 +47,7 @@ impl<'a> IamCsTenantServ {
                 contact_phone: add_req.tenant_contact_phone.clone(),
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+                note: add_req.tenant_note.clone(),
             },
             funs,
             &tenant_cxt,
@@ -76,9 +77,20 @@ impl<'a> IamCsTenantServ {
         )
         .await?;
 
-        let rbum_cert_conf_id = IamCertServ::init_default_ident_conf(funs, &tenant_cxt).await?;
+        let rbum_cert_conf_id = IamCertServ::init_default_ident_conf(
+            add_req.cert_conf_by_user_pwd.clone(),
+            add_req.cert_conf_by_phone_vcode.clone(),
+            add_req.cert_conf_by_mail_vcode.clone(),
+            funs,
+            &tenant_cxt,
+        )
+        .await?;
 
-        let pwd = IamCertServ::get_new_pwd();
+        let pwd = if let Some(admin_password) = &add_req.admin_password {
+            admin_password.to_string()
+        } else {
+            IamCertServ::get_new_pwd()
+        };
         IamCertUserPwdServ::add_cert(
             &mut IamUserPwdCertAddReq {
                 ak: TrimString(add_req.admin_username.0.to_string()),

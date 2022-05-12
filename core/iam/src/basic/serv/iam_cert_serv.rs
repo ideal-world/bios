@@ -25,7 +25,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
+use crate::iam_enumeration::{IamCertKind, IamCertTokenKind, IamRelKind};
 
 pub struct IamCertServ;
 
@@ -34,37 +34,22 @@ impl<'a> IamCertServ {
         TardisFuns::field.nanoid_len(10)
     }
 
-    pub async fn init_default_ident_conf(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(
-            &IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(true),
-                expire_sec: None,
-            },
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
-            funs,
-            cxt,
-        )
-        .await?;
+    pub async fn init_default_ident_conf(
+        user_pwd_cert_conf_add_req: IamUserPwdCertConfAddOrModifyReq,
+        phone_vcode_cert_conf_add_req: Option<IamPhoneVCodeCertConfAddOrModifyReq>,
+        mail_vcode_cert_conf_add_req: Option<IamMailVCodeCertConfAddOrModifyReq>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<String> {
+        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(&user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(cxt), funs, cxt).await?;
 
-        IamCertMailVCodeServ::add_cert_conf(
-            &IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
-            funs,
-            cxt,
-        )
-        .await?;
+        if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
+            IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(cxt), funs, cxt).await?;
+        }
 
-        IamCertPhoneVCodeServ::add_cert_conf(
-            &IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None },
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
-            funs,
-            cxt,
-        )
-        .await?;
+        if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
+            IamCertMailVCodeServ::add_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(cxt), funs, cxt).await?;
+        }
 
         IamCertTokenServ::add_cert_conf(
             &IamTokenCertConfAddReq {
@@ -136,9 +121,9 @@ impl<'a> IamCertServ {
     }
 
     pub async fn paginate_cert_conf(
-        q_id: Option<String>,
-        q_code: Option<String>,
-        q_name: Option<String>,
+        id: Option<String>,
+        code: Option<String>,
+        name: Option<String>,
         iam_item_id: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -150,9 +135,9 @@ impl<'a> IamCertServ {
         RbumCertConfServ::paginate_rbums(
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: q_id.map(|id| vec![id]),
-                    code: q_code,
-                    name: q_name,
+                    ids: id.map(|id| vec![id]),
+                    code: code,
+                    name: name,
                     ..Default::default()
                 },
                 rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
@@ -169,6 +154,10 @@ impl<'a> IamCertServ {
     }
 
     pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        let rbum_cert_conf = RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
+        if rbum_cert_conf.code == IamCertKind::UserPwd.to_string() {
+            return Err(TardisError::Conflict("Cannot delete default credential".to_string()));
+        }
         RbumCertConfServ::delete_rbum(id, funs, cxt).await
     }
 
@@ -205,36 +194,45 @@ impl<'a> IamCertServ {
         IamCertTokenServ::add_cert(&context.token, &token_kind, account_id, &rbum_cert_conf_id, rbum_cert_id, funs, &context).await?;
 
         let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
-        let enabled_apps = IamAppServ::find_items(
-            &IamAppFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: false,
-                    rel_cxt_owner: false,
-                    with_sub_own_paths: true,
-                    enabled: Some(true),
+        let roles = IamRelServ::find_from_rels(IamRelKind::IamAccountRole, true, account_id, Some(true), None, funs, &context).await?;
+
+        let apps = if !tenant_id.is_empty() {
+            let enabled_apps = IamAppServ::find_items(
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_cxt_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            &context,
-        )
-        .await?;
-        let roles = IamRelServ::paginate_from_rels(IamRelKind::IamAccountRole, true, account_id, 1, u64::MAX, Some(true), None, funs, &context).await?.records;
-        let roles_infos = enabled_apps
-            .into_iter()
-            .map(|app| {
-                AccountAppInfoResp {
-                    app_id: app.id,
-                    app_name: app.name,
-                    roles: roles.iter().filter(|r| r.rel.own_paths == app.own_paths).map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string())).collect(),
-                    // TODO
-                    groups: Default::default(),
-                }
-            })
-            .collect();
+                None,
+                None,
+                funs,
+                &context,
+            )
+            .await?;
+            enabled_apps
+                .into_iter()
+                .map(|app| {
+                    AccountAppInfoResp {
+                        app_id: app.id,
+                        app_name: app.name,
+                        roles: roles
+                            .iter()
+                            .filter(|r| r.rel.own_paths == app.own_paths)
+                            .map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string()))
+                            .collect(),
+                        // TODO
+                        groups: Default::default(),
+                    }
+                })
+                .collect()
+        } else {
+            vec![]
+        };
 
         let account_info = AccountInfoResp {
             account_id: account_id.to_string(),
@@ -242,7 +240,7 @@ impl<'a> IamCertServ {
             token: context.token.to_string(),
             roles: roles.iter().filter(|r| r.rel.own_paths == context.own_paths).map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string())).collect(),
             groups: Default::default(),
-            apps: roles_infos,
+            apps,
         };
 
         Self::add_cached_contexts(&account_info, ak, &token_kind.to_string(), &tenant_id, funs).await?;
@@ -301,5 +299,17 @@ impl<'a> IamCertServ {
             }
         }
         Err(TardisError::NotFound("context not found".to_string()))
+    }
+
+    pub fn get_anonymous_context() -> TardisContext {
+        TardisContext {
+            own_paths: "_/_/_/_/_/_".to_string(),
+            ak: "".to_string(),
+            owner: "".to_string(),
+            token: "".to_string(),
+            token_kind: "".to_string(),
+            roles: vec![],
+            groups: vec![],
+        }
     }
 }
