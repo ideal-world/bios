@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::result::TardisResult;
-use tardis::db::domain::tardis_db_config;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
@@ -16,23 +15,11 @@ pub async fn init(code: &str, config: RbumConfig) -> TardisResult<()> {
     RbumConfigManager::add(code, config)?;
     let db_kind = TardisFuns::reldb().backend();
     let mut tx = TardisFuns::reldb().conn();
-    if tx
-        .count(&Query::select().column(tardis_db_config::Column::Id).from(tardis_db_config::Entity).and_where(Expr::col(tardis_db_config::Column::K).eq("__BIOS_INIT__")))
-        .await?
-        > 0
-    {
+    if TardisFuns::dict.get("__RBUM_INIT__", &tx).await?.is_some() {
         return Ok(());
     }
     tx.begin().await?;
-    tardis_db_config::ActiveModel {
-        k: Set("__BIOS_INIT__".to_string()),
-        v: Set("".to_string()),
-        creator: Set("".to_string()),
-        updater: Set("".to_string()),
-        ..Default::default()
-    }
-    .insert(tx.raw_tx().unwrap())
-    .await?;
+    TardisFuns::dict.add("__RBUM_INIT__", "", "", &tx).await?;
     tx.create_table_and_index(&rbum_domain::ActiveModel::create_table_and_index_statement(db_kind)).await?;
     tx.create_table_and_index(&rbum_kind::ActiveModel::create_table_and_index_statement(db_kind)).await?;
     tx.create_table_and_index(&rbum_item::ActiveModel::create_table_and_index_statement(db_kind)).await?;
