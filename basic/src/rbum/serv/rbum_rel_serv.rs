@@ -267,6 +267,36 @@ impl<'a> RbumRelServ {
         .await
     }
 
+    pub async fn find_from_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub_own_paths: bool,
+        from_rbum_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        Self::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: None,
+                to_own_paths: None,
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
     pub async fn paginate_to_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -299,6 +329,45 @@ impl<'a> RbumRelServ {
         .await
     }
 
+    pub async fn find_to_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        Self::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: None,
+                from_rbum_id: None,
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                to_own_paths: Some(cxt.own_paths.to_string()),
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
+    async fn find_rels(
+        filter: &RbumRelFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        let rbum_rels = RbumRelServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+        Self::package_agg_rels(rbum_rels, filter, funs, cxt).await
+    }
+
     async fn paginate_rels(
         filter: &RbumRelFilterReq,
         page_number: u64,
@@ -309,12 +378,21 @@ impl<'a> RbumRelServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
-        let rbum_rel_ids: Vec<String> = rbum_rels.records.iter().map(|r| r.id.to_string()).collect();
-        let mut result = Vec::with_capacity(rbum_rel_ids.len());
-        for record in rbum_rels.records {
-            let rbum_rel_id = record.id.to_string();
+        let result = Self::package_agg_rels(rbum_rels.records, filter, funs, cxt).await?;
+        Ok(TardisPage {
+            page_number,
+            total_size: rbum_rels.total_size as u64,
+            page_size,
+            records: result,
+        })
+    }
+
+    async fn package_agg_rels(rels: Vec<RbumRelDetailResp>, filter: &RbumRelFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
+        let mut result = Vec::with_capacity(rels.len());
+        for rel in rels {
+            let rbum_rel_id = rel.id.to_string();
             let resp = RbumRelAggResp {
-                rel: record,
+                rel,
                 attrs: RbumRelAttrServ::find_rbums(
                     &RbumRelExtFilterReq {
                         basic: filter.basic.clone(),
@@ -340,12 +418,7 @@ impl<'a> RbumRelServ {
             };
             result.push(resp);
         }
-        Ok(TardisPage {
-            page_number,
-            total_size: rbum_rel_ids.len() as u64,
-            page_size,
-            records: result,
-        })
+        Ok(result)
     }
 
     pub async fn find_rel_ids(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<String>> {
