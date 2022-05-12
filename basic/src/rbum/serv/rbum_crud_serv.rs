@@ -268,6 +268,31 @@ where
         })
     }
 
+    async fn paginate_detail_rbums(
+        filter: &FilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<DetailResp>> {
+        let mut query = Self::package_query(true, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos(&query, page_number, page_size).await?;
+        Ok(TardisPage {
+            page_size,
+            page_number,
+            total_size,
+            records,
+        })
+    }
+
     async fn find_rbums(
         filter: &FilterReq,
         desc_sort_by_create: Option<bool>,
@@ -276,6 +301,23 @@ where
         cxt: &TardisContext,
     ) -> TardisResult<Vec<SummaryResp>> {
         let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos(&query).await?)
+    }
+
+    async fn find_detail_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<DetailResp>> {
+        let mut query = Self::package_query(true, filter, funs, cxt).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
