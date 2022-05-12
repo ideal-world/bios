@@ -32,6 +32,13 @@ pub struct IamTenantModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+pub struct IamTenantBoneResp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+}
+
+#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamTenantSummaryResp {
     pub id: String,
     pub name: String,
@@ -59,7 +66,7 @@ pub struct IamTenantDetailResp {
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
-    
+
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 

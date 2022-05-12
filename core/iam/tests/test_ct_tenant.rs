@@ -3,8 +3,10 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
-use bios_iam::console_tenant::dto::iam_ct_tenant_dto::IamCtTenantModifyReq;
-use bios_iam::console_tenant::serv::iam_ct_tenant_serv::IamCtTenantServ;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
+use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::iam_constants;
 
 pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<()> {
@@ -12,8 +14,9 @@ pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<(
     funs.begin().await?;
 
     info!("【test_ct_tenant】 : Modify Current Tenant");
-    IamCtTenantServ::modify_tenant(
-        &mut IamCtTenantModifyReq {
+    IamTenantServ::modify_item(
+        &IamTenantServ::get_id_by_cxt(context1)?,
+        &mut IamTenantModifyReq {
             name: Some(TrimString("NT".to_string())),
             icon: None,
             sort: None,
@@ -27,7 +30,7 @@ pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<(
     .await?;
 
     info!("【test_ct_tenant】 : Get Current Tenant");
-    let tenant = IamCtTenantServ::get_tenant(&funs, context1).await?;
+    let tenant = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(context1)?, &IamTenantFilterReq::default(), &funs, context1).await?;
     assert_eq!(tenant.name, "NT");
     assert_eq!(tenant.contact_phone, "1333333");
     assert!(!tenant.disabled);

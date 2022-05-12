@@ -1,9 +1,14 @@
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
-use bios_iam::console_tenant::dto::iam_ct_app_dto::{IamCtAppAddReq, IamCtAppModifyReq};
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_iam::basic::dto::iam_app_dto::IamAppModifyReq;
+use bios_iam::basic::dto::iam_filer_dto::IamAppFilterReq;
+use bios_iam::basic::serv::iam_app_serv::IamAppServ;
+use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_constants;
 
@@ -41,14 +46,15 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     .await?;
 
     info!("【test_ct_app】 : Modify App By Id, with err");
-    assert!(IamCtAppServ::modify_app(
+    assert!(IamAppServ::modify_item(
         &app_id1,
-        &mut IamCtAppModifyReq {
+        &mut IamAppModifyReq {
             name: Some(TrimString("测试应用3".to_string())),
             icon: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
-            disabled: None
+            disabled: None,
+            scope_level: None,
         },
         &funs,
         context2
@@ -56,14 +62,15 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     .await
     .is_err());
     info!("【test_ct_app】 : Modify App By Id");
-    IamCtAppServ::modify_app(
+    IamAppServ::modify_item(
         &app_id1,
-        &mut IamCtAppModifyReq {
+        &mut IamAppModifyReq {
             name: Some(TrimString("测试应用".to_string())),
             icon: None,
             sort: None,
             contact_phone: Some("13333333333".to_string()),
             disabled: None,
+            scope_level: None,
         },
         &funs,
         context1,
@@ -71,33 +78,89 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     .await?;
 
     info!("【test_ct_app】 : Get App By Id, with err");
-    assert!(IamCtAppServ::get_app(&app_id1, &funs, context2).await.is_err());
+    assert!(IamAppServ::get_item(&app_id1, &IamAppFilterReq::default(), &funs, context2).await.is_err());
     info!("【test_ct_app】 : Get App By Id");
-    let app = IamCtAppServ::get_app(&app_id1, &funs, context1).await?;
+    let app = IamAppServ::get_item(&app_id1, &IamAppFilterReq::default(), &funs, context1).await?;
     assert_eq!(app.id, app_id1);
     assert_eq!(app.name, "测试应用");
     assert_eq!(app.contact_phone, "13333333333");
     assert!(!app.disabled);
 
     info!("【test_ct_app】 : Find Apps");
-    let apps = IamCtAppServ::paginate_apps(None, None, 1, 10, None, None, &funs, context1).await?;
+    let apps = IamAppServ::paginate_items(
+        &IamAppFilterReq {
+            basic: RbumBasicFilterReq {
+                ids: None,
+                name: None,
+                own_paths: Some(context1.own_paths.clone()),
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        1,
+        10,
+        None,
+        None,
+        &funs,
+        context1,
+    )
+    .await?;
     assert_eq!(apps.page_number, 1);
     assert_eq!(apps.page_size, 10);
     assert_eq!(apps.total_size, 1);
     assert!(apps.records.iter().any(|i| i.name == "测试应用"));
 
     info!("【test_ct_app】 : Delete App By Id, with err");
-    assert!(IamCtAppServ::delete_app("11111", &funs, &context1).await.is_err());
+    assert!(IamAppServ::delete_item_with_all_rels("11111", &funs, &context1).await.is_err());
     info!("【test_ct_app】 : Delete App By Id, with err");
-    assert!(IamCtAppServ::delete_app(&app_id1, &funs, &context2).await.is_err());
+    assert!(IamAppServ::delete_item_with_all_rels(&app_id1, &funs, &context2).await.is_err());
     info!("【test_ct_app】 : Delete App By Id");
     assert_eq!(
-        IamCtAppServ::paginate_apps(Some(app_id1.clone()), None, 1, 10, None, None, &funs, context1).await?.total_size,
+        IamAppServ::paginate_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![app_id1.clone()]),
+                    name: None,
+                    own_paths: Some(context1.own_paths.clone()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            1,
+            10,
+            None,
+            None,
+            &funs,
+            context1,
+        )
+        .await?
+        .total_size,
         1
     );
-    IamCtAppServ::delete_app(&app_id1, &funs, &context1).await?;
+    IamAppServ::delete_item_with_all_rels(&app_id1, &funs, &context1).await?;
     assert_eq!(
-        IamCtAppServ::paginate_apps(Some(app_id1.clone()), None, 1, 10, None, None, &funs, context1).await?.total_size,
+        IamAppServ::paginate_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![app_id1.clone()]),
+                    name: None,
+                    own_paths: Some(context1.own_paths.clone()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            1,
+            10,
+            None,
+            None,
+            &funs,
+            context1,
+        )
+        .await?
+        .total_size,
         0
     );
 
