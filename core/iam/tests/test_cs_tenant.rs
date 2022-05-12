@@ -5,8 +5,10 @@ use tardis::log::info;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
+use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
 use bios_iam::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
@@ -22,9 +24,28 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             tenant_name: TrimString("测试租户1".to_string()),
             tenant_icon: None,
             tenant_contact_phone: None,
+            tenant_note: None,
             admin_username: TrimString("admin".to_string()),
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
+            admin_password: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                repeatable: Some(true),
+                expire_sec: None
+            },
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
+                ak_note: None,
+                ak_rule: None
+            }),
+
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
+                ak_note: None,
+                ak_rule: None
+            }),
         },
         &funs,
         context,
@@ -37,8 +58,27 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             tenant_icon: None,
             tenant_contact_phone: Some("12345678901".to_string()),
             admin_username: TrimString("admin".to_string()),
+            tenant_note: None,
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
+            admin_password: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                repeatable: Some(true),
+                expire_sec: None
+            },
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
+                ak_note: None,
+                ak_rule: None
+            }),
+
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
+                ak_note: None,
+                ak_rule: None
+            }),
         },
         &funs,
         context,
@@ -50,9 +90,28 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             tenant_name: TrimString("测试租户2".to_string()),
             tenant_icon: None,
             tenant_contact_phone: Some("12345678901".to_string()),
+            tenant_note: None,
             admin_username: TrimString("admin1".to_string()),
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
+            admin_password: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                repeatable: Some(true),
+                expire_sec: None
+            },
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
+                ak_note: None,
+                ak_rule: None
+            }),
+
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
+                ak_note: None,
+                ak_rule: None
+            }),
         },
         &funs,
         context,
@@ -80,6 +139,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             contact_phone: None,
             disabled: Some(true),
             scope_level: None,
+            note: None
         },
         &funs,
         context,
@@ -95,6 +155,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             contact_phone: Some("xxxx".to_string()),
             disabled: None,
             scope_level: None,
+            note: None
         },
         &funs,
         context,
@@ -123,6 +184,25 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(tenants.page_size, 10);
     assert!(tenants.records.iter().any(|r| r.contact_phone == "xxxx"));
     assert!(tenants.records.iter().any(|r| r.disabled));
+
+    let tenants = IamTenantServ::find_items(
+        &IamTenantFilterReq {
+            basic: RbumBasicFilterReq {
+                ignore_scope: true,
+                own_paths: Some("".to_string()),
+                with_sub_own_paths: true,
+                enabled: Some(true),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        None,
+        None,
+        &funs,
+        &IamCertServ::get_anonymous_context(),
+    )
+    .await?;
+    assert_eq!(tenants.len(), 2);
 
     funs.rollback().await?;
 

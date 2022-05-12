@@ -49,9 +49,9 @@ impl IamCcResApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        q_kind: Query<IamResKind>,
-        q_id: Query<Option<String>>,
-        q_name: Query<Option<String>>,
+        kind: Query<IamResKind>,
+        id: Query<Option<String>>,
+        name: Query<Option<String>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
@@ -62,12 +62,12 @@ impl IamCcResApi {
         let result = IamResServ::paginate_items(
             &IamResFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: q_id.0.map(|id| vec![id]),
-                    name: q_name.0,
+                    ids: id.0.map(|id| vec![id]),
+                    name: name.0,
                     own_paths: Some(cxt.0.own_paths.clone()),
                     ..Default::default()
                 },
-                kind: Some(q_kind.0),
+                kind: Some(kind.0),
                 ..Default::default()
             },
             page_number.0,

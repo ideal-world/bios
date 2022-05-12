@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi::Object;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamUserPwdCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -16,7 +16,7 @@ pub struct IamUserPwdCertConfAddOrModifyReq {
     pub expire_sec: Option<u32>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamMailVCodeCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -24,7 +24,7 @@ pub struct IamMailVCodeCertConfAddOrModifyReq {
     pub ak_rule: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamPhoneVCodeCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,

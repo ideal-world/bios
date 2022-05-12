@@ -1,5 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -49,9 +49,9 @@ impl IamCcRoleApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        q_id: Query<Option<String>>,
-        q_name: Query<Option<String>>,
-      page_number: Query<u64>,
+        id: Query<Option<String>>,
+        name: Query<Option<String>>,
+        page_number: Query<u64>,
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
@@ -61,8 +61,8 @@ impl IamCcRoleApi {
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: q_id.0.map(|id| vec![id]),
-                    name: q_name.0,
+                    ids: id.0.map(|id| vec![id]),
+                    name: name.0,
                     own_paths: Some(cxt.0.own_paths.clone()),
                     ..Default::default()
                 },

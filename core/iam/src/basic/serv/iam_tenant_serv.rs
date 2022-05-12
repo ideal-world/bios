@@ -48,6 +48,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
+            note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
     }
@@ -65,7 +66,8 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_tenant::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() {
+        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone
+            .is_none()&& modify_req.note.is_none() {
             return Ok(None);
         }
         let mut iam_tenant = iam_tenant::ActiveModel {
@@ -81,6 +83,9 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         if let Some(contact_phone) = &modify_req.contact_phone {
             iam_tenant.contact_phone = Set(contact_phone.to_string());
         }
+        if let Some(note) = &modify_req.note {
+            iam_tenant.contact_phone = Set(note.to_string());
+        }
         Ok(Some(iam_tenant))
     }
 
@@ -88,6 +93,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         query.column((iam_tenant::Entity, iam_tenant::Column::Icon));
         query.column((iam_tenant::Entity, iam_tenant::Column::Sort));
         query.column((iam_tenant::Entity, iam_tenant::Column::ContactPhone));
+        query.column((iam_tenant::Entity, iam_tenant::Column::Note));
         if let Some(contact_phone) = &filter.contact_phone {
             query.and_where(Expr::col(iam_tenant::Column::ContactPhone).eq(contact_phone.as_str()));
         }

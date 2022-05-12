@@ -1,5 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{OpenApi, param::Path, param::Query, payload::Json};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -29,7 +29,7 @@ impl IamCtAppApi {
 
     /// Modify App By Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>,  modify_req: Json<IamCtAppModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, modify_req: Json<IamCtAppModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::modify_item(
@@ -45,7 +45,7 @@ impl IamCtAppApi {
             &funs,
             &cxt.0,
         )
-            .await?;
+        .await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -53,7 +53,7 @@ impl IamCtAppApi {
     /// Get App By Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
-        let  funs = iam_constants::get_tardis_inst();
+        let funs = iam_constants::get_tardis_inst();
         let result = IamAppServ::get_item(&id.0, &IamAppFilterReq::default(), &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
@@ -62,20 +62,20 @@ impl IamCtAppApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        q_id: Query<Option<String>>,
-        q_name: Query<Option<String>>,
+        id: Query<Option<String>>,
+        name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
-        let  funs = iam_constants::get_tardis_inst();
+        let funs = iam_constants::get_tardis_inst();
         let result = IamAppServ::paginate_items(
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: q_id.0.map(|id| vec![id]),
-                    name: q_name.0,
+                    ids: id.0.map(|id| vec![id]),
+                    name: name.0,
                     own_paths: Some(cxt.0.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
@@ -89,7 +89,7 @@ impl IamCtAppApi {
             &funs,
             &cxt.0,
         )
-            .await?;
+        .await?;
         TardisResp::ok(result)
     }
 

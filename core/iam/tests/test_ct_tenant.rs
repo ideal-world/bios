@@ -23,6 +23,7 @@ pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<(
             contact_phone: Some("1333333".to_string()),
             scope_level: None,
             disabled: None,
+            note: None
         },
         &funs,
         context1,

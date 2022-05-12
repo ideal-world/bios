@@ -19,6 +19,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
+use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -28,8 +29,8 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::iam_ca_app_api;
 use crate::console_common::api::{iam_cc_account_api, iam_cc_account_attr_api, iam_cc_cert_api, iam_cc_cert_conf_api, iam_cc_res_api, iam_cc_role_api, iam_cc_set_api};
-use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api};
-use crate::console_system::api::iam_cs_tenant_api;
+use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
+use crate::console_system::api::{iam_cs_account_api, iam_cs_cert_conf_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{iam_ct_app_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -52,6 +53,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
             (
                 iam_cp_account_api::IamCpAccountApi,
                 iam_cp_cert_api::IamCpCertApi,
+                iam_cp_tenant_api::IamCpTenantApi,
                 iam_cc_account_api::IamCcAccountApi,
                 iam_cc_account_attr_api::IamCcAccountAttrApi,
                 iam_cc_cert_api::IamCcCertApi,
@@ -60,6 +62,8 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 iam_cc_role_api::IamCcRoleApi,
                 iam_cc_set_api::IamCcSetApi,
                 iam_cs_tenant_api::IamCsTenantApi,
+                iam_cs_account_api::IamCsAccountApi,
+                iam_cs_cert_conf_api::IamCsCertConfApi,
                 iam_ct_tenant_api::IamCtTenantApi,
                 iam_ct_app_api::IamCtAppApi,
                 iam_ca_app_api::IamCtAppApi,
@@ -242,7 +246,21 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 
     IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
     IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
-    let rbum_cert_conf_user_pwd_id = IamCertServ::init_default_ident_conf(funs, &cxt).await?;
+    let rbum_cert_conf_user_pwd_id = IamCertServ::init_default_ident_conf(
+        IamUserPwdCertConfAddOrModifyReq {
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            repeatable: Some(true),
+            expire_sec: None,
+        },
+        Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+        Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+        funs,
+        &cxt,
+    )
+    .await?;
 
     let account_sys_admin_id = IamAccountServ::add_item(
         &mut IamAccountAddReq {
