@@ -8,7 +8,7 @@ use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamMailVCodeCertAddReq;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::console_passport::dto::iam_cp_cert_dto::{IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq};
+use crate::console_passport::dto::iam_cp_cert_dto::IamCpMailVCodeLoginReq;
 use crate::iam_enumeration::IamCertKind;
 
 pub struct IamCpCertMailVCodeServ;
@@ -17,22 +17,6 @@ impl<'a> IamCpCertMailVCodeServ {
     pub async fn add_cert_mail_vocde(add_req: &IamMailVCodeCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), get_max_level_id_by_context(cxt), funs).await?;
         IamCertMailVCodeServ::add_cert(add_req, &cxt.owner, &rbum_cert_conf_id, funs, cxt).await
-    }
-
-    pub async fn delete_cert_mail_vocde(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamCertServ::delete_cert(id, funs, cxt).await
-    }
-
-    pub async fn resend_activation_mail(mail: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamCertMailVCodeServ::resend_activation_mail(&cxt.owner, mail, funs, cxt).await
-    }
-
-    pub async fn activate_mail(mail: &str, vcode: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamCertMailVCodeServ::activate_mail(mail, vcode, funs, cxt).await
-    }
-
-    pub async fn send_login_mail(req: &IamCpMailVCodeLoginGenVCodeReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        IamCertMailVCodeServ::send_login_mail(&req.mail, &req.tenant_id, funs).await
     }
 
     pub async fn login_by_mail_vocde(login_req: &IamCpMailVCodeLoginReq, funs: &TardisFunsInst<'a>) -> TardisResult<AccountInfoResp> {

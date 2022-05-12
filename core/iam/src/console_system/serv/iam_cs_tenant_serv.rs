@@ -1,16 +1,13 @@
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountAddReq;
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
-use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
-use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
+use crate::basic::dto::iam_tenant_dto::IamTenantAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -18,7 +15,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::console_system::dto::iam_cs_tenant_dto::{IamCsTenantAddReq, IamCsTenantModifyReq};
+use crate::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
@@ -98,58 +95,5 @@ impl<'a> IamCsTenantServ {
         IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
 
         Ok((tenant_id, pwd))
-    }
-
-    pub async fn modify_tenant(id: &str, modify_req: &mut IamCsTenantModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRoleServ::need_sys_admin(funs, cxt).await?;
-        IamTenantServ::modify_item(
-            id,
-            &mut IamTenantModifyReq {
-                name: None,
-                icon: None,
-                sort: None,
-                contact_phone: None,
-                disabled: modify_req.disabled,
-                scope_level: None,
-            },
-            funs,
-            cxt,
-        )
-        .await
-    }
-
-    pub async fn get_tenant(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamTenantDetailResp> {
-        IamRoleServ::need_sys_admin(funs, cxt).await?;
-        IamTenantServ::get_item(id, &IamTenantFilterReq::default(), funs, cxt).await
-    }
-
-    pub async fn paginate_tenants(
-        q_id: Option<String>,
-        q_name: Option<String>,
-        page_number: u64,
-        page_size: u64,
-        desc_sort_by_create: Option<bool>,
-        desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<TardisPage<IamTenantSummaryResp>> {
-        IamRoleServ::need_sys_admin(funs, cxt).await?;
-        IamTenantServ::paginate_items(
-            &IamTenantFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: q_id.map(|id| vec![id]),
-                    name: q_name,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            page_number,
-            page_size,
-            desc_sort_by_create,
-            desc_sort_by_update,
-            funs,
-            cxt,
-        )
-        .await
     }
 }

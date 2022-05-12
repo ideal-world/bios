@@ -7,6 +7,14 @@ use bios_iam::iam_constants;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 pub async fn test(client: &BIOSWebTestClient, sysadmin_name: &str, sysadmin_password: &str) -> TardisResult<()> {
+    login_page(client, sysadmin_name, sysadmin_password).await?;
+    Ok(())
+}
+
+pub async fn login_page(client: &BIOSWebTestClient, sysadmin_name: &str, sysadmin_password: &str) -> TardisResult<()> {
+    // Fetch Tenants
+
+    // Login
     let account_info: AccountInfoResp = client
         .put(
             "/cp/login/userpwd",

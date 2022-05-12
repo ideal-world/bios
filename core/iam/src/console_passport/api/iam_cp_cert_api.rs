@@ -6,6 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamMailVCodeCertActivateReq, IamMailVCodeCertAddReq, IamMailVCodeCertResendActivationReq, IamUserPwdCertModifyReq};
+use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpUserPwdLoginReq};
 use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
@@ -14,7 +15,7 @@ use crate::iam_constants;
 
 pub struct IamCpCertApi;
 
-/// Personal Console Cert API
+/// Passport Console Cert API
 #[OpenApi(prefix_path = "/cp", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpCertApi {
     /// Fetch TardisContext By Token
@@ -58,7 +59,7 @@ impl IamCpCertApi {
     async fn delete_mail_vcode_cert(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCpCertMailVCodeServ::delete_cert_mail_vocde(&id.0, &funs, &cxt.0).await?;
+        IamCertServ::delete_cert(&id.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -67,7 +68,7 @@ impl IamCpCertApi {
     #[oai(path = "/cert/mailvcode/resend", method = "put")]
     async fn resend_activation_mail(&self, req: Json<IamMailVCodeCertResendActivationReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCpCertMailVCodeServ::resend_activation_mail(&req.0.mail, &funs, &cxt.0).await?;
+        IamCertMailVCodeServ::resend_activation_mail(&cxt.0.owner, &req.0.mail, &funs, &cxt.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -76,7 +77,7 @@ impl IamCpCertApi {
     async fn activate_mail(&self, req: Json<IamMailVCodeCertActivateReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCpCertMailVCodeServ::activate_mail(&req.0.mail, &req.0.vcode, &funs, &cxt.0).await?;
+        IamCertMailVCodeServ::activate_mail(&req.0.mail, &req.0.vcode, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -86,7 +87,7 @@ impl IamCpCertApi {
     async fn send_login_mail(&self, login_req: Json<IamCpMailVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCpCertMailVCodeServ::send_login_mail(&login_req.0, &funs).await?;
+        IamCertMailVCodeServ::send_login_mail(&login_req.0.mail, &login_req.0.tenant_id, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

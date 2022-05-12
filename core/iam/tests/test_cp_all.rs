@@ -12,8 +12,9 @@ use bios_iam::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamMailVCodeCertAddReq, IamUserPwdCertModifyReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
+use bios_iam::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
-use bios_iam::console_passport::dto::iam_cp_cert_dto::{IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpUserPwdLoginReq};
+use bios_iam::console_passport::dto::iam_cp_cert_dto::{IamCpMailVCodeLoginReq, IamCpUserPwdLoginReq};
 use bios_iam::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
@@ -199,23 +200,16 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(vcode.is_some());
 
     info!("【test_cp_all】 : Resend Activation Mail");
-    IamCpCertMailVCodeServ::resend_activation_mail("i@sunisle.org", &funs, &tenant_admin_context).await?;
+    IamCertMailVCodeServ::resend_activation_mail(&tenant_admin_context.owner, "i@sunisle.org", &funs, &tenant_admin_context).await?;
 
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
 
     info!("【test_cp_all】 : Activate Mail");
-    IamCpCertMailVCodeServ::activate_mail("i@sunisle.org", &vcode.unwrap(), &funs, &tenant_admin_context).await?;
+    IamCertMailVCodeServ::activate_mail("i@sunisle.org", &vcode.unwrap(), &funs, &tenant_admin_context).await?;
 
     info!("【test_cp_all】 : Send Login Mail");
-    IamCpCertMailVCodeServ::send_login_mail(
-        &IamCpMailVCodeLoginGenVCodeReq {
-            mail: "i@sunisle.org".to_string(),
-            tenant_id: tenant_admin_context.own_paths.clone(),
-        },
-        &funs,
-    )
-    .await?;
+    IamCertMailVCodeServ::send_login_mail("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
     assert!(vcode.is_some());
 
@@ -233,7 +227,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     .await?;
 
     info!("【test_cp_all】 : Delete Mail-VCode Cert");
-    IamCpCertMailVCodeServ::delete_cert_mail_vocde(&mail_vcode_cert_id, &funs, &tenant_admin_context).await?;
+    IamCertServ::delete_cert(&mail_vcode_cert_id, &funs, &tenant_admin_context).await?;
 
     // ------------------ Mail-VCode Cert Test End ------------------
 

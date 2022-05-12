@@ -14,7 +14,7 @@ use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCpAccountApi;
 
-/// Personal Console Account API
+/// Passport Console Account API
 #[OpenApi(prefix_path = "/cp/account", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpAccountApi {
     /// Modify Current Account
