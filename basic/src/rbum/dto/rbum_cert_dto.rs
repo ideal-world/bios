@@ -47,6 +47,7 @@ pub struct RbumCertSummaryResp {
     pub ak: String,
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
+    pub rel_rbum_cert_conf_code: Option<String>,
     pub rel_rbum_kind: RbumCertRelKind,
     pub rel_rbum_id: String,
 
@@ -68,6 +69,7 @@ pub struct RbumCertDetailResp {
     pub status: RbumCertStatusKind,
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
+    pub rel_rbum_cert_conf_code: Option<String>,
     pub rel_rbum_kind: RbumCertRelKind,
     pub rel_rbum_id: String,
 

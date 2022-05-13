@@ -2,7 +2,7 @@ use std::default::Default;
 
 use serde::{Deserialize, Serialize};
 
-use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind};
+use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
@@ -87,7 +87,7 @@ pub struct RbumSetCateFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel_rbum_set_id: Option<String>,
     pub sys_code: Option<String>,
-    pub find_parent: Option<bool>,
+    pub find_filter: Option<RbumSetCateLevelQueryKind>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

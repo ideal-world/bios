@@ -398,7 +398,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_set_item】 : Prepare Set Cate : RbumSetCateServ::add_rbum");
-    let set_cate_id = RbumSetCateServ::add_rbum(
+    let set_cate_l1_id = RbumSetCateServ::add_rbum(
         &mut RbumSetCateAddReq {
             bus_code: TrimString("".to_string()),
             name: TrimString("l1".to_string()),
@@ -406,6 +406,22 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             sort: None,
             ext: None,
             rbum_parent_cate_id: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+            rel_rbum_set_id: set_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let set_cate_id = RbumSetCateServ::add_rbum(
+        &mut RbumSetCateAddReq {
+            bus_code: TrimString("".to_string()),
+            name: TrimString("l2".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: Some(set_cate_l1_id.to_string()),
             scope_level: Some(RbumScopeLevelKind::L2),
             rel_rbum_set_id: set_id.to_string(),
         },
@@ -470,9 +486,9 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all");
     let set_infos = RbumSetServ::get_tree_all(&set_id, &funs, context).await?;
-    assert_eq!(set_infos.len(), 1);
-    assert_eq!(set_infos.get(0).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(set_infos.get(0).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "用户1");
+    assert_eq!(set_infos.len(), 2);
+    assert_eq!(set_infos.get(1).unwrap().rbum_set_items.len(), 1);
+    assert_eq!(set_infos.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "用户1");
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::get_rbum");
     let rbum = RbumSetItemServ::get_rbum(
@@ -489,8 +505,15 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.sort, 0);
-    assert_eq!(rbum.rel_rbum_set_cate_name, "l1");
+    assert_eq!(rbum.rel_rbum_set_cate_name, "l2");
     assert_eq!(rbum.rel_rbum_item_name, "用户1");
+
+    info!("【test_rbum_set_item】 : Test Find Set Paths : RbumSetItemServ::get_rbum");
+    let set_paths = RbumSetItemServ::find_set_paths(&item_account_a1_id, &set_id, &funs, context).await?;
+    assert_eq!(set_paths.len(), 1);
+    assert_eq!(set_paths.get(0).unwrap().len(), 2);
+    assert_eq!(set_paths.get(0).unwrap().get(0).unwrap().name, "l1");
+    assert_eq!(set_paths.get(0).unwrap().get(1).unwrap().name, "l2");
 
     info!("【test_rbum_set_item】 : Test Modify : RbumSetItemServ::modify_rbum");
     RbumSetItemServ::modify_rbum(&id, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;

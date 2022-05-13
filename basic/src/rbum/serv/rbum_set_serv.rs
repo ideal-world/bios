@@ -10,10 +10,10 @@ use tardis::TardisFuns;
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetItemInfoResp, RbumSetTreeResp};
-use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetSummaryResp};
+use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp};
 use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use crate::rbum::rbum_config::RbumConfigManager;
-use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
+use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use crate::rbum::serv::rbum_cert_serv::RbumCertServ;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -378,11 +378,21 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
         }
         if let Some(sys_code) = &filter.sys_code {
-            if filter.find_parent.is_some() {
-                let parent_sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
-                query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
-            } else {
-                query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+            if let Some(find_filter) = &filter.find_filter {
+                match find_filter {
+                    RbumSetCateLevelQueryKind::Sub => {
+                        query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+                    }
+                    RbumSetCateLevelQueryKind::CurrentAndParent => {
+                        let mut sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
+                        sys_codes.insert(0, sys_code.to_string());
+                        query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(sys_codes));
+                    }
+                    RbumSetCateLevelQueryKind::Parent => {
+                        let parent_sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
+                        query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
+                    }
+                }
             }
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);
@@ -513,6 +523,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdateTime),
             ])
             .expr_as(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id), Alias::new("rel_rbum_set_cate_id"))
+            .expr_as(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode), Alias::new("rel_rbum_set_cate_sys_code"))
             .expr_as(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Name), Alias::new("rel_rbum_set_cate_name"))
             .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Name), Alias::new("rel_rbum_item_name"))
             .from(rbum_set_item::Entity)
@@ -537,6 +548,51 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
         Ok(query)
+    }
+}
+
+impl<'a> RbumSetItemServ {
+    pub async fn find_set_paths(rbum_item_id: &str, rbum_set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
+        let rbum_set_cate_sys_codes: Vec<String> = Self::find_rbums(
+            &RbumSetItemFilterReq {
+                rel_rbum_set_id: Some(rbum_set_id.to_string()),
+                rel_rbum_item_id: Some(rbum_item_id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?
+        .into_iter()
+        .map(|item| item.rel_rbum_set_cate_sys_code)
+        .collect();
+        let mut result: Vec<Vec<RbumSetPathResp>> = Vec::with_capacity(rbum_set_cate_sys_codes.len());
+        for rbum_set_cate_sys_code in rbum_set_cate_sys_codes {
+            let rbum_set_paths = RbumSetCateServ::find_rbums(
+                &RbumSetCateFilterReq {
+                    rel_rbum_set_id: Some(rbum_set_id.to_string()),
+                    sys_code: Some(rbum_set_cate_sys_code),
+                    find_filter: Some(RbumSetCateLevelQueryKind::CurrentAndParent),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                cxt,
+            )
+            .await?
+            .into_iter()
+            .map(|item| RbumSetPathResp {
+                id: item.id,
+                name: item.name,
+                own_paths: item.own_paths,
+            })
+            .collect();
+            result.push(rbum_set_paths);
+        }
+        Ok(result)
     }
 }
 
