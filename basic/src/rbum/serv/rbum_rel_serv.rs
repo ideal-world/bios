@@ -267,6 +267,32 @@ impl<'a> RbumRelServ {
         .await
     }
 
+    pub async fn count_from_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub_own_paths: bool,
+        from_rbum_id: &str,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<u64> {
+        Self::count_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: None,
+                to_own_paths: None,
+            },
+            funs,
+            cxt,
+        )
+        .await
+    }
+
     pub async fn find_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -329,6 +355,25 @@ impl<'a> RbumRelServ {
         .await
     }
 
+    pub async fn count_to_rels(tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        Self::count_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: None,
+                from_rbum_id: None,
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                to_own_paths: Some(cxt.own_paths.to_string()),
+            },
+            funs,
+            cxt,
+        )
+        .await
+    }
+
     pub async fn find_to_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -355,6 +400,10 @@ impl<'a> RbumRelServ {
             cxt,
         )
         .await
+    }
+
+    async fn count_rels(filter: &RbumRelFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        RbumRelServ::count_rbums(filter, funs, cxt).await
     }
 
     async fn find_rels(
