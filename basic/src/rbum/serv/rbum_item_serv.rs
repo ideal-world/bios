@@ -471,6 +471,10 @@ where
 
     async fn count_items(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+        );
         Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
         funs.db().count(&query).await
     }
