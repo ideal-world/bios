@@ -11,7 +11,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterFetcher, RbumBasicFilterReq, RbumItemAttrFilterReq, RbumKindAttrFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumKindAttrFilterReq};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
@@ -187,7 +187,7 @@ where
     ModifyReq: Sync + Send,
     SummaryResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     DetailResp: FromQueryResult + ParseFromJSON + ToJSON + Serialize + Send + Sync,
-    ItemFilterReq: Sync + Send + RbumBasicFilterFetcher,
+    ItemFilterReq: Sync + Send + RbumItemFilterFetcher,
 {
     fn get_ext_table_name() -> &'static str;
     fn get_rbum_kind_id() -> String;
@@ -369,7 +369,7 @@ where
     // ----------------------------- Query -------------------------------
 
     async fn package_item_query(is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
-        RbumItemServ::package_query(
+        let mut query = RbumItemServ::package_query(
             is_detail,
             &RbumBasicFilterReq {
                 ignore_scope: filter.basic().ignore_scope,
@@ -396,7 +396,33 @@ where
             funs,
             cxt,
         )
-        .await
+        .await?;
+        if let Some(rbum_item_rel_filter_req) = &filter.rel() {
+            if rbum_item_rel_filter_req.rel_by_from {
+                query.inner_join(
+                    rbum_rel::Entity,
+                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                );
+                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
+                }
+            } else {
+                query.inner_join(
+                    rbum_rel::Entity,
+                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                );
+                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
+                }
+            }
+            if let Some(tag) = &rbum_item_rel_filter_req.tag {
+                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Tag).eq(tag.to_string()));
+            }
+            if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
+                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+            }
+        }
+        Ok(query)
     }
 
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;

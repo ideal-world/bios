@@ -99,19 +99,34 @@ pub struct RbumSetItemFilterReq {
     pub rel_rbum_item_id: Option<String>,
 }
 
-pub trait RbumBasicFilterFetcher {
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[serde(default)]
+pub struct RbumItemRelFilterReq {
+    pub rel_by_from: bool,
+    pub tag: Option<String>,
+    pub from_rbum_kind: Option<RbumRelFromKind>,
+    pub rel_item_id: Option<String>,
+}
+
+pub trait RbumItemFilterFetcher {
     fn basic(&self) -> &RbumBasicFilterReq;
+    fn rel(&self) -> &Option<RbumItemRelFilterReq>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 #[serde(default)]
-pub struct RbumItemFilterReq {
+pub struct RbumItemBasicFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub rel: Option<RbumItemRelFilterReq>,
 }
 
-impl RbumBasicFilterFetcher for RbumItemFilterReq {
+impl RbumItemFilterFetcher for RbumItemBasicFilterReq {
     fn basic(&self) -> &RbumBasicFilterReq {
         &self.basic
+    }
+    fn rel(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel
     }
 }
