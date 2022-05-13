@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use tardis::{log, TardisFuns};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -9,6 +8,7 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::regex::Regex;
+use tardis::{log, TardisFuns};
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -350,6 +350,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             .expr_as(
                 Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Name).if_null(""),
                 Alias::new("rel_rbum_cert_conf_name"),
+            )
+            .expr_as(
+                Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Name).if_null(""),
+                Alias::new("rel_rbum_cert_conf_code"),
             )
             .from(rbum_cert::Entity)
             .left_join(

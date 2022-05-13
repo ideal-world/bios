@@ -78,3 +78,12 @@ pub struct RbumSetDetailResp {
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+pub struct RbumSetPathResp {
+    pub id: String,
+    pub name: String,
+
+    pub own_paths: String,
+}

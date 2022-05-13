@@ -17,7 +17,7 @@ use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
 use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp, RbumRelEnvModifyReq};
-use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
+use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind, RbumSetCateLevelQueryKind};
 use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
@@ -543,7 +543,7 @@ impl<'a> RbumRelServ {
                     basic: Default::default(),
                     rel_rbum_set_id: Some(rbum_set_cate_base.rel_rbum_set_id.clone()),
                     sys_code: Some(rbum_set_cate_base.sys_code.clone()),
-                    find_parent: Some(true),
+                    find_filter: Some(RbumSetCateLevelQueryKind::Parent),
                 },
                 None,
                 None,
