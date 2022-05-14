@@ -1,9 +1,9 @@
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -14,11 +14,11 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertKind;
 
-pub struct IamCcCertApi;
+pub struct IamCsCertApi;
 
-/// Common Console Cert API
-#[OpenApi(prefix_path = "/cc/cert", tag = "crate::iam_enumeration::Tag::Common")]
-impl IamCcCertApi {
+/// System Console Cert API
+#[OpenApi(prefix_path = "/cs/cert", tag = "crate::iam_enumeration::Tag::System")]
+impl IamCsCertApi {
     /// Rest Password
     #[oai(path = "/user-pwd/:account_id", method = "put")]
     async fn rest_password(&self, account_id: Path<String>, modify_req: Json<IamUserPwdCertRestReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -32,7 +32,7 @@ impl IamCcCertApi {
 
     /// Find Certs
     #[oai(path = "/", method = "get")]
-    async fn find_certs(&self, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
+    async fn find_certs(&self, account_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let rbum_certs = RbumCertServ::find_rbums(
             &RbumCertFilterReq {

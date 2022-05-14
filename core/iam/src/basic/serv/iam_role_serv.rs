@@ -106,6 +106,10 @@ impl<'a> IamRoleServ {
         IamRelServ::add_rel(IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
     }
 
+    pub async fn count_rel_accounts(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        IamRelServ::count_to_rels(IamRelKind::IamAccountRole, role_id, funs, cxt).await
+    }
+
     pub async fn paginate_rel_accounts(
         role_id: &str,
         page_number: u64,
@@ -120,6 +124,10 @@ impl<'a> IamRoleServ {
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_rel(IamRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
+    }
+
+    pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        IamRelServ::count_to_rels(IamRelKind::IamResRole, role_id, funs, cxt).await
     }
 
     pub async fn paginate_rel_res(

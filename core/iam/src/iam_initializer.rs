@@ -30,7 +30,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::iam_ca_app_api;
 use crate::console_common::api::{iam_cc_account_api, iam_cc_account_attr_api, iam_cc_cert_api, iam_cc_cert_conf_api, iam_cc_res_api, iam_cc_role_api, iam_cc_set_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
-use crate::console_system::api::{iam_cs_account_api, iam_cs_cert_conf_api, iam_cs_tenant_api};
+use crate::console_system::api::{iam_cs_account_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{iam_ct_app_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -51,22 +51,25 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         .add_module(
             &bios_basic::Components::Iam.to_string(),
             (
-                iam_cp_account_api::IamCpAccountApi,
-                iam_cp_cert_api::IamCpCertApi,
-                iam_cp_tenant_api::IamCpTenantApi,
-                iam_cc_account_api::IamCcAccountApi,
-                iam_cc_account_attr_api::IamCcAccountAttrApi,
-                iam_cc_cert_api::IamCcCertApi,
-                iam_cc_cert_conf_api::IamCcCertConfApi,
-                iam_cc_res_api::IamCcResApi,
-                iam_cc_role_api::IamCcRoleApi,
-                iam_cc_set_api::IamCcSetApi,
-                iam_cs_tenant_api::IamCsTenantApi,
-                iam_cs_account_api::IamCsAccountApi,
-                iam_cs_cert_conf_api::IamCsCertConfApi,
-                iam_ct_tenant_api::IamCtTenantApi,
-                iam_ct_app_api::IamCtAppApi,
-                iam_ca_app_api::IamCtAppApi,
+                (iam_cp_account_api::IamCpAccountApi, iam_cp_cert_api::IamCpCertApi, iam_cp_tenant_api::IamCpTenantApi),
+                (
+                    iam_cc_account_api::IamCcAccountApi,
+                    iam_cc_account_attr_api::IamCcAccountAttrApi,
+                    iam_cc_cert_api::IamCcCertApi,
+                    iam_cc_cert_conf_api::IamCcCertConfApi,
+                    iam_cc_res_api::IamCcResApi,
+                    iam_cc_role_api::IamCcRoleApi,
+                    iam_cc_set_api::IamCcSetApi,
+                ),
+                (
+                    iam_cs_tenant_api::IamCsTenantApi,
+                    iam_cs_account_api::IamCsAccountApi,
+                    iam_cs_cert_api::IamCsCertApi,
+                    iam_cs_cert_conf_api::IamCsCertConfApi,
+                    iam_cs_role_api::IamCsRoleApi,
+                ),
+                (iam_ct_tenant_api::IamCtTenantApi, iam_ct_app_api::IamCtAppApi),
+                (iam_ca_app_api::IamCaAppApi),
             ),
         )
         .await;

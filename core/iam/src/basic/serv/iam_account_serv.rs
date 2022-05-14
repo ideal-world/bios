@@ -131,6 +131,16 @@ impl<'a> IamAccountServ {
         .await
     }
 
+    pub async fn find_rel_roles(
+        account_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        IamRelServ::find_from_rels(IamRelKind::IamAccountRole, false, account_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn paginate_rel_roles(
         account_id: &str,
         page_number: u64,
