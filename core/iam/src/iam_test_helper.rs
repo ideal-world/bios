@@ -3,9 +3,9 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFuns;
 use tardis::web::web_client::TardisWebClient;
 use tardis::web::web_resp::TardisResp;
+use tardis::TardisFuns;
 
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 
@@ -33,6 +33,10 @@ impl BIOSWebTestClient {
 
     pub fn set_default_header(&mut self, key: &str, value: &str) {
         self.client.set_default_header(key, value);
+    }
+
+    pub async fn get_to_str(&self, url: &str) -> String {
+        self.client.get_to_str(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap()
     }
 
     pub async fn get<T>(&self, url: &str) -> T

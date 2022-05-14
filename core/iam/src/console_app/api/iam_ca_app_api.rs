@@ -10,11 +10,11 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::console_app::dto::iam_ca_app_dto::IamCaAppModifyReq;
 use crate::iam_constants;
 
-pub struct IamCtAppApi;
+pub struct IamCaAppApi;
 
 /// App Console App API
 #[OpenApi(prefix_path = "/ca/app", tag = "crate::iam_enumeration::Tag::App")]
-impl IamCtAppApi {
+impl IamCaAppApi {
     /// Modify Current App
     #[oai(path = "/", method = "put")]
     async fn modify(&self, modify_req: Json<IamCaAppModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {

@@ -111,6 +111,16 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 }
 
 impl<'a> IamResServ {
+    pub async fn find_rel_roles(
+        res_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        IamRelServ::find_from_rels(IamRelKind::IamResRole, false, res_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn paginate_rel_roles(
         res_id: &str,
         page_number: u64,

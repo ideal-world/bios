@@ -17,7 +17,7 @@ pub struct IamSetServ;
 
 impl<'a> IamSetServ {
     pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let code = if is_org { Self::get_org_code(cxt) } else { Self::get_res_code(cxt) };
+        let code = if is_org { Self::get_default_org_code_by_cxt(cxt) } else { Self::get_default_res_code_by_cxt(cxt) };
         let set_id = RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
                 code: TrimString(code.clone()),
@@ -69,10 +69,14 @@ impl<'a> IamSetServ {
     }
 
     pub async fn get_default_set_id_by_cxt(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let code = if is_org { Self::get_org_code(cxt) } else { Self::get_res_code(cxt) };
+        let code = if is_org { Self::get_default_org_code_by_cxt(cxt) } else { Self::get_default_res_code_by_cxt(cxt) };
+        Self::get_set_id_by_code(&code, funs, cxt).await
+    }
+
+    pub async fn get_set_id_by_code(code: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let resp = RbumSetServ::find_rbums(
             &RbumBasicFilterReq {
-                code: Some(code.clone()),
+                code: Some(code.to_string()),
                 ..Default::default()
             },
             None,
@@ -166,11 +170,11 @@ impl<'a> IamSetServ {
         .await
     }
 
-    fn get_res_code(cxt: &TardisContext) -> String {
+    pub fn get_default_res_code_by_cxt(cxt: &TardisContext) -> String {
         format!("{}:{}", cxt.own_paths, "res")
     }
 
-    fn get_org_code(cxt: &TardisContext) -> String {
+   pub fn get_default_org_code_by_cxt(cxt: &TardisContext) -> String {
         format!("{}:{}", cxt.own_paths, "org")
     }
 }

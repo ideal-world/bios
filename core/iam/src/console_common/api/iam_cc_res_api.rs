@@ -2,15 +2,16 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamResKind;
+use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 pub struct IamCcResApi;
 
@@ -52,6 +53,8 @@ impl IamCcResApi {
         kind: Query<IamResKind>,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        role_id: Query<Option<String>>,
+        with_sub: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
@@ -59,14 +62,22 @@ impl IamCcResApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamResSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
+        let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
+            rel_by_from: true,
+            tag: Some(IamRelKind::IamResRole.to_string()),
+            from_rbum_kind: Some(RbumRelFromKind::Item),
+            rel_item_id: Some(role_id),
+        });
         let result = IamResServ::paginate_items(
             &IamResFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     own_paths: Some(cxt.0.own_paths.clone()),
+                    with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
+                rel,
                 kind: Some(kind.0),
                 ..Default::default()
             },
@@ -93,17 +104,15 @@ impl IamCcResApi {
 
     /// Find Rel Roles By Res Id
     #[oai(path = "/:id/roles", method = "get")]
-    async fn paginate_rel_roles(
+    async fn find_rel_roles(
         &self,
         id: Path<String>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
+    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::paginate_rel_roles(&id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamResServ::find_rel_roles(&id.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }
