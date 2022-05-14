@@ -160,8 +160,8 @@ pub async fn sys_tenant_mgr(client: &mut BIOSWebTestClient) -> TardisResult<()> 
     assert!(roles.records.iter().find(|i| i.name == "审计管理员").is_some());
 
     // Count Accounts By Role Id
-    // let roles: u64 = client.get(&format!("/cs/role/{}/account/total", sys_admin_role_id)).await;
-    // assert_eq!(roles, 1);
+    let roles: u64 = client.get(&format!("/cs/role/{}/account/total", sys_admin_role_id)).await;
+    assert_eq!(roles, 1);
 
     // Fetch Accounts
     let accounts: TardisPage<IamAccountSummaryResp> = client.get("/cs/account?with_sub=true&page_number=1&page_size=10").await;

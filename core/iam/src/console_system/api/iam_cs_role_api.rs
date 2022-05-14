@@ -1,4 +1,3 @@
-use std::process::id;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
@@ -161,11 +160,11 @@ impl IamCsRoleApi {
     }
 
     /// Delete Rel By Rel Id
-    #[oai(path = "/:role_id/rel/:xid", method = "delete")]
-    async fn delete_rel(&self, role_id: Path<String>, xid: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/:_/rel/:id", method = "delete")]
+    async fn delete_rel(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRelServ::delete_rel(&xid.0, &funs, &cxt.0).await?;
+        IamRelServ::delete_rel(&id.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
