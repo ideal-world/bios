@@ -150,6 +150,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
 
     async fn before_add_rbum(add_req: &mut RbumKindAttrAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), funs, cxt).await?;
+        // TODO This check does not consider scope level
         if funs
             .db()
             .count(
@@ -157,7 +158,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                     .column(rbum_kind_attr::Column::Id)
                     .from(rbum_kind_attr::Entity)
                     .and_where(Expr::col(rbum_kind_attr::Column::Name).eq(add_req.name.0.as_str()))
-                    .and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(add_req.rel_rbum_kind_id.as_str())),
+                    .and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(add_req.rel_rbum_kind_id.as_str()))
+                    .and_where(Expr::col(rbum_kind_attr::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
             )
             .await?
             > 0

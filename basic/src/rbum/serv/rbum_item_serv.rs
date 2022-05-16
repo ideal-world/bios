@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use serde::Serialize;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
@@ -584,7 +586,17 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
 
 impl<'a> RbumItemAttrServ {
     pub async fn find_item_attr_defs_by_item_id(rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
-        let rel_rbum_kind_id = RbumItemServ::peek_rbum(rbum_item_id, &RbumBasicFilterReq::default(), funs, cxt).await?.rel_rbum_kind_id;
+        let rel_rbum_kind_id = RbumItemServ::peek_rbum(
+            rbum_item_id,
+            &RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?
+        .rel_rbum_kind_id;
         RbumKindAttrServ::find_rbums(
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
@@ -656,6 +668,51 @@ impl<'a> RbumItemAttrServ {
         }
 
         Ok(())
+    }
+
+    pub async fn find_item_attr_values(rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(rbum_item_id, funs, cxt).await?;
+        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| !i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+
+        let mut values: HashMap<String, String> = HashMap::new();
+        if !in_main_table_attrs.is_empty() {
+            let rel_rbum_kind_id = RbumItemServ::peek_rbum(rbum_item_id, &RbumBasicFilterReq::default(), funs, cxt).await?.rel_rbum_kind_id;
+            let ext_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumBasicFilterReq::default(), funs, cxt).await?.ext_table_name;
+
+            let mut select_statement = Query::select();
+            select_statement.from(Alias::new(&ext_table_name));
+            for in_main_table_attr in &in_main_table_attrs {
+                let column_name = Alias::new(&in_main_table_attr.name);
+                select_statement.column(column_name);
+            }
+            select_statement.and_where(Expr::col(ID_FIELD.clone()).eq(rbum_item_id));
+            let select_statement = funs.db().raw_conn().get_database_backend().build(&select_statement);
+            if let Some(row) = funs.db().raw_conn().query_one(select_statement).await? {
+                for in_main_table_attr in &in_main_table_attrs {
+                    let value: String = row.try_get("", &in_main_table_attr.name)?;
+                    values.insert(in_main_table_attr.name.clone(), value);
+                }
+            }
+        }
+
+        if !in_ext_table_attrs.is_empty() {
+            let attr_values = Self::find_rbums(
+                &RbumItemAttrFilterReq {
+                    rel_rbum_item_id: Some(rbum_item_id.to_string()),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                cxt,
+            )
+            .await?;
+            for attr_value in attr_values {
+                values.insert(attr_value.rel_rbum_kind_attr_name, attr_value.value);
+            }
+        }
+        Ok(values)
     }
 }
 

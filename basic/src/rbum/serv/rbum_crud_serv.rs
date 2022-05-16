@@ -75,11 +75,11 @@ where
         if funs
             .db()
             .count(
-                &Query::select()
+                Query::select()
                     .column((Alias::new(table_name), ID_FIELD.clone()))
                     .from(Alias::new(table_name))
                     .and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).eq(id))
-                    .with_scope(table_name, cxt),
+                    .with_scope(table_name, &cxt.own_paths, false, cxt),
             )
             .await?
             == 0
@@ -340,7 +340,7 @@ where
 
 pub trait RbumCrudQueryPackage {
     fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, ignore_owner: bool, has_scope: bool, cxt: &TardisContext) -> &mut Self;
-    fn with_scope(&mut self, table_name: &str, cxt: &TardisContext) -> &mut Self;
+    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, cxt: &TardisContext) -> &mut Self;
 }
 
 impl RbumCrudQueryPackage for SelectStatement {
@@ -380,20 +380,13 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Expr::tbl(OWNER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), OWNER_FIELD.clone()),
             );
         }
-        if let Some(own_paths) = &filter.own_paths {
-            if filter.with_sub_own_paths {
-                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", own_paths).as_str()));
-            } else {
-                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(own_paths.to_string()));
-            }
-        } else if has_scope && !filter.ignore_scope {
-            self.with_scope(table_name, cxt);
-        } else if !has_scope && !filter.ignore_scope {
-            if filter.with_sub_own_paths {
-                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", cxt.own_paths).as_str()));
-            } else {
-                self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str()));
-            }
+        let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &cxt.own_paths };
+        if has_scope && !filter.ignore_scope {
+            self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths, cxt);
+        } else if filter.with_sub_own_paths {
+            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths).as_str()));
+        } else {
+            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths));
         }
         if let Some(desc_by_sort) = filter.desc_by_sort {
             self.order_by((Alias::new(table_name), SORT_FIELD.clone()), if desc_by_sort { Order::Desc } else { Order::Asc });
@@ -401,15 +394,16 @@ impl RbumCrudQueryPackage for SelectStatement {
         self
     }
 
-    fn with_scope(&mut self, table_name: &str, cxt: &TardisContext) -> &mut Self {
+    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, cxt: &TardisContext) -> &mut Self {
+        let cond = if with_sub_own_paths {
+            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths).as_str())
+        } else {
+            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths)
+        };
         self.cond_where(
             Cond::all().add(
                 Cond::any()
-                    .add(
-                        Cond::all()
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(-1))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(cxt.own_paths.as_str())),
-                    )
+                    .add(cond)
                     .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0))
                     .add(
                         Cond::all()

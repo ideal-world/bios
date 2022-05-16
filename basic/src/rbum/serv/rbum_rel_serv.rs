@@ -236,7 +236,7 @@ impl<'a> RbumRelServ {
     pub async fn paginate_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
-        with_sub_own_paths: bool,
+        with_sub: bool,
         from_rbum_id: &str,
         page_number: u64,
         page_size: u64,
@@ -248,7 +248,7 @@ impl<'a> RbumRelServ {
         Self::paginate_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths,
+                    with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
@@ -270,7 +270,7 @@ impl<'a> RbumRelServ {
     pub async fn count_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
-        with_sub_own_paths: bool,
+        with_sub: bool,
         from_rbum_id: &str,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
@@ -278,7 +278,7 @@ impl<'a> RbumRelServ {
         Self::count_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths,
+                    with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
@@ -296,7 +296,7 @@ impl<'a> RbumRelServ {
     pub async fn find_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
-        with_sub_own_paths: bool,
+        with_sub: bool,
         from_rbum_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -306,7 +306,7 @@ impl<'a> RbumRelServ {
         Self::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths,
+                    with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),

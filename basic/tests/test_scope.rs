@@ -296,7 +296,7 @@ pub async fn test() -> TardisResult<()> {
         s0.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 4);
+    assert_eq!(rbums.len(), 7);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
@@ -314,7 +314,7 @@ pub async fn test() -> TardisResult<()> {
         s1.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 7);
+    assert_eq!(rbums.len(), 9);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
@@ -332,7 +332,7 @@ pub async fn test() -> TardisResult<()> {
         s2.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 9);
+    assert_eq!(rbums.len(), 10);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {

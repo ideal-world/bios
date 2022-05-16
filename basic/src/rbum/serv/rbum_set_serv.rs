@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -327,7 +328,6 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             id,
             &RbumSetCateFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(cxt.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -589,6 +589,7 @@ impl<'a> RbumSetItemServ {
                 name: item.name,
                 own_paths: item.own_paths,
             })
+            .sorted_by(|a, b| Ord::cmp(&a.own_paths.len(), &b.own_paths.len()))
             .collect();
             result.push(rbum_set_paths);
         }
