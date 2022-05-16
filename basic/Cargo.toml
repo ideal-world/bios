@@ -33,11 +33,11 @@ itertools = { version = "^0" }
 
 tardis = { path = "../../tardis", optional = true }
 poem-openapi = { version = "^1.3", optional = true }
-sea-orm = { version = "^0.7", features = ["macros"], optional = true }
+sea-orm = { version = "^0.8", features = ["macros"], optional = true }
 
 [dev-dependencies]
 tardis = { path = "../../tardis", features = ["test", "reldb", "sea-orm"] }
-sea-orm = { version = "^0.7", features = ["macros"] }
+sea-orm = { version = "^0.8", features = ["macros"] }
 
 [[test]]
 name = "test_rbum"
