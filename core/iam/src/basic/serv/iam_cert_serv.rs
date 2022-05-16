@@ -120,10 +120,47 @@ impl<'a> IamCertServ {
         .await
     }
 
+    pub async fn find_cert_conf_detail_without_token_kind(
+        id: Option<String>,
+        code: Option<String>,
+        name: Option<String>,
+        with_sub: Option<bool>,
+        iam_item_id: Option<String>,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumCertConfDetailResp>> {
+        let result = RbumCertConfServ::find_detail_rbums(
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: id.map(|id| vec![id]),
+                    code,
+                    name,
+                    with_sub_own_paths: with_sub.unwrap_or(false),
+                    ..Default::default()
+                },
+                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
+                rel_rbum_item_id: iam_item_id,
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await?;
+        let result = result
+            .into_iter()
+            .filter(|r| r.code == IamCertKind::UserPwd.to_string() || r.code == IamCertKind::PhoneVCode.to_string() || r.code == IamCertKind::MailVCode.to_string())
+            .collect();
+        Ok(result)
+    }
+
     pub async fn paginate_cert_conf(
         id: Option<String>,
         code: Option<String>,
         name: Option<String>,
+        with_sub: Option<bool>,
         iam_item_id: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -136,8 +173,9 @@ impl<'a> IamCertServ {
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.map(|id| vec![id]),
-                    code: code,
-                    name: name,
+                    code,
+                    name,
+                    with_sub_own_paths: with_sub.unwrap_or(false),
                     ..Default::default()
                 },
                 rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
@@ -154,7 +192,19 @@ impl<'a> IamCertServ {
     }
 
     pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let rbum_cert_conf = RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
+        let rbum_cert_conf = RbumCertConfServ::get_rbum(
+            id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
         if rbum_cert_conf.code == IamCertKind::UserPwd.to_string() {
             return Err(TardisError::Conflict("Cannot delete default credential".to_string()));
         }
@@ -166,9 +216,11 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &IamBasicInfoManager::get().domain_iam_id, rel_iam_item_id.unwrap_or("".to_string()).as_str(), funs)
-            .await?
-            .ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
+        Self::get_cert_conf_id_opt_by_code(code, rel_iam_item_id, funs).await?.ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
+    }
+
+    pub async fn get_cert_conf_id_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &IamBasicInfoManager::get().domain_iam_id, rel_iam_item_id.unwrap_or("".to_string()).as_str(), funs).await
     }
 
     pub async fn package_tardis_context_and_resp(
@@ -299,6 +351,23 @@ impl<'a> IamCertServ {
             }
         }
         Err(TardisError::NotFound("context not found".to_string()))
+    }
+
+    pub fn use_tenant_ctx(cxt: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
+        Self::degrade_own_paths(cxt, tenant_id.to_string().as_str())
+    }
+
+    pub fn use_app_ctx(cxt: TardisContext, app_id: &str) -> TardisResult<TardisContext> {
+        let own_paths = cxt.own_paths.clone();
+        Self::degrade_own_paths(cxt, format!("{}/{}", own_paths, app_id).as_str())
+    }
+
+    fn degrade_own_paths(mut cxt: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
+        if !new_own_paths.contains(&cxt.own_paths) {
+            return Err(TardisError::Conflict("Not qualified for downgrade".to_string()));
+        }
+        cxt.own_paths = new_own_paths.to_string();
+        Ok(cxt)
     }
 
     pub fn get_anonymous_context() -> TardisContext {

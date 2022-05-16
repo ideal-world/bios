@@ -1,12 +1,16 @@
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::rand::Rng;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertConfServ;
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
+use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
+use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamPhoneVCodeCertConfAddOrModifyReq;
+use crate::basic::dto::iam_cert_dto::IamPhoneVCodeCertAddReq;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::IamCertKind;
 
@@ -71,6 +75,42 @@ impl<'a> IamCertPhoneVCodeServ {
         )
         .await?;
         Ok(())
+    }
+
+    pub async fn add_cert(
+        add_req: &IamPhoneVCodeCertAddReq,
+        account_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<String> {
+        let vcode = Self::get_vcode();
+        let id = RbumCertServ::add_rbum(
+            &mut RbumCertAddReq {
+                ak: TrimString(add_req.phone.to_string()),
+                sk: None,
+                vcode: Some(TrimString(vcode.clone())),
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: RbumCertStatusKind::Pending,
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: account_id.to_string(),
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        // TODO send vcode
+        Ok(id)
+    }
+
+    fn get_vcode() -> String {
+        let mut rand = tardis::rand::thread_rng();
+        let vcode: i32 = rand.gen_range(1000..9999);
+        format!("{}", vcode)
     }
 
     // TODO

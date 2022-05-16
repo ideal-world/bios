@@ -27,7 +27,7 @@ impl IamCsTenantApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Tenant By Id
+    /// Modify Tenant By Tenant Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamTenantModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -37,7 +37,7 @@ impl IamCsTenantApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get Tenant By Id
+    /// Get Tenant By Tenant Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
         let funs = iam_constants::get_tardis_inst();

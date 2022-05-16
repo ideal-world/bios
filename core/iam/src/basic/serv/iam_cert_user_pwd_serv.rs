@@ -160,6 +160,7 @@ impl<'a> IamCertUserPwdServ {
             return Err(TardisError::NotFound(format!("there are multiple credentials of kind {:?}", IamCertKind::UserPwd)));
         }
         if let Some(cert) = certs.get(0) {
+            // TODO remove cache & token
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))

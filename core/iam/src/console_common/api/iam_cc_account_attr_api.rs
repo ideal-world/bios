@@ -4,7 +4,6 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_item_attr_dto::RbumItemAttrSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 
 use crate::basic::dto::iam_attr_dto::IamKindAttrAddReq;
@@ -40,7 +39,7 @@ impl IamCcAccountAttrApi {
     #[oai(path = "/attr/:id", method = "get")]
     async fn get_attr(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<RbumKindAttrDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAttrServ::get_account_attr(&id.0, &funs, &cxt.0).await?;
+        let result = IamAttrServ::get_account_attr(&id.0, false, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -74,9 +73,9 @@ impl IamCcAccountAttrApi {
 
     /// Find Account Ext Attr Values
     #[oai(path = "/:account_id/attr/values", method = "get")]
-    async fn find_account_ext_attr_values(&self, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumItemAttrSummaryResp>> {
+    async fn find_account_attr_values(&self, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAttrServ::find_account_ext_attr_values(&account_id.0, false, &funs, &cxt.0).await?;
+        let result = IamAttrServ::find_account_attr_values(&account_id.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }

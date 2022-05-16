@@ -54,7 +54,7 @@ impl<'a> IamRelServ {
 
     pub async fn find_from_rels(
         rel_kind: IamRelKind,
-        with_sub_own_paths: bool,
+        with_sub: bool,
         from_iam_item_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -64,7 +64,7 @@ impl<'a> IamRelServ {
         RbumRelServ::find_from_rels(
             &rel_kind.to_string(),
             &RbumRelFromKind::Item,
-            with_sub_own_paths,
+            with_sub,
             from_iam_item_id,
             desc_sort_by_create,
             desc_sort_by_update,
@@ -76,7 +76,7 @@ impl<'a> IamRelServ {
 
     pub async fn paginate_from_rels(
         rel_kind: IamRelKind,
-        with_sub_own_paths: bool,
+        with_sub: bool,
         from_iam_item_id: &str,
         page_number: u64,
         page_size: u64,
@@ -88,7 +88,7 @@ impl<'a> IamRelServ {
         RbumRelServ::paginate_from_rels(
             &rel_kind.to_string(),
             &RbumRelFromKind::Item,
-            with_sub_own_paths,
+            with_sub,
             from_iam_item_id,
             page_number,
             page_size,

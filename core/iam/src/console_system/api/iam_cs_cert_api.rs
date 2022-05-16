@@ -1,5 +1,5 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi::{param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
@@ -20,20 +20,36 @@ pub struct IamCsCertApi;
 #[OpenApi(prefix_path = "/cs/cert", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsCertApi {
     /// Rest Password
-    #[oai(path = "/user-pwd/:account_id", method = "put")]
-    async fn rest_password(&self, account_id: Path<String>, modify_req: Json<IamUserPwdCertRestReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/user-pwd", method = "put")]
+    async fn rest_password(
+        &self,
+        account_id: Query<String>,
+        tenant_id: Query<Option<String>>,
+        modify_req: Json<IamUserPwdCertRestReq>,
+        cxt: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&cxt.0), &funs).await?;
-        IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &cxt.0).await?;
+        let cxt = if let Some(tenant_id) = &tenant_id.0 {
+            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
+        } else {
+            cxt.0
+        };
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&cxt), &funs).await?;
+        IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Find Certs
     #[oai(path = "/", method = "get")]
-    async fn find_certs(&self, account_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
+    async fn find_certs(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
+        let cxt = if let Some(tenant_id) = &tenant_id.0 {
+            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
+        } else {
+            cxt.0
+        };
         let rbum_certs = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.0.to_string()),
@@ -42,7 +58,7 @@ impl IamCsCertApi {
             None,
             None,
             &funs,
-            &cxt.0,
+            &cxt,
         )
         .await?;
         TardisResp::ok(rbum_certs)

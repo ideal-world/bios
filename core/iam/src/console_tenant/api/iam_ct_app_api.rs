@@ -76,7 +76,6 @@ impl IamCtAppApi {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
-                    own_paths: Some(cxt.0.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

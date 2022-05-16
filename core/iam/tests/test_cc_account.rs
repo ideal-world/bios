@@ -102,11 +102,11 @@ async fn test_single_level(context: &TardisContext, account_name: &str, role_nam
     assert!(accounts.records.iter().any(|i| i.name == "星航"));
 
     info!("【test_cc_account】 : test_single_level : Find Rel Roles By Account Id");
-    let account_roles = IamAccountServ::paginate_rel_roles(&account_id, 1, 10, None, None, &funs, another_context).await?;
+    let account_roles = IamAccountServ::paginate_rel_roles(&account_id, false, 1, 10, None, None, &funs, another_context).await?;
     assert_eq!(account_roles.page_number, 1);
     assert_eq!(account_roles.page_size, 10);
     assert_eq!(account_roles.total_size, 0);
-    let account_roles = IamAccountServ::paginate_rel_roles(&context.owner, 1, 10, None, None, &funs, context).await?;
+    let account_roles = IamAccountServ::paginate_rel_roles(&context.owner, false, 1, 10, None, None, &funs, context).await?;
     assert_eq!(account_roles.page_number, 1);
     assert_eq!(account_roles.page_size, 10);
     assert_eq!(account_roles.total_size, 1);
@@ -117,7 +117,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, role_nam
     info!("【test_cc_account】 : test_single_level : Add Rel Account By Id");
     assert!(IamRoleServ::add_rel_account(&role_id, &account_id, &funs, another_context).await.is_err());
     IamRoleServ::add_rel_account(&role_id, &account_id, &funs, context).await?;
-    let account_roles = IamAccountServ::paginate_rel_roles(&account_id, 1, 10, None, None, &funs, context).await?;
+    let account_roles = IamAccountServ::paginate_rel_roles(&account_id, false, 1, 10, None, None, &funs, context).await?;
     assert_eq!(account_roles.page_number, 1);
     assert_eq!(account_roles.page_size, 10);
     assert_eq!(account_roles.total_size, 1);
@@ -290,7 +290,6 @@ pub async fn test_multi_level_by_sys_context(
             &account_t1_id,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(sys_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -309,7 +308,6 @@ pub async fn test_multi_level_by_sys_context(
             &account_t2_a1_id,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(sys_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -409,7 +407,6 @@ pub async fn test_multi_level_by_tenant_context(
             &account_t2_a1_id,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(t2_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

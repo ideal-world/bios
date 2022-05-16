@@ -73,7 +73,6 @@ impl IamCcResApi {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
-                    own_paths: Some(cxt.0.own_paths.clone()),
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
@@ -112,7 +111,7 @@ impl IamCcResApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelAggResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_rel_roles(&id.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamResServ::find_rel_roles(&id.0, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }

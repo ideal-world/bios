@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
+use tardis::basic::error::TardisError;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
@@ -10,11 +12,20 @@ use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_account;
-use crate::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryResp};
+use crate::basic::dto::iam_account_dto::{
+    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryResp,
+};
+use crate::basic::dto::iam_cert_dto::{IamMailVCodeCertAddReq, IamPhoneVCodeCertAddReq, IamUserPwdCertAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::iam_attr_serv::IamAttrServ;
+use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
+use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamCertKind, IamRelKind};
 
 pub struct IamAccountServ;
 
@@ -116,6 +127,83 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
 }
 
 impl<'a> IamAccountServ {
+    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        let attrs = IamAttrServ::find_account_attrs(funs, cxt).await?;
+        if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
+            return Err(TardisError::BadRequest("Missing required field".to_string()));
+        }
+        let account_id = IamAccountServ::add_item(
+            &mut IamAccountAddReq {
+                id: add_req.id.clone(),
+                name: add_req.name.clone(),
+                scope_level: add_req.scope_level.clone(),
+                disabled: add_req.disabled,
+                icon: add_req.icon.clone(),
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(cxt.own_paths.clone()), funs).await? {
+            IamCertUserPwdServ::add_cert(
+                &IamUserPwdCertAddReq {
+                    ak: add_req.cert_user_name.clone(),
+                    sk: add_req.cert_password.clone(),
+                },
+                &account_id,
+                Some(cert_conf_id),
+                funs,
+                cxt,
+            )
+            .await?;
+        }
+        if let Some(cert_phone) = &add_req.cert_phone {
+            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(cxt.own_paths.clone()), funs).await? {
+                IamCertPhoneVCodeServ::add_cert(
+                    &IamPhoneVCodeCertAddReq {
+                        phone: TrimString(cert_phone.to_string()),
+                    },
+                    &account_id,
+                    &cert_conf_id,
+                    funs,
+                    cxt,
+                )
+                .await?;
+            }
+        }
+        if let Some(cert_mail) = &add_req.cert_mail {
+            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::MailVCode.to_string(), Some(cxt.own_paths.clone()), funs).await? {
+                IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf_id, funs, cxt).await?;
+            }
+        }
+        if let Some(roles) = &add_req.roles {
+            for role in roles {
+                IamRoleServ::add_rel_account(&role, &account_id, funs, cxt).await?;
+            }
+        }
+        IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), &funs, &cxt).await?;
+        Ok(account_id)
+    }
+
+    pub async fn modify_account_agg(id: &str, modify_req: &IamAccountAggModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamAccountServ::modify_item(
+            id,
+            &mut IamAccountModifyReq {
+                name: modify_req.name.clone(),
+                scope_level: modify_req.scope_level.clone(),
+                disabled: modify_req.disabled,
+                icon: modify_req.icon.clone(),
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        // TODO remove cache & token
+        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, cxt).await?;
+        Ok(())
+    }
+
+    // TODO
     pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         IamAccountServ::modify_item(
             &cxt.owner,
@@ -133,16 +221,18 @@ impl<'a> IamAccountServ {
 
     pub async fn find_rel_roles(
         account_id: &str,
+        with_sub: bool,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
-        IamRelServ::find_from_rels(IamRelKind::IamAccountRole, false, account_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_from_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_rel_roles(
         account_id: &str,
+        with_sub: bool,
         page_number: u64,
         page_size: u64,
         desc_by_create: Option<bool>,
@@ -152,7 +242,7 @@ impl<'a> IamAccountServ {
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRelServ::paginate_from_rels(
             IamRelKind::IamAccountRole,
-            false,
+            with_sub,
             account_id,
             page_number,
             page_size,

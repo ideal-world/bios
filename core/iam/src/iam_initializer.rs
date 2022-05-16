@@ -15,22 +15,18 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
-use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
-use crate::basic::dto::iam_account_dto::IamAccountAddReq;
+use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::iam_ca_app_api;
-use crate::console_common::api::{iam_cc_account_api, iam_cc_account_attr_api, iam_cc_cert_api, iam_cc_cert_conf_api, iam_cc_res_api, iam_cc_role_api, iam_cc_set_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
-use crate::console_system::api::{iam_cs_account_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_role_api, iam_cs_tenant_api};
+use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{iam_ct_app_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -38,7 +34,6 @@ use crate::iam_constants::{
     RBUM_ITEM_NAME_APP_ADMIN_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_SCHEME_IAM_ACCOUNT,
     RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT, RBUM_SCOPE_LEVEL_GLOBAL,
 };
-use crate::iam_enumeration::IamRelKind;
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -53,17 +48,9 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
             (
                 (iam_cp_account_api::IamCpAccountApi, iam_cp_cert_api::IamCpCertApi, iam_cp_tenant_api::IamCpTenantApi),
                 (
-                    iam_cc_account_api::IamCcAccountApi,
-                    iam_cc_account_attr_api::IamCcAccountAttrApi,
-                    iam_cc_cert_api::IamCcCertApi,
-                    iam_cc_cert_conf_api::IamCcCertConfApi,
-                    iam_cc_res_api::IamCcResApi,
-                    iam_cc_role_api::IamCcRoleApi,
-                    iam_cc_set_api::IamCcSetApi,
-                ),
-                (
                     iam_cs_tenant_api::IamCsTenantApi,
                     iam_cs_account_api::IamCsAccountApi,
+                    iam_cs_account_attr_api::IamCsAccountAttrApi,
                     iam_cs_cert_api::IamCsCertApi,
                     iam_cs_cert_conf_api::IamCsCertConfApi,
                     iam_cs_role_api::IamCsRoleApi,
@@ -249,7 +236,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 
     IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
     IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
-    let rbum_cert_conf_user_pwd_id = IamCertServ::init_default_ident_conf(
+    IamCertServ::init_default_ident_conf(
         IamUserPwdCertConfAddOrModifyReq {
             ak_note: None,
             ak_rule: None,
@@ -265,29 +252,21 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     )
     .await?;
 
-    let account_sys_admin_id = IamAccountServ::add_item(
-        &mut IamAccountAddReq {
+    let pwd = IamCertServ::get_new_pwd();
+    IamAccountServ::add_account_agg(
+        &mut IamAccountAggAddReq {
             id: Some(TrimString(default_account_id)),
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            cert_user_name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            cert_password: TrimString(pwd.clone()),
+            cert_phone: None,
+            cert_mail: None,
             icon: None,
             disabled: None,
             scope_level: None,
+            roles: Some(vec![role_sys_admin_id.clone()]),
+            exts: Default::default(),
         },
-        funs,
-        &cxt,
-    )
-    .await?;
-
-    RbumRelServ::add_simple_rel(&IamRelKind::IamAccountRole.to_string(), &account_sys_admin_id, &role_sys_admin_id, funs, &cxt).await?;
-
-    let pwd = IamCertServ::get_new_pwd();
-    IamCertUserPwdServ::add_cert(
-        &mut IamUserPwdCertAddReq {
-            ak: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
-            sk: TrimString(pwd.clone()),
-        },
-        &account_sys_admin_id,
-        Some(rbum_cert_conf_user_pwd_id),
         funs,
         &cxt,
     )

@@ -5,13 +5,10 @@ use tardis::TardisFuns;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::IamAccountAddReq;
-use crate::basic::dto::iam_cert_dto::IamUserPwdCertAddReq;
+use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_tenant_dto::IamTenantAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -19,7 +16,6 @@ use crate::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
-use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCsTenantServ;
 
@@ -53,31 +49,11 @@ impl<'a> IamCsTenantServ {
             &tenant_cxt,
         )
         .await?;
-        IamAccountServ::add_item(
-            &mut IamAccountAddReq {
-                id: Some(TrimString(tenant_admin_id.clone())),
-                name: add_req.admin_name.clone(),
-                icon: None,
-                disabled: add_req.disabled,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
-            },
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
 
-        IamRelServ::add_rel(
-            IamRelKind::IamAccountRole,
-            &tenant_admin_id,
-            &IamBasicInfoManager::get().role_tenant_admin_id,
-            None,
-            None,
-            funs,
-            &tenant_cxt,
-        )
-        .await?;
+        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
+        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
 
-        let rbum_cert_conf_id = IamCertServ::init_default_ident_conf(
+        IamCertServ::init_default_ident_conf(
             add_req.cert_conf_by_user_pwd.clone(),
             add_req.cert_conf_by_phone_vcode.clone(),
             add_req.cert_conf_by_mail_vcode.clone(),
@@ -91,20 +67,25 @@ impl<'a> IamCsTenantServ {
         } else {
             IamCertServ::get_new_pwd()
         };
-        IamCertUserPwdServ::add_cert(
-            &mut IamUserPwdCertAddReq {
-                ak: TrimString(add_req.admin_username.0.to_string()),
-                sk: TrimString(pwd.to_string()),
+
+        IamAccountServ::add_account_agg(
+            &IamAccountAggAddReq {
+                id: Some(TrimString(tenant_admin_id.clone())),
+                name: add_req.admin_name.clone(),
+                cert_user_name: TrimString(add_req.admin_username.0.to_string()),
+                cert_password: TrimString(pwd.to_string()),
+                cert_phone: None,
+                cert_mail: None,
+                icon: None,
+                disabled: add_req.disabled,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                roles: Some(vec![IamBasicInfoManager::get().role_tenant_admin_id]),
+                exts: Default::default(),
             },
-            &tenant_admin_id,
-            Some(rbum_cert_conf_id),
             funs,
             &tenant_cxt,
         )
         .await?;
-
-        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
-        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
 
         Ok((tenant_id, pwd))
     }
