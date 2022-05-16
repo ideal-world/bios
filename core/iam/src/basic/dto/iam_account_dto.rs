@@ -1,10 +1,37 @@
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::FromQueryResult;
 use tardis::web::poem_openapi::Object;
+
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountAggAddReq {
+    #[oai(skip = true)]
+    pub id: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub cert_user_name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub cert_password: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub cert_phone: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub cert_mail: Option<TrimString>,
+
+    pub roles: Option<Vec<String>>,
+
+    pub scope_level: Option<RbumScopeLevelKind>,
+    pub disabled: Option<bool>,
+
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub icon: Option<String>,
+    pub exts: HashMap<String, String>,
+}
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamAccountAddReq {
@@ -17,6 +44,18 @@ pub struct IamAccountAddReq {
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountAggModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: Option<TrimString>,
+    pub scope_level: Option<RbumScopeLevelKind>,
+    pub disabled: Option<bool>,
+
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub icon: Option<String>,
+    pub exts: HashMap<String, String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
@@ -71,6 +110,24 @@ pub struct IamAccountDetailResp {
     pub disabled: bool,
 
     pub icon: String,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountDetailWithExtResp {
+    pub id: String,
+    pub name: String,
+
+    pub own_paths: String,
+    pub owner: String,
+    pub owner_name: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
+
+    pub icon: String,
+    pub exts: HashMap<String, String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

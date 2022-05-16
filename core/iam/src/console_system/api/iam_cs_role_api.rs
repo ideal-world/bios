@@ -8,6 +8,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
@@ -27,7 +28,7 @@ impl IamCsRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Role By Id
+    /// Modify Role By Role Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamRoleModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -37,7 +38,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get Role By Id
+    /// Get Role By Role Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamRoleDetailResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -51,6 +52,7 @@ impl IamCsRoleApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        tenant_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
@@ -59,12 +61,16 @@ impl IamCsRoleApi {
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
+        let cxt = if let Some(tenant_id) = &tenant_id.0 {
+            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
+        } else {
+            cxt.0
+        };
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
-                    own_paths: Some(cxt.0.own_paths.clone()),
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
@@ -75,13 +81,13 @@ impl IamCsRoleApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt.0,
+            &cxt,
         )
         .await?;
         TardisResp::ok(result)
     }
 
-    /// Delete Role By Id
+    /// Delete Role By Role Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -91,7 +97,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Rel Account By Id
+    /// Add Rel Account
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -125,7 +131,7 @@ impl IamCsRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Add Rel Res By Id
+    /// Add Rel Res
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

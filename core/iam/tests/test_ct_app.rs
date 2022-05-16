@@ -92,7 +92,6 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
             basic: RbumBasicFilterReq {
                 ids: None,
                 name: None,
-                own_paths: Some(context1.own_paths.clone()),
                 with_sub_own_paths: true,
                 ..Default::default()
             },
@@ -122,7 +121,6 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![app_id1.clone()]),
                     name: None,
-                    own_paths: Some(context1.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -146,7 +144,6 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![app_id1.clone()]),
                     name: None,
-                    own_paths: Some(context1.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

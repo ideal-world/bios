@@ -103,6 +103,8 @@ impl<'a> IamRoleServ {
         {
             return Err(TardisError::BadRequest("The associated role is invalid.".to_string()));
         }
+        // TODO only bind the same own_paths roles
+        // E.g. sys admin can't bind tenant admin
         IamRelServ::add_rel(IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
     }
 

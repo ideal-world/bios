@@ -39,6 +39,7 @@ impl IamCcCertConfApi {
             id.0,
             code.0,
             name.0,
+            Some(false),
             get_max_level_id_by_context(&cxt.0),
             page_number.0,
             page_size.0,

@@ -373,7 +373,6 @@ pub async fn test_multi_level_by_sys_context(
             &role_t2_id,
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(sys_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -391,7 +390,6 @@ pub async fn test_multi_level_by_sys_context(
             &role_t2_tenant_id,
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(sys_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -410,7 +408,6 @@ pub async fn test_multi_level_by_sys_context(
             &role_t2_a1_id,
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(sys_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -545,7 +542,6 @@ pub async fn test_multi_level_by_tenant_context(
             &role_t2_a1_id,
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(t2_context.own_paths.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

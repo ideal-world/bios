@@ -3,18 +3,13 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenAp
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq};
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertConfServ;
-use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertKind;
 
 pub struct IamCsCertConfApi;
 
@@ -25,26 +20,7 @@ impl IamCsCertConfApi {
     #[oai(path = "/", method = "get")]
     async fn find_cert_conf(&self, tenant_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertConfDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = RbumCertConfServ::find_detail_rbums(
-            &RbumCertConfFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
-                rel_rbum_item_id: Some(tenant_id.0),
-                ..Default::default()
-            },
-            None,
-            None,
-            &funs,
-            &cxt.0,
-        )
-        .await?
-        .into_iter()
-        .filter(|r| r.code == IamCertKind::UserPwd.to_string() || r.code == IamCertKind::PhoneVCode.to_string() || r.code == IamCertKind::MailVCode.to_string())
-        .collect();
+        let result = IamCertServ::find_cert_conf_detail_without_token_kind(None, None, None, Some(true), Some(tenant_id.0), None, None, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -63,7 +39,8 @@ impl IamCsCertConfApi {
     async fn add_cert_conf_mail_vcode(&self, tenant_id: Query<String>, add_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertMailVCodeServ::add_cert_conf(&add_req.0, Some(tenant_id.0), &funs, &cxt.0).await?;
+        let cxt = IamCertServ::use_tenant_ctx(cxt.0, &tenant_id.0)?;
+        IamCertMailVCodeServ::add_cert_conf(&add_req.0, Some(tenant_id.0), &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -83,7 +60,8 @@ impl IamCsCertConfApi {
     async fn add_cert_conf_phone_vcode(&self, tenant_id: Query<String>, add_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::add_cert_conf(&add_req.0, Some(tenant_id.0), &funs, &cxt.0).await?;
+        let cxt = IamCertServ::use_tenant_ctx(cxt.0, &tenant_id.0)?;
+        IamCertPhoneVCodeServ::add_cert_conf(&add_req.0, Some(tenant_id.0), &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -98,7 +76,7 @@ impl IamCsCertConfApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Cert Config By Id
+    /// Delete Cert Config By Cert Config Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
