@@ -33,7 +33,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let set_cate_id1 = IamSetServ::add_set_cate(
         &set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("bc1".to_string()),
+            bus_code: Some(TrimString("bc1".to_string())),
             name: TrimString("xxx分公司".to_string()),
             icon: None,
             sort: None,
@@ -49,7 +49,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let _set_cate_id3 = IamSetServ::add_set_cate(
         &set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("bc2-1".to_string()),
+            bus_code:  Some(TrimString("bc2-1".to_string())),
             name: TrimString("yyy分公司zzz部门".to_string()),
             icon: None,
             sort: None,
@@ -65,7 +65,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let set_cate_id4 = IamSetServ::add_set_cate(
         &set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("bc2-2".to_string()),
+            bus_code:  Some(TrimString("bc2-2".to_string())),
             name: TrimString("yyy分公司zzz部门".to_string()),
             icon: None,
             sort: None,
@@ -191,7 +191,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_sys_global_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("xxx公司".to_string()),
             icon: None,
             sort: None,
@@ -207,7 +207,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_sys_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("sys私有部门".to_string()),
             icon: None,
             sort: None,
@@ -223,7 +223,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_t1_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("t1私有部门".to_string()),
             icon: None,
             sort: None,
@@ -239,7 +239,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_t2_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("t2私有部门".to_string()),
             icon: None,
             sort: None,
@@ -255,7 +255,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_t2_tenant_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("t2共享部门".to_string()),
             icon: None,
             sort: None,
@@ -271,7 +271,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_t2_a1_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("t2_a1私有部门".to_string()),
             icon: None,
             sort: None,
@@ -287,7 +287,7 @@ async fn test_multi_level_add<'a>(
     let set_cate_t2_a2_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &mut IamSetCateAddReq {
-            bus_code: TrimString("".to_string()),
+            bus_code: None,
             name: TrimString("t2_a2私有部门".to_string()),
             icon: None,
             sort: None,

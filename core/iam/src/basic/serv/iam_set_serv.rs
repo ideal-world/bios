@@ -17,7 +17,11 @@ pub struct IamSetServ;
 
 impl<'a> IamSetServ {
     pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let code = if is_org { Self::get_default_org_code_by_cxt(cxt) } else { Self::get_default_res_code_by_cxt(cxt) };
+        let code = if is_org {
+            Self::get_default_org_code_by_cxt(cxt)
+        } else {
+            Self::get_default_res_code_by_cxt(cxt)
+        };
         let set_id = RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
                 code: TrimString(code.clone()),
@@ -37,7 +41,7 @@ impl<'a> IamSetServ {
             RbumSetCateServ::add_rbum(
                 &mut RbumSetCateAddReq {
                     name: TrimString("Menus".to_string()),
-                    bus_code: TrimString("".to_string()),
+                    bus_code: TrimString("menus".to_string()),
                     icon: None,
                     sort: None,
                     ext: None,
@@ -52,7 +56,7 @@ impl<'a> IamSetServ {
             RbumSetCateServ::add_rbum(
                 &mut RbumSetCateAddReq {
                     name: TrimString("Apis".to_string()),
-                    bus_code: TrimString("".to_string()),
+                    bus_code: TrimString("apis".to_string()),
                     icon: None,
                     sort: None,
                     ext: None,
@@ -69,7 +73,11 @@ impl<'a> IamSetServ {
     }
 
     pub async fn get_default_set_id_by_cxt(is_org: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let code = if is_org { Self::get_default_org_code_by_cxt(cxt) } else { Self::get_default_res_code_by_cxt(cxt) };
+        let code = if is_org {
+            Self::get_default_org_code_by_cxt(cxt)
+        } else {
+            Self::get_default_res_code_by_cxt(cxt)
+        };
         Self::get_set_id_by_code(&code, funs, cxt).await
     }
 
@@ -93,7 +101,7 @@ impl<'a> IamSetServ {
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
                 name: add_req.name.clone(),
-                bus_code: add_req.bus_code.clone(),
+                bus_code: add_req.bus_code.as_ref().unwrap_or(&TrimString("".to_string())).clone(),
                 icon: add_req.icon.clone(),
                 sort: add_req.sort,
                 ext: add_req.ext.clone(),
@@ -174,7 +182,7 @@ impl<'a> IamSetServ {
         format!("{}:{}", cxt.own_paths, "res")
     }
 
-   pub fn get_default_org_code_by_cxt(cxt: &TardisContext) -> String {
+    pub fn get_default_org_code_by_cxt(cxt: &TardisContext) -> String {
         format!("{}:{}", cxt.own_paths, "org")
     }
 }

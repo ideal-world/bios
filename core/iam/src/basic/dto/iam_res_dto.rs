@@ -4,9 +4,16 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::FromQueryResult;
 use tardis::web::poem_openapi::Object;
 
+use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::iam_enumeration::IamResKind;
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamResAggAddReq {
+    pub res: IamResAddReq,
+    pub set: IamSetItemAggAddReq,
+}
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamResAddReq {
@@ -19,7 +26,7 @@ pub struct IamResAddReq {
     pub icon: Option<String>,
     pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub method: TrimString,
+    pub method: Option<TrimString>,
     pub hide: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub action: Option<String>,

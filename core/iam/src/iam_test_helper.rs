@@ -3,6 +3,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::log::warn;
 use tardis::web::web_client::TardisWebClient;
 use tardis::web::web_resp::{TardisResp, Void};
 use tardis::TardisFuns;
@@ -44,6 +45,9 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.get::<TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
+        if result.code != "200" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
         result.data.unwrap()
     }
 
@@ -56,6 +60,9 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.post::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
+        if result.code != "200" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
         result.data.unwrap()
     }
 
@@ -64,6 +71,9 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.put::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
+        if result.code != "200" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
         result.data.unwrap()
     }
 
@@ -72,6 +82,9 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.patch::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
+        if result.code != "200" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
         result.data.unwrap()
     }
 }

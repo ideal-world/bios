@@ -9,7 +9,7 @@ pub struct IamSetCateAddReq {
     pub name: TrimString,
     pub scope_level: Option<RbumScopeLevelKind>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub bus_code: TrimString,
+    pub bus_code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
@@ -31,6 +31,12 @@ pub struct IamSetCateModifyReq {
     pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamSetItemAggAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
