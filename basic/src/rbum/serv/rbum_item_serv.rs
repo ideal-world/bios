@@ -410,7 +410,7 @@ where
             RbumCertServ::delete_rbum(&cert.id, funs, cxt).await?;
         }
 
-        // Delete Cert Config
+        // Delete Cert Conf
         let cert_confs = RbumCertConfServ::find_rbums(
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {

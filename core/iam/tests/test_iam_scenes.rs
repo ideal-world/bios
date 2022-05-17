@@ -11,6 +11,7 @@ use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKind
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{AccountInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
@@ -18,20 +19,23 @@ use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleSummaryResp};
-use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAggAddReq};
+use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAggAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantBoneResp, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
-use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
+use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_GLOBAL, RBUM_SCOPE_LEVEL_TENANT};
 use bios_iam::iam_enumeration::{IamCertKind, IamResKind};
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_password: &str) -> TardisResult<()> {
     login_page(client, sysadmin_name, sysadmin_password, None, true).await?;
-    let tenant_id = sys_admin_tenant_mgr_page(client).await?;
-    sys_admin_account_mgr_page(client, &tenant_id).await?;
-    let res_menu_id = sys_admin_res_mgr_page(client).await?;
-    sys_admin_auth_mgr_page(client, &res_menu_id).await?;
+    let (tenant_id, tenant_admin_user_name, tenant_admin_password) = sys_console_tenant_mgr_page(client).await?;
+    sys_console_account_mgr_page(client, &tenant_id).await?;
+    let res_menu_id = sys_console_res_mgr_page(client).await?;
+    sys_console_auth_mgr_page(client, &res_menu_id).await?;
+    login_page(client, &tenant_admin_user_name, &tenant_admin_password, Some(tenant_id), true).await?;
+    tenant_console_tenant_mgr_page(client).await?;
+    tenant_console_org_mgr_page(client).await?;
     Ok(())
 }
 
@@ -51,7 +55,6 @@ pub async fn login_page(client: &mut BIOSWebTestClient, user_name: &str, passwor
             },
         )
         .await;
-    assert_eq!(account.account_name, user_name);
     // Find Context
     if set_auth {
         client.set_auth(&account.token, None).await?;
@@ -59,8 +62,8 @@ pub async fn login_page(client: &mut BIOSWebTestClient, user_name: &str, passwor
     Ok(account)
 }
 
-pub async fn sys_admin_tenant_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<String> {
-    info!("【sys_admin_tenant_mgr_page】");
+pub async fn sys_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<(String, String, String)> {
+    info!("【sys_console_tenant_mgr_page】");
     // Add Tenant
     let tenant_id: String = client
         .post(
@@ -72,7 +75,7 @@ pub async fn sys_admin_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
                 tenant_note: None,
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("admin".to_string()),
-                admin_password: None,
+                admin_password: Some("123456".to_string()),
                 cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
                     ak_note: None,
                     ak_rule: None,
@@ -235,11 +238,11 @@ pub async fn sys_admin_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
         .await;
     login_page(client, "bios", "123456", None, true).await?;
 
-    Ok(tenant_id)
+    Ok((tenant_id, "admin".to_string(), "123456".to_string()))
 }
 
-pub async fn sys_admin_account_mgr_page(client: &mut BIOSWebTestClient, tenant_id: &str) -> TardisResult<()> {
-    info!("【sys_admin_account_mgr_page】");
+pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant_id: &str) -> TardisResult<()> {
+    info!("【sys_console_account_mgr_page】");
     // -------------------- Account Attr --------------------
 
     // Add Account Attr By Tenant Id
@@ -440,8 +443,8 @@ pub async fn sys_admin_account_mgr_page(client: &mut BIOSWebTestClient, tenant_i
     Ok(())
 }
 
-pub async fn sys_admin_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<String> {
-    info!("【sys_admin_res_mgr_page】");
+pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<String> {
+    info!("【sys_console_res_mgr_page】");
 
     // Find Res Tree
     let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/cates").await;
@@ -479,10 +482,10 @@ pub async fn sys_admin_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisRes
         )
         .await;
 
-    // Delete Res Cate By Cate Id
+    // Delete Res Cate By Res Cate Id
     client.delete(&format!("/cs/res/cate/{}", cate_collaboration_id)).await;
 
-    // Modify Res Cate By Cate Id
+    // Modify Res Cate By Res Cate Id
     let _: Void = client
         .put(
             &format!("/cs/res/cate/{}", cate_work_spaces_id),
@@ -598,8 +601,8 @@ pub async fn sys_admin_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisRes
     Ok(res_menu_id)
 }
 
-pub async fn sys_admin_auth_mgr_page(client: &mut BIOSWebTestClient, res_menu_id: &str) -> TardisResult<()> {
-    info!("【sys_admin_auth_mgr_page】");
+pub async fn sys_console_auth_mgr_page(client: &mut BIOSWebTestClient, res_menu_id: &str) -> TardisResult<()> {
+    info!("【sys_console_auth_mgr_page】");
 
     // Find Roles
     let roles: TardisPage<IamRoleSummaryResp> = client.get("/cs/role?with_sub=true&page_number=1&page_size=10").await;
@@ -635,6 +638,168 @@ pub async fn sys_admin_auth_mgr_page(client: &mut BIOSWebTestClient, res_menu_id
     client.delete(&format!("/cs/role/{}/res/{}", sys_admin_role_id, res_menu_id)).await;
     let res: u64 = client.get(&format!("/cs/role/{}/res/total", sys_admin_role_id)).await;
     assert_eq!(res, 0);
+
+    Ok(())
+}
+
+pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【tenant_console_tenant_mgr_page】");
+
+    // Get Current Tenant
+    let tenant: IamTenantDetailResp = client.get("/ct/tenant").await;
+    assert_eq!(tenant.name, "测试公司_new");
+    assert_eq!(tenant.icon, "https://oss.minio.io/xxx.icon");
+
+    // Find Cert Conf by Current Tenant
+    let cert_conf: Vec<RbumCertConfDetailResp> = client.get("/ct/cert-conf").await;
+    let cert_conf_user_pwd = cert_conf.iter().find(|x| x.code == IamCertKind::UserPwd.to_string()).unwrap();
+    let cert_conf_mail_vcode = cert_conf.iter().find(|x| x.code == IamCertKind::MailVCode.to_string()).unwrap();
+    assert_eq!(cert_conf.len(), 2);
+    assert!(cert_conf_user_pwd.sk_encrypted);
+    assert!(!cert_conf_user_pwd.repeatable);
+
+    // Modify Current Tenant
+    let _: Void = client
+        .put(
+            "/ct/tenant",
+            &IamTenantModifyReq {
+                name: Some(TrimString("测试公司".to_string())),
+                scope_level: None,
+                disabled: None,
+                icon: None,
+                sort: None,
+                contact_phone: None,
+                note: None,
+            },
+        )
+        .await;
+    let tenant: IamTenantDetailResp = client.get("/ct/tenant").await;
+    assert_eq!(tenant.name, "测试公司");
+
+    // Modify Cert Conf by User Pwd Id
+    let _: Void = client
+        .put(
+            &format!("/ct/cert-conf/{}/user-pwd", cert_conf_user_pwd.id),
+            &IamUserPwdCertConfAddOrModifyReq {
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                repeatable: Some(false),
+                expire_sec: Some(111),
+            },
+        )
+        .await;
+
+    // Add Cert Conf by Tenant Id
+    let _: Void = client.post("/ct/cert-conf/phone-vcode", &IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }).await;
+    let cert_conf: Vec<RbumCertConfDetailResp> = client.get("/ct/cert-conf").await;
+    assert_eq!(cert_conf.len(), 3);
+
+    Ok(())
+}
+
+pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【tenant_console_org_mgr_page】");
+
+    // Find Org Tree
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
+    assert_eq!(res_tree.len(), 0);
+
+    // Add Org Cate
+    let cate_node1_id: String = client
+        .post(
+            "/ct/org/cate",
+            &IamSetCateAddReq {
+                name: TrimString("综合服务中心".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: None,
+            },
+        )
+        .await;
+    let cate_node2_id: String = client
+        .post(
+            "/ct/org/cate",
+            &IamSetCateAddReq {
+                name: TrimString("综合服务".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: None,
+            },
+        )
+        .await;
+
+    // Delete Org Cate By Org Id
+    client.delete(&format!("/ct/org/cate/{}", cate_node2_id)).await;
+
+    // Modify Org Cate By Org Id
+    let _: Void = client
+        .put(
+            &format!("/ct/org/cate/{}", cate_node1_id),
+            &IamSetCateModifyReq {
+                name: Some(TrimString("综合服务中心".to_string())),
+                scope_level: None,
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+            },
+        )
+        .await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
+    assert_eq!(res_tree.len(), 1);
+    assert_eq!(res_tree.get(0).unwrap().name, "综合服务中心");
+
+    // Count Accounts
+    let accounts: u64 = client.get("/ct/account/total").await;
+    assert_eq!(accounts, 2);
+
+    // Find Accounts
+    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 2);
+    let account_id = accounts.records.iter().find(|i| i.name == "bios").unwrap().id.clone();
+
+    // Find Role By Account Id
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/roles", account_id)).await;
+    assert_eq!(roles.len(), 1);
+    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "sys_admin");
+
+    // Find Set Paths By Account Id
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-paths", account_id)).await;
+    assert_eq!(roles.len(), 0);
+
+    // Find Certs By Account Id
+    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
+    assert_eq!(certs.len(), 2);
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+
+    // Add Org Item
+    let _: String = client
+        .put(
+            "/ct/org/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node1_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: account_id.clone(),
+            },
+        )
+        .await;
+
+    // Find Org Items
+    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/items?cate_id={}", cate_node1_id)).await;
+    assert_eq!(items.len(), 1);
+
+    // Delete Org Item By Org Item Id
+    client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
+    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/items?cate_id={}", cate_node1_id)).await;
+    assert_eq!(items.len(), 0);
 
     Ok(())
 }

@@ -15,10 +15,10 @@ use crate::iam_constants;
 
 pub struct IamCsResApi;
 
-/// System Console Resource API
+/// System Console Res API
 #[OpenApi(prefix_path = "/cs/res", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsResApi {
-    /// Add Res Category
+    /// Add Res Cate
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -29,7 +29,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Set Category By Id
+    /// Modify Res Cate By Res Cate Id
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -39,7 +39,7 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Set Categories
+    /// Find Res Cates
     #[oai(path = "/cates", method = "get")]
     async fn find_cates(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
@@ -48,7 +48,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Set Category By Id
+    /// Delete Res Cate By Res Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

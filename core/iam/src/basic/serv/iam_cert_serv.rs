@@ -216,7 +216,7 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        Self::get_cert_conf_id_opt_by_code(code, rel_iam_item_id, funs).await?.ok_or_else(|| TardisError::NotFound(format!("cert config code {} not found", code)))
+        Self::get_cert_conf_id_opt_by_code(code, rel_iam_item_id, funs).await?.ok_or_else(|| TardisError::NotFound(format!("Cert Conf code {} not found", code)))
     }
 
     pub async fn get_cert_conf_id_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {

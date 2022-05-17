@@ -33,6 +33,7 @@ impl BIOSWebTestClient {
     }
 
     pub fn set_default_header(&mut self, key: &str, value: &str) {
+        self.client.remove_default_header(key);
         self.client.set_default_header(key, value);
     }
 
@@ -45,14 +46,17 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.get::<TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
-        if result.code != "200" {
+        if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
         result.data.unwrap()
     }
 
     pub async fn delete(&self, url: &str) {
-        self.client.delete::<TardisResp<Void>>(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
+        let result: TardisResp<Void> = self.client.delete(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
+        if result.code != "200000000000" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
     }
 
     pub async fn post<B: Serialize, T>(&self, url: &str, body: &B) -> T
@@ -60,7 +64,7 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.post::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
-        if result.code != "200" {
+        if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
         result.data.unwrap()
@@ -71,7 +75,7 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.put::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
-        if result.code != "200" {
+        if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
         result.data.unwrap()
@@ -82,7 +86,7 @@ impl BIOSWebTestClient {
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync,
     {
         let result: TardisResp<T> = self.client.patch::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
-        if result.code != "200" {
+        if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
         result.data.unwrap()

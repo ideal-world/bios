@@ -13,7 +13,7 @@ use crate::iam_constants;
 
 pub struct IamCsAccountAttrApi;
 
-/// System Console Tenant API
+/// System Console Account Attr API
 #[OpenApi(prefix_path = "/cs/account/attr", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsAccountAttrApi {
     /// Add Account Attr By Tenant Id
