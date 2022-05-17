@@ -315,7 +315,9 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                     .from(rbum_set_item::Entity)
                     .inner_join(
                         rbum_set_cate::Entity,
-                        Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode),
+                        Condition::all()
+                            .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode))
+                            .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)),
                     )
                     .and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).eq(id)),
             )
