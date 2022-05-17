@@ -40,6 +40,16 @@ pub struct IamSetItemAggAddReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamSetItemWithDefaultSetAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub set_cate_id: String,
+    pub sort: u32,
+
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub rel_rbum_item_id: String,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamSetItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_id: String,

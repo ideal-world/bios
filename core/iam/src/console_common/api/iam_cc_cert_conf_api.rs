@@ -10,10 +10,10 @@ use crate::iam_constants;
 
 pub struct IamCcCertConfApi;
 
-/// Common Console Cert Config API
+/// Common Console Cert Conf API
 #[OpenApi(prefix_path = "/cc/cert-conf", tag = "crate::iam_enumeration::Tag::Common")]
 impl IamCcCertConfApi {
-    /// Get Cert Config By Id
+    /// Get Cert Conf By Id
     #[oai(path = "/:id", method = "get")]
     async fn get_cert_conf(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<RbumCertConfDetailResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -21,7 +21,7 @@ impl IamCcCertConfApi {
         TardisResp::ok(result)
     }
 
-    /// Find Cert Configs
+    /// Find Cert Confs
     #[oai(path = "/", method = "get")]
     async fn paginate_cert_conf(
         &self,
