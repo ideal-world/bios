@@ -26,7 +26,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::iam_ca_app_api;
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
-use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_role_api, iam_cs_tenant_api};
+use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{iam_ct_app_api, iam_ct_tenant_api};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -54,6 +54,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cs_cert_api::IamCsCertApi,
                     iam_cs_cert_conf_api::IamCsCertConfApi,
                     iam_cs_role_api::IamCsRoleApi,
+                    iam_cs_res_api::IamCsResApi,
                 ),
                 (iam_ct_tenant_api::IamCtTenantApi, iam_ct_app_api::IamCtAppApi),
                 (iam_ca_app_api::IamCaAppApi),

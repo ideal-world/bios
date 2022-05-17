@@ -13,7 +13,9 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumKindAttrFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{
+    RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumKindAttrFilterReq, RbumSetItemFilterReq,
+};
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
@@ -337,6 +339,7 @@ where
     }
 
     async fn delete_item_with_all_rels(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        // Delete rels
         let rel_ids = RbumRelServ::find_rel_ids(
             &RbumRelFindReq {
                 tag: None,
@@ -365,6 +368,68 @@ where
         for rel_id in rel_ids {
             RbumRelServ::delete_rel_with_ext(&rel_id, funs, cxt).await?;
         }
+
+        // Delete set items
+        let set_items = RbumSetItemServ::find_rbums(
+            &RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?;
+        for set_item in set_items {
+            RbumSetItemServ::delete_rbum(&set_item.id, funs, cxt).await?;
+        }
+
+        // Delete Certs
+        let certs = RbumCertServ::find_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?;
+        for cert in certs {
+            RbumCertServ::delete_rbum(&cert.id, funs, cxt).await?;
+        }
+
+        // Delete Cert Config
+        let cert_confs = RbumCertConfServ::find_rbums(
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_item_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            cxt,
+        )
+        .await?;
+        for cert_conf in cert_confs {
+            RbumCertConfServ::delete_rbum(&cert_conf.id, funs, cxt).await?;
+        }
+
         Self::delete_item(id, funs, cxt).await
     }
 

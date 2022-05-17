@@ -55,6 +55,9 @@ pub struct IamAccountAggModifyReq {
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
+
+    pub roles: Option<Vec<String>>,
+
     pub exts: HashMap<String, String>,
 }
 

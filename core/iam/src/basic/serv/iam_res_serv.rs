@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
@@ -11,8 +12,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
+use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::IamRelKind;
 
@@ -48,7 +51,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
             kind: Set(add_req.kind.to_int()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
-            method: Set(add_req.method.0.to_string()),
+            method: Set(add_req.method.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             hide: Set(add_req.hide.unwrap_or(false)),
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
@@ -133,5 +136,23 @@ impl<'a> IamResServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         IamRelServ::paginate_from_rels(IamRelKind::IamResRole, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+    }
+}
+
+impl<'a> IamResServ {
+    pub async fn add_agg_res(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        let res_id = Self::add_item(&mut add_req.res, funs, cxt).await?;
+        IamSetServ::add_set_item(
+            &mut IamSetItemAddReq {
+                set_id: set_id.to_string(),
+                set_cate_id: add_req.set.set_cate_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: res_id.clone(),
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        Ok(res_id)
     }
 }

@@ -178,7 +178,7 @@ impl<'a> IamAccountServ {
         }
         if let Some(roles) = &add_req.roles {
             for role in roles {
-                IamRoleServ::add_rel_account(&role, &account_id, funs, cxt).await?;
+                IamRoleServ::add_rel_account(role, &account_id, funs, cxt).await?;
             }
         }
         IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), &funs, &cxt).await?;
@@ -198,6 +198,20 @@ impl<'a> IamAccountServ {
             cxt,
         )
         .await?;
+        if let Some(input_roles) = &modify_req.roles {
+            let stored_roles = Self::find_rel_roles(id, true, None, None, funs, cxt).await?;
+            let stored_roles: Vec<String> = stored_roles.into_iter().map(|r| r.rel.to_rbum_item_id).collect();
+            for input_role in input_roles {
+                if !stored_roles.contains(input_role) {
+                    IamRoleServ::add_rel_account(input_role, id, funs, cxt).await?;
+                }
+            }
+            for stored_role in stored_roles {
+                if !input_roles.contains(&stored_role) {
+                    IamRoleServ::delete_rel_account(&stored_role, id, funs, cxt).await?;
+                }
+            }
+        }
         // TODO remove cache & token
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, cxt).await?;
         Ok(())

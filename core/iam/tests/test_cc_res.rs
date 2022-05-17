@@ -52,7 +52,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         &mut IamResAddReq {
             name: TrimString("测试资源1".to_string()),
             code: TrimString("test_code1".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -70,7 +70,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         &mut IamResAddReq {
             name: TrimString("测试资源2".to_string()),
             code: TrimString("test_code2".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -189,7 +189,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_sys".to_string()),
             code: TrimString("res_sys_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -207,7 +207,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_sys_global".to_string()),
             code: TrimString("res_sys_global_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -225,7 +225,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_t1".to_string()),
             code: TrimString("res_t1_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -243,7 +243,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_t2".to_string()),
             code: TrimString("res_t2_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -261,7 +261,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_t2_tenant".to_string()),
             code: TrimString("res_t2_tenant_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -279,7 +279,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_t2_a1".to_string()),
             code: TrimString("res_t2_a1_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,
@@ -297,7 +297,7 @@ async fn test_multi_level_add<'a>(
         &mut IamResAddReq {
             name: TrimString("res_t2_a2".to_string()),
             code: TrimString("res_t2_a2_id".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             kind: IamResKind::API,
             icon: None,
             sort: None,

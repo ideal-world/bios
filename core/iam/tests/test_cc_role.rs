@@ -133,7 +133,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
         &mut IamResAddReq {
             name: TrimString("测试资源".to_string()),
             code: TrimString("test_code".to_string()),
-            method: TrimString("GET".to_string()),
+            method: Some(TrimString("GET".to_string())),
             hide: None,
             sort: None,
             icon: None,
