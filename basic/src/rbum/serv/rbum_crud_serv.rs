@@ -6,7 +6,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::{Alias, Cond, Expr, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
+use tardis::db::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 
@@ -395,33 +395,60 @@ impl RbumCrudQueryPackage for SelectStatement {
     }
 
     fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, cxt: &TardisContext) -> &mut Self {
-        let cond = if with_sub_own_paths {
+        let mut cond = Cond::any().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0));
+
+        let own_cond = if with_sub_own_paths {
             Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths).as_str())
         } else {
             Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths)
         };
-        self.cond_where(
-            Cond::all().add(
-                Cond::any()
-                    .add(cond)
-                    .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0))
-                    .add(
-                        Cond::all()
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", rbum_scope_helper::get_pre_paths(1, &cxt.own_paths)).as_str())),
-                    )
-                    .add(
-                        Cond::all()
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", rbum_scope_helper::get_pre_paths(2, &cxt.own_paths)).as_str())),
-                    )
-                    .add(
-                        Cond::all()
-                            .add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", rbum_scope_helper::get_pre_paths(3, &cxt.own_paths)).as_str())),
+        cond = cond.add(own_cond);
+
+        if let Some(p1) = rbum_scope_helper::get_pre_paths(1, &cxt.own_paths) {
+            cond = cond.add(
+                Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1)).add(
+                    Cond::any()
+                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p1.as_str())),
+                ),
+            );
+            if let Some(p2) = rbum_scope_helper::get_pre_paths(2, &cxt.own_paths) {
+                let node_len = (p2.len() - p1.len() - 1) as u8;
+                cond = cond.add(
+                    Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
+                        Cond::any()
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                            .add(
+                                Cond::all()
+                                    .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
+                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p1.as_str())),
+                            )
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p2.as_str())),
                     ),
-            ),
-        );
+                );
+                if let Some(p3) = rbum_scope_helper::get_pre_paths(3, &cxt.own_paths) {
+                    cond = cond.add(
+                        Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3)).add(
+                            Cond::any()
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                                .add(
+                                    Cond::all()
+                                        .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p1.as_str())),
+                                )
+                                .add(
+                                    Cond::all()
+                                        .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len * 2 + 1))
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p2.as_str())),
+                                )
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p3.as_str())),
+                        ),
+                    );
+                };
+            };
+        };
+
+        self.cond_where(Cond::all().add(cond));
         self
     }
 }
