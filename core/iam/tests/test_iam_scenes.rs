@@ -764,12 +764,12 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     // Find Accounts
     let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 2);
-    let account_id = accounts.records.iter().find(|i| i.name == "bios").unwrap().id.clone();
+    let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
 
     // Find Role By Account Id
     let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/roles", account_id)).await;
     assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "sys_admin");
+    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
 
     // Find Set Paths By Account Id
     let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-paths", account_id)).await;
