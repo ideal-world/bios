@@ -12,7 +12,6 @@ use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
@@ -22,52 +21,45 @@ pub struct IamCtAccountApi;
 /// Tenant Console Account API
 #[OpenApi(prefix_path = "/ct/account", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtAccountApi {
-    // /// Add Account By Tenant Id
-    // #[oai(path = "/", method = "post")]
-    // async fn add(&self, tenant_id: Query<String>, add_req: Json<IamAccountAggAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
-    //     let mut funs = iam_constants::get_tardis_inst();
-    //     funs.begin().await?;
-    //     let cxt = IamCertServ::use_tenant_ctx(cxt.0, &tenant_id.0)?;
-    //     let result = IamAccountServ::add_account_agg(&add_req.0, &funs, &cxt).await?;
-    //     funs.commit().await?;
-    //     TardisResp::ok(result)
-    // }
-    //
-    // /// Modify Account By Account Id
-    // #[oai(path = "/:id", method = "put")]
-    // async fn modify(&self, id: Path<String>, tenant_id: Query<Option<String>>, modify_req: Json<IamAccountAggModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-    //     let mut funs = iam_constants::get_tardis_inst();
-    //     funs.begin().await?;
-    //     let cxt = if let Some(tenant_id) = &tenant_id.0 {
-    //         IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
-    //     } else {
-    //         cxt.0
-    //     };
-    //     IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &cxt).await?;
-    //     funs.commit().await?;
-    //     TardisResp::ok(Void {})
-    // }
+    /// Add Account By Tenant Id
+    #[oai(path = "/", method = "post")]
+    async fn add(&self, add_req: Json<IamAccountAggAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = IamAccountServ::add_account_agg(&add_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
 
-    // /// Get Account By Account Id
-    // #[oai(path = "/:id", method = "get")]
-    // async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
-    //     let funs = iam_constants::get_tardis_inst();
-    //     let result = IamAccountServ::get_item(
-    //         &id.0,
-    //         &IamAccountFilterReq {
-    //             basic: RbumBasicFilterReq {
-    //                 own_paths: Some("".to_string()),
-    //                 with_sub_own_paths: true,
-    //                 ..Default::default()
-    //             },
-    //             ..Default::default()
-    //         },
-    //         &funs,
-    //         &cxt.0,
-    //     )
-    //     .await?;
-    //     TardisResp::ok(result)
-    // }
+    /// Modify Account By Account Id
+    #[oai(path = "/:id", method = "put")]
+    async fn modify(&self, id: Path<String>, modify_req: Json<IamAccountAggModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Get Account By Account Id
+    #[oai(path = "/:id", method = "get")]
+    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamAccountServ::get_item(
+            &id.0,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &cxt.0,
+        )
+        .await?;
+        TardisResp::ok(result)
+    }
 
     /// Find Accounts
     #[oai(path = "/", method = "get")]
@@ -112,15 +104,15 @@ impl IamCtAccountApi {
         TardisResp::ok(result)
     }
 
-    // /// Delete Account By Account Id
-    // #[oai(path = "/:id", method = "delete")]
-    // async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-    //     let mut funs = iam_constants::get_tardis_inst();
-    //     funs.begin().await?;
-    //     IamAccountServ::delete_item(&id.0, &funs, &cxt.0).await?;
-    //     funs.commit().await?;
-    //     TardisResp::ok(Void {})
-    // }
+    /// Delete Account By Account Id
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::delete_item(&id.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
 
     /// Find Rel Roles By Account Id
     #[oai(path = "/:id/roles", method = "get")]
@@ -135,7 +127,7 @@ impl IamCtAccountApi {
         let result = IamAccountServ::find_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
-    
+
     /// Find Rel Set By Account Id
     #[oai(path = "/:id/set-paths", method = "get")]
     async fn find_rel_set_paths(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {

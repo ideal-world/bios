@@ -35,7 +35,7 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Org Cates
+    /// Find Org Cates By Current Tenant
     #[oai(path = "/cates", method = "get")]
     async fn find_cates(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();

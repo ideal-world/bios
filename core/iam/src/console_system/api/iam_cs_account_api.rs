@@ -56,7 +56,6 @@ impl IamCsAccountApi {
             &id.0,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
