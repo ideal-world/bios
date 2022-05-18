@@ -54,6 +54,8 @@ impl TardisActiveModel for ActiveModel {
                 .table(Entity)
                 .col(Column::RelRbumSetId)
                 .col(Column::RelRbumSetCateCode)
+                .col(Column::RelRbumItemId)
+                .unique()
                 .to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumItemId.to_string())).table(Entity).col(Column::RelRbumItemId).to_owned(),
         ]
