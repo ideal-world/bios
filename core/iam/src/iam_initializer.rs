@@ -4,8 +4,8 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::log::info;
-use tardis::TardisFuns;
 use tardis::web::web_server::TardisWebServer;
+use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -27,7 +27,9 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::iam_ca_app_api;
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
-use crate::console_tenant::api::{iam_ct_account_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_cert_conf_api, iam_ct_org_api, iam_ct_tenant_api};
+use crate::console_tenant::api::{
+    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_cert_conf_api, iam_ct_org_api, iam_ct_role_api, iam_ct_tenant_api,
+};
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{
@@ -61,8 +63,10 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ct_cert_conf_api::IamCtCertConfApi,
                     iam_ct_org_api::IamCtOrgApi,
                     iam_ct_account_api::IamCtAccountApi,
+                    iam_ct_account_attr_api::IamCtAccountAttrApi,
                     iam_ct_app_api::IamCtAppApi,
                     iam_ct_cert_api::IamCtCertApi,
+                    iam_ct_role_api::IamCtRoleApi,
                 ),
                 (iam_ca_app_api::IamCaAppApi),
             ),
@@ -198,7 +202,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
             disabled: None,
         },
         funs,
@@ -210,7 +214,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
             disabled: None,
         },
         funs,
@@ -222,7 +226,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             name: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
-            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
             disabled: None,
         },
         funs,

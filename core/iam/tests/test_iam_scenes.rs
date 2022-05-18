@@ -36,6 +36,7 @@ pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_
     login_page(client, &tenant_admin_user_name, &tenant_admin_password, Some(tenant_id), true).await?;
     tenant_console_tenant_mgr_page(client).await?;
     tenant_console_org_mgr_page(client).await?;
+    tenant_console_account_mgr_page(client).await?;
     Ok(())
 }
 
@@ -353,8 +354,8 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
     // Find Roles by Tenant Id
     let roles: TardisPage<IamRoleSummaryResp> = client.get(&format!("/cs/role?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
     let role_id = &roles.records.iter().find(|i| i.name == "审计管理员").unwrap().id;
-    assert_eq!(roles.total_size, 4);
-    assert!(roles.records.iter().any(|i| i.name == "sys_admin"));
+    assert_eq!(roles.total_size, 2);
+    assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
     assert!(roles.records.iter().any(|i| i.name == "审计管理员"));
 
     // Add Account
@@ -653,7 +654,7 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
     // Find Cert Conf by Current Tenant
     let cert_conf: Vec<RbumCertConfDetailResp> = client.get("/ct/cert-conf").await;
     let cert_conf_user_pwd = cert_conf.iter().find(|x| x.code == IamCertKind::UserPwd.to_string()).unwrap();
-    let cert_conf_mail_vcode = cert_conf.iter().find(|x| x.code == IamCertKind::MailVCode.to_string()).unwrap();
+    let _cert_conf_mail_vcode = cert_conf.iter().find(|x| x.code == IamCertKind::MailVCode.to_string()).unwrap();
     assert_eq!(cert_conf.len(), 2);
     assert!(cert_conf_user_pwd.sk_encrypted);
     assert!(!cert_conf_user_pwd.repeatable);
@@ -702,7 +703,7 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
 pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【tenant_console_org_mgr_page】");
 
-    // Find Org Tree
+    // Find Org Cates By Current Tenant
     let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
     assert_eq!(res_tree.len(), 0);
 
@@ -800,6 +801,110 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
     let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/items?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 0);
+
+    Ok(())
+}
+
+pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【tenant_console_account_mgr_page】");
+
+    // Find Accounts
+    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 2);
+    let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
+
+    // Find Certs By Account Id
+    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
+    assert_eq!(certs.len(), 2);
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+
+    // Find Role By Account Id
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/roles", account_id)).await;
+    assert_eq!(roles.len(), 1);
+    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
+
+    // Find Set Paths By Account Id
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-paths", account_id)).await;
+    assert_eq!(roles.len(), 0);
+
+    // Find Org Cates By Current Tenant
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
+    assert_eq!(res_tree.len(), 1);
+
+    // Find Roles
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/ct/role?with_sub=true&page_number=1&page_size=10").await;
+    let role_id = &roles.records.iter().find(|i| i.name == "审计管理员").unwrap().id;
+    assert_eq!(roles.total_size, 2);
+    assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
+
+    // Find Account Attrs By Current Tenant
+    let attrs: Vec<RbumKindAttrSummaryResp> = client.get("/ct/account/attr").await;
+    assert_eq!(attrs.len(), 1);
+
+    // Add Account
+    let account_id: String = client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: None,
+                name: TrimString("用户3".to_string()),
+                cert_user_name: TrimString("user3".to_string()),
+                cert_password: TrimString("123456".to_string()),
+                cert_phone: None,
+                cert_mail: Some(TrimString("gudaoxuri@outlook.com".to_string())),
+                roles: Some(vec![role_id.to_string()]),
+                scope_level: None,
+                disabled: None,
+                icon: None,
+                exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+            },
+        )
+        .await;
+
+    // Get Account By Account Id
+    let account: IamAccountDetailResp = client.get(&format!("/ct/account/{}", account_id)).await;
+    assert_eq!(account.name, "用户3");
+    // Find Account Attr Value By Account Id
+    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/values?account_id={}", account_id)).await;
+    assert_eq!(account_attrs.len(), 1);
+    assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
+
+    // Modify Account By Account Id
+    let _: Void = client
+        .put(
+            &format!("/ct/account/{}", account_id),
+            &IamAccountAggModifyReq {
+                name: Some(TrimString("用户3_new".to_string())),
+                scope_level: None,
+                disabled: None,
+                icon: None,
+                roles: Some(vec![]),
+                exts: HashMap::from([("ext1_idx".to_string(), "".to_string())]),
+            },
+        )
+        .await;
+
+    // Get Account By Account Id
+    let account: IamAccountDetailResp = client.get(&format!("/ct/account/{}", account_id)).await;
+    assert_eq!(account.name, "用户3_new");
+
+    // Find Account Attr By Account Id
+    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/values?account_id={}", account_id)).await;
+    assert_eq!(account_attrs.len(), 1);
+    assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
+
+    // Delete Account By Account Id
+    let _ = client.delete(&format!("/ct/account/{}", account_id)).await;
+
+    // Rest Password By Account Id
+    let _: Void = client
+        .put(
+            &format!("/ct/cert/user-pwd?account_id={}", account_id),
+            &IamUserPwdCertRestReq {
+                new_sk: TrimString("123456".to_string()),
+            },
+        )
+        .await;
 
     Ok(())
 }
