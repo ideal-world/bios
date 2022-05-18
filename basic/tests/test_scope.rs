@@ -300,7 +300,7 @@ pub async fn test() -> TardisResult<()> {
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
-            name: Some("scope_test_%".to_string()),
+            name: Some("scope_test_".to_string()),
             ..Default::default()
         },
         None,
@@ -310,15 +310,15 @@ pub async fn test() -> TardisResult<()> {
     )
     .await?;
     info!(
-        "{}:{:?}",
+        "{}:{:#?}",
         s1.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 9);
+    assert_eq!(rbums.len(), 10);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
-            name: Some("scope_test_%".to_string()),
+            name: Some("scope_test_".to_string()),
             ..Default::default()
         },
         None,
@@ -328,15 +328,15 @@ pub async fn test() -> TardisResult<()> {
     )
     .await?;
     info!(
-        "{}:{:?}",
+        "{}:{:#?}",
         s2.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 10);
+    assert_eq!(rbums.len(), 13);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
-            name: Some("scope_test_%".to_string()),
+            name: Some("scope_test_".to_string()),
             ..Default::default()
         },
         None,
@@ -346,15 +346,15 @@ pub async fn test() -> TardisResult<()> {
     )
     .await?;
     info!(
-        "{}:{:?}",
+        "{}:{:#?}",
         s3.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 10);
+    assert_eq!(rbums.len(), 16);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
-            name: Some("scope_test_%".to_string()),
+            name: Some("scope_test_".to_string()),
             ..Default::default()
         },
         None,
@@ -371,12 +371,12 @@ pub async fn test() -> TardisResult<()> {
         },
     )
     .await?;
-    info!("xxx:{:?}", rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>());
-    assert_eq!(rbums.len(), 4);
+    info!("xxx:{:#?}", rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>());
+    assert_eq!(rbums.len(), 5);
 
     let rbums = RbumDomainServ::find_rbums(
         &RbumBasicFilterReq {
-            name: Some("scope_test_%".to_string()),
+            name: Some("scope_test_".to_string()),
             ..Default::default()
         },
         None,
@@ -394,11 +394,11 @@ pub async fn test() -> TardisResult<()> {
     )
     .await?;
     info!(
-        "{}x:{:?}",
+        "{}/x:{:#?}",
         s3.own_paths,
         rbums.iter().map(|r| format!("{}:{}", r.name, r.own_paths)).collect::<Vec<String>>()
     );
-    assert_eq!(rbums.len(), 10);
+    assert_eq!(rbums.len(), 16);
 
     funs.rollback().await?;
 
