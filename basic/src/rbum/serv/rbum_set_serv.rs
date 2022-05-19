@@ -128,6 +128,14 @@ impl<'a> RbumSetServ {
         let rbum_set_items = RbumSetItemServ::find_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
+                    // set cate item is only used for connection,
+                    // it will do scope checking on both ends of the connection when it is created,
+                    // so we can release the own paths restriction here to avoid query errors.
+                    // E.g.
+                    // A tenant creates a set cate with scope_level=0 and associates a item,
+                    // if the permission is not released, all app will not query the data.
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
                     desc_by_sort: Some(true),
                     ..Default::default()
                 },
