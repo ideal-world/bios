@@ -16,7 +16,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{AccountInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSelfModifyReq, IamAccountSummaryResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
-use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
+use bios_iam::basic::dto::iam_cert_dto::{IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAggAddReq, IamSetItemWithDefaultSetAddReq};
@@ -39,6 +39,7 @@ pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_
     tenant_console_account_mgr_page(client).await?;
     tenant_console_auth_mgr_page(client).await?;
     passport_console_account_mgr_page(client).await?;
+    passport_console_security_mgr_page(client).await?;
     Ok(())
 }
 
@@ -1057,6 +1058,23 @@ pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -
     let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/values").await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
+
+    Ok(())
+}
+
+pub async fn passport_console_security_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【passport_console_security_mgr_page】");
+
+    // Modify Password
+    let _: Void = client
+        .put(
+            "/cp/cert/userpwd",
+            &IamUserPwdCertModifyReq {
+                original_sk: TrimString("123456".to_string()),
+                new_sk: TrimString("654321".to_string()),
+            },
+        )
+        .await;
 
     Ok(())
 }
