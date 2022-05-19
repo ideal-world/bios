@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
@@ -97,6 +97,35 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
 }
 
 impl<'a> IamRoleServ {
+    pub async fn add_role(add_req: &mut IamRoleAggAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        let role_id = Self::add_item(&mut add_req.role, funs, cxt).await?;
+        if let Some(res_ids) = &add_req.res_ids {
+            for res_id in res_ids {
+                Self::add_rel_res(&role_id, &res_id, funs, cxt).await?;
+            }
+        }
+        Ok(role_id)
+    }
+
+    pub async fn modify_role(id: &str, modify_req: &mut IamRoleAggModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        Self::modify_item(id, &mut modify_req.role, funs, cxt).await?;
+        if let Some(input_res_ids) = &modify_req.res_ids {
+            let stored_res = Self::find_rel_res(id, None, None, funs, cxt).await?;
+            let stored_res_ids: Vec<String> = stored_res.into_iter().map(|x| x.rel.from_rbum_id).collect();
+            for input_res_id in input_res_ids {
+                if !stored_res_ids.contains(input_res_id) {
+                    Self::add_rel_res(id, input_res_id, funs, cxt).await?;
+                }
+            }
+            for stored_res_id in stored_res_ids {
+                if !input_res_ids.contains(&stored_res_id) {
+                    Self::delete_rel_res(id, &stored_res_id, funs, cxt).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub async fn add_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let basic_info = IamBasicInfoManager::get();
         let scope_level = get_scope_level_by_context(cxt)?;

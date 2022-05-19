@@ -179,10 +179,18 @@ impl<'a> IamSetServ {
     }
 
     pub fn get_default_res_code_by_cxt(cxt: &TardisContext) -> String {
-        format!("{}:{}", cxt.own_paths, "res")
+        Self::get_default_res_code_by_own_paths(&cxt.own_paths)
     }
 
     pub fn get_default_org_code_by_cxt(cxt: &TardisContext) -> String {
-        format!("{}:{}", cxt.own_paths, "org")
+        Self::get_default_org_code_by_own_paths(&cxt.own_paths)
+    }
+
+    pub fn get_default_res_code_by_own_paths(own_paths: &str) -> String {
+        format!("{}:{}", own_paths, "res")
+    }
+
+    pub fn get_default_org_code_by_own_paths(own_paths: &str) -> String {
+        format!("{}:{}", own_paths, "org")
     }
 }
