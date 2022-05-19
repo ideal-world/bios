@@ -55,15 +55,15 @@ impl IamCpCertApi {
         TardisResp::ok(rbum_certs)
     }
 
-    // /// Modify Password
-    // #[oai(path = "/cert/userpwd", method = "put")]
-    // async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
-    //     let mut funs = iam_constants::get_tardis_inst();
-    //     funs.begin().await?;
-    //     IamCpCertUserPwdServ::modify_cert_user_pwd(&modify_req.0, &funs, &cxt.0).await?;
-    //     funs.commit().await?;
-    //     TardisResp::ok(Void {})
-    // }
+    /// Modify Password
+    #[oai(path = "/cert/userpwd", method = "put")]
+    async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCpCertUserPwdServ::modify_cert_user_pwd(&modify_req.0, &funs, &cxt.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
 
     // /// Add Mail-VCode Cert
     // #[oai(path = "/cert/mailvcode", method = "put")]
