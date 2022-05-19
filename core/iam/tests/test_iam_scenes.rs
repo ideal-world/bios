@@ -13,7 +13,7 @@ use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
-use bios_iam::basic::dto::iam_account_dto::{AccountInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
+use bios_iam::basic::dto::iam_account_dto::{AccountInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSelfModifyReq, IamAccountSummaryResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
@@ -38,13 +38,14 @@ pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_
     tenant_console_org_mgr_page(client).await?;
     tenant_console_account_mgr_page(client).await?;
     tenant_console_auth_mgr_page(client).await?;
+    passport_console_account_mgr_page(client).await?;
     Ok(())
 }
 
 pub async fn login_page(client: &mut BIOSWebTestClient, user_name: &str, password: &str, tenant_id: Option<String>, set_auth: bool) -> TardisResult<AccountInfoResp> {
     info!("【login_page】");
     // Find Tenants
-    let _: Vec<IamTenantBoneResp> = client.get("/cp/tenant").await;
+    let _: Vec<IamTenantBoneResp> = client.get("/cp/tenant/all").await;
     // Login
     let account: AccountInfoResp = client
         .put(
@@ -997,6 +998,65 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     client.delete(&format!("/ct/role/{}/account/{}", role_id, account_id)).await;
     let accounts: u64 = client.get(&format!("/ct/role/{}/account/total", role_id)).await;
     assert_eq!(accounts, 0);
+
+    Ok(())
+}
+
+pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【passport_console_account_mgr_page】");
+
+    // Get Current Account
+    let account: IamAccountDetailResp = client.get("/cp/account").await;
+    assert_eq!(account.name, "测试管理员");
+
+    // Get Current Tenant
+    let tenant: IamTenantDetailResp = client.get("/cp/tenant").await;
+    assert_eq!(tenant.name, "测试公司");
+
+    // Find Certs By Current Account
+    let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
+    assert_eq!(certs.len(), 2);
+    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+
+    // Find Role By Current Account
+    let roles: Vec<RbumRelAggResp> = client.get("/cp/account/roles").await;
+    assert_eq!(roles.len(), 1);
+    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
+
+    // Find Set Paths By Current Account
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get("/cp/account/set-paths?sys_org=true").await;
+    assert_eq!(roles.len(), 0);
+
+    // Find Account Attrs By Current Tenant
+    let attrs: Vec<RbumKindAttrSummaryResp> = client.get("/cp/account/attr").await;
+    assert_eq!(attrs.len(), 1);
+
+    // Find Account Attr Value By Current Account
+    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/values").await;
+    assert_eq!(account_attrs.len(), 1);
+    assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
+
+    // Modify Account By Current Account
+    let _: Void = client
+        .put(
+            "/cp/account",
+            &IamAccountSelfModifyReq {
+                name: Some(TrimString("测试管理员1".to_string())),
+                disabled: None,
+                icon: None,
+                exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+            },
+        )
+        .await;
+
+    // Get Current Account
+    let account: IamAccountDetailResp = client.get("/cp/account").await;
+    assert_eq!(account.name, "测试管理员1");
+
+    // Find Account Attr Value By Current Account
+    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/values").await;
+    assert_eq!(account_attrs.len(), 1);
+    assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
 
     Ok(())
 }

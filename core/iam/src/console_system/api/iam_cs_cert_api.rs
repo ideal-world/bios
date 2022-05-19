@@ -46,7 +46,7 @@ impl IamCsCertApi {
     async fn find_certs(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let cxt = if let Some(tenant_id) = &tenant_id.0 {
-            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
+            IamCertServ::use_tenant_ctx(cxt.0, tenant_id)?
         } else {
             cxt.0
         };

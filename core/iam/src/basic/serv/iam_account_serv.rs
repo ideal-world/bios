@@ -219,8 +219,9 @@ impl<'a> IamAccountServ {
 
     // TODO
     pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let id = &cxt.owner;
         IamAccountServ::modify_item(
-            &cxt.owner,
+            id,
             &mut IamAccountModifyReq {
                 name: modify_req.name.clone(),
                 icon: modify_req.icon.clone(),
@@ -230,7 +231,9 @@ impl<'a> IamAccountServ {
             funs,
             cxt,
         )
-        .await
+        .await?;
+        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, cxt).await?;
+        Ok(())
     }
 
     pub async fn find_rel_roles(

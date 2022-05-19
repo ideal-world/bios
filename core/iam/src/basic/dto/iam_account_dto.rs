@@ -80,6 +80,8 @@ pub struct IamAccountSelfModifyReq {
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
+
+    pub exts: HashMap<String, String>,
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
