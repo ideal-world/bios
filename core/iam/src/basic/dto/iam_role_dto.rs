@@ -7,6 +7,12 @@ use tardis::web::poem_openapi::Object;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamRoleAggAddReq {
+    pub role: IamRoleAddReq,
+    pub res_ids: Option<Vec<String>>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAddReq {
     pub name: TrimString,
 
@@ -15,6 +21,12 @@ pub struct IamRoleAddReq {
 
     pub icon: Option<String>,
     pub sort: Option<u32>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamRoleAggModifyReq {
+    pub role: IamRoleModifyReq,
+    pub res_ids: Option<Vec<String>>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

@@ -176,9 +176,9 @@ impl<'a> IamAccountServ {
                 IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf_id, funs, cxt).await?;
             }
         }
-        if let Some(roles) = &add_req.roles {
-            for role in roles {
-                IamRoleServ::add_rel_account(role, &account_id, funs, cxt).await?;
+        if let Some(role_ids) = &add_req.role_ids {
+            for role_id in role_ids {
+                IamRoleServ::add_rel_account(role_id, &account_id, funs, cxt).await?;
             }
         }
         IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), &funs, &cxt).await?;
@@ -198,17 +198,17 @@ impl<'a> IamAccountServ {
             cxt,
         )
         .await?;
-        if let Some(input_roles) = &modify_req.roles {
+        if let Some(input_role_ids) = &modify_req.role_ids {
             let stored_roles = Self::find_rel_roles(id, true, None, None, funs, cxt).await?;
-            let stored_roles: Vec<String> = stored_roles.into_iter().map(|r| r.rel.to_rbum_item_id).collect();
-            for input_role in input_roles {
-                if !stored_roles.contains(input_role) {
-                    IamRoleServ::add_rel_account(input_role, id, funs, cxt).await?;
+            let stored_role_ids: Vec<String> = stored_roles.into_iter().map(|r| r.rel.to_rbum_item_id).collect();
+            for input_role_id in input_role_ids {
+                if !stored_role_ids.contains(input_role_id) {
+                    IamRoleServ::add_rel_account(input_role_id, id, funs, cxt).await?;
                 }
             }
-            for stored_role in stored_roles {
-                if !input_roles.contains(&stored_role) {
-                    IamRoleServ::delete_rel_account(&stored_role, id, funs, cxt).await?;
+            for stored_role_id in stored_role_ids {
+                if !input_role_ids.contains(&stored_role_id) {
+                    IamRoleServ::delete_rel_account(&stored_role_id, id, funs, cxt).await?;
                 }
             }
         }

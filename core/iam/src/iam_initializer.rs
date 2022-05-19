@@ -28,7 +28,7 @@ use crate::console_app::api::iam_ca_app_api;
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{
-    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_cert_conf_api, iam_ct_org_api, iam_ct_role_api, iam_ct_tenant_api,
+    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_cert_conf_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api,
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -67,6 +67,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ct_app_api::IamCtAppApi,
                     iam_ct_cert_api::IamCtCertApi,
                     iam_ct_role_api::IamCtRoleApi,
+                    iam_ct_res_api::IamCtResApi,
                 ),
                 (iam_ca_app_api::IamCaAppApi),
             ),
@@ -276,7 +277,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
             icon: None,
             disabled: None,
             scope_level: None,
-            roles: Some(vec![role_sys_admin_id.clone()]),
+            role_ids: Some(vec![role_sys_admin_id.clone()]),
             exts: Default::default(),
         },
         funs,

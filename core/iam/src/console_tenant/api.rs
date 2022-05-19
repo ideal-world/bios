@@ -6,3 +6,4 @@ pub mod iam_ct_cert_conf_api;
 pub mod iam_ct_org_api;
 pub mod iam_ct_role_api;
 pub mod iam_ct_tenant_api;
+pub mod iam_ct_res_api;

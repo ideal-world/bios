@@ -18,7 +18,7 @@ use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
-use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleDetailResp, IamRoleSummaryResp};
+use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAggAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantBoneResp, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
@@ -37,6 +37,7 @@ pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_
     tenant_console_tenant_mgr_page(client).await?;
     tenant_console_org_mgr_page(client).await?;
     tenant_console_account_mgr_page(client).await?;
+    tenant_console_auth_mgr_page(client).await?;
     Ok(())
 }
 
@@ -222,7 +223,7 @@ pub async fn sys_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tard
                 scope_level: None,
                 disabled: Some(true),
                 icon: None,
-                roles: None,
+                role_ids: None,
                 exts: Default::default(),
             },
         )
@@ -369,7 +370,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
                 cert_password: TrimString("123456".to_string()),
                 cert_phone: None,
                 cert_mail: Some(TrimString("i@sunisle.org".to_string())),
-                roles: Some(vec![role_id.to_string()]),
+                role_ids: Some(vec![role_id.to_string()]),
                 scope_level: None,
                 disabled: None,
                 icon: None,
@@ -404,7 +405,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
                 scope_level: None,
                 disabled: None,
                 icon: None,
-                roles: Some(vec![]),
+                role_ids: Some(vec![]),
                 exts: HashMap::from([("ext1_idx".to_string(), "".to_string())]),
             },
         )
@@ -852,7 +853,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 cert_password: TrimString("123456".to_string()),
                 cert_phone: None,
                 cert_mail: Some(TrimString("gudaoxuri@outlook.com".to_string())),
-                roles: Some(vec![role_id.to_string()]),
+                role_ids: Some(vec![role_id.to_string()]),
                 scope_level: None,
                 disabled: None,
                 icon: None,
@@ -878,7 +879,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 scope_level: None,
                 disabled: None,
                 icon: None,
-                roles: Some(vec![]),
+                role_ids: Some(vec![]),
                 exts: HashMap::from([("ext1_idx".to_string(), "".to_string())]),
             },
         )
@@ -905,6 +906,97 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
             },
         )
         .await;
+
+    Ok(())
+}
+
+pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【tenant_console_auth_mgr_page】");
+
+    // Find Accounts
+    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 3);
+    let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
+
+    // Find Roles
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/ct/role?with_sub=true&page_number=1&page_size=10").await;
+    assert_eq!(roles.total_size, 2);
+    assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
+
+    // Find Res Tree
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/cates?sys_res=true").await;
+    assert_eq!(res_tree.len(), 3);
+    let res = res_tree.iter().find(|i| i.name == "个人工作台").unwrap().rbum_set_items.get(0).unwrap();
+    assert_eq!(res.rel_rbum_item_name, "工作台页面");
+    let res_id = res.rel_rbum_item_id.clone();
+
+    // Add Role
+    let role_id: String = client
+        .post(
+            "/ct/role",
+            &IamRoleAggAddReq {
+                role: IamRoleAddReq {
+                    name: TrimString("角色5".to_string()),
+                    scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                    disabled: None,
+                    icon: None,
+                    sort: None,
+                },
+                res_ids: Some(vec![res_id.clone()]),
+            },
+        )
+        .await;
+
+    // Get Role By Role Id
+    let role: IamRoleDetailResp = client.get(&format!("/ct/role/{}", role_id)).await;
+    assert_eq!(role.name, "角色5");
+
+    // Find Res By Role Id
+    let res: Vec<RbumRelAggResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
+    assert_eq!(res.len(), 1);
+    assert_eq!(res.get(0).unwrap().rel.from_rbum_item_name, "工作台页面");
+
+    // Modify Role by Role Id
+    let _: Void = client
+        .put(
+            &format!("/ct/role/{}", role_id),
+            &IamRoleAggModifyReq {
+                role: IamRoleModifyReq {
+                    name: Some(TrimString("xx角色".to_string())),
+                    scope_level: None,
+                    disabled: None,
+                    icon: None,
+                    sort: None,
+                },
+                res_ids: Some(vec![]),
+            },
+        )
+        .await;
+
+    // Get Role By Role Id
+    let role: IamRoleDetailResp = client.get(&format!("/ct/role/{}", role_id)).await;
+    assert_eq!(role.name, "xx角色");
+
+    // Find Res By Role Id
+    let res: Vec<RbumRelAggResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
+    assert_eq!(res.len(), 0);
+
+    // Add Account To Role
+    let _: Void = client.put(&format!("/ct/role/{}/account/{}", role_id, account_id), &Void {}).await;
+
+    // Find Accounts By Role Id
+    let accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/ct/account?role_id={}&with_sub=true&page_number=1&page_size=10", role_id)).await;
+    assert_eq!(accounts.total_size, 1);
+    assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
+
+    // Count Account By Role Id
+    let accounts: u64 = client.get(&format!("/ct/role/{}/account/total", role_id)).await;
+    assert_eq!(accounts, 1);
+
+    // Delete Account By Res Id
+    client.delete(&format!("/ct/role/{}/account/{}", role_id, account_id)).await;
+    let accounts: u64 = client.get(&format!("/ct/role/{}/account/total", role_id)).await;
+    assert_eq!(accounts, 0);
 
     Ok(())
 }

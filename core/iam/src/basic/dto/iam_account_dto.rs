@@ -23,7 +23,7 @@ pub struct IamAccountAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub cert_mail: Option<TrimString>,
 
-    pub roles: Option<Vec<String>>,
+    pub role_ids: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -56,7 +56,7 @@ pub struct IamAccountAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 
-    pub roles: Option<Vec<String>>,
+    pub role_ids: Option<Vec<String>>,
 
     pub exts: HashMap<String, String>,
 }

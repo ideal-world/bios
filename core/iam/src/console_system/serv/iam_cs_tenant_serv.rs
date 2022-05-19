@@ -79,7 +79,7 @@ impl<'a> IamCsTenantServ {
                 icon: None,
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
-                roles: Some(vec![IamBasicInfoManager::get().role_tenant_admin_id]),
+                role_ids: Some(vec![IamBasicInfoManager::get().role_tenant_admin_id]),
                 exts: Default::default(),
             },
             funs,
