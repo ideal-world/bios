@@ -8,17 +8,19 @@ use tardis::web::web_resp::{TardisPage, Void};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
-use bios_iam::basic::dto::iam_account_dto::{AccountInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSelfModifyReq, IamAccountSummaryResp};
+use bios_iam::basic::dto::iam_account_dto::{
+    AccountInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountBoneResp, IamAccountDetailResp, IamAccountSelfModifyReq, IamAccountSummaryResp,
+};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::{IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
-use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleBoneResp, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAggAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantBoneResp, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
@@ -169,13 +171,16 @@ pub async fn sys_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     let role_id: String = client
         .post(
             "/cs/role",
-            &IamRoleAddReq {
-                name: TrimString("审计管理员".to_string()),
-                // 必须设置成全局作用域（1）
-                scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
-                disabled: None,
-                icon: None,
-                sort: None,
+            &IamRoleAggAddReq {
+                role: IamRoleAddReq {
+                    name: TrimString("审计管理员".to_string()),
+                    // 必须设置成全局作用域（1）
+                    scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+                    disabled: None,
+                    icon: None,
+                    sort: None,
+                },
+                res_ids: None,
             },
         )
         .await;
@@ -204,9 +209,9 @@ pub async fn sys_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     assert_eq!(accounts.total_size, 0);
 
     // Find Role By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/role", sys_admin_account_id)).await;
+    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/cs/account/{}/role", sys_admin_account_id)).await;
     assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "sys_admin");
+    assert_eq!(roles.get(0).unwrap().rel_name, "sys_admin");
 
     // Find Set Paths By Account Id
     let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/cs/account/{}/set-path", sys_admin_account_id)).await;
@@ -395,9 +400,9 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
 
     // Find Rel Roles By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
+    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "审计管理员");
+    assert_eq!(roles.get(0).unwrap().rel_name, "审计管理员");
 
     // Modify Account By Account Id
     let _: Void = client
@@ -419,7 +424,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
     assert_eq!(account.name, "用户2");
 
     // Find Rel Roles By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
+    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 0);
 
     // Find Account Attr By Account Id
@@ -635,9 +640,9 @@ pub async fn sys_console_auth_mgr_page(client: &mut BIOSWebTestClient, res_menu_
     assert_eq!(res, 1);
 
     // Find Res By Role Id
-    let res: Vec<RbumRelAggResp> = client.get(&format!("/cs/role/{}/res", sys_admin_role_id)).await;
+    let res: Vec<RbumRelBoneResp> = client.get(&format!("/cs/role/{}/res", sys_admin_role_id)).await;
     assert_eq!(res.len(), 1);
-    assert_eq!(res.get(0).unwrap().rel.from_rbum_item_name, "工作台页面");
+    assert_eq!(res.get(0).unwrap().rel_name, "工作台页面");
 
     // Delete Res By Res Id
     client.delete(&format!("/cs/role/{}/res/{}", sys_admin_role_id, res_menu_id)).await;
@@ -772,9 +777,9 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
 
     // Find Role By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
+    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
+    assert_eq!(roles.get(0).unwrap().rel_name, "tenant_admin");
 
     // Find Set Paths By Account Id
     let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
@@ -823,9 +828,9 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Find Role By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
+    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
+    assert_eq!(roles.get(0).unwrap().rel_name, "tenant_admin");
 
     // Find Set Paths By Account Id
     let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
@@ -955,9 +960,9 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert_eq!(role.name, "角色5");
 
     // Find Res By Role Id
-    let res: Vec<RbumRelAggResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
+    let res: Vec<RbumRelBoneResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
     assert_eq!(res.len(), 1);
-    assert_eq!(res.get(0).unwrap().rel.from_rbum_item_name, "工作台页面");
+    assert_eq!(res.get(0).unwrap().rel_name, "工作台页面");
 
     // Modify Role by Role Id
     let _: Void = client
@@ -981,7 +986,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert_eq!(role.name, "xx角色");
 
     // Find Res By Role Id
-    let res: Vec<RbumRelAggResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
+    let res: Vec<RbumRelBoneResp> = client.get(&format!("/ct/role/{}/res", role_id)).await;
     assert_eq!(res.len(), 0);
 
     // Add Account To Role
@@ -1021,9 +1026,9 @@ pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Find Role By Current Account
-    let roles: Vec<RbumRelAggResp> = client.get("/cp/account/role").await;
+    let roles: Vec<RbumRelBoneResp> = client.get("/cp/account/role").await;
     assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
+    assert_eq!(roles.get(0).unwrap().rel_name, "tenant_admin");
 
     // Find Set Paths By Current Account
     let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get("/cp/account/set-path?sys_org=true").await;
@@ -1084,12 +1089,12 @@ pub async fn common_console_opt(client: &mut BIOSWebTestClient) -> TardisResult<
     info!("【common_console_opt】");
 
     // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/cc/account?page_number=1&page_size=10").await;
+    let accounts: TardisPage<IamAccountBoneResp> = client.get("/cc/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 3);
     assert!(accounts.records.iter().any(|i| i.name == "测试管理员1"));
 
     // Find Roles
-    let roles: TardisPage<IamRoleSummaryResp> = client.get("/cc/role?page_number=1&page_size=10").await;
+    let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?page_number=1&page_size=10").await;
     assert_eq!(roles.total_size, 3);
     assert!(roles.records.iter().any(|i| i.name == "审计管理员"));
 

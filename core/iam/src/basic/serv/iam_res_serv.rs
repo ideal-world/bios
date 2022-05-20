@@ -8,6 +8,7 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
@@ -114,6 +115,17 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 }
 
 impl<'a> IamResServ {
+    pub async fn find_simple_rel_roles(
+        res_id: &str,
+        with_sub: bool,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_from_simple_rels(IamRelKind::IamResRole, with_sub, res_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn find_rel_roles(
         res_id: &str,
         with_sub: bool,
@@ -123,6 +135,19 @@ impl<'a> IamResServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         IamRelServ::find_from_rels(IamRelKind::IamResRole, with_sub, res_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_simple_rel_roles(
+        res_id: &str,
+        with_sub: bool,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        IamRelServ::paginate_from_simple_rels(IamRelKind::IamResRole, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_rel_roles(

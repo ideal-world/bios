@@ -10,7 +10,7 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelCheckReq;
+use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -168,6 +168,38 @@ impl<'a> IamRoleServ {
         IamRelServ::count_to_rels(IamRelKind::IamAccountRole, role_id, funs, cxt).await
     }
 
+    pub async fn find_simple_rel_accounts(
+        role_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_to_simple_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn find_rel_accounts(
+        role_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        IamRelServ::find_to_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_simple_rel_accounts(
+        role_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        IamRelServ::paginate_to_simple_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn paginate_rel_accounts(
         role_id: &str,
         page_number: u64,
@@ -213,6 +245,16 @@ impl<'a> IamRoleServ {
         IamRelServ::count_to_rels(IamRelKind::IamResRole, role_id, funs, cxt).await
     }
 
+    pub async fn find_simple_rel_res(
+        role_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_to_simple_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn find_rel_res(
         role_id: &str,
         desc_by_create: Option<bool>,
@@ -221,6 +263,18 @@ impl<'a> IamRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         IamRelServ::find_to_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_simple_rel_res(
+        role_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        IamRelServ::paginate_to_simple_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_rel_res(

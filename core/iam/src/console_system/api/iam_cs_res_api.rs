@@ -1,4 +1,4 @@
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
@@ -107,9 +107,9 @@ impl IamCsResApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
+    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_rel_roles(&id.0, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamResServ::find_simple_rel_roles(&id.0, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }

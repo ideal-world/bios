@@ -6,7 +6,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::IamAccountSummaryResp;
+use crate::basic::dto::iam_account_dto::IamAccountBoneResp;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::iam_constants;
@@ -30,7 +30,7 @@ impl IamCcAccountApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
+    ) -> TardisApiResult<TardisPage<IamAccountBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
             rel_by_from: true,
@@ -58,6 +58,19 @@ impl IamCcAccountApi {
             &cxt.0,
         )
         .await?;
-        TardisResp::ok(result)
+        TardisResp::ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result
+                .records
+                .into_iter()
+                .map(|item| IamAccountBoneResp {
+                    id: item.id,
+                    name: item.name,
+                    icon: item.icon,
+                })
+                .collect(),
+        })
     }
 }

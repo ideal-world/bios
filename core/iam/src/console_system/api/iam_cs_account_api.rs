@@ -3,7 +3,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenAp
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -128,10 +128,10 @@ impl IamCsAccountApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
+    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::find_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &cxt).await?;
+        let result = IamAccountServ::find_simple_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &cxt).await?;
         TardisResp::ok(result)
     }
 

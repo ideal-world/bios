@@ -9,6 +9,7 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_account;
@@ -236,6 +237,17 @@ impl<'a> IamAccountServ {
         Ok(())
     }
 
+    pub async fn find_simple_rel_roles(
+        account_id: &str,
+        with_sub: bool,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_from_simple_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn find_rel_roles(
         account_id: &str,
         with_sub: bool,
@@ -245,6 +257,30 @@ impl<'a> IamAccountServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         IamRelServ::find_from_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_simple_rel_roles(
+        account_id: &str,
+        with_sub: bool,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        IamRelServ::paginate_from_simple_rels(
+            IamRelKind::IamAccountRole,
+            with_sub,
+            account_id,
+            page_number,
+            page_size,
+            desc_by_create,
+            desc_by_update,
+            funs,
+            cxt,
+        )
+        .await
     }
 
     pub async fn paginate_rel_roles(

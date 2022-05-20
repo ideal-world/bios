@@ -6,7 +6,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
-use crate::basic::dto::iam_role_dto::IamRoleSummaryResp;
+use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 
@@ -27,7 +27,7 @@ impl IamCcRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
+    ) -> TardisApiResult<TardisPage<IamRoleBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
@@ -48,6 +48,19 @@ impl IamCcRoleApi {
             &cxt.0,
         )
         .await?;
-        TardisResp::ok(result)
+        TardisResp::ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result
+                .records
+                .into_iter()
+                .map(|item| IamRoleBoneResp {
+                    id: item.id,
+                    name: item.name,
+                    icon: item.icon,
+                })
+                .collect(),
+        })
     }
 }

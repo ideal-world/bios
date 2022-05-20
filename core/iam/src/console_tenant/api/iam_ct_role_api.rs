@@ -3,7 +3,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenAp
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
@@ -130,9 +130,9 @@ impl IamCtRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<RbumRelAggResp>> {
+    ) -> TardisApiResult<TardisPage<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamRoleServ::paginate_rel_accounts(&id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamRoleServ::paginate_simple_rel_accounts(&id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -172,9 +172,9 @@ impl IamCtRoleApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
-    ) -> TardisApiResult<Vec<RbumRelAggResp>> {
+    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamRoleServ::find_rel_res(&id.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamRoleServ::find_simple_rel_res(&id.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }
