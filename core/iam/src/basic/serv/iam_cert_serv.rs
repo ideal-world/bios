@@ -353,8 +353,24 @@ impl<'a> IamCertServ {
         Err(TardisError::NotFound("context not found".to_string()))
     }
 
+    pub fn try_use_tenant_ctx(cxt: TardisContext, tenant_id: Option<String>) -> TardisResult<TardisContext> {
+        if let Some(tenant_id) = &tenant_id {
+            Self::use_tenant_ctx(cxt, tenant_id)
+        } else {
+            Ok(cxt)
+        }
+    }
+
     pub fn use_tenant_ctx(cxt: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
         Self::degrade_own_paths(cxt, tenant_id.to_string().as_str())
+    }
+
+    pub fn try_use_app_ctx(cxt: TardisContext, app_id: Option<String>) -> TardisResult<TardisContext> {
+        if let Some(app_id) = &app_id {
+            Self::use_app_ctx(cxt, app_id)
+        } else {
+            Ok(cxt)
+        }
     }
 
     pub fn use_app_ctx(cxt: TardisContext, app_id: &str) -> TardisResult<TardisContext> {
@@ -362,6 +378,7 @@ impl<'a> IamCertServ {
         Self::degrade_own_paths(cxt, format!("{}/{}", own_paths, app_id).as_str())
     }
 
+    // TODO move to rbum
     fn degrade_own_paths(mut cxt: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
         if !new_own_paths.contains(&cxt.own_paths) {
             return Err(TardisError::Conflict("Not qualified for downgrade".to_string()));

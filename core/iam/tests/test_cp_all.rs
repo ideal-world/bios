@@ -149,6 +149,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Modify Password, original password error");
     assert!(IamCpCertUserPwdServ::modify_cert_user_pwd(
+        &system_admin_context.owner,
         &mut IamUserPwdCertModifyReq {
             original_sk: TrimString("12345".to_string()),
             new_sk: TrimString("123456".to_string()),
@@ -161,6 +162,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Modify Password");
     IamCpCertUserPwdServ::modify_cert_user_pwd(
+        &system_admin_context.owner,
         &mut IamUserPwdCertModifyReq {
             original_sk: TrimString(sysadmin_info.1.to_string()),
             new_sk: TrimString("123456".to_string()),

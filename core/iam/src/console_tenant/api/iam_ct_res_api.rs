@@ -12,6 +12,8 @@ use crate::iam_constants;
 pub struct IamCtResApi;
 
 /// Tenant Console Res API
+///
+/// Note: the current res only supports sys level.
 #[OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtResApi {
     /// Find Res Cates

@@ -45,7 +45,6 @@ impl IamCsTenantApi {
             &id.0,
             &IamTenantFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
@@ -76,7 +75,6 @@ impl IamCsTenantApi {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
-                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },

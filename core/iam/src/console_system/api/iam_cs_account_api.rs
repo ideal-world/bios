@@ -24,10 +24,10 @@ pub struct IamCsAccountApi;
 impl IamCsAccountApi {
     /// Add Account By Tenant Id
     #[oai(path = "/", method = "post")]
-    async fn add(&self, tenant_id: Query<String>, add_req: Json<IamAccountAggAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, tenant_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let cxt = IamCertServ::use_tenant_ctx(cxt.0, &tenant_id.0)?;
         let result = IamAccountServ::add_account_agg(&add_req.0, &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(result)
@@ -36,13 +36,9 @@ impl IamCsAccountApi {
     /// Modify Account By Account Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, tenant_id: Query<Option<String>>, modify_req: Json<IamAccountAggModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let cxt = if let Some(tenant_id) = &tenant_id.0 {
-            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
-        } else {
-            cxt.0
-        };
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
@@ -83,12 +79,8 @@ impl IamCsAccountApi {
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let cxt = if let Some(tenant_id) = &tenant_id.0 {
-            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
-        } else {
-            cxt.0
-        };
         let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountRole.to_string()),
@@ -132,39 +124,42 @@ impl IamCsAccountApi {
     async fn find_rel_roles(
         &self,
         id: Path<String>,
+        tenant_id: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelAggResp>> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::find_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamAccountServ::find_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &cxt).await?;
         TardisResp::ok(result)
     }
 
     /// Find Rel Set By Account Id
     #[oai(path = "/:id/set-paths", method = "get")]
-    async fn find_rel_set_paths(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
+    async fn find_rel_set_paths(&self, id: Path<String>, tenant_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?;
-        let result = RbumSetItemServ::find_set_paths(&id.0, &set_id, &funs, &cxt.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt).await?;
+        let result = RbumSetItemServ::find_set_paths(&id.0, &set_id, &funs, &cxt).await?;
         TardisResp::ok(result)
     }
 
     /// Count Accounts By Tenant Id
     #[oai(path = "/total", method = "get")]
-    async fn count(&self, tenant_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<u64> {
+    async fn count(&self, tenant_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<u64> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::count_items(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(tenant_id.0.clone()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
             },
             &funs,
-            &cxt.0,
+            &cxt,
         )
         .await?;
         TardisResp::ok(result)

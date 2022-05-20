@@ -19,20 +19,23 @@ pub struct IamCtCertApi;
 /// Tenant Console Cert API
 #[OpenApi(prefix_path = "/ct/cert", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtCertApi {
-    /// Rest Password
+    /// Rest Password By Account Id
     #[oai(path = "/user-pwd", method = "put")]
-    async fn rest_password(&self, account_id: Query<String>, modify_req: Json<IamUserPwdCertRestReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn rest_password(&self, account_id: Query<String>, app_id: Query<Option<String>>,
+                           modify_req: Json<IamUserPwdCertRestReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+        let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&cxt.0), &funs).await?;
-        IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &cxt.0).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&cxt), &funs).await?;
+        IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Find Certs
+    /// Find Certs By Account Id
     #[oai(path = "/", method = "get")]
-    async fn find_certs(&self, account_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
+    async fn find_certs(&self, account_id: Query<String>, app_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
+        let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let rbum_certs = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
@@ -42,7 +45,7 @@ impl IamCtCertApi {
             None,
             None,
             &funs,
-            &cxt.0,
+            &cxt,
         )
         .await?;
         TardisResp::ok(rbum_certs)

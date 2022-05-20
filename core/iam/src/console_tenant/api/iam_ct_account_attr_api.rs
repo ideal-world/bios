@@ -12,6 +12,8 @@ use crate::iam_constants;
 pub struct IamCtAccountAttrApi;
 
 /// Tenant Console Account Attr API
+/// 
+/// Note: the current account attr only supports tenant level.
 #[OpenApi(prefix_path = "/ct/account/attr", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtAccountAttrApi {
     /// Find Account Attrs By Current Tenant
@@ -22,7 +24,7 @@ impl IamCtAccountAttrApi {
         TardisResp::ok(result)
     }
 
-    /// Find Account Ext Attr Values
+    /// Find Account Ext Attr Values By Account Id
     #[oai(path = "/values", method = "get")]
     async fn find_account_attr_values(&self, account_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();

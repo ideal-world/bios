@@ -16,6 +16,8 @@ use crate::iam_constants;
 pub struct IamCsResApi;
 
 /// System Console Res API
+///
+/// Note: the current res only supports sys level.
 #[OpenApi(prefix_path = "/cs/res", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsResApi {
     /// Add Res Cate

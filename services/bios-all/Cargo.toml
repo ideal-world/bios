@@ -12,10 +12,12 @@ publish = false
 
 [profile.release]
 lto = true
+strip = true
 codegen-units = 1
+opt-level = "z"
 
 [dependencies]
-tardis = { path = "../../../tardis", features = ["web-server", "test"] }
+tardis = { path = "../../../tardis", features = ["web-server"] }
 
 serde = { version = "^1", features = ["derive"] }
 

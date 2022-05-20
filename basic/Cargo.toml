@@ -12,7 +12,9 @@ publish = false
 
 [profile.release]
 lto = true
+strip = true
 codegen-units = 1
+opt-level = "z"
 
 [lib]
 name = "bios_basic"
