@@ -63,6 +63,45 @@ pub struct RbumRelFindReq {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+pub struct RbumRelBoneResp {
+    pub tag: String,
+    pub note: String,
+    pub from_rbum_kind: RbumRelFromKind,
+    pub rel_id: String,
+    pub rel_name: String,
+    pub ext: String,
+}
+
+impl RbumRelBoneResp {
+    pub fn new(detail: RbumRelDetailResp, is_from: bool) -> RbumRelBoneResp {
+        if is_from {
+            RbumRelBoneResp {
+                tag: detail.tag,
+                note: detail.note,
+                from_rbum_kind: detail.from_rbum_kind,
+                rel_id: detail.to_rbum_item_id,
+                rel_name: detail.to_rbum_item_name,
+                ext: detail.ext,
+            }
+        } else {
+            RbumRelBoneResp {
+                rel_name: match &detail.from_rbum_kind {
+                    RbumRelFromKind::Item => detail.from_rbum_item_name,
+                    RbumRelFromKind::Set => detail.from_rbum_set_name,
+                    RbumRelFromKind::SetCate => detail.from_rbum_set_cate_name,
+                },
+                tag: detail.tag,
+                note: detail.note,
+                from_rbum_kind: detail.from_rbum_kind,
+                rel_id: detail.from_rbum_id,
+                ext: detail.ext,
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumRelDetailResp {
     pub id: String,
     pub tag: String,

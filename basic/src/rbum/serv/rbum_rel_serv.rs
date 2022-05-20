@@ -15,7 +15,7 @@ use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rb
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp};
 use crate::rbum::dto::rbum_rel_attr_dto::{RbumRelAttrAddReq, RbumRelAttrDetailResp, RbumRelAttrModifyReq};
-use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
+use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelCheckReq, RbumRelDetailResp, RbumRelFindReq, RbumRelModifyReq};
 use crate::rbum::dto::rbum_rel_env_dto::{RbumRelEnvAddReq, RbumRelEnvDetailResp, RbumRelEnvModifyReq};
 use crate::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind, RbumSetCateLevelQueryKind};
 use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQueryPackage};
@@ -233,6 +233,107 @@ impl<'a> RbumRelServ {
         Ok(rbum_rel_id)
     }
 
+    pub async fn find_from_simple_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        Self::find_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: None,
+                to_own_paths: None,
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+        .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, true)).collect())
+    }
+
+    pub async fn find_from_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        Self::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: None,
+                to_own_paths: None,
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
+    pub async fn paginate_from_simple_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        let result = Self::paginate_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: Some(from_rbum_kind.clone()),
+                from_rbum_id: Some(from_rbum_id.to_string()),
+                to_rbum_item_id: None,
+                to_own_paths: None,
+            },
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await?;
+        Ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result.records.into_iter().map(|item| RbumRelBoneResp::new(item, true)).collect(),
+        })
+    }
+
     pub async fn paginate_from_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -293,11 +394,38 @@ impl<'a> RbumRelServ {
         .await
     }
 
-    pub async fn find_from_rels(
+    pub async fn find_to_simple_rels(
         tag: &str,
-        from_rbum_kind: &RbumRelFromKind,
-        with_sub: bool,
-        from_rbum_id: &str,
+        to_rbum_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        Self::find_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: None,
+                from_rbum_id: None,
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                to_own_paths: Some(cxt.own_paths.to_string()),
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+        .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, false)).collect())
+    }
+
+    pub async fn find_to_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
@@ -306,14 +434,14 @@ impl<'a> RbumRelServ {
         Self::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    with_sub_own_paths: with_sub,
+                    ignore_scope: true,
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
-                from_rbum_kind: Some(from_rbum_kind.clone()),
-                from_rbum_id: Some(from_rbum_id.to_string()),
-                to_rbum_item_id: None,
-                to_own_paths: None,
+                from_rbum_kind: None,
+                from_rbum_id: None,
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                to_own_paths: Some(cxt.own_paths.to_string()),
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -321,6 +449,44 @@ impl<'a> RbumRelServ {
             cxt,
         )
         .await
+    }
+
+    pub async fn paginate_to_simple_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        let result = Self::paginate_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+                from_rbum_kind: None,
+                from_rbum_id: None,
+                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
+                to_own_paths: Some(cxt.own_paths.to_string()),
+            },
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await?;
+        Ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result.records.into_iter().map(|item| RbumRelBoneResp::new(item, false)).collect(),
+        })
     }
 
     pub async fn paginate_to_rels(
@@ -368,34 +534,6 @@ impl<'a> RbumRelServ {
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
                 to_own_paths: Some(cxt.own_paths.to_string()),
             },
-            funs,
-            cxt,
-        )
-        .await
-    }
-
-    pub async fn find_to_rels(
-        tag: &str,
-        to_rbum_item_id: &str,
-        desc_sort_by_create: Option<bool>,
-        desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Vec<RbumRelAggResp>> {
-        Self::find_rels(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                tag: Some(tag.to_string()),
-                from_rbum_kind: None,
-                from_rbum_id: None,
-                to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: Some(cxt.own_paths.to_string()),
-            },
-            desc_sort_by_create,
-            desc_sort_by_update,
             funs,
             cxt,
         )
