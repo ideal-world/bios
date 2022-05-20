@@ -37,7 +37,7 @@ impl IamCpAccountApi {
     }
 
     /// Find Rel Roles By Current Account
-    #[oai(path = "/roles", method = "get")]
+    #[oai(path = "/role", method = "get")]
     async fn find_rel_roles(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelAggResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::find_rel_roles(&cxt.0.owner, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
@@ -45,7 +45,7 @@ impl IamCpAccountApi {
     }
 
     /// Find Rel Set By Current Account
-    #[oai(path = "/set-paths", method = "get")]
+    #[oai(path = "/set-path", method = "get")]
     async fn find_rel_set_paths(&self, sys_org: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_org.0.unwrap_or(false) {

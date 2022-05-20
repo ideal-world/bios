@@ -38,7 +38,7 @@ impl IamCtOrgApi {
     }
 
     /// Find Org Cates By Current Tenant
-    #[oai(path = "/cates", method = "get")]
+    #[oai(path = "/cate", method = "get")]
     async fn find_cates(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?;
@@ -78,7 +78,7 @@ impl IamCtOrgApi {
     }
 
     /// Find Org Items
-    #[oai(path = "/items", method = "get")]
+    #[oai(path = "/item", method = "get")]
     async fn find_items(&self, cate_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?;

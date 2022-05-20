@@ -42,7 +42,7 @@ impl IamCsResApi {
     }
 
     /// Find Res Cates
-    #[oai(path = "/cates", method = "get")]
+    #[oai(path = "/cate", method = "get")]
     async fn find_cates(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_cxt(false, &funs, &cxt.0).await?;
@@ -100,7 +100,7 @@ impl IamCsResApi {
     }
 
     /// Find Rel Roles By Res Id
-    #[oai(path = "/:id/roles", method = "get")]
+    #[oai(path = "/:id/role", method = "get")]
     async fn find_rel_roles(
         &self,
         id: Path<String>,

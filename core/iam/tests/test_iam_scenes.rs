@@ -204,12 +204,12 @@ pub async fn sys_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     assert_eq!(accounts.total_size, 0);
 
     // Find Role By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/roles", sys_admin_account_id)).await;
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/role", sys_admin_account_id)).await;
     assert_eq!(roles.len(), 1);
     assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "sys_admin");
 
     // Find Set Paths By Account Id
-    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/cs/account/{}/set-paths", sys_admin_account_id)).await;
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/cs/account/{}/set-path", sys_admin_account_id)).await;
     assert_eq!(roles.len(), 0);
 
     // Find Certs By Account Id
@@ -390,12 +390,12 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
     let account: IamAccountDetailResp = client.get(&format!("/cs/account/{}", account_id)).await;
     assert_eq!(account.name, "用户1");
     // Find Account Attr Value By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/cs/account/attr/values?account_id={}&tenant_id={}", account_id, tenant_id)).await;
+    let account_attrs: HashMap<String, String> = client.get(&format!("/cs/account/attr/value?account_id={}&tenant_id={}", account_id, tenant_id)).await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
 
     // Find Rel Roles By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/roles", account_id)).await;
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 1);
     assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "审计管理员");
 
@@ -419,11 +419,11 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
     assert_eq!(account.name, "用户2");
 
     // Find Rel Roles By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/roles", account_id)).await;
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 0);
 
     // Find Account Attr By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/cs/account/attr/values?account_id={}&tenant_id={}", account_id, tenant_id)).await;
+    let account_attrs: HashMap<String, String> = client.get(&format!("/cs/account/attr/value?account_id={}&tenant_id={}", account_id, tenant_id)).await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
 
@@ -452,7 +452,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
     info!("【sys_console_res_mgr_page】");
 
     // Find Res Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/cates").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/cate").await;
     assert_eq!(res_tree.len(), 2);
     let cate_menus_id = res_tree.iter().find(|i| i.bus_code == "menus").map(|i| i.id.clone()).unwrap();
     let cate_apis_id = res_tree.iter().find(|i| i.bus_code == "apis").map(|i| i.id.clone()).unwrap();
@@ -624,7 +624,7 @@ pub async fn sys_console_auth_mgr_page(client: &mut BIOSWebTestClient, res_menu_
     assert_eq!(res, 0);
 
     // Find Res Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/cates").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/cate").await;
     assert_eq!(res_tree.len(), 3);
 
     // Add Res To Role
@@ -708,7 +708,7 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     info!("【tenant_console_org_mgr_page】");
 
     // Find Org Cates By Current Tenant
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cate").await;
     assert_eq!(res_tree.len(), 0);
 
     // Add Org Cate
@@ -758,7 +758,7 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
             },
         )
         .await;
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cate").await;
     assert_eq!(res_tree.len(), 1);
     assert_eq!(res_tree.get(0).unwrap().name, "综合服务中心");
 
@@ -772,12 +772,12 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
 
     // Find Role By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/roles", account_id)).await;
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 1);
     assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
 
     // Find Set Paths By Account Id
-    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-paths", account_id)).await;
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
     assert_eq!(roles.len(), 0);
 
     // Find Certs By Account Id
@@ -798,12 +798,12 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
         .await;
 
     // Find Org Items
-    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/items?cate_id={}", cate_node1_id)).await;
+    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 1);
 
     // Delete Org Item By Org Item Id
     client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
-    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/items?cate_id={}", cate_node1_id)).await;
+    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 0);
 
     Ok(())
@@ -823,16 +823,16 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Find Role By Account Id
-    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/roles", account_id)).await;
+    let roles: Vec<RbumRelAggResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
     assert_eq!(roles.len(), 1);
     assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
 
     // Find Set Paths By Account Id
-    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-paths", account_id)).await;
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
     assert_eq!(roles.len(), 0);
 
     // Find Org Cates By Current Tenant
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cates").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/cate").await;
     assert_eq!(res_tree.len(), 1);
 
     // Find Roles
@@ -869,7 +869,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     let account: IamAccountDetailResp = client.get(&format!("/ct/account/{}", account_id)).await;
     assert_eq!(account.name, "用户3");
     // Find Account Attr Value By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/values?account_id={}", account_id)).await;
+    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/value?account_id={}", account_id)).await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
 
@@ -893,7 +893,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     assert_eq!(account.name, "用户3_new");
 
     // Find Account Attr By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/values?account_id={}", account_id)).await;
+    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/value?account_id={}", account_id)).await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
 
@@ -927,7 +927,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
 
     // Find Res Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/cates?sys_res=true").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/cate?sys_res=true").await;
     assert_eq!(res_tree.len(), 3);
     let res = res_tree.iter().find(|i| i.name == "个人工作台").unwrap().rbum_set_items.get(0).unwrap();
     assert_eq!(res.rel_rbum_item_name, "工作台页面");
@@ -1021,12 +1021,12 @@ pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Find Role By Current Account
-    let roles: Vec<RbumRelAggResp> = client.get("/cp/account/roles").await;
+    let roles: Vec<RbumRelAggResp> = client.get("/cp/account/role").await;
     assert_eq!(roles.len(), 1);
     assert_eq!(roles.get(0).unwrap().rel.to_rbum_item_name, "tenant_admin");
 
     // Find Set Paths By Current Account
-    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get("/cp/account/set-paths?sys_org=true").await;
+    let roles: Vec<Vec<Vec<RbumSetPathResp>>> = client.get("/cp/account/set-path?sys_org=true").await;
     assert_eq!(roles.len(), 0);
 
     // Find Account Attrs By Current Tenant
@@ -1034,7 +1034,7 @@ pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -
     assert_eq!(attrs.len(), 1);
 
     // Find Account Attr Value By Current Account
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/values").await;
+    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
 
@@ -1056,7 +1056,7 @@ pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -
     assert_eq!(account.name, "测试管理员1");
 
     // Find Account Attr Value By Current Account
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/values").await;
+    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
     assert_eq!(account_attrs.len(), 1);
     assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
 

@@ -120,7 +120,7 @@ impl IamCtAccountApi {
     }
 
     /// Find Rel Roles By Account Id
-    #[oai(path = "/:id/roles", method = "get")]
+    #[oai(path = "/:id/role", method = "get")]
     async fn find_rel_roles(
         &self,
         id: Path<String>,
@@ -136,7 +136,7 @@ impl IamCtAccountApi {
     }
 
     /// Find Rel Set By Account Id
-    #[oai(path = "/:id/set-paths", method = "get")]
+    #[oai(path = "/:id/set-path", method = "get")]
     async fn find_rel_set_paths(&self, id: Path<String>, app_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
         let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let funs = iam_constants::get_tardis_inst();
