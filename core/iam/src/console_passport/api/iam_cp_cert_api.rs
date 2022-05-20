@@ -37,7 +37,7 @@ impl IamCpCertApi {
         TardisResp::ok(resp)
     }
 
-    /// Find Certs
+    /// Find Certs By Current Account
     #[oai(path = "/cert", method = "get")]
     async fn find_certs(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
@@ -55,12 +55,12 @@ impl IamCpCertApi {
         TardisResp::ok(rbum_certs)
     }
 
-    /// Modify Password
+    /// Modify Password By Current Account
     #[oai(path = "/cert/userpwd", method = "put")]
     async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCpCertUserPwdServ::modify_cert_user_pwd(&modify_req.0, &funs, &cxt.0).await?;
+        IamCpCertUserPwdServ::modify_cert_user_pwd(&cxt.0.owner, &modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

@@ -93,6 +93,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
 
     info!("【test_cc_cert】 : test_single_level : Modify Cert");
     assert!(IamCpCertUserPwdServ::modify_cert_user_pwd(
+        &another_context.owner,
         &IamUserPwdCertModifyReq {
             original_sk: TrimString("aaa".to_string()),
             new_sk: TrimString("123456789".to_string())
@@ -103,6 +104,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await
     .is_err());
     assert!(IamCpCertUserPwdServ::modify_cert_user_pwd(
+        &context.owner,
         &IamUserPwdCertModifyReq {
             original_sk: TrimString("aaa".to_string()),
             new_sk: TrimString("123456789".to_string())
@@ -114,6 +116,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .is_err());
 
     IamCpCertUserPwdServ::modify_cert_user_pwd(
+        &context.owner,
         &IamUserPwdCertModifyReq {
             original_sk: TrimString("sssssssssss".to_string()),
             new_sk: TrimString("123456789".to_string()),

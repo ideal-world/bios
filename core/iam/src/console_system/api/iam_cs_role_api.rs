@@ -59,12 +59,8 @@ impl IamCsRoleApi {
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
+        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let cxt = if let Some(tenant_id) = &tenant_id.0 {
-            IamCertServ::use_tenant_ctx(cxt.0, &tenant_id)?
-        } else {
-            cxt.0
-        };
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {

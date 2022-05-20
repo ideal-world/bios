@@ -42,7 +42,7 @@ impl IamCpAccountApi {
     #[oai(path = "/roles", method = "get")]
     async fn find_rel_roles(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelAggResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamRelServ::find_from_rels(IamRelKind::IamAccountRole, false, &cxt.0.owner, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamAccountServ::find_rel_roles(&cxt.0.owner, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

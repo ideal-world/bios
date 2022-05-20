@@ -15,9 +15,11 @@ use crate::iam_constants;
 pub struct IamCtCertConfApi;
 
 /// Tenant Console Cert Conf API
+///
+/// Note: the current cert conf only supports sys & tenant levels.
 #[OpenApi(prefix_path = "/ct/cert-conf", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtCertConfApi {
-    /// Find Cert Conf by Current Tenant
+    /// Find Cert Conf By Current Tenant
     #[oai(path = "/", method = "get")]
     async fn find_cert_conf(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertConfDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
@@ -26,7 +28,7 @@ impl IamCtCertConfApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Cert Conf By UserPwd Kind
+    /// Modify UserPwd Kind Cert Conf By Cert Conf Id
     #[oai(path = "/:id/user-pwd", method = "put")]
     async fn modify_cert_conf_user_pwd(&self, id: Path<String>, modify_req: Json<IamUserPwdCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -36,7 +38,7 @@ impl IamCtCertConfApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Cert Conf By MailVCode Kind
+    /// Add MailVCode Kind Cert Conf By Current Tenant
     #[oai(path = "/mail-vcode", method = "post")]
     async fn add_cert_conf_mail_vcode(&self, add_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -46,7 +48,7 @@ impl IamCtCertConfApi {
         TardisResp::ok(Void {})
     }
 
-    /// Modify Cert Conf By MailVCode Kind
+    /// Modify MailVCode Kind Cert Conf By Cert Conf Id
     #[oai(path = "/:id/mail-vcode", method = "put")]
     async fn modify_cert_conf_mail_vcode(&self, id: Path<String>, modify_req: Json<IamMailVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -56,7 +58,7 @@ impl IamCtCertConfApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Cert Conf By PhoneVCode Kind
+    /// Add PhoneVCode Kind Cert Conf By Current Tenant
     #[oai(path = "/phone-vcode", method = "post")]
     async fn add_cert_conf_phone_vcode(&self, add_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -66,7 +68,7 @@ impl IamCtCertConfApi {
         TardisResp::ok(Void {})
     }
 
-    /// Modify Cert Conf By PhoneVCode Kind
+    /// Modify PhoneVCode Kind Cert Conf By Cert Conf Id
     #[oai(path = "/:id/phone-vcode", method = "put")]
     async fn modify_cert_conf_phone_vcode(&self, id: Path<String>, modify_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

@@ -14,9 +14,9 @@ use crate::iam_enumeration::IamCertKind;
 pub struct IamCpCertUserPwdServ;
 
 impl<'a> IamCpCertUserPwdServ {
-    pub async fn modify_cert_user_pwd(modify_req: &IamUserPwdCertModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamUserPwdCertModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(cxt), funs).await?;
-        IamCertUserPwdServ::modify_cert(modify_req, &cxt.owner, &rbum_cert_conf_id, funs, cxt).await
+        IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, cxt).await
         // TODO remove cache
     }
 

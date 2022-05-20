@@ -12,9 +12,11 @@ use crate::iam_constants;
 pub struct IamCtOrgApi;
 
 /// Tenant Console Org API
+///
+/// Note: the current org only supports tenant level.
 #[OpenApi(prefix_path = "/ct/org", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtOrgApi {
-    /// Add Org Cate
+    /// Add Org Cate By Current Tenant
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();

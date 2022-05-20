@@ -22,7 +22,7 @@ impl IamCpAccountAttrApi {
         TardisResp::ok(result)
     }
 
-    /// Find Account Ext Attr Values
+    /// Find Account Ext Attr Values By Current Account
     #[oai(path = "/values", method = "get")]
     async fn find_account_attr_values(&self, cxt: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
