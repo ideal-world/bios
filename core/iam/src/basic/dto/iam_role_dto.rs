@@ -41,6 +41,13 @@ pub struct IamRoleModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+pub struct IamRoleBoneResp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+}
+
+#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamRoleSummaryResp {
     pub id: String,
     pub name: String,

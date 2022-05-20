@@ -2,7 +2,7 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
@@ -38,9 +38,9 @@ impl IamCpAccountApi {
 
     /// Find Rel Roles By Current Account
     #[oai(path = "/role", method = "get")]
-    async fn find_rel_roles(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelAggResp>> {
+    async fn find_rel_roles(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::find_rel_roles(&cxt.0.owner, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamAccountServ::find_simple_rel_roles(&cxt.0.owner, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

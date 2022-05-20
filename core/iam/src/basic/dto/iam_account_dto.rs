@@ -85,6 +85,13 @@ pub struct IamAccountSelfModifyReq {
 }
 
 #[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+pub struct IamAccountBoneResp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+}
+
+#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamAccountSummaryResp {
     pub id: String,
     pub name: String,

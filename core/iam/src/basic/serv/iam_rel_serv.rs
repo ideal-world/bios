@@ -3,7 +3,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelEnvAggAddReq};
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
+use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp};
 use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
@@ -52,6 +52,28 @@ impl<'a> IamRelServ {
         RbumRelServ::count_from_rels(&rel_kind.to_string(), &RbumRelFromKind::Item, with_sub_own_paths, from_iam_item_id, funs, cxt).await
     }
 
+    pub async fn find_from_simple_rels(
+        rel_kind: IamRelKind,
+        with_sub: bool,
+        from_iam_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        RbumRelServ::find_from_simple_rels(
+            &rel_kind.to_string(),
+            &RbumRelFromKind::Item,
+            with_sub,
+            from_iam_item_id,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
     pub async fn find_from_rels(
         rel_kind: IamRelKind,
         with_sub: bool,
@@ -71,7 +93,33 @@ impl<'a> IamRelServ {
             funs,
             cxt,
         )
-        .await
+            .await
+    }
+
+    pub async fn paginate_from_simple_rels(
+        rel_kind: IamRelKind,
+        with_sub: bool,
+        from_iam_item_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        RbumRelServ::paginate_from_simple_rels(
+            &rel_kind.to_string(),
+            &RbumRelFromKind::Item,
+            with_sub,
+            from_iam_item_id,
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+            .await
     }
 
     pub async fn paginate_from_rels(
@@ -104,6 +152,17 @@ impl<'a> IamRelServ {
         RbumRelServ::count_to_rels(&rel_kind.to_string(), to_iam_item_id, funs, cxt).await
     }
 
+    pub async fn find_to_simple_rels(
+        rel_kind: IamRelKind,
+        to_iam_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        RbumRelServ::find_to_simple_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
     pub async fn find_to_rels(
         rel_kind: IamRelKind,
         to_iam_item_id: &str,
@@ -113,6 +172,29 @@ impl<'a> IamRelServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         RbumRelServ::find_to_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_to_simple_rels(
+        rel_kind: IamRelKind,
+        to_iam_item_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        RbumRelServ::paginate_to_simple_rels(
+            &rel_kind.to_string(),
+            to_iam_item_id,
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+            .await
     }
 
     pub async fn paginate_to_rels(
