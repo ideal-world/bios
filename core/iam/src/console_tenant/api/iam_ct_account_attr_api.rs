@@ -25,7 +25,7 @@ impl IamCtAccountAttrApi {
     }
 
     /// Find Account Ext Attr Values By Account Id
-    #[oai(path = "/values", method = "get")]
+    #[oai(path = "/value", method = "get")]
     async fn find_account_attr_values(&self, account_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attr_values(&account_id.0, &funs, &cxt.0).await?;

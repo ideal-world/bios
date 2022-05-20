@@ -17,7 +17,7 @@ pub struct IamCtResApi;
 #[OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtResApi {
     /// Find Res Cates
-    #[oai(path = "/cates", method = "get")]
+    #[oai(path = "/cate", method = "get")]
     async fn find_cates(&self, sys_res: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_res.0.unwrap_or(false) {
@@ -30,7 +30,7 @@ impl IamCtResApi {
     }
 
     /// Find Rel Roles By Res Id
-    #[oai(path = "/:id/roles", method = "get")]
+    #[oai(path = "/:id/role", method = "get")]
     async fn find_rel_roles(
         &self,
         id: Path<String>,
