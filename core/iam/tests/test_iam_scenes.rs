@@ -40,6 +40,7 @@ pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_
     tenant_console_auth_mgr_page(client).await?;
     passport_console_account_mgr_page(client).await?;
     passport_console_security_mgr_page(client).await?;
+    common_console_opt(client).await?;
     Ok(())
 }
 
@@ -1075,6 +1076,22 @@ pub async fn passport_console_security_mgr_page(client: &mut BIOSWebTestClient) 
             },
         )
         .await;
+
+    Ok(())
+}
+
+pub async fn common_console_opt(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【common_console_opt】");
+
+    // Find Accounts
+    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/cc/account?page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 3);
+    assert!(accounts.records.iter().any(|i| i.name == "测试管理员1"));
+
+    // Find Roles
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/cc/role?page_number=1&page_size=10").await;
+    assert_eq!(roles.total_size, 3);
+    assert!(roles.records.iter().any(|i| i.name == "审计管理员"));
 
     Ok(())
 }
