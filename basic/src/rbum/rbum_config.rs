@@ -16,6 +16,10 @@ pub struct RbumConfig {
     // own_paths:ak -> vcode
     pub cache_key_cert_vcode_info_: String,
     pub cache_key_cert_vcode_expire_sec: usize,
+    pub cache_key_cert_code_: String,
+    pub cache_key_cert_code_expire_sec: usize,
+    pub cache_key_set_code_: String,
+    pub cache_key_set_code_expire_sec: usize,
 }
 
 impl Default for RbumConfig {
@@ -26,6 +30,10 @@ impl Default for RbumConfig {
             mq_header_name_operator: "OP".to_string(),
             cache_key_cert_vcode_info_: "rbum:cache:cert:vcode:".to_string(),
             cache_key_cert_vcode_expire_sec: 2,
+            cache_key_cert_code_: "rbum:cache:cert:code:".to_string(),
+            cache_key_cert_code_expire_sec: 60 * 60 * 24,
+            cache_key_set_code_: "rbum:cache:set:code:".to_string(),
+            cache_key_set_code_expire_sec: 60 * 60 * 24,
         }
     }
 }
