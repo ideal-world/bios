@@ -9,7 +9,6 @@ use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_tenant_dto::IamTenantAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
@@ -20,9 +19,7 @@ use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 pub struct IamCsTenantServ;
 
 impl<'a> IamCsTenantServ {
-    pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>, system_cxt: &TardisContext) -> TardisResult<(String, String)> {
-        IamRoleServ::need_sys_admin(funs, system_cxt).await?;
-
+    pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>) -> TardisResult<(String, String)> {
         let tenant_admin_id = TardisFuns::field.nanoid();
         let tenant_id = IamTenantServ::get_new_id();
         let tenant_cxt = TardisContext {

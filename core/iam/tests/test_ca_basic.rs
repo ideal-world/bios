@@ -6,9 +6,9 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 
-use bios_iam::basic::dto::iam_account_dto::{ IamAccountAggAddReq};
+use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
-use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq};
+use bios_iam::basic::dto::iam_cert_dto::IamContextFetchReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
@@ -19,7 +19,7 @@ use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_constants;
 
-pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, TardisContext, TardisContext)> {
+pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, TardisContext, TardisContext)> {
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
@@ -47,7 +47,6 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
             disabled: None,
         },
         &funs,
-        context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;

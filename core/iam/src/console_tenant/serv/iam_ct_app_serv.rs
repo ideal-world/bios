@@ -7,7 +7,6 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_app_dto::IamAppAddReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use crate::iam_config::IamBasicInfoManager;
@@ -19,8 +18,6 @@ pub struct IamCtAppServ;
 
 impl<'a> IamCtAppServ {
     pub async fn add_app(add_req: &mut IamCtAppAddReq, funs: &TardisFunsInst<'a>, tenant_cxt: &TardisContext) -> TardisResult<String> {
-        IamRoleServ::need_tenant_admin(funs, tenant_cxt).await?;
-
         let app_id = IamAppServ::get_new_id();
         let app_cxt = TardisContext {
             own_paths: format!("{}/{}", tenant_cxt.own_paths, app_id),
@@ -62,5 +59,4 @@ impl<'a> IamCtAppServ {
 
         Ok(app_id)
     }
-
 }

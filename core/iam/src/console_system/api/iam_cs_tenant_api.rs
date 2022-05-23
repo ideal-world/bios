@@ -19,10 +19,10 @@ pub struct IamCsTenantApi;
 impl IamCsTenantApi {
     /// Add Tenant
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, _cxt: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCsTenantServ::add_tenant(&mut add_req.0, &funs, &cxt.0).await?.0;
+        let result = IamCsTenantServ::add_tenant(&mut add_req.0, &funs).await?.0;
         funs.commit().await?;
         TardisResp::ok(result)
     }

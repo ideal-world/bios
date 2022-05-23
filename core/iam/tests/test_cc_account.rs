@@ -102,25 +102,17 @@ async fn test_single_level(context: &TardisContext, account_name: &str, role_nam
     assert!(accounts.records.iter().any(|i| i.name == "星航"));
 
     info!("【test_cc_account】 : test_single_level : Find Rel Roles By Account Id");
-    let account_roles = IamAccountServ::paginate_rel_roles(&account_id, false, 1, 10, None, None, &funs, another_context).await?;
-    assert_eq!(account_roles.page_number, 1);
-    assert_eq!(account_roles.page_size, 10);
-    assert_eq!(account_roles.total_size, 0);
-    let account_roles = IamAccountServ::paginate_rel_roles(&context.owner, false, 1, 10, None, None, &funs, context).await?;
-    assert_eq!(account_roles.page_number, 1);
-    assert_eq!(account_roles.page_size, 10);
-    assert_eq!(account_roles.total_size, 1);
-    assert_eq!(account_roles.records.len(), 1);
-    assert_eq!(account_roles.records.get(0).unwrap().rel.from_rbum_item_name, account_name);
-    assert_eq!(account_roles.records.get(0).unwrap().rel.to_rbum_item_name, role_name);
+    let account_roles = IamAccountServ::find_simple_rel_roles(&account_id, false, None, None, &funs, another_context).await?;
+    assert_eq!(account_roles.len(), 0);
+    let account_roles = IamAccountServ::find_simple_rel_roles(&context.owner, false, None, None, &funs, context).await?;
+    assert_eq!(account_roles.len(), 1);
+    assert_eq!(account_roles.get(0).unwrap().rel_name, role_name);
 
     info!("【test_cc_account】 : test_single_level : Add Rel Account By Id");
     assert!(IamRoleServ::add_rel_account(&role_id, &account_id, &funs, another_context).await.is_err());
     IamRoleServ::add_rel_account(&role_id, &account_id, &funs, context).await?;
-    let account_roles = IamAccountServ::paginate_rel_roles(&account_id, false, 1, 10, None, None, &funs, context).await?;
-    assert_eq!(account_roles.page_number, 1);
-    assert_eq!(account_roles.page_size, 10);
-    assert_eq!(account_roles.total_size, 1);
+    let account_roles = IamAccountServ::find_simple_rel_roles(&account_id, false, None, None, &funs, context).await?;
+    assert_eq!(account_roles.len(), 1);
 
     info!("【test_cc_account】 : test_single_level : Delete Account By Id");
     assert!(IamAccountServ::delete_item_with_all_rels("11111", &funs, context).await.is_err());

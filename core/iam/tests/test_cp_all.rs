@@ -50,7 +50,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             disabled: None,
         },
         &funs,
-        system_admin_context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
@@ -253,7 +252,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             name: Some(TrimString("测试系统管理员".to_string())),
             icon: Some("/static/images/avatar.png".to_string()),
             disabled: Some(true),
-            exts: Default::default()
+            exts: Default::default(),
         },
         &funs,
         &system_admin_context,
@@ -267,13 +266,9 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(sysadmin.disabled);
 
     info!("【test_cp_all】 : Find Rel Roles By Current Account");
-    let sysadmin_roles = IamAccountServ::paginate_rel_roles(&system_admin_context.owner, false, 1, 10, None, None, &funs, &system_admin_context).await?;
-    assert_eq!(sysadmin_roles.page_number, 1);
-    assert_eq!(sysadmin_roles.page_size, 10);
-    assert_eq!(sysadmin_roles.total_size, 1);
-    assert_eq!(sysadmin_roles.records.len(), 1);
-    assert_eq!(sysadmin_roles.records.get(0).unwrap().rel.from_rbum_item_name, "测试系统管理员");
-    assert_eq!(sysadmin_roles.records.get(0).unwrap().rel.to_rbum_item_name, "sys_admin");
+    let sysadmin_roles = IamAccountServ::find_simple_rel_roles(&system_admin_context.owner, false, None, None, &funs, &system_admin_context).await?;
+    assert_eq!(sysadmin_roles.len(), 1);
+    assert_eq!(sysadmin_roles.get(0).unwrap().rel_name, "sys_admin");
 
     funs.rollback().await?;
 
