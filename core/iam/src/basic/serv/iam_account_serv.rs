@@ -180,7 +180,7 @@ impl<'a> IamAccountServ {
                 IamRoleServ::add_rel_account(role_id, &account_id, funs, cxt).await?;
             }
         }
-        IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), &funs, &cxt).await?;
+        IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, cxt).await?;
         Ok(account_id)
     }
 
@@ -245,7 +245,6 @@ impl<'a> IamAccountServ {
     }
 
     pub async fn delete_cache(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        // TODO change cert role group
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         for (token, _) in tokens.iter() {
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;

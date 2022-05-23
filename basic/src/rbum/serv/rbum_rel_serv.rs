@@ -634,12 +634,13 @@ impl<'a> RbumRelServ {
         Ok(ids)
     }
 
+    // TODO cache
     pub async fn check_rel(check_req: &mut RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
         if Self::do_check_rel(check_req, funs, cxt).await? {
             return Ok(true);
         }
         let rel_rbum_set_cate_ids = if check_req.from_rbum_kind == RbumRelFromKind::Item {
-            // check set category
+            // Check set category
             RbumSetItemServ::find_rbums(
                 &RbumSetItemFilterReq {
                     basic: Default::default(),
