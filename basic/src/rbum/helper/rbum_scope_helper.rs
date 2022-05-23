@@ -29,6 +29,7 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -45,9 +46,7 @@ pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> Option<String> {
             // unmatched characters
             None
         }
-        _ => {
-            Some(format!("{}%", split_items.iter().take(scope_level as usize).join("/")))
-        }
+        _ => Some(format!("{}%", split_items.iter().take(scope_level as usize).join("/"))),
     }
 }
 
@@ -77,4 +76,12 @@ pub fn get_max_level_id_by_context(cxt: &TardisContext) -> Option<String> {
     }
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
     own_paths.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string())
+}
+
+pub fn degrade_own_paths(mut cxt: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
+    if !new_own_paths.contains(&cxt.own_paths) {
+        return Err(TardisError::Conflict("Not qualified for downgrade".to_string()));
+    }
+    cxt.own_paths = new_own_paths.to_string();
+    Ok(cxt)
 }

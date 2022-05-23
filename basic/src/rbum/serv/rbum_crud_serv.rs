@@ -293,6 +293,22 @@ where
         })
     }
 
+    async fn find_one_rbum(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Option<SummaryResp>> {
+       let result = Self::find_rbums(filter,desc_sort_by_create,desc_sort_by_update,funs,cxt)
+           .await?;
+        if result.len()>1{
+            Err(TardisError::Conflict("Multiple records found".to_string()))
+        }else {
+            Ok(result.into_iter().nth(0))
+        }
+    }
+
     async fn find_rbums(
         filter: &FilterReq,
         desc_sort_by_create: Option<bool>,
@@ -308,6 +324,22 @@ where
             query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
         Ok(funs.db().find_dtos(&query).await?)
+    }
+
+    async fn find_one_detail_rbum(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Option<DetailResp>> {
+        let result = Self::find_detail_rbums(filter,desc_sort_by_create,desc_sort_by_update,funs,
+                                             cxt).await?;
+        if result.len()>1{
+            Err(TardisError::Conflict("Multiple records found".to_string()))
+        }else{
+            Ok(result.into_iter().nth(0))
+        }
     }
 
     async fn find_detail_rbums(
