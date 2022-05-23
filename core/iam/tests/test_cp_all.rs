@@ -253,6 +253,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             name: Some(TrimString("测试系统管理员".to_string())),
             icon: Some("/static/images/avatar.png".to_string()),
             disabled: Some(true),
+            exts: Default::default()
         },
         &funs,
         &system_admin_context,

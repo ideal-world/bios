@@ -113,7 +113,7 @@ impl<'a> IamCertUserPwdServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
-        let certs = RbumCertServ::find_rbums(
+        let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_id: Some(rel_iam_item_id.to_string()),
@@ -126,10 +126,7 @@ impl<'a> IamCertUserPwdServ {
             cxt,
         )
         .await?;
-        if certs.len() > 1 {
-            return Err(TardisError::NotFound(format!("there are multiple credentials of kind {:?}", IamCertKind::UserPwd)));
-        }
-        if let Some(cert) = certs.get(0) {
+        if let Some(cert) = cert {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
@@ -143,7 +140,7 @@ impl<'a> IamCertUserPwdServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
-        let certs = RbumCertServ::find_rbums(
+        let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_id: Some(rel_iam_item_id.to_string()),
@@ -156,10 +153,7 @@ impl<'a> IamCertUserPwdServ {
             cxt,
         )
         .await?;
-        if certs.len() > 1 {
-            return Err(TardisError::NotFound(format!("there are multiple credentials of kind {:?}", IamCertKind::UserPwd)));
-        }
-        if let Some(cert) = certs.get(0) {
+        if let Some(cert) = cert {
             // TODO remove cache & token
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
         } else {
