@@ -249,6 +249,29 @@ impl<'a> RbumSetServ {
         }
         funs.db().find_dtos(&query).await
     }
+
+    pub async fn get_rbum_set_id_by_code(code: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<String>> {
+        let key = &format!("{}{}", RbumConfigManager::get(funs.module_code())?.cache_key_set_code_, code);
+        if let Some(cached_id) = funs.cache().get(key).await? {
+            Ok(Some(cached_id))
+        } else {
+            if let Some(rbum_set) = Self::find_one_rbum(
+                &RbumBasicFilterReq {
+                    code: Some(code.to_string()),
+                    ..Default::default()
+                },
+                funs,
+                cxt,
+            )
+            .await?
+            {
+                funs.cache().set_ex(key, &rbum_set.id, RbumConfigManager::get(funs.module_code())?.cache_key_set_code_expire_sec).await?;
+                Ok(Some(rbum_set.id))
+            } else {
+                Ok(None)
+            }
+        }
+    }
 }
 
 #[async_trait]
