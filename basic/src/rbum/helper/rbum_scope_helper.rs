@@ -27,6 +27,7 @@
 //!
 use std::cmp::Ordering;
 
+use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
@@ -38,7 +39,7 @@ pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> Option<String> {
     let own_paths = own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
     if scope_level == 0 {
-        return Some("%".to_string());
+        return Some("".to_string());
     }
     let split_items = if own_paths.is_empty() { vec![] } else { own_paths.split('/').collect::<Vec<_>>() };
     match split_items.len().cmp(&(scope_level as usize)) {
@@ -46,7 +47,7 @@ pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> Option<String> {
             // unmatched characters
             None
         }
-        _ => Some(format!("{}%", split_items.iter().take(scope_level as usize).join("/"))),
+        _ => Some(format!("{}", split_items.iter().take(scope_level as usize).join("/"))),
     }
 }
 
@@ -84,4 +85,36 @@ pub fn degrade_own_paths(mut cxt: TardisContext, new_own_paths: &str) -> TardisR
     }
     cxt.own_paths = new_own_paths.to_string();
     Ok(cxt)
+}
+
+pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i8>, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> bool {
+    let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &cxt.own_paths };
+    if record_own_paths == filter_own_paths || filter.with_sub_own_paths && record_own_paths.contains(filter_own_paths) {
+        return true;
+    }
+    if filter.ignore_scope {
+        return false;
+    }
+    if let Some(record_scope_level) = record_scope_level {
+        if let Some(p1) = get_pre_paths(1, filter_own_paths) {
+            if record_scope_level == 1 {
+                return record_own_paths.is_empty() || record_own_paths.contains(&p1);
+            }
+            if let Some(p2) = get_pre_paths(2, filter_own_paths) {
+                let node_len = p2.len() - p1.len() - 1;
+                if record_scope_level == 2 {
+                    return record_own_paths.is_empty() || record_own_paths.contains(&p2) || (record_own_paths.len() == node_len && record_own_paths.contains(&p1));
+                }
+                if let Some(p3) = get_pre_paths(3, filter_own_paths) {
+                    if record_scope_level == 3 {
+                        return record_own_paths.is_empty()
+                            || record_own_paths.contains(&p3)
+                            || (record_own_paths.len() == node_len && record_own_paths.contains(&p1))
+                            || (record_own_paths.len() == node_len * 2 + 1 && record_own_paths.contains(&p2));
+                    }
+                }
+            }
+        }
+    }
+    false
 }
