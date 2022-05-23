@@ -362,7 +362,7 @@ impl<'a> IamCertServ {
     }
 
     pub fn use_tenant_ctx(cxt: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
-        Self::degrade_own_paths(cxt, tenant_id.to_string().as_str())
+        rbum_scope_helper::degrade_own_paths(cxt, tenant_id.to_string().as_str())
     }
 
     pub fn try_use_app_ctx(cxt: TardisContext, app_id: Option<String>) -> TardisResult<TardisContext> {
@@ -375,16 +375,7 @@ impl<'a> IamCertServ {
 
     pub fn use_app_ctx(cxt: TardisContext, app_id: &str) -> TardisResult<TardisContext> {
         let own_paths = cxt.own_paths.clone();
-        Self::degrade_own_paths(cxt, format!("{}/{}", own_paths, app_id).as_str())
-    }
-
-    // TODO move to rbum
-    fn degrade_own_paths(mut cxt: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
-        if !new_own_paths.contains(&cxt.own_paths) {
-            return Err(TardisError::Conflict("Not qualified for downgrade".to_string()));
-        }
-        cxt.own_paths = new_own_paths.to_string();
-        Ok(cxt)
+        rbum_scope_helper::degrade_own_paths(cxt, format!("{}/{}", own_paths, app_id).as_str())
     }
 
     pub fn get_anonymous_context() -> TardisContext {

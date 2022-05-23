@@ -141,7 +141,7 @@ impl<'a> IamCertMailVCodeServ {
     pub async fn activate_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &cxt.own_paths, funs).await? {
             if cached_vcode == input_vcode {
-                let certs = RbumCertServ::find_rbums(
+                let cert = RbumCertServ::find_one_rbum(
                     &RbumCertFilterReq {
                         ak: Some(mail.to_string()),
                         status: Some(RbumCertStatusKind::Pending),
@@ -157,10 +157,7 @@ impl<'a> IamCertMailVCodeServ {
                     cxt,
                 )
                 .await?;
-                if certs.len() > 1 {
-                    return Err(TardisError::NotFound(format!("there are multiple credentials of kind {:?}", IamCertKind::MailVCode)));
-                }
-                if let Some(cert) = certs.get(0) {
+                if let Some(cert) = cert {
                     RbumCertServ::modify_rbum(
                         &cert.id,
                         &mut RbumCertModifyReq {
@@ -180,7 +177,7 @@ impl<'a> IamCertMailVCodeServ {
                 }
             }
         }
-        return Err(TardisError::Unauthorized("Email or verification code error".to_string()));
+        Err(TardisError::Unauthorized("Email or verification code error".to_string()))
     }
 
     pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
