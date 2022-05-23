@@ -69,6 +69,7 @@ pub struct RbumRelBoneResp {
     pub from_rbum_kind: RbumRelFromKind,
     pub rel_id: String,
     pub rel_name: String,
+    pub rel_own_paths: String,
     pub ext: String,
 }
 
@@ -81,6 +82,7 @@ impl RbumRelBoneResp {
                 from_rbum_kind: detail.from_rbum_kind,
                 rel_id: detail.to_rbum_item_id,
                 rel_name: detail.to_rbum_item_name,
+                rel_own_paths: detail.to_own_paths,
                 ext: detail.ext,
             }
         } else {
@@ -94,6 +96,7 @@ impl RbumRelBoneResp {
                 note: detail.note,
                 from_rbum_kind: detail.from_rbum_kind,
                 rel_id: detail.from_rbum_id,
+                rel_own_paths: detail.own_paths,
                 ext: detail.ext,
             }
         }
