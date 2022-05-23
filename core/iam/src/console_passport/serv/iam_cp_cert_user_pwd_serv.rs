@@ -17,7 +17,6 @@ impl<'a> IamCpCertUserPwdServ {
     pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamUserPwdCertModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(cxt), funs).await?;
         IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, cxt).await
-        // TODO remove cache
     }
 
     pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst<'a>) -> TardisResult<AccountInfoResp> {
