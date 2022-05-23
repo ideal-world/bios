@@ -295,12 +295,10 @@ where
 
     async fn find_one_rbum(
         filter: &FilterReq,
-        desc_sort_by_create: Option<bool>,
-        desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Option<SummaryResp>> {
-        let result = Self::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+        let result = Self::find_rbums(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
             Err(TardisError::Conflict("Multiple records found".to_string()))
         } else {
