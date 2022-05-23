@@ -29,6 +29,7 @@ use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetItemServ;
 
 pub struct RbumItemServ;
+
 pub struct RbumItemAttrServ;
 
 #[async_trait]
@@ -495,6 +496,10 @@ where
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
 
     async fn get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
+        Self::do_get_item(id, filter, funs, cxt).await
+    }
+
+    async fn do_get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_item_query(true, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
@@ -511,6 +516,18 @@ where
     }
 
     async fn paginate_items(
+        filter: &ItemFilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<SummaryResp>> {
+        Self::do_paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_paginate_items(
         filter: &ItemFilterReq,
         page_number: u64,
         page_size: u64,
@@ -547,6 +564,16 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<SummaryResp>> {
+        Self::do_find_items(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<SummaryResp>> {
         let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
@@ -563,6 +590,10 @@ where
     }
 
     async fn count_items(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        Self::do_count_items(filter, funs, cxt).await
+    }
+
+    async fn do_count_items(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),

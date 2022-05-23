@@ -222,6 +222,10 @@ where
     async fn package_query(is_detail: bool, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement>;
 
     async fn peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
+        Self::do_peek_rbum(id, filter, funs, cxt).await
+    }
+
+    async fn do_peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
         let mut query = Self::package_query(false, filter, funs, cxt).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = funs.db().get_dto(&query).await?;
@@ -233,6 +237,10 @@ where
     }
 
     async fn get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
+        Self::do_get_rbum(id, filter, funs, cxt).await
+    }
+
+    async fn do_get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_query(true, filter, funs, cxt).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = funs.db().get_dto(&query).await?;
@@ -244,6 +252,18 @@ where
     }
 
     async fn paginate_rbums(
+        filter: &FilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<SummaryResp>> {
+        Self::do_paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_paginate_rbums(
         filter: &FilterReq,
         page_number: u64,
         page_size: u64,
@@ -277,6 +297,18 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<DetailResp>> {
+        Self::do_paginate_detail_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_paginate_detail_rbums(
+        filter: &FilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<DetailResp>> {
         let mut query = Self::package_query(true, filter, funs, cxt).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
@@ -293,11 +325,11 @@ where
         })
     }
 
-    async fn find_one_rbum(
-        filter: &FilterReq,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Option<SummaryResp>> {
+    async fn find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
+        Self::do_find_one_rbum(filter, funs, cxt).await
+    }
+
+    async fn do_find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
         let result = Self::find_rbums(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
             Err(TardisError::Conflict("Multiple records found".to_string()))
@@ -307,6 +339,16 @@ where
     }
 
     async fn find_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<SummaryResp>> {
+        Self::do_find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_rbums(
         filter: &FilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -330,6 +372,16 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Option<DetailResp>> {
+        Self::do_find_one_detail_rbum(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_one_detail_rbum(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Option<DetailResp>> {
         let result = Self::find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
         if result.len() > 1 {
             Err(TardisError::Conflict("Multiple records found".to_string()))
@@ -339,6 +391,16 @@ where
     }
 
     async fn find_detail_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<DetailResp>> {
+        Self::do_find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_detail_rbums(
         filter: &FilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -356,6 +418,10 @@ where
     }
 
     async fn count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        Self::do_count_rbums(filter, funs, cxt).await
+    }
+
+    async fn do_count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         let query = Self::package_query(false, filter, funs, cxt).await?;
         funs.db().count(&query).await
     }
@@ -426,7 +492,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         let mut cond = Cond::any().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0));
 
         let own_cond = if with_sub_own_paths {
-            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths).as_str())
+            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", filter_own_paths))
         } else {
             Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths)
         };
@@ -437,7 +503,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1)).add(
                     Cond::any()
                         .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p1.as_str())),
+                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
                 ),
             );
             if let Some(p2) = rbum_scope_helper::get_pre_paths(2, &cxt.own_paths) {
@@ -449,9 +515,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                             .add(
                                 Cond::all()
                                     .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p1.as_str())),
+                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
                             )
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p2.as_str())),
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
                     ),
                 );
                 if let Some(p3) = rbum_scope_helper::get_pre_paths(3, &cxt.own_paths) {
@@ -462,14 +528,14 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p1.as_str())),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
                                 )
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len * 2 + 1))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p2.as_str())),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(p3.as_str())),
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p3))),
                         ),
                     );
                 };
