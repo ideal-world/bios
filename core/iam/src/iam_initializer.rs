@@ -17,7 +17,7 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
-use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
+use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_role_dto::IamRoleAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -182,7 +182,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
-        owner: default_account_id.to_string(),
+        owner: default_account_id.clone(),
     };
 
     let kind_tenant_id = add_kind(RBUM_KIND_SCHEME_IAM_TENANT, funs, &cxt).await?;
@@ -205,6 +205,44 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         role_app_admin_id: "".to_string(),
     })?;
 
+    IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
+    IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
+    IamCertServ::init_default_ident_conf(
+        IamUserPwdCertConfAddOrModifyReq {
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            repeatable: Some(true),
+            expire_sec: None,
+        },
+        Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+        Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+        funs,
+        &cxt,
+    )
+    .await?;
+
+    let pwd = IamCertServ::get_new_pwd();
+    IamAccountServ::add_account_agg(
+        &IamAccountAggAddReq {
+            id: Some(TrimString(default_account_id.clone())),
+            name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            cert_user_name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            cert_password: TrimString(pwd.clone()),
+            cert_phone: None,
+            cert_mail: None,
+            icon: None,
+            disabled: None,
+            scope_level: None,
+            role_ids: None,
+            exts: Default::default(),
+        },
+        funs,
+        &cxt,
+    )
+    .await?;
+
     let role_sys_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
@@ -217,6 +255,22 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         &cxt,
     )
     .await?;
+
+    IamAccountServ::modify_account_agg(
+        &default_account_id,
+        &IamAccountAggModifyReq {
+            name: None,
+            scope_level: None,
+            disabled: None,
+            icon: None,
+            role_ids: Some(vec![role_sys_admin_id.clone()]),
+            exts: Default::default(),
+        },
+        funs,
+        &cxt,
+    )
+    .await?;
+
     let role_tenant_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
             name: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
@@ -253,44 +307,6 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         role_tenant_admin_id,
         role_app_admin_id,
     })?;
-
-    IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
-    IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
-    IamCertServ::init_default_ident_conf(
-        IamUserPwdCertConfAddOrModifyReq {
-            ak_note: None,
-            ak_rule: None,
-            sk_note: None,
-            sk_rule: None,
-            repeatable: Some(true),
-            expire_sec: None,
-        },
-        Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-        Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-        funs,
-        &cxt,
-    )
-    .await?;
-
-    let pwd = IamCertServ::get_new_pwd();
-    IamAccountServ::add_account_agg(
-        &mut IamAccountAggAddReq {
-            id: Some(TrimString(default_account_id)),
-            name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
-            cert_user_name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
-            cert_password: TrimString(pwd.clone()),
-            cert_phone: None,
-            cert_mail: None,
-            icon: None,
-            disabled: None,
-            scope_level: None,
-            role_ids: Some(vec![role_sys_admin_id.clone()]),
-            exts: Default::default(),
-        },
-        funs,
-        &cxt,
-    )
-    .await?;
 
     info!(
         "Initialization is complete.
