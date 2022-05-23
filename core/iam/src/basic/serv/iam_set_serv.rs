@@ -5,7 +5,7 @@ use tardis::basic::result::TardisResult;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetAddReq;
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -176,6 +176,10 @@ impl<'a> IamSetServ {
             cxt,
         )
         .await
+    }
+
+    pub async fn find_set_paths(set_item_id: &str, set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
+        RbumSetItemServ::find_set_paths(set_item_id, set_id, funs, cxt).await
     }
 
     pub fn get_default_res_code_by_cxt(cxt: &TardisContext) -> String {

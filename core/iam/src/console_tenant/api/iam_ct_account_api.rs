@@ -7,7 +7,6 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
@@ -141,7 +140,7 @@ impl IamCtAccountApi {
         let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt).await?;
-        let result = RbumSetItemServ::find_set_paths(&id.0, &set_id, &funs, &cxt).await?;
+        let result = IamSetServ::find_set_paths(&id.0, &set_id, &funs, &cxt).await?;
         TardisResp::ok(result)
     }
 
