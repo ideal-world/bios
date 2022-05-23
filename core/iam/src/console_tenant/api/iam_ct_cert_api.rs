@@ -5,8 +5,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
-use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -21,8 +19,13 @@ pub struct IamCtCertApi;
 impl IamCtCertApi {
     /// Rest Password By Account Id
     #[oai(path = "/user-pwd", method = "put")]
-    async fn rest_password(&self, account_id: Query<String>, app_id: Query<Option<String>>,
-                           modify_req: Json<IamUserPwdCertRestReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn rest_password(
+        &self,
+        account_id: Query<String>,
+        app_id: Query<Option<String>>,
+        modify_req: Json<IamUserPwdCertRestReq>,
+        cxt: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
         let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -37,7 +40,7 @@ impl IamCtCertApi {
     async fn find_certs(&self, account_id: Query<String>, app_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let rbum_certs = RbumCertServ::find_rbums(
+        let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.0.to_string()),
                 ..Default::default()

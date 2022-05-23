@@ -5,7 +5,6 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSelfModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
@@ -53,7 +52,7 @@ impl IamCpAccountApi {
         } else {
             IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?
         };
-        let result = RbumSetItemServ::find_set_paths(&cxt.0.owner, &set_id, &funs, &cxt.0).await?;
+        let result = IamSetServ::find_set_paths(&cxt.0.owner, &set_id, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 }

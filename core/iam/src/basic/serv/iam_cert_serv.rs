@@ -6,7 +6,8 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq};
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -209,6 +210,16 @@ impl<'a> IamCertServ {
             return Err(TardisError::Conflict("Cannot delete default credential".to_string()));
         }
         RbumCertConfServ::delete_rbum(id, funs, cxt).await
+    }
+
+    pub async fn find_certs(
+        filter: &RbumCertFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumCertSummaryResp>> {
+        RbumCertServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
     }
 
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
