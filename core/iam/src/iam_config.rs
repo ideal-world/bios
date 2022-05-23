@@ -21,6 +21,8 @@ pub struct IamConfig {
     //     <app_id>: app context,
     // }
     pub cache_key_account_info_: String,
+    // role_id -> iam_role
+    pub cache_key_role_info_: String,
     pub mail_template_cert_activate_title: String,
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
@@ -34,6 +36,7 @@ impl Default for IamConfig {
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
+            cache_key_role_info_: "iam:cache:role:info:".to_string(),
             mail_template_cert_activate_title: "IAM Service Mail Credentials Activation".to_string(),
             mail_template_cert_activate_content: "Your account [{account_name}] is activating email credentials, verification code: {vcode}".to_string(),
             mail_template_cert_login_title: "IAM Service Mail login verification".to_string(),

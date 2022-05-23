@@ -6,10 +6,12 @@ use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
+use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -20,7 +22,7 @@ use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::IamRelKind;
 
@@ -59,6 +61,29 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         })
     }
 
+    async fn after_add_item(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let role = Self::do_get_item(
+            id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        funs.cache()
+            .set(
+                &format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id),
+                TardisFuns::json.obj_to_string(&role)?.as_str(),
+            )
+            .await?;
+        Ok(())
+    }
+
     async fn package_item_modify(_: &str, modify_req: &IamRoleModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
@@ -88,10 +113,55 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         Ok(Some(iam_role))
     }
 
+    async fn after_modify_item(id: &str, _: &mut IamRoleModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let role = Self::do_get_item(
+            id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        funs.cache()
+            .set(
+                &format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id),
+                TardisFuns::json.obj_to_string(&role)?.as_str(),
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn after_delete_item(id: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        funs.cache().del(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await?;
+        Ok(())
+    }
+
     async fn package_ext_query(query: &mut SelectStatement, _: bool, _: &IamRoleFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_role::Entity, iam_role::Column::Icon));
         query.column((iam_role::Entity, iam_role::Column::Sort));
         Ok(())
+    }
+
+    async fn get_item(id: &str, filter: &IamRoleFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamRoleDetailResp> {
+        if let Some(role) = funs.cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await? {
+            let role = TardisFuns::json.str_to_obj::<IamRoleDetailResp>(&role)?;
+            if rbum_scope_helper::check_scope(&role.own_paths, Some(role.scope_level.to_int()), &filter.basic, &cxt) {
+                return Ok(role);
+            }
+        }
+        let role = Self::do_get_item(id, filter, funs, cxt).await?;
+        funs.cache()
+            .set(
+                &format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id),
+                TardisFuns::json.obj_to_string(&role)?.as_str(),
+            )
+            .await?;
+        Ok(role)
     }
 }
 
@@ -100,7 +170,7 @@ impl<'a> IamRoleServ {
         let role_id = Self::add_item(&mut add_req.role, funs, cxt).await?;
         if let Some(res_ids) = &add_req.res_ids {
             for res_id in res_ids {
-                Self::add_rel_res(&role_id, &res_id, funs, cxt).await?;
+                Self::add_rel_res(&role_id, res_id, funs, cxt).await?;
             }
         }
         Ok(role_id)
