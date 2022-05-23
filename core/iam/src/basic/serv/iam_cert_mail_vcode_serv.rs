@@ -151,13 +151,11 @@ impl<'a> IamCertMailVCodeServ {
                         ),
                         ..Default::default()
                     },
-                    None,
-                    None,
                     funs,
                     cxt,
                 )
                 .await?;
-                if let Some(cert) = cert {
+                return if let Some(cert) = cert {
                     RbumCertServ::modify_rbum(
                         &cert.id,
                         &mut RbumCertModifyReq {
@@ -170,10 +168,10 @@ impl<'a> IamCertMailVCodeServ {
                         funs,
                         cxt,
                     )
-                    .await?;
-                    return Ok(());
+                        .await?;
+                    Ok(())
                 } else {
-                    return Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::MailVCode)));
+                    Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::MailVCode)))
                 }
             }
         }

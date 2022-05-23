@@ -3,7 +3,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumSetItemFilterReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
@@ -82,19 +82,7 @@ impl<'a> IamSetServ {
     }
 
     pub async fn get_set_id_by_code(code: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let resp = RbumSetServ::find_rbums(
-            &RbumBasicFilterReq {
-                code: Some(code.to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            cxt,
-        )
-        .await?;
-        let id = resp.get(0).map(|x| x.id.clone()).ok_or_else(|| TardisError::NotFound(format!("set {} not found", code)))?;
-        Ok(id)
+        RbumSetServ::get_rbum_set_id_by_code(code, funs, cxt).await?.ok_or_else(|| TardisError::NotFound(format!("set {} not found", code)))
     }
 
     pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {

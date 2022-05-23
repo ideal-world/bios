@@ -66,8 +66,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_tenant::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone
-            .is_none()&& modify_req.note.is_none() {
+        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() && modify_req.note.is_none() {
             return Ok(None);
         }
         let mut iam_tenant = iam_tenant::ActiveModel {

@@ -12,6 +12,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::IamCertKind;
 
@@ -120,14 +121,13 @@ impl<'a> IamCertUserPwdServ {
                 rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 ..Default::default()
             },
-            None,
-            None,
             funs,
             cxt,
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
+            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
+            IamAccountServ::delete_cache(rel_iam_item_id, funs).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
         }
@@ -147,15 +147,13 @@ impl<'a> IamCertUserPwdServ {
                 rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 ..Default::default()
             },
-            None,
-            None,
             funs,
             cxt,
         )
         .await?;
         if let Some(cert) = cert {
-            // TODO remove cache & token
-            RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await
+            RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
+            IamAccountServ::delete_cache(rel_iam_item_id, funs).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
         }

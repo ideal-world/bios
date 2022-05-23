@@ -9,7 +9,6 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
 use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -110,8 +109,8 @@ impl<'a> IamRoleServ {
     pub async fn modify_role(id: &str, modify_req: &mut IamRoleAggModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::modify_item(id, &mut modify_req.role, funs, cxt).await?;
         if let Some(input_res_ids) = &modify_req.res_ids {
-            let stored_res = Self::find_rel_res(id, None, None, funs, cxt).await?;
-            let stored_res_ids: Vec<String> = stored_res.into_iter().map(|x| x.rel.from_rbum_id).collect();
+            let stored_res = Self::find_simple_rel_res(id, None, None, funs, cxt).await?;
+            let stored_res_ids: Vec<String> = stored_res.into_iter().map(|x| x.rel_id).collect();
             for input_res_id in input_res_ids {
                 if !stored_res_ids.contains(input_res_id) {
                     Self::add_rel_res(id, input_res_id, funs, cxt).await?;
@@ -178,16 +177,6 @@ impl<'a> IamRoleServ {
         IamRelServ::find_to_simple_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
-    pub async fn find_rel_accounts(
-        role_id: &str,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Vec<RbumRelAggResp>> {
-        IamRelServ::find_to_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
     pub async fn paginate_simple_rel_accounts(
         role_id: &str,
         page_number: u64,
@@ -198,18 +187,6 @@ impl<'a> IamRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         IamRelServ::paginate_to_simple_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
-    pub async fn paginate_rel_accounts(
-        role_id: &str,
-        page_number: u64,
-        page_size: u64,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_to_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -255,16 +232,6 @@ impl<'a> IamRoleServ {
         IamRelServ::find_to_simple_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
-    pub async fn find_rel_res(
-        role_id: &str,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Vec<RbumRelAggResp>> {
-        IamRelServ::find_to_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
     pub async fn paginate_simple_rel_res(
         role_id: &str,
         page_number: u64,
@@ -275,18 +242,6 @@ impl<'a> IamRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         IamRelServ::paginate_to_simple_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
-    pub async fn paginate_rel_res(
-        role_id: &str,
-        page_number: u64,
-        page_size: u64,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_to_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn need_sys_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -302,7 +257,6 @@ impl<'a> IamRoleServ {
     }
 
     pub async fn need_role(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        // TODO cache
         let exist = RbumRelServ::check_rel(
             &mut RbumRelCheckReq {
                 tag: IamRelKind::IamAccountRole.to_string(),

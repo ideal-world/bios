@@ -2,8 +2,8 @@ use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
+use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
@@ -23,10 +23,9 @@ use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertKind, IamCertTokenKind, IamRelKind};
+use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
 
 pub struct IamCertServ;
 
@@ -223,7 +222,22 @@ impl<'a> IamCertServ {
     }
 
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumCertServ::delete_rbum(id, funs, cxt).await
+        let cert = RbumCertServ::get_rbum(
+            id,
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt
+        )
+        .await?;
+        let result = RbumCertServ::delete_rbum(id, funs, cxt).await?;
+        IamAccountServ::delete_cache(&cert.rel_rbum_id, funs).await?;
+        Ok(result)
     }
 
     pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
@@ -231,7 +245,13 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_cert_conf_id_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &IamBasicInfoManager::get().domain_iam_id, rel_iam_item_id.unwrap_or("".to_string()).as_str(), funs).await
+        RbumCertConfServ::get_rbum_cert_conf_id_by_code(
+            code,
+            &IamBasicInfoManager::get().domain_iam_id,
+            rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(),
+            funs,
+        )
+        .await
     }
 
     pub async fn package_tardis_context_and_resp(
@@ -257,7 +277,7 @@ impl<'a> IamCertServ {
         IamCertTokenServ::add_cert(&context.token, &token_kind, account_id, &rbum_cert_conf_id, rbum_cert_id, funs, &context).await?;
 
         let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
-        let roles = IamRelServ::find_from_rels(IamRelKind::IamAccountRole, true, account_id, Some(true), None, funs, &context).await?;
+        let roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;
 
         let apps = if !tenant_id.is_empty() {
             let enabled_apps = IamAppServ::find_items(
@@ -283,11 +303,7 @@ impl<'a> IamCertServ {
                     AccountAppInfoResp {
                         app_id: app.id,
                         app_name: app.name,
-                        roles: roles
-                            .iter()
-                            .filter(|r| r.rel.own_paths == app.own_paths)
-                            .map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string()))
-                            .collect(),
+                        roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
                         // TODO
                         groups: Default::default(),
                     }
@@ -301,7 +317,7 @@ impl<'a> IamCertServ {
             account_id: account_id.to_string(),
             account_name: account_name.to_string(),
             token: context.token.to_string(),
-            roles: roles.iter().filter(|r| r.rel.own_paths == context.own_paths).map(|r| (r.rel.to_rbum_item_id.to_string(), r.rel.to_rbum_item_name.to_string())).collect(),
+            roles: roles.iter().filter(|r| r.rel_own_paths == context.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             groups: Default::default(),
             apps,
         };
@@ -349,7 +365,7 @@ impl<'a> IamCertServ {
 
     pub async fn fetch_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
-            let account_id = token_info.split(",").nth(1).unwrap_or("");
+            let account_id = token_info.split(',').nth(1).unwrap_or("");
             if let Some(context) = funs
                 .cache()
                 .hget(

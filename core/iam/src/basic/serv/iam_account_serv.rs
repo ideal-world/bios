@@ -5,10 +5,8 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
-use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
-use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggResp;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -200,8 +198,8 @@ impl<'a> IamAccountServ {
         )
         .await?;
         if let Some(input_role_ids) = &modify_req.role_ids {
-            let stored_roles = Self::find_rel_roles(id, true, None, None, funs, cxt).await?;
-            let stored_role_ids: Vec<String> = stored_roles.into_iter().map(|r| r.rel.to_rbum_item_id).collect();
+            let stored_roles = Self::find_simple_rel_roles(id, true, None, None, funs, cxt).await?;
+            let stored_role_ids: Vec<String> = stored_roles.into_iter().map(|r| r.rel_id).collect();
             for input_role_id in input_role_ids {
                 if !stored_role_ids.contains(input_role_id) {
                     IamRoleServ::add_rel_account(input_role_id, id, funs, cxt).await?;
@@ -213,12 +211,10 @@ impl<'a> IamAccountServ {
                 }
             }
         }
-        // TODO remove cache & token
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, cxt).await?;
         Ok(())
     }
 
-    // TODO
     pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let id = &cxt.owner;
         IamAccountServ::modify_item(
@@ -246,65 +242,6 @@ impl<'a> IamAccountServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_from_simple_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
-    pub async fn find_rel_roles(
-        account_id: &str,
-        with_sub: bool,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Vec<RbumRelAggResp>> {
-        IamRelServ::find_from_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
-    pub async fn paginate_simple_rel_roles(
-        account_id: &str,
-        with_sub: bool,
-        page_number: u64,
-        page_size: u64,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
-        IamRelServ::paginate_from_simple_rels(
-            IamRelKind::IamAccountRole,
-            with_sub,
-            account_id,
-            page_number,
-            page_size,
-            desc_by_create,
-            desc_by_update,
-            funs,
-            cxt,
-        )
-        .await
-    }
-
-    pub async fn paginate_rel_roles(
-        account_id: &str,
-        with_sub: bool,
-        page_number: u64,
-        page_size: u64,
-        desc_by_create: Option<bool>,
-        desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        IamRelServ::paginate_from_rels(
-            IamRelKind::IamAccountRole,
-            with_sub,
-            account_id,
-            page_number,
-            page_size,
-            desc_by_create,
-            desc_by_update,
-            funs,
-            cxt,
-        )
-        .await
     }
 
     pub async fn delete_cache(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {

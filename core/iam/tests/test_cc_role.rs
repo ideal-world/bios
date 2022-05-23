@@ -107,7 +107,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     // ----------------------- Rel Account -----------------------
 
     info!("【test_cc_role】 : test_single_level : Find Rel Accounts By Role Id");
-    let role_accounts = IamRoleServ::paginate_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
+    let role_accounts = IamRoleServ::paginate_simple_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_accounts.page_number, 1);
     assert_eq!(role_accounts.page_size, 10);
     assert_eq!(role_accounts.total_size, 0);
@@ -115,17 +115,16 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     info!("【test_cc_role】 : test_single_level : Add Rel Account By Id");
     IamRoleServ::add_rel_account(&role_id1, &context.owner, &funs, context).await?;
 
-    let role_accounts = IamRoleServ::paginate_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
+    let role_accounts = IamRoleServ::paginate_simple_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_accounts.page_number, 1);
     assert_eq!(role_accounts.page_size, 10);
     assert_eq!(role_accounts.total_size, 1);
     assert_eq!(role_accounts.records.len(), 1);
-    assert_eq!(role_accounts.records.get(0).unwrap().rel.from_rbum_item_name, account_name);
-    assert_eq!(role_accounts.records.get(0).unwrap().rel.to_rbum_item_name, "角色3");
+    assert_eq!(role_accounts.records.get(0).unwrap().rel_name, account_name);
 
     info!("【test_cc_role】 : test_single_level : Delete Rel By Id");
-    IamRelServ::delete_rel(&role_accounts.records.get(0).unwrap().rel.id, &funs, context).await?;
-    let role_accounts = IamRoleServ::paginate_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
+    IamRoleServ::delete_rel_account(&role_id1, &role_accounts.records.get(0).unwrap().rel_id, &funs, context).await?;
+    let role_accounts = IamRoleServ::paginate_simple_rel_accounts(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_accounts.total_size, 0);
 
     // ----------------------- Rel Res -----------------------
@@ -148,7 +147,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     .await?;
 
     info!("【test_cc_role】 : test_single_level : Find Rel Res By Role Id");
-    let role_res = IamRoleServ::paginate_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
+    let role_res = IamRoleServ::paginate_simple_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_res.page_number, 1);
     assert_eq!(role_res.page_size, 10);
     assert_eq!(role_res.total_size, 0);
@@ -156,17 +155,16 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     info!("【test_cc_role】 : test_single_level : Add Rel Res By Id");
     IamRoleServ::add_rel_res(&role_id1, &res_id, &funs, context).await?;
 
-    let role_res = IamRoleServ::paginate_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
+    let role_res = IamRoleServ::paginate_simple_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_res.page_number, 1);
     assert_eq!(role_res.page_size, 10);
     assert_eq!(role_res.total_size, 1);
     assert_eq!(role_res.records.len(), 1);
-    assert_eq!(role_res.records.get(0).unwrap().rel.from_rbum_item_name, "测试资源");
-    assert_eq!(role_res.records.get(0).unwrap().rel.to_rbum_item_name, "角色3");
+    assert_eq!(role_res.records.get(0).unwrap().rel_name, "测试资源");
 
     info!("【test_cc_role】 : test_single_level : Delete Rel By Id");
-    IamRelServ::delete_rel(&role_res.records.get(0).unwrap().rel.id, &funs, context).await?;
-    let role_res = IamRoleServ::paginate_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
+    IamRoleServ::delete_rel_res(&role_id1, &role_res.records.get(0).unwrap().rel_id, &funs, context).await?;
+    let role_res = IamRoleServ::paginate_simple_rel_res(&role_id1, 1, 10, None, None, &funs, context).await?;
     assert_eq!(role_res.total_size, 0);
 
     // ---------------------------
@@ -422,16 +420,22 @@ pub async fn test_multi_level_by_sys_context(
     );
 
     info!("【test_cc_role】 : test_multi_level : Test Rel Accounts By sys_context");
-    assert_eq!(IamRoleServ::paginate_rel_accounts(&role_sys_id, 1, 10, None, None, &funs, sys_context).await?.total_size, 0);
-    IamRoleServ::add_rel_account(&role_sys_id, &sys_context.owner, &funs, sys_context).await?;
-    assert_eq!(IamRoleServ::paginate_rel_accounts(&role_sys_id, 1, 10, None, None, &funs, sys_context).await?.total_size, 1);
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_id, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        0
+    );
+    IamRoleServ::add_rel_account(&role_sys_id, &sys_context.owner, &funs, sys_context).await?;
+    assert_eq!(
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_id, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        1
+    );
+    assert_eq!(
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, sys_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_account(&role_sys_global_id, &sys_context.owner, &funs, sys_context).await?;
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, sys_context).await?.total_size,
         1
     );
     assert!(IamRoleServ::add_rel_account(&role_t1_id, &sys_context.owner, &funs, sys_context).await.is_err());
@@ -557,21 +561,21 @@ pub async fn test_multi_level_by_tenant_context(
 
     info!("【test_cc_role】 : test_multi_level : Test Rel Accounts By tenant_context");
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_account(&role_sys_global_id, &t2_context.owner, &funs, t2_context).await?;
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_account(&role_t2_tenant_id, &t2_context.owner, &funs, t2_context).await?;
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_context).await?.total_size,
         1
     );
     assert!(IamRoleServ::add_rel_account(&role_sys_id, &t2_context.owner, &funs, t2_context).await.is_err());
@@ -719,21 +723,21 @@ pub async fn test_multi_level_by_app_context(
 
     info!("【test_cc_role】 : test_multi_level : Test Rel Accounts By app_context");
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_account(&role_sys_global_id, &t2_a1_context.owner, &funs, t2_a1_context).await?;
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_sys_global_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_account(&role_t2_tenant_id, &t2_a1_context.owner, &funs, t2_a1_context).await?;
     assert_eq!(
-        IamRoleServ::paginate_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamRoleServ::paginate_simple_rel_accounts(&role_t2_tenant_id, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         1
     );
 

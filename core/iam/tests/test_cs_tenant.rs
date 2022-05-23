@@ -35,20 +35,13 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
                 sk_note: None,
                 sk_rule: None,
                 repeatable: Some(true),
-                expire_sec: None
+                expire_sec: None,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
 
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
         },
         &funs,
-        context,
     )
     .await?;
 
@@ -68,20 +61,13 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
                 sk_note: None,
                 sk_rule: None,
                 repeatable: Some(true),
-                expire_sec: None
+                expire_sec: None,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
 
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
         },
         &funs,
-        context,
     )
     .await?;
 
@@ -101,20 +87,13 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
                 sk_note: None,
                 sk_rule: None,
                 repeatable: Some(true),
-                expire_sec: None
+                expire_sec: None,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
 
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
         },
         &funs,
-        context,
     )
     .await?
     .0;
@@ -139,7 +118,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             contact_phone: None,
             disabled: Some(true),
             scope_level: None,
-            note: None
+            note: None,
         },
         &funs,
         context,
@@ -155,7 +134,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             contact_phone: Some("xxxx".to_string()),
             disabled: None,
             scope_level: None,
-            note: None
+            note: None,
         },
         &funs,
         context,

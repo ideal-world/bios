@@ -15,7 +15,7 @@ use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
 use bios_iam::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
 use bios_iam::iam_constants;
 
-pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, TardisContext)> {
+pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, TardisContext)> {
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
@@ -36,20 +36,13 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
                 sk_note: None,
                 sk_rule: None,
                 repeatable: Some(true),
-                expire_sec: None
+                expire_sec: None,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
 
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
         },
         &funs,
-        context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
@@ -89,20 +82,13 @@ pub async fn test(context: &TardisContext) -> TardisResult<(TardisContext, Tardi
                 sk_note: None,
                 sk_rule: None,
                 repeatable: Some(true),
-                expire_sec: None
+                expire_sec: None,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
 
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq{
-                ak_note: None,
-                ak_rule: None
-            }),
+            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
         },
         &funs,
-        context,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
