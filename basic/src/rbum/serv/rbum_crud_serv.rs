@@ -300,12 +300,11 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Option<SummaryResp>> {
-       let result = Self::find_rbums(filter,desc_sort_by_create,desc_sort_by_update,funs,cxt)
-           .await?;
-        if result.len()>1{
+        let result = Self::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+        if result.len() > 1 {
             Err(TardisError::Conflict("Multiple records found".to_string()))
-        }else {
-            Ok(result.into_iter().nth(0))
+        } else {
+            Ok(result.into_iter().next())
         }
     }
 
@@ -333,12 +332,11 @@ where
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Option<DetailResp>> {
-        let result = Self::find_detail_rbums(filter,desc_sort_by_create,desc_sort_by_update,funs,
-                                             cxt).await?;
-        if result.len()>1{
+        let result = Self::find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+        if result.len() > 1 {
             Err(TardisError::Conflict("Multiple records found".to_string()))
-        }else{
-            Ok(result.into_iter().nth(0))
+        } else {
+            Ok(result.into_iter().next())
         }
     }
 
