@@ -47,7 +47,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
-            &bios_basic::Components::Iam.to_string(),
+            iam_constants::COMPONENT_CODE,
             (
                 (iam_cc_account_api::IamCcAccountApi, iam_cc_role_api::IamCcRoleApi),
                 (
@@ -86,7 +86,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(String, String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
     funs.begin().await?;
-    let cxt = get_first_account_context(RBUM_KIND_SCHEME_IAM_ACCOUNT, &bios_basic::Components::Iam.to_string(), &funs).await?;
+    let cxt = get_first_account_context(RBUM_KIND_SCHEME_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(cxt) = cxt {
         init_basic_info(&funs, &cxt).await?;
         None
@@ -120,7 +120,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> 
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, res kind not found".to_string()))?;
 
-    let domain_iam_id = RbumDomainServ::get_rbum_domain_id_by_code(&bios_basic::Components::Iam.to_string(), funs)
+    let domain_iam_id = RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs)
         .await?
         .ok_or_else(|| TardisError::NotFound("Initialization error, iam domain not found".to_string()))?;
 
@@ -338,8 +338,8 @@ async fn add_kind<'a>(scheme: &str, funs: &TardisFunsInst<'a>, cxt: &TardisConte
 async fn add_domain<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString(bios_basic::Components::Iam.to_string()),
-            name: TrimString(bios_basic::Components::Iam.to_string()),
+            code: TrimString(iam_constants::COMPONENT_CODE.to_string()),
+            name: TrimString(iam_constants::COMPONENT_CODE.to_string()),
             note: None,
             icon: None,
             sort: None,
