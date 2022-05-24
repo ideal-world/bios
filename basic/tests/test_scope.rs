@@ -57,8 +57,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s0_l3".to_string()),
-            name: TrimString("scope_test_s0_l3".to_string()),
+            code: TrimString("s0-l3".to_string()),
+            name: TrimString("scope_test_s0-l3".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -71,8 +71,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s0_l2".to_string()),
-            name: TrimString("scope_test_s0_l2".to_string()),
+            code: TrimString("s0-l2".to_string()),
+            name: TrimString("scope_test_s0-l2".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -85,8 +85,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s0_l1".to_string()),
-            name: TrimString("scope_test_s0_l1".to_string()),
+            code: TrimString("s0-l1".to_string()),
+            name: TrimString("scope_test_s0-l1".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -99,8 +99,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s0_l0".to_string()),
-            name: TrimString("scope_test_s0_l0".to_string()),
+            code: TrimString("s0-l0".to_string()),
+            name: TrimString("scope_test_s0-l0".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -113,8 +113,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s1_l3".to_string()),
-            name: TrimString("scope_test_s1_l3".to_string()),
+            code: TrimString("s1-l3".to_string()),
+            name: TrimString("scope_test_s1-l3".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -127,8 +127,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s1_l2".to_string()),
-            name: TrimString("scope_test_s1_l2".to_string()),
+            code: TrimString("s1-l2".to_string()),
+            name: TrimString("scope_test_s1-l2".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -141,8 +141,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s1_l1".to_string()),
-            name: TrimString("scope_test_s1_l1".to_string()),
+            code: TrimString("s1-l1".to_string()),
+            name: TrimString("scope_test_s1-l1".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -155,8 +155,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s1_l0".to_string()),
-            name: TrimString("scope_test_s1_l0".to_string()),
+            code: TrimString("s1-l0".to_string()),
+            name: TrimString("scope_test_s1-l0".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -169,8 +169,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s2_l3".to_string()),
-            name: TrimString("scope_test_s2_l3".to_string()),
+            code: TrimString("s2-l3".to_string()),
+            name: TrimString("scope_test_s2-l3".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -183,8 +183,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s2_l2".to_string()),
-            name: TrimString("scope_test_s2_l2".to_string()),
+            code: TrimString("s2-l2".to_string()),
+            name: TrimString("scope_test_s2-l2".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -197,8 +197,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s2_l1".to_string()),
-            name: TrimString("scope_test_s2_l1".to_string()),
+            code: TrimString("s2-l1".to_string()),
+            name: TrimString("scope_test_s2-l1".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -211,8 +211,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s2_l0".to_string()),
-            name: TrimString("scope_test_s2_l0".to_string()),
+            code: TrimString("s2-l0".to_string()),
+            name: TrimString("scope_test_s2-l0".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -225,8 +225,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s3_l3".to_string()),
-            name: TrimString("scope_test_s3_l3".to_string()),
+            code: TrimString("s3-l3".to_string()),
+            name: TrimString("scope_test_s3-l3".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -239,8 +239,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s3_l2".to_string()),
-            name: TrimString("scope_test_s3_l2".to_string()),
+            code: TrimString("s3-l2".to_string()),
+            name: TrimString("scope_test_s3-l2".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -253,8 +253,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s3_l1".to_string()),
-            name: TrimString("scope_test_s3_l1".to_string()),
+            code: TrimString("s3-l1".to_string()),
+            name: TrimString("scope_test_s3-l1".to_string()),
             note: None,
             icon: None,
             sort: None,
@@ -267,8 +267,8 @@ pub async fn test() -> TardisResult<()> {
 
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("s3_l0".to_string()),
-            name: TrimString("scope_test_s3_l0".to_string()),
+            code: TrimString("s3-l0".to_string()),
+            name: TrimString("scope_test_s3-l0".to_string()),
             note: None,
             icon: None,
             sort: None,

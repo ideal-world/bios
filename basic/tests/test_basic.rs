@@ -20,9 +20,9 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
-const RBUM_KIND_SCHEME_IAM_TENANT: &str = "iam_tenant";
-const RBUM_KIND_SCHEME_IAM_APP: &str = "iam_app";
-const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam_account";
+const RBUM_KIND_SCHEME_IAM_TENANT: &str = "iam-tenant";
+const RBUM_KIND_SCHEME_IAM_APP: &str = "iam-app";
+const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam-account";
 const RBUM_ITEM_NAME_DEFAULT_TENANT: &str = "system";
 const RBUM_ITEM_NAME_DEFAULT_APP: &str = "iam";
 const RBUM_ITEM_NAME_DEFAULT_ACCOUNT: &str = "sys_admin";
@@ -122,8 +122,8 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     let domain_iam_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString(bios_basic::Components::Iam.to_string()),
-            name: TrimString(bios_basic::Components::Iam.to_string()),
+            code: TrimString("iam".to_string()),
+            name: TrimString("IAM".to_string()),
             note: None,
             icon: None,
             sort: None,
