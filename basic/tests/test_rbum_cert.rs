@@ -233,7 +233,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
 
     let domain_db_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,

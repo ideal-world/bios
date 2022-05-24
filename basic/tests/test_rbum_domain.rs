@@ -17,7 +17,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_domin】 : Test Add : RbumDomainServ::add_rbum");
     let id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
@@ -32,7 +32,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_domin】 : Test Get : RbumDomainServ::get_rbum");
     let rbum = RbumDomainServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, id);
-    assert_eq!(rbum.code, "mysql_dev");
+    assert_eq!(rbum.code, "mysql-dev");
     assert_eq!(rbum.name, "Mysql测试集群");
     assert_eq!(rbum.icon, "...");
     assert_eq!(rbum.note, "...");

@@ -75,7 +75,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -494,7 +494,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -689,7 +689,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_env】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,
@@ -898,7 +898,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_rel_use】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_reldb_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: None,
             icon: None,

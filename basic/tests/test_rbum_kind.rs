@@ -22,6 +22,51 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     funs.begin().await?;
 
     info!("【test_rbum_kind】 : Test Add : RbumKindServ::add_rbum");
+    assert!(RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("Db".to_string()),
+            name: TrimString("关系型数据库".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some("reldb_mgr".to_string()),
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
+    assert!(RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("db_db".to_string()),
+            name: TrimString("关系型数据库".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some("reldb_mgr".to_string()),
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
+    assert!(RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("D-b".to_string()),
+            name: TrimString("关系型数据库".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: Some("reldb_mgr".to_string()),
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
     let id = RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             code: TrimString("db".to_string()),

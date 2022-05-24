@@ -7,6 +7,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
+use tardis::regex::Regex;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 
@@ -28,6 +29,7 @@ lazy_static! {
     pub static ref REL_KIND_ID_FIELD: Alias = Alias::new("rel_rbum_kind_id");
     pub static ref REL_DOMAIN_ID_FIELD: Alias = Alias::new("rel_rbum_domain_id");
     pub static ref DISABLED_FIELD: Alias = Alias::new("disabled");
+    pub static ref R_URL_PART_CODE: Regex = Regex::new(r"^[a-z0-9-.]+$").expect("Regular parsing error");
 }
 
 #[async_trait]

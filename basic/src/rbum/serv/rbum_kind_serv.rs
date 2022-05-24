@@ -12,7 +12,7 @@ use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
-use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
+use crate::rbum::serv::rbum_crud_serv::{R_URL_PART_CODE, RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelAttrServ;
 
@@ -40,6 +40,9 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
     }
 
     async fn before_add_rbum(add_req: &mut RbumKindAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
+            return Err(TardisError::BadRequest(format!("Kind code {} is invalid", add_req.code)));
+        }
         if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.0.as_str()))).await?
             > 0
         {

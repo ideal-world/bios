@@ -12,7 +12,7 @@ use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, 
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 use crate::rbum::serv::rbum_cert_serv::RbumCertConfServ;
-use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, R_URL_PART_CODE};
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 
 pub struct RbumDomainServ;
@@ -39,6 +39,9 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
     }
 
     async fn before_add_rbum(add_req: &mut RbumDomainAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
+            return Err(TardisError::BadRequest(format!("Domain code {} is invalid", add_req.code)));
+        }
         if funs
             .db()
             .count(Query::select().column(rbum_domain::Column::Id).from(rbum_domain::Entity).and_where(Expr::col(rbum_domain::Column::Code).eq(add_req.code.0.as_str())))

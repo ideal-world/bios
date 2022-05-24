@@ -52,7 +52,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
@@ -230,7 +230,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("mysql_dev".to_string()),
+            code: TrimString("mysql-dev".to_string()),
             name: TrimString("Mysql测试集群".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
@@ -449,7 +449,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     info!("【test_rbum_item_attr】 : Prepare Domain : RbumDomainServ::add_rbum");
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
-            code: TrimString("test_iam".to_string()),
+            code: TrimString("test-iam".to_string()),
             name: TrimString("IAM".to_string()),
             note: Some("...".to_string()),
             icon: Some("...".to_string()),
@@ -539,7 +539,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     let main_values = funs
         .db()
         .get_dto::<IamAccountResp>(
-            &Query::select()
+            Query::select()
                 .column(test_iam_account::Column::Id)
                 .column(test_iam_account::Column::Ext1Idx)
                 .column(test_iam_account::Column::Ext2)
