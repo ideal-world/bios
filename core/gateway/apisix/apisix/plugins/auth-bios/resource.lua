@@ -30,6 +30,7 @@ function _M.add_res(res_action, res_uri, auth_info)
     end
 end
 
+-- iam-res, iam-serv
 function _M.remove_res(res_action, res_uri)
     res_action = string.lower(res_action)
     core.log.info("Remove resource [" .. res_action .. "][" .. res_uri .. "]")
@@ -41,59 +42,70 @@ function _M.remove_res(res_action, res_uri)
         else
             return
         end
-        if resources ~= nil then
-            resources[res_action] = nil
-        end
     end
-    do_remove_res(RESOURCES, items)
+    if resources ~= nil then
+        resources[res_action] = nil
+    end
+    remove_empty_node(RESOURCES, items)
 end
 
-function do_remove_res(res, items)
+function remove_empty_node(res, items)
     if m_utils.table_length(res) == 0 or m_utils.table_length(items) == 0 then
         return
     end
     local curr_item = table.remove(items, 1)
-    do_remove_res(res[curr_item], items)
+    remove_empty_node(res[curr_item], items)
     if m_utils.table_length(res[curr_item]) == 0 then
         res[curr_item] = nil
     end
 end
 
 function _M.match_res(res_action, req_uri)
-    res_action = string.lower(res_action)
     local items = parse_uri(req_uri)
-    local matched_uris = {}
+    -- remove $ node
     table.remove(items)
-    do_match_res(res_action, RESOURCES, items, matched_uris, false)
-    return matched_uris
+    return do_match_res(string.lower(res_action), RESOURCES, items, matched_uris, false)
 end
 
-function do_match_res(res_action, res, items, matched_uris, multi_wildcard)
+function do_match_res(res_action, res, items, multi_wildcard)
     if res["$"] ~= nil and (m_utils.table_length(items) == 0 or multi_wildcard) then
         -- matched
         local match_info = res["$"][res_action]
-        if match_info.auth["_start"] <= ngx.time() and match_info.auth["_end"] >= ngx.time() then
-            table.insert(matched_uris, match_info)
+        if match_info ~= nil and match_info.auth["st"] <= ngx.time() and match_info.auth["et"] >= ngx.time() then
+            return match_info
         end
-        return
+        return nil
     end
     if (m_utils.table_length(items) == 0) then
         -- un-matched
-        return
+        return nil
     end
     local next_items = { table.unpack(items, 2) }
     if res[items[1]] ~= nil then
-        do_match_res(res_action, res[items[1]], next_items, matched_uris, false)
+        local matched_info = do_match_res(res_action, res[items[1]], next_items, false)
+        if matched_info ~= nil then
+            return matched_info
+        end
     end
     if res["*"] ~= nil then
-        do_match_res(res_action, res["*"], next_items, matched_uris, false)
+        local matched_info = do_match_res(res_action, res["*"], next_items, false)
+        if matched_info ~= nil then
+            return matched_info
+        end
     end
     if res["**"] ~= nil then
-        do_match_res(res_action, res["**"], next_items, matched_uris, true)
+        local matched_info = do_match_res(res_action, res["**"], next_items, true)
+        if matched_info ~= nil then
+            return matched_info
+        end
     end
     if multi_wildcard then
-        do_match_res(res_action, res, next_items, matched_uris, true)
+        local matched_info = do_match_res(res_action, res, next_items, true)
+        if matched_info ~= nil then
+            return matched_info
+        end
     end
+    return nil
 end
 
 function _M.get_res()
@@ -102,11 +114,10 @@ end
 
 function parse_uri(res_uri)
     local res = url.parse(res_uri)
+    core.log.debug("################" .. res.path)
     local items = {}
     table.insert(items, string.lower(res.scheme))
-    local host = m_utils.split(res.host, ".")
-    table.insert(items, string.lower(host[1]))
-    table.insert(items, string.lower(host[2]))
+    table.insert(items, string.lower(res.host))
     local paths = m_utils.split(res.path, "/")
     for _, p in pairs(paths) do
         table.insert(items, string.lower(p))
