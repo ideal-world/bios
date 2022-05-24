@@ -81,18 +81,18 @@ function do_match_res(res_action, res, items, matched_uris, multi_wildcard)
         -- un-matched
         return
     end
-    local curr_items = { table.unpack(items, 2) }
+    local next_items = { table.unpack(items, 2) }
     if res[items[1]] ~= nil then
-        do_match_res(res_action, res[items[1]], curr_items, matched_uris, false)
+        do_match_res(res_action, res[items[1]], next_items, matched_uris, false)
     end
     if res["*"] ~= nil then
-        do_match_res(res_action, res["*"], curr_items, matched_uris, false)
+        do_match_res(res_action, res["*"], next_items, matched_uris, false)
     end
     if res["**"] ~= nil then
-        do_match_res(res_action, res["**"], curr_items, matched_uris, true)
+        do_match_res(res_action, res["**"], next_items, matched_uris, true)
     end
     if multi_wildcard then
-        do_match_res(res_action, res, curr_items, matched_uris, true)
+        do_match_res(res_action, res, next_items, matched_uris, true)
     end
 end
 
