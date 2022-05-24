@@ -72,6 +72,9 @@ pub struct RbumCertConfSummaryResp {
     pub name: String,
     pub conn_uri: String,
 
+    pub rel_rbum_domain_id: String,
+    pub rel_rbum_item_id: String,
+    
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime<Utc>,
