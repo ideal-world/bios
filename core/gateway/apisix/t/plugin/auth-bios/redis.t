@@ -42,8 +42,8 @@ GET /t
 --- response_body
 测试1
 nil
-k_test3:测试3
 k_test1:测试1
+k_test3:测试3
 k_test2:测试2
 {"a":"xx5"}
 nil

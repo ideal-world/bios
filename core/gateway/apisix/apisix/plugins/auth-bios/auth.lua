@@ -52,6 +52,7 @@ function _M.auth(ident_info)
             return 401, { message = "Permission denied" }
         end
         for i = 1, m_utils.table_length(groups) do
+            -- TODO
             if m_utils.contain(auth_info["group_node"], "#" .. groups[i] .. "#") == false then
                 return 401, { message = "Permission denied" }
             end

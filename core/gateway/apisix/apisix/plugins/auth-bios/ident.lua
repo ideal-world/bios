@@ -14,7 +14,8 @@ function _M.ident(conf, ctx)
     local auth_flag = conf.auth_flag
     local date_flag = conf.date_flag
     local host_flag = conf.host_flag
-    local protocol_flag = conf.protocol_flag
+    -- TODO
+    local protocol_flag = "http"
     local request_date_offset_ms = conf.request_date_offset_ms
 
     local cache_token = conf.cache_token
