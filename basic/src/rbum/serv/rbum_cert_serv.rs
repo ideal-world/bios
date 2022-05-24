@@ -141,7 +141,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         Self::check_ownership(id, funs, cxt).await?;
         Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
-        let result = Self::get_rbum(
+        let result = Self::peek_rbum(
             id,
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
@@ -225,23 +225,23 @@ impl<'a> RbumCertConfServ {
         );
         if let Some(cached_id) = funs.cache().get(key).await? {
             Ok(Some(cached_id))
+        } else if let Some(id) = funs
+            .db()
+            .get_dto::<IdResp>(
+                Query::select()
+                    .column(rbum_cert_conf::Column::Id)
+                    .from(rbum_cert_conf::Entity)
+                    .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(code))
+                    .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
+                    .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
+            )
+            .await?
+            .map(|r| r.id)
+        {
+            funs.cache().set_ex(key, &id, RbumConfigManager::get(funs.module_code())?.cache_key_cert_code_expire_sec).await?;
+            Ok(Some(id))
         } else {
-            let id = funs
-                .db()
-                .get_dto::<IdResp>(
-                    Query::select()
-                        .column(rbum_cert_conf::Column::Id)
-                        .from(rbum_cert_conf::Entity)
-                        .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(code))
-                        .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
-                        .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
-                )
-                .await?
-                .map(|r| r.id);
-            if let Some(id) = &id {
-                funs.cache().set_ex(key, id, RbumConfigManager::get(funs.module_code())?.cache_key_cert_code_expire_sec).await?;
-            }
-            Ok(id)
+            Ok(None)
         }
     }
 }

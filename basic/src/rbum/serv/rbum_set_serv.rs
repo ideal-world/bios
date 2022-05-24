@@ -92,6 +92,18 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
             funs,
         )
         .await?;
+        let result = Self::peek_rbum(
+            id,
+            &RbumBasicFilterReq {
+                with_sub_own_paths: true,
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        let key = &format!("{}{}", RbumConfigManager::get(funs.module_code())?.cache_key_set_code_, result.code);
+        funs.cache().del(key).await?;
         Ok(())
     }
 
