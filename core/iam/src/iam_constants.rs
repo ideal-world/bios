@@ -10,6 +10,12 @@ pub const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam-account";
 pub const RBUM_KIND_SCHEME_IAM_ROLE: &str = "iam-role";
 pub const RBUM_KIND_SCHEME_IAM_RES: &str = "iam-res";
 
+pub const RBUM_EXT_TABLE_IAM_TENANT: &str = "iam_tenant";
+pub const RBUM_EXT_TABLE_IAM_APP: &str = "iam_app";
+pub const RBUM_EXT_TABLE_IAM_ACCOUNT: &str = "iam_account";
+pub const RBUM_EXT_TABLE_IAM_ROLE: &str = "iam-role";
+pub const RBUM_EXT_TABLE_IAM_RES: &str = "iam-res";
+
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT: &str = "bios";
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";
 pub const RBUM_ITEM_NAME_TENANT_ADMIN_ROLE: &str = "tenant_admin";

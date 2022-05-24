@@ -34,8 +34,9 @@ use crate::console_tenant::api::{
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{
-    RBUM_ITEM_NAME_APP_ADMIN_ROLE, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_SCHEME_IAM_ACCOUNT,
-    RBUM_KIND_SCHEME_IAM_APP, RBUM_KIND_SCHEME_IAM_RES, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT, RBUM_SCOPE_LEVEL_GLOBAL,
+    RBUM_EXT_TABLE_IAM_ACCOUNT, RBUM_EXT_TABLE_IAM_APP, RBUM_EXT_TABLE_IAM_RES, RBUM_EXT_TABLE_IAM_ROLE, RBUM_EXT_TABLE_IAM_TENANT, RBUM_ITEM_NAME_APP_ADMIN_ROLE,
+    RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_SCHEME_IAM_ACCOUNT, RBUM_KIND_SCHEME_IAM_APP,
+    RBUM_KIND_SCHEME_IAM_RES, RBUM_KIND_SCHEME_IAM_ROLE, RBUM_KIND_SCHEME_IAM_TENANT, RBUM_SCOPE_LEVEL_GLOBAL,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -185,11 +186,11 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         owner: default_account_id.clone(),
     };
 
-    let kind_tenant_id = add_kind(RBUM_KIND_SCHEME_IAM_TENANT, funs, &cxt).await?;
-    let kind_app_id = add_kind(RBUM_KIND_SCHEME_IAM_APP, funs, &cxt).await?;
-    let kind_role_id = add_kind(RBUM_KIND_SCHEME_IAM_ROLE, funs, &cxt).await?;
-    let kind_account_id = add_kind(RBUM_KIND_SCHEME_IAM_ACCOUNT, funs, &cxt).await?;
-    let kind_res_id = add_kind(RBUM_KIND_SCHEME_IAM_RES, funs, &cxt).await?;
+    let kind_tenant_id = add_kind(RBUM_KIND_SCHEME_IAM_TENANT, RBUM_EXT_TABLE_IAM_TENANT, funs, &cxt).await?;
+    let kind_app_id = add_kind(RBUM_KIND_SCHEME_IAM_APP, RBUM_EXT_TABLE_IAM_APP, funs, &cxt).await?;
+    let kind_role_id = add_kind(RBUM_KIND_SCHEME_IAM_ROLE, RBUM_EXT_TABLE_IAM_ROLE, funs, &cxt).await?;
+    let kind_account_id = add_kind(RBUM_KIND_SCHEME_IAM_ACCOUNT, RBUM_EXT_TABLE_IAM_ACCOUNT, funs, &cxt).await?;
+    let kind_res_id = add_kind(RBUM_KIND_SCHEME_IAM_RES, RBUM_EXT_TABLE_IAM_RES, funs, &cxt).await?;
 
     let domain_iam_id = add_domain(funs, &cxt).await?;
 
@@ -318,7 +319,7 @@ System administrator name: {} ,Initial password: {}
     Ok((RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string(), pwd))
 }
 
-async fn add_kind<'a>(scheme: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
     RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             code: TrimString(scheme.to_string()),
@@ -326,7 +327,7 @@ async fn add_kind<'a>(scheme: &str, funs: &TardisFunsInst<'a>, cxt: &TardisConte
             note: None,
             icon: None,
             sort: None,
-            ext_table_name: Some(scheme.to_string().to_lowercase()),
+            ext_table_name: Some(ext_table.to_string().to_lowercase()),
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
         },
         funs,
