@@ -1,10 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Copyright 2022. the original author or authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -14,18 +15,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+set -ex
 
-OPENRESTY_PREFIX="/usr/openresty"
+# you might need sudo to run this script
+if [ -z ${OPENRESTY_PREFIX} ]; then
+    OPENRESTY_PREFIX="/usr/local/openresty"
+fi
 
-wget https://luarocks.github.io/luarocks/releases/luarocks-3.4.0.tar.gz
-tar -xf luarocks-3.4.0.tar.gz
-rm luarocks-3.4.0.tar.gz
-
-cd luarocks-3.4.0 || exit
+LUAROCKS_VER=3.8.0
+wget https://github.com/luarocks/luarocks/archive/v"$LUAROCKS_VER".tar.gz
+tar -xf v"$LUAROCKS_VER".tar.gz
+rm -f v"$LUAROCKS_VER".tar.gz
+cd luarocks-"$LUAROCKS_VER" || exit
 
 OR_BIN="$OPENRESTY_PREFIX/bin/openresty"
-OR_VER=$($OR_BIN -v 2>&1 | awk -F '/' '{print $2}' | awk -F '.' '{print $1"."$2}')
-if [[ -e $OR_BIN && "$OR_VER" == 1.19 ]]; then
+OR_VER=$($OR_BIN -v 2>&1 | awk -F '/' '{print $2}' | awk -F '.' '{print $1 * 100 + $2}')
+if [[ -e $OR_BIN && "$OR_VER" -ge 119 ]]; then
     WITH_LUA_OPT="--with-lua=${OPENRESTY_PREFIX}/luajit"
 else
     # For old version OpenResty, we still need to install LuaRocks with Lua
@@ -35,14 +40,12 @@ fi
 ./configure $WITH_LUA_OPT \
     > build.log 2>&1 || (cat build.log && exit 1)
 
-sudo make build > build.log 2>&1 || (cat build.log && exit 1)
-msg="rerun this script with 'sudo' if you failed to make install because of privilege problem."
-sudo make install > build.log 2>&1 || (cat build.log && echo "$msg" && exit 1)
+make build > build.log 2>&1 || (cat build.log && exit 1)
+sudo make install > build.log 2>&1 || (cat build.log && exit 1)
 cd .. || exit
-sudo rm -rf luarocks-3.4.0
+rm -rf luarocks-"$LUAROCKS_VER"
 
-rm -rf ~/.luarocks
-mkdir ~/.luarocks
+mkdir ~/.luarocks || true
 
 # OpenResty 1.17.8 or higher version uses openssl111 as the openssl dirname.
 OPENSSL_PREFIX=${OPENRESTY_PREFIX}/openssl
@@ -52,6 +55,3 @@ fi
 
 luarocks config variables.OPENSSL_LIBDIR ${OPENSSL_PREFIX}/lib
 luarocks config variables.OPENSSL_INCDIR ${OPENSSL_PREFIX}/include
-
-rm build.log
-
