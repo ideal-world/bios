@@ -1,4 +1,4 @@
-FROM apache/apisix:2.8-alpine
+FROM apache/apisix:2.13.1-alpine
 
 COPY apisix/apisix/plugins/auth-bios.lua /usr/local/apisix/apisix/plugins/auth-bios.lua
 COPY apisix/apisix/plugins/auth-bios /usr/local/apisix/apisix/plugins/auth-bios
