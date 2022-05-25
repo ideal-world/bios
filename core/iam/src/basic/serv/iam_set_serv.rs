@@ -25,6 +25,7 @@ impl<'a> IamSetServ {
         let set_id = RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
                 code: TrimString(code.clone()),
+                kind: TrimString(if is_org { "org".to_string() } else { "res".to_string() }),
                 name: TrimString(code),
                 note: None,
                 icon: None,

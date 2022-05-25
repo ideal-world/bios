@@ -5,7 +5,7 @@ use tardis::log::info;
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
@@ -33,6 +33,7 @@ async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
     let id = RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
             code: TrimString("test_rbum_set_code".to_string()),
+            kind: TrimString("".to_string()),
             name: TrimString(" 测试集合 ".to_string()),
             note: None,
             icon: None,
@@ -47,7 +48,7 @@ async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_set】 : Test Get : RbumSetServ::get_rbum");
-    let rbum = RbumSetServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    let rbum = RbumSetServ::get_rbum(&id, &RbumSetFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.name, "测试集合");
     assert_eq!(rbum.scope_level, RbumScopeLevelKind::L2);
@@ -70,7 +71,7 @@ async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_set】 : Test Find : RbumSetServ::paginate_rbums");
-    let rbums = RbumSetServ::paginate_rbums(&RbumBasicFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    let rbums = RbumSetServ::paginate_rbums(&RbumSetFilterReq::default(), 1, 10, None, None, &funs, context).await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
@@ -78,7 +79,7 @@ async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_set】 : Test Delete : RbumSetServ::delete_rbum");
     RbumSetServ::delete_rbum(&id, &funs, context).await?;
-    assert!(RbumSetServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumSetServ::get_rbum(&id, &RbumSetFilterReq::default(), &funs, context).await.is_err());
 
     funs.rollback().await?;
 
@@ -93,6 +94,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     let set_id = RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
             code: TrimString("sss".to_string()),
+            kind: TrimString("".to_string()),
             name: TrimString(" 测试集合 ".to_string()),
             note: None,
             icon: None,
@@ -384,6 +386,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     let set_id = RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
             code: TrimString("set_test".to_string()),
+            kind: TrimString("".to_string()),
             name: TrimString(" 测试集合 ".to_string()),
             note: None,
             icon: None,

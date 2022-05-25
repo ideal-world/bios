@@ -9,7 +9,7 @@ use tardis::db::sea_query::*;
 use tardis::TardisFuns;
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq};
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp, RbumSetItemInfoResp, RbumSetTreeResp};
 use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp};
 use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq, RbumSetItemSummaryResp};
@@ -25,7 +25,7 @@ pub struct RbumSetCateServ;
 pub struct RbumSetItemServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, RbumSetSummaryResp, RbumSetDetailResp, RbumBasicFilterReq> for RbumSetServ {
+impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, RbumSetSummaryResp, RbumSetDetailResp, RbumSetFilterReq> for RbumSetServ {
     fn get_table_name() -> &'static str {
         rbum_set::Entity.table_name()
     }
@@ -34,6 +34,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         Ok(rbum_set::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             code: Set(add_req.code.to_string()),
+            kind: Set(add_req.kind.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -94,8 +95,11 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         .await?;
         let result = Self::peek_rbum(
             id,
-            &RbumBasicFilterReq {
-                with_sub_own_paths: true,
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             funs,
@@ -107,12 +111,13 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         Ok(())
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
                 (rbum_set::Entity, rbum_set::Column::Id),
                 (rbum_set::Entity, rbum_set::Column::Code),
+                (rbum_set::Entity, rbum_set::Column::Kind),
                 (rbum_set::Entity, rbum_set::Column::Name),
                 (rbum_set::Entity, rbum_set::Column::Note),
                 (rbum_set::Entity, rbum_set::Column::Icon),
@@ -126,7 +131,35 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 (rbum_set::Entity, rbum_set::Column::ScopeLevel),
             ])
             .from(rbum_set::Entity);
-        query.with_filter(Self::get_table_name(), filter, is_detail, true, cxt);
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::tbl(rbum_set::Entity, rbum_set::Column::Kind).eq(kind.to_string()));
+        }
+        if let Some(rbum_item_rel_filter_req) = &filter.rel {
+            if rbum_item_rel_filter_req.rel_by_from {
+                query.inner_join(
+                    rbum_rel::Entity,
+                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).equals(rbum_set::Entity, rbum_set::Column::Id),
+                );
+                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
+                }
+            } else {
+                query.inner_join(
+                    rbum_rel::Entity,
+                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).equals(rbum_set::Entity, rbum_set::Column::Id),
+                );
+                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
+                }
+            }
+            if let Some(tag) = &rbum_item_rel_filter_req.tag {
+                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Tag).eq(tag.to_string()));
+            }
+            if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
+                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+            }
+        }
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);
         Ok(query)
     }
 }
@@ -267,8 +300,11 @@ impl<'a> RbumSetServ {
         if let Some(cached_id) = funs.cache().get(key).await? {
             Ok(Some(cached_id))
         } else if let Some(rbum_set) = Self::find_one_rbum(
-            &RbumBasicFilterReq {
-                code: Some(code.to_string()),
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    code: Some(code.to_string()),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             funs,
@@ -436,6 +472,31 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                         query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
                     }
                 }
+            }
+        }
+        if let Some(rbum_item_rel_filter_req) = &filter.rel {
+            if rbum_item_rel_filter_req.rel_by_from {
+                query.inner_join(
+                    rbum_rel::Entity,
+                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).equals(rbum_set_cate::Entity, rbum_set_cate::Column::Id),
+                );
+                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
+                }
+            } else {
+                query.inner_join(
+                    rbum_rel::Entity,
+                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).equals(rbum_set_cate::Entity, rbum_set_cate::Column::Id),
+                );
+                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
+                }
+            }
+            if let Some(tag) = &rbum_item_rel_filter_req.tag {
+                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Tag).eq(tag.to_string()));
+            }
+            if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
+                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
             }
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);

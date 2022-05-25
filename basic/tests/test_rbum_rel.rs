@@ -245,6 +245,7 @@ async fn test_rbum_rel_with_set(context: &TardisContext) -> TardisResult<()> {
     let set_id = RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
             code: TrimString("set_test".to_string()),
+            kind: TrimString("".to_string()),
             name: TrimString(" 测试集合 ".to_string()),
             note: None,
             icon: None,

@@ -10,6 +10,8 @@ pub struct RbumSetAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub code: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub kind: TrimString,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
@@ -45,6 +47,7 @@ pub struct RbumSetModifyReq {
 pub struct RbumSetSummaryResp {
     pub id: String,
     pub code: String,
+    pub kind: String,
     pub name: String,
     pub icon: String,
     pub sort: u32,
@@ -63,6 +66,8 @@ pub struct RbumSetSummaryResp {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
 pub struct RbumSetDetailResp {
     pub id: String,
+    pub code: String,
+    pub kind: String,
     pub name: String,
     pub note: String,
     pub icon: String,
