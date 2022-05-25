@@ -258,7 +258,6 @@ impl<'a> IamCertServ {
         tenant_id: Option<String>,
         ak: &str,
         account_id: &str,
-        rbum_cert_id: &str,
         token_kind: Option<String>,
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<AccountInfoResp> {
@@ -273,7 +272,7 @@ impl<'a> IamCertServ {
             groups: vec![],
         };
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
-        IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, rbum_cert_id, funs, &context).await?;
+        IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
 
         let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
         let roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;

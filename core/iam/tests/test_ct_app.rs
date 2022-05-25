@@ -137,29 +137,7 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
         .total_size,
         1
     );
-    IamAppServ::delete_item_with_all_rels(&app_id1, &funs, &context1).await?;
-    assert_eq!(
-        IamAppServ::paginate_items(
-            &IamAppFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(vec![app_id1.clone()]),
-                    name: None,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            1,
-            10,
-            None,
-            None,
-            &funs,
-            context1,
-        )
-        .await?
-        .total_size,
-        0
-    );
+    assert!(IamAppServ::delete_item_with_all_rels(&app_id1, &funs, context1).await.is_err());
 
     funs.rollback().await?;
 
