@@ -45,6 +45,8 @@ pub struct RbumCertModifyReq {
 pub struct RbumCertSummaryResp {
     pub id: String,
     pub ak: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub status: RbumCertStatusKind,
 
     pub rel_rbum_cert_conf_id: Option<String>,
