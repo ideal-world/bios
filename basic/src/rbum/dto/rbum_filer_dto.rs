@@ -83,8 +83,17 @@ pub struct RbumRelExtFilterReq {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+pub struct RbumSetFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub rel: Option<RbumItemRelFilterReq>,
+    pub kind: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumSetCateFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub rel: Option<RbumItemRelFilterReq>,
     pub rel_rbum_set_id: Option<String>,
     pub sys_code: Option<String>,
     pub find_filter: Option<RbumSetCateLevelQueryKind>,

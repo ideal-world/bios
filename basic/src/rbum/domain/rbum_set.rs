@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -11,6 +11,7 @@ pub struct Model {
     pub id: String,
     // Specific
     pub code: String,
+    pub kind: String,
     pub name: String,
     pub note: String,
     pub icon: String,
@@ -42,6 +43,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::Code).not_null().string())
+            .col(ColumnDef::new(Column::Kind).not_null().string())
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Icon).not_null().string())
@@ -63,6 +65,7 @@ impl TardisActiveModel for ActiveModel {
         vec![
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::OwnPaths.to_string())).table(Entity).col(Column::OwnPaths).to_owned(),
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Code.to_string())).table(Entity).col(Column::Code).unique().to_owned(),
+            Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::Kind.to_string())).table(Entity).col(Column::Kind).to_owned(),
         ]
     }
 }
