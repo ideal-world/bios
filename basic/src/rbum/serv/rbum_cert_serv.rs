@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use tardis::{log, TardisFuns};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -8,7 +9,6 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::regex::Regex;
-use tardis::{log, TardisFuns};
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -283,7 +283,19 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         }
 
         if let Some(rel_rbum_cert_conf_id) = &add_req.rel_rbum_cert_conf_id {
-            let rbum_cert_conf = RbumCertConfServ::get_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
+            let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+                rel_rbum_cert_conf_id,
+                &RbumCertConfFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                cxt,
+            )
+            .await?;
             RbumCertServ::check_cert_conf_constraint_by_add(add_req, &rbum_cert_conf, funs, cxt).await?;
             // Encrypt Sk
             if rbum_cert_conf.sk_encrypted {
@@ -303,6 +315,38 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             if rbum_cert_conf.sk_dynamic {
                 add_req.end_time = None;
             }
+        }
+        Ok(())
+    }
+
+    async fn after_add_rbum(id: &str, add_req: &RbumCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let rbum_cert = Self::peek_rbum(
+            id,
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
+            let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+                rel_rbum_cert_conf_id,
+                &RbumCertConfFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                cxt,
+            )
+            .await?;
             // Delete Old Certs
             if rbum_cert_conf.coexist_num != 0 {
                 let need_delete_rbum_certs = Self::paginate_rbums(
@@ -326,10 +370,6 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                 }
             }
         }
-        Ok(())
-    }
-
-    async fn after_add_rbum(_: &str, add_req: &RbumCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if let Some(vcode) = &add_req.vcode {
             Self::add_vcode_to_cache(add_req.ak.0.as_str(), vcode.0.as_str(), &cxt.own_paths, funs).await?;
         }
@@ -618,7 +658,7 @@ impl<'a> RbumCertServ {
 
     async fn check_cert_conf_constraint_by_add(
         add_req: &RbumCertAddReq,
-        rbum_cert_conf: &RbumCertConfDetailResp,
+        rbum_cert_conf: &RbumCertConfSummaryResp,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<()> {
