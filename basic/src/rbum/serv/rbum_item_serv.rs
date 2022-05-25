@@ -796,6 +796,20 @@ where
         Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
         funs.db().count(&query).await
     }
+
+    async fn is_disabled(id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<bool> {
+        #[derive(Debug, FromQueryResult)]
+        pub struct StatusResp {
+            pub disabled: bool,
+        }
+        let result =
+            funs.db().get_dto::<StatusResp>(Query::select().column(rbum_item::Column::Disabled).from(rbum_item::Entity).and_where(Expr::col(rbum_item::Column::Id).eq(id))).await?;
+        if let Some(result) = result {
+            Ok(result.disabled)
+        } else {
+            Err(TardisError::NotFound(format!("Item {} not found", id)))
+        }
+    }
 }
 
 #[async_trait]
