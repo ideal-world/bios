@@ -219,7 +219,7 @@ pub async fn sys_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> Tard
 
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/cs/cert?account_id={}", sys_admin_account_id)).await;
-    assert_eq!(certs.len(), 2);
+    assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Lock/Unlock Account By Account Id
@@ -787,7 +787,7 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
 
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
-    assert_eq!(certs.len(), 2);
+    assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Add Org Item
@@ -824,7 +824,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
 
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
-    assert_eq!(certs.len(), 2);
+    assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Find Role By Account Id
@@ -1022,7 +1022,7 @@ pub async fn passport_console_account_mgr_page(client: &mut BIOSWebTestClient) -
 
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
-    assert_eq!(certs.len(), 2);
+    assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
 
     // Find Role By Current Account
