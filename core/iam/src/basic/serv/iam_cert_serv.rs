@@ -2,8 +2,8 @@ use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFuns;
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
@@ -222,7 +222,7 @@ impl<'a> IamCertServ {
     }
 
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let cert = RbumCertServ::get_rbum(
+        let cert = RbumCertServ::peek_rbum(
             id,
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
@@ -232,7 +232,7 @@ impl<'a> IamCertServ {
                 ..Default::default()
             },
             funs,
-            cxt
+            cxt,
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, cxt).await?;

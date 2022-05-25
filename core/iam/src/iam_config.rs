@@ -12,9 +12,9 @@ use bios_basic::rbum::rbum_config::RbumConfig;
 #[serde(default)]
 pub struct IamConfig {
     pub rbum: RbumConfig,
-    // token -> token_kind, account_id
+    // token -> (token_kind, account_id)
     pub cache_key_token_info_: String,
-    // account_id -> [token]
+    // account_id -> [token, (token_kind, add_time)]
     pub cache_key_account_rel_: String,
     // account_id -> {
     //     _: system or tenant context,
