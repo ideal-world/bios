@@ -4,61 +4,46 @@ local m_resource = require("apisix.plugins.auth-bios.resource")
 local _M = {}
 
 function _M.auth(ident_info)
-    local res_action = ident_info.res_action
-    local res_uri = ident_info.res_uri
-    local tenant_id = ident_info.tenant_id
-    local app_id = ident_info.app_id
-    local account_id = ident_info.account_id
-    local roles = ident_info.roles
-    local groups = ident_info.groups
 
-    local matched_res = m_resource.match_res(res_action, res_uri)
-    if m_utils.table_length(matched_res) == 0 then
+    local rbum_uri = ident_info.rbum_uri
+    local rbum_action = ident_info.rbum_action
+    local iam_app_id = ident_info.iam_app_id
+    local iam_tenant_id = ident_info.iam_tenant_id
+    local iam_account_id = ident_info.iam_account_id
+    local iam_roles = ident_info.iam_roles
+    local iam_groups = ident_info.iam_groups
+
+    local matched_res = m_resource.match_res(rbum_action, rbum_uri)
+    if matched_res == nil then
         -- No authentication required
         return 200, { message = "" }
     end
-    local auth_info = {}
-    for _, res in pairs(matched_res) do
-        for k, v in pairs(res.auth) do
-            if auth_info[k] == nil then
-                auth_info[k] = v
+    local auth_info = matched_res.auth
+    if auth_info.accounts ~= nil and auth_info.accounts ~= '' and iam_account_id ~= nil and iam_account_id ~= '' and m_utils.contain(auth_info.accounts, "#" .. iam_account_id .. "#") then
+        return 200, { message = "" }
+    end
+    if auth_info.roles ~= nil and auth_info.roles ~= '' and iam_roles ~= nil then
+        for _, iam_role in pairs(iam_roles) do
+            if iam_role ~= nil and iam_role ~= '' and m_utils.contain(auth_info.roles, "#" .. iam_role .. "#") then
+                return 200, { message = "" }
             end
         end
     end
-    if auth_info["tenant"] ~= nil and string.len(auth_info["tenant"]) ~= 0
-            and (tenant_id == nil or m_utils.contain(auth_info["tenant"], "#" .. tenant_id .. "#") == false) then
-        return 401, { message = "Permission denied" }
-    end
-    if auth_info["app"] ~= nil and string.len(auth_info["app"]) ~= 0
-            and (app_id == nil or m_utils.contain(auth_info["app"], "#" .. app_id .. "#") == false) then
-        return 401, { message = "Permission denied" }
-    end
-    if auth_info["account"] ~= nil and string.len(auth_info["account"]) ~= 0
-            and (account_id == nil or m_utils.contain(auth_info["account"], "#" .. account_id .. "#") == false) then
-        return 401, { message = "Permission denied" }
-    end
-    if auth_info["role"] ~= nil and string.len(auth_info["role"]) ~= 0 then
-        if roles == nil then
-            return 401, { message = "Permission denied" }
-        end
-        for i = 1, m_utils.table_length(roles) do
-            if m_utils.contain(auth_info["role"], "#" .. roles[i] .. "#") == false then
-                return 401, { message = "Permission denied" }
+    if auth_info.groups ~= nil and auth_info.groups ~= '' and iam_groups ~= nil then
+        for _, iam_group in pairs(iam_groups) do
+            if iam_group ~= nil and iam_group ~= '' and m_utils.contain(auth_info.groups, "#" .. iam_group .. "%w-#") then
+                return 200, { message = "" }
             end
         end
     end
-    if auth_info["group_node"] ~= nil and string.len(auth_info["group_node"]) ~= 0 then
-        if groups == nil then
-            return 401, { message = "Permission denied" }
-        end
-        for i = 1, m_utils.table_length(groups) do
-            -- TODO
-            if m_utils.contain(auth_info["group_node"], "#" .. groups[i] .. "#") == false then
-                return 401, { message = "Permission denied" }
-            end
-        end
+    if auth_info.apps ~= nil and auth_info.apps ~= '' and iam_app_id ~= nil and iam_app_id ~= '' and m_utils.contain(auth_info.apps, "#" .. iam_app_id .. "#") then
+        return 200, { message = "" }
     end
-    return 200, { message = "" }
+    if auth_info.tenants ~= nil and auth_info.tenants ~= '' and iam_tenant_id ~= nil and iam_tenant_id ~= '' and m_utils.contain(auth_info.tenants, "#" .. iam_tenant_id .. "#") then
+        return 200, { message = "" }
+    end
+
+    return 401, { message = "Permission denied" }
 end
 
 return _M
