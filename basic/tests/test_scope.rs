@@ -19,8 +19,6 @@ pub async fn test() -> TardisResult<()> {
         own_paths: "".to_string(),
         ak: "".to_string(),
         owner: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
     };
@@ -29,8 +27,6 @@ pub async fn test() -> TardisResult<()> {
         own_paths: TardisFuns::field.nanoid_len(4),
         ak: "".to_string(),
         owner: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
     };
@@ -39,8 +35,6 @@ pub async fn test() -> TardisResult<()> {
         own_paths: format!("{}/{}", s1.own_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
         owner: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
     };
@@ -49,8 +43,6 @@ pub async fn test() -> TardisResult<()> {
         own_paths: format!("{}/{}", s2.own_paths, TardisFuns::field.nanoid_len(4)),
         ak: "".to_string(),
         owner: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
     };
@@ -364,8 +356,6 @@ pub async fn test() -> TardisResult<()> {
             own_paths: "xxx".to_string(),
             ak: "".to_string(),
             owner: "".to_string(),
-            token: "".to_string(),
-            token_kind: "".to_string(),
             roles: vec![],
             groups: vec![],
         },
@@ -386,8 +376,6 @@ pub async fn test() -> TardisResult<()> {
             own_paths: format!("{}/x", s3.own_paths),
             ak: "".to_string(),
             owner: "".to_string(),
-            token: "".to_string(),
-            token_kind: "".to_string(),
             roles: vec![],
             groups: vec![],
         },

@@ -68,8 +68,6 @@ pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_cod
             own_paths: context.own_paths.to_string(),
             owner: context.id,
             ak: "_".to_string(),
-            token: "_".to_string(),
-            token_kind: "_".to_string(),
             roles: vec![],
             groups: vec![],
         }))
