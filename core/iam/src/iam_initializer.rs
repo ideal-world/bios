@@ -179,8 +179,6 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     let cxt = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
         owner: default_account_id.clone(),

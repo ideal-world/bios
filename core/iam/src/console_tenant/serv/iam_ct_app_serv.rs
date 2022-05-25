@@ -22,8 +22,6 @@ impl<'a> IamCtAppServ {
         let app_cxt = TardisContext {
             own_paths: format!("{}/{}", tenant_cxt.own_paths, app_id),
             ak: "".to_string(),
-            token: "".to_string(),
-            token_kind: "".to_string(),
             roles: vec![],
             groups: vec![],
             owner: add_req.admin_id.clone(),
