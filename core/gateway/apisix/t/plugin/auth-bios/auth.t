@@ -8,78 +8,188 @@ log_level('debug');
 
 __DATA__
 
-=== TEST 1: test resource
+=== TEST Auth
 --- config
     location /t {
         content_by_lua_block {
-            local json = require("cjson")
             local m_utils = require("apisix.plugins.auth-bios.utils")
             local m_resource = require("apisix.plugins.auth-bios.resource")
             local m_auth = require("apisix.plugins.auth-bios.auth")
-            m_resource.add_res("FETCH","api://app1.tenant1/p1/**",{_start=ngx.time(),_end=ngx.time()+3600,tenant="#tenant1#",app="#app1#",account="#account1#"})
-            m_resource.add_res("FETCH","api://app1.tenant1/p1/p2",{_start=ngx.time(),_end=ngx.time()+3600,app="#app2#",role="#role1#",account="",group_node="#group1#"})
-            local matched_res = m_resource.match_res("FETCH","api://app1.tenant1/p1/p2")
 
             local result = m_auth.auth({
-                res_action = "FETCH",
-                res_uri = "api://app1.tenant1/p2",
-                app_id = nil,
-                tenant_id = nil,
-                account_id = nil,
-                roles = nil,
-                groups = nil,
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = nil,
+                iam_roles = nil,
+                iam_groups = nil
             })
-            ngx.say(result)
+            ngx.say('public -> ',result)
+
+            m_resource.add_res("GET","iam-res://iam-serv",{apps="#app1#app2#",tenants="#tenant1#",st=ngx.time(),et=ngx.time()+3600})
             local result = m_auth.auth({
-                res_action = "FETCH",
-                res_uri = "api://app1.tenant1/p1/p2",
-                app_id = nil,
-                tenant_id = nil,
-                account_id = nil,
-                roles = nil,
-                groups = nil,
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = nil,
+                iam_roles = nil,
+                iam_groups = nil
             })
-            ngx.say(result)
+            ngx.say('private -> ',result)
+
+            m_resource.add_res("GET","iam-res://iam-serv",{accounts="#acc1#acc2#",st=ngx.time(),et=ngx.time()+3600})
             local result = m_auth.auth({
-                res_action = "FETCH",
-                res_uri = "api://app1.tenant1/p1/p3",
-                app_id = "app1",
-                tenant_id = "tenant1",
-                account_id = "account1",
-                roles = nil,
-                groups = nil,
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "acc3",
+                iam_roles = nil,
+                iam_groups = nil
             })
-            ngx.say(result)
+            ngx.say('acc0 -> ',result)
             local result = m_auth.auth({
-                res_action = "FETCH",
-                res_uri = "api://app1.tenant1/p1/p2",
-                app_id = "app1",
-                tenant_id = "tenant1",
-                account_id = "account1",
-                roles = nil,
-                groups = nil,
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "acc1",
+                iam_roles = nil,
+                iam_groups = nil
             })
-            ngx.say(result)
+            ngx.say('acc1 -> ',result)
+
+            m_resource.add_res("GET","iam-res://iam-serv",{roles="#role1#role2#",st=ngx.time(),et=ngx.time()+3600})
             local result = m_auth.auth({
-                res_action = "FETCH",
-                res_uri = "api://app1.tenant1/p1/p2",
-                app_id = "app2",
-                tenant_id = "tenant1",
-                account_id = nil,
-                roles = {"role1"},
-                groups = {"group1"},
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = {"role0"},
+                iam_groups = nil
             })
-            ngx.say(result)
+            ngx.say('role0 -> ',result)
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = {"role1"},
+                iam_groups = nil
+            })
+            ngx.say('role1 -> ',result)
+
+            m_resource.add_res("GET","iam-res://iam-serv",{groups="#g2.aaaa#g1.aaab##g1.aaaaaaaa##g1.aaaaaaab#",st=ngx.time(),et=ngx.time()+3600})
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = "",
+                iam_groups = {"g2.bbbb"}
+            })
+            ngx.say('g2.bbbb -> ',result)
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = "",
+                iam_groups = {"g1.aaab"}
+            })
+            ngx.say('g1.aaab -> ',result)
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = nil,
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = "",
+                iam_groups = {"g1.aaaa"}
+            })
+            ngx.say('g1.aaaa -> ',result)
+
+            m_resource.add_res("GET","iam-res://iam-serv",{apps="#app1#app2#",st=ngx.time(),et=ngx.time()+3600})
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = "app0",
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = {},
+                iam_groups = {}
+            })
+            ngx.say('app0 -> ',result)
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = "app1",
+                iam_tenant_id = nil,
+                iam_account_id = "",
+                iam_roles = {},
+                iam_groups = {}
+            })
+            ngx.say('app1 -> ',result)
+
+            m_resource.add_res("GET","iam-res://iam-serv",{tenants="#tenant1#tenant2#",st=ngx.time(),et=ngx.time()+3600})
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = "",
+                iam_tenant_id = "tenant0",
+                iam_account_id = "",
+                iam_roles = {},
+                iam_groups = {}
+            })
+            ngx.say('tenant0 -> ',result)
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = "",
+                iam_tenant_id = "tenant1",
+                iam_account_id = "",
+                iam_roles = {},
+                iam_groups = {}
+            })
+            ngx.say('tenant1 -> ',result)
+
+
+            m_resource.add_res("GET","iam-res://iam-serv",{tenants="#tenant1#tenant2#",st=ngx.time(),et=ngx.time()+3600})
+            local result = m_auth.auth({
+                rbum_uri = "iam-res://iam-serv",
+                rbum_action = "get",
+                iam_app_id = "app1",
+                iam_tenant_id = "tenant1",
+                iam_account_id = "acc1",
+                iam_roles = {},
+                iam_groups = {}
+            })
+            ngx.say('all -> ',result)
         }
     }
 --- request
 GET /t
 --- response_body
-200
-401
-200
-401
-200
+public -> 200
+private -> 401
+acc0 -> 401
+acc1 -> 200
+role0 -> 401
+role1 -> 200
+g2.bbbb -> 401
+g1.aaab -> 200
+g1.aaaa -> 200
+app0 -> 401
+app1 -> 200
+tenant0 -> 401
+tenant1 -> 200
+all -> 200
 --- no_error_log
 [error]
 
