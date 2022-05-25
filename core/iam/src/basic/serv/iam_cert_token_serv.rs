@@ -1,10 +1,14 @@
+use std::str::FromStr;
+
+use itertools::Itertools;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::chrono::Utc;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -104,7 +108,7 @@ impl<'a> IamCertTokenServ {
             cxt,
         )
         .await?;
-        let cert = RbumCertServ::get_rbum(&id, &RbumCertFilterReq::default(), funs, cxt).await?;
+        let cert = RbumCertServ::peek_rbum(&id, &RbumCertFilterReq::default(), funs, cxt).await?;
         let expire_sec = (cert.end_time - cert.start_time).num_seconds() as usize;
         funs.cache()
             .set_ex(
@@ -113,11 +117,54 @@ impl<'a> IamCertTokenServ {
                 expire_sec,
             )
             .await?;
-        funs.cache().hset(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str(), &token, "").await?;
+        funs.cache()
+            .hset(
+                format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str(),
+                token,
+                &format!("{},{}", token_kind.to_string(), Utc::now().timestamp()),
+            )
+            .await?;
+        // Remove old tokens
+        // TODO test
+        if let Some(rel_rbum_cert_conf_id) = &cert.rel_rbum_cert_conf_id {
+            let cert_conf = RbumCertConfServ::peek_rbum(
+                rel_rbum_cert_conf_id,
+                &RbumCertConfFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                cxt,
+            )
+            .await?;
+            if cert_conf.coexist_num != 0 {
+                let old_tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str()).await?;
+                let old_tokens = old_tokens
+                    .into_iter()
+                    .map(|(k, v)| {
+                        (
+                            k,
+                            v.split(",").next().unwrap_or("").to_string(),
+                            i64::from_str(v.split(',').nth(1).unwrap_or("")).unwrap_or(0),
+                        )
+                    })
+                    .filter(|(_, kind, _)| kind == token_kind.to_string().as_str())
+                    .sorted_by(|(_, _, t1), (_, _, t2)| t2.cmp(t1))
+                    .skip(cert_conf.coexist_num as usize)
+                    .map(|(token, _, _)| token)
+                    .collect::<Vec<String>>();
+                for old_token in old_tokens {
+                    Self::remove_token(&old_token, funs).await?;
+                }
+            }
+        }
         Ok(())
     }
 
-    pub async fn remove_cert(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn remove_token(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(",").nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
