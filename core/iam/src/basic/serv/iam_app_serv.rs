@@ -6,14 +6,17 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::TardisFuns;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
-use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::iam_config::IamBasicInfoManager;
+use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 
 pub struct IamAppServ;
@@ -82,6 +85,42 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
             iam_app.contact_phone = Set(contact_phone.to_string());
         }
         Ok(Some(iam_app))
+    }
+
+    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: 
+    &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        if modify_req.disabled.unwrap_or(false) {
+            let app = Self::get_item(id,&IamAppFilterReq::default(),funs,cxt).await?;
+            let own_paths = app.own_paths;
+            let cxt = cxt.clone();
+            tardis::tokio::spawn(async move {
+                // TODO test
+                let funs = iam_constants::get_tardis_inst();
+                let filter = IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(own_paths),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap();
+                let mut page_number = 1;
+                while count > 0 {
+                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                    for id in ids {
+                        IamAccountServ::delete_cache(&id, &funs).await.unwrap();
+                    }
+                    page_number += 1;
+                    count -= 100;
+                }
+            });
+        }
+        Ok(())
+    }
+
+    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        Err(TardisError::Conflict("App can only be disabled but not deleted".to_string()))
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
