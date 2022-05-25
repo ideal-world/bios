@@ -5,7 +5,7 @@ use serde::Serialize;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
@@ -495,6 +495,26 @@ where
 
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()>;
 
+    async fn peek_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
+        Self::do_peek_item(id, filter, funs, cxt).await
+    }
+
+    async fn do_peek_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
+        let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+        );
+        Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
+        query.and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).eq(id));
+        let query = funs.db().get_dto(&query).await?;
+        match query {
+            Some(resp) => Ok(resp),
+            // TODO
+            None => Err(TardisError::NotFound("".to_string())),
+        }
+    }
+
     async fn get_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
         Self::do_get_item(id, filter, funs, cxt).await
     }
@@ -513,6 +533,48 @@ where
             // TODO
             None => Err(TardisError::NotFound("".to_string())),
         }
+    }
+
+    async fn paginate_id_items(
+        filter: &ItemFilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        Self::do_paginate_id_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_paginate_id_items(
+        filter: &ItemFilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+        );
+        Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos::<IdResp>(&query, page_number, page_size).await?;
+        Ok(TardisPage {
+            page_size,
+            page_number,
+            total_size,
+            records: records.into_iter().map(|resp| resp.id).collect(),
+        })
     }
 
     async fn paginate_items(
@@ -557,6 +619,93 @@ where
         })
     }
 
+    async fn paginate_detail_items(
+        filter: &ItemFilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<DetailResp>> {
+        Self::do_paginate_detail_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_paginate_detail_items(
+        filter: &ItemFilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<DetailResp>> {
+        let mut query = Self::package_item_query(true, filter, funs, cxt).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+        );
+        Self::package_ext_query(&mut query, true, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos(&query, page_number, page_size).await?;
+        Ok(TardisPage {
+            page_size,
+            page_number,
+            total_size,
+            records,
+        })
+    }
+
+    async fn find_one_item(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
+        Self::do_find_one_item(filter, funs, cxt).await
+    }
+
+    async fn do_find_one_item(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
+        let result = Self::find_items(filter, None, None, funs, cxt).await?;
+        if result.len() > 1 {
+            Err(TardisError::Conflict("Multiple records found".to_string()))
+        } else {
+            Ok(result.into_iter().next())
+        }
+    }
+
+    async fn find_id_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        Self::do_find_id_items(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_id_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        let mut query = Self::package_item_query(false, filter, funs, cxt).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+        );
+        Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos::<IdResp>(&query).await?.into_iter().map(|resp| resp.id).collect())
+    }
+
     async fn find_items(
         filter: &ItemFilterReq,
         desc_sort_by_create: Option<bool>,
@@ -580,6 +729,51 @@ where
             Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
         );
         Self::package_ext_query(&mut query, false, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos(&query).await?)
+    }
+
+    async fn find_one_detail_item(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        Self::do_find_one_detail_item(filter, funs, cxt).await
+    }
+
+    async fn do_find_one_detail_item(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        let result = Self::find_detail_items(filter, None, None, funs, cxt).await?;
+        if result.len() > 1 {
+            Err(TardisError::Conflict("Multiple records found".to_string()))
+        } else {
+            Ok(result.into_iter().next())
+        }
+    }
+
+    async fn find_detail_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<DetailResp>> {
+        Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_detail_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<DetailResp>> {
+        let mut query = Self::package_item_query(true, filter, funs, cxt).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+        );
+        Self::package_ext_query(&mut query, true, filter, funs, cxt).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
