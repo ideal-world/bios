@@ -69,8 +69,6 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         own_paths: "".to_string(),
         owner: "".to_string(),
         ak: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
     };
@@ -184,8 +182,6 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         own_paths: format!("{}/{}", tenant_id, app_id),
         owner: account_id.to_string(),
         ak: "".to_string(),
-        token: "".to_string(),
-        token_kind: "".to_string(),
         roles: vec![],
         groups: vec![],
     })
