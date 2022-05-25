@@ -4,7 +4,7 @@ use serde::Serialize;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::regex::Regex;
@@ -253,6 +253,43 @@ where
         }
     }
 
+    async fn paginate_id_rbums(
+        filter: &FilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        Self::do_paginate_id_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_paginate_id_rbums(
+        filter: &FilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos::<IdResp>(&query, page_number, page_size).await?;
+        Ok(TardisPage {
+            page_size,
+            page_number,
+            total_size,
+            records: records.into_iter().map(|resp| resp.id).collect(),
+        })
+    }
+
     async fn paginate_rbums(
         filter: &FilterReq,
         page_number: u64,
@@ -340,6 +377,33 @@ where
         }
     }
 
+    async fn find_id_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        Self::do_find_id_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    async fn do_find_id_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos::<IdResp>(&query).await?.into_iter().map(|resp| resp.id).collect())
+    }
+
     async fn find_rbums(
         filter: &FilterReq,
         desc_sort_by_create: Option<bool>,
@@ -367,24 +431,12 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
-    async fn find_one_detail_rbum(
-        filter: &FilterReq,
-        desc_sort_by_create: Option<bool>,
-        desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Option<DetailResp>> {
-        Self::do_find_one_detail_rbum(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    async fn find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        Self::do_find_one_detail_rbum(filter, funs, cxt).await
     }
 
-    async fn do_find_one_detail_rbum(
-        filter: &FilterReq,
-        desc_sort_by_create: Option<bool>,
-        desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
-    ) -> TardisResult<Option<DetailResp>> {
-        let result = Self::find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+    async fn do_find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        let result = Self::find_detail_rbums(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
             Err(TardisError::Conflict("Multiple records found".to_string()))
         } else {
