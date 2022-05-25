@@ -60,6 +60,7 @@ local function hget(key, field)
     return value
 end
 
+-- TODO auto remove local caches
 local function get(key, cache_sec)
     if cache_sec and cache_sec > 0 and CACHES[key] and CACHES[key][1] > os.time() then
         return CACHES[key][2]

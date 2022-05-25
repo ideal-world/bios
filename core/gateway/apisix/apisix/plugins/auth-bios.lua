@@ -17,21 +17,19 @@ local schema = {
         redis_timeout = { type = "integer", default = 1000 },
         redis_database = { type = "integer", default = 0 },
 
-        token_flag = { type = "string", default = "BIOS-Token" },
-        auth_flag = { type = "string", default = "Authorization" },
-        date_flag = { type = "string", default = "BIOS-Date" },
-        protocol_flag = { type = "string", default = "iam_res" },
-        request_date_offset_ms = { type = "integer", default = 5000 },
+        head_key_token = { type = "string", default = "Bios-Token" },
+        head_key_app = { type = "string", default = "Bios-App" },
+        head_key_protocol = { type = "string", default = "Bios-Proto" },
+        head_key_context = { type = "string", default = "Tardis-Context" },
 
-        context_flag = { type = "string", default = "BIOS-Context" },
+        cache_key_token_info = { type = "string", default = "iam:cache:token:info:" },
+        cache_key_account_info = { type = "string", default = "iam:cache:account:info:" },
+        cache_key_token_local_expire_sec = { type = "integer", default = 0 },
 
-        cache_resources = { type = "string", default = "bios:iam:resources" },
-        cache_change_resources = { type = "string", default = "bios:iam:change_resources:" },
-        cache_change_resources_timer_sec = { type = "integer", default = 30 },
-        cache_token = { type = "string", default = "bios:iam:token:info:" },
-        cache_token_exp_sec = { type = "integer", default = 60 },
-        cache_aksk = { type = "string", default = "bios:iam:app:aksk:" },
-        cache_aksk_exp_sec = { type = "integer", default = 60 },
+
+        cache_key_res_info = { type = "string", default = "iam:res:info" },
+        cache_key_res_changed_info = { type = "string", default = "iam:res:changed:info:" },
+        cache_key_res_changed_timer_sec = { type = "integer", default = 30 },
     },
     required = { "redis_host" }
 }
@@ -55,7 +53,7 @@ function _M.check_schema(conf)
         core.log.error("Connect redis error", redis_err)
         return false, redis_err
     end
-    m_init.init(conf.cache_resources, conf.cache_change_resources, conf.cache_change_resources_timer_sec)
+    m_init.init(conf.cache_key_res_info, conf.cache_key_res_changed_info, conf.cache_key_res_changed_timer_sec)
     return true
 end
 
@@ -68,22 +66,12 @@ function _M.rewrite(conf, ctx)
     if auth_code ~= 200 then
         return auth_code, auth_message
     end
-    core.request.set_header(ctx, conf.context_flag, ngx_encode_base64(json.decode({
-        trace = {
-            id=ngx.now() .. math.random(10000,99999),
-        },
-        ident = {
-            res_action = ctx.ident_info.resource_action,
-            res_uri = ctx.ident_info.resource_uri,
-            app_id = ctx.ident_info.app_id,
-            tenant_id = ctx.ident_info.tenant_id,
-            account_id = ctx.ident_info.account_id,
-            token = ctx.ident_info.token,
-            token_kind = ctx.ident_info.token_kind,
-            ak = ctx.ident_info.ak,
-            roles = ctx.ident_info.roles,
-            groups = ctx.ident_info.groups,
-        }
+    core.request.set_header(ctx, conf.head_key_context, ngx_encode_base64(json.decode({
+        own_paths = ctx.ident_info.own_paths,
+        owner = ctx.ident_info.iam_account_id,
+        ak = ctx.ident_info.ak,
+        roles = ctx.ident_info.roles,
+        groups = ctx.ident_info.groups,
     })))
 end
 
