@@ -3,131 +3,95 @@ local core = require("apisix.core")
 local m_utils = require("apisix.plugins.auth-bios.utils")
 local m_redis = require("apisix.plugins.auth-bios.redis")
 local json = require("cjson")
-local hmac_sha1 = ngx.hmac_sha1
-local ngx_encode_base64 = ngx.encode_base64
 
 local _M = {}
 
 function _M.ident(conf, ctx)
     -- Fetch args
-    local token_flag = conf.token_flag
-    local auth_flag = conf.auth_flag
-    local date_flag = conf.date_flag
-    local host_flag = conf.host_flag
-    -- TODO
-    local protocol_flag = "http"
-    local request_date_offset_ms = conf.request_date_offset_ms
+    local token_flag = conf.head_key_token
+    local app_flag = conf.head_key_app
+    local protocol_flag = conf.head_key_protocol
 
-    local cache_token = conf.cache_token
-    local cache_token_exp_sec = conf.cache_token_exp_sec
-    local cache_aksk = conf.cache_aksk
-    local cache_aksk_exp_sec = conf.cache_aksk_exp_sec
+    local cache_token = conf.cache_key_token_info
+    local cache_account = conf.cache_key_account_info
+    local cache_token_exp_sec = conf.cache_key_token_local_expire_sec
 
-    local host = core.request.header(ctx, host_flag)
+    local resource_uri = ngx.var.request_uri
     local req_method = ngx.var.request_method
 
     -- check
-    if host == nil or host == "" then
-        return 400, { message = "Request is not legal, missing [" .. host_flag .. "] in Header" }
+    if resource_uri == nil or resource_uri == "" then
+        return 400, { message = "Request is not legal, missing [path]" }
+    end
+    local domain_end_idx = string.find(string.sub(resource_uri, 2), "/")
+    if domain_end_idx == nil then
+        return 400, { message = "Request is not legal, missing [domain] in path" }
+    end
+    local rbum_kind = core.request.header(ctx, protocol_flag)
+    if rbum_kind == nil or rbum_kind == "" then
+        rbum_kind = "iam-res"
+    end
+    local app_id = core.request.header(ctx, app_flag)
+    if app_id == nil or app_id == "" then
+        app_id = ""
     end
 
-    local resource_uri = ngx.var.request_uri
-    local resource_action = string.lower(req_method)
-    resource_uri = protocol_flag .. "://" .. host .. resource_uri
+    -- package rbum info
+    local rbum_domain = string.sub(resource_uri, 2, domain_end_idx)
+    local rbum_item = string.sub(resource_uri, domain_end_idx + 1)
+    local rbum_uri = rbum_kind .. "://" .. rbum_domain .. rbum_item
+    local rbum_action = string.lower(req_method)
 
     -- ident
     local token = core.request.header(ctx, token_flag)
-    local authorization = core.request.header(ctx, auth_flag)
 
     -- public
-    if token == nil and authorization == nil then
+    if token == nil then
         ctx.ident_info = {
-            res_action = resource_action,
-            res_uri = resource_uri,
-            app_id = nil,
-            tenant_id = nil,
-            account_id = nil,
-            token = nil,
-            token_kind = nil,
-            ak = nil,
-            roles = nil,
-            groups = nil,
+            rbum_uri = rbum_uri,
+            rbum_action = rbum_action,
+            iam_app_id = nil,
+            iam_tenant_id = nil,
+            iam_account_id = nil,
+            iam_roles = nil,
+            iam_groups = nil,
         }
         return 200, { message = "" }
     end
+
     -- token
     if token ~= nil then
-        local opt_info, redis_err = m_redis.get(cache_token .. token, cache_token_exp_sec)
+        local account_info, redis_err = m_redis.get(cache_token .. token, cache_token_exp_sec)
         if redis_err then
             error("Redis get error: " .. redis_err)
         end
-        if opt_info == nil or opt_info == "" then
+        if account_info == nil or account_info == "" then
             return 401, { message = "Token [" .. token .. "] is not legal" }
         end
-        opt_info = json.decode(opt_info)
+        local account_id = m_utils.split(account_info, ',')[2]
+        local context, redis_err = m_redis.hget(cache_account .. account_id, app_id)
+        if redis_err then
+            error("Redis get error: " .. redis_err)
+        end
+        if context == nil or context == "" then
+            return 401, { message = "Token [" .. token .. "] with App [" .. app_id .. "] is not legal" }
+        end
+        local context = json.decode(context)
+        local own_paths = m_utils.split(context.own_paths, '/')
         ctx.ident_info = {
-            res_action = resource_action,
-            res_uri = resource_uri,
-            app_id = opt_info.app_id,
-            tenant_id = opt_info.tenant_id,
-            account_id = opt_info.account_id,
-            token = token,
-            token_kind = opt_info.token_kind,
-            ak = nil,
-            roles = opt_info.roles,
-            groups = opt_info.groups,
+            rbum_uri = rbum_uri,
+            rbum_action = rbum_action,
+            iam_app_id = own_paths[2] or '',
+            iam_tenant_id = own_paths[1] or '',
+            iam_account_id = context.owner,
+            iam_roles = context.roles,
+            iam_groups = context.groups,
+            own_paths = context.own_paths,
+            ak = context.ak,
         }
         return 200, { message = "" }
     end
 
-    -- authorization
-    local req_date = core.request.header(ctx, date_flag)
-    if req_date == nil or req_date == "" then
-        return 400, { message = "Request is not legal, missing [" .. date_flag .. "]" }
-    end
-    local req_time = ngx.parse_http_time(req_date)
-    if req_time == nil then
-        return 400, { message = "Request Date [" .. req_date .. "] is not legal" }
-    end
-    if req_time * 1000 + request_date_offset_ms < ngx.time() * 1000 then
-        return 400, { message = "Request has expired" }
-    end
-    if m_utils.contain(authorization, ":") == false then
-        return 400, { message = "Authorization [" .. authorization .. "] is not legal" }
-    end
-    local auth_info = m_utils.split(authorization, ":")
-    local req_ak = auth_info[1]
-    local req_signature = auth_info[2]
-    local req_path = ngx.var.uri
-    local sorted_req_query = m_utils.sort_query(ngx.req.get_uri_args())
-
-    local aksk_info, redis_err = m_redis.get(cache_aksk .. req_ak, cache_aksk_exp_sec)
-    if redis_err then
-        error("Redis get error: " .. redis_err)
-    end
-    if aksk_info == nil or aksk_info == "" then
-        return 401, { message = "Authorization [" .. authorization .. "] is not legal" }
-    end
-    aksk_info = m_utils.split(aksk_info, ":")
-    local sk = aksk_info[1]
-    local tenant_id = aksk_info[2]
-    local app_id = aksk_info[3]
-    local calc_signature = ngx_encode_base64(hmac_sha1(sk, string.lower(req_method .. "\n" .. req_date .. "\n" .. req_path .. "\n" .. sorted_req_query)))
-    if calc_signature ~= req_signature then
-        return 401, { message = "Authorization [" .. authorization .. "] is not legal" }
-    end
-    ctx.ident_info = {
-        res_action = resource_action,
-        res_uri = resource_uri,
-        app_id = app_id,
-        tenant_id = tenant_id,
-        account_id = nil,
-        token = nil,
-        token_kind = nil,
-        ak = req_ak,
-        roles = nil,
-        groups = nil,
-    }
     return 200, { message = "" }
 end
 
