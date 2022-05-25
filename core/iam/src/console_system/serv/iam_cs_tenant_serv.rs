@@ -25,8 +25,6 @@ impl<'a> IamCsTenantServ {
         let tenant_cxt = TardisContext {
             own_paths: tenant_id.clone(),
             ak: "".to_string(),
-            token: "".to_string(),
-            token_kind: "".to_string(),
             roles: vec![],
             groups: vec![],
             owner: tenant_admin_id.to_string(),

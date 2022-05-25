@@ -139,8 +139,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         own_paths: system_admin_context.own_paths.to_string(),
         ak: sysadmin_info.0.to_string(),
         owner: system_admin_context.owner.to_string(),
-        token: system_admin_context.token.to_string(),
-        token_kind: system_admin_context.token_kind.to_string(),
         roles: account_resp.roles.iter().map(|i| i.0.to_string()).collect(),
         // TODO
         groups: vec![],

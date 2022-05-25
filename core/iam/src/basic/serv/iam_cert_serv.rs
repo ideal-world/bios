@@ -263,18 +263,17 @@ impl<'a> IamCertServ {
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<AccountInfoResp> {
         let token_kind = IamCertTokenKind::parse(&token_kind);
+        let token = TardisFuns::crypto.key.generate_token()?;
         let tenant_id = if let Some(tenant_id) = tenant_id { tenant_id } else { "".to_string() };
         let context = TardisContext {
             own_paths: tenant_id.clone(),
             ak: ak.to_string(),
             owner: account_id.to_string(),
-            token: TardisFuns::crypto.key.generate_token()?,
-            token_kind: token_kind.to_string(),
             roles: vec![],
             groups: vec![],
         };
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
-        IamCertTokenServ::add_cert(&context.token, &token_kind, account_id, &rbum_cert_conf_id, rbum_cert_id, funs, &context).await?;
+        IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, rbum_cert_id, funs, &context).await?;
 
         let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
         let roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;
@@ -316,18 +315,18 @@ impl<'a> IamCertServ {
         let account_info = AccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_name.to_string(),
-            token: context.token.to_string(),
+            token,
             roles: roles.iter().filter(|r| r.rel_own_paths == context.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             groups: Default::default(),
             apps,
         };
 
-        Self::add_cached_contexts(&account_info, ak, &token_kind.to_string(), &tenant_id, funs).await?;
+        Self::add_cached_contexts(&account_info, ak, &tenant_id, funs).await?;
 
         Ok(account_info)
     }
 
-    pub async fn add_cached_contexts(account_info: &AccountInfoResp, ak: &str, token_kind: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    async fn add_cached_contexts(account_info: &AccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         funs.cache()
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
@@ -336,8 +335,6 @@ impl<'a> IamCertServ {
                     own_paths: tenant_id.to_string(),
                     ak: ak.to_string(),
                     owner: account_info.account_id.to_string(),
-                    token: account_info.token.to_string(),
-                    token_kind: token_kind.to_string(),
                     roles: account_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
                     groups: account_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
                 })?,
@@ -352,8 +349,6 @@ impl<'a> IamCertServ {
                         own_paths: format!("{}/{}", tenant_id, account_app_info.app_id).to_string(),
                         ak: ak.to_string(),
                         owner: account_info.account_id.to_string(),
-                        token: account_info.token.to_string(),
-                        token_kind: token_kind.to_string(),
                         roles: account_app_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
                         groups: account_app_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
                     })?,
@@ -410,8 +405,6 @@ impl<'a> IamCertServ {
             own_paths: "_/_/_/_/_/_".to_string(),
             ak: "".to_string(),
             owner: "".to_string(),
-            token: "".to_string(),
-            token_kind: "".to_string(),
             roles: vec![],
             groups: vec![],
         }
