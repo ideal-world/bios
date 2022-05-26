@@ -15,7 +15,6 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{AccountAppInfoResp, AccountInfoResp};
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
@@ -23,7 +22,8 @@ use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
 
@@ -236,7 +236,7 @@ impl<'a> IamCertServ {
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, cxt).await?;
-        IamAccountServ::delete_cache(&cert.rel_rbum_id, funs).await?;
+        IamIdentCacheServ::delete_token_by_account_id(&cert.rel_rbum_id, funs).await?;
         Ok(result)
     }
 
@@ -320,58 +320,9 @@ impl<'a> IamCertServ {
             apps,
         };
 
-        Self::add_cached_contexts(&account_info, ak, &tenant_id, funs).await?;
+        IamIdentCacheServ::add_contexts(&account_info, ak, &tenant_id, funs).await?;
 
         Ok(account_info)
-    }
-
-    async fn add_cached_contexts(account_info: &AccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        funs.cache()
-            .hset(
-                format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
-                "",
-                &TardisFuns::json.obj_to_string(&TardisContext {
-                    own_paths: tenant_id.to_string(),
-                    ak: ak.to_string(),
-                    owner: account_info.account_id.to_string(),
-                    roles: account_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
-                    groups: account_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
-                })?,
-            )
-            .await?;
-        for account_app_info in &account_info.apps {
-            funs.cache()
-                .hset(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
-                    &account_app_info.app_id,
-                    &TardisFuns::json.obj_to_string(&TardisContext {
-                        own_paths: format!("{}/{}", tenant_id, account_app_info.app_id).to_string(),
-                        ak: ak.to_string(),
-                        owner: account_info.account_id.to_string(),
-                        roles: account_app_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
-                        groups: account_app_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
-                    })?,
-                )
-                .await?;
-        }
-        Ok(())
-    }
-
-    pub async fn fetch_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
-        if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
-            let account_id = token_info.split(',').nth(1).unwrap_or("");
-            if let Some(context) = funs
-                .cache()
-                .hget(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),
-                    fetch_req.app_id.as_ref().unwrap_or(&"".to_string()),
-                )
-                .await?
-            {
-                return TardisFuns::json.str_to_obj(&context);
-            }
-        }
-        Err(TardisError::NotFound("context not found".to_string()))
     }
 
     pub fn try_use_tenant_ctx(cxt: TardisContext, tenant_id: Option<String>) -> TardisResult<TardisContext> {

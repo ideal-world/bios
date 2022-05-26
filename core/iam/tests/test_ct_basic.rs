@@ -8,7 +8,7 @@ use tardis::tokio::time::sleep;
 
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::IamContextFetchReq;
-use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
+use bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
@@ -57,7 +57,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
         &funs,
     )
     .await?;
-    let context1 = IamCertServ::fetch_context(
+    let context1 = IamIdentCacheServ::fetch_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,
@@ -103,7 +103,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
         &funs,
     )
     .await?;
-    let context2 = IamCertServ::fetch_context(
+    let context2 = IamIdentCacheServ::fetch_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,

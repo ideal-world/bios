@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
-use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::IamCertKind;
 
@@ -127,7 +127,7 @@ impl<'a> IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
-            IamAccountServ::delete_cache(rel_iam_item_id, funs).await
+            IamIdentCacheServ::delete_token_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
         }
@@ -153,7 +153,7 @@ impl<'a> IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
-            IamAccountServ::delete_cache(rel_iam_item_id, funs).await
+            IamIdentCacheServ::delete_token_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
         }
