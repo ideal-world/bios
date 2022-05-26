@@ -126,7 +126,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
         Ok(rbum_item)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumItemDetailResp>> {
         Self::check_ownership(id, funs, cxt).await?;
         Self::check_exist_before_delete(id, RbumItemAttrServ::get_table_name(), rbum_item_attr::Column::RelRbumItemId.as_str(), funs).await?;
         Self::check_exist_with_cond_before_delete(
@@ -145,7 +145,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
             funs,
         )
         .await?;
-        Ok(())
+        Ok(None)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
@@ -306,21 +306,21 @@ where
         Ok(EXT::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
-    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        Ok(())
+    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        Ok(None)
     }
 
-    async fn after_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(_: &str, _: Option<DetailResp>, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
     async fn delete_item(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        Self::before_delete_item(id, funs, cxt).await?;
-        RbumItemServ::delete_rbum(id, funs, cxt).await?;
+        let deleted_item = Self::before_delete_item(id, funs, cxt).await?;
         let select = Self::package_delete(id, funs, cxt).await?;
         #[cfg(feature = "with-mq")]
         {
             let delete_records = funs.db().soft_delete_custom(select, "id").await?;
+            RbumItemServ::delete_rbum(id, funs, cxt).await?;
             let mq_topic_entity_deleted = &crate::rbum::rbum_config::RbumConfigManager::get(funs.module_code())?.mq_topic_entity_deleted;
             let mq_header = std::collections::HashMap::from([(
                 crate::rbum::rbum_config::RbumConfigManager::get(funs.module_code())?.mq_header_name_operator,
@@ -329,13 +329,15 @@ where
             for delete_record in &delete_records {
                 funs.mq().request(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
-            Self::after_delete_item(id, funs, cxt).await?;
+            Self::after_delete_item(id, deleted_item, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
         {
             let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
-            Ok(delete_records)
+            RbumItemServ::delete_rbum(id, funs, cxt).await?;
+            Self::after_delete_item(id, deleted_item, funs, cxt).await?;
+            Ok(delete_records.len() as u64)
         }
     }
 

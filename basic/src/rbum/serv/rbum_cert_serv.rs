@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use tardis::{log, TardisFuns};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -9,6 +8,7 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::regex::Regex;
+use tardis::{log, TardisFuns};
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -138,7 +138,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(rbum_cert_conf)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
         Self::check_ownership(id, funs, cxt).await?;
         Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
         let result = Self::peek_rbum(
@@ -160,7 +160,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             TardisFuns::crypto.base64.encode(&format!("{}{}{}", &result.code, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
         );
         funs.cache().del(key).await?;
-        Ok(())
+        Ok(None)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumCertConfFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {

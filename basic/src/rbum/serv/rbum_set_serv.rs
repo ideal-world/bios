@@ -75,7 +75,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         Ok(rbum_set)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumSetDetailResp>> {
         Self::check_ownership(id, funs, cxt).await?;
         Self::check_exist_before_delete(id, RbumSetCateServ::get_table_name(), rbum_set_cate::Column::RelRbumSetId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumSetItemServ::get_table_name(), rbum_set_item::Column::RelRbumSetId.as_str(), funs).await?;
@@ -108,7 +108,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         .await?;
         let key = &format!("{}{}", RbumConfigManager::get(funs.module_code())?.cache_key_set_code_, result.code);
         funs.cache().del(key).await?;
-        Ok(())
+        Ok(None)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumSetFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
@@ -382,7 +382,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         Ok(rbum_set_cate)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumSetCateDetailResp>> {
         Self::check_ownership(id, funs, cxt).await?;
         if funs
             .db()
@@ -431,7 +431,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         {
             return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are sub rbum_set_cate".to_string()));
         }
-        Ok(())
+        Ok(None)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumSetCateFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {

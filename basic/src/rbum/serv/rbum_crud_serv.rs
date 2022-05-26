@@ -187,16 +187,17 @@ where
         Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership(id, funs, cxt).await
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        Self::check_ownership(id, funs, cxt).await?;
+        Ok(None)
     }
 
-    async fn after_delete_rbum(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_rbum(_: &str, _: Option<DetailResp>, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
     async fn delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        Self::before_delete_rbum(id, funs, cxt).await?;
+        let deleted_rbum = Self::before_delete_rbum(id, funs, cxt).await?;
         let select = Self::package_delete(id, funs, cxt).await?;
         #[cfg(feature = "with-mq")]
         {
@@ -209,12 +210,13 @@ where
             for delete_record in &delete_records {
                 funs.mq().request(mq_topic_entity_deleted, tardis::TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
-            Self::after_delete_rbum(id, funs, cxt).await?;
+            Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
         {
             let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
+            Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
             Ok(delete_records)
         }
     }
