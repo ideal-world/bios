@@ -467,6 +467,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
     let kind_attr_db_type_id = RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
+            module: None,
             label: "数据库类型".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -486,6 +487,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind_id: kind_reldb_id.to_string(),
             idx: None,
             ext: None,
+            hide: None,
         },
         &funs,
         context,
@@ -856,6 +858,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
     let kind_attr_db_type_id = RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
+            module: None,
             label: "数据库类型".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -875,6 +878,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind_id: kind_reldb_id.to_string(),
             idx: None,
             ext: None,
+            hide: None,
         },
         &funs,
         context,

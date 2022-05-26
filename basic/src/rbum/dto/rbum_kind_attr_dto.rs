@@ -10,6 +10,8 @@ pub struct RbumKindAttrAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub module: Option<TrimString>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub label: String,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
@@ -18,6 +20,7 @@ pub struct RbumKindAttrAddReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub hide: Option<bool>,
     pub idx: Option<bool>,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
@@ -42,8 +45,6 @@ pub struct RbumKindAttrAddReq {
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
 pub struct RbumKindAttrModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub name: Option<TrimString>,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub label: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub note: Option<String>,
@@ -52,6 +53,7 @@ pub struct RbumKindAttrModifyReq {
     pub position: Option<bool>,
     pub capacity: Option<bool>,
     pub overload: Option<bool>,
+    pub hide: Option<bool>,
     pub idx: Option<bool>,
     pub data_type: Option<RbumDataTypeKind>,
     pub widget_type: Option<RbumWidgetTypeKind>,
@@ -75,6 +77,7 @@ pub struct RbumKindAttrModifyReq {
 pub struct RbumKindAttrSummaryResp {
     pub id: String,
     pub name: String,
+    pub module: String,
     pub label: String,
     pub note: String,
     pub sort: u32,
@@ -82,6 +85,7 @@ pub struct RbumKindAttrSummaryResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+    pub hide: bool,
     pub idx: bool,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,
@@ -107,6 +111,7 @@ pub struct RbumKindAttrSummaryResp {
 pub struct RbumKindAttrDetailResp {
     pub id: String,
     pub name: String,
+    pub module: String,
     pub label: String,
     pub note: String,
     pub sort: u32,
@@ -114,6 +119,7 @@ pub struct RbumKindAttrDetailResp {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+    pub hide: bool,
     pub idx: bool,
     pub data_type: RbumDataTypeKind,
     pub widget_type: RbumWidgetTypeKind,

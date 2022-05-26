@@ -319,7 +319,6 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
         .put(
             &format!("/cs/account/attr/{}", attr_id),
             &RbumKindAttrModifyReq {
-                name: None,
                 label: None,
                 note: None,
                 sort: None,
@@ -327,6 +326,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient, tenant
                 position: None,
                 capacity: None,
                 overload: None,
+                hide: None,
                 idx: None,
                 data_type: None,
                 widget_type: None,
@@ -590,11 +590,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
         .put(
             &format!("/cs/res/{}", res_api_id),
             &IamResModifyReq {
-                code: None,
                 name: None,
                 icon: Some("/static/img/icon/api.png".to_string()),
                 sort: None,
-                method: None,
                 hide: None,
                 action: None,
                 scope_level: None,

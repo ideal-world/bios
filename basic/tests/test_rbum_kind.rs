@@ -158,6 +158,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
+            module: None,
             label: "数据库类型".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -176,7 +177,8 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             rel_rbum_kind_id: "".to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
-            idx: None
+            idx: None,
+            hide: None
         },
         &funs,
         context,
@@ -187,6 +189,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
+            module: None,
             label: "数据库类型".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -205,7 +208,8 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             rel_rbum_kind_id: "11".to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
-            idx: None
+            idx: None,
+            hide: None
         },
         &funs,
         context,
@@ -216,6 +220,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     let kind_attr_id = RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
+            module: None,
             label: "数据库类型".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -235,6 +240,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind_id: kind_id.to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
+            hide: None,
         },
         &funs,
         context,
@@ -254,36 +260,6 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
     assert!(RbumKindAttrServ::modify_rbum(
         "111",
         &mut RbumKindAttrModifyReq {
-            name: None,
-            label: None,
-            data_type: None,
-            widget_type: None,
-            note: None,
-            sort: None,
-            main_column: None,
-            position: None,
-            capacity: None,
-            overload: Some(true),
-            default_value: None,
-            options: None,
-            required: None,
-            min_length: None,
-            max_length: None,
-            action: None,
-            ext: None,
-            scope_level: None,
-            idx: None
-        },
-        &funs,
-        context
-    )
-    .await
-    .is_err());
-
-    RbumKindAttrServ::modify_rbum(
-        &kind_attr_id,
-        &mut RbumKindAttrModifyReq {
-            name: None,
             label: None,
             data_type: None,
             widget_type: None,
@@ -302,6 +278,36 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             scope_level: None,
             idx: None,
+            hide: None
+        },
+        &funs,
+        context
+    )
+    .await
+    .is_err());
+
+    RbumKindAttrServ::modify_rbum(
+        &kind_attr_id,
+        &mut RbumKindAttrModifyReq {
+            label: None,
+            data_type: None,
+            widget_type: None,
+            note: None,
+            sort: None,
+            main_column: None,
+            position: None,
+            capacity: None,
+            overload: Some(true),
+            default_value: None,
+            options: None,
+            required: None,
+            min_length: None,
+            max_length: None,
+            action: None,
+            ext: None,
+            scope_level: None,
+            idx: None,
+            hide: None,
         },
         &funs,
         context,

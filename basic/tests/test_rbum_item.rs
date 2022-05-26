@@ -202,6 +202,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
     let kind_attr_id = RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("db_type".to_string()),
+            module: None,
             label: "数据库类型".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -221,6 +222,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind_id: kind_id.to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
+            hide: None,
         },
         &funs,
         context,
@@ -365,6 +367,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("ext2".to_string()),
+            module: None,
             label: "图标".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -384,6 +387,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
             rel_rbum_kind_id: kind_id.to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
+            hide: None,
         },
         &funs,
         context,
@@ -393,6 +397,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("ext1_idx".to_string()),
+            module: None,
             label: "是否临时账号".to_string(),
             data_type: RbumDataTypeKind::Boolean,
             widget_type: RbumWidgetTypeKind::Checkbox,
@@ -412,6 +417,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
             rel_rbum_kind_id: kind_id.to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
+            hide: None,
         },
         &funs,
         context,
@@ -421,6 +427,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
             name: TrimString("addr".to_string()),
+            module: None,
             label: "住址".to_string(),
             data_type: RbumDataTypeKind::String,
             widget_type: RbumWidgetTypeKind::InputTxt,
@@ -440,6 +447,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
             rel_rbum_kind_id: kind_id.to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
+            hide: None,
         },
         &funs,
         context,

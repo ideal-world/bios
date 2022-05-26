@@ -11,6 +11,7 @@ pub struct Model {
     pub id: String,
     // Specific
     pub name: String,
+    pub module: String,
     pub label: String,
     pub note: String,
     pub sort: u32,
@@ -18,6 +19,7 @@ pub struct Model {
     pub position: bool,
     pub capacity: bool,
     pub overload: bool,
+    pub hide: bool,
     pub idx: bool,
     pub data_type: String,
     pub widget_type: String,
@@ -53,12 +55,14 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::Name).not_null().string())
+            .col(ColumnDef::new(Column::Module).not_null().string())
             .col(ColumnDef::new(Column::Label).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::MainColumn).not_null().boolean())
             .col(ColumnDef::new(Column::Position).not_null().boolean())
             .col(ColumnDef::new(Column::Capacity).not_null().boolean())
+            .col(ColumnDef::new(Column::Hide).not_null().boolean())
             .col(ColumnDef::new(Column::Overload).not_null().boolean())
             .col(ColumnDef::new(Column::Idx).not_null().boolean())
             .col(ColumnDef::new(Column::DataType).not_null().string())
@@ -82,12 +86,22 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
+        // TODO Specified key was too long; max key length is 3072 bytes
+        // vec![Index::create()
+        //     .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string()))
+        //     .table(Entity)
+        //     .col(Column::RelRbumKindId)
+        //     .col(Column::Module)
+        //     .col(Column::Name)
+        //     .col(Column::OwnPaths)
+        //     .unique()
+        //     .to_owned()]
         vec![Index::create()
             .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string()))
             .table(Entity)
             .col(Column::RelRbumKindId)
             .col(Column::Name)
-            .unique()
+            .col(Column::Module)
             .to_owned()]
     }
 }

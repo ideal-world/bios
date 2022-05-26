@@ -19,11 +19,11 @@ __DATA__
             local m_utils = require("apisix.plugins.auth-bios.utils")
 
             m_redis.init("127.0.0.1", 6379, 1, 1000, "123456")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=1##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc1#\"}")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=2##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc2#\"}")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=3##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc3#\"}")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=4##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc4#\"}")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=5##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc5#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=1##get","{\"accounts\":\"#acc1#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=2##get","{\"accounts\":\"#acc2#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=3##get","{\"accounts\":\"#acc3#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=4##get","{\"accounts\":\"#acc4#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=5##get","{\"accounts\":\"#acc5#\"}")
 
             m_init.init("iam:res:info","iam:res:changed:info:",1)
 
@@ -35,8 +35,8 @@ __DATA__
             m_redis.set("iam:res:changed:info:yy","iam-res://iam-serv/p1?a=6##get")
             m_redis.set("iam:res:changed:info:zz","iam-res://iam-serv/p1?a=7##get")
             m_redis.hdel("iam:res:info","iam-res://iam-serv/p1?a=1##get")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=6##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc6#\"}")
-            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=7##get","{\"st\":"..ngx.time()..",\"et\":"..(ngx.time()+3600)..",\"accounts\":\"#acc7#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=6##get","{\"accounts\":\"#acc6#\"}")
+            m_redis.hset("iam:res:info","iam-res://iam-serv/p1?a=7##get","{\"accounts\":\"#acc7#\"}")
 
             ngx.sleep(2)
 

@@ -37,7 +37,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
 
     info!("【test_cc_attr】 : test_single_level : Get Account Attr By Id");
     assert!(IamAttrServ::get_account_attr(&attr1, false, &funs, another_context).await.is_err());
-    assert_eq!(IamAttrServ::get_account_attr(&attr1, false, &funs, context).await?.name, "attr1_modify");
+    assert_eq!(IamAttrServ::get_account_attr(&attr1, false, &funs, context).await?.label, "attr1_modify");
 
     info!("【test_cc_attr】 : test_single_level : Find Account Attrs");
     assert_eq!(IamAttrServ::find_account_attrs(&funs, another_context).await?.len(), 0);
@@ -162,9 +162,9 @@ pub async fn test_multi_level_by_sys_context(
     IamAttrServ::modify_account_attr(&t2_a2_attr1_id, &mut package_test_attr_modify_req("t2_a2_attr1_modify"), &funs, sys_context).await?;
 
     info!("【test_cc_attr】 : test_multi_level : Get Account Attr By sys_context");
-    assert_eq!(IamAttrServ::get_account_attr(&sys_attr1_id, false, &funs, sys_context).await?.name, "sys_attr1_modify");
+    assert_eq!(IamAttrServ::get_account_attr(&sys_attr1_id, false, &funs, sys_context).await?.label, "sys_attr1_modify");
     assert_eq!(
-        IamAttrServ::get_account_attr(&sys_attr2_global_id, false, &funs, sys_context).await?.name,
+        IamAttrServ::get_account_attr(&sys_attr2_global_id, false, &funs, sys_context).await?.label,
         "sys_attr2_global_modify"
     );
     assert!(IamAttrServ::get_account_attr(&t2_attr1_id, false, &funs, sys_context).await.is_err());
@@ -173,7 +173,7 @@ pub async fn test_multi_level_by_sys_context(
     assert!(IamAttrServ::get_account_attr(&t2_a1_attr2_app_id, false, &funs, sys_context).await.is_err());
     assert!(IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, false, &funs, sys_context).await.is_err());
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, false, &funs, sys_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, false, &funs, sys_context).await?.label,
         "t2_a1_attr3_global_modify"
     );
     assert!(IamAttrServ::get_account_attr(&t2_a2_attr1_id, false, &funs, sys_context).await.is_err());
@@ -267,22 +267,22 @@ pub async fn test_multi_level_by_tenant_context(
     info!("【test_cc_attr】 : test_multi_level : Get Account Attr By tenant_context");
     assert!(IamAttrServ::get_account_attr(&sys_attr1_id, false, &funs, t2_context).await.is_err());
     assert_eq!(
-        IamAttrServ::get_account_attr(&sys_attr2_global_id, false, &funs, t2_context).await?.name,
+        IamAttrServ::get_account_attr(&sys_attr2_global_id, false, &funs, t2_context).await?.label,
         "sys_attr2_global"
     );
-    assert_eq!(IamAttrServ::get_account_attr(&t2_attr1_id, false, &funs, t2_context).await?.name, "t2_attr1_modify");
+    assert_eq!(IamAttrServ::get_account_attr(&t2_attr1_id, false, &funs, t2_context).await?.label, "t2_attr1_modify");
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_attr2_tenant_id, false, &funs, t2_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_attr2_tenant_id, false, &funs, t2_context).await?.label,
         "t2_attr2_tenant_modify"
     );
     assert!(IamAttrServ::get_account_attr(&t2_a1_attr1_id, false, &funs, t2_context).await.is_err());
     assert!(IamAttrServ::get_account_attr(&t2_a1_attr2_app_id, false, &funs, t2_context).await.is_err());
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, false, &funs, t2_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, false, &funs, t2_context).await?.label,
         "t2_a1_attr2_tenant_modify"
     );
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, false, &funs, t2_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, false, &funs, t2_context).await?.label,
         "t2_a1_attr3_global_modify"
     );
     assert!(IamAttrServ::get_account_attr(&t2_a2_attr1_id, false, &funs, t2_context).await.is_err());
@@ -382,28 +382,28 @@ pub async fn test_multi_level_by_app_context(
     info!("【test_cc_attr】 : test_multi_level : Get Account Attr By app_context");
     assert!(IamAttrServ::get_account_attr(&sys_attr1_id, false, &funs, t2_a1_context).await.is_err());
     assert_eq!(
-        IamAttrServ::get_account_attr(&sys_attr2_global_id, false, &funs, t2_a1_context).await?.name,
+        IamAttrServ::get_account_attr(&sys_attr2_global_id, false, &funs, t2_a1_context).await?.label,
         "sys_attr2_global"
     );
     assert!(IamAttrServ::get_account_attr(&t2_attr1_id, false, &funs, t2_a1_context).await.is_err());
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_attr2_tenant_id, false, &funs, t2_a1_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_attr2_tenant_id, false, &funs, t2_a1_context).await?.label,
         "t2_attr2_tenant"
     );
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr1_id, false, &funs, t2_a1_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr1_id, false, &funs, t2_a1_context).await?.label,
         "t2_a1_attr1_modify"
     );
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr2_app_id, false, &funs, t2_a1_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr2_app_id, false, &funs, t2_a1_context).await?.label,
         "t2_a1_attr2_app_modify"
     );
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, false, &funs, t2_a1_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr2_tenant_id, false, &funs, t2_a1_context).await?.label,
         "t2_a1_attr2_tenant_modify"
     );
     assert_eq!(
-        IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, false, &funs, t2_a1_context).await?.name,
+        IamAttrServ::get_account_attr(&t2_a1_attr3_global_id, false, &funs, t2_a1_context).await?.label,
         "t2_a1_attr3_global_modify"
     );
     assert!(IamAttrServ::get_account_attr(&t2_a2_attr1_id, false, &funs, t2_a1_context).await.is_err());
@@ -476,7 +476,7 @@ pub async fn test_multi_level_by_app_context(
 fn package_test_attr_add_req(name: &str, scope_level: Option<RbumScopeLevelKind>) -> IamKindAttrAddReq {
     IamKindAttrAddReq {
         name: TrimString(name.to_string()),
-        label: "".to_string(),
+        label: name.to_string(),
         note: None,
         sort: None,
         main_column: None,
@@ -497,16 +497,16 @@ fn package_test_attr_add_req(name: &str, scope_level: Option<RbumScopeLevelKind>
     }
 }
 
-fn package_test_attr_modify_req(name: &str) -> RbumKindAttrModifyReq {
+fn package_test_attr_modify_req(label: &str) -> RbumKindAttrModifyReq {
     RbumKindAttrModifyReq {
-        name: Some(TrimString(name.to_string())),
-        label: None,
+        label: Some(label.to_string()),
         note: None,
         sort: None,
         main_column: None,
         position: None,
         capacity: None,
         overload: None,
+        hide: None,
         idx: None,
         data_type: None,
         widget_type: None,

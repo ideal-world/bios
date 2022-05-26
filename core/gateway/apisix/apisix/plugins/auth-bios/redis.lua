@@ -60,6 +60,33 @@ local function hget(key, field)
     return value
 end
 
+local function lpush(key, value)
+    redis_client:lpush(key, value)
+end
+
+local function lpush(key, value)
+    redis_client:lpush(key, value)
+end
+
+local function lrangeall(key)
+    redis_client:lrange(key, 0, -1)
+end
+
+local function hdel(key, field)
+    redis_client:hdel(key, field)
+end
+
+local function hget(key, field)
+    local value, err = redis_client:hget(key, field)
+    if err then
+        error("Redis operation failure [hget]:" .. err)
+    end
+    if value == ngx.null then
+        return nil
+    end
+    return value
+end
+
 -- TODO auto remove local caches
 local function get(key, cache_sec)
     if cache_sec and cache_sec > 0 and CACHES[key] and CACHES[key][1] > os.time() then
@@ -123,6 +150,8 @@ return {
     init = init,
     set = set,
     get = get,
+    lpush = lpush,
+    lrangeall = lrangeall,
     hset = hset,
     hdel = hdel,
     hget = hget,
