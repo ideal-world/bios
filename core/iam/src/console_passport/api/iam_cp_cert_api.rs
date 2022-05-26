@@ -9,6 +9,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
@@ -22,7 +23,7 @@ impl IamCpCertApi {
     #[oai(path = "/context", method = "put")]
     async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {
         let funs = iam_constants::get_tardis_inst();
-        let cxt = IamCertServ::fetch_context(&fetch_req.0, &funs).await?;
+        let cxt = IamIdentCacheServ::fetch_context(&fetch_req.0, &funs).await?;
         TardisResp::ok(cxt)
     }
 

@@ -15,6 +15,7 @@ use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
@@ -111,7 +112,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
                 while count > 0 {
                     let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
                     for id in ids {
-                        IamAccountServ::delete_cache(&id, &funs).await.unwrap();
+                        IamIdentCacheServ::delete_token_by_account_id(&id, &funs).await.unwrap();
                     }
                     page_number += 1;
                     count -= 100;

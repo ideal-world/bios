@@ -21,9 +21,10 @@ use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::{IamCertKind, IamRelKind};
 
 pub struct IamAccountServ;
@@ -98,12 +99,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
     }
 
     async fn after_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        Self::delete_cache(id, funs).await?;
+        IamIdentCacheServ::delete_token_by_account_id(id, funs).await?;
         Ok(())
     }
 
     async fn after_delete_item(id: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        Self::delete_cache(id, funs).await?;
+        IamIdentCacheServ::delete_token_by_account_id(id, funs).await?;
         Ok(())
     }
 
@@ -242,15 +243,5 @@ impl<'a> IamAccountServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_from_simple_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
-    }
-
-    pub async fn delete_cache(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
-        for (token, _) in tokens.iter() {
-            funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
-        }
-        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
-        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
-        Ok(())
     }
 }

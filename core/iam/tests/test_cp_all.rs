@@ -15,6 +15,7 @@ use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
+use bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::{IamCpMailVCodeLoginReq, IamCpUserPwdLoginReq};
 use bios_iam::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -104,7 +105,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         &funs,
     )
     .await?;
-    let tenant_admin_context = IamCertServ::fetch_context(
+    let tenant_admin_context = IamIdentCacheServ::fetch_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,
