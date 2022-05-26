@@ -192,7 +192,7 @@ impl<'a> IamCertServ {
     }
 
     pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let rbum_cert_conf = RbumCertConfServ::get_rbum(
+        let rbum_cert_conf = RbumCertConfServ::peek_rbum(
             id,
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
@@ -274,7 +274,7 @@ impl<'a> IamCertServ {
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
         IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
 
-        let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
+        let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
         let roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;
 
         let apps = if !tenant_id.is_empty() {

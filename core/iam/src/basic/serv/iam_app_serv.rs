@@ -90,7 +90,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
 
     async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
-            let app = Self::get_item(id, &IamAppFilterReq::default(), funs, cxt).await?;
+            let app = Self::peek_item(id, &IamAppFilterReq::default(), funs, cxt).await?;
             let own_paths = app.own_paths;
             let cxt = cxt.clone();
             tardis::tokio::spawn(async move {
