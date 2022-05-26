@@ -88,11 +88,9 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert!(IamResServ::modify_item(
         &res_id1,
         &mut IamResModifyReq {
-            code: None,
             name: Some(TrimString("测试资源".to_string())),
             icon: Some("/icon/icon.png".to_string()),
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -107,11 +105,9 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     IamResServ::modify_item(
         &res_id1,
         &mut IamResModifyReq {
-            code: None,
             name: Some(TrimString("测试资源".to_string())),
             icon: Some("/icon/icon.png".to_string()),
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -127,7 +123,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let res = IamResServ::get_item(&res_id1, &IamResFilterReq::default(), &funs, context).await?;
     assert_eq!(res.id, res_id1);
     assert_eq!(res.name, "测试资源");
-    assert_eq!(res.method, "POST");
+    assert_eq!(res.method, "GET");
     assert_eq!(res.icon, "/icon/icon.png");
     assert!(!res.disabled);
 
@@ -346,10 +342,8 @@ pub async fn test_multi_level_by_sys_context(
         &res_sys_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -363,10 +357,8 @@ pub async fn test_multi_level_by_sys_context(
         &res_t1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t1_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -380,10 +372,8 @@ pub async fn test_multi_level_by_sys_context(
         &res_t2_a1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a1_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -498,10 +488,8 @@ pub async fn test_multi_level_by_tenant_context(
         &res_sys_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -516,10 +504,8 @@ pub async fn test_multi_level_by_tenant_context(
         &res_sys_global_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_global_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -534,10 +520,8 @@ pub async fn test_multi_level_by_tenant_context(
         &res_t1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t1_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -552,10 +536,8 @@ pub async fn test_multi_level_by_tenant_context(
         &res_t2_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -569,10 +551,8 @@ pub async fn test_multi_level_by_tenant_context(
         &res_t2_a1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a1_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -622,9 +602,15 @@ pub async fn test_multi_level_by_tenant_context(
         IamResServ::paginate_simple_rel_roles(&res_sys_global_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
         1
     );
-    assert_eq!(IamResServ::paginate_simple_rel_roles(&res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size, 0);
+    assert_eq!(
+        IamResServ::paginate_simple_rel_roles(&res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        0
+    );
     IamRoleServ::add_rel_res(&role_id, &res_t2_id, &funs, t2_context).await?;
-    assert_eq!(IamResServ::paginate_simple_rel_roles(&res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size, 1);
+    assert_eq!(
+        IamResServ::paginate_simple_rel_roles(&res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        1
+    );
     assert!(IamRoleServ::add_rel_res(&role_id, &res_sys_id, &funs, t2_context).await.is_err());
     assert!(IamRoleServ::add_rel_res(&role_id, &res_t1_id, &funs, t2_context).await.is_err());
 
@@ -671,10 +657,8 @@ pub async fn test_multi_level_by_app_context(
         &res_sys_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_sys_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -689,10 +673,8 @@ pub async fn test_multi_level_by_app_context(
         &res_t1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t1_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -707,10 +689,8 @@ pub async fn test_multi_level_by_app_context(
         &res_t2_tenant_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_tenant_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -725,10 +705,8 @@ pub async fn test_multi_level_by_app_context(
         &res_t2_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -743,10 +721,8 @@ pub async fn test_multi_level_by_app_context(
         &res_t2_a2_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a2_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,
@@ -761,10 +737,8 @@ pub async fn test_multi_level_by_app_context(
         &res_t2_a1_id,
         &mut IamResModifyReq {
             name: Some(TrimString("res_t2_a1_modify".to_string())),
-            code: None,
             icon: None,
             sort: None,
-            method: Some(TrimString("POST".to_string())),
             hide: None,
             action: None,
             scope_level: None,

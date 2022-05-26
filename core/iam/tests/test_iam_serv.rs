@@ -34,7 +34,7 @@ async fn test_iam_serv() -> TardisResult<()> {
     sleep(Duration::from_secs(1)).await;
 
     let system_admin_context = get_first_account_context(
-        iam_constants::RBUM_KIND_SCHEME_IAM_ACCOUNT,
+        iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT,
         iam_constants::COMPONENT_CODE,
         &TardisFuns::inst_with_db_conn("".to_string()),
     )

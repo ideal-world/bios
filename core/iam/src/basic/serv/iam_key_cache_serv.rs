@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
@@ -115,7 +116,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn fetch_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
+    pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
             let account_id = token_info.split(',').nth(1).unwrap_or("");
             if let Some(context) = funs
@@ -131,4 +132,112 @@ impl<'a> IamIdentCacheServ {
         }
         Err(TardisError::NotFound("context not found".to_string()))
     }
+}
+
+pub struct IamResCacheServ;
+
+impl<'a> IamResCacheServ {
+    pub async fn add_or_modify_res_rel(uri: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
+            // TODO support time range
+            return Err(TardisError::Conflict("st and et must be none".to_string()));
+        }
+        let mut res_dto = IamCacheResRelAddOrModifyDto {
+            accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
+            roles: format!("#{}#", add_or_modify_req.roles.join("#")),
+            groups: format!("#{}#", add_or_modify_req.groups.join("#")),
+            apps: format!("#{}#", add_or_modify_req.apps.join("#")),
+            tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+        };
+        let uri_mix = Self::mix_uri(uri, action);
+        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix).await?;
+        if let Some(rels) = rels {
+            let old_res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
+            res_dto.accounts = format!("{}{}", res_dto.accounts, old_res_dto.accounts);
+            res_dto.roles = format!("{}{}", res_dto.roles, old_res_dto.roles);
+            res_dto.groups = format!("{}{}", res_dto.groups, old_res_dto.groups);
+            res_dto.apps = format!("{}{}", res_dto.apps, old_res_dto.apps);
+            res_dto.tenants = format!("{}{}", res_dto.tenants, old_res_dto.tenants);
+        }
+        res_dto.accounts = res_dto.accounts.replace("##", "#");
+        res_dto.roles = res_dto.roles.replace("##", "#");
+        res_dto.groups = res_dto.groups.replace("##", "#");
+        res_dto.apps = res_dto.apps.replace("##", "#");
+        res_dto.tenants = res_dto.tenants.replace("##", "#");
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+        Self::add_change_trigger(&uri_mix, funs).await
+    }
+
+    pub async fn delete_res_rel(uri: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let uri_mix = Self::mix_uri(uri, action);
+        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix).await?;
+        if let Some(rels) = rels {
+            let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
+            for account in &delete_req.accounts {
+                res_dto.accounts = res_dto.accounts.replace(&format!("#{}#", account), "#");
+            }
+            for role in &delete_req.roles {
+                res_dto.roles = res_dto.roles.replace(&format!("#{}#", role), "#");
+            }
+            for group in &delete_req.groups {
+                res_dto.groups = res_dto.groups.replace(&format!("#{}#", group), "#");
+            }
+            for app in &delete_req.apps {
+                res_dto.apps = res_dto.apps.replace(&format!("#{}#", app), "#");
+            }
+            for tenant in &delete_req.tenants {
+                res_dto.tenants = res_dto.tenants.replace(&format!("#{}#", tenant), "#");
+            }
+            funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+            return Self::add_change_trigger(&uri_mix, funs).await;
+        }
+        Err(TardisError::NotFound("res_rel not found".to_string()))
+    }
+
+    pub async fn delete_res(uri: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        Self::add_change_trigger(&Self::mix_uri(uri, action), funs).await
+    }
+
+    async fn add_change_trigger(mix_uri: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        funs.cache()
+            .set_ex(
+                &format!("{}{}", funs.conf::<IamConfig>().cache_key_res_changed_info_, Utc::now().timestamp_nanos()),
+                mix_uri,
+                funs.conf::<IamConfig>().cache_key_res_changed_expire_sec,
+            )
+            .await?;
+        Ok(())
+    }
+
+    fn mix_uri(uri: &str, action: &str) -> String {
+        format!("{}##{}", uri, action)
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+struct IamCacheResRelAddOrModifyDto {
+    pub accounts: String,
+    pub roles: String,
+    pub groups: String,
+    pub apps: String,
+    pub tenants: String,
+}
+
+pub struct IamCacheResRelAddOrModifyReq {
+    pub st: Option<i64>,
+    pub et: Option<i64>,
+    pub accounts: Vec<String>,
+    pub roles: Vec<String>,
+    pub groups: Vec<String>,
+    pub apps: Vec<String>,
+    pub tenants: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct IamCacheResRelDeleteReq {
+    pub accounts: Vec<String>,
+    pub roles: Vec<String>,
+    pub groups: Vec<String>,
+    pub apps: Vec<String>,
+    pub tenants: Vec<String>,
 }

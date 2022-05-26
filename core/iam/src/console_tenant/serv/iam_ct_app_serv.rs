@@ -41,7 +41,7 @@ impl<'a> IamCtAppServ {
         )
         .await?;
 
-        IamRelServ::add_rel(
+        IamRelServ::add_simple_rel(
             IamRelKind::IamAccountRole,
             &add_req.admin_id,
             &IamBasicInfoManager::get().role_app_admin_id,

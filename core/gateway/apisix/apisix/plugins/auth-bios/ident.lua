@@ -76,7 +76,7 @@ function _M.ident(conf, ctx)
         if context == nil or context == "" then
             return 401, { message = "Token [" .. token .. "] with App [" .. app_id .. "] is not legal" }
         end
-        local context = json.decode(context)
+        context = json.decode(context)
         local own_paths = m_utils.split(context.own_paths, '/')
         ctx.ident_info = {
             rbum_uri = rbum_uri,
