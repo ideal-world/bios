@@ -36,6 +36,7 @@ impl<'a> IamAttrServ {
         RbumKindAttrServ::add_rbum(
             &mut RbumKindAttrAddReq {
                 name: add_req.name.clone(),
+                module: None,
                 label: add_req.label.clone(),
                 note: add_req.note.clone(),
                 sort: add_req.sort,
@@ -43,6 +44,7 @@ impl<'a> IamAttrServ {
                 position: add_req.position,
                 capacity: add_req.capacity,
                 overload: add_req.overload,
+                hide: None,
                 idx: add_req.idx,
                 data_type: add_req.data_type.clone(),
                 widget_type: add_req.widget_type.clone(),

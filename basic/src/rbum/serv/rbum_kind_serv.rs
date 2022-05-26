@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
@@ -128,6 +129,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         Ok(rbum_kind_attr::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
+            module: Set(add_req.module.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             label: Set(add_req.label.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
@@ -135,6 +137,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             position: Set(add_req.position.unwrap_or(false)),
             capacity: Set(add_req.capacity.unwrap_or(false)),
             overload: Set(add_req.overload.unwrap_or(false)),
+            hide: Set(add_req.hide.unwrap_or(false)),
             idx: Set(add_req.idx.unwrap_or(false)),
             data_type: Set(add_req.data_type.to_string()),
             widget_type: Set(add_req.widget_type.to_string()),
@@ -161,6 +164,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                     .column(rbum_kind_attr::Column::Id)
                     .from(rbum_kind_attr::Entity)
                     .and_where(Expr::col(rbum_kind_attr::Column::Name).eq(add_req.name.0.as_str()))
+                    .and_where(Expr::col(rbum_kind_attr::Column::Module).eq(add_req.module.as_ref().unwrap_or(&TrimString("".to_string())).0.as_str()))
                     .and_where(Expr::col(rbum_kind_attr::Column::RelRbumKindId).eq(add_req.rel_rbum_kind_id.as_str()))
                     .and_where(Expr::col(rbum_kind_attr::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
             )
@@ -177,9 +181,6 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             id: Set(id.to_string()),
             ..Default::default()
         };
-        if let Some(name) = &modify_req.name {
-            rbum_kind_attr.name = Set(name.to_string());
-        }
         if let Some(label) = &modify_req.label {
             rbum_kind_attr.label = Set(label.to_string());
         }
@@ -200,6 +201,9 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         }
         if let Some(overload) = modify_req.overload {
             rbum_kind_attr.overload = Set(overload);
+        }
+        if let Some(hide) = modify_req.hide {
+            rbum_kind_attr.hide = Set(hide);
         }
         if let Some(idx) = modify_req.idx {
             rbum_kind_attr.idx = Set(idx);
@@ -250,6 +254,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             .columns(vec![
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Id),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Name),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::Module),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Label),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Note),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Sort),
@@ -257,6 +262,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Position),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Capacity),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Overload),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::Hide),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Idx),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::DataType),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::WidgetType),
