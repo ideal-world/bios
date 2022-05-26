@@ -122,7 +122,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         Ok(())
     }
 
-    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamTenantDetailResp>> {
         Err(TardisError::Conflict("Tenant can only be disabled but not deleted".to_string()))
     }
 

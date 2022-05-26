@@ -136,7 +136,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         Ok(())
     }
 
-    async fn after_delete_item(id: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(id: &str, _: Option<IamRoleDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         funs.cache().del(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await?;
         Ok(())
     }

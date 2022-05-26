@@ -12,7 +12,7 @@ use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
-use crate::rbum::serv::rbum_crud_serv::{R_URL_PART_CODE, RbumCrudOperation, RbumCrudQueryPackage};
+use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, R_URL_PART_CODE};
 use crate::rbum::serv::rbum_item_serv::{RbumItemAttrServ, RbumItemServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelAttrServ;
 
@@ -77,11 +77,11 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
         Ok(rbum_kind)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumKindDetailResp>> {
         Self::check_ownership(id, funs, cxt).await?;
         Self::check_exist_before_delete(id, RbumKindAttrServ::get_table_name(), rbum_kind_attr::Column::RelRbumKindId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumItemServ::get_table_name(), rbum_item::Column::RelRbumKindId.as_str(), funs).await?;
-        Ok(())
+        Ok(None)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
@@ -237,11 +237,11 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         Ok(rbum_kind_attr)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumKindAttrDetailResp>> {
         Self::check_ownership(id, funs, cxt).await?;
         Self::check_exist_before_delete(id, RbumItemAttrServ::get_table_name(), rbum_item_attr::Column::RelRbumKindAttrId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumRelAttrServ::get_table_name(), rbum_rel_attr::Column::RelRbumKindAttrId.as_str(), funs).await?;
-        Ok(())
+        Ok(None)
     }
 
     async fn package_query(is_detail: bool, filter: &RbumKindAttrFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
