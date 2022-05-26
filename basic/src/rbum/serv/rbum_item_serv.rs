@@ -373,7 +373,7 @@ where
         }
 
         // Delete set items
-        let set_items = RbumSetItemServ::find_rbums(
+        let set_item_ids = RbumSetItemServ::find_id_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -388,12 +388,12 @@ where
             cxt,
         )
         .await?;
-        for set_item in set_items {
-            RbumSetItemServ::delete_rbum(&set_item.id, funs, cxt).await?;
+        for set_item_id in set_item_ids {
+            RbumSetItemServ::delete_rbum(&set_item_id, funs, cxt).await?;
         }
 
         // Delete Certs
-        let certs = RbumCertServ::find_rbums(
+        let cert_ids = RbumCertServ::find_id_rbums(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -409,12 +409,12 @@ where
             cxt,
         )
         .await?;
-        for cert in certs {
-            RbumCertServ::delete_rbum(&cert.id, funs, cxt).await?;
+        for cert_id in cert_ids {
+            RbumCertServ::delete_rbum(&cert_id, funs, cxt).await?;
         }
 
         // Delete Cert Conf
-        let cert_confs = RbumCertConfServ::find_rbums(
+        let cert_conf_ids = RbumCertConfServ::find_id_rbums(
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -429,8 +429,8 @@ where
             cxt,
         )
         .await?;
-        for cert_conf in cert_confs {
-            RbumCertConfServ::delete_rbum(&cert_conf.id, funs, cxt).await?;
+        for cert_conf_id in cert_conf_ids {
+            RbumCertConfServ::delete_rbum(&cert_conf_id, funs, cxt).await?;
         }
 
         Self::delete_item(id, funs, cxt).await
@@ -944,7 +944,7 @@ impl<'a> RbumItemAttrServ {
         if !in_ext_table_attrs.is_empty() {
             for in_ext_table_attr in in_ext_table_attrs {
                 let column_val = add_req.values.get(&in_ext_table_attr.name).unwrap().clone();
-                let exist_item_attr = Self::find_rbums(
+                let exist_item_attr_ids = Self::find_id_rbums(
                     &RbumItemAttrFilterReq {
                         basic: Default::default(),
                         rel_rbum_item_id: Some(add_req.rel_rbum_item_id.to_string()),
@@ -956,7 +956,7 @@ impl<'a> RbumItemAttrServ {
                     cxt,
                 )
                 .await?;
-                if exist_item_attr.is_empty() {
+                if exist_item_attr_ids.is_empty() {
                     Self::add_rbum(
                         &mut RbumItemAttrAddReq {
                             value: column_val,
@@ -968,7 +968,7 @@ impl<'a> RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(&exist_item_attr.get(0).unwrap().id, &mut RbumItemAttrModifyReq { value: column_val }, funs, cxt).await?;
+                    Self::modify_rbum(&exist_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: column_val }, funs, cxt).await?;
                 }
             }
         }

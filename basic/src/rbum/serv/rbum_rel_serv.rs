@@ -677,7 +677,7 @@ impl<'a> RbumRelServ {
             if Self::do_check_rel(check_req, funs, cxt).await? {
                 return Ok(true);
             }
-            let rbum_set_cate_with_rels = RbumSetCateServ::find_rbums(
+            let rbum_set_cate_with_rel_ids = RbumSetCateServ::find_id_rbums(
                 &RbumSetCateFilterReq {
                     basic: Default::default(),
                     rel_rbum_set_id: Some(rbum_set_cate_base.rel_rbum_set_id.clone()),
@@ -691,9 +691,9 @@ impl<'a> RbumRelServ {
                 cxt,
             )
             .await?;
-            for rbum_set_cate in rbum_set_cate_with_rels {
+            for rbum_set_cate_with_rel_id in rbum_set_cate_with_rel_ids {
                 check_req.from_rbum_kind = RbumRelFromKind::SetCate;
-                check_req.from_rbum_id = rbum_set_cate.id.clone();
+                check_req.from_rbum_id = rbum_set_cate_with_rel_id;
                 // Check indirectly related records
                 if Self::do_check_rel(check_req, funs, cxt).await? {
                     return Ok(true);
@@ -785,7 +785,7 @@ impl<'a> RbumRelServ {
     }
 
     pub async fn delete_rel_with_ext(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let rbum_rel_env_ids = RbumRelEnvServ::find_rbums(
+        let rbum_rel_env_ids = RbumRelEnvServ::find_id_rbums(
             &RbumRelExtFilterReq {
                 basic: Default::default(),
                 rel_rbum_rel_id: Some(id.to_string()),
@@ -795,11 +795,8 @@ impl<'a> RbumRelServ {
             funs,
             cxt,
         )
-        .await?
-        .iter()
-        .map(|rbum_rel_env| rbum_rel_env.id.clone())
-        .collect::<Vec<String>>();
-        let rbum_rel_attr_ids = RbumRelAttrServ::find_rbums(
+        .await?;
+        let rbum_rel_attr_ids = RbumRelAttrServ::find_id_rbums(
             &RbumRelExtFilterReq {
                 basic: Default::default(),
                 rel_rbum_rel_id: Some(id.to_string()),
@@ -809,10 +806,7 @@ impl<'a> RbumRelServ {
             funs,
             cxt,
         )
-        .await?
-        .iter()
-        .map(|rbum_rel_attr| rbum_rel_attr.id.clone())
-        .collect::<Vec<String>>();
+        .await?;
         for rbum_rel_env_id in rbum_rel_env_ids {
             RbumRelEnvServ::delete_rbum(&rbum_rel_env_id, funs, cxt).await?;
         }

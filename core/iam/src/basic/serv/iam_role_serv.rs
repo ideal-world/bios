@@ -8,13 +8,12 @@ use tardis::db::sea_query::SelectStatement;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
-use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
@@ -205,32 +204,11 @@ impl<'a> IamRoleServ {
         }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
-        IamRelServ::add_rel(IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
+        IamRelServ::add_simple_rel(IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
     }
 
     pub async fn delete_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let rels = RbumRelServ::find_rbums(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some(IamRelKind::IamAccountRole.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(account_id.to_string()),
-                to_rbum_item_id: Some(role_id.to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            cxt,
-        )
-        .await?;
-        for rel in rels {
-            RbumRelServ::delete_rbum(&rel.id, funs, cxt).await?;
-        }
-        Ok(())
+        IamRelServ::delete_simple_rel(IamRelKind::IamAccountRole, account_id, role_id, funs, cxt).await
     }
 
     pub async fn count_rel_accounts(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
@@ -260,32 +238,11 @@ impl<'a> IamRoleServ {
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_rel(IamRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
+        IamRelServ::add_simple_rel(IamRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
     }
 
     pub async fn delete_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let rels = RbumRelServ::find_rbums(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some(IamRelKind::IamResRole.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
-                from_rbum_id: Some(res_id.to_string()),
-                to_rbum_item_id: Some(role_id.to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            cxt,
-        )
-        .await?;
-        for rel in rels {
-            RbumRelServ::delete_rbum(&rel.id, funs, cxt).await?;
-        }
-        Ok(())
+        IamRelServ::delete_simple_rel(IamRelKind::IamResRole, res_id, role_id, funs, cxt).await
     }
 
     pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {

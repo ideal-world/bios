@@ -349,7 +349,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             .await?;
             // Delete Old Certs
             if rbum_cert_conf.coexist_num != 0 {
-                let need_delete_rbum_certs = Self::paginate_rbums(
+                let need_delete_rbum_cert_ids = Self::paginate_id_rbums(
                     &RbumCertFilterReq {
                         rel_rbum_kind: Some(add_req.rel_rbum_kind.clone()),
                         rel_rbum_id: Some(add_req.rel_rbum_id.clone()),
@@ -365,8 +365,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
                     cxt,
                 )
                 .await?;
-                for need_delete_rbum_cert in need_delete_rbum_certs.records {
-                    Self::delete_rbum(&need_delete_rbum_cert.id, funs, cxt).await?;
+                for need_delete_rbum_cert_id in need_delete_rbum_cert_ids.records {
+                    Self::delete_rbum(&need_delete_rbum_cert_id, funs, cxt).await?;
                 }
             }
         }
@@ -578,9 +578,9 @@ impl<'a> RbumCertServ {
     }
 
     pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let rbum_cert = Self::get_rbum(id, filter, funs, cxt).await?;
+        let rbum_cert = Self::peek_rbum(id, filter, funs, cxt).await?;
         let new_sk = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
-            let rbum_cert_conf = RbumCertConfServ::get_rbum(
+            let rbum_cert_conf = RbumCertConfServ::peek_rbum(
                 rel_rbum_cert_conf_id,
                 &RbumCertConfFilterReq {
                     basic: filter.basic.clone(),
@@ -615,10 +615,10 @@ impl<'a> RbumCertServ {
     }
 
     pub async fn change_sk(id: &str, original_sk: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let rbum_cert = Self::get_rbum(id, filter, funs, cxt).await?;
+        let rbum_cert = Self::peek_rbum(id, filter, funs, cxt).await?;
         let stored_sk = Self::show_sk(id, filter, funs, cxt).await?;
         let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
-            let rbum_cert_conf = RbumCertConfServ::get_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
+            let rbum_cert_conf = RbumCertConfServ::peek_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, cxt).await?;
             let original_sk = if rbum_cert_conf.sk_encrypted {
                 Self::encrypt_sk(original_sk, rbum_cert.ak.as_str())?
             } else {

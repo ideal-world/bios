@@ -116,7 +116,7 @@ impl<'a> IamCertMailVCodeServ {
     }
 
     async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let account_name = IamAccountServ::get_item(account_id, &IamAccountFilterReq::default(), funs, cxt).await?.name;
+        let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, cxt).await?.name;
         let mut subject = funs.conf::<IamConfig>().mail_template_cert_activate_title.clone();
         let mut content = funs.conf::<IamConfig>().mail_template_cert_activate_content.clone();
         subject = subject.replace("{account_name}", &account_name).replace("{vcode}", vcode);
@@ -168,11 +168,11 @@ impl<'a> IamCertMailVCodeServ {
                         funs,
                         cxt,
                     )
-                        .await?;
+                    .await?;
                     Ok(())
                 } else {
                     Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::MailVCode)))
-                }
+                };
             }
         }
         Err(TardisError::Unauthorized("Email or verification code error".to_string()))
