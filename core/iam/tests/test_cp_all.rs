@@ -105,7 +105,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         &funs,
     )
     .await?;
-    let tenant_admin_context = IamIdentCacheServ::fetch_context(
+    let tenant_admin_context = IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,

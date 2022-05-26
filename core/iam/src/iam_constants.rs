@@ -4,17 +4,17 @@ use tardis::TardisFuns;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 pub const COMPONENT_CODE: &str = "iam";
-pub const RBUM_KIND_SCHEME_IAM_TENANT: &str = "iam-tenant";
-pub const RBUM_KIND_SCHEME_IAM_APP: &str = "iam-app";
-pub const RBUM_KIND_SCHEME_IAM_ACCOUNT: &str = "iam-account";
-pub const RBUM_KIND_SCHEME_IAM_ROLE: &str = "iam-role";
-pub const RBUM_KIND_SCHEME_IAM_RES: &str = "iam-res";
+pub const RBUM_KIND_CODE_IAM_TENANT: &str = "iam-tenant";
+pub const RBUM_KIND_CODE_IAM_APP: &str = "iam-app";
+pub const RBUM_KIND_CODE_IAM_ACCOUNT: &str = "iam-account";
+pub const RBUM_KIND_CODE_IAM_ROLE: &str = "iam-role";
+pub const RBUM_KIND_CODE_IAM_RES: &str = "iam-res";
 
 pub const RBUM_EXT_TABLE_IAM_TENANT: &str = "iam_tenant";
 pub const RBUM_EXT_TABLE_IAM_APP: &str = "iam_app";
 pub const RBUM_EXT_TABLE_IAM_ACCOUNT: &str = "iam_account";
-pub const RBUM_EXT_TABLE_IAM_ROLE: &str = "iam-role";
-pub const RBUM_EXT_TABLE_IAM_RES: &str = "iam-res";
+pub const RBUM_EXT_TABLE_IAM_ROLE: &str = "iam_role";
+pub const RBUM_EXT_TABLE_IAM_RES: &str = "iam_res";
 
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT: &str = "bios";
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";

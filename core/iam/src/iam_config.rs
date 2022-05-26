@@ -23,7 +23,9 @@ pub struct IamConfig {
     pub cache_key_account_info_: String,
     // role_id -> iam_role
     pub cache_key_role_info_: String,
+    //  -> [res_uri##action, {st,et,accounts,roles,groups,apps,tenants}]
     pub cache_key_res_info: String,
+    // time_stamp -> res_uri##action
     pub cache_key_res_changed_info_: String,
     pub cache_key_res_changed_expire_sec: usize,
     pub mail_template_cert_activate_title: String,

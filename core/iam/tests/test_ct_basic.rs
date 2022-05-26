@@ -57,7 +57,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
         &funs,
     )
     .await?;
-    let context1 = IamIdentCacheServ::fetch_context(
+    let context1 = IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,
@@ -103,7 +103,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
         &funs,
     )
     .await?;
-    let context2 = IamIdentCacheServ::fetch_context(
+    let context2 = IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,

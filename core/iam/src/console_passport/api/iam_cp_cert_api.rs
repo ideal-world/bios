@@ -23,7 +23,7 @@ impl IamCpCertApi {
     #[oai(path = "/context", method = "put")]
     async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {
         let funs = iam_constants::get_tardis_inst();
-        let cxt = IamIdentCacheServ::fetch_context(&fetch_req.0, &funs).await?;
+        let cxt = IamIdentCacheServ::get_context(&fetch_req.0, &funs).await?;
         TardisResp::ok(cxt)
     }
 

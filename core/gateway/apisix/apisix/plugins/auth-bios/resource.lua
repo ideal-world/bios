@@ -71,7 +71,11 @@ function do_match_res(res_action, res, items, multi_wildcard)
     if res["$"] ~= nil and (m_utils.table_length(items) == 0 or multi_wildcard) then
         -- matched
         local match_info = res["$"][res_action]
-        if match_info ~= nil and match_info.auth["st"] <= ngx.time() and match_info.auth["et"] >= ngx.time() then
+        if match_info ~= nil then
+            return match_info
+        end
+        match_info = res["$"]["*"]
+        if match_info ~= nil then
             return match_info
         end
         return nil
