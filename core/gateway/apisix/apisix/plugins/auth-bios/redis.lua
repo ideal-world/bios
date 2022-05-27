@@ -41,6 +41,29 @@ local function set(key, value, cache_sec)
     end
 end
 
+-- TODO auto remove local caches
+local function get(key, cache_sec)
+    if cache_sec and cache_sec > 0 and CACHES[key] and CACHES[key][1] > os.time() then
+        return CACHES[key][2]
+    else
+        local value, err = redis_client:get(key)
+        if err then
+            error("Redis operation failure [get]:" .. err)
+        end
+        if value == ngx.null then
+            return nil
+        end
+        if cache_sec and cache_sec > 0 then
+            CACHES[key] = { os.time() + cache_sec, value }
+        end
+        return value
+    end
+end
+
+local function del(key)
+    redis_client:del(key)
+end
+
 local function hset(key, field, value)
     redis_client:hset(key, field, value)
 end
@@ -64,46 +87,8 @@ local function lpush(key, value)
     redis_client:lpush(key, value)
 end
 
-local function lpush(key, value)
-    redis_client:lpush(key, value)
-end
-
 local function lrangeall(key)
-    redis_client:lrange(key, 0, -1)
-end
-
-local function hdel(key, field)
-    redis_client:hdel(key, field)
-end
-
-local function hget(key, field)
-    local value, err = redis_client:hget(key, field)
-    if err then
-        error("Redis operation failure [hget]:" .. err)
-    end
-    if value == ngx.null then
-        return nil
-    end
-    return value
-end
-
--- TODO auto remove local caches
-local function get(key, cache_sec)
-    if cache_sec and cache_sec > 0 and CACHES[key] and CACHES[key][1] > os.time() then
-        return CACHES[key][2]
-    else
-        local value, err = redis_client:get(key)
-        if err then
-            error("Redis operation failure [get]:" .. err)
-        end
-        if value == ngx.null then
-            return nil
-        end
-        if cache_sec and cache_sec > 0 then
-            CACHES[key] = { os.time() + cache_sec, value }
-        end
-        return value
-    end
+    return redis_client:lrange(key, 0, -1)
 end
 
 local function hscan(key, field, max_number, func)
@@ -150,6 +135,7 @@ return {
     init = init,
     set = set,
     get = get,
+    del = del,
     lpush = lpush,
     lrangeall = lrangeall,
     hset = hset,

@@ -99,4 +99,8 @@ impl<'a> IamCertTokenServ {
         .await?;
         IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, cert_conf.expire_sec, cert_conf.coexist_num, funs).await
     }
+
+    pub async fn delete_cert(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        IamIdentCacheServ::delete_token_by_token(token, funs).await
+    }
 }

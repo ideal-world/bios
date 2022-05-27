@@ -1,6 +1,6 @@
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{payload::Json, OpenApi};
+use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
@@ -9,6 +9,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -33,6 +34,14 @@ impl IamCpCertApi {
         let funs = iam_constants::get_tardis_inst();
         let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, &funs).await?;
         TardisResp::ok(resp)
+    }
+
+    /// Logout By Token
+    #[oai(path = "/logout/:token", method = "delete")]
+    async fn logout(&self, token: Path<String>) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamCertTokenServ::delete_cert(&token.0, &funs).await?;
+        TardisResp::ok(Void {})
     }
 
     /// Find Certs By Current Account

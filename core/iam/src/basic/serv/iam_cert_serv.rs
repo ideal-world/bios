@@ -8,6 +8,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -23,6 +24,7 @@ use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
@@ -236,7 +238,7 @@ impl<'a> IamCertServ {
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, cxt).await?;
-        IamIdentCacheServ::delete_token_by_account_id(&cert.rel_rbum_id, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&cert.rel_rbum_id, funs).await?;
         Ok(result)
     }
 
@@ -275,7 +277,13 @@ impl<'a> IamCertServ {
         IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
 
         let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
-        let roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;
+        let raw_roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;
+        let mut roles: Vec<RbumRelBoneResp> = vec![];
+        for role in raw_roles {
+            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                roles.push(role)
+            }
+        }
 
         let apps = if !tenant_id.is_empty() {
             let enabled_apps = IamAppServ::find_items(

@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamResCacheServ};
+use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
@@ -54,45 +54,42 @@ impl<'a> IamRelServ {
             },
         };
         RbumRelServ::add_rel(req, funs, cxt).await?;
-        match rel_kind {
-            IamRelKind::IamResRole => {
-                let iam_res = IamResServ::peek_item(
-                    from_iam_item_id,
-                    &IamResFilterReq {
-                        basic: RbumBasicFilterReq {
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
+        if rel_kind == IamRelKind::IamResRole {
+            let iam_res = IamResServ::peek_item(
+                from_iam_item_id,
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
-                    funs,
-                    cxt,
-                )
-                .await?;
+                    ..Default::default()
+                },
+                funs,
+                cxt,
+            )
+            .await?;
 
-                let uri = format!(
-                    "{}://{}/{}",
-                    iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-                    iam_constants::COMPONENT_CODE.to_lowercase(),
-                    iam_res.code
-                );
-                IamResCacheServ::add_or_modify_res_rel(
-                    &uri,
-                    &iam_res.method,
-                    &IamCacheResRelAddOrModifyReq {
-                        st: if start_timestamp.is_some() { Some(value1) } else { None },
-                        et: if end_timestamp.is_some() { Some(value2) } else { None },
-                        accounts: vec![],
-                        roles: vec![to_iam_item_id.to_string()],
-                        groups: vec![],
-                        apps: vec![],
-                        tenants: vec![],
-                    },
-                    funs,
-                )
-                .await?;
-            }
-            _ => {}
+            let uri = format!(
+                "{}://{}/{}",
+                iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
+                iam_constants::COMPONENT_CODE.to_lowercase(),
+                iam_res.code
+            );
+            IamResCacheServ::add_or_modify_res_rel(
+                &uri,
+                &iam_res.method,
+                &IamCacheResRelAddOrModifyReq {
+                    st: if start_timestamp.is_some() { Some(value1) } else { None },
+                    et: if end_timestamp.is_some() { Some(value2) } else { None },
+                    accounts: vec![],
+                    roles: vec![to_iam_item_id.to_string()],
+                    groups: vec![],
+                    apps: vec![],
+                    tenants: vec![],
+                },
+                funs,
+            )
+            .await?;
         }
         Ok(())
     }
@@ -155,13 +152,37 @@ impl<'a> IamRelServ {
                 )
                 .await?;
             }
-            _ => {}
+            IamRelKind::IamAccountRole => {
+                IamIdentCacheServ::delete_tokens_and_contents_by_account_id(from_iam_item_id, funs).await?;
+            }
         }
         Ok(())
     }
 
     pub async fn count_from_rels(rel_kind: IamRelKind, with_sub_own_paths: bool, from_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         RbumRelServ::count_from_rels(&rel_kind.to_string(), &RbumRelFromKind::Item, with_sub_own_paths, from_iam_item_id, funs, cxt).await
+    }
+
+    pub async fn find_from_id_rels(
+        rel_kind: IamRelKind,
+        with_sub: bool,
+        from_iam_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        RbumRelServ::find_from_id_rels(
+            &rel_kind.to_string(),
+            &RbumRelFromKind::Item,
+            with_sub,
+            from_iam_item_id,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
     }
 
     pub async fn find_from_simple_rels(
@@ -178,6 +199,32 @@ impl<'a> IamRelServ {
             &RbumRelFromKind::Item,
             with_sub,
             from_iam_item_id,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
+    pub async fn paginate_from_id_rels(
+        rel_kind: IamRelKind,
+        with_sub: bool,
+        from_iam_item_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        RbumRelServ::paginate_from_id_rels(
+            &rel_kind.to_string(),
+            &RbumRelFromKind::Item,
+            with_sub,
+            from_iam_item_id,
+            page_number,
+            page_size,
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
@@ -216,6 +263,17 @@ impl<'a> IamRelServ {
         RbumRelServ::count_to_rels(&rel_kind.to_string(), to_iam_item_id, funs, cxt).await
     }
 
+    pub async fn find_to_id_rels(
+        rel_kind: IamRelKind,
+        to_iam_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        RbumRelServ::find_to_id_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
     pub async fn find_to_simple_rels(
         rel_kind: IamRelKind,
         to_iam_item_id: &str,
@@ -225,6 +283,29 @@ impl<'a> IamRelServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         RbumRelServ::find_to_simple_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_to_id_rels(
+        rel_kind: IamRelKind,
+        to_iam_item_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        RbumRelServ::paginate_to_id_rels(
+            &rel_kind.to_string(),
+            to_iam_item_id,
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
     }
 
     pub async fn paginate_to_simple_rels(
