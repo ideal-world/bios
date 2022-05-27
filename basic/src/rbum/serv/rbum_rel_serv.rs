@@ -233,6 +233,21 @@ impl<'a> RbumRelServ {
         Ok(rbum_rel_id)
     }
 
+    pub async fn find_from_id_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        Self::find_from_simple_rels(tag, from_rbum_kind, with_sub, from_rbum_id, desc_sort_by_create, desc_sort_by_update, funs, cxt)
+            .await
+            .map(|r| r.into_iter().map(|item| item.rel_id).collect())
+    }
+
     pub async fn find_from_simple_rels(
         tag: &str,
         from_rbum_kind: &RbumRelFromKind,
@@ -292,6 +307,39 @@ impl<'a> RbumRelServ {
             cxt,
         )
         .await
+    }
+
+    pub async fn paginate_from_id_rels(
+        tag: &str,
+        from_rbum_kind: &RbumRelFromKind,
+        with_sub: bool,
+        from_rbum_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        let result = Self::paginate_from_simple_rels(
+            tag,
+            from_rbum_kind,
+            with_sub,
+            from_rbum_id,
+            page_number,
+            page_size,
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await?;
+        Ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result.records.into_iter().map(|item| item.rel_id).collect(),
+        })
     }
 
     pub async fn paginate_from_simple_rels(
@@ -394,6 +442,17 @@ impl<'a> RbumRelServ {
         .await
     }
 
+    pub async fn find_to_id_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        Self::find_to_simple_rels(tag, to_rbum_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await.map(|r| r.into_iter().map(|item| item.rel_id).collect())
+    }
+
     pub async fn find_to_simple_rels(
         tag: &str,
         to_rbum_item_id: &str,
@@ -405,6 +464,8 @@ impl<'a> RbumRelServ {
         Self::find_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
+                    own_paths: Some(cxt.own_paths.to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
                 },
@@ -412,7 +473,7 @@ impl<'a> RbumRelServ {
                 from_rbum_kind: None,
                 from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: Some(cxt.own_paths.to_string()),
+                to_own_paths: None,
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -434,6 +495,8 @@ impl<'a> RbumRelServ {
         Self::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
+                    own_paths: Some(cxt.own_paths.to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
                 },
@@ -441,7 +504,7 @@ impl<'a> RbumRelServ {
                 from_rbum_kind: None,
                 from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: Some(cxt.own_paths.to_string()),
+                to_own_paths: None,
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -449,6 +512,25 @@ impl<'a> RbumRelServ {
             cxt,
         )
         .await
+    }
+
+    pub async fn paginate_to_id_rels(
+        tag: &str,
+        to_rbum_item_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        let result = Self::paginate_to_simple_rels(tag, to_rbum_item_id, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+        Ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result.records.into_iter().map(|item| item.rel_id).collect(),
+        })
     }
 
     pub async fn paginate_to_simple_rels(
@@ -464,6 +546,8 @@ impl<'a> RbumRelServ {
         let result = Self::paginate_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
+                    own_paths: Some(cxt.own_paths.to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
                 },
@@ -471,7 +555,7 @@ impl<'a> RbumRelServ {
                 from_rbum_kind: None,
                 from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: Some(cxt.own_paths.to_string()),
+                to_own_paths: None,
             },
             page_number,
             page_size,
@@ -502,6 +586,8 @@ impl<'a> RbumRelServ {
         Self::paginate_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
+                    own_paths: Some(cxt.own_paths.to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
                 },
@@ -509,7 +595,7 @@ impl<'a> RbumRelServ {
                 from_rbum_kind: None,
                 from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: Some(cxt.own_paths.to_string()),
+                to_own_paths: None,
             },
             page_number,
             page_size,
@@ -525,6 +611,8 @@ impl<'a> RbumRelServ {
         Self::count_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
+                    own_paths: Some(cxt.own_paths.to_string()),
+                    with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
                 },
@@ -532,7 +620,7 @@ impl<'a> RbumRelServ {
                 from_rbum_kind: None,
                 from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: Some(cxt.own_paths.to_string()),
+                to_own_paths: None,
             },
             funs,
             cxt,
