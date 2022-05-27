@@ -97,7 +97,6 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
             let own_paths = id.to_string();
             let cxt = cxt.clone();
             tardis::tokio::spawn(async move {
-                // TODO test
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
@@ -107,12 +106,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
                     },
                     ..Default::default()
                 };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap();
+                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap() as isize;
                 let mut page_number = 1;
                 while count > 0 {
                     let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
                     for id in ids {
-                        IamIdentCacheServ::delete_token_by_account_id(&id, &funs).await.unwrap();
+                        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&id, &funs).await.unwrap();
                     }
                     page_number += 1;
                     count -= 100;

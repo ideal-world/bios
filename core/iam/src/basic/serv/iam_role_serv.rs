@@ -20,8 +20,10 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::IamRelKind;
 
@@ -112,7 +114,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         Ok(Some(iam_role))
     }
 
-    async fn after_modify_item(id: &str, _: &mut IamRoleModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamRoleModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let role = Self::do_get_item(
             id,
             &IamRoleFilterReq {
@@ -132,11 +134,43 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
                 TardisFuns::json.obj_to_string(&role)?.as_str(),
             )
             .await?;
+        let role_id = id.to_string();
+        if modify_req.disabled.unwrap_or(false) {
+            let cxt = cxt.clone();
+            tardis::tokio::spawn(async move {
+                let funs = iam_constants::get_tardis_inst();
+                let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &cxt).await.unwrap() as isize;
+                let mut page_number = 1;
+                while count > 0 {
+                    let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                    for id in ids {
+                        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&id, &funs).await.unwrap();
+                    }
+                    page_number += 1;
+                    count -= 100;
+                }
+            });
+        }
         Ok(())
     }
 
-    async fn after_delete_item(id: &str, _: Option<IamRoleDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(id: &str, _: Option<IamRoleDetailResp>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         funs.cache().del(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await?;
+        let role_id = id.to_string();
+        let cxt = cxt.clone();
+        tardis::tokio::spawn(async move {
+            let funs = iam_constants::get_tardis_inst();
+            let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &cxt).await.unwrap() as isize;
+            let mut page_number = 1;
+            while count > 0 {
+                let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                for id in ids {
+                    IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&id, &funs).await.unwrap();
+                }
+                page_number += 1;
+                count -= 100;
+            }
+        });
         Ok(())
     }
 
@@ -215,6 +249,16 @@ impl<'a> IamRoleServ {
         IamRelServ::count_to_rels(IamRelKind::IamAccountRole, role_id, funs, cxt).await
     }
 
+    pub async fn find_id_rel_accounts(
+        role_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_to_id_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn find_simple_rel_accounts(
         role_id: &str,
         desc_by_create: Option<bool>,
@@ -223,6 +267,18 @@ impl<'a> IamRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_to_simple_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_id_rel_accounts(
+        role_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        IamRelServ::paginate_to_id_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_simple_rel_accounts(
@@ -249,6 +305,16 @@ impl<'a> IamRoleServ {
         IamRelServ::count_to_rels(IamRelKind::IamResRole, role_id, funs, cxt).await
     }
 
+    pub async fn find_id_rel_res(
+        role_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_to_id_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
     pub async fn find_simple_rel_res(
         role_id: &str,
         desc_by_create: Option<bool>,
@@ -257,6 +323,18 @@ impl<'a> IamRoleServ {
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_to_simple_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+    }
+
+    pub async fn paginate_id_rel_res(
+        role_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<TardisPage<String>> {
+        IamRelServ::paginate_to_id_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_simple_rel_res(

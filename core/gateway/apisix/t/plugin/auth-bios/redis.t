@@ -16,10 +16,22 @@ __DATA__
             local m_redis1 = require("apisix.plugins.auth-bios.redis")
             m_redis.init("127.0.0.1", 6379, 1, 1000, "123456")
             m_redis1.set("k_test1", "测试1")
+            ngx.sleep(1)
             m_redis.set("k_test2", "测试2")
+            ngx.sleep(1)
             m_redis.set("k_test3", "测试3")
             ngx.say(m_redis.get("k_test1"))
             ngx.say(m_redis.get("k_test6"))
+
+            local list = m_redis.del("k_list")
+            m_redis.lpush("k_list", "列表1")
+            m_redis.lpush("k_list", "列表2")
+            local list = m_redis.lrangeall("k_list")
+            ngx.say(list)
+            ngx.say(list[1])
+            for _, l in pairs(list) do
+                ngx.say(l)
+            end
 
             m_redis.scan("k_test", 2, function(k,v) ngx.say(k..":"..v) end)
 
@@ -42,9 +54,13 @@ GET /t
 --- response_body
 测试1
 nil
+列表2列表1
+列表2
+列表2
+列表1
 k_test1:测试1
-k_test3:测试3
 k_test2:测试2
+k_test3:测试3
 {"a":"xx5"}
 nil
 api://xx/?1:{"a":"xx1"}

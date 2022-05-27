@@ -16,6 +16,7 @@ use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModif
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
@@ -88,28 +89,25 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(_: &str, modify_req: &mut IamAppModifyReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
-            let app = Self::peek_item(id, &IamAppFilterReq::default(), funs, cxt).await?;
-            let own_paths = app.own_paths;
             let cxt = cxt.clone();
             tardis::tokio::spawn(async move {
-                // TODO test
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some(own_paths),
+                        own_paths: Some(IamTenantServ::get_id_by_cxt(&cxt).unwrap()),
                         with_sub_own_paths: true,
                         ..Default::default()
                     },
                     ..Default::default()
                 };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap();
+                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap() as isize;
                 let mut page_number = 1;
                 while count > 0 {
                     let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
                     for id in ids {
-                        IamIdentCacheServ::delete_token_by_account_id(&id, &funs).await.unwrap();
+                        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&id, &funs).await.unwrap();
                     }
                     page_number += 1;
                     count -= 100;

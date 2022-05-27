@@ -22,6 +22,7 @@ mod test_cs_tenant;
 mod test_ct_app;
 mod test_ct_basic;
 mod test_ct_tenant;
+mod test_key_cache;
 
 #[tokio::test]
 async fn test_iam_serv() -> TardisResult<()> {
@@ -114,6 +115,8 @@ async fn test_iam_serv() -> TardisResult<()> {
         &app2_admin_context,
     )
     .await?;
+
+    test_key_cache::test((&sysadmin_name, &sysadmin_password), &system_admin_context).await?;
 
     Ok(())
 }

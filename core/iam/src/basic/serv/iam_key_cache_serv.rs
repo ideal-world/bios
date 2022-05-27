@@ -6,7 +6,7 @@ use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
-use tardis::TardisFuns;
+use tardis::{log, TardisFuns};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
@@ -37,11 +37,10 @@ impl<'a> IamIdentCacheServ {
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str(),
                 token,
-                &format!("{},{}", token_kind.to_string(), Utc::now().timestamp()),
+                &format!("{},{}", token_kind.to_string(), Utc::now().timestamp_nanos()),
             )
             .await?;
         // Remove old tokens
-        // TODO test
         if coexist_num != 0 {
             let old_tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str()).await?;
             let old_tokens = old_tokens
@@ -66,15 +65,17 @@ impl<'a> IamIdentCacheServ {
     }
 
     pub async fn delete_token_by_token(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        log::trace!("delete_token_by_token: token={}", token);
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
-            let iam_item_id = token_info.split(",").nth(1).unwrap_or("");
+            let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
-            funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), &token).await?;
+            funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
         }
         Ok(())
     }
 
-    pub async fn delete_token_by_account_id(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn delete_tokens_and_contents_by_account_id(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        log::trace!("delete_tokens_and_contents_by_account_id: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         for (token, _) in tokens.iter() {
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;

@@ -53,7 +53,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     sleep(Duration::from_secs(1)).await;
 
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
             sk: TrimString(tenant_admin_pwd),
             tenant_id: Some(tenant_id.clone()),
@@ -74,7 +74,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     let pwd = IamCertServ::get_new_pwd();
 
     let account_id1 = IamAccountServ::add_account_agg(
-        &mut IamAccountAggAddReq {
+        &IamAccountAggAddReq {
             id: None,
             name: TrimString("应用1管理员".to_string()),
             cert_user_name: TrimString("app_admin1".to_string()),
@@ -93,7 +93,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     .await?;
 
     let account_id2 = IamAccountServ::add_account_agg(
-        &mut IamAccountAggAddReq {
+        &IamAccountAggAddReq {
             id: None,
             name: TrimString("应用2管理员".to_string()),
             cert_user_name: TrimString("app_admin2".to_string()),
@@ -140,7 +140,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     .await?;
 
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("app_admin1".to_string()),
             sk: TrimString(pwd.clone()),
             tenant_id: Some(tenant_id.clone()),
@@ -159,7 +159,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     .await?;
 
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
-        &mut IamCpUserPwdLoginReq {
+        &IamCpUserPwdLoginReq {
             ak: TrimString("app_admin2".to_string()),
             sk: TrimString(pwd),
             tenant_id: Some(tenant_id.clone()),
