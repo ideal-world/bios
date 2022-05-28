@@ -99,12 +99,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
     }
 
     async fn after_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(id, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         Ok(())
     }
 
     async fn after_delete_item(id: &str, _: Option<IamAccountDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(id, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         Ok(())
     }
 

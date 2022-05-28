@@ -127,7 +127,7 @@ impl<'a> IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
-            IamIdentCacheServ::delete_tokens_and_contents_by_account_id(rel_iam_item_id, funs).await
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
         }
@@ -153,7 +153,7 @@ impl<'a> IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
-            IamIdentCacheServ::delete_tokens_and_contents_by_account_id(rel_iam_item_id, funs).await
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
         }
