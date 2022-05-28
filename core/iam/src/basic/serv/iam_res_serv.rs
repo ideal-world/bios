@@ -20,8 +20,7 @@ use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_constants;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 pub struct IamResServ;
 
@@ -67,6 +66,26 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         Ok(())
     }
 
+    async fn after_add_item(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        let res = Self::peek_item(
+            id,
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            cxt,
+        )
+        .await?;
+        if res.kind == IamResKind::API {
+            IamResCacheServ::add_res(&res.code, &res.method, funs).await?;
+        }
+        Ok(())
+    }
+
     async fn package_item_modify(_: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
@@ -103,7 +122,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut IamResModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        if modify_req.disabled.unwrap_or(false) {
+        if let Some(disabled) = modify_req.disabled {
             let res = Self::peek_item(
                 id,
                 &IamResFilterReq {
@@ -117,13 +136,13 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
                 cxt,
             )
             .await?;
-            let uri = format!(
-                "{}://{}/{}",
-                iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-                iam_constants::COMPONENT_CODE.to_lowercase(),
-                res.code
-            );
-            IamResCacheServ::delete_res(&uri, &res.method, funs).await?;
+            if res.kind == IamResKind::API {
+                if disabled {
+                    IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
+                } else {
+                    IamResCacheServ::add_res(&res.code, &res.method, funs).await?;
+                }
+            }
         }
         Ok(())
     }
@@ -148,13 +167,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 
     async fn after_delete_item(_: &str, deleted_item: Option<IamResDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         let deleted_res = deleted_item.ok_or_else(|| TardisError::NotFound("The resource to delete does not exist".to_string()))?;
-        let uri = format!(
-            "{}://{}/{}",
-            iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-            iam_constants::COMPONENT_CODE.to_lowercase(),
-            deleted_res.code
-        );
-        IamResCacheServ::delete_res(&uri, &deleted_res.method, funs).await
+        if deleted_res.kind == IamResKind::API {
+            IamResCacheServ::delete_res(&deleted_res.code, &deleted_res.method, funs).await?;
+        }
+        Ok(())
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamResFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {

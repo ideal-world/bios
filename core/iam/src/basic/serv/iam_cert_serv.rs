@@ -238,7 +238,7 @@ impl<'a> IamCertServ {
         )
         .await?;
         let result = RbumCertServ::delete_rbum(id, funs, cxt).await?;
-        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&cert.rel_rbum_id, funs).await?;
+        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, funs).await?;
         Ok(result)
     }
 

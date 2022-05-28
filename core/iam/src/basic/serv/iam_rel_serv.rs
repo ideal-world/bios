@@ -14,7 +14,6 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
-use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
 pub struct IamRelServ;
@@ -68,15 +67,8 @@ impl<'a> IamRelServ {
                 cxt,
             )
             .await?;
-
-            let uri = format!(
-                "{}://{}/{}",
-                iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-                iam_constants::COMPONENT_CODE.to_lowercase(),
-                iam_res.code
-            );
             IamResCacheServ::add_or_modify_res_rel(
-                &uri,
+                &iam_res.code,
                 &iam_res.method,
                 &IamCacheResRelAddOrModifyReq {
                     st: if start_timestamp.is_some() { Some(value1) } else { None },
@@ -131,15 +123,8 @@ impl<'a> IamRelServ {
                     cxt,
                 )
                 .await?;
-
-                let uri = format!(
-                    "{}://{}/{}",
-                    iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-                    iam_constants::COMPONENT_CODE.to_lowercase(),
-                    iam_res.code
-                );
                 IamResCacheServ::delete_res_rel(
-                    &uri,
+                    &iam_res.code,
                     &iam_res.method,
                     &IamCacheResRelDeleteReq {
                         accounts: vec![],
@@ -153,7 +138,7 @@ impl<'a> IamRelServ {
                 .await?;
             }
             IamRelKind::IamAccountRole => {
-                IamIdentCacheServ::delete_tokens_and_contents_by_account_id(from_iam_item_id, funs).await?;
+                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
             }
         }
         Ok(())

@@ -1,19 +1,21 @@
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use std::time::Duration;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::{log, TardisFuns};
+use tardis::TardisFuns;
 
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use bios_iam::basic::dto::iam_app_dto::IamAppModifyReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{
     IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfModifyReq, IamUserPwdCertConfAddOrModifyReq,
 };
 use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
-use bios_iam::basic::dto::iam_role_dto::{IamRoleAggModifyReq, IamRoleModifyReq};
+use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResModifyReq};
+use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggModifyReq, IamRoleModifyReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_app_serv::IamAppServ;
@@ -21,6 +23,7 @@ use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use bios_iam::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use bios_iam::basic::serv::iam_res_serv::IamResServ;
 use bios_iam::basic::serv::iam_role_serv::IamRoleServ;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
@@ -31,10 +34,11 @@ use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_config::IamConfig;
 use bios_iam::iam_constants;
-use bios_iam::iam_enumeration::{IamCertKind, IamCertTokenKind};
+use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_GLOBAL};
+use bios_iam::iam_enumeration::{IamCertKind, IamCertTokenKind, IamResKind};
 
-pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisContext) -> TardisResult<()> {
-    let mut funs = iam_constants::get_tardis_inst();
+pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
+    let funs = iam_constants::get_tardis_inst();
 
     let (tenant_id, tenant_admin_pwd) = IamCsTenantServ::add_tenant(
         &mut IamCsTenantAddReq {
@@ -420,7 +424,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     let role_id = app_admin_context.roles.get(0).unwrap();
     info!("【test_key_cache】 Disable role, expected no token record");
-    log::trace!("=====x:{}", account_id);
     IamRoleServ::modify_role(
         role_id,
         &mut IamRoleAggModifyReq {
@@ -815,5 +818,135 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         2
     );
 
+    //---------------------------------- Test Res ----------------------------------
+
+    let exists_res_counter = funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?;
+
+    info!("【test_key_cache】 Add res, expected two res records");
+    let res_cs_id = IamResServ::add_item(
+        &mut IamResAddReq {
+            code: TrimString("cs/**".to_string()),
+            name: TrimString("系统控制台".to_string()),
+            kind: IamResKind::API,
+            icon: None,
+            sort: None,
+            method: None,
+            hide: None,
+            action: None,
+            scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+            disabled: None,
+        },
+        &funs,
+        system_admin_context,
+    )
+    .await?;
+    let res_ca_id = IamResServ::add_item(
+        &mut IamResAddReq {
+            code: TrimString("ca/**".to_string()),
+            name: TrimString("应用控制台".to_string()),
+            kind: IamResKind::API,
+            icon: None,
+            sort: None,
+            method: None,
+            hide: None,
+            action: None,
+            scope_level: Some(RBUM_SCOPE_LEVEL_APP),
+            disabled: None,
+        },
+        &funs,
+        system_admin_context,
+    )
+    .await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 2);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs/**", "*")).await?.unwrap().contains(r#""roles":"""#));
+
+    info!("【test_key_cache】 Disable res, expected one res record");
+    IamResServ::modify_item(
+        &res_cs_id,
+        &mut IamResModifyReq {
+            name: None,
+            icon: None,
+            sort: None,
+            hide: None,
+            action: None,
+            scope_level: None,
+            disabled: Some(true),
+        },
+        &funs,
+        system_admin_context,
+    )
+    .await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs/**", "*")).await?.is_none());
+
+    info!("【test_key_cache】 Enable res, expected two res records");
+    IamResServ::modify_item(
+        &res_cs_id,
+        &mut IamResModifyReq {
+            name: None,
+            icon: None,
+            sort: None,
+            hide: None,
+            action: None,
+            scope_level: None,
+            disabled: Some(false),
+        },
+        &funs,
+        system_admin_context,
+    )
+    .await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 2);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs/**", "*")).await?.unwrap().contains(r#""roles":"""#));
+
+    info!("【test_key_cache】 Delete res, expected one res record");
+    IamResServ::delete_item(&res_cs_id, &funs, system_admin_context).await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs/**", "*")).await?.is_none());
+
+    info!("【test_key_cache】 Add role rel, expected one role rel record");
+    IamRoleServ::add_rel_res(role_id, &res_ca_id, &funs, &app_admin_context).await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca/**", "*")).await?.unwrap().contains(&format!(r##""roles":"#{}#""##, role_id)));
+
+    info!("【test_key_cache】 Add role rel, expected two role rel records");
+    let role_id1 = IamRoleServ::add_item(
+        &mut IamRoleAddReq {
+            name: TrimString("角色1".to_string()),
+            icon: None,
+            scope_level: None,
+            disabled: None,
+            sort: None,
+        },
+        &funs,
+        &app_admin_context,
+    )
+    .await?;
+    IamRoleServ::add_rel_res(&role_id1, &res_ca_id, &funs, &app_admin_context).await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
+    assert!(funs
+        .cache()
+        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca/**", "*"))
+        .await?
+        .unwrap()
+        .contains(&format!(r##""roles":"#{}#{}#""##, role_id1, role_id)));
+
+    info!("【test_key_cache】 Remove role rel, expected no role rel record");
+    IamRoleServ::delete_rel_res(role_id, &res_ca_id, &funs, &app_admin_context).await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca/**", "*")).await?.unwrap().contains(&format!(r##""roles":"#{}#""##, role_id1)));
+    IamRoleServ::delete_rel_res(&role_id1, &res_ca_id, &funs, &app_admin_context).await?;
+    assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca/**", "*")).await?.unwrap().contains(r##""roles":"#""##));
+
     Ok(())
+}
+
+fn package_uri_mixed(item_code: &str, action: &str) -> String {
+    format!(
+        "{}://{}/{}##{}",
+        iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
+        iam_constants::COMPONENT_CODE.to_lowercase(),
+        item_code,
+        action
+    )
 }

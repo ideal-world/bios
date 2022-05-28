@@ -144,7 +144,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
                 while count > 0 {
                     let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
                     for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&id, &funs).await.unwrap();
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                     }
                     page_number += 1;
                     count -= 100;
@@ -165,7 +165,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
             while count > 0 {
                 let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
                 for id in ids {
-                    IamIdentCacheServ::delete_tokens_and_contents_by_account_id(&id, &funs).await.unwrap();
+                    IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                 }
                 page_number += 1;
                 count -= 100;

@@ -1,22 +1,25 @@
+use std::default::Default;
 use std::str::FromStr;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tardis::{log, TardisFuns};
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
-use tardis::{log, TardisFuns};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::iam_config::IamConfig;
+use crate::iam_constants;
 use crate::iam_enumeration::IamCertTokenKind;
 
 pub struct IamIdentCacheServ;
 
 impl<'a> IamIdentCacheServ {
     pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: u32, coexist_num: u32, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        log::trace!("add token: token={}", token);
         if expire_sec > 0 {
             funs.cache()
                 .set_ex(
@@ -65,7 +68,7 @@ impl<'a> IamIdentCacheServ {
     }
 
     pub async fn delete_token_by_token(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        log::trace!("delete_token_by_token: token={}", token);
+        log::trace!("delete token: token={}", token);
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
@@ -74,8 +77,8 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn delete_tokens_and_contents_by_account_id(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        log::trace!("delete_tokens_and_contents_by_account_id: account_id={}", account_id);
+    pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        log::trace!("delete tokens and contexts: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         for (token, _) in tokens.iter() {
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
@@ -86,6 +89,7 @@ impl<'a> IamIdentCacheServ {
     }
 
     pub async fn add_contexts(account_info: &AccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        log::trace!("add contexts: account_id={:?}", account_info);
         funs.cache()
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_info.account_id).as_str(),
@@ -138,7 +142,27 @@ impl<'a> IamIdentCacheServ {
 pub struct IamResCacheServ;
 
 impl<'a> IamResCacheServ {
-    pub async fn add_or_modify_res_rel(uri: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn add_res(item_code: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        log::trace!("add res: uri_mixed={}",uri_mixed);
+        funs.cache()
+            .hset(
+                &funs.conf::<IamConfig>().cache_key_res_info,
+                &uri_mixed,
+                &TardisFuns::json.obj_to_string(&IamCacheResRelAddOrModifyDto::default())?,
+            )
+            .await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
+    }
+
+    pub async fn delete_res(item_code: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        log::trace!("delete res: uri_mixed={}",uri_mixed);
+        funs.cache().hdel(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
+    }
+
+    pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
             // TODO support time range
             return Err(TardisError::Conflict("st and et must be none".to_string()));
@@ -150,8 +174,9 @@ impl<'a> IamResCacheServ {
             apps: format!("#{}#", add_or_modify_req.apps.join("#")),
             tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
         };
-        let uri_mix = Self::mix_uri(uri, action);
-        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix).await?;
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        log::trace!("add or modify res rel: uri_mixed={}",uri_mixed);
+        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         if let Some(rels) = rels {
             let old_res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
             res_dto.accounts = format!("{}{}", res_dto.accounts, old_res_dto.accounts);
@@ -165,13 +190,14 @@ impl<'a> IamResCacheServ {
         res_dto.groups = res_dto.groups.replace("##", "#");
         res_dto.apps = res_dto.apps.replace("##", "#");
         res_dto.tenants = res_dto.tenants.replace("##", "#");
-        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
-        Self::add_change_trigger(&uri_mix, funs).await
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
     }
 
-    pub async fn delete_res_rel(uri: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        let uri_mix = Self::mix_uri(uri, action);
-        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix).await?;
+    pub async fn delete_res_rel(item_code: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        log::trace!("delete res rel: uri_mixed={}",uri_mixed);
+        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         if let Some(rels) = rels {
             let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
             for account in &delete_req.accounts {
@@ -189,33 +215,36 @@ impl<'a> IamResCacheServ {
             for tenant in &delete_req.tenants {
                 res_dto.tenants = res_dto.tenants.replace(&format!("#{}#", tenant), "#");
             }
-            funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mix, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
-            return Self::add_change_trigger(&uri_mix, funs).await;
+            funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+            return Self::add_change_trigger(&uri_mixed, funs).await;
         }
         Err(TardisError::NotFound("res_rel not found".to_string()))
     }
 
-    pub async fn delete_res(uri: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
-        Self::add_change_trigger(&Self::mix_uri(uri, action), funs).await
-    }
-
-    async fn add_change_trigger(mix_uri: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    async fn add_change_trigger(uri: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         funs.cache()
             .set_ex(
                 &format!("{}{}", funs.conf::<IamConfig>().cache_key_res_changed_info_, Utc::now().timestamp_nanos()),
-                mix_uri,
+                uri,
                 funs.conf::<IamConfig>().cache_key_res_changed_expire_sec,
             )
             .await?;
         Ok(())
     }
 
-    fn mix_uri(uri: &str, action: &str) -> String {
-        format!("{}##{}", uri, action)
+    fn package_uri_mixed(item_code: &str, action: &str) -> String {
+        format!(
+            "{}://{}/{}##{}",
+            iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
+            iam_constants::COMPONENT_CODE.to_lowercase(),
+            item_code,
+            action
+        )
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
 struct IamCacheResRelAddOrModifyDto {
     pub accounts: String,
     pub roles: String,
