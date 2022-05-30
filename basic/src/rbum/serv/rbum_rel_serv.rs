@@ -8,8 +8,8 @@ use tardis::chrono::Utc;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
+use tardis::web::web_resp::TardisPage;
 
 use crate::rbum::domain::{rbum_item, rbum_kind_attr, rbum_rel, rbum_rel_attr, rbum_rel_env, rbum_set, rbum_set_cate};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelExtFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
@@ -697,6 +697,15 @@ impl<'a> RbumRelServ {
     }
 
     pub async fn find_rel_ids(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<String>> {
+        let ids = funs.db().find_dtos::<IdResp>(&Self::package_simple_rel_query(find_req, cxt)).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
+        Ok(ids)
+    }
+
+    pub async fn exist_simple_rel(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+        funs.db().count(&Self::package_simple_rel_query(find_req, cxt)).await.map(|i| i > 0)
+    }
+
+    fn package_simple_rel_query(find_req: &RbumRelFindReq, cxt: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query.column(rbum_rel::Column::Id).from(rbum_rel::Entity);
         if let Some(tag) = &find_req.tag {
@@ -718,8 +727,7 @@ impl<'a> RbumRelServ {
                     .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
             ),
         );
-        let ids = funs.db().find_dtos::<IdResp>(&query).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
-        Ok(ids)
+        query
     }
 
     // TODO cache
