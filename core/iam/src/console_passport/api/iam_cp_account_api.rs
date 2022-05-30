@@ -9,6 +9,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_account_dto::{IamAccountDetailResp, IamAccountSelfModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 
@@ -22,7 +23,8 @@ impl IamCpAccountApi {
     async fn modify(&self, mut modify_req: Json<IamAccountSelfModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &cxt.0).await?;
+        let cxt = IamCertServ::use_tenant_ctx_unsafe(cxt.0)?;
+        IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

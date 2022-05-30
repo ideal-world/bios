@@ -6,13 +6,12 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_app_dto::IamAppAddReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
-use crate::basic::serv::iam_rel_serv::IamRelServ;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
-use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCtAppServ;
 
@@ -41,16 +40,8 @@ impl<'a> IamCtAppServ {
         )
         .await?;
 
-        IamRelServ::add_simple_rel(
-            IamRelKind::IamAccountRole,
-            &add_req.admin_id,
-            &IamBasicInfoManager::get().role_app_admin_id,
-            None,
-            None,
-            funs,
-            &app_cxt,
-        )
-        .await?;
+        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_cxt).await?;
+        IamRoleServ::add_rel_account(&IamBasicInfoManager::get().role_app_admin_id, &add_req.admin_id, funs, &app_cxt).await?;
 
         IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_cxt).await?;
         IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_cxt).await?;

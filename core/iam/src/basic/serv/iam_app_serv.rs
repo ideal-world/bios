@@ -6,9 +6,10 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
@@ -16,10 +17,11 @@ use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModif
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
-use crate::basic::serv::iam_tenant_serv::IamTenantServ;
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamAppServ;
 
@@ -89,14 +91,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn after_modify_item(_: &str, modify_req: &mut IamAppModifyReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
+            let app_id = id.to_string();
             let cxt = cxt.clone();
             tardis::tokio::spawn(async move {
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some(IamTenantServ::get_id_by_cxt(&cxt).unwrap()),
+                        own_paths: Some(IamAppServ::get_id_by_cxt(&cxt).unwrap()),
                         with_sub_own_paths: true,
                         ..Default::default()
                     },
@@ -106,6 +109,16 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
                 let mut page_number = 1;
                 while count > 0 {
                     let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                    for id in ids {
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                    }
+                    page_number += 1;
+                    count -= 100;
+                }
+                let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &app_id, &funs, &cxt).await.unwrap() as isize;
+                let mut page_number = 1;
+                while count > 0 {
+                    let ids = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &app_id, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
                     for id in ids {
                         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                     }
@@ -132,7 +145,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 }
 
-impl IamAppServ {
+impl<'a> IamAppServ {
     pub fn get_new_id() -> String {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_APP_LEN as usize)
     }
@@ -143,5 +156,30 @@ impl IamAppServ {
         } else {
             Err(TardisError::Unauthorized(format!("app id not found in tardis content {}", cxt.own_paths)))
         }
+    }
+
+    pub async fn add_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, funs, cxt).await
+    }
+
+    pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, cxt).await
+    }
+
+    pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, cxt).await
+    }
+
+    pub async fn exist_rel_accounts(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+        IamRelServ::exist_rels(&IamRelKind::IamAccountApp, account_id, app_id, funs, cxt).await
+    }
+
+    pub fn with_app_rel_filter(cxt: &TardisContext) -> TardisResult<Option<RbumItemRelFilterReq>> {
+        Ok(Some(RbumItemRelFilterReq {
+            rel_by_from: true,
+            tag: Some(IamRelKind::IamAccountApp.to_string()),
+            from_rbum_kind: Some(RbumRelFromKind::Item),
+            rel_item_id: Some(Self::get_id_by_cxt(cxt)?),
+        }))
     }
 }

@@ -120,22 +120,6 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Find Rel Accounts By Role Id
-    #[oai(path = "/:id/account", method = "get")]
-    async fn paginate_rel_accounts(
-        &self,
-        id: Path<String>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
-        desc_by_create: Query<Option<bool>>,
-        desc_by_update: Query<Option<bool>>,
-        cxt: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<RbumRelBoneResp>> {
-        let funs = iam_constants::get_tardis_inst();
-        let result = IamRoleServ::paginate_simple_rel_accounts(&id.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
-        TardisResp::ok(result)
-    }
-
     /// Add Rel Res
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {

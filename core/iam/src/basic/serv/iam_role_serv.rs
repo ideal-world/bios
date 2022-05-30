@@ -238,15 +238,15 @@ impl<'a> IamRoleServ {
         }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
-        IamRelServ::add_simple_rel(IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, cxt).await
     }
 
     pub async fn delete_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::delete_simple_rel(IamRelKind::IamAccountRole, account_id, role_id, funs, cxt).await
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, cxt).await
     }
 
     pub async fn count_rel_accounts(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamRelServ::count_to_rels(IamRelKind::IamAccountRole, role_id, funs, cxt).await
+        IamRelServ::count_to_rels(&IamRelKind::IamAccountRole, role_id, funs, cxt).await
     }
 
     pub async fn find_id_rel_accounts(
@@ -256,7 +256,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        IamRelServ::find_to_id_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_to_id_rels(&IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn find_simple_rel_accounts(
@@ -266,7 +266,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_to_simple_rels(IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_id_rel_accounts(
@@ -278,7 +278,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
-        IamRelServ::paginate_to_id_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_simple_rel_accounts(
@@ -290,19 +290,19 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
-        IamRelServ::paginate_to_simple_rels(IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_to_simple_rels(&IamRelKind::IamAccountRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(IamRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, funs, cxt).await
     }
 
     pub async fn delete_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::delete_simple_rel(IamRelKind::IamResRole, res_id, role_id, funs, cxt).await
+        IamRelServ::delete_simple_rel(&IamRelKind::IamResRole, res_id, role_id, funs, cxt).await
     }
 
     pub async fn count_rel_res(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamRelServ::count_to_rels(IamRelKind::IamResRole, role_id, funs, cxt).await
+        IamRelServ::count_to_rels(&IamRelKind::IamResRole, role_id, funs, cxt).await
     }
 
     pub async fn find_id_rel_res(
@@ -312,7 +312,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        IamRelServ::find_to_id_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn find_simple_rel_res(
@@ -322,7 +322,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_to_simple_rels(IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_id_rel_res(
@@ -334,7 +334,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
-        IamRelServ::paginate_to_id_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_to_id_rels(&IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_simple_rel_res(
@@ -346,7 +346,7 @@ impl<'a> IamRoleServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
-        IamRelServ::paginate_to_simple_rels(IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_to_simple_rels(&IamRelKind::IamResRole, role_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn need_sys_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
