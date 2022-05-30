@@ -47,7 +47,7 @@ pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> Option<String> {
             // unmatched characters
             None
         }
-        _ => Some(format!("{}", split_items.iter().take(scope_level as usize).join("/"))),
+        _ => Some(split_items.iter().take(scope_level as usize).join("/").to_string()),
     }
 }
 
