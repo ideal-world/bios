@@ -127,7 +127,7 @@ impl<'a> IamCertServ {
         id: Option<String>,
         code: Option<String>,
         name: Option<String>,
-        with_sub: Option<bool>,
+        with_sub: bool,
         iam_item_id: Option<String>,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -140,7 +140,7 @@ impl<'a> IamCertServ {
                     ids: id.map(|id| vec![id]),
                     code,
                     name,
-                    with_sub_own_paths: with_sub.unwrap_or(false),
+                    with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
                 rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
@@ -163,7 +163,7 @@ impl<'a> IamCertServ {
         id: Option<String>,
         code: Option<String>,
         name: Option<String>,
-        with_sub: Option<bool>,
+        with_sub: bool,
         iam_item_id: Option<String>,
         page_number: u64,
         page_size: u64,
@@ -178,7 +178,7 @@ impl<'a> IamCertServ {
                     ids: id.map(|id| vec![id]),
                     code,
                     name,
-                    with_sub_own_paths: with_sub.unwrap_or(false),
+                    with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
                 rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
@@ -307,8 +307,8 @@ impl<'a> IamCertServ {
 
             let mut apps: Vec<AccountAppInfoResp> = vec![];
             for app in enabled_apps {
-                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&app.own_paths), funs, &context).await?;
-                let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, funs, &context).await?;
+                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&app.own_paths), true, funs, &context).await?;
+                let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, true, funs, &context).await?;
                 apps.push(AccountAppInfoResp {
                     app_id: app.id,
                     app_name: app.name,
@@ -321,8 +321,8 @@ impl<'a> IamCertServ {
             vec![]
         };
 
-        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&context.own_paths), funs, &context).await?;
-        let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, funs, &context).await?;
+        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&context.own_paths), false, funs, &context).await?;
+        let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, false, funs, &context).await?;
         let account_info = AccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_name.to_string(),

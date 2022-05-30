@@ -82,7 +82,7 @@ impl IamCtOrgApi {
     async fn find_items(&self, cate_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, &funs, &cxt.0).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

@@ -48,7 +48,7 @@ impl IamCpAccountApi {
     async fn find_rel_set_paths(&self, sys_org: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_org.0.unwrap_or(false) {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), &funs, &cxt.0).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, &funs, &cxt.0).await?
         } else {
             IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?
         };
