@@ -15,7 +15,6 @@ pub struct IamRoleAggAddReq {
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAddReq {
     pub name: TrimString,
-
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
