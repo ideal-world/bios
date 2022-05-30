@@ -620,6 +620,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
             .columns(vec![
                 (rbum_set_item::Entity, rbum_set_item::Column::Id),
                 (rbum_set_item::Entity, rbum_set_item::Column::Sort),
+                (rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId),
                 (rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
                 (rbum_set_item::Entity, rbum_set_item::Column::OwnPaths),
                 (rbum_set_item::Entity, rbum_set_item::Column::Owner),

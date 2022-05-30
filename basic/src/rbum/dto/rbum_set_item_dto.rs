@@ -25,8 +25,10 @@ pub struct RbumSetItemModifyReq {
 pub struct RbumSetItemSummaryResp {
     pub id: String,
     pub sort: u32,
+    pub rel_rbum_set_id: String,
     pub rel_rbum_set_cate_id: String,
     pub rel_rbum_set_cate_sys_code: String,
+    pub rel_rbum_set_cate_name: String,
     pub rel_rbum_item_id: String,
     pub rel_rbum_item_name: String,
 
@@ -41,6 +43,7 @@ pub struct RbumSetItemSummaryResp {
 pub struct RbumSetItemDetailResp {
     pub id: String,
     pub sort: u32,
+    pub rel_rbum_set_id: String,
     pub rel_rbum_set_cate_id: String,
     pub rel_rbum_set_cate_sys_code: String,
     pub rel_rbum_set_cate_name: String,
