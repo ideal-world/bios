@@ -274,7 +274,7 @@ impl<'a> IamResServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_from_simple_rels(IamRelKind::IamResRole, with_sub, res_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_from_simple_rels(&IamRelKind::IamResRole, with_sub, res_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 
     pub async fn paginate_simple_rel_roles(
@@ -287,7 +287,7 @@ impl<'a> IamResServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
-        IamRelServ::paginate_from_simple_rels(IamRelKind::IamResRole, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::paginate_from_simple_rels(&IamRelKind::IamResRole, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, cxt).await
     }
 }
 

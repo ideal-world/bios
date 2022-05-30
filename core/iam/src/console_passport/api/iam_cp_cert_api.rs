@@ -4,13 +4,14 @@ use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
@@ -48,8 +49,18 @@ impl IamCpCertApi {
     #[oai(path = "/cert", method = "get")]
     async fn find_certs(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
+        let own_paths = if cxt.0.own_paths.is_empty() {
+            None
+        } else {
+            Some(IamTenantServ::get_id_by_cxt(&cxt.0)?)
+        };
         let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
                 rel_rbum_id: Some(cxt.0.owner.to_string()),
                 ..Default::default()
             },
@@ -67,7 +78,8 @@ impl IamCpCertApi {
     async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCpCertUserPwdServ::modify_cert_user_pwd(&cxt.0.owner, &modify_req.0, &funs, &cxt.0).await?;
+        let cxt = IamCertServ::use_tenant_ctx_unsafe(cxt.0)?;
+        IamCpCertUserPwdServ::modify_cert_user_pwd(&cxt.owner, &modify_req.0, &funs, &cxt).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

@@ -30,7 +30,7 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
     env::set_var("TARDIS_FW.MQ.URL", url);
 
-    env::set_var("RUST_LOG", "debug,test_iam_serv=trace,bios_iam=trace");
+    env::set_var("RUST_LOG", "debug,test_iam_serv=trace,bios_iam=trace,sqlx::query=off");
     TardisFuns::init("tests/config").await?;
 
     Ok(LifeHold {

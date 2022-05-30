@@ -2,21 +2,24 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleSummaryResp};
-use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
+use crate::iam_enumeration::IamRelKind;
 
-pub struct IamCsRoleApi;
+pub struct IamCaRoleApi;
 
-/// System Console Role API
-#[OpenApi(prefix_path = "/cs/role", tag = "crate::iam_enumeration::Tag::System")]
-impl IamCsRoleApi {
+/// App Console Role API
+#[OpenApi(prefix_path = "/ca/role", tag = "crate::iam_enumeration::Tag::App")]
+impl IamCaRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamRoleAggAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
@@ -51,22 +54,18 @@ impl IamCsRoleApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
-        tenant_id: Query<Option<String>>,
-        with_sub: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         cxt: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamRoleSummaryResp>> {
-        let cxt = IamCertServ::try_use_tenant_ctx(cxt.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
-                    with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -76,7 +75,7 @@ impl IamCsRoleApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt,
+            &cxt.0,
         )
         .await?;
         TardisResp::ok(result)
@@ -97,6 +96,10 @@ impl IamCsRoleApi {
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        let app_id = IamAppServ::get_id_by_cxt(&cxt.0)?;
+        if !IamAppServ::exist_rel_accounts(&app_id, &account_id.0, &funs, &cxt.0).await? {
+            IamAppServ::add_rel_account(&app_id, &account_id.0, &funs, &cxt.0).await?;
+        }
         IamRoleServ::add_rel_account(&id.0, &account_id.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
@@ -116,7 +119,21 @@ impl IamCsRoleApi {
     #[oai(path = "/:id/account/total", method = "get")]
     async fn count_rel_accounts(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<u64> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamRoleServ::count_rel_accounts(&id.0, &funs, &cxt.0).await?;
+        let result = IamAccountServ::count_items(
+            &IamAccountFilterReq {
+                rel: IamAppServ::with_app_rel_filter(&cxt.0)?,
+                rel2: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    tag: Some(IamRelKind::IamAccountRole.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(id.0.to_string()),
+                }),
+                ..Default::default()
+            },
+            &funs,
+            &cxt.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 

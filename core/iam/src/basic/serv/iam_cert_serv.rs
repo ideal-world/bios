@@ -345,6 +345,11 @@ impl<'a> IamCertServ {
         }
     }
 
+    pub fn use_tenant_ctx_unsafe(mut cxt: TardisContext) -> TardisResult<TardisContext> {
+        cxt.own_paths = rbum_scope_helper::get_path_item(1, &cxt.own_paths).unwrap();
+        Ok(cxt)
+    }
+
     pub fn use_tenant_ctx(cxt: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
         rbum_scope_helper::degrade_own_paths(cxt, tenant_id.to_string().as_str())
     }

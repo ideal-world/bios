@@ -5,7 +5,7 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq};
-use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp};
+use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelFindReq};
 use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -20,7 +20,7 @@ pub struct IamRelServ;
 
 impl<'a> IamRelServ {
     pub async fn add_simple_rel(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         from_iam_item_id: &str,
         to_iam_item_id: &str,
         start_timestamp: Option<i64>,
@@ -53,7 +53,7 @@ impl<'a> IamRelServ {
             },
         };
         RbumRelServ::add_rel(req, funs, cxt).await?;
-        if rel_kind == IamRelKind::IamResRole {
+        if rel_kind == &IamRelKind::IamResRole {
             let iam_res = IamResServ::peek_item(
                 from_iam_item_id,
                 &IamResFilterReq {
@@ -86,7 +86,7 @@ impl<'a> IamRelServ {
         Ok(())
     }
 
-    pub async fn delete_simple_rel(rel_kind: IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_simple_rel(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         let rel_ids = RbumRelServ::find_id_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -105,6 +105,9 @@ impl<'a> IamRelServ {
             cxt,
         )
         .await?;
+        if rel_ids.is_empty() {
+            return Ok(());
+        }
         for rel_id in rel_ids {
             RbumRelServ::delete_rbum(&rel_id, funs, cxt).await?;
         }
@@ -140,16 +143,19 @@ impl<'a> IamRelServ {
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
             }
+            IamRelKind::IamAccountApp => {
+                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
+            }
         }
         Ok(())
     }
 
-    pub async fn count_from_rels(rel_kind: IamRelKind, with_sub_own_paths: bool, from_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumRelServ::count_from_rels(&rel_kind.to_string(), &RbumRelFromKind::Item, with_sub_own_paths, from_iam_item_id, funs, cxt).await
+    pub async fn count_from_rels(rel_kind: &IamRelKind, with_sub: bool, from_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+        RbumRelServ::count_from_rels(&rel_kind.to_string(), &RbumRelFromKind::Item, with_sub, from_iam_item_id, funs, cxt).await
     }
 
     pub async fn find_from_id_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         with_sub: bool,
         from_iam_item_id: &str,
         desc_sort_by_create: Option<bool>,
@@ -171,7 +177,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn find_from_simple_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         with_sub: bool,
         from_iam_item_id: &str,
         desc_sort_by_create: Option<bool>,
@@ -193,7 +199,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn paginate_from_id_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         with_sub: bool,
         from_iam_item_id: &str,
         page_number: u64,
@@ -219,7 +225,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn paginate_from_simple_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         with_sub: bool,
         from_iam_item_id: &str,
         page_number: u64,
@@ -244,12 +250,12 @@ impl<'a> IamRelServ {
         .await
     }
 
-    pub async fn count_to_rels(rel_kind: IamRelKind, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn count_to_rels(rel_kind: &IamRelKind, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
         RbumRelServ::count_to_rels(&rel_kind.to_string(), to_iam_item_id, funs, cxt).await
     }
 
     pub async fn find_to_id_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         to_iam_item_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -260,7 +266,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn find_to_simple_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         to_iam_item_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -271,7 +277,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn paginate_to_id_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         to_iam_item_id: &str,
         page_number: u64,
         page_size: u64,
@@ -294,7 +300,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn paginate_to_simple_rels(
-        rel_kind: IamRelKind,
+        rel_kind: &IamRelKind,
         to_iam_item_id: &str,
         page_number: u64,
         page_size: u64,
@@ -310,6 +316,20 @@ impl<'a> IamRelServ {
             page_size,
             desc_sort_by_create,
             desc_sort_by_update,
+            funs,
+            cxt,
+        )
+        .await
+    }
+
+    pub async fn exist_rels(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+        RbumRelServ::exist_simple_rel(
+            &RbumRelFindReq {
+                tag: Some(rel_kind.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_id: Some(from_iam_item_id.to_string()),
+                to_rbum_item_id: Some(to_iam_item_id.to_string()),
+            },
             funs,
             cxt,
         )

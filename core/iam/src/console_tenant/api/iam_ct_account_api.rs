@@ -136,10 +136,20 @@ impl IamCtAccountApi {
 
     /// Find Rel Set By Account Id
     #[oai(path = "/:id/set-path", method = "get")]
-    async fn find_rel_set_paths(&self, id: Path<String>, app_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
+    async fn find_rel_set_paths(
+        &self,
+        id: Path<String>,
+        sys_org: Query<Option<bool>>,
+        app_id: Query<Option<String>>,
+        cxt: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
         let cxt = IamCertServ::try_use_app_ctx(cxt.0, app_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt).await?;
+        let set_id = if sys_org.0.unwrap_or(false) {
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, &funs, &cxt).await?
+        } else {
+            IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt).await?
+        };
         let result = IamSetServ::find_set_paths(&id.0, &set_id, &funs, &cxt).await?;
         TardisResp::ok(result)
     }

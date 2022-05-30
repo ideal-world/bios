@@ -242,6 +242,6 @@ impl<'a> IamAccountServ {
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_from_simple_rels(IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
     }
 }

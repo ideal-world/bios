@@ -12,6 +12,7 @@ use crate::iam_enumeration::IamResKind;
 pub struct IamAccountFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
 }
 
@@ -22,6 +23,9 @@ impl RbumItemFilterFetcher for IamAccountFilterReq {
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
         &self.rel
     }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
+    }
 }
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone, Default)]
@@ -29,6 +33,7 @@ impl RbumItemFilterFetcher for IamAccountFilterReq {
 pub struct IamAppFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
     pub sort: Option<u32>,
     pub contact_phone: Option<String>,
@@ -41,6 +46,9 @@ impl RbumItemFilterFetcher for IamAppFilterReq {
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
         &self.rel
     }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
+    }
 }
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone, Default)]
@@ -48,6 +56,7 @@ impl RbumItemFilterFetcher for IamAppFilterReq {
 pub struct IamTenantFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
     pub sort: Option<u32>,
     pub contact_phone: Option<String>,
@@ -60,6 +69,9 @@ impl RbumItemFilterFetcher for IamTenantFilterReq {
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
         &self.rel
     }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
+    }
 }
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone, Default)]
@@ -67,6 +79,7 @@ impl RbumItemFilterFetcher for IamTenantFilterReq {
 pub struct IamResFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
     pub kind: Option<IamResKind>,
     pub icon: Option<String>,
     pub sort: Option<u32>,
@@ -80,6 +93,9 @@ impl RbumItemFilterFetcher for IamResFilterReq {
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
         &self.rel
     }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
+    }
 }
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone, Default)]
@@ -87,6 +103,7 @@ impl RbumItemFilterFetcher for IamResFilterReq {
 pub struct IamRoleFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
+    pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
     pub sort: Option<u32>,
 }
@@ -97,5 +114,8 @@ impl RbumItemFilterFetcher for IamRoleFilterReq {
     }
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
         &self.rel
+    }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel2
     }
 }
