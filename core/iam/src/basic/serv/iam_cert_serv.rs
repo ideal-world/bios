@@ -25,6 +25,7 @@ use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
@@ -303,28 +304,31 @@ impl<'a> IamCertServ {
                 &context,
             )
             .await?;
-            enabled_apps
-                .into_iter()
-                .map(|app| {
-                    AccountAppInfoResp {
-                        app_id: app.id,
-                        app_name: app.name,
-                        roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-                        // TODO
-                        groups: Default::default(),
-                    }
-                })
-                .collect()
+
+            let mut apps: Vec<AccountAppInfoResp> = vec![];
+            for app in enabled_apps {
+                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&app.own_paths), funs, &context).await?;
+                let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, funs, &context).await?;
+                apps.push(AccountAppInfoResp {
+                    app_id: app.id,
+                    app_name: app.name,
+                    roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
+                    groups,
+                });
+            }
+            apps
         } else {
             vec![]
         };
 
+        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&context.own_paths), funs, &context).await?;
+        let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, funs, &context).await?;
         let account_info = AccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_name.to_string(),
             token,
             roles: roles.iter().filter(|r| r.rel_own_paths == context.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-            groups: Default::default(),
+            groups,
             apps,
         };
 

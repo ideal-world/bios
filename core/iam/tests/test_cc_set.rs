@@ -49,7 +49,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let _set_cate_id3 = IamSetServ::add_set_cate(
         &set_id,
         &mut IamSetCateAddReq {
-            bus_code:  Some(TrimString("bc2-1".to_string())),
+            bus_code: Some(TrimString("bc2-1".to_string())),
             name: TrimString("yyy分公司zzz部门".to_string()),
             icon: None,
             sort: None,
@@ -65,7 +65,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let set_cate_id4 = IamSetServ::add_set_cate(
         &set_id,
         &mut IamSetCateAddReq {
-            bus_code:  Some(TrimString("bc2-2".to_string())),
+            bus_code: Some(TrimString("bc2-2".to_string())),
             name: TrimString("yyy分公司zzz部门".to_string()),
             icon: None,
             sort: None,
@@ -163,13 +163,13 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     IamSetServ::modify_set_item(&item_id1, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;
 
     info!("【test_ca_set】 : test_single_level : Find Set Item");
-    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), &funs, context).await?;
+    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, &funs, context).await?;
     assert_eq!(items.len(), 1);
 
     info!("【test_ca_set】 : test_single_level : Delete Set Item By Id");
     assert!(IamSetServ::delete_set_item(&item_id1, &funs, another_context).await.is_err());
     IamSetServ::delete_set_item(&item_id1, &funs, context).await?;
-    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), &funs, context).await?;
+    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, &funs, context).await?;
     assert_eq!(items.len(), 0);
 
     funs.rollback().await?;

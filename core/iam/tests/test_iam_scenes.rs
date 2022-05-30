@@ -35,9 +35,9 @@ pub async fn test(client: &mut BIOSWebTestClient, sysadmin_name: &str, sysadmin_
     sys_console_account_mgr_page(client, &tenant_id).await?;
     let res_menu_id = sys_console_res_mgr_page(client).await?;
     sys_console_auth_mgr_page(client, &res_menu_id).await?;
-    login_page(client, &tenant_admin_user_name, &tenant_admin_password, Some(tenant_id), true).await?;
+    login_page(client, &tenant_admin_user_name, &tenant_admin_password, Some(tenant_id.clone()), true).await?;
     tenant_console_tenant_mgr_page(client).await?;
-    tenant_console_org_mgr_page(client).await?;
+    tenant_console_org_mgr_page(client, &tenant_admin_user_name, &tenant_admin_password, &tenant_id).await?;
     tenant_console_account_mgr_page(client).await?;
     tenant_console_auth_mgr_page(client).await?;
     passport_console_account_mgr_page(client).await?;
@@ -707,7 +707,7 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
     Ok(())
 }
 
-pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient, tenant_admin_user_name: &str, tenant_admin_password: &str, tenant_id: &str) -> TardisResult<()> {
     info!("【tenant_console_org_mgr_page】");
 
     // Find Org Cates By Current Tenant
@@ -804,10 +804,17 @@ pub async fn tenant_console_org_mgr_page(client: &mut BIOSWebTestClient) -> Tard
     let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 1);
 
+    login_page(client, tenant_admin_user_name, tenant_admin_password, Some(tenant_id.to_string()), true).await?;
+    assert_eq!(client.context().groups.len(), 1);
+    assert!(client.context().groups.get(0).unwrap().contains(":aaaa"));
+
     // Delete Org Item By Org Item Id
     client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
     let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 0);
+
+    login_page(client, tenant_admin_user_name, tenant_admin_password, Some(tenant_id.to_string()), true).await?;
+    assert_eq!(client.context().groups.len(), 0);
 
     Ok(())
 }

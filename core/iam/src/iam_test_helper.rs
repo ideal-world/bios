@@ -13,6 +13,7 @@ use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 
 pub struct BIOSWebTestClient {
     client: TardisWebClient,
+    context: TardisContext,
     base_url: String,
 }
 
@@ -20,17 +21,22 @@ impl BIOSWebTestClient {
     pub fn new(base_url: String) -> BIOSWebTestClient {
         BIOSWebTestClient {
             client: TardisWebClient::init(600).unwrap(),
+            context: Default::default(),
             base_url,
         }
     }
 
     pub async fn set_auth(&mut self, token: &str, app_id: Option<String>) -> TardisResult<()> {
-        let context: TardisContext = self.put("/cp/context", &IamContextFetchReq { token: token.to_string(), app_id }).await;
+        self.context = self.put("/cp/context", &IamContextFetchReq { token: token.to_string(), app_id }).await;
         self.set_default_header(
             &TardisFuns::fw_config().web_server.context_conf.context_header_name,
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&context)?).as_str(),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&self.context)?).as_str(),
         );
         Ok(())
+    }
+
+    pub fn context(&self) -> &TardisContext {
+        &self.context
     }
 
     pub fn set_default_header(&mut self, key: &str, value: &str) {

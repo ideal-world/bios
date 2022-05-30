@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use tardis::basic::dto::{TardisContext, TardisFunsInst};
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
@@ -12,6 +13,8 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
+
+const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
 
 pub struct IamSetServ;
 
@@ -151,13 +154,19 @@ impl<'a> IamSetServ {
         RbumSetItemServ::delete_rbum(set_item_id, funs, cxt).await
     }
 
-    pub async fn find_set_items(set_id: Option<String>, set_cate_id: Option<String>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
+    pub async fn find_set_items(
+        set_id: Option<String>,
+        set_cate_id: Option<String>,
+        item_id: Option<String>,
+        funs: &TardisFunsInst<'a>,
+        cxt: &TardisContext,
+    ) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
         RbumSetItemServ::find_rbums(
             &RbumSetItemFilterReq {
                 basic: Default::default(),
                 rel_rbum_set_id: set_id.clone(),
                 rel_rbum_set_cate_id: set_cate_id.clone(),
-                rel_rbum_item_id: None,
+                rel_rbum_item_id: item_id.clone(),
             },
             None,
             None,
@@ -169,6 +178,20 @@ impl<'a> IamSetServ {
 
     pub async fn find_set_paths(set_item_id: &str, set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
         RbumSetItemServ::find_set_paths(set_item_id, set_id, funs, cxt).await
+    }
+
+    pub async fn find_flat_set_items(set_id: &str, item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), funs, cxt).await?;
+        let items = items
+            .into_iter()
+            .map(|item| {
+                (
+                    format!("{}{}{}", item.rel_rbum_set_id, SET_AND_ITEM_SPLIT_FLAG, item.rel_rbum_set_cate_sys_code),
+                    item.rel_rbum_set_cate_name,
+                )
+            })
+            .collect();
+        Ok(items)
     }
 
     pub fn get_default_res_code_by_cxt(cxt: &TardisContext) -> String {
