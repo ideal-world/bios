@@ -121,6 +121,7 @@ pub struct RbumItemRelFilterReq {
 pub trait RbumItemFilterFetcher {
     fn basic(&self) -> &RbumBasicFilterReq;
     fn rel(&self) -> &Option<RbumItemRelFilterReq>;
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -136,6 +137,9 @@ impl RbumItemFilterFetcher for RbumItemBasicFilterReq {
         &self.basic
     }
     fn rel(&self) -> &Option<RbumItemRelFilterReq> {
+        &self.rel
+    }
+    fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
         &self.rel
     }
 }
