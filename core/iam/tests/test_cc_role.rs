@@ -37,6 +37,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     info!("【test_cc_role】 : test_single_level : Add Role");
     let role_id1 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role1".to_string()),
             name: TrimString("角色1".to_string()),
             icon: None,
             scope_level: None,
@@ -49,6 +50,7 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     .await?;
     let role_id2 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role2".to_string()),
             name: TrimString("角色2".to_string()),
             icon: None,
             scope_level: None,
@@ -209,6 +211,7 @@ async fn test_multi_level_add<'a>(
 
     let role_sys_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_sys".to_string()),
             name: TrimString("role_sys".to_string()),
             icon: None,
             scope_level: None,
@@ -222,6 +225,7 @@ async fn test_multi_level_add<'a>(
 
     let role_sys_global_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_sys_global".to_string()),
             name: TrimString("role_sys_global".to_string()),
             icon: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
@@ -235,6 +239,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t1_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_t1".to_string()),
             name: TrimString("role_t1".to_string()),
             icon: None,
             scope_level: None,
@@ -248,6 +253,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_t2".to_string()),
             name: TrimString("role_t2".to_string()),
             icon: None,
             scope_level: None,
@@ -261,6 +267,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_tenant_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_t2_tenant".to_string()),
             name: TrimString("role_t2_tenant".to_string()),
             icon: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
@@ -274,6 +281,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_a1_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_t2_a1".to_string()),
             name: TrimString("role_t2_a1".to_string()),
             icon: None,
             scope_level: None,
@@ -287,6 +295,7 @@ async fn test_multi_level_add<'a>(
 
     let role_t2_a2_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role_t2_a2".to_string()),
             name: TrimString("role_t2_a2".to_string()),
             icon: None,
             scope_level: None,

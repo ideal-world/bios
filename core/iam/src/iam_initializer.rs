@@ -242,6 +242,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 
     let role_sys_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
             name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
@@ -270,6 +271,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 
     let role_tenant_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
             name: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
@@ -282,6 +284,7 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     .await?;
     let role_app_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
             name: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,

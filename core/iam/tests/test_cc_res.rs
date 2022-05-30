@@ -36,6 +36,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     info!("【test_cc_res】 : test_single_level : Prepare : Add Role");
     let role_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role1".to_string()),
             name: TrimString("角色1".to_string()),
             icon: None,
             sort: None,
@@ -323,6 +324,7 @@ pub async fn test_multi_level_by_sys_context(
     info!("【test_cc_res】 : test_multi_level : Prepare : Add Role");
     let role_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role1".to_string()),
             name: TrimString("角色1".to_string()),
             icon: None,
             sort: None,
@@ -469,6 +471,7 @@ pub async fn test_multi_level_by_tenant_context(
     info!("【test_cc_res】 : test_multi_level : Prepare : Add Role");
     let role_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role1".to_string()),
             name: TrimString("角色1".to_string()),
             icon: None,
             sort: None,
@@ -638,6 +641,7 @@ pub async fn test_multi_level_by_app_context(
     info!("【test_cc_res】 : test_multi_level : Prepare : Add Role");
     let role_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role1".to_string()),
             name: TrimString("角色1".to_string()),
             icon: None,
             sort: None,
