@@ -911,6 +911,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Add role rel, expected two role rel records");
     let role_id1 = IamRoleServ::add_item(
         &mut IamRoleAddReq {
+            code: TrimString("role1".to_string()),
             name: TrimString("角色1".to_string()),
             icon: None,
             scope_level: None,
