@@ -21,7 +21,7 @@ impl IamCtResApi {
     async fn find_cates(&self, sys_res: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_res.0.unwrap_or(false) {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_res_code_by_own_paths(""), &funs, &cxt.0).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_res_code_by_own_paths(""), true, &funs, &cxt.0).await?
         } else {
             IamSetServ::get_default_set_id_by_cxt(false, &funs, &cxt.0).await?
         };

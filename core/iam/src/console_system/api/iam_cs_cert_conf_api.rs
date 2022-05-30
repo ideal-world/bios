@@ -22,7 +22,7 @@ impl IamCsCertConfApi {
     #[oai(path = "/", method = "get")]
     async fn find_cert_conf(&self, tenant_id: Query<Option<String>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertConfDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertServ::find_cert_conf_detail_without_token_kind(None, None, None, Some(true), tenant_id.0, None, None, &funs, &cxt.0).await?;
+        let result = IamCertServ::find_cert_conf_detail_without_token_kind(None, None, None, true, tenant_id.0, None, None, &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

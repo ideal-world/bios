@@ -4,7 +4,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetItemFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
@@ -82,11 +82,11 @@ impl<'a> IamSetServ {
         } else {
             Self::get_default_res_code_by_cxt(cxt)
         };
-        Self::get_set_id_by_code(&code, funs, cxt).await
+        Self::get_set_id_by_code(&code, true, funs, cxt).await
     }
 
-    pub async fn get_set_id_by_code(code: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        RbumSetServ::get_rbum_set_id_by_code(code, funs, cxt).await?.ok_or_else(|| TardisError::NotFound(format!("set {} not found", code)))
+    pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+        RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, cxt).await?.ok_or_else(|| TardisError::NotFound(format!("set {} not found", code)))
     }
 
     pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
@@ -158,12 +158,16 @@ impl<'a> IamSetServ {
         set_id: Option<String>,
         set_cate_id: Option<String>,
         item_id: Option<String>,
+        with_sub: bool,
         funs: &TardisFunsInst<'a>,
         cxt: &TardisContext,
     ) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
         RbumSetItemServ::find_rbums(
             &RbumSetItemFilterReq {
-                basic: Default::default(),
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
                 rel_rbum_set_id: set_id.clone(),
                 rel_rbum_set_cate_id: set_cate_id.clone(),
                 rel_rbum_item_id: item_id.clone(),
@@ -180,8 +184,8 @@ impl<'a> IamSetServ {
         RbumSetItemServ::find_set_paths(set_item_id, set_id, funs, cxt).await
     }
 
-    pub async fn find_flat_set_items(set_id: &str, item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), funs, cxt).await?;
+    pub async fn find_flat_set_items(set_id: &str, item_id: &str, with_sub: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), with_sub, funs, cxt).await?;
         let items = items
             .into_iter()
             .map(|item| {

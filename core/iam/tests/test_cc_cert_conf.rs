@@ -29,7 +29,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     funs.begin().await?;
 
     info!("【test_ct_cert_conf】 : test_single_level : Find Cert Conf By UserPwd");
-    let user_pwd_cert_conf = IamCertServ::paginate_cert_conf(None, Some(IamCertKind::UserPwd.to_string()), None, None, None, 1, 10, None, None, &funs, context).await?;
+    let user_pwd_cert_conf = IamCertServ::paginate_cert_conf(None, Some(IamCertKind::UserPwd.to_string()), None, false, None, 1, 10, None, None, &funs, context).await?;
     assert_eq!(user_pwd_cert_conf.page_number, 1);
     assert_eq!(user_pwd_cert_conf.page_size, 10);
     assert_eq!(user_pwd_cert_conf.total_size, 1);
@@ -67,7 +67,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .await?;
 
     info!("【test_ct_cert_conf】 : test_single_level : Modify Cert Conf By MailVCode Kind");
-    let cert_conf_mail_vcode = IamCertServ::paginate_cert_conf(None, Some(IamCertKind::MailVCode.to_string()), None, None, None, 1, 10, None, None, &funs, context).await?;
+    let cert_conf_mail_vcode = IamCertServ::paginate_cert_conf(None, Some(IamCertKind::MailVCode.to_string()), None, false, None, 1, 10, None, None, &funs, context).await?;
     let cert_conf_mail_vcode_id = cert_conf_mail_vcode.records.get(0).unwrap().id.clone();
     IamCertMailVCodeServ::modify_cert_conf(
         &cert_conf_mail_vcode_id,
@@ -81,7 +81,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .await?;
 
     info!("【test_ct_cert_conf】 : test_single_level : Modify Cert Conf By PhoneVCode Kind");
-    let cert_conf_phone_vcode = IamCertServ::paginate_cert_conf(None, Some(IamCertKind::PhoneVCode.to_string()), None, None, None, 1, 10, None, None, &funs, context).await?;
+    let cert_conf_phone_vcode = IamCertServ::paginate_cert_conf(None, Some(IamCertKind::PhoneVCode.to_string()), None, false, None, 1, 10, None, None, &funs, context).await?;
     let cert_conf_phone_vcode_id = cert_conf_phone_vcode.records.get(0).unwrap().id.clone();
     IamCertPhoneVCodeServ::modify_cert_conf(
         &cert_conf_phone_vcode_id,
@@ -107,7 +107,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert_eq!(cert_conf.ak_note, "ddddd1");
 
     info!("【test_ct_cert_conf】 : test_single_level : Find Cert Conf");
-    let cert_conf = IamCertServ::paginate_cert_conf(None, None, None, None, None, 1, 10, None, None, &funs, context).await?;
+    let cert_conf = IamCertServ::paginate_cert_conf(None, None, None, false, None, 1, 10, None, None, &funs, context).await?;
     assert_eq!(cert_conf.page_number, 1);
     assert_eq!(cert_conf.page_size, 10);
     assert_eq!(cert_conf.total_size, 7);
@@ -116,12 +116,12 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert!(IamCertServ::delete_cert_conf("11111", &funs, &context).await.is_err());
     assert!(IamCertServ::delete_cert_conf(&cert_conf_phone_vcode_id, &funs, &another_context).await.is_err());
     assert_eq!(
-        IamCertServ::paginate_cert_conf(Some(cert_conf_phone_vcode_id.clone()), None, None, None, None, 1, 10, None, None, &funs, context).await?.total_size,
+        IamCertServ::paginate_cert_conf(Some(cert_conf_phone_vcode_id.clone()), None, None, false, None, 1, 10, None, None, &funs, context).await?.total_size,
         1
     );
     IamCertServ::delete_cert_conf(&cert_conf_phone_vcode_id, &funs, &context).await?;
     assert_eq!(
-        IamCertServ::paginate_cert_conf(Some(cert_conf_phone_vcode_id.clone()), None, None, None, None, 1, 10, None, None, &funs, context).await?.total_size,
+        IamCertServ::paginate_cert_conf(Some(cert_conf_phone_vcode_id.clone()), None, None, false, None, 1, 10, None, None, &funs, context).await?.total_size,
         0
     );
 
