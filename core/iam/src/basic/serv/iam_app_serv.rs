@@ -4,7 +4,7 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
-use tardis::TardisFuns;
+use tardis::{tokio, TardisFuns};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -32,11 +32,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_app_id
+        IamBasicInfoManager::get_config(|conf| conf.kind_app_id.clone())
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id
+        IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
     async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
@@ -91,15 +91,29 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             let app_id = id.to_string();
+            let own_paths = Self::peek_item(
+                id,
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                cxt,
+            )
+            .await?
+            .own_paths;
             let cxt = cxt.clone();
-            tardis::tokio::spawn(async move {
+            tokio::spawn(async move {
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some(IamAppServ::get_id_by_cxt(&cxt).unwrap()),
+                        own_paths: Some(own_paths),
                         with_sub_own_paths: true,
                         ..Default::default()
                     },

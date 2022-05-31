@@ -38,11 +38,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_account_id
+        IamBasicInfoManager::get_config(|conf| conf.kind_account_id.clone())
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id
+        IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
     async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {

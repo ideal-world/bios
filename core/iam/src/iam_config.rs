@@ -3,6 +3,7 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use tardis::basic::dto::TardisFunsInst;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 
@@ -79,8 +80,62 @@ impl IamBasicInfoManager {
         Ok(())
     }
 
-    pub fn get() -> BasicInfo {
-        let conf = BASIC_INFO.lock().expect("Basic info not set");
-        conf.as_ref().expect("Basic info not set").clone()
+    pub fn get_config<F, T>(fun: F) -> T
+    where
+        F: Fn(&BasicInfo) -> T,
+    {
+        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("Iam basic config lock error: {:?}", e));
+        let conf = conf.as_ref().unwrap_or_else(|| panic!("rbum config not set"));
+        fun(conf)
+    }
+}
+
+pub trait IamBasicConfigApi {
+    fn iam_basic_kind_tenant_id(&self) -> String;
+    fn iam_basic_kind_app_id(&self) -> String;
+    fn iam_basic_kind_account_id(&self) -> String;
+    fn iam_basic_kind_role_id(&self) -> String;
+    fn iam_basic_kind_res_id(&self) -> String;
+    fn iam_basic_domain_iam_id(&self) -> String;
+    fn iam_basic_role_sys_admin_id(&self) -> String;
+    fn iam_basic_role_tenant_admin_id(&self) -> String;
+    fn iam_basic_role_app_admin_id(&self) -> String;
+}
+
+impl<'a> IamBasicConfigApi for TardisFunsInst<'a> {
+    fn iam_basic_kind_tenant_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_tenant_id.clone())
+    }
+
+    fn iam_basic_kind_app_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_app_id.clone())
+    }
+
+    fn iam_basic_kind_account_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_account_id.clone())
+    }
+
+    fn iam_basic_kind_role_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_role_id.clone())
+    }
+
+    fn iam_basic_kind_res_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.kind_res_id.clone())
+    }
+
+    fn iam_basic_domain_iam_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
+    }
+
+    fn iam_basic_role_sys_admin_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_sys_admin_id.clone())
+    }
+
+    fn iam_basic_role_tenant_admin_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_tenant_admin_id.clone())
+    }
+
+    fn iam_basic_role_app_admin_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_app_admin_id.clone())
     }
 }

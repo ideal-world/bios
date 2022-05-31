@@ -22,7 +22,7 @@ use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::IamRelKind;
@@ -36,11 +36,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_role_id
+        IamBasicInfoManager::get_config(|conf| conf.kind_role_id.clone())
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id
+        IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
     async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
@@ -229,10 +229,9 @@ impl<'a> IamRoleServ {
     }
 
     pub async fn add_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let basic_info = IamBasicInfoManager::get();
         let scope_level = get_scope_level_by_context(cxt)?;
-        if scope_level == RBUM_SCOPE_LEVEL_APP && (role_id == basic_info.role_sys_admin_id || role_id == basic_info.role_tenant_admin_id)
-            || scope_level == RBUM_SCOPE_LEVEL_TENANT && role_id == basic_info.role_sys_admin_id
+        if scope_level == RBUM_SCOPE_LEVEL_APP && (role_id == funs.iam_basic_role_sys_admin_id() || role_id == funs.iam_basic_role_tenant_admin_id())
+            || scope_level == RBUM_SCOPE_LEVEL_TENANT && role_id == funs.iam_basic_role_sys_admin_id()
         {
             return Err(TardisError::BadRequest("The associated role is invalid.".to_string()));
         }
@@ -350,15 +349,15 @@ impl<'a> IamRoleServ {
     }
 
     pub async fn need_sys_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::need_role(&IamBasicInfoManager::get().role_sys_admin_id, funs, cxt).await
+        Self::need_role(&funs.iam_basic_role_sys_admin_id(), funs, cxt).await
     }
 
     pub async fn need_tenant_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::need_role(&IamBasicInfoManager::get().role_tenant_admin_id, funs, cxt).await
+        Self::need_role(&funs.iam_basic_role_tenant_admin_id(), funs, cxt).await
     }
 
     pub async fn need_app_admin(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::need_role(&IamBasicInfoManager::get().role_app_admin_id, funs, cxt).await
+        Self::need_role(&funs.iam_basic_role_app_admin_id(), funs, cxt).await
     }
 
     pub async fn need_role(role_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {

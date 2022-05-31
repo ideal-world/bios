@@ -12,7 +12,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 
@@ -74,7 +74,7 @@ impl<'a> IamCsTenantServ {
                 icon: None,
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
-                role_ids: Some(vec![IamBasicInfoManager::get().role_tenant_admin_id]),
+                role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
                 exts: Default::default(),
             },
             funs,

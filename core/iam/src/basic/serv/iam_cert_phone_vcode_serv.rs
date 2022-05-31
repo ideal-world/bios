@@ -11,7 +11,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamPhoneVCodeCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::IamPhoneVCodeCertAddReq;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKind;
 
 pub struct IamCertPhoneVCodeServ;
@@ -41,7 +41,7 @@ impl<'a> IamCertPhoneVCodeServ {
                 expire_sec: None,
                 coexist_num: Some(1),
                 conn_uri: None,
-                rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
+                rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id,
             },
             funs,

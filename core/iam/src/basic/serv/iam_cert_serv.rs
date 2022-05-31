@@ -26,7 +26,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
 
@@ -113,7 +113,7 @@ impl<'a> IamCertServ {
         RbumCertConfServ::get_rbum(
             id,
             &RbumCertConfFilterReq {
-                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
                 ..Default::default()
             },
@@ -143,7 +143,7 @@ impl<'a> IamCertServ {
                     with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
-                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
             },
             desc_sort_by_create,
@@ -181,7 +181,7 @@ impl<'a> IamCertServ {
                     with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
-                rel_rbum_domain_id: Some(IamBasicInfoManager::get().domain_iam_id.to_string()),
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
             },
             page_number,
@@ -248,13 +248,7 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_cert_conf_id_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(
-            code,
-            &IamBasicInfoManager::get().domain_iam_id,
-            rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(),
-            funs,
-        )
-        .await
+        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(), funs).await
     }
 
     pub async fn package_tardis_context_and_resp(

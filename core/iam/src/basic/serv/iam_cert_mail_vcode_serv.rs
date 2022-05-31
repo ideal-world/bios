@@ -19,7 +19,7 @@ use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_enumeration::IamCertKind;
 
 pub struct IamCertMailVCodeServ;
@@ -49,7 +49,7 @@ impl<'a> IamCertMailVCodeServ {
                 expire_sec: None,
                 coexist_num: Some(1),
                 conn_uri: None,
-                rel_rbum_domain_id: IamBasicInfoManager::get().domain_iam_id.to_string(),
+                rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
