@@ -14,6 +14,7 @@ use tardis::web::web_resp::TardisPage;
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::helper::{rbum_event_helper, rbum_scope_helper};
+use crate::rbum::rbum_config::RbumConfigApi;
 
 lazy_static! {
     pub static ref OWNER_TABLE: Alias = Alias::new("t_owner");
@@ -205,11 +206,8 @@ where
         #[cfg(feature = "with-mq")]
         {
             let delete_records = funs.db().soft_delete_custom(select, "id").await?;
-            let mq_topic_entity_deleted = &crate::rbum::rbum_config::RbumConfigManager::get(funs.module_code())?.mq_topic_entity_deleted;
-            let mq_header = std::collections::HashMap::from([(
-                crate::rbum::rbum_config::RbumConfigManager::get(funs.module_code())?.mq_header_name_operator,
-                cxt.owner.clone(),
-            )]);
+            let mq_topic_entity_deleted = &funs.rbum_conf_mq_topic_entity_deleted();
+            let mq_header = std::collections::HashMap::from([(funs.rbum_conf_mq_header_name_operator(), cxt.owner.clone())]);
             for delete_record in &delete_records {
                 funs.mq().request(mq_topic_entity_deleted, tardis::TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
