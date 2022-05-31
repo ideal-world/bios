@@ -29,11 +29,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 
     fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get().kind_tenant_id
+        IamBasicInfoManager::get_config(|conf| conf.kind_tenant_id.clone())
     }
 
     fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get().domain_iam_id
+        IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
     async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {

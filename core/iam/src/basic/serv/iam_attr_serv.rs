@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemAttrServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
 
 use crate::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::IamBasicConfigApi;
 
 pub struct IamAttrServ;
 
@@ -55,7 +55,7 @@ impl<'a> IamAttrServ {
                 max_length: add_req.max_length,
                 action: add_req.action.clone(),
                 ext: add_req.ext.clone(),
-                rel_rbum_kind_id: IamBasicInfoManager::get().kind_account_id,
+                rel_rbum_kind_id: funs.iam_basic_kind_account_id(),
                 scope_level: add_req.scope_level.clone(),
             },
             funs,
@@ -74,7 +74,7 @@ impl<'a> IamAttrServ {
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
-                    rbum_kind_id: Some(IamBasicInfoManager::get().kind_account_id),
+                    rbum_kind_id: Some(funs.iam_basic_kind_account_id()),
                     ..Default::default()
                 },
             },
@@ -88,7 +88,7 @@ impl<'a> IamAttrServ {
         RbumKindAttrServ::find_rbums(
             &RbumKindAttrFilterReq {
                 basic: RbumBasicFilterReq {
-                    rbum_kind_id: Some(IamBasicInfoManager::get().kind_account_id),
+                    rbum_kind_id: Some(funs.iam_basic_kind_account_id()),
                     desc_by_sort: Some(true),
                     ..Default::default()
                 },

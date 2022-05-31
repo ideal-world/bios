@@ -9,7 +9,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 
@@ -41,7 +41,7 @@ impl<'a> IamCtAppServ {
         .await?;
 
         IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_cxt).await?;
-        IamRoleServ::add_rel_account(&IamBasicInfoManager::get().role_app_admin_id, &add_req.admin_id, funs, &app_cxt).await?;
+        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, funs, &app_cxt).await?;
 
         IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_cxt).await?;
         IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_cxt).await?;
