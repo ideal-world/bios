@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 #[cfg(feature = "default")]
-use tardis::db::sea_orm::{DbErr, QueryResult, TryGetable, TryGetError};
+use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]

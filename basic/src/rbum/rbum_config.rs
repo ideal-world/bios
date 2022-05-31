@@ -12,6 +12,7 @@ use tardis::basic::result::TardisResult;
 pub struct RbumConfig {
     pub set_cate_sys_code_node_len: usize,
     pub mq_topic_entity_deleted: String,
+    pub mq_topic_event: String,
     pub mq_header_name_operator: String,
     // own_paths:ak -> vcode
     pub cache_key_cert_vcode_info_: String,
@@ -20,13 +21,16 @@ pub struct RbumConfig {
     pub cache_key_cert_code_expire_sec: usize,
     pub cache_key_set_code_: String,
     pub cache_key_set_code_expire_sec: usize,
+    // table name (support prefix matching) -> <c><u><d>
+    pub event_domains: HashMap<String, String>,
 }
 
 impl Default for RbumConfig {
     fn default() -> Self {
         RbumConfig {
             set_cate_sys_code_node_len: 4,
-            mq_topic_entity_deleted: "entity_deleted".to_string(),
+            mq_topic_entity_deleted: "rbum::entity_deleted".to_string(),
+            mq_topic_event: "rbum::event".to_string(),
             mq_header_name_operator: "OP".to_string(),
             cache_key_cert_vcode_info_: "rbum:cache:cert:vcode:".to_string(),
             cache_key_cert_vcode_expire_sec: 2,
@@ -34,6 +38,7 @@ impl Default for RbumConfig {
             cache_key_cert_code_expire_sec: 60 * 60 * 24,
             cache_key_set_code_: "rbum:cache:set:code:".to_string(),
             cache_key_set_code_expire_sec: 60 * 60 * 24,
+            event_domains: HashMap::from([("rbum_".to_string(), "cud".to_string())]),
         }
     }
 }
@@ -56,5 +61,18 @@ impl RbumConfigManager {
         let conf = conf.get(code).ok_or_else(|| TardisError::NotFound(code.to_string()))?;
         // TODO
         Ok(conf.clone())
+    }
+
+    pub fn match_event(code: &str, table_name: &str, operate: &str) -> TardisResult<bool> {
+        Self::get_config(code, |conf| conf.event_domains.iter().any(|(k, v)| table_name.contains(k) && v.contains(operate)))
+    }
+
+    fn get_config<F, T>(code: &str, fun: F) -> TardisResult<T>
+    where
+        F: Fn(&RbumConfig) -> T,
+    {
+        let conf = RBUM_CONFIG.lock().map_err(|e| TardisError::InternalError(format!("{:?}", e)))?;
+        let conf = conf.get(code).ok_or_else(|| TardisError::NotFound(code.to_string()))?;
+        Ok(fun(conf))
     }
 }

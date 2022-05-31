@@ -13,7 +13,7 @@ use tardis::web::web_resp::TardisPage;
 
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use crate::rbum::helper::rbum_scope_helper;
+use crate::rbum::helper::{rbum_event_helper, rbum_scope_helper};
 
 lazy_static! {
     pub static ref OWNER_TABLE: Alias = Alias::new("t_owner");
@@ -154,6 +154,7 @@ where
         };
         if let Some(id) = id {
             Self::after_add_rbum(&id, add_req, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, cxt).await?;
             Ok(id)
         } else {
             return Err(TardisError::InternalError(
@@ -178,7 +179,9 @@ where
         Self::before_modify_rbum(id, modify_req, funs, cxt).await?;
         let domain = Self::package_modify(id, modify_req, funs, cxt).await?;
         funs.db().update_one(domain, cxt).await?;
-        Self::after_modify_rbum(id, modify_req, funs, cxt).await
+        Self::after_modify_rbum(id, modify_req, funs, cxt).await?;
+        rbum_event_helper::try_notify(Self::get_table_name(), "u", &id, funs, cxt).await?;
+        Ok(())
     }
 
     // ----------------------------- Delete -------------------------------
@@ -211,12 +214,14 @@ where
                 funs.mq().request(mq_topic_entity_deleted, tardis::TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "d", &id, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
         {
             let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
             Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "d", &id, funs, cxt).await?;
             Ok(delete_records)
         }
     }

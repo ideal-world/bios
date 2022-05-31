@@ -20,6 +20,7 @@ use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetai
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
+use crate::rbum::helper::rbum_event_helper;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind};
 use crate::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage, CREATE_TIME_FIELD, ID_FIELD, UPDATE_TIME_FIELD};
@@ -228,6 +229,7 @@ where
         let ext_domain = Self::package_ext_add(&id, add_req, funs, cxt).await?;
         funs.db().insert_one(ext_domain, cxt).await?;
         Self::after_add_item(&id, funs, cxt).await?;
+        rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, cxt).await?;
         Ok(id)
     }
 
@@ -297,7 +299,9 @@ where
         if let Some(ext_domain) = ext_domain {
             funs.db().update_one(ext_domain, cxt).await?;
         }
-        Self::after_modify_item(id, modify_req, funs, cxt).await
+        Self::after_modify_item(id, modify_req, funs, cxt).await?;
+        rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", &id, funs, cxt).await?;
+        Ok(())
     }
 
     // ----------------------------- Delete -------------------------------
@@ -330,6 +334,7 @@ where
                 funs.mq().request(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_item(id, deleted_item, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
@@ -337,6 +342,7 @@ where
             let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
             RbumItemServ::delete_rbum(id, funs, cxt).await?;
             Self::after_delete_item(id, deleted_item, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
     }
