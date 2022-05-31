@@ -4,6 +4,7 @@ use tardis::{testcontainers, tokio};
 mod test_basic;
 mod test_rbum_cert;
 mod test_rbum_domain;
+mod test_rbum_event;
 mod test_rbum_item;
 mod test_rbum_kind;
 mod test_rbum_rel;
@@ -22,5 +23,6 @@ async fn test_rbum() -> TardisResult<()> {
     test_rbum_cert::test(&cxt).await?;
     test_rbum_rel::test(&cxt).await?;
     test_rbum_set::test(&cxt).await?;
+    test_rbum_event::test(&cxt).await?;
     Ok(())
 }
