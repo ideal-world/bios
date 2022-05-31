@@ -4,6 +4,7 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use tardis::basic::dto::TardisFunsInst;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 
@@ -56,23 +57,76 @@ impl RbumConfigManager {
         Ok(())
     }
 
-    pub fn get(code: &str) -> TardisResult<RbumConfig> {
-        let conf = RBUM_CONFIG.lock().map_err(|e| TardisError::InternalError(format!("{:?}", e)))?;
-        let conf = conf.get(code).ok_or_else(|| TardisError::NotFound(code.to_string()))?;
-        // TODO
-        Ok(conf.clone())
-    }
-
-    pub fn match_event(code: &str, table_name: &str, operate: &str) -> TardisResult<bool> {
+    pub fn match_event(code: &str, table_name: &str, operate: &str) -> bool {
         Self::get_config(code, |conf| conf.event_domains.iter().any(|(k, v)| table_name.contains(k) && v.contains(operate)))
     }
 
-    fn get_config<F, T>(code: &str, fun: F) -> TardisResult<T>
+    pub fn get_config<F, T>(code: &str, fun: F) -> T
     where
         F: Fn(&RbumConfig) -> T,
     {
-        let conf = RBUM_CONFIG.lock().map_err(|e| TardisError::InternalError(format!("{:?}", e)))?;
-        let conf = conf.get(code).ok_or_else(|| TardisError::NotFound(code.to_string()))?;
-        Ok(fun(conf))
+        let conf = RBUM_CONFIG.lock().unwrap_or_else(|e| panic!("rbum config lock error: {:?}", e));
+        let conf = conf.get(code).unwrap_or_else(|| panic!("rbum config code {}  not found", code));
+        fun(conf)
+    }
+}
+
+pub trait RbumConfigApi {
+    fn rbum_conf_set_cate_sys_code_node_len(&self) -> usize;
+    fn rbum_conf_mq_topic_entity_deleted(&self) -> String;
+    fn rbum_conf_mq_topic_event(&self) -> String;
+    fn rbum_conf_mq_header_name_operator(&self) -> String;
+    fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String;
+    fn rbum_conf_cache_key_cert_vcode_expire_sec(&self) -> usize;
+    fn rbum_conf_cache_key_cert_code_(&self) -> String;
+    fn rbum_conf_cache_key_cert_code_expire_sec(&self) -> usize;
+    fn rbum_conf_cache_key_set_code_(&self) -> String;
+    fn rbum_conf_cache_key_set_code_expire_sec(&self) -> usize;
+    fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool;
+}
+
+impl<'a> RbumConfigApi for TardisFunsInst<'a> {
+    fn rbum_conf_set_cate_sys_code_node_len(&self) -> usize {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.set_cate_sys_code_node_len)
+    }
+
+    fn rbum_conf_mq_topic_entity_deleted(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_topic_entity_deleted.to_string())
+    }
+
+    fn rbum_conf_mq_topic_event(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_topic_event.to_string())
+    }
+
+    fn rbum_conf_mq_header_name_operator(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.mq_header_name_operator.to_string())
+    }
+
+    fn rbum_conf_cache_key_cert_vcode_info_(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_vcode_info_.to_string())
+    }
+
+    fn rbum_conf_cache_key_cert_vcode_expire_sec(&self) -> usize {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_vcode_expire_sec)
+    }
+
+    fn rbum_conf_cache_key_cert_code_(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_code_.to_string())
+    }
+
+    fn rbum_conf_cache_key_cert_code_expire_sec(&self) -> usize {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_cert_code_expire_sec)
+    }
+
+    fn rbum_conf_cache_key_set_code_(&self) -> String {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_set_code_.to_string())
+    }
+
+    fn rbum_conf_cache_key_set_code_expire_sec(&self) -> usize {
+        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_set_code_expire_sec)
+    }
+
+    fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool {
+        RbumConfigManager::match_event(self.module_code(), table_name, operate)
     }
 }
