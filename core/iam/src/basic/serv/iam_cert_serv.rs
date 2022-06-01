@@ -1,9 +1,9 @@
-use tardis::basic::dto::{TardisContext, TardisFunsInst};
+use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
-use tardis::TardisFuns;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
