@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::*;
@@ -62,7 +61,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                 .await?
                 > 0
             {
-                return Err(TardisError::BadRequest(format!("code {} already exists", code)));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", code)));
             }
             code.0.clone()
         } else {
@@ -112,7 +111,7 @@ impl<'a> RbumCrudOperation<'a, rbum_item::ActiveModel, RbumItemAddReq, RbumItemM
                 .await?
                 > 0
             {
-                return Err(TardisError::BadRequest(format!("code {} already exists", code)));
+                return Err(funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("code {} already exists", code)));
             }
             rbum_item.code = Set(code.to_string());
         }
@@ -197,7 +196,17 @@ where
     ItemFilterReq: Sync + Send + RbumItemFilterFetcher,
 {
     fn get_ext_table_name() -> &'static str;
+
+    fn get_obj_name() -> String {
+        Self::get_obj_name_from(Self::get_ext_table_name())
+    }
+
+    fn get_obj_name_from(table_name: &str) -> String {
+        table_name.replace("rbum_", "")
+    }
+
     fn get_rbum_kind_id() -> String;
+
     fn get_rbum_domain_id() -> String;
 
     // ----------------------------- Add -------------------------------
@@ -526,8 +535,7 @@ where
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            // TODO
-            None => Err(TardisError::NotFound("".to_string())),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "peek", &format!("not found {}.{} by {}", Self::get_obj_name(), id, cxt.owner))),
         }
     }
 
@@ -546,8 +554,7 @@ where
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            // TODO
-            None => Err(TardisError::NotFound("".to_string())),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "get", &format!("not found {}.{} by {}", Self::get_obj_name(), id, cxt.owner))),
         }
     }
 
@@ -684,7 +691,7 @@ where
     async fn do_find_one_item(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
         let result = Self::find_items(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
-            Err(TardisError::Conflict("Multiple records found".to_string()))
+            Err(funs.err().conflict(&Self::get_obj_name(), "find_one", "found multiple records"))
         } else {
             Ok(result.into_iter().next())
         }
@@ -761,7 +768,7 @@ where
     async fn do_find_one_detail_item(filter: &ItemFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
         let result = Self::find_detail_items(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
-            Err(TardisError::Conflict("Multiple records found".to_string()))
+            Err(funs.err().conflict(&Self::get_obj_name(), "find_one_detail", "found multiple records"))
         } else {
             Ok(result.into_iter().next())
         }
@@ -823,7 +830,7 @@ where
         if let Some(result) = result {
             Ok(result.disabled)
         } else {
-            Err(TardisError::NotFound(format!("Item {} not found", id)))
+            Err(funs.err().not_found(&Self::get_obj_name(), "is_disabled", &format!("not found {}.{}", Self::get_obj_name(), id)))
         }
     }
 }
@@ -851,12 +858,10 @@ impl<'a> RbumCrudOperation<'a, rbum_item_attr::ActiveModel, RbumItemAttrAddReq, 
         Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, cxt).await?;
         let rbum_kind_attr = RbumKindAttrServ::peek_rbum(&add_req.rel_rbum_kind_attr_id, &RbumKindAttrFilterReq::default(), funs, cxt).await?;
         if rbum_kind_attr.main_column {
-            return Err(TardisError::BadRequest(
-                "Extension fields located in main table cannot be added using this function".to_string(),
-            ));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "extension fields located in main table cannot be added using this function"));
         }
         if rbum_kind_attr.idx {
-            return Err(TardisError::BadRequest("Indexed extension fields cannot be added using this function".to_string()));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "index extension fields cannot be added using this function"));
         }
         Ok(())
     }

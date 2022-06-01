@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
@@ -399,7 +398,11 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             .await?
             > 0
         {
-            return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are rbum_set_item".to_string()));
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "delete",
+                &format!("can not delete {}.{} when there are associated by set_item", Self::get_obj_name(), id),
+            ));
         }
         let set = Self::peek_rbum(
             id,
@@ -427,7 +430,11 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             .await?
             > 0
         {
-            return Err(TardisError::BadRequest("Can not delete rbum_set_cate when there are sub rbum_set_cate".to_string()));
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "delete",
+                &format!("can not delete {}.{} when there are associated by sub set_cate", Self::get_obj_name(), id),
+            ));
         }
         Ok(None)
     }
@@ -545,12 +552,15 @@ impl<'a> RbumSetCateServ {
                 // if level N (N!=1) not empty
                 let curr_level_sys_code = max_sys_code[max_sys_code.len() - set_cate_sys_code_node_len..].to_string();
                 let parent_sys_code = max_sys_code[..max_sys_code.len() - set_cate_sys_code_node_len].to_string();
-                let curr_level_sys_code =
-                    TardisFuns::field.incr_by_base36(&curr_level_sys_code).ok_or_else(|| TardisError::BadRequest("the current number of nodes is saturated".to_string()))?;
+                let curr_level_sys_code = TardisFuns::field
+                    .incr_by_base36(&curr_level_sys_code)
+                    .ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "get_sys_code", "current number of nodes is saturated"))?;
                 Ok(format!("{}{}", parent_sys_code, curr_level_sys_code))
             } else {
                 // if level 1 not empty
-                Ok(TardisFuns::field.incr_by_base36(&max_sys_code).ok_or_else(|| TardisError::BadRequest("the current number of nodes is saturated".to_string()))?)
+                Ok(TardisFuns::field
+                    .incr_by_base36(&max_sys_code)
+                    .ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "get_sys_code", "current number of nodes is saturated"))?)
             }
         } else if let Some(parent_sys_code) = parent_sys_code {
             // if level N (N!=1) is empty
@@ -569,7 +579,7 @@ impl<'a> RbumSetCateServ {
                 Query::select().column(rbum_set_cate::Column::SysCode).from(rbum_set_cate::Entity).and_where(Expr::col(rbum_set_cate::Column::Id).eq(rbum_set_cate_id)),
             )
             .await?
-            .ok_or_else(|| TardisError::NotFound(format!("set cate {} does not exist", rbum_set_cate_id)))?
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "get_sys_code", &format!("not found set cate {}", rbum_set_cate_id)))?
             .sys_code;
         Ok(sys_code)
     }

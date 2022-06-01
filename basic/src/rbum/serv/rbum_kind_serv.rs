@@ -1,13 +1,12 @@
 use async_trait::async_trait;
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
+use tardis::TardisFunsInst;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
@@ -43,12 +42,12 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
 
     async fn before_add_rbum(add_req: &mut RbumKindAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
-            return Err(TardisError::BadRequest(format!("Kind code {} is invalid", add_req.code)));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code)));
         }
         if funs.db().count(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(add_req.code.0.as_str()))).await?
             > 0
         {
-            return Err(TardisError::BadRequest(format!("code {} already exists", add_req.code)));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code)));
         }
         Ok(())
     }
@@ -172,7 +171,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
             .await?
             > 0
         {
-            return Err(TardisError::BadRequest(format!("name {} already exists", add_req.name)));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("name {} already exists", add_req.name)));
         }
         Ok(())
     }
