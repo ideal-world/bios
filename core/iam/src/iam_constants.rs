@@ -1,5 +1,5 @@
-use tardis::basic::dto::TardisFunsInst;
 use tardis::TardisFuns;
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 

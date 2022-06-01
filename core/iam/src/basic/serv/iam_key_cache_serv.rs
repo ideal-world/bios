@@ -3,11 +3,11 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tardis::{log, TardisFuns};
-use tardis::basic::dto::{TardisContext, TardisFunsInst};
+use tardis::basic::dto::TardisContext;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
+use tardis::{log, TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
@@ -144,7 +144,7 @@ pub struct IamResCacheServ;
 impl<'a> IamResCacheServ {
     pub async fn add_res(item_code: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
-        log::trace!("add res: uri_mixed={}",uri_mixed);
+        log::trace!("add res: uri_mixed={}", uri_mixed);
         funs.cache()
             .hset(
                 &funs.conf::<IamConfig>().cache_key_res_info,
@@ -157,7 +157,7 @@ impl<'a> IamResCacheServ {
 
     pub async fn delete_res(item_code: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
-        log::trace!("delete res: uri_mixed={}",uri_mixed);
+        log::trace!("delete res: uri_mixed={}", uri_mixed);
         funs.cache().hdel(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
     }
@@ -175,7 +175,7 @@ impl<'a> IamResCacheServ {
             tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
         };
         let uri_mixed = Self::package_uri_mixed(item_code, action);
-        log::trace!("add or modify res rel: uri_mixed={}",uri_mixed);
+        log::trace!("add or modify res rel: uri_mixed={}", uri_mixed);
         let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         if let Some(rels) = rels {
             let old_res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
@@ -196,7 +196,7 @@ impl<'a> IamResCacheServ {
 
     pub async fn delete_res_rel(item_code: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
-        log::trace!("delete res rel: uri_mixed={}",uri_mixed);
+        log::trace!("delete res rel: uri_mixed={}", uri_mixed);
         let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         if let Some(rels) = rels {
             let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
