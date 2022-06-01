@@ -4,9 +4,9 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use tardis::basic::dto::TardisFunsInst;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
+use tardis::TardisFunsInst;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
