@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use serde::Serialize;
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::*;
@@ -11,6 +9,7 @@ use tardis::db::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, O
 use tardis::regex::Regex;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
+use tardis::TardisFunsInst;
 
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -46,6 +45,14 @@ where
 {
     fn get_table_name() -> &'static str;
 
+    fn get_obj_name() -> String {
+        Self::get_obj_name_from(Self::get_table_name())
+    }
+
+    fn get_obj_name_from(table_name: &str) -> String {
+        table_name.replace("rbum_", "")
+    }
+
     // ----------------------------- Ownership -------------------------------
 
     async fn check_ownership(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
@@ -54,7 +61,11 @@ where
 
     async fn check_ownership_with_table_name(id: &str, table_name: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
         if funs.db().count(&Self::package_ownership_query_with_table_name(id, table_name, cxt)).await? == 0 {
-            return Err(TardisError::NotFound(format!("The ownership of {}.{} is illegal", Self::get_table_name(), id)));
+            return Err(funs.err().not_found(
+                &Self::get_obj_name_from(table_name),
+                "check",
+                &format!("ownership {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, cxt.owner),
+            ));
         }
         Ok(())
     }
@@ -88,7 +99,11 @@ where
             .await?
             == 0
         {
-            return Err(TardisError::NotFound(format!("The scope of {}.{} is illegal", Self::get_table_name(), id)));
+            return Err(funs.err().not_found(
+                &Self::get_obj_name_from(table_name),
+                "check",
+                &format!("scope {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, cxt.owner),
+            ));
         }
         Ok(())
     }
@@ -107,22 +122,32 @@ where
             .await?
             > 0
         {
-            return Err(TardisError::BadRequest(format!(
-                "Can not delete {} when there are {}",
-                Self::get_table_name(),
-                rel_table_name
-            )));
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "delete",
+                &format!(
+                    "can not delete {}.{} when there are associated by {}.{}",
+                    Self::get_obj_name(),
+                    id,
+                    Self::get_obj_name_from(rel_table_name),
+                    rel_field_name
+                ),
+            ));
         }
         Ok(())
     }
 
     async fn check_exist_with_cond_before_delete(rel_table_name: &str, condition: Condition, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         if funs.db().count(Query::select().column((Alias::new(rel_table_name), ID_FIELD.clone())).from(Alias::new(rel_table_name)).cond_where(condition)).await? > 0 {
-            return Err(TardisError::BadRequest(format!(
-                "Can not delete {} when there are {}",
-                Self::get_table_name(),
-                rel_table_name
-            )));
+            return Err(funs.err().conflict(
+                &Self::get_obj_name(),
+                "delete",
+                &format!(
+                    "can not delete {} when there are associated by {}",
+                    Self::get_obj_name(),
+                    Self::get_obj_name_from(rel_table_name)
+                ),
+            ));
         }
         Ok(())
     }
@@ -159,9 +184,7 @@ where
             rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, cxt).await?;
             Ok(id)
         } else {
-            return Err(TardisError::InternalError(
-                "The id data type is invalid, currently only the string is supported".to_string(),
-            ));
+            return Err(funs.err().internal_error(&Self::get_obj_name(), "add", "id data type is invalid, currently only the string is supported"));
         }
     }
 
@@ -239,8 +262,7 @@ where
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            // TODO
-            None => Err(TardisError::NotFound("".to_string())),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "peek", &format!("not found {}.{} by {}", Self::get_obj_name(), id, cxt.owner))),
         }
     }
 
@@ -254,8 +276,7 @@ where
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            // TODO
-            None => Err(TardisError::NotFound("".to_string())),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "get", &format!("not found {}.{} by {}", Self::get_obj_name(), id, cxt.owner))),
         }
     }
 
@@ -377,7 +398,7 @@ where
     async fn do_find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
         let result = Self::find_rbums(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
-            Err(TardisError::Conflict("Multiple records found".to_string()))
+            Err(funs.err().conflict(&Self::get_obj_name(), "find_one", "found multiple records"))
         } else {
             Ok(result.into_iter().next())
         }
@@ -444,7 +465,7 @@ where
     async fn do_find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
         let result = Self::find_detail_rbums(filter, None, None, funs, cxt).await?;
         if result.len() > 1 {
-            Err(TardisError::Conflict("Multiple records found".to_string()))
+            Err(funs.err().conflict(&Self::get_obj_name(), "find_one_detail", "found multiple records"))
         } else {
             Ok(result.into_iter().next())
         }

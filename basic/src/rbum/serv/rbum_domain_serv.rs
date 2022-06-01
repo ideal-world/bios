@@ -1,12 +1,11 @@
 use async_trait::async_trait;
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFuns;
+use tardis::TardisFunsInst;
 
 use crate::rbum::domain::{rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_domain_dto::{RbumDomainAddReq, RbumDomainDetailResp, RbumDomainModifyReq, RbumDomainSummaryResp};
@@ -41,7 +40,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
 
     async fn before_add_rbum(add_req: &mut RbumDomainAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
-            return Err(TardisError::BadRequest(format!("Domain code {} is invalid", add_req.code)));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code)));
         }
         if funs
             .db()
@@ -49,7 +48,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             .await?
             > 0
         {
-            return Err(TardisError::BadRequest(format!("code {} already exists", add_req.code)));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code)));
         }
         Ok(())
     }
