@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
@@ -87,7 +86,7 @@ impl<'a> IamSetServ {
     }
 
     pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, cxt).await?.ok_or_else(|| TardisError::NotFound(format!("set {} not found", code)))
+        RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, cxt).await?.ok_or_else(|| funs.err().not_found("set", "get_id", &format!("not found set by code {}", code)))
     }
 
     pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {

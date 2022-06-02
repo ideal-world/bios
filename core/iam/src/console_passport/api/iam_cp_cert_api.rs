@@ -52,7 +52,7 @@ impl IamCpCertApi {
         let own_paths = if cxt.0.own_paths.is_empty() {
             None
         } else {
-            Some(IamTenantServ::get_id_by_cxt(&cxt.0)?)
+            Some(IamTenantServ::get_id_by_cxt(&cxt.0, &funs)?)
         };
         let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {

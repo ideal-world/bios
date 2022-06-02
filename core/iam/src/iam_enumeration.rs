@@ -68,7 +68,7 @@ impl IamResKind {
             0 => Ok(IamResKind::MENU),
             1 => Ok(IamResKind::API),
             2 => Ok(IamResKind::ELEMENT),
-            _ => Err(TardisError::FormatError(format!("Invalid IamResKind: {}", s))),
+            _ => Err(TardisError::FormatError(format!("invalid IamResKind: {}", s))),
         }
     }
 

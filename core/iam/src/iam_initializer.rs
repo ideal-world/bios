@@ -1,5 +1,4 @@
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
@@ -33,11 +32,6 @@ use crate::console_tenant::api::{
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_constants::{
-    RBUM_EXT_TABLE_IAM_ACCOUNT, RBUM_EXT_TABLE_IAM_APP, RBUM_EXT_TABLE_IAM_RES, RBUM_EXT_TABLE_IAM_ROLE, RBUM_EXT_TABLE_IAM_TENANT, RBUM_ITEM_NAME_APP_ADMIN_ROLE,
-    RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_ITEM_NAME_SYS_ADMIN_ROLE, RBUM_ITEM_NAME_TENANT_ADMIN_ROLE, RBUM_KIND_CODE_IAM_ACCOUNT, RBUM_KIND_CODE_IAM_APP, RBUM_KIND_CODE_IAM_RES,
-    RBUM_KIND_CODE_IAM_ROLE, RBUM_KIND_CODE_IAM_TENANT, RBUM_SCOPE_LEVEL_GLOBAL,
-};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -94,7 +88,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(String, String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
     funs.begin().await?;
-    let cxt = get_first_account_context(RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
+    let cxt = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
     let sysadmin_info = if let Some(cxt) = cxt {
         init_basic_info(&funs, &cxt).await?;
         None
@@ -112,23 +106,21 @@ pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(Strin
 }
 
 async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-    let kind_tenant_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_CODE_IAM_TENANT, funs)
+    let kind_tenant_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_TENANT, funs)
         .await?
-        .ok_or_else(|| TardisError::NotFound("Initialization error, tenant kind not found".to_string()))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant kind"))?;
     let kind_app_id =
-        RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_CODE_IAM_APP, funs).await?.ok_or_else(|| TardisError::NotFound("Initialization error, app kind not found".to_string()))?;
-    let kind_role_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_CODE_IAM_ROLE, funs)
+        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_APP, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found app kind"))?;
+    let kind_role_id =
+        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_ROLE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found role kind"))?;
+    let kind_account_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, funs)
         .await?
-        .ok_or_else(|| TardisError::NotFound("Initialization error, role kind not found".to_string()))?;
-    let kind_account_id = RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_CODE_IAM_ACCOUNT, funs)
-        .await?
-        .ok_or_else(|| TardisError::NotFound("Initialization error, account kind not found".to_string()))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found account kind"))?;
     let kind_res_id =
-        RbumKindServ::get_rbum_kind_id_by_code(RBUM_KIND_CODE_IAM_RES, funs).await?.ok_or_else(|| TardisError::NotFound("Initialization error, res kind not found".to_string()))?;
+        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_RES, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found res kind"))?;
 
-    let domain_iam_id = RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs)
-        .await?
-        .ok_or_else(|| TardisError::NotFound("Initialization error, iam domain not found".to_string()))?;
+    let domain_iam_id =
+        RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found iam domain"))?;
 
     let roles = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
@@ -148,21 +140,21 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> 
 
     let role_sys_admin_id = roles
         .iter()
-        .find(|r| r.name == RBUM_ITEM_NAME_SYS_ADMIN_ROLE)
+        .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| TardisError::NotFound("Initialization error, sys admin role not found".to_string()))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role"))?;
 
     let role_tenant_admin_id = roles
         .iter()
-        .find(|r| r.name == RBUM_ITEM_NAME_TENANT_ADMIN_ROLE)
+        .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| TardisError::NotFound("Initialization error, tenant admin role not found".to_string()))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant admin role"))?;
 
     let role_app_admin_id = roles
         .iter()
-        .find(|r| r.name == RBUM_ITEM_NAME_APP_ADMIN_ROLE)
+        .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| TardisError::NotFound("Initialization error, app admin role not found".to_string()))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found app admin role"))?;
 
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,
@@ -189,11 +181,11 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         owner: default_account_id.clone(),
     };
 
-    let kind_tenant_id = add_kind(RBUM_KIND_CODE_IAM_TENANT, RBUM_EXT_TABLE_IAM_TENANT, funs, &cxt).await?;
-    let kind_app_id = add_kind(RBUM_KIND_CODE_IAM_APP, RBUM_EXT_TABLE_IAM_APP, funs, &cxt).await?;
-    let kind_role_id = add_kind(RBUM_KIND_CODE_IAM_ROLE, RBUM_EXT_TABLE_IAM_ROLE, funs, &cxt).await?;
-    let kind_account_id = add_kind(RBUM_KIND_CODE_IAM_ACCOUNT, RBUM_EXT_TABLE_IAM_ACCOUNT, funs, &cxt).await?;
-    let kind_res_id = add_kind(RBUM_KIND_CODE_IAM_RES, RBUM_EXT_TABLE_IAM_RES, funs, &cxt).await?;
+    let kind_tenant_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_TENANT, iam_constants::RBUM_EXT_TABLE_IAM_TENANT, funs, &cxt).await?;
+    let kind_app_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_APP, iam_constants::RBUM_EXT_TABLE_IAM_APP, funs, &cxt).await?;
+    let kind_role_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_ROLE, iam_constants::RBUM_EXT_TABLE_IAM_ROLE, funs, &cxt).await?;
+    let kind_account_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::RBUM_EXT_TABLE_IAM_ACCOUNT, funs, &cxt).await?;
+    let kind_res_id = add_kind(iam_constants::RBUM_KIND_CODE_IAM_RES, iam_constants::RBUM_EXT_TABLE_IAM_RES, funs, &cxt).await?;
 
     let domain_iam_id = add_domain(funs, &cxt).await?;
 
@@ -209,8 +201,8 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         role_app_admin_id: "".to_string(),
     })?;
 
-    IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
-    IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
+    IamSetServ::init_set(true, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
+    IamSetServ::init_set(false, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &cxt).await?;
     IamCertServ::init_default_ident_conf(
         IamUserPwdCertConfAddOrModifyReq {
             ak_note: None,
@@ -231,8 +223,8 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     IamAccountServ::add_account_agg(
         &IamAccountAggAddReq {
             id: Some(TrimString(default_account_id.clone())),
-            name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
-            cert_user_name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
+            cert_user_name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
             cert_password: TrimString(pwd.clone()),
             cert_phone: None,
             cert_mail: None,
@@ -249,8 +241,8 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 
     let role_sys_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
-            code: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
-            name: TrimString(RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
+            code: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
+            name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
@@ -278,8 +270,8 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 
     let role_tenant_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
-            code: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
-            name: TrimString(RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
+            code: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
+            name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
@@ -291,8 +283,8 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     .await?;
     let role_app_admin_id = IamRoleServ::add_item(
         &mut IamRoleAddReq {
-            code: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
-            name: TrimString(RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
+            code: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
+            name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
             icon: None,
             sort: None,
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
@@ -320,9 +312,10 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
 -----------
 System administrator name: {} ,Initial password: {}
 -----------",
-        RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, pwd
+        iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT,
+        pwd
     );
-    Ok((RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string(), pwd))
+    Ok((iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string(), pwd))
 }
 
 async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {

@@ -1,10 +1,9 @@
 use async_trait::async_trait;
+use tardis::{TardisFuns, TardisFunsInst, tokio};
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
-use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -144,8 +143,8 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(())
     }
 
-    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamAppDetailResp>> {
-        Err(TardisError::Conflict("App can only be disabled but not deleted".to_string()))
+    async fn before_delete_item(_: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamAppDetailResp>> {
+        Err(funs.err().conflict(&Self::get_obj_name(), "delete", "app can only be disabled but not deleted"))
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
@@ -164,11 +163,11 @@ impl<'a> IamAppServ {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_APP_LEN as usize)
     }
 
-    pub fn get_id_by_cxt(cxt: &TardisContext) -> TardisResult<String> {
+    pub fn get_id_by_cxt(cxt: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &cxt.own_paths) {
             Ok(id)
         } else {
-            Err(TardisError::Unauthorized(format!("app id not found in tardis content {}", cxt.own_paths)))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("app id not found in tardis content {}", cxt.own_paths)))
         }
     }
 
@@ -188,12 +187,12 @@ impl<'a> IamAppServ {
         IamRelServ::exist_rels(&IamRelKind::IamAccountApp, account_id, app_id, funs, cxt).await
     }
 
-    pub fn with_app_rel_filter(cxt: &TardisContext) -> TardisResult<Option<RbumItemRelFilterReq>> {
+    pub fn with_app_rel_filter(cxt: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumItemRelFilterReq>> {
         Ok(Some(RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
-            rel_item_id: Some(Self::get_id_by_cxt(cxt)?),
+            rel_item_id: Some(Self::get_id_by_cxt(cxt, &funs)?),
         }))
     }
 }

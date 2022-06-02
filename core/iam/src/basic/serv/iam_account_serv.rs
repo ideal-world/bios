@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
@@ -131,7 +130,7 @@ impl<'a> IamAccountServ {
     pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, cxt).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
-            return Err(TardisError::BadRequest("Missing required field".to_string()));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field"));
         }
         let account_id = IamAccountServ::add_item(
             &mut IamAccountAddReq {

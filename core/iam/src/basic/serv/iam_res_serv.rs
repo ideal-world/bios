@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
+use tardis::TardisFunsInst;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -167,7 +166,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
     }
 
     async fn after_delete_item(_: &str, deleted_item: Option<IamResDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        let deleted_res = deleted_item.ok_or_else(|| TardisError::NotFound("The resource to delete does not exist".to_string()))?;
+        let deleted_res = deleted_item.ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "delete", "not found resource"))?;
         if deleted_res.kind == IamResKind::API {
             IamResCacheServ::delete_res(&deleted_res.code, &deleted_res.method, funs).await?;
         }

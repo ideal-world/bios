@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemAttrFilterReq, RbumKindAttrFilterReq};
 use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrsAddOrModifyReq};
@@ -26,13 +25,13 @@ impl<'a> IamAttrServ {
         let main_column = add_req.main_column.unwrap_or(false);
         let name = add_req.name.0.as_str();
         if idx && !main_column {
-            return Err(TardisError::BadRequest("Only the main table columns support indexes".to_string()));
+            return Err(funs.err().bad_request("account_attr", "add", "only the main table columns support indexes"));
         }
         if idx && !ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name) {
-            return Err(TardisError::BadRequest("Index column name is invalid".to_string()));
+            return Err(funs.err().bad_request("account_attr", "add", "index column name is invalid"));
         }
         if main_column && !(ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name) || ACCOUNT_NO_IDX_MAIN_COLUMN_NAMES.contains(&name)) {
-            return Err(TardisError::BadRequest("Main column name is invalid".to_string()));
+            return Err(funs.err().bad_request("account_attr", "add", "main column name is invalid"));
         }
         RbumKindAttrServ::add_rbum(
             &mut RbumKindAttrAddReq {

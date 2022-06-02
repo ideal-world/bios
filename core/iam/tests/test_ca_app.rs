@@ -15,7 +15,7 @@ pub async fn test(context1: &TardisContext, _context2: &TardisContext) -> Tardis
 
     info!("【test_ca_app】 : Modify App By Id");
     IamAppServ::modify_item(
-        &IamAppServ::get_id_by_cxt(context1)?,
+        &IamAppServ::get_id_by_cxt(context1, &funs)?,
         &mut IamAppModifyReq {
             name: Some(TrimString("测试应用".to_string())),
             icon: None,
@@ -30,7 +30,7 @@ pub async fn test(context1: &TardisContext, _context2: &TardisContext) -> Tardis
     .await?;
 
     info!("【test_ca_app】 : Get App By Id");
-    let app = IamAppServ::get_item(&IamAppServ::get_id_by_cxt(context1)?, &IamAppFilterReq::default(), &funs, context1).await?;
+    let app = IamAppServ::get_item(&IamAppServ::get_id_by_cxt(context1, &funs)?, &IamAppFilterReq::default(), &funs, context1).await?;
     assert_eq!(app.name, "测试应用");
     assert_eq!(app.contact_phone, "13333333333");
     assert!(!app.disabled);

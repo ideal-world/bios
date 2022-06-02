@@ -1,10 +1,9 @@
-use tardis::TardisFunsInst;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
 use tardis::rand::Rng;
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
@@ -148,7 +147,7 @@ impl<'a> IamCertMailVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_id: Some(
-                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_cxt(cxt)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_cxt(cxt, funs)?), funs).await?,
                         ),
                         ..Default::default()
                     },
@@ -172,11 +171,11 @@ impl<'a> IamCertMailVCodeServ {
                     .await?;
                     Ok(())
                 } else {
-                    Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::MailVCode)))
+                    Err(funs.err().not_found("cert_mail_vcode","activate",&format!("not found credential of kind {:?}", IamCertKind::MailVCode)))
                 };
             }
         }
-        Err(TardisError::Unauthorized("Email or verification code error".to_string()))
+        Err(funs.err().unauthorized("cert_mail_vcode","activate","email or verification code error"))
     }
 
     pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {

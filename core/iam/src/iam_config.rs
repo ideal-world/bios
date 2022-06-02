@@ -3,9 +3,9 @@ use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use tardis::TardisFunsInst;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::rbum_config::RbumConfig;
 
@@ -84,7 +84,7 @@ impl IamBasicInfoManager {
     where
         F: Fn(&BasicInfo) -> T,
     {
-        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("Iam basic config lock error: {:?}", e));
+        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("iam basic config lock error: {:?}", e));
         let conf = conf.as_ref().unwrap_or_else(|| panic!("rbum config not set"));
         fun(conf)
     }

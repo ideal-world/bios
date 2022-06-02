@@ -1,12 +1,11 @@
 use async_trait::async_trait;
 use sea_orm::EntityName;
+use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -233,7 +232,7 @@ impl<'a> IamRoleServ {
         if scope_level == RBUM_SCOPE_LEVEL_APP && (role_id == funs.iam_basic_role_sys_admin_id() || role_id == funs.iam_basic_role_tenant_admin_id())
             || scope_level == RBUM_SCOPE_LEVEL_TENANT && role_id == funs.iam_basic_role_sys_admin_id()
         {
-            return Err(TardisError::BadRequest("The associated role is invalid.".to_string()));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid"));
         }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
@@ -375,7 +374,7 @@ impl<'a> IamRoleServ {
         )
         .await?;
         if !exist {
-            Err(TardisError::Unauthorized("illegal operation".to_string()))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "need_role", "illegal operation"))
         } else {
             Ok(())
         }
