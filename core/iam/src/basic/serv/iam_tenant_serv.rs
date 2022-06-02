@@ -1,10 +1,9 @@
 use async_trait::async_trait;
+use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
-use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -121,8 +120,8 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         Ok(())
     }
 
-    async fn before_delete_item(_: &str, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamTenantDetailResp>> {
-        Err(TardisError::Conflict("Tenant can only be disabled but not deleted".to_string()))
+    async fn before_delete_item(_: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamTenantDetailResp>> {
+        Err(funs.err().conflict(&Self::get_obj_name(), "delete", "tenant can only be disabled but not deleted"))
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamTenantFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
@@ -137,18 +136,18 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 }
 
-impl IamTenantServ {
+impl<'a> IamTenantServ {
     pub fn get_new_id() -> String {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_TENANT_LEN as usize)
     }
 
-    pub fn get_id_by_cxt(cxt: &TardisContext) -> TardisResult<String> {
+    pub fn get_id_by_cxt(cxt: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         if cxt.own_paths.is_empty() {
             Ok("".to_string())
         } else if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &cxt.own_paths) {
             Ok(id)
         } else {
-            Err(TardisError::Unauthorized(format!("tenant id not found in tardis content {}", cxt.own_paths)))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("tenant id not found in tardis content {}", cxt.own_paths)))
         }
     }
 }

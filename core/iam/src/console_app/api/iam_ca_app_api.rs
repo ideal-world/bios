@@ -21,7 +21,7 @@ impl IamCaAppApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::modify_item(
-            &IamAppServ::get_id_by_cxt(&cxt.0)?,
+            &IamAppServ::get_id_by_cxt(&cxt.0, &funs)?,
             &mut IamAppModifyReq {
                 name: modify_req.0.name.clone(),
                 icon: modify_req.0.icon.clone(),
@@ -42,7 +42,7 @@ impl IamCaAppApi {
     #[oai(path = "/", method = "get")]
     async fn get(&self, cxt: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAppServ::get_item(&IamAppServ::get_id_by_cxt(&cxt.0)?, &IamAppFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamAppServ::get_item(&IamAppServ::get_id_by_cxt(&cxt.0, &funs)?, &IamAppFilterReq::default(), &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

@@ -1,5 +1,4 @@
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
@@ -26,8 +25,7 @@ impl<'a> IamCpCertUserPwdServ {
     pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst<'a>) -> TardisResult<AccountInfoResp> {
         let tenant_id = if let Some(tenant_id) = &login_req.tenant_id {
             if IamTenantServ::is_disabled(tenant_id, funs).await? {
-                // TODO test
-                return Err(TardisError::Conflict(format!("tenant {} is disabled", tenant_id)));
+                return Err(funs.err().conflict("cert_user_pwd", "login", &format!("tenant {} is disabled", tenant_id)));
             }
             tenant_id
         } else {

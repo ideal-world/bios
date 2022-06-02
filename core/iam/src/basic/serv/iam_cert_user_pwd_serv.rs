@@ -1,5 +1,4 @@
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
@@ -130,7 +129,7 @@ impl<'a> IamCertUserPwdServ {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
-            Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
+            Err(funs.err().not_found("cert_user_pwd", "modify", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
         }
     }
 
@@ -156,7 +155,7 @@ impl<'a> IamCertUserPwdServ {
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
-            Err(TardisError::NotFound(format!("cannot find credential of kind {:?}", IamCertKind::UserPwd)))
+            Err(funs.err().not_found("cert_user_pwd", "reset_sk", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
         }
     }
 }

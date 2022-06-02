@@ -1,5 +1,4 @@
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
@@ -209,7 +208,7 @@ impl<'a> IamCertServ {
         )
         .await?;
         if rbum_cert_conf.code == IamCertKind::UserPwd.to_string() {
-            return Err(TardisError::Conflict("Cannot delete default credential".to_string()));
+            return Err(funs.err().conflict("cert_conf", "delete", "can not delete default credential"));
         }
         RbumCertConfServ::delete_rbum(id, funs, cxt).await
     }
@@ -244,7 +243,9 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        Self::get_cert_conf_id_opt_by_code(code, rel_iam_item_id, funs).await?.ok_or_else(|| TardisError::NotFound(format!("Cert Conf code {} not found", code)))
+        Self::get_cert_conf_id_opt_by_code(code, rel_iam_item_id, funs)
+            .await?
+            .ok_or_else(|| funs.err().not_found("cert_conf", "get", &format!("not found cert conf code {}", code)))
     }
 
     pub async fn get_cert_conf_id_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {

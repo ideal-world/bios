@@ -20,7 +20,7 @@ impl IamCpTenantApi {
     #[oai(path = "/", method = "get")]
     async fn get(&self, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(&cxt.0)?, &IamTenantFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(&cxt.0, &funs)?, &IamTenantFilterReq::default(), &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 

@@ -96,7 +96,7 @@ impl IamCaRoleApi {
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let app_id = IamAppServ::get_id_by_cxt(&cxt.0)?;
+        let app_id = IamAppServ::get_id_by_cxt(&cxt.0, &funs)?;
         if !IamAppServ::exist_rel_accounts(&app_id, &account_id.0, &funs, &cxt.0).await? {
             IamAppServ::add_rel_account(&app_id, &account_id.0, &funs, &cxt.0).await?;
         }
@@ -121,7 +121,7 @@ impl IamCaRoleApi {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::count_items(
             &IamAccountFilterReq {
-                rel: IamAppServ::with_app_rel_filter(&cxt.0)?,
+                rel: IamAppServ::with_app_rel_filter(&cxt.0, &funs)?,
                 rel2: Some(RbumItemRelFilterReq {
                     rel_by_from: true,
                     tag: Some(IamRelKind::IamAccountRole.to_string()),

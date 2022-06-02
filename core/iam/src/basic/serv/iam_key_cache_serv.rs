@@ -4,7 +4,6 @@ use std::str::FromStr;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
@@ -135,7 +134,7 @@ impl<'a> IamIdentCacheServ {
                 return TardisFuns::json.str_to_obj(&context);
             }
         }
-        Err(TardisError::NotFound("context not found".to_string()))
+        Err(funs.err().not_found("cache_context", "get", "not found context"))
     }
 }
 
@@ -165,7 +164,7 @@ impl<'a> IamResCacheServ {
     pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
             // TODO support time range
-            return Err(TardisError::Conflict("st and et must be none".to_string()));
+            return Err(funs.err().conflict("cache_res", "add_or_modify", "st and et must be none"));
         }
         let mut res_dto = IamCacheResRelAddOrModifyDto {
             accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
@@ -218,7 +217,7 @@ impl<'a> IamResCacheServ {
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;
         }
-        Err(TardisError::NotFound("res_rel not found".to_string()))
+        Err(funs.err().not_found("cache_res", "delete", "not found res rel"))
     }
 
     async fn add_change_trigger(uri: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {

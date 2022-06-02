@@ -17,7 +17,7 @@ impl IamCtTenantApi {
     #[oai(path = "/", method = "get")]
     async fn get(&self, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(&cxt.0)?, &IamTenantFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(&cxt.0, &funs)?, &IamTenantFilterReq::default(), &funs, &cxt.0).await?;
         TardisResp::ok(result)
     }
 
@@ -26,7 +26,7 @@ impl IamCtTenantApi {
     async fn modify(&self, mut modify_req: Json<IamTenantModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamTenantServ::modify_item(&IamTenantServ::get_id_by_cxt(&cxt.0)?, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamTenantServ::modify_item(&IamTenantServ::get_id_by_cxt(&cxt.0, &funs)?, &mut modify_req.0, &funs, &cxt.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

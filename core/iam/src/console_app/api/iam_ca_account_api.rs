@@ -56,7 +56,7 @@ impl IamCaAccountApi {
                     name: name.0,
                     ..Default::default()
                 },
-                rel: IamAppServ::with_app_rel_filter(&cxt.0)?,
+                rel: IamAppServ::with_app_rel_filter(&cxt.0, &funs)?,
                 rel2,
                 ..Default::default()
             },
