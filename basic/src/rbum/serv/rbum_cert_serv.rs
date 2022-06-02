@@ -516,7 +516,7 @@ impl<'a> RbumCertServ {
                         .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id)),
                 )
                 .await?
-                .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "cert conf not found"))?;
+                .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf"))?;
             let input_sk = if cert_conf_peek_resp.sk_encrypted {
                 Self::encrypt_sk(input_sk, ak)?
             } else {
@@ -572,7 +572,7 @@ impl<'a> RbumCertServ {
         if let Some(sk_resp) = sk_resp {
             Ok(sk_resp.sk)
         } else {
-            Err(funs.err().not_found(&Self::get_obj_name(), "show_sk", "cert record not found"))
+            Err(funs.err().not_found(&Self::get_obj_name(), "show_sk", "not found cert record"))
         }
     }
 
