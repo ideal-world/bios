@@ -66,7 +66,7 @@ impl RbumConfigManager {
         F: Fn(&RbumConfig) -> T,
     {
         let conf = RBUM_CONFIG.lock().unwrap_or_else(|e| panic!("rbum config lock error: {:?}", e));
-        let conf = conf.get(code).unwrap_or_else(|| panic!("rbum config code {}  not found", code));
+        let conf = conf.get(code).unwrap_or_else(|| panic!("not found rbum config code {}", code));
         fun(conf)
     }
 }
