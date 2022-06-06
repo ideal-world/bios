@@ -527,8 +527,7 @@ impl<'a> RbumCertServ {
                     cached_vcode
                 } else {
                     tardis::log::warn!(
-                        "validation error [vcode is not exist] by ak {},rbum_cert_conf_id {}, \
-                    own_paths {}",
+                        "validation error [vcode is not exist] by ak {},rbum_cert_conf_id {}, own_paths {}",
                         ak,
                         rbum_cert_conf_id,
                         own_paths

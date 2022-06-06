@@ -4,12 +4,14 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Credential or authentication configuration model
+///
+/// Uniform use of cert refers to credentials or authentication
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_cert_conf")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
     pub code: String,
     pub name: String,
     pub note: String,
@@ -18,17 +20,37 @@ pub struct Model {
     pub sk_note: String,
     pub sk_rule: String,
     pub sk_need: bool,
+    /// Whether dynamic sk \
+    /// If true, the sk will be stored in the cache
     pub sk_dynamic: bool,
     pub sk_encrypted: bool,
+    /// Whether sk can be repeated \
+    /// If true, the sk can be modified to the same sk as the current one when it expires
     pub repeatable: bool,
+    /// Whether it is a basic authentication \
+    /// There can only be at most one base certification for the same `rel_rbum_item_id` \
+    /// If true, the sk of this record will be the public sk of the same `rel_rbum_item_id` ,
+    /// support a login method like ak of different cert configuration in the same `rel_rbum_item_id` + sk of this record
     pub is_basic: bool,
+    /// Support reset the cert configuration type(corresponding to the 'code' value) of the basic sk \
+    /// Multiple values are separated by commas
     pub rest_by_kinds: String,
+    /// The expiration time of the Sk
     pub expire_sec: u32,
+    /// The number of simultaneously valid \
+    /// Used to control the number of certs in effect, E.g.
+    /// * Single terminal sign-on: configure a record：`code` = 'token' & `coexist_num` = 1
+    /// * Can log in to one android, ios, two web terminals at the same time: configure 3 records：
+    ///  `code` = 'token_android' & `coexist_num` = 1 , `code` = 'token_ios' & `coexist_num` = 1 , `code` = 'token_web' & `coexist_num` = 2
     pub coexist_num: u32,
+    /// Specifies the connection address, mostly for two-party or third-party configurations \
+    /// E.g. http://localhost:8080/api/v1/
     pub conn_uri: String,
+    /// Associated Resource Domain Id
     pub rel_rbum_domain_id: String,
+    /// Associated Resource Id
     pub rel_rbum_item_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
