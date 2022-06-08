@@ -6,7 +6,7 @@ use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, Table
 
 /// Resource kind
 ///
-/// A resource kind is a set of common resources.。 \
+/// A resource kind is a set of common resources. \
 /// E.g. `/tenant/**` , `/app/**` these are all APIs, and these are all API-kind resources; `/tenant/list` ,
 /// `/tenant/detail#more` these are all menus, and these are all  menu-kind resources.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]

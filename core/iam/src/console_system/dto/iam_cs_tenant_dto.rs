@@ -22,7 +22,7 @@ pub struct IamCsTenantAddReq {
     pub admin_password: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub admin_name: TrimString,
-    
+
     pub cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq,
     pub cert_conf_by_phone_vcode: Option<IamPhoneVCodeCertConfAddOrModifyReq>,
     pub cert_conf_by_mail_vcode: Option<IamMailVCodeCertConfAddOrModifyReq>,

@@ -14,7 +14,7 @@ use crate::iam_constants;
 pub struct IamCsAccountAttrApi;
 
 /// System Console Account Attr API
-/// 
+///
 /// Note: the current account attr only supports tenant level.
 #[OpenApi(prefix_path = "/cs/account/attr", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsAccountAttrApi {
