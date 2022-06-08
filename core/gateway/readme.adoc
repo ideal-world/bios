@@ -27,7 +27,7 @@
 
 Execute ``init.sh`` to complete the initialization of the development environment.
 
-* Currently only supports ubuntu and its derivatives
+NOTE: Currently only supports ubuntu and its derivatives
 
 ===== Common operations
 
@@ -61,6 +61,13 @@ TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-bio
 
 ===== Integration test
 
+[TIP]
+====
+If running under Docker, "403 Forbidden" will be reported when accessing the admin apis outside the container.
+
+You need to modify the `allow_admin` in the `config-default.yaml` file to add an allowed IP.
+====
+
 [source,sh]
 ----
 # add upstream
@@ -75,12 +82,12 @@ curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f0343
 # add route
 curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
 {
-  "uri": "/api/*",
+  "uri": "/anything/*",
   "upstream_id": "1"
 }'
 
 # test success
-curl -i -X GET "http://127.0.0.1:9080/api/1"
+curl -i -X GET "http://127.0.0.1:9080/anything/foo?arg=10"
 
 # add a global plugin (redis needs to be enabled)
 curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
@@ -99,10 +106,9 @@ curl http://127.0.0.1:9080/apisix/admin/global_rules -H 'X-API-KEY: edd1c9f03433
 
 
 # test failed with missing token error
-curl -i -X GET "http://127.0.0.1:9080/api/1" -H 'Bios-Token: token001'
+curl -i -X GET "http://127.0.0.1:9080/anything/foo?arg=10" -H 'Bios-Token: token001'
 
-# test success
-curl -i -X GET "http://127.0.0.1:9080/api/1"
+# TODO
 ----
 
 ==== Use image

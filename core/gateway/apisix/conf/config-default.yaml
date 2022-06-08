@@ -71,8 +71,8 @@ apisix:
       - name: memory_cache
         memory_size: 50m
 
-  allow_admin:                  # http://nginx.org/en/docs/http/ngx_http_access_module.html#allow
-    - 127.0.0.0/24              # If we don't set any IP list, then any IP access is allowed by default.
+  #allow_admin:                  # http://nginx.org/en/docs/http/ngx_http_access_module.html#allow
+  #  - 127.0.0.0/24              # If we don't set any IP list, then any IP access is allowed by default.
     #- "::/64"
   #admin_listen:                # use a separate port
   #  ip: 127.0.0.1              # Specific IP, if not set, the default value is `0.0.0.0`.
