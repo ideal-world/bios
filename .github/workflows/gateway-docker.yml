@@ -24,6 +24,6 @@ jobs:
           directory: core/gateway
           dockerfile: core/gateway/Dockerfile
           registry: ghcr.io
-          image: ideal-world/bios-gateway
+          image: bios-gateway
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
