@@ -1,34 +1,33 @@
 === Gateway
 
-==== 目录说明
+==== Directory Description
 
 ----
 |apisix
 |-- apisix
 |---- plugins
-|------ auth-bios.lua               # auth-bios插件
-|------ auth-bios                   # auth-bios插件
+|------ auth-bios.lua               # auth-bios plugin
+|------ auth-bios                   # auth-bios plugin
 |-- conf
-|---- config-default.yaml          # 添加auth-bios到插件
+|---- config-default.yaml           # added auth-bios plugin
 |-- t
 |---- plugin
-|------ auth-bios                   # auth-bios插件测试
-|---- certs                        # 测试使用
-|---- error_page                   # 测试使用
-|---- APISIX.pm                    # 测试使用
-|utils
-|-- linux-install-luarocks.sh      # luarocks安装脚本
-|Dockerfile                        # Dockerfile
-|init-ubuntu.sh                    # 开发初始化脚本
+|------ auth-bios                   # auth-bios plugin test cases
+|---- certs                         # for test only
+|---- error_page                    # for test only
+|---- APISIX.pm                     # for test only
+|utils                              # install script
+|Dockerfile                         # Dockerfile
+|init.sh                            # install script
 ----
 
-==== 开发配置
+==== Development configuration
 
-===== 环境准备
+===== Environmental preparation
 
-执行 ``init-init-ubuntu.sh`` 完成开发环境初始化。
+Execute ``init.sh`` to complete the initialization of the development environment.
 
-===== 常用操作
+===== Common operations
 
 [source,sh]
 ----
@@ -45,7 +44,7 @@ make quit
 make stop
 ----
 
-===== 单元测试
+===== Unit test
 
 [source,sh]
 ----
@@ -58,11 +57,11 @@ TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-bio
 ...
 ----
 
-===== 集成测试
+===== Integration test
 
 [source,sh]
 ----
-# 添加upstream
+# add upstream
 curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
 {
   "type": "roundrobin",
@@ -71,17 +70,17 @@ curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f0343
   }
 }'
 
-# 添加route
+# add route
 curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
 {
-  "uri": "/cache/*",
+  "uri": "/api/*",
   "upstream_id": "1"
 }'
 
-# 测试成功
-curl -i -X GET "http://127.0.0.1:9080/cache/1"
+# test success
+curl -i -X GET "http://127.0.0.1:9080/api/1"
 
-# 添加全局插件（需要开启Redis）
+# add a global plugin (redis needs to be enabled)
 curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
 {
   "plugins": {
@@ -93,28 +92,15 @@ curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: appli
   }
 }'
 
-# 获取全局插件列表
+# get global plugin list
 curl http://127.0.0.1:9080/apisix/admin/global_rules -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1'
 
-# 测试失败，缺少 BIOS-Host
-curl -i -X GET "http://127.0.0.1:9080/cache/1"
-# 测试成功
-curl -i -X GET "http://127.0.0.1:9080/cache/1" -H 'BIOS-Host: app1.tenant1'
-
-# 测试失败，Token错误
-curl -i -X GET "http://127.0.0.1:9080/cache/1" -H 'BIOS-Host: app1.tenant1' -H 'BIOS-Token: token001'
-# 测试成功（先执行单元测试）
-curl -i -X GET "http://127.0.0.1:9080/cache/1" -H 'BIOS-Host: app1.tenant1' -H 'BIOS-Token: tokenxxx'
+# TODO
 ----
 
-==== 手工发布镜像
+==== Use image
 
 [source,sh]
 ----
-# 打包镜像
-docker build -t dewms/gateway:0.1 .
-# 发布镜像
-docker push dewms/gateway:0.1
-# 测试运行
-docker run --name bios-gateway -d -p 9080:9080 -d dewms/gateway:0.1
+docker run --name bios-gateway -d -p 9080:9080 -d ghcr.io/ideal-world/bios-gateway:latest
 ----
