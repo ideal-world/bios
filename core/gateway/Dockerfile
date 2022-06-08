@@ -1,6 +1,6 @@
 FROM alpine:3.13 AS etcd-stage
 
-LABEL etcd_version="3.4.18"
+ARG ETCD_VERSION="3.4.18"
 
 WORKDIR /tmp
 
