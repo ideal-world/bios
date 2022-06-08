@@ -1,4 +1,4 @@
-name: Publish Gateway Docker image
+name: Publish gateway docker image
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   push_to_registry:
-    name: Push Docker image to registry
+    name: Push docker image to registry
     runs-on: ubuntu-latest
     permissions:
       packages: write
