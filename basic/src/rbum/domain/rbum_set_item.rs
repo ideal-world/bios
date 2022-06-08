@@ -4,17 +4,23 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource item model
+///
+/// Used to bind resources to resource set categories
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_set_cate_item")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+
     pub sort: u32,
+    /// Associated [resource set](crate::rbum::domain::rbum_set::Model) id
     pub rel_rbum_set_id: String,
+    /// Associated [resource set category](crate::rbum::domain::rbum_set_cate::Model) sys_code
     pub rel_rbum_set_cate_code: String,
+    /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
     pub rel_rbum_item_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,

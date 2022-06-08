@@ -4,20 +4,24 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Relationship model
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_rel")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// Relationship label
     pub tag: String,
     pub note: String,
+    /// The [source kind](crate::rbum::rbum_enumeration::RbumRelFromKind) of the relationship
     pub from_rbum_kind: u8,
+    /// The source id of the relationship
     pub from_rbum_id: String,
+    /// The target resource id of the relationship
     pub to_rbum_item_id: String,
     pub to_own_paths: String,
     pub ext: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,

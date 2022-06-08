@@ -4,23 +4,30 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource domain model
+///
+/// The resource domain is the unit of ownership of the resource, indicating the owner of the resource.
+/// Each resource is required to belong to a resource domain.
+///
+/// E.g. All menu resources are provided by IAM components, and all IaaS resources are provided by CMDB components.
+/// IAM components and CMDB components are resource domains.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_domain")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// Resource domain code, which is required to conform to the host specification in the uri, matching the regular: ^[a-z0-9-.]+$
     pub code: String,
     pub name: String,
     pub note: String,
     pub icon: String,
     pub sort: u32,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
-    // With Scope
+
     pub scope_level: i8,
 }
 

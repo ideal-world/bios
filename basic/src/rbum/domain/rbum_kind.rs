@@ -4,24 +4,30 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource kind
+///
+/// A resource kind is a set of common resources.。 \
+/// E.g. `/tenant/**` , `/app/**` these are all APIs, and these are all API-kind resources; `/tenant/list` ,
+/// `/tenant/detail#more` these are all menus, and these are all  menu-kind resources.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// Resource kind code, which is required to conform to the scheme specification in the uri, matching the regular: ^[a-z0-9-.]+$
     pub code: String,
     pub name: String,
     pub note: String,
     pub icon: String,
     pub sort: u32,
+    /// Each resource kind can specify an extension table for storing customized data
     pub ext_table_name: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
-    // With Scope
+
     pub scope_level: i8,
 }
 

@@ -5,17 +5,21 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Relationship environment condition model
+///
+/// This model is used to further qualify the conditions under which the relationship is established
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_rel_env")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// [Environment Kind](crate::rbum::rbum_enumeration::RbumRelEnvKind)
     pub kind: u8,
     pub value1: String,
     pub value2: String,
+    /// Associated [relationship](crate::rbum::domain::rbum_rel::Model) id
     pub rel_rbum_rel_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
