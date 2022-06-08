@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use tardis::{TardisFuns, TardisFunsInst, tokio};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
+use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -192,7 +192,7 @@ impl<'a> IamAppServ {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
-            rel_item_id: Some(Self::get_id_by_cxt(cxt, &funs)?),
+            rel_item_id: Some(Self::get_id_by_cxt(cxt, funs)?),
         }))
     }
 }

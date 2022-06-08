@@ -23,7 +23,7 @@ impl<'a> IamIdentCacheServ {
             funs.cache()
                 .set_ex(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{},{}", token_kind.to_string(), rel_iam_item_id).as_str(),
+                    format!("{},{}", token_kind, rel_iam_item_id).as_str(),
                     expire_sec as usize,
                 )
                 .await?;
@@ -31,7 +31,7 @@ impl<'a> IamIdentCacheServ {
             funs.cache()
                 .set(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{},{}", token_kind.to_string(), rel_iam_item_id).as_str(),
+                    format!("{},{}", token_kind, rel_iam_item_id).as_str(),
                 )
                 .await?;
         }
@@ -39,7 +39,7 @@ impl<'a> IamIdentCacheServ {
             .hset(
                 format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, rel_iam_item_id).as_str(),
                 token,
-                &format!("{},{}", token_kind.to_string(), Utc::now().timestamp_nanos()),
+                &format!("{},{}", token_kind, Utc::now().timestamp_nanos()),
             )
             .await?;
         // Remove old tokens
@@ -50,7 +50,7 @@ impl<'a> IamIdentCacheServ {
                 .map(|(k, v)| {
                     (
                         k,
-                        v.split(",").next().unwrap_or("").to_string(),
+                        v.split(',').next().unwrap_or("").to_string(),
                         i64::from_str(v.split(',').nth(1).unwrap_or("")).unwrap_or(0),
                     )
                 })

@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use sea_orm::EntityName;
-use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::SelectStatement;
 use tardis::web::web_resp::TardisPage;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -182,7 +182,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     async fn get_item(id: &str, filter: &IamRoleFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<IamRoleDetailResp> {
         if let Some(role) = funs.cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await? {
             let role = TardisFuns::json.str_to_obj::<IamRoleDetailResp>(&role)?;
-            if rbum_scope_helper::check_scope(&role.own_paths, Some(role.scope_level.to_int()), &filter.basic, &cxt) {
+            if rbum_scope_helper::check_scope(&role.own_paths, Some(role.scope_level.to_int()), &filter.basic, cxt) {
                 return Ok(role);
             }
         }

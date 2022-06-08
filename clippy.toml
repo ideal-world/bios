@@ -1,1 +1,4 @@
 too-many-arguments-threshold = 12
+# fixed: variant name ends with the enum's name
+# like  basic/src/rbum/domain/rbum_kind_attr.rs #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+enum-variant-name-threshold = 6

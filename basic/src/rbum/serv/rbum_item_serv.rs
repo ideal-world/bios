@@ -310,7 +310,7 @@ where
             funs.db().update_one(ext_domain, cxt).await?;
         }
         Self::after_modify_item(id, modify_req, funs, cxt).await?;
-        rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", &id, funs, cxt).await?;
+        rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", id, funs, cxt).await?;
         Ok(())
     }
 
@@ -341,7 +341,7 @@ where
                 funs.mq().request(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_item(id, deleted_item, funs, cxt).await?;
-            rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", id, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
@@ -987,7 +987,7 @@ impl<'a> RbumItemAttrServ {
                     )
                     .await?;
                 } else {
-                    Self::modify_rbum(&exist_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: column_val }, funs, cxt).await?;
+                    Self::modify_rbum(exist_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: column_val }, funs, cxt).await?;
                 }
             }
         }
@@ -998,7 +998,7 @@ impl<'a> RbumItemAttrServ {
     pub async fn find_item_attr_values(rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<HashMap<String, String>> {
         let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(rbum_item_id, funs, cxt).await?;
         let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
-        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| !i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let has_in_ext_table_attrs = rbum_kind_attrs.iter().any(|i| !i.main_column);
 
         let mut values: HashMap<String, String> = HashMap::new();
         if !in_main_table_attrs.is_empty() {
@@ -1021,7 +1021,7 @@ impl<'a> RbumItemAttrServ {
             }
         }
 
-        if !in_ext_table_attrs.is_empty() {
+        if has_in_ext_table_attrs {
             let attr_values = Self::find_rbums(
                 &RbumItemAttrFilterReq {
                     rel_rbum_item_id: Some(rbum_item_id.to_string()),

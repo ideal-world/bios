@@ -205,7 +205,7 @@ where
         let domain = Self::package_modify(id, modify_req, funs, cxt).await?;
         funs.db().update_one(domain, cxt).await?;
         Self::after_modify_rbum(id, modify_req, funs, cxt).await?;
-        rbum_event_helper::try_notify(Self::get_table_name(), "u", &id, funs, cxt).await?;
+        rbum_event_helper::try_notify(Self::get_table_name(), "u", id, funs, cxt).await?;
         Ok(())
     }
 
@@ -236,7 +236,7 @@ where
                 funs.mq().request(mq_topic_entity_deleted, tardis::TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
-            rbum_event_helper::try_notify(Self::get_table_name(), "d", &id, funs, cxt).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "d", id, funs, cxt).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]

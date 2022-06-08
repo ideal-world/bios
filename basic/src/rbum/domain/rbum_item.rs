@@ -8,7 +8,7 @@ use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, Table
 ///
 /// Used to represent a specific resource,
 /// Each resource corresponds to a [resource kind](crate::rbum::domain::rbum_kind::Model)  and [resource domain](crate::rbum::domain::rbum_domain::Model).
-/// 
+///
 /// Each resource corresponds to a unique uri,
 /// and the uri consists of `<resource kind>://<resource domain>/<resource code>`
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
