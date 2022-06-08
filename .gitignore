@@ -3,7 +3,7 @@
 /core/gateway/etcd
 /core/gateway/default.etcd
 
-!/core/gateway/apisix/apisix/plugins/auth-bios/**
+!/core/gateway/apisix/apisix/plugins/auth-bios
 !/core/gateway/apisix/apisix/plugins/auth-bios.lua
 !/core/gateway/apisix/conf/config-default.yaml
 !/core/gateway/apisix/t/plugin/auth-bios

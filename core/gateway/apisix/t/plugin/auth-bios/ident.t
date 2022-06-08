@@ -8,17 +8,11 @@ log_level('debug');
 
 __DATA__
 
-
-
 === TEST Request is not legal, missing [domain] in path
 --- config
     location /iam {
         content_by_lua_block {
             local m_ident = require("apisix.plugins.auth-bios.ident")
-            local ctx ={
-                headers={
-                }
-            }
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
@@ -26,7 +20,7 @@ __DATA__
                 cache_key_token_info="iam:cache:token:info:",
                 cache_key_account_info="iam:cache:account:info:",
                 cache_key_token_local_expire_sec=0
-           },ctx)
+           },{})
            ngx.say(result)
            ngx.say(err.message)
         }
@@ -46,11 +40,7 @@ Request is not legal, missing [domain] in path
             local m_ident = require("apisix.plugins.auth-bios.ident")
             local m_redis = require("apisix.plugins.auth-bios.redis")
             m_redis.init("127.0.0.1", 6379, 1, 1000, "123456")
-            local ctx ={
-                headers={
-                    ["Bios-Token"]="aaaa"
-                }
-            }
+            ngx.req.set_header("Bios-Token", "aaaa")
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
@@ -58,7 +48,7 @@ Request is not legal, missing [domain] in path
                 cache_key_token_info="iam:cache:token:info:",
                 cache_key_account_info="iam:cache:account:info:",
                 cache_key_token_local_expire_sec=0
-           },ctx)
+           },{})
            ngx.say(result)
            ngx.say(err.message)
         }
@@ -76,10 +66,7 @@ Token [aaaa] is not legal
     location /iam/ {
         content_by_lua_block {
             local m_ident = require("apisix.plugins.auth-bios.ident")
-            local ctx ={
-                headers={
-                }
-            }
+            local ctx ={}
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
@@ -122,11 +109,8 @@ nil
             m_redis.set("iam:cache:token:info:tokenxxx", "default,accountxxx",0)
             m_redis.hset("iam:cache:account:info:accountxxx","",
                     "{\"own_paths\":\"\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
-            local ctx ={
-                headers={
-                    ["Bios-Token"]="tokenxxx"
-                }
-            }
+            local ctx ={}
+            ngx.req.set_header("Bios-Token", "tokenxxx")
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
@@ -169,11 +153,8 @@ g001
             m_redis.set("iam:cache:token:info:tokenxxx", "default,accountxxx",0)
             m_redis.hset("iam:cache:account:info:accountxxx","",
                     "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
-            local ctx ={
-                headers={
-                    ["Bios-Token"]="tokenxxx"
-                }
-            }
+            local ctx ={}
+            ngx.req.set_header("Bios-Token", "tokenxxx")
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
@@ -218,13 +199,9 @@ g001
                     "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
             m_redis.hset("iam:cache:account:info:accountxxx","app1",
                     "{\"own_paths\":\"tenant1/app1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
-
-            local ctx ={
-                headers={
-                    ["Bios-Token"]="tokenxxx",
-                    ["Bios-App"]="app2"
-                }
-            }
+            local ctx ={}
+            ngx.req.set_header("Bios-Token", "tokenxxx")
+            ngx.req.set_header("Bios-App", "app2")
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
@@ -257,13 +234,9 @@ Token [tokenxxx] with App [app2] is not legal
                    "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
             m_redis.hset("iam:cache:account:info::accountxxx","app1",
                     "{\"own_paths\":\"tenant1/app1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",0)
-
-            local ctx ={
-                headers={
-                    ["Bios-Token"]="tokenxxx",
-                    ["Bios-App"]="app1"
-                }
-            }
+            local ctx ={}
+            ngx.req.set_header("Bios-Token", "tokenxxx")
+            ngx.req.set_header("Bios-App", "app1")
             local result,err = m_ident.ident({
                 head_key_token="Bios-Token",
                 head_key_app="Bios-App",
