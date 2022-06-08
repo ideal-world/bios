@@ -4,19 +4,30 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Relationship attribute condition model
+///
+/// This model is used to further qualify the conditions under which the relationship is established
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_rel_attr")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// Condition qualifier \
+    /// if true, it means the limitation of the relationship source,
+    /// otherwise it is the limitation of the relationship target resource
     pub is_from: bool,
+    /// Attribute value
     pub value: String,
+    /// Attribute name, redundant field
     pub name: String,
+    /// Is it for record only \
+    /// if true, this condition is only used for records and does not participate in the judgment of whether the relationship is established
     pub record_only: bool,
+    /// Associated [resource kind attribute](crate::rbum::domain::rbum_kind_attr::Model) id
     pub rel_rbum_kind_attr_id: String,
+    /// Associated [relationship](crate::rbum::domain::rbum_rel::Model) id
     pub rel_rbum_rel_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,

@@ -1,19 +1,22 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::prelude::*;
+use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource extended attribute value model
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_item_attr")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// Extended attribute value
     pub value: String,
+    /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
     pub rel_rbum_item_id: String,
+    /// Associated [resource kind extended attribute](crate::rbum::domain::rbum_kind_attr::Model) id
     pub rel_rbum_kind_attr_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,

@@ -23,7 +23,6 @@ pub struct Model {
     /// The content and format are set by the upper service itself
     pub ext: String,
     /// Specifies the start time for the effective date
-    /// 指定生效时间的开始时间
     pub start_time: DateTime,
     /// Specifies the end time for the effective date
     pub end_time: DateTime,
@@ -33,10 +32,9 @@ pub struct Model {
     pub conn_uri: String,
     /// @see [status](crate::rbum::rbum_enumeration::RbumCertStatusKind)
     pub status: u8,
-    /// Associated cert configuration id
+    /// Associated [cert configuration](crate::rbum::domain::rbum_cert_conf::Model) id
     pub rel_rbum_cert_conf_id: String,
-    /// Associated resource type \
-    /// @see [kind](crate::rbum::rbum_enumeration::RbumCertRelKind)
+    /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind) id
     pub rel_rbum_kind: u8,
     /// Associated resource id
     ///

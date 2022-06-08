@@ -4,12 +4,13 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource kind extended attribute definition model
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind_attr")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+
     pub name: String,
     pub module: String,
     pub label: String,
@@ -28,15 +29,19 @@ pub struct Model {
     pub required: bool,
     pub min_length: u32,
     pub max_length: u32,
+    /// Custom behavior attributes \
+    /// E.g. user selection function, role selection function, etc.
+    /// Custom behavior needs to be bound to the corresponding function code.
     pub action: String,
     pub ext: String,
+    /// Associated [resource kind](crate::rbum::domain::rbum_kind::Model) id
     pub rel_rbum_kind_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
-    // With Scope
+
     pub scope_level: i8,
 }
 

@@ -46,9 +46,9 @@ pub struct Model {
     /// Specifies the connection address, mostly for two-party or third-party configurations \
     /// E.g. http://localhost:8080/api/v1/
     pub conn_uri: String,
-    /// Associated Resource Domain Id
+    /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
     pub rel_rbum_domain_id: String,
-    /// Associated Resource Id
+    /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
     pub rel_rbum_item_id: String,
 
     pub own_paths: String,

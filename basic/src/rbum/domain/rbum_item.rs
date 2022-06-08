@@ -4,24 +4,33 @@ use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource model
+///
+/// Used to represent a specific resource,
+/// Each resource corresponds to a [resource kind](crate::rbum::domain::rbum_kind::Model)  and [resource domain](crate::rbum::domain::rbum_domain::Model).
+/// 
+/// Each resource corresponds to a unique uri,
+/// and the uri consists of `<resource kind>://<resource domain>/<resource code>`
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_item")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    /// Resource code
     pub code: String,
     pub name: String,
+    /// Associated [resource kind](crate::rbum::domain::rbum_kind::Model) id
     pub rel_rbum_kind_id: String,
+    /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
     pub rel_rbum_domain_id: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
-    // With Scope
+
     pub scope_level: i8,
-    // With Status
+
     pub disabled: bool,
 }
 

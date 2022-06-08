@@ -1,30 +1,34 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::prelude::*;
+use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
+/// Resource set model
+///
+/// Resource set is essentially a general tree structure processing model
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_set")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    // Specific
+    // Set code
     pub code: String,
+    // Set kind
     pub kind: String,
     pub name: String,
     pub note: String,
     pub icon: String,
     pub sort: u32,
     pub ext: String,
-    // Basic
+
     pub own_paths: String,
     pub owner: String,
     pub create_time: DateTime,
     pub update_time: DateTime,
-    // With Scope
+
     pub scope_level: i8,
-    // With Status
+
     pub disabled: bool,
 }
 
