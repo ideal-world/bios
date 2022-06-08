@@ -17,8 +17,8 @@
 # limitations under the License.
 #
 
-wget https://github.com/etcd-io/etcd/releases/download/v3.4.0/etcd-v3.4.0-linux-amd64.tar.gz
-tar xf etcd-v3.4.0-linux-amd64.tar.gz
-sudo cp etcd-v3.4.0-linux-amd64/etcdctl etcd-v3.4.0-linux-amd64/etcd /usr/local/bin/
-rm -rf etcd-v3.4.0-linux-amd64
-rm etcd-v3.4.0-linux-amd64.tar.gz
+wget https://github.com/etcd-io/etcd/releases/download/v3.4.18/etcd-v3.4.18-linux-amd64.tar.gz
+tar xf etcd-v3.4.18-linux-amd64.tar.gz
+sudo cp etcd-v3.4.18-linux-amd64/etcdctl etcd-v3.4.18-linux-amd64/etcd /usr/local/bin/
+rm -rf etcd-v3.4.18-linux-amd64
+rm etcd-v3.4.18-linux-amd64.tar.gz

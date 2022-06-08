@@ -27,6 +27,8 @@
 
 Execute ``init.sh`` to complete the initialization of the development environment.
 
+* Currently only supports ubuntu and its derivatives
+
 ===== Common operations
 
 [source,sh]
@@ -95,12 +97,17 @@ curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: appli
 # get global plugin list
 curl http://127.0.0.1:9080/apisix/admin/global_rules -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1'
 
-# TODO
+
+# test failed with missing token error
+curl -i -X GET "http://127.0.0.1:9080/api/1" -H 'Bios-Token: token001'
+
+# test success
+curl -i -X GET "http://127.0.0.1:9080/api/1"
 ----
 
 ==== Use image
 
 [source,sh]
 ----
-docker run --name bios-gateway -d -p 9080:9080 -d ghcr.io/ideal-world/bios-gateway:latest
+docker run --name bios-gateway -d -p 9080:9080 ghcr.io/ideal-world/bios-gateway:latest
 ----
