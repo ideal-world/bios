@@ -21,6 +21,7 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
           directory: core/gateway
+          dockerfile: core/gateway/Dockerfile
           registry: ghcr.io
           image: ideal-world/bios-gateway
           username: ${{ github.actor }}
