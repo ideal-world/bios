@@ -25,5 +25,6 @@ jobs:
           dockerfile: core/gateway/Dockerfile
           registry: ghcr.io
           image: bios-gateway
+          tags: latest
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
