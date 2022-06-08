@@ -5,6 +5,7 @@ on:
     paths:
       - "core/gateway/Dockerfile"
       - "core/gateway/apisix/**"
+      - ".github/workflows/gateway-docker.yml"
 
 jobs:
   push_to_registry:
