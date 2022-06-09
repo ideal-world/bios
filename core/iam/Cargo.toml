@@ -22,8 +22,7 @@ path = "src/lib.rs"
 [dependencies]
 serde = { version = "^1", features = ["derive"] }
 derive_more = { version = "^0" }
-# temporary fix: consider adding an explicit lifetime bound...: `DetailResp: 'async_trait`
-async-trait = { version = "0.1.53" }
+async-trait = { version = "^0" }
 lazy_static = { version = "^1" }
 itertools = { version = "^0" }
 
