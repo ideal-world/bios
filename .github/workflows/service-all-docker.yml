@@ -25,8 +25,8 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Cache rust
-        uses: Swatinem/rust-cache@v1
+#      - name: Cache rust
+#        uses: Swatinem/rust-cache@v1
 
       - name: Go to service directory
         run: cd services/bios-all
@@ -34,8 +34,8 @@ jobs:
       - name: Check format
         run: cargo fmt --all -- --check
 
-#      - name: Check with clippy
-#        run: cargo clippy --all-features
+      - name: Check with clippy
+        run: cargo clippy --all-features
 
       - name: Build rust
         run: cargo build --release
