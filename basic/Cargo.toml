@@ -27,10 +27,10 @@ sdk = ["tardis", "tardis/web-client", "poem-openapi"]
 [dependencies]
 serde = { version = "^1", features = ["derive"] }
 derive_more = { version = "^0" }
-async-trait = { version = "^0" }
+# temporary fix: consider adding an explicit lifetime bound...: `DetailResp: 'async_trait`
+async-trait = { version = "0.1.53" }
 lazy_static = { version = "^1" }
 itertools = { version = "^0" }
-
 
 tardis = { version = "0.1.0-alpha9", optional = true }
 poem-openapi = { version = "^2", optional = true }

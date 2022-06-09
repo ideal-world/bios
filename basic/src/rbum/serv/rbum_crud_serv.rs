@@ -220,7 +220,7 @@ where
         Ok(None)
     }
 
-    async fn after_delete_rbum(_: &str, _deleted_rbum: Option<DetailResp>, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_rbum(_: &str, _: Option<DetailResp>, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
