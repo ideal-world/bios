@@ -27,11 +27,9 @@ lazy_static = { version = "^1" }
 itertools = { version = "^0" }
 
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
-# TODO
-tardis = { path = "../../../tardis", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
+tardis = { version = "0.1.0-alpha9", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
 poem-openapi = { version = "^2", features = ["chrono"] }
 sea-orm = { version = "^0.8", features = ["macros"] }
 
 [dev-dependencies]
-# TODO
-tardis = { path = "../../../tardis", features = ["test"] }
+tardis = { version = "0.1.0-alpha9", features = ["test"] }
