@@ -22,11 +22,12 @@ jobs:
       - name: Init rust envrionment
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
           components: rustfmt, clippy
 
-#      - name: Cache rust
-#        uses: Swatinem/rust-cache@v1
+      - name: Cache rust
+        uses: Swatinem/rust-cache@v1
 
       - name: Go to service directory
         run: cd services/bios-all
