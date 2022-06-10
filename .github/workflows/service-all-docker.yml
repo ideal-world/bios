@@ -41,6 +41,9 @@ jobs:
       - name: Build rust
         run: cargo build --release
 
+      - name: Test
+        run: echo $(pwd)
+
       - name: Copy binary to workspace
         run: cp ../../target/release/bios-serv-all ./
 
