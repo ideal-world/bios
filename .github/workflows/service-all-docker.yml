@@ -29,18 +29,6 @@ jobs:
       - name: Cache rust
         uses: Swatinem/rust-cache@v1
 
-      - name: Test1
-        run: echo $(pwd)
-
-      - name: Go to service directory
-        run: cd ./services/bios-all
-
-      - name: Test2
-        run: echo $(pwd)
-
-      - name: Test3
-        run: echo $(ls -l)
-
       - name: Check format
         run: cargo fmt --all -- --check
 
@@ -51,7 +39,7 @@ jobs:
         run: cargo build --release
 
       - name: Copy binary to workspace
-        run: cp ../../target/release/bios-serv-all ./
+        run: cp ./target/release/bios-serv-all ./services/bios-all/
 
       - name: Build and push Docker images
         uses: mr-smithers-excellent/docker-build-push@v5
@@ -63,6 +51,3 @@ jobs:
           tags: latest
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Remove binary
-        run: rm ./bios-serv-all
