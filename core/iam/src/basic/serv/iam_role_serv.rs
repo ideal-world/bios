@@ -153,7 +153,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
         Ok(())
     }
 
-    async fn after_delete_item(id: &str, _: Option<IamRoleDetailResp>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(id: &str, _: &Option<IamRoleDetailResp>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         funs.cache().del(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await?;
         let role_id = id.to_string();
         let ctx = ctx.clone();

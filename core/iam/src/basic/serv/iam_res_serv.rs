@@ -165,12 +165,15 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         ))
     }
 
-    async fn after_delete_item(_: &str, deleted_item: Option<IamResDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        let deleted_res = deleted_item.ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "delete", "not found resource"))?;
-        if deleted_res.kind == IamResKind::API {
-            IamResCacheServ::delete_res(&deleted_res.code, &deleted_res.method, funs).await?;
+    async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        if let Some(deleted_item) = deleted_item {
+            if deleted_item.kind == IamResKind::API {
+                IamResCacheServ::delete_res(&deleted_item.code, &deleted_item.method, funs).await?;
+            }
+            Ok(())
+        } else {
+            Err(funs.err().not_found(&Self::get_obj_name(), "delete", "not found resource"))
         }
-        Ok(())
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamResFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
