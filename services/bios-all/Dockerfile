@@ -1,7 +1,9 @@
 FROM ubuntu
 
-RUN mkdir -p /usr/local/bios & mkdir -p /usr/local/bios/config
-COPY ./bios-serv-all /usr/local/bios/bios-serv-all
+WORKDIR /bios
+
+RUN mkdir ./config
+COPY ./bios-serv-all ./bios-serv-all
 
 EXPOSE 8080
 
