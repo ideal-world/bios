@@ -15,9 +15,9 @@ use crate::iam_enumeration::IamCertKind;
 pub struct IamCpCertMailVCodeServ;
 
 impl<'a> IamCpCertMailVCodeServ {
-    pub async fn add_cert_mail_vocde(add_req: &IamMailVCodeCertAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), get_max_level_id_by_context(cxt), funs).await?;
-        IamCertMailVCodeServ::add_cert(add_req, &cxt.owner, &rbum_cert_conf_id, funs, cxt).await
+    pub async fn add_cert_mail_vocde(add_req: &IamMailVCodeCertAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
+        IamCertMailVCodeServ::add_cert(add_req, &ctx.owner, &rbum_cert_conf_id, funs, ctx).await
     }
 
     pub async fn login_by_mail_vocde(login_req: &IamCpMailVCodeLoginReq, funs: &TardisFunsInst<'a>) -> TardisResult<AccountInfoResp> {

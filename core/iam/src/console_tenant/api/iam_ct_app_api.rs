@@ -19,17 +19,17 @@ pub struct IamCtAppApi;
 impl IamCtAppApi {
     /// Add App
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamCtAppAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamCtAppAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCtAppServ::add_app(&mut add_req.0, &funs, &cxt.0).await?;
+        let result = IamCtAppServ::add_app(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify App By Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, modify_req: Json<IamCtAppModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, modify_req: Json<IamCtAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::modify_item(
@@ -43,7 +43,7 @@ impl IamCtAppApi {
                 scope_level: None,
             },
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         funs.commit().await?;
@@ -52,9 +52,9 @@ impl IamCtAppApi {
 
     /// Get App By Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAppServ::get_item(&id.0, &IamAppFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamAppServ::get_item(&id.0, &IamAppFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -68,7 +68,7 @@ impl IamCtAppApi {
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAppServ::paginate_items(
@@ -86,7 +86,7 @@ impl IamCtAppApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(result)
@@ -94,10 +94,10 @@ impl IamCtAppApi {
 
     /// Delete App By Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::delete_item_with_all_rels(&id.0, &funs, &cxt.0).await?;
+        IamAppServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

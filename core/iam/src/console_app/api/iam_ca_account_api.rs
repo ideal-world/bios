@@ -23,9 +23,9 @@ pub struct IamCaAccountApi;
 impl IamCaAccountApi {
     /// Get Account By Account Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::get_item(&id.0, &IamAccountFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamAccountServ::get_item(&id.0, &IamAccountFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -40,7 +40,7 @@ impl IamCaAccountApi {
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let rel2 = role_id.0.map(|role_id| RbumItemRelFilterReq {
@@ -56,7 +56,7 @@ impl IamCaAccountApi {
                     name: name.0,
                     ..Default::default()
                 },
-                rel: IamAppServ::with_app_rel_filter(&cxt.0, &funs)?,
+                rel: IamAppServ::with_app_rel_filter(&ctx.0, &funs)?,
                 rel2,
                 ..Default::default()
             },
@@ -65,7 +65,7 @@ impl IamCaAccountApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(result)
@@ -78,31 +78,31 @@ impl IamCaAccountApi {
         id: Path<String>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::find_simple_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamAccountServ::find_simple_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Find Rel Set By Account Id
     #[oai(path = "/:id/set-path", method = "get")]
-    async fn find_rel_set_paths(&self, id: Path<String>, sys_org: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
+    async fn find_rel_set_paths(&self, id: Path<String>, sys_org: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_org.0.unwrap_or(false) {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, &funs, &cxt.0).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, &funs, &ctx.0).await?
         } else {
-            IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?
+            IamSetServ::get_default_set_id_by_ctx(true, &funs, &ctx.0).await?
         };
-        let result = IamSetServ::find_set_paths(&id.0, &set_id, &funs, &cxt.0).await?;
+        let result = IamSetServ::find_set_paths(&id.0, &set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Count Accounts By Current Tenant
     #[oai(path = "/total", method = "get")]
-    async fn count(&self, cxt: TardisContextExtractor) -> TardisApiResult<u64> {
+    async fn count(&self, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::count_items(&IamAccountFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamAccountServ::count_items(&IamAccountFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }

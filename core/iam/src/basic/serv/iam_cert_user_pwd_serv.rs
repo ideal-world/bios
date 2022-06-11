@@ -23,7 +23,7 @@ impl<'a> IamCertUserPwdServ {
         add_req: &IamUserPwdCertConfAddOrModifyReq,
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
@@ -47,13 +47,13 @@ impl<'a> IamCertUserPwdServ {
                 rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -73,7 +73,7 @@ impl<'a> IamCertUserPwdServ {
                 conn_uri: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
@@ -84,7 +84,7 @@ impl<'a> IamCertUserPwdServ {
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: Option<String>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -101,7 +101,7 @@ impl<'a> IamCertUserPwdServ {
                 rel_rbum_id: rel_iam_item_id.to_string(),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
@@ -112,7 +112,7 @@ impl<'a> IamCertUserPwdServ {
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
@@ -122,11 +122,11 @@ impl<'a> IamCertUserPwdServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
+            RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(funs.err().not_found("cert_user_pwd", "modify", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
@@ -138,7 +138,7 @@ impl<'a> IamCertUserPwdServ {
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
@@ -148,11 +148,11 @@ impl<'a> IamCertUserPwdServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, cxt).await?;
+            RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(funs.err().not_found("cert_user_pwd", "reset_sk", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))

@@ -19,9 +19,9 @@ pub struct Model {
 }
 
 impl TardisActiveModel for ActiveModel {
-    fn fill_cxt(&mut self, cxt: &TardisContext, is_insert: bool) {
+    fn fill_cxt(&mut self, ctx: &TardisContext, is_insert: bool) {
         if is_insert {
-            self.own_paths = Set(cxt.own_paths.to_string());
+            self.own_paths = Set(ctx.own_paths.to_string());
         }
     }
 

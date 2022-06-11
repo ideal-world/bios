@@ -29,7 +29,7 @@ impl<'a> IamCertMailVCodeServ {
         add_req: &IamMailVCodeCertConfAddOrModifyReq,
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
@@ -53,13 +53,13 @@ impl<'a> IamCertMailVCodeServ {
                 rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -79,13 +79,13 @@ impl<'a> IamCertMailVCodeServ {
                 conn_uri: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
     }
 
-    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let vcode = Self::get_vcode();
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -102,21 +102,21 @@ impl<'a> IamCertMailVCodeServ {
                 rel_rbum_id: account_id.to_string(),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
-        Self::send_activation_mail(account_id, &add_req.mail, &vcode, funs, cxt).await?;
+        Self::send_activation_mail(account_id, &add_req.mail, &vcode, funs, ctx).await?;
         Ok(id)
     }
 
-    pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, &cxt.own_paths, funs).await?;
-        Self::send_activation_mail(account_id, mail, &vcode, funs, cxt).await
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
+        Self::send_activation_mail(account_id, mail, &vcode, funs, ctx).await
     }
 
-    async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, cxt).await?.name;
+    async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
         let mut subject = funs.conf::<IamConfig>().mail_template_cert_activate_title.clone();
         let mut content = funs.conf::<IamConfig>().mail_template_cert_activate_content.clone();
         subject = subject.replace("{account_name}", &account_name).replace("{vcode}", vcode);
@@ -138,8 +138,8 @@ impl<'a> IamCertMailVCodeServ {
         Ok(())
     }
 
-    pub async fn activate_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &cxt.own_paths, funs).await? {
+    pub async fn activate_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let cert = RbumCertServ::find_one_rbum(
                     &RbumCertFilterReq {
@@ -147,12 +147,12 @@ impl<'a> IamCertMailVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_id: Some(
-                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_cxt(cxt, funs)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
                         ),
                         ..Default::default()
                     },
                     funs,
-                    cxt,
+                    ctx,
                 )
                 .await?;
                 return if let Some(cert) = cert {
@@ -166,7 +166,7 @@ impl<'a> IamCertMailVCodeServ {
                             status: Some(RbumCertStatusKind::Enabled),
                         },
                         funs,
-                        cxt,
+                        ctx,
                     )
                     .await?;
                     Ok(())

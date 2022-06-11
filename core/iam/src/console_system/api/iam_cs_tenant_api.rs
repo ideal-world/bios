@@ -19,7 +19,7 @@ pub struct IamCsTenantApi;
 impl IamCsTenantApi {
     /// Add Tenant
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, _cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamCsTenantAddReq>, _ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamCsTenantServ::add_tenant(&mut add_req.0, &funs).await?.0;
@@ -29,17 +29,17 @@ impl IamCsTenantApi {
 
     /// Modify Tenant By Tenant Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamTenantModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamTenantModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamTenantServ::modify_item(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamTenantServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Tenant By Tenant Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamTenantServ::get_item(
             &id.0,
@@ -51,7 +51,7 @@ impl IamCsTenantApi {
                 ..Default::default()
             },
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(result)
@@ -67,7 +67,7 @@ impl IamCsTenantApi {
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamTenantSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamTenantServ::paginate_items(
@@ -85,7 +85,7 @@ impl IamCsTenantApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(result)

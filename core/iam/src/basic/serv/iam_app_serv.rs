@@ -90,7 +90,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             let app_id = id.to_string();
             let own_paths = Self::peek_item(
@@ -103,11 +103,11 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
                     ..Default::default()
                 },
                 funs,
-                cxt,
+                ctx,
             )
             .await?
             .own_paths;
-            let cxt = cxt.clone();
+            let ctx = ctx.clone();
             tokio::spawn(async move {
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
@@ -118,20 +118,20 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
                     },
                     ..Default::default()
                 };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap() as isize;
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx).await.unwrap() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
                     for id in ids {
                         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                     }
                     page_number += 1;
                     count -= 100;
                 }
-                let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &app_id, &funs, &cxt).await.unwrap() as isize;
+                let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &app_id, &funs, &ctx).await.unwrap() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &app_id, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                    let ids = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &app_id, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
                     for id in ids {
                         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                     }
@@ -163,36 +163,36 @@ impl<'a> IamAppServ {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_APP_LEN as usize)
     }
 
-    pub fn get_id_by_cxt(cxt: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &cxt.own_paths) {
+    pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
             Ok(id)
         } else {
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("app id not found in tardis content {}", cxt.own_paths)))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("app id not found in tardis content {}", ctx.own_paths)))
         }
     }
 
-    pub async fn add_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, funs, cxt).await
+    pub async fn add_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, funs, ctx).await
     }
 
-    pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, cxt).await
+    pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await
     }
 
-    pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, cxt).await
+    pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, ctx).await
     }
 
-    pub async fn exist_rel_accounts(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
-        IamRelServ::exist_rels(&IamRelKind::IamAccountApp, account_id, app_id, funs, cxt).await
+    pub async fn exist_rel_accounts(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        IamRelServ::exist_rels(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await
     }
 
-    pub fn with_app_rel_filter(cxt: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumItemRelFilterReq>> {
+    pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumItemRelFilterReq>> {
         Ok(Some(RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
-            rel_item_id: Some(Self::get_id_by_cxt(cxt, funs)?),
+            rel_item_id: Some(Self::get_id_by_ctx(ctx, funs)?),
         }))
     }
 }

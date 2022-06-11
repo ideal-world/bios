@@ -22,7 +22,7 @@ impl<'a> IamCsTenantServ {
     pub async fn add_tenant(add_req: &mut IamCsTenantAddReq, funs: &TardisFunsInst<'a>) -> TardisResult<(String, String)> {
         let tenant_admin_id = TardisFuns::field.nanoid();
         let tenant_id = IamTenantServ::get_new_id();
-        let tenant_cxt = TardisContext {
+        let tenant_ctx = TardisContext {
             own_paths: tenant_id.clone(),
             ak: "".to_string(),
             roles: vec![],
@@ -41,19 +41,19 @@ impl<'a> IamCsTenantServ {
                 note: add_req.tenant_note.clone(),
             },
             funs,
-            &tenant_cxt,
+            &tenant_ctx,
         )
         .await?;
 
-        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
-        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_cxt).await?;
+        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
+        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
 
         IamCertServ::init_default_ident_conf(
             add_req.cert_conf_by_user_pwd.clone(),
             add_req.cert_conf_by_phone_vcode.clone(),
             add_req.cert_conf_by_mail_vcode.clone(),
             funs,
-            &tenant_cxt,
+            &tenant_ctx,
         )
         .await?;
 
@@ -78,7 +78,7 @@ impl<'a> IamCsTenantServ {
                 exts: Default::default(),
             },
             funs,
-            &tenant_cxt,
+            &tenant_ctx,
         )
         .await?;
 

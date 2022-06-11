@@ -29,7 +29,7 @@ impl IamCcAccountApi {
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
@@ -55,7 +55,7 @@ impl IamCcAccountApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(TardisPage {

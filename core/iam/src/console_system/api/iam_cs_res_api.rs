@@ -22,79 +22,79 @@ pub struct IamCsResApi;
 impl IamCsResApi {
     /// Add Res Cate
     #[oai(path = "/cate", method = "post")]
-    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_cxt(false, &funs, &cxt.0).await?;
-        let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &cxt.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify Res Cate By Res Cate Id
     #[oai(path = "/cate/:id", method = "put")]
-    async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &cxt.0).await?;
+        IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Find Res Cates
     #[oai(path = "/cate", method = "get")]
-    async fn find_cates(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn find_cates(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_cxt(false, &funs, &cxt.0).await?;
-        let result = IamSetServ::find_set_cates(&set_id, &funs, &cxt.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let result = IamSetServ::find_set_cates(&set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Delete Res Cate By Res Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
-    async fn delete_cate(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_cate(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::delete_set_cate(&id.0, &funs, &cxt.0).await?;
+        IamSetServ::delete_set_cate(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Add Res
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamResAggAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_cxt(false, &funs, &cxt.0).await?;
-        let result = IamResServ::add_agg_res(&mut add_req.0, &set_id, &funs, &cxt.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let result = IamResServ::add_agg_res(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify Res By Res Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamResServ::modify_item(&id.0, &mut modify_req.0, &funs, &cxt.0).await?;
+        IamResServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Res By Res Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<IamResDetailResp> {
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamResDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::get_item(&id.0, &IamResFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamResServ::get_item(&id.0, &IamResFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Delete Res By Res Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamResServ::delete_item_with_all_rels(&id.0, &funs, &cxt.0).await?;
+        IamResServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -106,10 +106,10 @@ impl IamCsResApi {
         id: Path<String>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_simple_rel_roles(&id.0, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamResServ::find_simple_rel_roles(&id.0, false, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }

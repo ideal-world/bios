@@ -91,10 +91,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         Ok(Some(iam_tenant))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             let own_paths = id.to_string();
-            let cxt = cxt.clone();
+            let ctx = ctx.clone();
             tardis::tokio::spawn(async move {
                 let funs = iam_constants::get_tardis_inst();
                 let filter = IamAccountFilterReq {
@@ -105,10 +105,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
                     },
                     ..Default::default()
                 };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &cxt).await.unwrap() as isize;
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx).await.unwrap() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &cxt).await.unwrap().records;
+                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
                     for id in ids {
                         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                     }
@@ -141,13 +141,13 @@ impl<'a> IamTenantServ {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_TENANT_LEN as usize)
     }
 
-    pub fn get_id_by_cxt(cxt: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        if cxt.own_paths.is_empty() {
+    pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        if ctx.own_paths.is_empty() {
             Ok("".to_string())
-        } else if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &cxt.own_paths) {
+        } else if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths) {
             Ok(id)
         } else {
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("tenant id not found in tardis content {}", cxt.own_paths)))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("tenant id not found in tardis content {}", ctx.own_paths)))
         }
     }
 }

@@ -15,7 +15,7 @@ pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<(
 
     info!("【test_ct_tenant】 : Modify Current Tenant");
     IamTenantServ::modify_item(
-        &IamTenantServ::get_id_by_cxt(context1, &funs)?,
+        &IamTenantServ::get_id_by_ctx(context1, &funs)?,
         &mut IamTenantModifyReq {
             name: Some(TrimString("NT".to_string())),
             icon: None,
@@ -31,7 +31,7 @@ pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<(
     .await?;
 
     info!("【test_ct_tenant】 : Get Current Tenant");
-    let tenant = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(context1, &funs)?, &IamTenantFilterReq::default(), &funs, context1).await?;
+    let tenant = IamTenantServ::get_item(&IamTenantServ::get_id_by_ctx(context1, &funs)?, &IamTenantFilterReq::default(), &funs, context1).await?;
     assert_eq!(tenant.name, "NT");
     assert_eq!(tenant.contact_phone, "1333333");
     assert!(!tenant.disabled);

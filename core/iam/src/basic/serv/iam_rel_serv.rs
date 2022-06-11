@@ -27,7 +27,7 @@ impl<'a> IamRelServ {
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<()> {
         let value1 = start_timestamp.unwrap_or_else(|| Utc::now().timestamp());
         let value2 = end_timestamp.unwrap_or_else(|| (Utc::now() + Duration::days(365 * 100)).timestamp());
@@ -38,7 +38,7 @@ impl<'a> IamRelServ {
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
-                to_own_paths: cxt.own_paths.to_string(),
+                to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside: false,
                 ext: None,
             },
@@ -53,7 +53,7 @@ impl<'a> IamRelServ {
                 vec![]
             },
         };
-        RbumRelServ::add_rel(req, funs, cxt).await?;
+        RbumRelServ::add_rel(req, funs, ctx).await?;
         if rel_kind == &IamRelKind::IamResRole {
             let iam_res = IamResServ::peek_item(
                 from_iam_item_id,
@@ -65,7 +65,7 @@ impl<'a> IamRelServ {
                     ..Default::default()
                 },
                 funs,
-                cxt,
+                ctx,
             )
             .await?;
             IamResCacheServ::add_or_modify_res_rel(
@@ -87,7 +87,7 @@ impl<'a> IamRelServ {
         Ok(())
     }
 
-    pub async fn delete_simple_rel(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_simple_rel(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         let rel_ids = RbumRelServ::find_id_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -103,14 +103,14 @@ impl<'a> IamRelServ {
             None,
             None,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         if rel_ids.is_empty() {
             return Ok(());
         }
         for rel_id in rel_ids {
-            RbumRelServ::delete_rbum(&rel_id, funs, cxt).await?;
+            RbumRelServ::delete_rbum(&rel_id, funs, ctx).await?;
         }
         match rel_kind {
             IamRelKind::IamResRole => {
@@ -124,7 +124,7 @@ impl<'a> IamRelServ {
                         ..Default::default()
                     },
                     funs,
-                    cxt,
+                    ctx,
                 )
                 .await?;
                 IamResCacheServ::delete_res_rel(
@@ -151,8 +151,8 @@ impl<'a> IamRelServ {
         Ok(())
     }
 
-    pub async fn count_from_rels(rel_kind: &IamRelKind, with_sub: bool, from_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumRelServ::count_from_rels(&rel_kind.to_string(), &RbumRelFromKind::Item, with_sub, from_iam_item_id, funs, cxt).await
+    pub async fn count_from_rels(rel_kind: &IamRelKind, with_sub: bool, from_iam_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        RbumRelServ::count_from_rels(&rel_kind.to_string(), &RbumRelFromKind::Item, with_sub, from_iam_item_id, funs, ctx).await
     }
 
     pub async fn find_from_id_rels(
@@ -162,7 +162,7 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
         RbumRelServ::find_from_id_rels(
             &rel_kind.to_string(),
@@ -172,7 +172,7 @@ impl<'a> IamRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -184,7 +184,7 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         RbumRelServ::find_from_simple_rels(
             &rel_kind.to_string(),
@@ -194,7 +194,7 @@ impl<'a> IamRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -208,7 +208,7 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
         RbumRelServ::paginate_from_id_rels(
             &rel_kind.to_string(),
@@ -220,7 +220,7 @@ impl<'a> IamRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -234,7 +234,7 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         RbumRelServ::paginate_from_simple_rels(
             &rel_kind.to_string(),
@@ -246,13 +246,13 @@ impl<'a> IamRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
 
-    pub async fn count_to_rels(rel_kind: &IamRelKind, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumRelServ::count_to_rels(&rel_kind.to_string(), to_iam_item_id, funs, cxt).await
+    pub async fn count_to_rels(rel_kind: &IamRelKind, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        RbumRelServ::count_to_rels(&rel_kind.to_string(), to_iam_item_id, funs, ctx).await
     }
 
     pub async fn find_to_id_rels(
@@ -261,9 +261,9 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        RbumRelServ::find_to_id_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        RbumRelServ::find_to_id_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     pub async fn find_to_simple_rels(
@@ -272,9 +272,9 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        RbumRelServ::find_to_simple_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        RbumRelServ::find_to_simple_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     pub async fn paginate_to_id_rels(
@@ -285,7 +285,7 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
         RbumRelServ::paginate_to_id_rels(
             &rel_kind.to_string(),
@@ -295,7 +295,7 @@ impl<'a> IamRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -308,7 +308,7 @@ impl<'a> IamRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         RbumRelServ::paginate_to_simple_rels(
             &rel_kind.to_string(),
@@ -318,12 +318,12 @@ impl<'a> IamRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
 
-    pub async fn exist_rels(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+    pub async fn exist_rels(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
         RbumRelServ::exist_simple_rel(
             &RbumRelFindReq {
                 tag: Some(rel_kind.to_string()),
@@ -332,7 +332,7 @@ impl<'a> IamRelServ {
                 to_rbum_item_id: Some(to_iam_item_id.to_string()),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await
     }

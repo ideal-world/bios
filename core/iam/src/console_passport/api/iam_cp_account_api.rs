@@ -20,41 +20,41 @@ pub struct IamCpAccountApi;
 impl IamCpAccountApi {
     /// Modify Current Account
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, mut modify_req: Json<IamAccountSelfModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, mut modify_req: Json<IamAccountSelfModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let cxt = IamCertServ::use_tenant_ctx_unsafe(cxt.0)?;
-        IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &cxt).await?;
+        let ctx = IamCertServ::use_tenant_ctx_unsafe(ctx.0)?;
+        IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Current Account
     #[oai(path = "/", method = "get")]
-    async fn get(&self, cxt: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
+    async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::get_item(&cxt.0.owner, &IamAccountFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamAccountServ::get_item(&ctx.0.owner, &IamAccountFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Find Rel Roles By Current Account
     #[oai(path = "/role", method = "get")]
-    async fn find_rel_roles(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+    async fn find_rel_roles(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::find_simple_rel_roles(&cxt.0.owner, false, desc_by_create.0, desc_by_update.0, &funs, &cxt.0).await?;
+        let result = IamAccountServ::find_simple_rel_roles(&ctx.0.owner, false, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Find Rel Set By Current Account
     #[oai(path = "/set-path", method = "get")]
-    async fn find_rel_set_paths(&self, sys_org: Query<Option<bool>>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
+    async fn find_rel_set_paths(&self, sys_org: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_org.0.unwrap_or(false) {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, &funs, &cxt.0).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, &funs, &ctx.0).await?
         } else {
-            IamSetServ::get_default_set_id_by_cxt(true, &funs, &cxt.0).await?
+            IamSetServ::get_default_set_id_by_ctx(true, &funs, &ctx.0).await?
         };
-        let result = IamSetServ::find_set_paths(&cxt.0.owner, &set_id, &funs, &cxt.0).await?;
+        let result = IamSetServ::find_set_paths(&ctx.0.owner, &set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }
