@@ -127,8 +127,8 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
 }
 
 impl<'a> IamAccountServ {
-    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let attrs = IamAttrServ::find_account_attrs(funs, cxt).await?;
+    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field"));
         }
@@ -141,10 +141,10 @@ impl<'a> IamAccountServ {
                 icon: add_req.icon.clone(),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
-        if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(cxt.own_paths.clone()), funs).await? {
+        if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
             IamCertUserPwdServ::add_cert(
                 &IamUserPwdCertAddReq {
                     ak: add_req.cert_user_name.clone(),
@@ -153,12 +153,12 @@ impl<'a> IamAccountServ {
                 &account_id,
                 Some(cert_conf_id),
                 funs,
-                cxt,
+                ctx,
             )
             .await?;
         }
         if let Some(cert_phone) = &add_req.cert_phone {
-            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(cxt.own_paths.clone()), funs).await? {
+            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertPhoneVCodeServ::add_cert(
                     &IamPhoneVCodeCertAddReq {
                         phone: TrimString(cert_phone.to_string()),
@@ -166,26 +166,26 @@ impl<'a> IamAccountServ {
                     &account_id,
                     &cert_conf_id,
                     funs,
-                    cxt,
+                    ctx,
                 )
                 .await?;
             }
         }
         if let Some(cert_mail) = &add_req.cert_mail {
-            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::MailVCode.to_string(), Some(cxt.own_paths.clone()), funs).await? {
-                IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf_id, funs, cxt).await?;
+            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf_id, funs, ctx).await?;
             }
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {
-                IamRoleServ::add_rel_account(role_id, &account_id, funs, cxt).await?;
+                IamRoleServ::add_rel_account(role_id, &account_id, funs, ctx).await?;
             }
         }
-        IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, cxt).await?;
+        IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, ctx).await?;
         Ok(account_id)
     }
 
-    pub async fn modify_account_agg(id: &str, modify_req: &IamAccountAggModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_account_agg(id: &str, modify_req: &IamAccountAggModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         IamAccountServ::modify_item(
             id,
             &mut IamAccountModifyReq {
@@ -195,29 +195,29 @@ impl<'a> IamAccountServ {
                 icon: modify_req.icon.clone(),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         if let Some(input_role_ids) = &modify_req.role_ids {
-            let stored_roles = Self::find_simple_rel_roles(id, true, None, None, funs, cxt).await?;
+            let stored_roles = Self::find_simple_rel_roles(id, true, None, None, funs, ctx).await?;
             let stored_role_ids: Vec<String> = stored_roles.into_iter().map(|r| r.rel_id).collect();
             for input_role_id in input_role_ids {
                 if !stored_role_ids.contains(input_role_id) {
-                    IamRoleServ::add_rel_account(input_role_id, id, funs, cxt).await?;
+                    IamRoleServ::add_rel_account(input_role_id, id, funs, ctx).await?;
                 }
             }
             for stored_role_id in stored_role_ids {
                 if !input_role_ids.contains(&stored_role_id) {
-                    IamRoleServ::delete_rel_account(&stored_role_id, id, funs, cxt).await?;
+                    IamRoleServ::delete_rel_account(&stored_role_id, id, funs, ctx).await?;
                 }
             }
         }
-        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, cxt).await?;
+        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;
         Ok(())
     }
 
-    pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        let id = &cxt.owner;
+    pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        let id = &ctx.owner;
         IamAccountServ::modify_item(
             id,
             &mut IamAccountModifyReq {
@@ -227,10 +227,10 @@ impl<'a> IamAccountServ {
                 scope_level: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
-        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, cxt).await?;
+        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;
         Ok(())
     }
 
@@ -240,8 +240,8 @@ impl<'a> IamAccountServ {
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, cxt).await
+        IamRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 }

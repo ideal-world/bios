@@ -18,9 +18,9 @@ pub struct IamCpTenantApi;
 impl IamCpTenantApi {
     /// Get Current Tenant
     #[oai(path = "/", method = "get")]
-    async fn get(&self, cxt: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
+    async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_cxt(&cxt.0, &funs)?, &IamTenantFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &IamTenantFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

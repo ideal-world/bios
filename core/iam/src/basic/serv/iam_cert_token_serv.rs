@@ -21,7 +21,7 @@ impl<'a> IamCertTokenServ {
         token_kind: IamCertTokenKind,
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
@@ -45,13 +45,13 @@ impl<'a> IamCertTokenServ {
                 rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamTokenCertConfModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamTokenCertConfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -71,7 +71,7 @@ impl<'a> IamCertTokenServ {
                 conn_uri: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
@@ -83,7 +83,7 @@ impl<'a> IamCertTokenServ {
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<()> {
         let cert_conf = RbumCertConfServ::peek_rbum(
             rel_rbum_cert_conf_id,
@@ -95,7 +95,7 @@ impl<'a> IamCertTokenServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, cert_conf.expire_sec, cert_conf.coexist_num, funs).await

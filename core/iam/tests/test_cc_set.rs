@@ -30,7 +30,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
     info!("【test_cc_set】 : test_single_level : Add Set Cate");
-    let set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, context).await?;
+    let set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, context).await?;
     let set_cate_id1 = IamSetServ::add_set_cate(
         &set_id,
         &mut IamSetCateAddReq {
@@ -187,7 +187,7 @@ async fn test_multi_level_add<'a>(
 ) -> TardisResult<(String, String, String, String, String, String, String)> {
     info!("【test_cc_set】 : test_multi_level : Add Set Cate");
 
-    let sys_set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, sys_context).await?;
+    let sys_set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, sys_context).await?;
 
     let set_cate_sys_global_id = IamSetServ::add_set_cate(
         &sys_set_id,
@@ -322,7 +322,7 @@ pub async fn test_multi_level_by_sys_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let sys_set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, sys_context).await?;
+    let sys_set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, sys_context).await?;
 
     let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
@@ -410,7 +410,7 @@ pub async fn test_multi_level_by_tenant_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let sys_set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, sys_context).await?;
+    let sys_set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, sys_context).await?;
 
     let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
@@ -529,7 +529,7 @@ pub async fn test_multi_level_by_app_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let sys_set_id = IamSetServ::get_default_set_id_by_cxt(true, &funs, sys_context).await?;
+    let sys_set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, sys_context).await?;
 
     let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;

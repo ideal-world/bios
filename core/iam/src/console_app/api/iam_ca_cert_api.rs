@@ -15,7 +15,7 @@ pub struct IamCaCertApi;
 impl IamCaCertApi {
     /// Find Certs By Account Id
     #[oai(path = "/", method = "get")]
-    async fn find_certs(&self, account_id: Query<String>, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
+    async fn find_certs(&self, account_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -25,7 +25,7 @@ impl IamCaCertApi {
             None,
             None,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(rbum_certs)

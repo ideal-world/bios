@@ -25,8 +25,8 @@ impl IamCpCertApi {
     #[oai(path = "/context", method = "put")]
     async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {
         let funs = iam_constants::get_tardis_inst();
-        let cxt = IamIdentCacheServ::get_context(&fetch_req.0, &funs).await?;
-        TardisResp::ok(cxt)
+        let ctx = IamIdentCacheServ::get_context(&fetch_req.0, &funs).await?;
+        TardisResp::ok(ctx)
     }
 
     /// Login by Username and Password
@@ -47,12 +47,12 @@ impl IamCpCertApi {
 
     /// Find Certs By Current Account
     #[oai(path = "/cert", method = "get")]
-    async fn find_certs(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
+    async fn find_certs(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let own_paths = if cxt.0.own_paths.is_empty() {
+        let own_paths = if ctx.0.own_paths.is_empty() {
             None
         } else {
-            Some(IamTenantServ::get_id_by_cxt(&cxt.0, &funs)?)
+            Some(IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?)
         };
         let rbum_certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -61,13 +61,13 @@ impl IamCpCertApi {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel_rbum_id: Some(cxt.0.owner.to_string()),
+                rel_rbum_id: Some(ctx.0.owner.to_string()),
                 ..Default::default()
             },
             None,
             None,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(rbum_certs)
@@ -75,49 +75,49 @@ impl IamCpCertApi {
 
     /// Modify Password By Current Account
     #[oai(path = "/cert/userpwd", method = "put")]
-    async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let cxt = IamCertServ::use_tenant_ctx_unsafe(cxt.0)?;
-        IamCpCertUserPwdServ::modify_cert_user_pwd(&cxt.owner, &modify_req.0, &funs, &cxt).await?;
+        let ctx = IamCertServ::use_tenant_ctx_unsafe(ctx.0)?;
+        IamCpCertUserPwdServ::modify_cert_user_pwd(&ctx.owner, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     // /// Add Mail-VCode Cert
     // #[oai(path = "/cert/mailvcode", method = "put")]
-    // async fn add_mail_vcode_cert(&self, add_req: Json<IamMailVCodeCertAddReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    // async fn add_mail_vcode_cert(&self, add_req: Json<IamMailVCodeCertAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
     //     let mut funs = iam_constants::get_tardis_inst();
     //     funs.begin().await?;
-    //     IamCpCertMailVCodeServ::add_cert_mail_vocde(&add_req.0, &funs, &cxt.0).await?;
+    //     IamCpCertMailVCodeServ::add_cert_mail_vocde(&add_req.0, &funs, &ctx.0).await?;
     //     funs.commit().await?;
     //     TardisResp::ok(Void {})
     // }
     //
     // /// Delete Mail-VCode Cert
     // #[oai(path = "/cert/mailvcode/:id", method = "delete")]
-    // async fn delete_mail_vcode_cert(&self, id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    // async fn delete_mail_vcode_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
     //     let mut funs = iam_constants::get_tardis_inst();
     //     funs.begin().await?;
-    //     IamCertServ::delete_cert(&id.0, &funs, &cxt.0).await?;
+    //     IamCertServ::delete_cert(&id.0, &funs, &ctx.0).await?;
     //     funs.commit().await?;
     //     TardisResp::ok(Void {})
     // }
 
     // /// Resend Activation Mail
     // #[oai(path = "/cert/mailvcode/resend", method = "put")]
-    // async fn resend_activation_mail(&self, req: Json<IamMailVCodeCertResendActivationReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    // async fn resend_activation_mail(&self, req: Json<IamMailVCodeCertResendActivationReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
     //     let funs = iam_constants::get_tardis_inst();
-    //     IamCertMailVCodeServ::resend_activation_mail(&cxt.0.owner, &req.0.mail, &funs, &cxt.0).await?;
+    //     IamCertMailVCodeServ::resend_activation_mail(&ctx.0.owner, &req.0.mail, &funs, &ctx.0).await?;
     //     TardisResp::ok(Void {})
     // }
 
     // /// Activate Mail
     // #[oai(path = "/cert/mailvcode/activate", method = "put")]
-    // async fn activate_mail(&self, req: Json<IamMailVCodeCertActivateReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    // async fn activate_mail(&self, req: Json<IamMailVCodeCertActivateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
     //     let mut funs = iam_constants::get_tardis_inst();
     //     funs.begin().await?;
-    //     IamCertMailVCodeServ::activate_mail(&req.0.mail, &req.0.vcode, &funs, &cxt.0).await?;
+    //     IamCertMailVCodeServ::activate_mail(&req.0.mail, &req.0.vcode, &funs, &ctx.0).await?;
     //     funs.commit().await?;
     //     TardisResp::ok(Void {})
     // }

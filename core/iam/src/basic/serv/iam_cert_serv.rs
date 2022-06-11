@@ -41,16 +41,16 @@ impl<'a> IamCertServ {
         phone_vcode_cert_conf_add_req: Option<IamPhoneVCodeCertConfAddOrModifyReq>,
         mail_vcode_cert_conf_add_req: Option<IamMailVCodeCertConfAddOrModifyReq>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<String> {
-        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(&user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(cxt), funs, cxt).await?;
+        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(&user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
 
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
-            IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(cxt), funs, cxt).await?;
+            IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         }
 
         if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
-            IamCertMailVCodeServ::add_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(cxt), funs, cxt).await?;
+            IamCertMailVCodeServ::add_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         }
 
         IamCertTokenServ::add_cert_conf(
@@ -60,9 +60,9 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenDefault,
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
             funs,
-            cxt,
+            ctx,
         )
         .await?;
 
@@ -73,9 +73,9 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPc,
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
             funs,
-            cxt,
+            ctx,
         )
         .await?;
 
@@ -86,9 +86,9 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPhone,
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
             funs,
-            cxt,
+            ctx,
         )
         .await?;
 
@@ -99,16 +99,16 @@ impl<'a> IamCertServ {
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
             },
             IamCertTokenKind::TokenPad,
-            rbum_scope_helper::get_max_level_id_by_context(cxt),
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
             funs,
-            cxt,
+            ctx,
         )
         .await?;
 
         Ok(rbum_cert_conf_user_pwd_id)
     }
 
-    pub async fn get_cert_conf(id: &str, iam_item_id: Option<String>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
+    pub async fn get_cert_conf(id: &str, iam_item_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
         RbumCertConfServ::get_rbum(
             id,
             &RbumCertConfFilterReq {
@@ -117,7 +117,7 @@ impl<'a> IamCertServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -131,7 +131,7 @@ impl<'a> IamCertServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertConfDetailResp>> {
         let result = RbumCertConfServ::find_detail_rbums(
             &RbumCertConfFilterReq {
@@ -148,7 +148,7 @@ impl<'a> IamCertServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         let result = result
@@ -169,7 +169,7 @@ impl<'a> IamCertServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumCertConfSummaryResp>> {
         RbumCertConfServ::paginate_rbums(
             &RbumCertConfFilterReq {
@@ -188,12 +188,12 @@ impl<'a> IamCertServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
 
-    pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
         let rbum_cert_conf = RbumCertConfServ::peek_rbum(
             id,
             &RbumCertConfFilterReq {
@@ -204,13 +204,13 @@ impl<'a> IamCertServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         if rbum_cert_conf.code == IamCertKind::UserPwd.to_string() {
             return Err(funs.err().conflict("cert_conf", "delete", "can not delete default credential"));
         }
-        RbumCertConfServ::delete_rbum(id, funs, cxt).await
+        RbumCertConfServ::delete_rbum(id, funs, ctx).await
     }
 
     pub async fn find_certs(
@@ -218,12 +218,12 @@ impl<'a> IamCertServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertSummaryResp>> {
-        RbumCertServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        RbumCertServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
-    pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
         let cert = RbumCertServ::peek_rbum(
             id,
             &RbumCertFilterReq {
@@ -234,10 +234,10 @@ impl<'a> IamCertServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
-        let result = RbumCertServ::delete_rbum(id, funs, cxt).await?;
+        let result = RbumCertServ::delete_rbum(id, funs, ctx).await?;
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&cert.rel_rbum_id, funs).await?;
         Ok(result)
     }
@@ -286,7 +286,7 @@ impl<'a> IamCertServ {
                 &IamAppFilterReq {
                     basic: RbumBasicFilterReq {
                         ignore_scope: false,
-                        rel_cxt_owner: false,
+                        rel_ctx_owner: false,
                         with_sub_own_paths: true,
                         enabled: Some(true),
                         ..Default::default()
@@ -332,34 +332,34 @@ impl<'a> IamCertServ {
         Ok(account_info)
     }
 
-    pub fn try_use_tenant_ctx(cxt: TardisContext, tenant_id: Option<String>) -> TardisResult<TardisContext> {
+    pub fn try_use_tenant_ctx(ctx: TardisContext, tenant_id: Option<String>) -> TardisResult<TardisContext> {
         if let Some(tenant_id) = &tenant_id {
-            Self::use_tenant_ctx(cxt, tenant_id)
+            Self::use_tenant_ctx(ctx, tenant_id)
         } else {
-            Ok(cxt)
+            Ok(ctx)
         }
     }
 
-    pub fn use_tenant_ctx_unsafe(mut cxt: TardisContext) -> TardisResult<TardisContext> {
-        cxt.own_paths = rbum_scope_helper::get_path_item(1, &cxt.own_paths).unwrap();
-        Ok(cxt)
+    pub fn use_tenant_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
+        ctx.own_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap();
+        Ok(ctx)
     }
 
-    pub fn use_tenant_ctx(cxt: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
-        rbum_scope_helper::degrade_own_paths(cxt, tenant_id.to_string().as_str())
+    pub fn use_tenant_ctx(ctx: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
+        rbum_scope_helper::degrade_own_paths(ctx, tenant_id.to_string().as_str())
     }
 
-    pub fn try_use_app_ctx(cxt: TardisContext, app_id: Option<String>) -> TardisResult<TardisContext> {
+    pub fn try_use_app_ctx(ctx: TardisContext, app_id: Option<String>) -> TardisResult<TardisContext> {
         if let Some(app_id) = &app_id {
-            Self::use_app_ctx(cxt, app_id)
+            Self::use_app_ctx(ctx, app_id)
         } else {
-            Ok(cxt)
+            Ok(ctx)
         }
     }
 
-    pub fn use_app_ctx(cxt: TardisContext, app_id: &str) -> TardisResult<TardisContext> {
-        let own_paths = cxt.own_paths.clone();
-        rbum_scope_helper::degrade_own_paths(cxt, format!("{}/{}", own_paths, app_id).as_str())
+    pub fn use_app_ctx(ctx: TardisContext, app_id: &str) -> TardisResult<TardisContext> {
+        let own_paths = ctx.own_paths.clone();
+        rbum_scope_helper::degrade_own_paths(ctx, format!("{}/{}", own_paths, app_id).as_str())
     }
 
     pub fn get_anonymous_context() -> TardisContext {

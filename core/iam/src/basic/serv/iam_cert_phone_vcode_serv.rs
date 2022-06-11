@@ -22,7 +22,7 @@ impl<'a> IamCertPhoneVCodeServ {
         add_req: &IamPhoneVCodeCertConfAddOrModifyReq,
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
@@ -46,13 +46,13 @@ impl<'a> IamCertPhoneVCodeServ {
                 rel_rbum_item_id: rel_iam_item_id,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -72,7 +72,7 @@ impl<'a> IamCertPhoneVCodeServ {
                 conn_uri: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
@@ -83,7 +83,7 @@ impl<'a> IamCertPhoneVCodeServ {
         account_id: &str,
         rel_rbum_cert_conf_id: &str,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<String> {
         let vcode = Self::get_vcode();
         let id = RbumCertServ::add_rbum(
@@ -101,7 +101,7 @@ impl<'a> IamCertPhoneVCodeServ {
                 rel_rbum_id: account_id.to_string(),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         // TODO send vcode

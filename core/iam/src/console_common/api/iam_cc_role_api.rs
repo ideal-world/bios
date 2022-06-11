@@ -26,7 +26,7 @@ impl IamCcRoleApi {
         page_size: Query<u64>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        cxt: TardisContextExtractor,
+        ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamRoleBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::paginate_items(
@@ -45,7 +45,7 @@ impl IamCcRoleApi {
             desc_by_create.0,
             desc_by_update.0,
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         TardisResp::ok(TardisPage {

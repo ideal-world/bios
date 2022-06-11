@@ -17,10 +17,10 @@ use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 pub struct IamCtAppServ;
 
 impl<'a> IamCtAppServ {
-    pub async fn add_app(add_req: &mut IamCtAppAddReq, funs: &TardisFunsInst<'a>, tenant_cxt: &TardisContext) -> TardisResult<String> {
+    pub async fn add_app(add_req: &mut IamCtAppAddReq, funs: &TardisFunsInst<'a>, tenant_ctx: &TardisContext) -> TardisResult<String> {
         let app_id = IamAppServ::get_new_id();
-        let app_cxt = TardisContext {
-            own_paths: format!("{}/{}", tenant_cxt.own_paths, app_id),
+        let app_ctx = TardisContext {
+            own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
             ak: "".to_string(),
             roles: vec![],
             groups: vec![],
@@ -37,15 +37,15 @@ impl<'a> IamCtAppServ {
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
             },
             funs,
-            &app_cxt,
+            &app_ctx,
         )
         .await?;
 
-        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_cxt).await?;
-        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, funs, &app_cxt).await?;
+        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_ctx).await?;
+        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, funs, &app_ctx).await?;
 
-        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_cxt).await?;
-        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_cxt).await?;
+        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
 
         Ok(app_id)
     }

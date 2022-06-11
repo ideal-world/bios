@@ -17,11 +17,11 @@ pub struct IamCaAppApi;
 impl IamCaAppApi {
     /// Modify Current App
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, modify_req: Json<IamCaAppModifyReq>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, modify_req: Json<IamCaAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::modify_item(
-            &IamAppServ::get_id_by_cxt(&cxt.0, &funs)?,
+            &IamAppServ::get_id_by_ctx(&ctx.0, &funs)?,
             &mut IamAppModifyReq {
                 name: modify_req.0.name.clone(),
                 icon: modify_req.0.icon.clone(),
@@ -31,7 +31,7 @@ impl IamCaAppApi {
                 scope_level: None,
             },
             &funs,
-            &cxt.0,
+            &ctx.0,
         )
         .await?;
         funs.commit().await?;
@@ -40,28 +40,28 @@ impl IamCaAppApi {
 
     /// Get Current App
     #[oai(path = "/", method = "get")]
-    async fn get(&self, cxt: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
+    async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAppServ::get_item(&IamAppServ::get_id_by_cxt(&cxt.0, &funs)?, &IamAppFilterReq::default(), &funs, &cxt.0).await?;
+        let result = IamAppServ::get_item(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &IamAppFilterReq::default(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Add Rel Account
     #[oai(path = "/:id/account/:account_id", method = "put")]
-    async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::add_rel_account(&id.0, &account_id.0, &funs, &cxt.0).await?;
+        IamAppServ::add_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
-    async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, cxt: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::delete_rel_account(&id.0, &account_id.0, &funs, &cxt.0).await?;
+        IamAppServ::delete_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

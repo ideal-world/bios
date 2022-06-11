@@ -16,17 +16,17 @@ pub struct IamCpAccountAttrApi;
 impl IamCpAccountAttrApi {
     /// Find Account Attrs By Current Tenant
     #[oai(path = "/", method = "get")]
-    async fn find_attrs(&self, cxt: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
+    async fn find_attrs(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAttrServ::find_account_attrs(&funs, &cxt.0).await?;
+        let result = IamAttrServ::find_account_attrs(&funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Find Account Ext Attr Values By Current Account
     #[oai(path = "/value", method = "get")]
-    async fn find_account_attr_values(&self, cxt: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
+    async fn find_account_attr_values(&self, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAttrServ::find_account_attr_values(&cxt.0.owner, &funs, &cxt.0).await?;
+        let result = IamAttrServ::find_account_attr_values(&ctx.0.owner, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }
