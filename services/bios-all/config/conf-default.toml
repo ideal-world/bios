@@ -11,16 +11,16 @@ desc = "BIOS All Services"
 version = "0.1.0"
 
 [fw.web_server]
-port = 8081
+port = 8080
 [fw.web_server.modules.iam]
 title = "IAM Component"
-doc_urls = [["test env", "http://localhost:8081/"]]
+doc_urls = [["test env", "http://localhost:8080/"]]
 
 [fw.db]
 url = "mysql://root:123456@localhost:3306/test"
 
 [fw.cache]
-url = "redis://123456@127.0.0.1:6379"
+url = "redis://:123456@127.0.0.1:6379"
 
 [fw.mq]
 url = "amqp://user:123456@127.0.0.1:5672/%2f"
