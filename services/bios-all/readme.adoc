@@ -1,0 +1,8 @@
+=== All Services
+
+==== Use image
+
+[source,sh]
+----
+docker run --name bios-serv-all -d -p 8080:8080 -v /<path>/config:/bios/config ghcr.io/ideal-world/bios-serv-all:latest
+----

@@ -55,6 +55,8 @@ function _M.ident(conf, ctx)
             iam_account_id = nil,
             iam_roles = nil,
             iam_groups = nil,
+            own_paths = nil,
+            ak = nil,
         }
         return 200, { message = "" }
     end

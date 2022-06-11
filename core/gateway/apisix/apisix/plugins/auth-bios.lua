@@ -53,6 +53,7 @@ function _M.check_schema(conf)
         core.log.error("Connect redis error", redis_err)
         return false, redis_err
     end
+    json.encode_empty_table_as_object(false)
     m_init.init(conf.cache_key_res_info, conf.cache_key_res_changed_info, conf.cache_key_res_changed_timer_sec)
     return true
 end
@@ -66,13 +67,14 @@ function _M.rewrite(conf, ctx)
     if auth_code ~= 200 then
         return auth_code, auth_message
     end
-    core.request.set_header(ctx, conf.head_key_context, ngx_encode_base64(json.decode({
+    local context = json.encode({
         own_paths = ctx.ident_info.own_paths,
         owner = ctx.ident_info.iam_account_id,
         ak = ctx.ident_info.ak,
-        roles = ctx.ident_info.roles,
-        groups = ctx.ident_info.groups,
-    })))
+        roles = ctx.ident_info.iam_roles,
+        groups = ctx.ident_info.iam_groups,
+    })
+    core.request.set_header(ctx, conf.head_key_context, ngx_encode_base64(context))
 end
 
 return _M
