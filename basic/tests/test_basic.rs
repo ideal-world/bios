@@ -65,7 +65,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
     let mut funs = TardisFuns::inst_with_db_conn("".to_string());
     funs.begin().await?;
 
-    let cxt = TardisContext {
+    let ctx = TardisContext {
         own_paths: "".to_string(),
         owner: "".to_string(),
         ak: "".to_string(),
@@ -84,7 +84,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             scope_level: Some(RbumScopeLevelKind::Root),
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 
@@ -99,7 +99,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             scope_level: Some(RbumScopeLevelKind::Root),
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 
@@ -114,7 +114,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             scope_level: Some(RbumScopeLevelKind::Root),
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 
@@ -128,7 +128,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             scope_level: Some(RbumScopeLevelKind::Root),
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 
@@ -143,7 +143,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             id: Some(TrimString(TardisFuns::field.nanoid_len(4))),
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 
@@ -158,7 +158,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             id: Some(TrimString(TardisFuns::field.nanoid_len(4))),
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 
@@ -173,7 +173,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
             id: None,
         },
         &funs,
-        &cxt,
+        &ctx,
     )
     .await?;
 

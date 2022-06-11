@@ -15,14 +15,14 @@ mod test_scope;
 async fn test_rbum() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = test_basic::init(&docker).await?;
-    let cxt = test_basic::init_test_data().await?;
+    let ctx = test_basic::init_test_data().await?;
     test_scope::test().await?;
-    test_rbum_domain::test(&cxt).await?;
-    test_rbum_kind::test(&cxt).await?;
-    test_rbum_item::test(&cxt).await?;
-    test_rbum_cert::test(&cxt).await?;
-    test_rbum_rel::test(&cxt).await?;
-    test_rbum_set::test(&cxt).await?;
-    test_rbum_event::test(&cxt).await?;
+    test_rbum_domain::test(&ctx).await?;
+    test_rbum_kind::test(&ctx).await?;
+    test_rbum_item::test(&ctx).await?;
+    test_rbum_cert::test(&ctx).await?;
+    test_rbum_rel::test(&ctx).await?;
+    test_rbum_set::test(&ctx).await?;
+    test_rbum_event::test(&ctx).await?;
     Ok(())
 }
