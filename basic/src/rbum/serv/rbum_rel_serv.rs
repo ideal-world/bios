@@ -49,7 +49,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumRelAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumRelAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         let rel_rbum_table_name = match add_req.from_rbum_kind {
             RbumRelFromKind::Item => RbumItemServ::get_table_name(),
             RbumRelFromKind::Set => RbumSetServ::get_table_name(),
@@ -58,13 +58,13 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         // The relationship check is changed from check_ownership to check_scope.
         // for example, the account corresponding to the tenant can be associated to the app,
         // where the account belongs to the tenant but scope=1, so it can be used by the application.
-        Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, cxt).await?;
+        Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
         if add_req.to_rbum_item_id.trim().is_empty() {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty"));
         }
         // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
         if !add_req.to_is_outside {
-            Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
+            Self::check_scope(&add_req.to_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
         }
         Ok(())
     }
@@ -86,20 +86,20 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         Ok(rbum_rel)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumRelDetailResp>> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumRelDetailResp>> {
         let mut query = Query::select();
         query.column(rbum_rel::Column::Id).from(rbum_rel::Entity).and_where(Expr::col(rbum_rel::Column::Id).eq(id)).cond_where(
             Cond::all().add(
                 Cond::any()
-                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str()))
-                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
+                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
+                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
             ),
         );
         if funs.db().count(&query).await? == 0 {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
                 "delete",
-                &format!("ownership {}.{} is illegal by {}", Self::get_obj_name(), id, cxt.owner),
+                &format!("ownership {}.{} is illegal by {}", Self::get_obj_name(), id, ctx.owner),
             ));
         }
         Self::check_exist_before_delete(id, RbumRelAttrServ::get_table_name(), rbum_rel_attr::Column::RelRbumRelId.as_str(), funs).await?;
@@ -107,7 +107,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         Ok(None)
     }
 
-    async fn package_query(_: bool, filter: &RbumRelFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumRelFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let from_rbum_item_table = Alias::new("fromRbumItem");
         let to_rbum_item_table = Alias::new("toRbumItem");
         let mut query = Query::select();
@@ -179,13 +179,13 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         if let Some(to_own_paths) = &filter.to_own_paths {
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOwnPaths).eq(to_own_paths.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
     }
 }
 
 impl<'a> RbumRelServ {
-    pub async fn add_simple_rel(tag: &str, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    pub async fn add_simple_rel(tag: &str, from_rbum_id: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         RbumRelServ::add_rbum(
             &mut RbumRelAddReq {
                 tag: tag.to_string(),
@@ -193,19 +193,19 @@ impl<'a> RbumRelServ {
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: from_rbum_id.to_string(),
                 to_rbum_item_id: to_rbum_item_id.to_string(),
-                to_own_paths: cxt.own_paths.to_string(),
+                to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside: false,
                 ext: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(())
     }
 
-    pub async fn add_rel(add_req: &mut RbumRelAggAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        let rbum_rel_id = Self::add_rbum(&mut add_req.rel, funs, cxt).await?;
+    pub async fn add_rel(add_req: &mut RbumRelAggAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        let rbum_rel_id = Self::add_rbum(&mut add_req.rel, funs, ctx).await?;
         for attr in &add_req.attrs {
             RbumRelAttrServ::add_rbum(
                 &mut RbumRelAttrAddReq {
@@ -217,7 +217,7 @@ impl<'a> RbumRelServ {
                     record_only: attr.record_only,
                 },
                 funs,
-                cxt,
+                ctx,
             )
             .await?;
         }
@@ -230,7 +230,7 @@ impl<'a> RbumRelServ {
                     rel_rbum_rel_id: rbum_rel_id.to_string(),
                 },
                 funs,
-                cxt,
+                ctx,
             )
             .await?;
         }
@@ -245,9 +245,9 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        Self::find_from_simple_rels(tag, from_rbum_kind, with_sub, from_rbum_id, desc_sort_by_create, desc_sort_by_update, funs, cxt)
+        Self::find_from_simple_rels(tag, from_rbum_kind, with_sub, from_rbum_id, desc_sort_by_create, desc_sort_by_update, funs, ctx)
             .await
             .map(|r| r.into_iter().map(|item| item.rel_id).collect())
     }
@@ -260,7 +260,7 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         Self::find_rbums(
             &RbumRelFilterReq {
@@ -277,7 +277,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
         .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, true)).collect())
@@ -291,7 +291,7 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         Self::find_rels(
             &RbumRelFilterReq {
@@ -308,7 +308,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -323,7 +323,7 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
         let result = Self::paginate_from_simple_rels(
             tag,
@@ -335,7 +335,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(TardisPage {
@@ -356,7 +356,7 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         let result = Self::paginate_rbums(
             &RbumRelFilterReq {
@@ -375,7 +375,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(TardisPage {
@@ -396,7 +396,7 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         Self::paginate_rels(
             &RbumRelFilterReq {
@@ -415,7 +415,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -426,7 +426,7 @@ impl<'a> RbumRelServ {
         with_sub: bool,
         from_rbum_id: &str,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<u64> {
         Self::count_rels(
             &RbumRelFilterReq {
@@ -441,7 +441,7 @@ impl<'a> RbumRelServ {
                 to_own_paths: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -452,9 +452,9 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        Self::find_to_simple_rels(tag, to_rbum_item_id, desc_sort_by_create, desc_sort_by_update, funs, cxt).await.map(|r| r.into_iter().map(|item| item.rel_id).collect())
+        Self::find_to_simple_rels(tag, to_rbum_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await.map(|r| r.into_iter().map(|item| item.rel_id).collect())
     }
 
     pub async fn find_to_simple_rels(
@@ -463,12 +463,12 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         Self::find_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(cxt.own_paths.to_string()),
+                    own_paths: Some(ctx.own_paths.to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
@@ -482,7 +482,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
         .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, false)).collect())
@@ -494,12 +494,12 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
         Self::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(cxt.own_paths.to_string()),
+                    own_paths: Some(ctx.own_paths.to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
@@ -513,7 +513,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
@@ -526,9 +526,9 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
-        let result = Self::paginate_to_simple_rels(tag, to_rbum_item_id, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
+        let result = Self::paginate_to_simple_rels(tag, to_rbum_item_id, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         Ok(TardisPage {
             page_size: result.page_size,
             page_number: result.page_number,
@@ -545,12 +545,12 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         let result = Self::paginate_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(cxt.own_paths.to_string()),
+                    own_paths: Some(ctx.own_paths.to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
@@ -566,7 +566,7 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(TardisPage {
@@ -585,12 +585,12 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
         Self::paginate_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(cxt.own_paths.to_string()),
+                    own_paths: Some(ctx.own_paths.to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
@@ -606,16 +606,16 @@ impl<'a> RbumRelServ {
             desc_sort_by_create,
             desc_sort_by_update,
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
 
-    pub async fn count_to_rels(tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn count_to_rels(tag: &str, to_rbum_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
         Self::count_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
-                    own_paths: Some(cxt.own_paths.to_string()),
+                    own_paths: Some(ctx.own_paths.to_string()),
                     with_sub_own_paths: true,
                     ignore_scope: true,
                     ..Default::default()
@@ -627,13 +627,13 @@ impl<'a> RbumRelServ {
                 to_own_paths: None,
             },
             funs,
-            cxt,
+            ctx,
         )
         .await
     }
 
-    async fn count_rels(filter: &RbumRelFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        RbumRelServ::count_rbums(filter, funs, cxt).await
+    async fn count_rels(filter: &RbumRelFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        RbumRelServ::count_rbums(filter, funs, ctx).await
     }
 
     async fn find_rels(
@@ -641,10 +641,10 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelAggResp>> {
-        let rbum_rels = RbumRelServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
-        Self::package_agg_rels(rbum_rels, filter, funs, cxt).await
+        let rbum_rels = RbumRelServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Self::package_agg_rels(rbum_rels, filter, funs, ctx).await
     }
 
     async fn paginate_rels(
@@ -654,10 +654,10 @@ impl<'a> RbumRelServ {
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelAggResp>> {
-        let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await?;
-        let result = Self::package_agg_rels(rbum_rels.records, filter, funs, cxt).await?;
+        let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        let result = Self::package_agg_rels(rbum_rels.records, filter, funs, ctx).await?;
         Ok(TardisPage {
             page_number,
             total_size: rbum_rels.total_size as u64,
@@ -666,7 +666,7 @@ impl<'a> RbumRelServ {
         })
     }
 
-    async fn package_agg_rels(rels: Vec<RbumRelDetailResp>, filter: &RbumRelFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
+    async fn package_agg_rels(rels: Vec<RbumRelDetailResp>, filter: &RbumRelFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumRelAggResp>> {
         let mut result = Vec::with_capacity(rels.len());
         for rel in rels {
             let rbum_rel_id = rel.id.to_string();
@@ -680,7 +680,7 @@ impl<'a> RbumRelServ {
                     None,
                     None,
                     funs,
-                    cxt,
+                    ctx,
                 )
                 .await?,
                 envs: RbumRelEnvServ::find_rbums(
@@ -691,7 +691,7 @@ impl<'a> RbumRelServ {
                     None,
                     None,
                     funs,
-                    cxt,
+                    ctx,
                 )
                 .await?,
             };
@@ -700,16 +700,16 @@ impl<'a> RbumRelServ {
         Ok(result)
     }
 
-    pub async fn find_rel_ids(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<String>> {
-        let ids = funs.db().find_dtos::<IdResp>(&Self::package_simple_rel_query(find_req, cxt)).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
+    pub async fn find_rel_ids(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let ids = funs.db().find_dtos::<IdResp>(&Self::package_simple_rel_query(find_req, ctx)).await?.iter().map(|i| i.id.to_string()).collect::<Vec<String>>();
         Ok(ids)
     }
 
-    pub async fn exist_simple_rel(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
-        funs.db().count(&Self::package_simple_rel_query(find_req, cxt)).await.map(|i| i > 0)
+    pub async fn exist_simple_rel(find_req: &RbumRelFindReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        funs.db().count(&Self::package_simple_rel_query(find_req, ctx)).await.map(|i| i > 0)
     }
 
-    fn package_simple_rel_query(find_req: &RbumRelFindReq, cxt: &TardisContext) -> SelectStatement {
+    fn package_simple_rel_query(find_req: &RbumRelFindReq, ctx: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query.column(rbum_rel::Column::Id).from(rbum_rel::Entity);
         if let Some(tag) = &find_req.tag {
@@ -727,16 +727,16 @@ impl<'a> RbumRelServ {
         query.cond_where(
             Cond::all().add(
                 Cond::any()
-                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", cxt.own_paths).as_str()))
-                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", cxt.own_paths).as_str())),
+                    .add(Expr::col(rbum_rel::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
+                    .add(Expr::col(rbum_rel::Column::ToOwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
             ),
         );
         query
     }
 
     // TODO cache
-    pub async fn check_rel(check_req: &mut RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
-        if Self::do_check_rel(check_req, funs, cxt).await? {
+    pub async fn check_rel(check_req: &mut RbumRelCheckReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        if Self::do_check_rel(check_req, funs, ctx).await? {
             return Ok(true);
         }
         let rel_rbum_set_cate_ids = if check_req.from_rbum_kind == RbumRelFromKind::Item {
@@ -751,7 +751,7 @@ impl<'a> RbumRelServ {
                 None,
                 None,
                 funs,
-                cxt,
+                ctx,
             )
             .await?
             .into_iter()
@@ -763,18 +763,18 @@ impl<'a> RbumRelServ {
             return Ok(false);
         };
         for rel_rbum_set_cate_id in rel_rbum_set_cate_ids {
-            let rbum_set_cate_base = RbumSetCateServ::peek_rbum(&rel_rbum_set_cate_id, &RbumSetCateFilterReq::default(), funs, cxt).await?;
+            let rbum_set_cate_base = RbumSetCateServ::peek_rbum(&rel_rbum_set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
             if check_req.from_rbum_kind != RbumRelFromKind::SetCate {
                 check_req.from_rbum_kind = RbumRelFromKind::SetCate;
                 check_req.from_rbum_id = rbum_set_cate_base.id.clone();
                 // Check directly related records
-                if Self::do_check_rel(check_req, funs, cxt).await? {
+                if Self::do_check_rel(check_req, funs, ctx).await? {
                     return Ok(true);
                 }
             }
             check_req.from_rbum_kind = RbumRelFromKind::Set;
             check_req.from_rbum_id = rbum_set_cate_base.rel_rbum_set_id.clone();
-            if Self::do_check_rel(check_req, funs, cxt).await? {
+            if Self::do_check_rel(check_req, funs, ctx).await? {
                 return Ok(true);
             }
             let rbum_set_cate_with_rel_ids = RbumSetCateServ::find_id_rbums(
@@ -788,14 +788,14 @@ impl<'a> RbumRelServ {
                 None,
                 None,
                 funs,
-                cxt,
+                ctx,
             )
             .await?;
             for rbum_set_cate_with_rel_id in rbum_set_cate_with_rel_ids {
                 check_req.from_rbum_kind = RbumRelFromKind::SetCate;
                 check_req.from_rbum_id = rbum_set_cate_with_rel_id;
                 // Check indirectly related records
-                if Self::do_check_rel(check_req, funs, cxt).await? {
+                if Self::do_check_rel(check_req, funs, ctx).await? {
                     return Ok(true);
                 }
             }
@@ -803,7 +803,7 @@ impl<'a> RbumRelServ {
         Ok(false)
     }
 
-    async fn do_check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+    async fn do_check_rel(check_req: &RbumRelCheckReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
         let rbum_rel_ids = Self::find_rel_ids(
             &RbumRelFindReq {
                 tag: Some(check_req.tag.clone()),
@@ -812,7 +812,7 @@ impl<'a> RbumRelServ {
                 to_rbum_item_id: Some(check_req.to_rbum_item_id.clone()),
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         for rbum_rel_id in rbum_rel_ids {
@@ -884,7 +884,7 @@ impl<'a> RbumRelServ {
         Ok(false)
     }
 
-    pub async fn delete_rel_with_ext(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_rel_with_ext(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
         let rbum_rel_env_ids = RbumRelEnvServ::find_id_rbums(
             &RbumRelExtFilterReq {
                 basic: Default::default(),
@@ -893,7 +893,7 @@ impl<'a> RbumRelServ {
             None,
             None,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         let rbum_rel_attr_ids = RbumRelAttrServ::find_id_rbums(
@@ -904,16 +904,16 @@ impl<'a> RbumRelServ {
             None,
             None,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         for rbum_rel_env_id in rbum_rel_env_ids {
-            RbumRelEnvServ::delete_rbum(&rbum_rel_env_id, funs, cxt).await?;
+            RbumRelEnvServ::delete_rbum(&rbum_rel_env_id, funs, ctx).await?;
         }
         for rbum_rel_attr_id in rbum_rel_attr_ids {
-            RbumRelAttrServ::delete_rbum(&rbum_rel_attr_id, funs, cxt).await?;
+            RbumRelAttrServ::delete_rbum(&rbum_rel_attr_id, funs, ctx).await?;
         }
-        RbumRelServ::delete_rbum(id, funs, cxt).await
+        RbumRelServ::delete_rbum(id, funs, ctx).await
     }
 }
 
@@ -955,9 +955,9 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumRelAttrAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, cxt).await?;
-        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, cxt).await?;
+    async fn before_add_rbum(add_req: &mut RbumRelAttrAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
+        Self::check_scope(&add_req.rel_rbum_kind_attr_id, RbumKindAttrServ::get_table_name(), funs, ctx).await?;
         Ok(())
     }
 
@@ -975,7 +975,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
         Ok(rbum_rel_attr)
     }
 
-    async fn package_query(_: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -1000,7 +1000,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
         if let Some(rel_rbum_rel_id) = &filter.rel_rbum_rel_id {
             query.and_where(Expr::tbl(rbum_rel_attr::Entity, rbum_rel_attr::Column::RelRbumRelId).eq(rel_rbum_rel_id.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
     }
 }
@@ -1024,8 +1024,8 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumRelEnvAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, cxt).await?;
+    async fn before_add_rbum(add_req: &mut RbumRelEnvAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership_with_table_name(&add_req.rel_rbum_rel_id, RbumRelServ::get_table_name(), funs, ctx).await?;
         Ok(())
     }
 
@@ -1043,7 +1043,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
         Ok(rbum_rel_env)
     }
 
-    async fn package_query(_: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(_: bool, filter: &RbumRelExtFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -1062,7 +1062,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
         if let Some(rel_rbum_rel_id) = &filter.rel_rbum_rel_id {
             query.and_where(Expr::tbl(rbum_rel_env::Entity, rbum_rel_env::Column::RelRbumRelId).eq(rel_rbum_rel_id.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, true, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
     }
 }

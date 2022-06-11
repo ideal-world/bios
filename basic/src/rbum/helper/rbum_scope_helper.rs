@@ -64,14 +64,14 @@ pub fn get_path_item(scope_level: i8, own_paths: &str) -> Option<String> {
     split_items.get(scope_level as usize - 1).map(|s| s.to_string())
 }
 
-pub fn get_scope_level_by_context(cxt: &TardisContext) -> TardisResult<RbumScopeLevelKind> {
-    let own_paths = cxt.own_paths.trim();
+pub fn get_scope_level_by_context(ctx: &TardisContext) -> TardisResult<RbumScopeLevelKind> {
+    let own_paths = ctx.own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
     RbumScopeLevelKind::from_int(own_paths.matches('/').count() as i8)
 }
 
-pub fn get_max_level_id_by_context(cxt: &TardisContext) -> Option<String> {
-    let own_paths = cxt.own_paths.trim();
+pub fn get_max_level_id_by_context(ctx: &TardisContext) -> Option<String> {
+    let own_paths = ctx.own_paths.trim();
     if own_paths.is_empty() {
         return None;
     }
@@ -79,16 +79,16 @@ pub fn get_max_level_id_by_context(cxt: &TardisContext) -> Option<String> {
     own_paths.split('/').collect::<Vec<&str>>().last().map(|s| s.to_string())
 }
 
-pub fn degrade_own_paths(mut cxt: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
-    if !new_own_paths.contains(&cxt.own_paths) {
+pub fn degrade_own_paths(mut ctx: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
+    if !new_own_paths.contains(&ctx.own_paths) {
         return Err(TardisError::Conflict("not qualified for downgrade".to_string()));
     }
-    cxt.own_paths = new_own_paths.to_string();
-    Ok(cxt)
+    ctx.own_paths = new_own_paths.to_string();
+    Ok(ctx)
 }
 
-pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i8>, filter: &RbumBasicFilterReq, cxt: &TardisContext) -> bool {
-    let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &cxt.own_paths };
+pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i8>, filter: &RbumBasicFilterReq, ctx: &TardisContext) -> bool {
+    let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &ctx.own_paths };
     if record_own_paths == filter_own_paths || filter.with_sub_own_paths && record_own_paths.contains(filter_own_paths) {
         return true;
     }

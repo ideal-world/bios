@@ -9,7 +9,7 @@ use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRel
 #[serde(default)]
 pub struct RbumBasicFilterReq {
     pub ignore_scope: bool,
-    pub rel_cxt_owner: bool,
+    pub rel_ctx_owner: bool,
 
     pub own_paths: Option<String>,
     pub with_sub_own_paths: bool,

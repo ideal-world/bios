@@ -55,38 +55,38 @@ where
 
     // ----------------------------- Ownership -------------------------------
 
-    async fn check_ownership(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership_with_table_name(id, Self::get_table_name(), funs, cxt).await
+    async fn check_ownership(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership_with_table_name(id, Self::get_table_name(), funs, ctx).await
     }
 
-    async fn check_ownership_with_table_name(id: &str, table_name: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        if funs.db().count(&Self::package_ownership_query_with_table_name(id, table_name, cxt)).await? == 0 {
+    async fn check_ownership_with_table_name(id: &str, table_name: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        if funs.db().count(&Self::package_ownership_query_with_table_name(id, table_name, ctx)).await? == 0 {
             return Err(funs.err().not_found(
                 &Self::get_obj_name_from(table_name),
                 "check",
-                &format!("ownership {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, cxt.owner),
+                &format!("ownership {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, ctx.owner),
             ));
         }
         Ok(())
     }
 
-    fn package_ownership_query(id: &str, cxt: &TardisContext) -> SelectStatement {
-        Self::package_ownership_query_with_table_name(id, Self::get_table_name(), cxt)
+    fn package_ownership_query(id: &str, ctx: &TardisContext) -> SelectStatement {
+        Self::package_ownership_query_with_table_name(id, Self::get_table_name(), ctx)
     }
 
-    fn package_ownership_query_with_table_name(id: &str, table_name: &str, cxt: &TardisContext) -> SelectStatement {
+    fn package_ownership_query_with_table_name(id: &str, table_name: &str, ctx: &TardisContext) -> SelectStatement {
         let mut query = Query::select();
         query
             .column(ID_FIELD.clone())
             .from(Alias::new(table_name))
             .and_where(Expr::col(ID_FIELD.clone()).eq(id))
-            .and_where(Expr::col(OWN_PATHS_FIELD.clone()).like(format!("{}%", cxt.own_paths).as_str()));
+            .and_where(Expr::col(OWN_PATHS_FIELD.clone()).like(format!("{}%", ctx.own_paths).as_str()));
         query
     }
 
     // ----------------------------- Scope -------------------------------
 
-    async fn check_scope(id: &str, table_name: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
+    async fn check_scope(id: &str, table_name: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         if funs
             .db()
             .count(
@@ -94,7 +94,7 @@ where
                     .column((Alias::new(table_name), ID_FIELD.clone()))
                     .from(Alias::new(table_name))
                     .and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).eq(id))
-                    .with_scope(table_name, &cxt.own_paths, false, cxt),
+                    .with_scope(table_name, &ctx.own_paths, false, ctx),
             )
             .await?
             == 0
@@ -102,7 +102,7 @@ where
             return Err(funs.err().not_found(
                 &Self::get_obj_name_from(table_name),
                 "check",
-                &format!("scope {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, cxt.owner),
+                &format!("scope {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, ctx.owner),
             ));
         }
         Ok(())
@@ -154,7 +154,7 @@ where
 
     // ----------------------------- Add -------------------------------
 
-    async fn package_add(add_req: &AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<E>;
+    async fn package_add(add_req: &AddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<E>;
 
     async fn before_add_rbum(_: &mut AddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
@@ -164,10 +164,10 @@ where
         Ok(())
     }
 
-    async fn add_rbum(add_req: &mut AddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        Self::before_add_rbum(add_req, funs, cxt).await?;
-        let domain = Self::package_add(add_req, funs, cxt).await?;
-        let insert_result = funs.db().insert_one(domain, cxt).await?;
+    async fn add_rbum(add_req: &mut AddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        Self::before_add_rbum(add_req, funs, ctx).await?;
+        let domain = Self::package_add(add_req, funs, ctx).await?;
+        let insert_result = funs.db().insert_one(domain, ctx).await?;
         let id_value = insert_result.last_insert_id.into_value_tuple();
         let id = match id_value {
             ValueTuple::One(v) => {
@@ -180,8 +180,8 @@ where
             _ => None,
         };
         if let Some(id) = id {
-            Self::after_add_rbum(&id, add_req, funs, cxt).await?;
-            rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, cxt).await?;
+            Self::after_add_rbum(&id, add_req, funs, ctx).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, ctx).await?;
             Ok(id)
         } else {
             return Err(funs.err().internal_error(&Self::get_obj_name(), "add", "id data type is invalid, currently only the string is supported"));
@@ -190,33 +190,33 @@ where
 
     // ----------------------------- Modify -------------------------------
 
-    async fn package_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<E>;
+    async fn package_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<E>;
 
-    async fn before_modify_rbum(id: &str, _: &mut ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_ownership(id, funs, cxt).await
+    async fn before_modify_rbum(id: &str, _: &mut ModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, funs, ctx).await
     }
 
     async fn after_modify_rbum(_: &str, _: &mut ModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
-    async fn modify_rbum(id: &str, modify_req: &mut ModifyReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::before_modify_rbum(id, modify_req, funs, cxt).await?;
-        let domain = Self::package_modify(id, modify_req, funs, cxt).await?;
-        funs.db().update_one(domain, cxt).await?;
-        Self::after_modify_rbum(id, modify_req, funs, cxt).await?;
-        rbum_event_helper::try_notify(Self::get_table_name(), "u", id, funs, cxt).await?;
+    async fn modify_rbum(id: &str, modify_req: &mut ModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::before_modify_rbum(id, modify_req, funs, ctx).await?;
+        let domain = Self::package_modify(id, modify_req, funs, ctx).await?;
+        funs.db().update_one(domain, ctx).await?;
+        Self::after_modify_rbum(id, modify_req, funs, ctx).await?;
+        rbum_event_helper::try_notify(Self::get_table_name(), "u", id, funs, ctx).await?;
         Ok(())
     }
 
     // ----------------------------- Delete -------------------------------
 
-    async fn package_delete(id: &str, _funs: &TardisFunsInst<'a>, _cxt: &TardisContext) -> TardisResult<Select<E::Entity>> {
+    async fn package_delete(id: &str, _funs: &TardisFunsInst<'a>, _ctx: &TardisContext) -> TardisResult<Select<E::Entity>> {
         Ok(E::Entity::find().filter(Expr::col(ID_FIELD.clone()).eq(id)))
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
-        Self::check_ownership(id, funs, cxt).await?;
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        Self::check_ownership(id, funs, ctx).await?;
         Ok(None)
     }
 
@@ -224,59 +224,59 @@ where
         Ok(())
     }
 
-    async fn delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let deleted_rbum = Self::before_delete_rbum(id, funs, cxt).await?;
-        let select = Self::package_delete(id, funs, cxt).await?;
+    async fn delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        let deleted_rbum = Self::before_delete_rbum(id, funs, ctx).await?;
+        let select = Self::package_delete(id, funs, ctx).await?;
         #[cfg(feature = "with-mq")]
         {
             let delete_records = funs.db().soft_delete_custom(select, "id").await?;
             let mq_topic_entity_deleted = &funs.rbum_conf_mq_topic_entity_deleted();
-            let mq_header = std::collections::HashMap::from([(funs.rbum_conf_mq_header_name_operator(), cxt.owner.clone())]);
+            let mq_header = std::collections::HashMap::from([(funs.rbum_conf_mq_header_name_operator(), ctx.owner.clone())]);
             for delete_record in &delete_records {
                 funs.mq().request(mq_topic_entity_deleted, tardis::TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
-            Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
-            rbum_event_helper::try_notify(Self::get_table_name(), "d", id, funs, cxt).await?;
+            Self::after_delete_rbum(id, deleted_rbum, funs, ctx).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "d", id, funs, ctx).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
         {
-            let delete_records = funs.db().soft_delete(select, &cxt.owner).await?;
-            Self::after_delete_rbum(id, deleted_rbum, funs, cxt).await?;
-            rbum_event_helper::try_notify(Self::get_table_name(), "d", &id, funs, cxt).await?;
+            let delete_records = funs.db().soft_delete(select, &ctx.owner).await?;
+            Self::after_delete_rbum(id, deleted_rbum, funs, ctx).await?;
+            rbum_event_helper::try_notify(Self::get_table_name(), "d", &id, funs, ctx).await?;
             Ok(delete_records)
         }
     }
 
     // ----------------------------- Query -------------------------------
 
-    async fn package_query(is_detail: bool, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement>;
+    async fn package_query(is_detail: bool, filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement>;
 
-    async fn peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
-        Self::do_peek_rbum(id, filter, funs, cxt).await
+    async fn peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SummaryResp> {
+        Self::do_peek_rbum(id, filter, funs, ctx).await
     }
 
-    async fn do_peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SummaryResp> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+    async fn do_peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SummaryResp> {
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            None => Err(funs.err().not_found(&Self::get_obj_name(), "peek", &format!("not found {}.{} by {}", Self::get_obj_name(), id, cxt.owner))),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "peek", &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner))),
         }
     }
 
-    async fn get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
-        Self::do_get_rbum(id, filter, funs, cxt).await
+    async fn get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<DetailResp> {
+        Self::do_get_rbum(id, filter, funs, ctx).await
     }
 
-    async fn do_get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<DetailResp> {
-        let mut query = Self::package_query(true, filter, funs, cxt).await?;
+    async fn do_get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<DetailResp> {
+        let mut query = Self::package_query(true, filter, funs, ctx).await?;
         query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            None => Err(funs.err().not_found(&Self::get_obj_name(), "get", &format!("not found {}.{} by {}", Self::get_obj_name(), id, cxt.owner))),
+            None => Err(funs.err().not_found(&Self::get_obj_name(), "get", &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner))),
         }
     }
 
@@ -287,9 +287,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
-        Self::do_paginate_id_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        Self::do_paginate_id_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     async fn do_paginate_id_rbums(
@@ -299,9 +299,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -324,9 +324,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<SummaryResp>> {
-        Self::do_paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        Self::do_paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     async fn do_paginate_rbums(
@@ -336,9 +336,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<SummaryResp>> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -361,9 +361,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<DetailResp>> {
-        Self::do_paginate_detail_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        Self::do_paginate_detail_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     async fn do_paginate_detail_rbums(
@@ -373,9 +373,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<TardisPage<DetailResp>> {
-        let mut query = Self::package_query(true, filter, funs, cxt).await?;
+        let mut query = Self::package_query(true, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -391,12 +391,12 @@ where
         })
     }
 
-    async fn find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
-        Self::do_find_one_rbum(filter, funs, cxt).await
+    async fn find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<SummaryResp>> {
+        Self::do_find_one_rbum(filter, funs, ctx).await
     }
 
-    async fn do_find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<SummaryResp>> {
-        let result = Self::find_rbums(filter, None, None, funs, cxt).await?;
+    async fn do_find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<SummaryResp>> {
+        let result = Self::find_rbums(filter, None, None, funs, ctx).await?;
         if result.len() > 1 {
             Err(funs.err().conflict(&Self::get_obj_name(), "find_one", "found multiple records"))
         } else {
@@ -409,9 +409,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        Self::do_find_id_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        Self::do_find_id_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     async fn do_find_id_rbums(
@@ -419,9 +419,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -436,9 +436,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<SummaryResp>> {
-        Self::do_find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        Self::do_find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     async fn do_find_rbums(
@@ -446,9 +446,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<SummaryResp>> {
-        let mut query = Self::package_query(false, filter, funs, cxt).await?;
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -458,12 +458,12 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
-    async fn find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
-        Self::do_find_one_detail_rbum(filter, funs, cxt).await
+    async fn find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        Self::do_find_one_detail_rbum(filter, funs, ctx).await
     }
 
-    async fn do_find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<DetailResp>> {
-        let result = Self::find_detail_rbums(filter, None, None, funs, cxt).await?;
+    async fn do_find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
+        let result = Self::find_detail_rbums(filter, None, None, funs, ctx).await?;
         if result.len() > 1 {
             Err(funs.err().conflict(&Self::get_obj_name(), "find_one_detail", "found multiple records"))
         } else {
@@ -476,9 +476,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<DetailResp>> {
-        Self::do_find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, cxt).await
+        Self::do_find_detail_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     async fn do_find_detail_rbums(
@@ -486,9 +486,9 @@ where
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<DetailResp>> {
-        let mut query = Self::package_query(true, filter, funs, cxt).await?;
+        let mut query = Self::package_query(true, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -498,30 +498,30 @@ where
         Ok(funs.db().find_dtos(&query).await?)
     }
 
-    async fn count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        Self::do_count_rbums(filter, funs, cxt).await
+    async fn count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        Self::do_count_rbums(filter, funs, ctx).await
     }
 
-    async fn do_count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<u64> {
-        let query = Self::package_query(false, filter, funs, cxt).await?;
+    async fn do_count_rbums(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+        let query = Self::package_query(false, filter, funs, ctx).await?;
         funs.db().count(&query).await
     }
 
-    async fn exist_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
-        let query = Self::count_rbums(filter, funs, cxt).await?;
+    async fn exist_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        let query = Self::count_rbums(filter, funs, ctx).await?;
         Ok(query > 0)
     }
 }
 
 pub trait RbumCrudQueryPackage {
-    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, ignore_owner: bool, has_scope: bool, cxt: &TardisContext) -> &mut Self;
-    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, cxt: &TardisContext) -> &mut Self;
+    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, ignore_owner: bool, has_scope: bool, ctx: &TardisContext) -> &mut Self;
+    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, ctx: &TardisContext) -> &mut Self;
 }
 
 impl RbumCrudQueryPackage for SelectStatement {
-    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, with_owner: bool, has_scope: bool, cxt: &TardisContext) -> &mut Self {
-        if filter.rel_cxt_owner {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWNER_FIELD.clone()).eq(cxt.owner.as_str()));
+    fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, with_owner: bool, has_scope: bool, ctx: &TardisContext) -> &mut Self {
+        if filter.rel_ctx_owner {
+            self.and_where(Expr::tbl(Alias::new(table_name), OWNER_FIELD.clone()).eq(ctx.owner.as_str()));
         }
         if let Some(ids) = &filter.ids {
             self.and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).is_in(ids.clone()));
@@ -555,9 +555,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Expr::tbl(OWNER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), OWNER_FIELD.clone()),
             );
         }
-        let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &cxt.own_paths };
+        let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &ctx.own_paths };
         if has_scope && !filter.ignore_scope {
-            self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths, cxt);
+            self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths, ctx);
         } else if filter.with_sub_own_paths {
             self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths).as_str()));
         } else {
@@ -569,7 +569,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         self
     }
 
-    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, cxt: &TardisContext) -> &mut Self {
+    fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool, ctx: &TardisContext) -> &mut Self {
         let mut cond = Cond::any().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0));
 
         let own_cond = if with_sub_own_paths {
@@ -579,7 +579,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         };
         cond = cond.add(own_cond);
 
-        if let Some(p1) = rbum_scope_helper::get_pre_paths(1, &cxt.own_paths) {
+        if let Some(p1) = rbum_scope_helper::get_pre_paths(1, &ctx.own_paths) {
             cond = cond.add(
                 Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1)).add(
                     Cond::any()
@@ -587,7 +587,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                         .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
                 ),
             );
-            if let Some(p2) = rbum_scope_helper::get_pre_paths(2, &cxt.own_paths) {
+            if let Some(p2) = rbum_scope_helper::get_pre_paths(2, &ctx.own_paths) {
                 let node_len = (p2.len() - p1.len() - 1) as u8;
                 cond = cond.add(
                     Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
@@ -601,7 +601,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                             .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
                     ),
                 );
-                if let Some(p3) = rbum_scope_helper::get_pre_paths(3, &cxt.own_paths) {
+                if let Some(p3) = rbum_scope_helper::get_pre_paths(3, &ctx.own_paths) {
                     cond = cond.add(
                         Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3)).add(
                             Cond::any()

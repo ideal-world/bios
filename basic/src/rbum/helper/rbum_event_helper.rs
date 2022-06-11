@@ -9,7 +9,7 @@ use tardis::TardisFunsInst;
 
 use crate::rbum::rbum_config::RbumConfigApi;
 
-pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<bool> {
+pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
     #[cfg(feature = "with-mq")]
     {
         if funs.rbum_conf_match_event(table_name, operate) {
@@ -19,7 +19,7 @@ pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, fu
                     tardis::TardisFuns::json.obj_to_string(&RbumEventMessage {
                         table_name: table_name.to_string(),
                         operate: operate.to_string(),
-                        operator: cxt.owner.clone(),
+                        operator: ctx.owner.clone(),
                         record_id: record_id.to_string(),
                         ts: Utc::now().timestamp_millis(),
                     })?,

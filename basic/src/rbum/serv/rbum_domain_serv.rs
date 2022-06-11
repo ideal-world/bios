@@ -76,14 +76,14 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
         Ok(rbum_domain)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumDomainDetailResp>> {
-        Self::check_ownership(id, funs, cxt).await?;
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumDomainDetailResp>> {
+        Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumItemServ::get_table_name(), rbum_item::Column::RelRbumDomainId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumCertConfServ::get_table_name(), rbum_cert_conf::Column::RelRbumDomainId.as_str(), funs).await?;
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query.columns(vec![
             (rbum_domain::Entity, rbum_domain::Column::Id),
@@ -98,7 +98,7 @@ impl<'a> RbumCrudOperation<'a, rbum_domain::ActiveModel, RbumDomainAddReq, RbumD
             (rbum_domain::Entity, rbum_domain::Column::UpdateTime),
             (rbum_domain::Entity, rbum_domain::Column::ScopeLevel),
         ]);
-        query.from(rbum_domain::Entity).with_filter(Self::get_table_name(), filter, is_detail, true, cxt);
+        query.from(rbum_domain::Entity).with_filter(Self::get_table_name(), filter, is_detail, true, ctx);
         Ok(query)
     }
 }

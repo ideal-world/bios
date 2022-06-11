@@ -74,8 +74,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         Ok(rbum_set)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumSetDetailResp>> {
-        Self::check_ownership(id, funs, cxt).await?;
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumSetDetailResp>> {
+        Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumSetCateServ::get_table_name(), rbum_set_cate::Column::RelRbumSetId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumSetItemServ::get_table_name(), rbum_set_item::Column::RelRbumSetId.as_str(), funs).await?;
         Self::check_exist_with_cond_before_delete(
@@ -102,7 +102,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         let key = &format!("{}{}", funs.rbum_conf_cache_key_set_code_(), result.code);
@@ -110,7 +110,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumSetFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -158,15 +158,15 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
                 query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
             }
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
         Ok(query)
     }
 }
 
 impl<'a> RbumSetServ {
-    pub async fn get_tree_all(rbum_set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_tree_all(rbum_set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let mut resp = Self::do_get_tree(rbum_set_id, None, true, funs, cxt).await?;
+        let mut resp = Self::do_get_tree(rbum_set_id, None, true, funs, ctx).await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
         let rbum_set_items = RbumSetItemServ::find_rbums(
@@ -189,7 +189,7 @@ impl<'a> RbumSetServ {
             None,
             None,
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         Ok(resp
@@ -225,9 +225,9 @@ impl<'a> RbumSetServ {
         rbum_set_id: &str,
         rbum_parent_set_cate_id: Option<&str>,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumSetCateSummaryResp>> {
-        let resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, false, funs, cxt).await?;
+        let resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, false, funs, ctx).await?;
         Ok(resp
             .into_iter()
             .map(|r| RbumSetCateSummaryResp {
@@ -253,9 +253,9 @@ impl<'a> RbumSetServ {
         rbum_parent_set_cate_id: Option<&str>,
         fetch_all: bool,
         funs: &TardisFunsInst<'a>,
-        cxt: &TardisContext,
+        ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumSetCateWithLevelResp>> {
-        Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
+        Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         let mut query = Query::select();
         query
             .columns(vec![
@@ -277,8 +277,8 @@ impl<'a> RbumSetServ {
 
         if !fetch_all {
             if let Some(parent_set_cate_id) = rbum_parent_set_cate_id {
-                Self::check_scope(parent_set_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
-                let parent_sys_code = RbumSetCateServ::get_sys_code(parent_set_cate_id, funs, cxt).await?;
+                Self::check_scope(parent_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
+                let parent_sys_code = RbumSetCateServ::get_sys_code(parent_set_cate_id, funs, ctx).await?;
                 query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
                 query.and_where(
                     Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len()) as i32),
@@ -291,7 +291,7 @@ impl<'a> RbumSetServ {
         funs.db().find_dtos(&query).await
     }
 
-    pub async fn get_rbum_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<String>> {
+    pub async fn get_rbum_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let key = &format!("{}{}", funs.rbum_conf_cache_key_set_code_(), code);
         if let Some(cached_id) = funs.cache().get(key).await? {
             Ok(Some(cached_id))
@@ -305,7 +305,7 @@ impl<'a> RbumSetServ {
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?
         {
@@ -325,11 +325,11 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         rbum_set_cate::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
+    async fn package_add(add_req: &RbumSetCateAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<rbum_set_cate::ActiveModel> {
         let sys_code = if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
-            Self::package_sys_code(&add_req.rel_rbum_set_id, Some(rbum_parent_cate_id), funs, cxt).await?
+            Self::package_sys_code(&add_req.rel_rbum_set_id, Some(rbum_parent_cate_id), funs, ctx).await?
         } else {
-            Self::package_sys_code(&add_req.rel_rbum_set_id, None, funs, cxt).await?
+            Self::package_sys_code(&add_req.rel_rbum_set_id, None, funs, ctx).await?
         };
         Ok(rbum_set_cate::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
@@ -345,10 +345,10 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
+    async fn before_add_rbum(add_req: &mut RbumSetCateAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         if let Some(rbum_parent_cate_id) = &add_req.rbum_parent_cate_id {
-            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
+            Self::check_scope(rbum_parent_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         }
         Ok(())
     }
@@ -379,8 +379,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         Ok(rbum_set_cate)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Option<RbumSetCateDetailResp>> {
-        Self::check_ownership(id, funs, cxt).await?;
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumSetCateDetailResp>> {
+        Self::check_ownership(id, funs, ctx).await?;
         if funs
             .db()
             .count(
@@ -414,7 +414,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 ..Default::default()
             },
             funs,
-            cxt,
+            ctx,
         )
         .await?;
         if funs
@@ -439,7 +439,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumSetCateFilterReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetCateFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -504,7 +504,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
             }
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
         Ok(query)
     }
 }
@@ -524,12 +524,12 @@ impl<'a> RbumSetCateServ {
         Ok(sys_code_item)
     }
 
-    async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
+    async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         if let Some(rbum_set_parent_cate_id) = rbum_set_parent_cate_id {
-            let rel_parent_sys_code = Self::get_sys_code(rbum_set_parent_cate_id, funs, cxt).await?;
-            Self::get_max_sys_code_by_level(rbum_set_id, Some(&rel_parent_sys_code), funs, cxt).await
+            let rel_parent_sys_code = Self::get_sys_code(rbum_set_parent_cate_id, funs, ctx).await?;
+            Self::get_max_sys_code_by_level(rbum_set_id, Some(&rel_parent_sys_code), funs, ctx).await
         } else {
-            Self::get_max_sys_code_by_level(rbum_set_id, None, funs, cxt).await
+            Self::get_max_sys_code_by_level(rbum_set_id, None, funs, ctx).await
         }
     }
 
@@ -571,8 +571,8 @@ impl<'a> RbumSetCateServ {
         }
     }
 
-    async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<String> {
-        Self::check_scope(rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
+    async fn get_sys_code(rbum_set_cate_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        Self::check_scope(rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         let sys_code = funs
             .db()
             .get_dto::<SysCodeResp>(
@@ -593,8 +593,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         rbum_set_item::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
-        let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, cxt).await?;
+    async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
+        let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?;
         Ok(rbum_set_item::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
@@ -605,10 +605,10 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumSetItemAddReq, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<()> {
-        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, cxt).await?;
-        Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, cxt).await?;
-        Self::check_scope(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, cxt).await?;
+    async fn before_add_rbum(add_req: &mut RbumSetItemAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
+        Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
+        Self::check_scope(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         Ok(())
     }
 
@@ -620,7 +620,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         })
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, _: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
 
         let mut query = Query::select();
@@ -659,13 +659,13 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         if let Some(rel_rbum_item_id) = &filter.rel_rbum_item_id {
             query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId).eq(rel_rbum_item_id.to_string()));
         }
-        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, cxt);
+        query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
     }
 }
 
 impl<'a> RbumSetItemServ {
-    pub async fn find_set_paths(rbum_item_id: &str, rbum_set_id: &str, funs: &TardisFunsInst<'a>, cxt: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
+    pub async fn find_set_paths(rbum_item_id: &str, rbum_set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
         let rbum_set_cate_sys_codes: Vec<String> = Self::find_rbums(
             &RbumSetItemFilterReq {
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
@@ -675,7 +675,7 @@ impl<'a> RbumSetItemServ {
             None,
             None,
             funs,
-            cxt,
+            ctx,
         )
         .await?
         .into_iter()
@@ -693,7 +693,7 @@ impl<'a> RbumSetItemServ {
                 None,
                 None,
                 funs,
-                cxt,
+                ctx,
             )
             .await?
             .into_iter()
