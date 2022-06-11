@@ -17,7 +17,8 @@ opt-level = "z"
 
 [dependencies]
 tardis = { version = "0.1.0-alpha9", features = ["web-server"] }
-
+# TODO move to tardis
+openssl = { version = "^0.10", features = ["vendored"] }
 serde = { version = "^1", features = ["derive"] }
 
 bios-iam = { path = "../../core/iam" }
