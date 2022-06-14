@@ -76,3 +76,25 @@ pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_cod
         Ok(None)
     }
 }
+
+pub async fn truncate_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    funs.db()
+        .execute(
+            Table::truncate()
+                .table(rbum_cert::Entity)
+                .table(rbum_cert_conf::Entity)
+                .table(rbum_domain::Entity)
+                .table(rbum_item::Entity)
+                .table(rbum_item_attr::Entity)
+                .table(rbum_kind::Entity)
+                .table(rbum_kind_attr::Entity)
+                .table(rbum_rel::Entity)
+                .table(rbum_rel_attr::Entity)
+                .table(rbum_rel_env::Entity)
+                .table(rbum_set::Entity)
+                .table(rbum_set_cate::Entity)
+                .table(rbum_set_item::Entity),
+        )
+        .await?;
+    Ok(())
+}
