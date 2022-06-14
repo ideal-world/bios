@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -19,7 +20,7 @@ const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
 pub struct IamSetServ;
 
 impl<'a> IamSetServ {
-    pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<(String, Option<(String, String)>)> {
         let code = if is_org {
             Self::get_default_org_code_by_ctx(ctx)
         } else {
@@ -40,9 +41,9 @@ impl<'a> IamSetServ {
             funs,
             ctx,
         )
-        .await?;
-        if !is_org {
-            RbumSetCateServ::add_rbum(
+            .await?;
+        let cates = if !is_org {
+            let cate_menu_id = RbumSetCateServ::add_rbum(
                 &mut RbumSetCateAddReq {
                     name: TrimString("Menus".to_string()),
                     bus_code: TrimString("menus".to_string()),
@@ -56,8 +57,8 @@ impl<'a> IamSetServ {
                 funs,
                 ctx,
             )
-            .await?;
-            RbumSetCateServ::add_rbum(
+                .await?;
+            let cate_api_id = RbumSetCateServ::add_rbum(
                 &mut RbumSetCateAddReq {
                     name: TrimString("Apis".to_string()),
                     bus_code: TrimString("apis".to_string()),
@@ -71,9 +72,12 @@ impl<'a> IamSetServ {
                 funs,
                 ctx,
             )
-            .await?;
-        }
-        Ok(set_id)
+                .await?;
+            Some((cate_menu_id, cate_api_id))
+        } else {
+            None
+        };
+        Ok((set_id, cates))
     }
 
     pub async fn get_default_set_id_by_ctx(is_org: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
@@ -104,7 +108,7 @@ impl<'a> IamSetServ {
             funs,
             ctx,
         )
-        .await
+            .await
     }
 
     pub async fn modify_set_cate(set_cate_id: &str, modify_req: &IamSetCateModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
@@ -121,15 +125,15 @@ impl<'a> IamSetServ {
             funs,
             ctx,
         )
-        .await
+            .await
     }
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await
     }
 
-    pub async fn find_set_cates(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
-        RbumSetServ::get_tree_all(set_id, funs, ctx).await
+    pub async fn get_tree(set_id: &str, parent_set_cate_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+        RbumSetServ::get_tree(set_id, parent_set_cate_id.as_deref(), funs, ctx).await
     }
 
     pub async fn add_set_item(add_req: &IamSetItemAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
@@ -143,7 +147,7 @@ impl<'a> IamSetServ {
             funs,
             ctx,
         )
-        .await
+            .await
     }
 
     pub async fn modify_set_item(set_item_id: &str, modify_req: &mut RbumSetItemModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
@@ -177,7 +181,7 @@ impl<'a> IamSetServ {
             funs,
             ctx,
         )
-        .await
+            .await
     }
 
     pub async fn find_set_paths(set_item_id: &str, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {

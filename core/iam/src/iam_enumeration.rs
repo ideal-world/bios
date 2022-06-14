@@ -53,30 +53,31 @@ pub enum IamRelKind {
     IamAccountRole,
     IamResRole,
     IamAccountApp,
+    IamResApi,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum)]
 pub enum IamResKind {
-    MENU,
-    API,
-    ELEMENT,
+    Menu,
+    Api,
+    Ele,
 }
 
 impl IamResKind {
     pub fn from_int(s: u8) -> TardisResult<IamResKind> {
         match s {
-            0 => Ok(IamResKind::MENU),
-            1 => Ok(IamResKind::API),
-            2 => Ok(IamResKind::ELEMENT),
+            0 => Ok(IamResKind::Menu),
+            1 => Ok(IamResKind::Api),
+            2 => Ok(IamResKind::Ele),
             _ => Err(TardisError::FormatError(format!("invalid IamResKind: {}", s))),
         }
     }
 
     pub fn to_int(&self) -> u8 {
         match self {
-            IamResKind::MENU => 0,
-            IamResKind::API => 1,
-            IamResKind::ELEMENT => 2,
+            IamResKind::Menu => 0,
+            IamResKind::Api => 1,
+            IamResKind::Ele => 2,
         }
     }
 }

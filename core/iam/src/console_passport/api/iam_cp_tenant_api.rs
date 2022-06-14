@@ -6,7 +6,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
-use crate::basic::dto::iam_tenant_dto::{IamTenantBoneResp, IamTenantDetailResp};
+use crate::basic::dto::iam_tenant_dto::{IamTenantBoneResp, IamTenantSummaryResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
@@ -18,10 +18,13 @@ pub struct IamCpTenantApi;
 impl IamCpTenantApi {
     /// Get Current Tenant
     #[oai(path = "/", method = "get")]
-    async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamTenantDetailResp> {
+    async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamTenantSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamTenantServ::get_item(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &IamTenantFilterReq::default(), &funs, &ctx.0).await?;
-        TardisResp::ok(result)
+        if ctx.0.own_paths.is_empty() {
+            return TardisResp::ok(None);
+        }
+        let result = IamTenantServ::peek_item(&IamTenantServ::get_id_by_ctx(&ctx.0, &funs)?, &IamTenantFilterReq::default(), &funs, &ctx.0).await?;
+        TardisResp::ok(Some(result))
     }
 
     /// Find Tenants

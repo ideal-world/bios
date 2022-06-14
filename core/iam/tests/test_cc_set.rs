@@ -112,7 +112,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .await?;
 
     info!("【test_cc_set】 : test_single_level : Find Set Cate");
-    let set_cates = IamSetServ::find_set_cates(&set_id, &funs, context).await?;
+    let set_cates = IamSetServ::get_tree(&set_id, None, &funs, context).await?;
     assert_eq!(set_cates.len(), 3);
     assert!(set_cates.iter().any(|i| i.bus_code == "bc2-xxxxx"));
 
@@ -386,7 +386,7 @@ pub async fn test_multi_level_by_sys_context(
     .await?;
 
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By sys_context");
-    let set_cates = IamSetServ::find_set_cates(&sys_set_id, &funs, sys_context).await?;
+    let set_cates = IamSetServ::get_tree(&sys_set_id, None, &funs, sys_context).await?;
     assert_eq!(set_cates.len(), 7);
     assert!(set_cates.iter().find(|i| i.name == "t1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
@@ -505,7 +505,7 @@ pub async fn test_multi_level_by_tenant_context(
     .await?;
 
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By tenant_context");
-    let set_cates = IamSetServ::find_set_cates(&sys_set_id, &funs, t2_context).await?;
+    let set_cates = IamSetServ::get_tree(&sys_set_id, None, &funs, t2_context).await?;
     assert_eq!(set_cates.len(), 7);
     assert!(set_cates.iter().find(|i| i.name == "t2私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
@@ -626,7 +626,7 @@ pub async fn test_multi_level_by_app_context(
     .await?;
 
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By app_context");
-    let set_cates = IamSetServ::find_set_cates(&sys_set_id, &funs, t2_a1_context).await?;
+    let set_cates = IamSetServ::get_tree(&sys_set_id, None, &funs, t2_a1_context).await?;
     assert_eq!(set_cates.len(), 7);
     assert!(set_cates.iter().find(|i| i.name == "t2_a1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
