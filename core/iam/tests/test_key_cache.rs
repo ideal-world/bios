@@ -424,7 +424,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
 
     let role_id = app_admin_context.roles.get(0).unwrap();
     info!("【test_key_cache】 Disable role, expected no token record");
-    IamRoleServ::modify_role(
+    IamRoleServ::modify_role_agg(
         role_id,
         &mut IamRoleAggModifyReq {
             role: IamRoleModifyReq {
@@ -491,7 +491,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     );
 
     info!("【test_key_cache】 Enable role and login, expected two token records");
-    IamRoleServ::modify_role(
+    IamRoleServ::modify_role_agg(
         role_id,
         &mut IamRoleAggModifyReq {
             role: IamRoleModifyReq {
@@ -827,7 +827,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &mut IamResAddReq {
             code: TrimString("cs/**".to_string()),
             name: TrimString("系统控制台".to_string()),
-            kind: IamResKind::API,
+            kind: IamResKind::Api,
             icon: None,
             sort: None,
             method: None,
@@ -844,7 +844,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &mut IamResAddReq {
             code: TrimString("ca/**".to_string()),
             name: TrimString("应用控制台".to_string()),
-            kind: IamResKind::API,
+            kind: IamResKind::Api,
             icon: None,
             sort: None,
             method: None,

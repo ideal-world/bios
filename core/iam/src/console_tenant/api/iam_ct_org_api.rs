@@ -37,12 +37,12 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Org Cates By Current Tenant
-    #[oai(path = "/cate", method = "get")]
-    async fn find_cates(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    /// Find Org Tree By Current Tenant
+    #[oai(path = "/tree", method = "get")]
+    async fn get_tree(&self, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, &ctx.0).await?;
-        let result = IamSetServ::find_set_cates(&set_id, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_tree(&set_id, parent_cate_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

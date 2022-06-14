@@ -198,7 +198,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
 }
 
 impl<'a> IamRoleServ {
-    pub async fn add_role(add_req: &mut IamRoleAggAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_role_agg(add_req: &mut IamRoleAggAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let role_id = Self::add_item(&mut add_req.role, funs, ctx).await?;
         if let Some(res_ids) = &add_req.res_ids {
             for res_id in res_ids {
@@ -208,7 +208,7 @@ impl<'a> IamRoleServ {
         Ok(role_id)
     }
 
-    pub async fn modify_role(id: &str, modify_req: &mut IamRoleAggModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_role_agg(id: &str, modify_req: &mut IamRoleAggModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         Self::modify_item(id, &mut modify_req.role, funs, ctx).await?;
         if let Some(input_res_ids) = &modify_req.res_ids {
             let stored_res = Self::find_simple_rel_res(id, None, None, funs, ctx).await?;
