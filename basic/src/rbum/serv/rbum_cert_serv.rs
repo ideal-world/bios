@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::{Duration, Utc};
+use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
@@ -476,13 +476,21 @@ impl<'a> RbumCertServ {
         Ok(vcode)
     }
 
-    pub async fn validate(ak: &str, input_sk: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<(String, RbumCertRelKind, String)> {
+    pub async fn validate(
+        ak: &str,
+        input_sk: &str,
+        rbum_cert_conf_id: &str,
+        ignore_end_time: bool,
+        own_paths: &str,
+        funs: &TardisFunsInst<'a>,
+    ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
             pub sk: String,
             pub rel_rbum_kind: RbumCertRelKind,
             pub rel_rbum_id: String,
+            pub end_time: DateTime<Utc>,
         }
 
         #[derive(Debug, FromQueryResult)]
@@ -497,15 +505,18 @@ impl<'a> RbumCertServ {
             .column(rbum_cert::Column::Sk)
             .column(rbum_cert::Column::RelRbumKind)
             .column(rbum_cert::Column::RelRbumId)
+            .column(rbum_cert::Column::EndTime)
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
             .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
-            .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
-            .and_where(Expr::col(rbum_cert::Column::EndTime).gte(Utc::now().naive_utc()));
+            .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
+            if !ignore_end_time && rbum_cert.end_time < Utc::now() {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired"));
+            }
             let cert_conf_peek_resp = funs
                 .db()
                 .get_dto::<CertConfPeekResp>(
@@ -526,7 +537,7 @@ impl<'a> RbumCertServ {
                 if let Some(cached_vcode) = Self::get_and_delete_vcode_in_cache(ak, own_paths, funs).await? {
                     cached_vcode
                 } else {
-                    tardis::log::warn!(
+                    log::warn!(
                         "validation error [vcode is not exist] by ak {},rbum_cert_conf_id {}, own_paths {}",
                         ak,
                         rbum_cert_conf_id,
@@ -612,7 +623,7 @@ impl<'a> RbumCertServ {
         Ok(())
     }
 
-    pub async fn change_sk(id: &str, original_sk: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn change_sk(id: &str, original_sk: &str, input_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(id, filter, funs, ctx).await?;
         let stored_sk = Self::show_sk(id, filter, funs, ctx).await?;
         let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
@@ -625,20 +636,24 @@ impl<'a> RbumCertServ {
             if original_sk != stored_sk {
                 return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match"));
             }
-            if !rbum_cert_conf.sk_rule.is_empty() && !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(new_sk) {
-                return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} is not match sk rule", new_sk)));
+            if !rbum_cert_conf.sk_rule.is_empty() && !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(input_sk) {
+                return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} is not match sk rule", input_sk)));
+            }
+            let new_sk = if rbum_cert_conf.sk_encrypted {
+                Self::encrypt_sk(input_sk, rbum_cert.ak.as_str())?
+            } else {
+                input_sk.to_string()
+            };
+            if !rbum_cert_conf.repeatable && original_sk == new_sk {
+                return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} cannot be duplicated", input_sk)));
             }
             let end_time = Utc::now() + Duration::seconds(rbum_cert_conf.expire_sec as i64);
-            if rbum_cert_conf.sk_encrypted {
-                (Self::encrypt_sk(new_sk, rbum_cert.ak.as_str())?, end_time)
-            } else {
-                (new_sk.to_string(), end_time)
-            }
+            (new_sk, end_time)
         } else {
             if original_sk != stored_sk {
                 return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match"));
             }
-            (new_sk.to_string(), rbum_cert.start_time + (rbum_cert.end_time - rbum_cert.start_time))
+            (input_sk.to_string(), rbum_cert.start_time + (rbum_cert.end_time - rbum_cert.start_time))
         };
         funs.db()
             .update_one(
