@@ -1,6 +1,8 @@
 use std::default::Default;
 use std::str::FromStr;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
@@ -10,9 +12,13 @@ use tardis::{log, TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_app_serv::IamAppServ;
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertTokenKind;
+use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 
 pub struct IamIdentCacheServ;
 
@@ -73,6 +79,63 @@ impl<'a> IamIdentCacheServ {
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
         }
+        Ok(())
+    }
+
+    pub async fn delete_tokens_and_contexts_by_tenant_or_app(tenant_or_app_id: &str, is_app: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_or_app_id = tenant_or_app_id.to_string();
+        let own_paths = if is_app {
+            IamAppServ::peek_item(
+                &tenant_or_app_id,
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .own_paths
+        } else {
+            tenant_or_app_id.clone()
+        };
+        let ctx = ctx.clone();
+        tardis::tokio::spawn(async move {
+            let funs = iam_constants::get_tardis_inst();
+            let filter = IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(own_paths),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let mut count = IamAccountServ::count_items(&filter, &funs, &ctx).await.unwrap() as isize;
+            let mut page_number = 1;
+            while count > 0 {
+                let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
+                for id in ids {
+                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                }
+                page_number += 1;
+                count -= 100;
+            }
+            if is_app {
+                let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx).await.unwrap() as isize;
+                let mut page_number = 1;
+                while count > 0 {
+                    let ids = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
+                    for id in ids {
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                    }
+                    page_number += 1;
+                    count -= 100;
+                }
+            }
+        });
         Ok(())
     }
 

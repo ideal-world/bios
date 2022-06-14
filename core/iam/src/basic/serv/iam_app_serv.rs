@@ -3,9 +3,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
-use tardis::{tokio, TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -13,12 +13,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
-use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::IamRelKind;
 
@@ -92,53 +90,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
 
     async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
-            let app_id = id.to_string();
-            let own_paths = Self::peek_item(
-                id,
-                &IamAppFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?
-            .own_paths;
-            let ctx = ctx.clone();
-            tokio::spawn(async move {
-                let funs = iam_constants::get_tardis_inst();
-                let filter = IamAccountFilterReq {
-                    basic: RbumBasicFilterReq {
-                        own_paths: Some(own_paths),
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx).await.unwrap() as isize;
-                let mut page_number = 1;
-                while count > 0 {
-                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
-                    for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
-                    }
-                    page_number += 1;
-                    count -= 100;
-                }
-                let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &app_id, &funs, &ctx).await.unwrap() as isize;
-                let mut page_number = 1;
-                while count > 0 {
-                    let ids = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &app_id, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
-                    for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
-                    }
-                    page_number += 1;
-                    count -= 100;
-                }
-            });
+            IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
         }
         Ok(())
     }
