@@ -80,7 +80,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
             ctx,
         )
         .await?;
-        if res.kind == IamResKind::API {
+        if res.kind == IamResKind::Api {
             IamResCacheServ::add_res(&res.code, &res.method, funs).await?;
         }
         Ok(())
@@ -136,7 +136,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
                 ctx,
             )
             .await?;
-            if res.kind == IamResKind::API {
+            if res.kind == IamResKind::Api {
                 if disabled {
                     IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
                 } else {
@@ -167,7 +167,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 
     async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
         if let Some(deleted_item) = deleted_item {
-            if deleted_item.kind == IamResKind::API {
+            if deleted_item.kind == IamResKind::Api {
                 IamResCacheServ::delete_res(&deleted_item.code, &deleted_item.method, funs).await?;
             }
             Ok(())
@@ -269,7 +269,20 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 }
 
 impl<'a> IamResServ {
+    pub async fn find_id_rel_roles(
+        rel_kind: &IamRelKind,
+        res_id: &str,
+        with_sub: bool,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_from_id_rels(rel_kind, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
+    }
+
     pub async fn find_simple_rel_roles(
+        rel_kind: &IamRelKind,
         res_id: &str,
         with_sub: bool,
         desc_by_create: Option<bool>,
@@ -277,10 +290,11 @@ impl<'a> IamResServ {
         funs: &TardisFunsInst<'a>,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_from_simple_rels(&IamRelKind::IamResRole, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
+        IamRelServ::find_from_simple_rels(rel_kind, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
     pub async fn paginate_simple_rel_roles(
+        rel_kind: &IamRelKind,
         res_id: &str,
         with_sub: bool,
         page_number: u64,
@@ -290,12 +304,10 @@ impl<'a> IamResServ {
         funs: &TardisFunsInst<'a>,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
-        IamRelServ::paginate_from_simple_rels(&IamRelKind::IamResRole, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
+        IamRelServ::paginate_from_simple_rels(rel_kind, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
     }
-}
 
-impl<'a> IamResServ {
-    pub async fn add_agg_res(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_res_agg(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let res_id = Self::add_item(&mut add_req.res, funs, ctx).await?;
         IamSetServ::add_set_item(
             &IamSetItemAddReq {

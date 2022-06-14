@@ -9,9 +9,11 @@ use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
+use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
+use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCsResApi;
 
@@ -41,12 +43,12 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Res Cates
-    #[oai(path = "/cate", method = "get")]
-    async fn find_cates(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    /// Find Res Tree
+    #[oai(path = "/tree", method = "get")]
+    async fn get_tree(&self, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
-        let result = IamSetServ::find_set_cates(&set_id, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_tree(&set_id, parent_cate_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -66,7 +68,7 @@ impl IamCsResApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
-        let result = IamResServ::add_agg_res(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
+        let result = IamResServ::add_res_agg(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -109,7 +111,49 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_simple_rel_roles(&id.0, false, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let result = IamResServ::find_simple_rel_roles(&IamRelKind::IamResRole, &id.0, false, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Add Rel Res
+    #[oai(path = "/:id/res/:res_id", method = "put")]
+    async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &id.0, &res_id.0, None, None, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Delete Rel Res
+    #[oai(path = "/:id/res/:res_id", method = "delete")]
+    async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &id.0, &res_id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Count Rel Res By Role Id
+    #[oai(path = "/:id/res/total", method = "get")]
+    async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamRelServ::count_to_rels(&IamRelKind::IamResApi, &id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Rel Res By Role Id
+    #[oai(path = "/:id/res", method = "get")]
+    async fn find_rel_res(
+        &self,
+        id: Path<String>,
+        desc_by_create: Query<Option<bool>>,
+        desc_by_update: Query<Option<bool>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamResServ::find_simple_rel_roles(&IamRelKind::IamResApi, &id.0, true, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }
