@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{Duration, Utc};
@@ -15,7 +17,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 pub struct IamRelServ;
 
@@ -68,6 +70,9 @@ impl<'a> IamRelServ {
                 ctx,
             )
             .await?;
+            if iam_res.kind != IamResKind::Api {
+                return Ok(());
+            }
             IamResCacheServ::add_or_modify_res_rel(
                 &iam_res.code,
                 &iam_res.method,
@@ -83,6 +88,57 @@ impl<'a> IamRelServ {
                 funs,
             )
             .await?;
+        } else if rel_kind == &IamRelKind::IamResRole {
+            let iam_res = IamResServ::peek_item(
+                from_iam_item_id,
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            let rel_res = if iam_res.kind != IamResKind::Api {
+                vec![iam_res]
+            } else {
+                let rel_res_api_ids = Self::find_to_id_rels(&IamRelKind::IamResApi, &from_iam_item_id, None, None, funs, ctx).await?;
+                IamResServ::find_items(
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ids: Some(rel_res_api_ids),
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?
+            };
+            for res in rel_res {
+                IamResCacheServ::add_or_modify_res_rel(
+                    &res.code,
+                    &res.method,
+                    &IamCacheResRelAddOrModifyReq {
+                        st: if start_timestamp.is_some() { Some(value1) } else { None },
+                        et: if end_timestamp.is_some() { Some(value2) } else { None },
+                        accounts: vec![],
+                        roles: vec![to_iam_item_id.to_string()],
+                        groups: vec![],
+                        apps: vec![],
+                        tenants: vec![],
+                    },
+                    funs,
+                )
+                .await?;
+            }
         }
         Ok(())
     }
@@ -127,6 +183,9 @@ impl<'a> IamRelServ {
                     ctx,
                 )
                 .await?;
+                if iam_res.kind != IamResKind::Api {
+                    return Ok(());
+                }
                 IamResCacheServ::delete_res_rel(
                     &iam_res.code,
                     &iam_res.method,
@@ -140,6 +199,50 @@ impl<'a> IamRelServ {
                     funs,
                 )
                 .await?;
+            }
+            IamRelKind::IamResApi => {
+                let iam_res = IamResServ::peek_item(
+                    from_iam_item_id,
+                    &IamResFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                if iam_res.kind != IamResKind::Api {
+                    return Ok(());
+                }
+                let rel_menu_or_ele_res_ids = IamResServ::find_id_rel_roles(&IamRelKind::IamResApi, from_iam_item_id, true, None, None, funs, ctx).await?;
+                let mut rel_roles_ids: HashMap<String, i64> = HashMap::new();
+                for rel_menu_or_ele_res_id in rel_menu_or_ele_res_ids {
+                    IamResServ::find_id_rel_roles(&IamRelKind::IamResRole, &rel_menu_or_ele_res_id, true, None, None, funs, ctx).await?.into_iter().for_each(|rel_role_id| {
+                        rel_roles_ids.entry(rel_role_id).and_modify(|count| *count += 1).or_insert(0);
+                    });
+                }
+                let only_one_rel_res_role_ids = rel_roles_ids.into_iter().filter(|(_, v)| *v == 1).map(|(k, _)| k).collect::<Vec<String>>();
+                if only_one_rel_res_role_ids.is_empty() {
+                    return Ok(());
+                }
+                for only_one_rel_res_role_id in only_one_rel_res_role_ids {
+                    IamResCacheServ::delete_res_rel(
+                        &iam_res.code,
+                        &iam_res.method,
+                        &IamCacheResRelDeleteReq {
+                            accounts: vec![],
+                            roles: vec![only_one_rel_res_role_id.to_string()],
+                            groups: vec![],
+                            apps: vec![],
+                            tenants: vec![],
+                        },
+                        funs,
+                    )
+                    .await?;
+                }
             }
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
