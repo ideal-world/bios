@@ -12,6 +12,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamPhoneVCodeCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::IamPhoneVCodeCertAddReq;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKind;
 
@@ -75,6 +76,9 @@ impl<'a> IamCertPhoneVCodeServ {
             ctx,
         )
         .await?;
+        if modify_req.ak_rule.is_some() {
+            IamCertServ::clean_cache_by_cert_conf(id, None, funs, ctx).await?;
+        }
         Ok(())
     }
 

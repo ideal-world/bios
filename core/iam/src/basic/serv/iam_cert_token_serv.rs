@@ -9,6 +9,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::RbumCertConfServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamTokenCertConfModifyReq};
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertTokenKind;
@@ -74,6 +75,9 @@ impl<'a> IamCertTokenServ {
             ctx,
         )
         .await?;
+        if modify_req.expire_sec.is_some() || modify_req.coexist_num.is_some() {
+            IamCertServ::clean_cache_by_cert_conf(id, None, funs, ctx).await?;
+        }
         Ok(())
     }
 
