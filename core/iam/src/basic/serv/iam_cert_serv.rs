@@ -210,7 +210,36 @@ impl<'a> IamCertServ {
         if rbum_cert_conf.code == IamCertKind::UserPwd.to_string() {
             return Err(funs.err().conflict("cert_conf", "delete", "can not delete default credential"));
         }
-        RbumCertConfServ::delete_rbum(id, funs, ctx).await
+        let result = RbumCertConfServ::delete_rbum(id, funs, ctx).await?;
+        Self::clean_cache_by_cert_conf(id, Some(rbum_cert_conf), funs, ctx).await?;
+        Ok(result)
+    }
+
+    pub async fn clean_cache_by_cert_conf(id: &str, fetched_cert_conf: Option<RbumCertConfSummaryResp>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        let rbum_cert_conf = if let Some(rbum_cert_conf) = fetched_cert_conf {
+            rbum_cert_conf
+        } else {
+            RbumCertConfServ::peek_rbum(
+                id,
+                &RbumCertConfFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+        };
+        if rbum_cert_conf.code == IamCertKind::UserPwd.to_string()
+            || rbum_cert_conf.code == IamCertKind::MailVCode.to_string()
+            || rbum_cert_conf.code == IamCertKind::PhoneVCode.to_string()
+        {
+            IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(&rbum_cert_conf.rel_rbum_item_id, false, funs, ctx).await?;
+        }
+        Ok(())
     }
 
     pub async fn find_certs(
