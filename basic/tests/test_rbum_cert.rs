@@ -530,25 +530,25 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     RbumCertServ::change_sk(&cert_root_id, "87654321", "abcdefgh", &RbumCertFilterReq::default(), &funs, context).await?;
 
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate");
-    assert!(RbumCertServ::validate("11", "11", "111", "11", &funs).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", "111", "11", &funs).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, "11", &funs).await.is_err());
-    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, &context.own_paths, &funs).await.is_err());
+    assert!(RbumCertServ::validate("11", "11", "111", false, "11", &funs).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", "111", false, "11", &funs).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, false, "11", &funs).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "11", &cert_conf_user_pwd_id, false, &context.own_paths, &funs).await.is_err());
     tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     info!("Test Validate RbumCertServ::validate gudaoxuri abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.own_paths, &funs).await?.0,
+        RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, false, &context.own_paths, &funs).await?.0,
         cert_gudaoxuri_id.to_string()
     );
     info!("Test Validate RbumCertServ::validate root abcdefgh");
     assert_eq!(
-        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, &context.own_paths, &funs).await?.0,
+        RbumCertServ::validate("root", "abcdefgh", &cert_conf_ssh_id, false, &context.own_paths, &funs).await?.0,
         cert_root_id.to_string()
     );
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
     // Expire
     info!("Test Validate Expire RbumCertServ::validate gudaoxuri abcdefgh");
-    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, &context.own_paths, &funs).await.is_err());
+    assert!(RbumCertServ::validate("gudaoxuri", "abcdefgh", &cert_conf_user_pwd_id, false, &context.own_paths, &funs).await.is_err());
 
     info!("【test_rbum_cert】 : Test Delete : RbumCertServ::delete_rbum");
     RbumCertServ::delete_rbum(&cert_gudaoxuri_id, &funs, context).await?;
@@ -629,8 +629,8 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
     .await?;
     tardis::tokio::time::sleep(Duration::from_secs(1)).await;
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic");
-    RbumCertServ::validate("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await?;
-    assert!(RbumCertServ::validate("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await.is_err());
+    RbumCertServ::validate("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await?;
+    assert!(RbumCertServ::validate("i@sunisle.org", "123456", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await.is_err());
 
     info!("【test_rbum_cert】 : Test Add : RbumCertServ::get_and_delete_vcode_in_cache");
     assert!(RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?.is_none());
@@ -642,12 +642,12 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
 
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic");
     RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
-    RbumCertServ::validate("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await?;
+    RbumCertServ::validate("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await?;
 
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic & expire");
     RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
     tardis::tokio::time::sleep(Duration::from_secs(3)).await;
-    assert!(RbumCertServ::validate("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, &context.own_paths, &funs).await.is_err());
+    assert!(RbumCertServ::validate("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await.is_err());
 
     funs.rollback().await?;
 

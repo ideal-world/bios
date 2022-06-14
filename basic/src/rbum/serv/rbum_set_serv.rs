@@ -164,9 +164,9 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 }
 
 impl<'a> RbumSetServ {
-    pub async fn get_tree_all(rbum_set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_tree(rbum_set_id: &str, rbum_parent_set_cate_id: Option<&str>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let mut resp = Self::do_get_tree(rbum_set_id, None, true, funs, ctx).await?;
+        let mut resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, true, funs, ctx).await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
         let rbum_set_items = RbumSetItemServ::find_rbums(
