@@ -118,6 +118,16 @@ impl IamCsAccountApi {
         TardisResp::ok(Void {})
     }
 
+    /// Delete Token By Account Id
+    #[oai(path = "/:id/token", method = "delete")]
+    async fn offline(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::delete_tokens(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Find Rel Roles By Account Id
     #[oai(path = "/:id/role", method = "get")]
     async fn find_rel_roles(
