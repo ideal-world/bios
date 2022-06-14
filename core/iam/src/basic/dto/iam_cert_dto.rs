@@ -11,6 +11,19 @@ pub struct IamContextFetchReq {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamPwdNewReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub ak: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub original_sk: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub new_sk: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tenant_id: Option<String>,
+    
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamUserPwdCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,

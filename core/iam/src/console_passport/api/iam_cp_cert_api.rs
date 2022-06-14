@@ -7,7 +7,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 
 use crate::basic::dto::iam_account_dto::AccountInfoResp;
-use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamPwdNewReq, IamUserPwdCertModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -71,6 +71,16 @@ impl IamCpCertApi {
         )
         .await?;
         TardisResp::ok(rbum_certs)
+    }
+
+    /// Set New Password
+    #[oai(path = "/cert/userpwd/new", method = "put")]
+    async fn new_pwd_without_login(&self, pwd_new_req: Json<IamPwdNewReq>) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCpCertUserPwdServ::new_pwd_without_login(&pwd_new_req.0, &funs).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 
     /// Modify Password By Current Account
