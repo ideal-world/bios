@@ -285,7 +285,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.get(0).unwrap().bus_code, "dddddd");
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all");
-    let rbums = RbumSetServ::get_tree_all(&set_id, &funs, context).await?;
+    let rbums = RbumSetServ::get_tree(&set_id, None, &funs, context).await?;
     assert_eq!(rbums.len(), 7);
     assert_eq!(rbums.get(0).unwrap().id, l1_id);
     assert_eq!(rbums.get(0).unwrap().pid, None);
@@ -488,7 +488,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all");
-    let set_infos = RbumSetServ::get_tree_all(&set_id, &funs, context).await?;
+    let set_infos = RbumSetServ::get_tree(&set_id, None, &funs, context).await?;
     assert_eq!(set_infos.len(), 2);
     assert_eq!(set_infos.get(1).unwrap().rbum_set_items.len(), 1);
     assert_eq!(set_infos.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "用户1");
