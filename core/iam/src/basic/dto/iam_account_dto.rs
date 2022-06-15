@@ -143,17 +143,17 @@ pub struct IamAccountDetailWithExtResp {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct AccountInfoResp {
+pub struct IamAccountInfoResp {
     pub account_id: String,
     pub account_name: String,
     pub token: String,
     pub roles: HashMap<String, String>,
     pub groups: HashMap<String, String>,
-    pub apps: Vec<AccountAppInfoResp>,
+    pub apps: Vec<IamAccountAppInfoResp>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct AccountAppInfoResp {
+pub struct IamAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,
     pub roles: HashMap<String, String>,

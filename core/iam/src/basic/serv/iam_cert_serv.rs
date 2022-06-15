@@ -13,7 +13,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{AccountAppInfoResp, AccountInfoResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountInfoResp};
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -27,6 +27,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
+use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
 
 pub struct IamCertServ;
@@ -287,7 +288,7 @@ impl<'a> IamCertServ {
         account_id: &str,
         token_kind: Option<String>,
         funs: &TardisFunsInst<'a>,
-    ) -> TardisResult<AccountInfoResp> {
+    ) -> TardisResult<IamAccountInfoResp> {
         let token_kind = IamCertTokenKind::parse(&token_kind);
         let token = TardisFuns::crypto.key.generate_token()?;
         let tenant_id = if let Some(tenant_id) = tenant_id { tenant_id } else { "".to_string() };
@@ -329,11 +330,11 @@ impl<'a> IamCertServ {
             )
             .await?;
 
-            let mut apps: Vec<AccountAppInfoResp> = vec![];
+            let mut apps: Vec<IamAccountAppInfoResp> = vec![];
             for app in enabled_apps {
                 let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&app.own_paths), true, funs, &context).await?;
                 let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, true, funs, &context).await?;
-                apps.push(AccountAppInfoResp {
+                apps.push(IamAccountAppInfoResp {
                     app_id: app.id,
                     app_name: app.name,
                     roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
@@ -347,7 +348,7 @@ impl<'a> IamCertServ {
 
         let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&context.own_paths), false, funs, &context).await?;
         let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, false, funs, &context).await?;
-        let account_info = AccountInfoResp {
+        let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_name.to_string(),
             token,
@@ -369,8 +370,8 @@ impl<'a> IamCertServ {
         }
     }
 
-    pub fn use_tenant_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
-        ctx.own_paths = rbum_scope_helper::get_path_item(1, &ctx.own_paths).unwrap();
+    pub fn use_sys_or_tenant_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
+        ctx.own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths).unwrap_or_else(|| "".to_string());
         Ok(ctx)
     }
 
