@@ -111,26 +111,26 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_simple_rel_roles(&IamRelKind::IamResRole, &id.0, false, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let result = IamResServ::find_from_simple_rel_roles(&IamRelKind::IamResRole, false, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
     /// Add Rel Res
-    #[oai(path = "/:id/res/:res_id", method = "put")]
-    async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/:id/res/:res_api_id", method = "put")]
+    async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &id.0, &res_id.0, None, None, &funs, &ctx.0).await?;
+        IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, None, None, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Rel Res
-    #[oai(path = "/:id/res/:res_id", method = "delete")]
-    async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/:id/res/:res_api_id", method = "delete")]
+    async fn delete_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &id.0, &res_id.0, &funs, &ctx.0).await?;
+        IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -153,7 +153,7 @@ impl IamCsResApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_simple_rel_roles(&IamRelKind::IamResApi, &id.0, true, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let result = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }

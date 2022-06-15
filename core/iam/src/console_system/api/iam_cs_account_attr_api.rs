@@ -20,8 +20,8 @@ pub struct IamCsAccountAttrApi;
 impl IamCsAccountAttrApi {
     /// Add Account Attr By Tenant Id
     #[oai(path = "/", method = "post")]
-    async fn add_attr(&self, tenant_id: Query<String>, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
-        let ctx = IamCertServ::use_tenant_ctx(ctx.0, &tenant_id.0)?;
+    async fn add_attr(&self, tenant_id: Query<Option<String>>, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAttrServ::add_account_attr(&add_req.0, &funs, &ctx).await?;
@@ -31,26 +31,34 @@ impl IamCsAccountAttrApi {
 
     /// Modify Account Attr By Account Attr Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify_attr(&self, id: Path<String>, mut modify_req: Json<RbumKindAttrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_attr(
+        &self,
+        id: Path<String>,
+        tenant_id: Query<Option<String>>,
+        mut modify_req: Json<RbumKindAttrModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAttrServ::modify_account_attr(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
+        IamAttrServ::modify_account_attr(&id.0, &mut modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Account Attr By Account Attr Id
     #[oai(path = "/:id", method = "get")]
-    async fn get_attr(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumKindAttrDetailResp> {
+    async fn get_attr(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumKindAttrDetailResp> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAttrServ::get_account_attr(&id.0, true, &funs, &ctx.0).await?;
+        let result = IamAttrServ::get_account_attr(&id.0, true, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 
     /// Find Account Attrs By Tenant Id
     #[oai(path = "/", method = "get")]
-    async fn find_attrs(&self, tenant_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
-        let ctx = IamCertServ::use_tenant_ctx(ctx.0, &tenant_id.0)?;
+    async fn find_attrs(&self, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attrs(&funs, &ctx).await?;
         TardisResp::ok(result)
@@ -58,18 +66,19 @@ impl IamCsAccountAttrApi {
 
     /// Delete Account Attr By Account Attr Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete_attr(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_attr(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAttrServ::delete_account_attr(&id.0, &funs, &ctx.0).await?;
+        IamAttrServ::delete_account_attr(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Find Account Ext Attr Values By Account Id And Tenant Id
     #[oai(path = "/value", method = "get")]
-    async fn find_account_attr_values(&self, account_id: Query<String>, tenant_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
-        let ctx = IamCertServ::use_tenant_ctx(ctx.0, &tenant_id.0)?;
+    async fn find_account_attr_values(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attr_values(&account_id.0, &funs, &ctx).await?;
         TardisResp::ok(result)
