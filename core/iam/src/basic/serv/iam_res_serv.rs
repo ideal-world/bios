@@ -269,10 +269,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
 }
 
 impl<'a> IamResServ {
-    pub async fn find_id_rel_roles(
+    pub async fn find_from_id_rel_roles(
         rel_kind: &IamRelKind,
-        res_id: &str,
         with_sub: bool,
+        res_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
@@ -281,10 +281,21 @@ impl<'a> IamResServ {
         IamRelServ::find_from_id_rels(rel_kind, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
-    pub async fn find_simple_rel_roles(
+    pub async fn find_to_id_rel_roles(
         rel_kind: &IamRelKind,
         res_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<String>> {
+        IamRelServ::find_to_id_rels(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx).await
+    }
+
+    pub async fn find_from_simple_rel_roles(
+        rel_kind: &IamRelKind,
         with_sub: bool,
+        res_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst<'a>,
@@ -293,7 +304,18 @@ impl<'a> IamResServ {
         IamRelServ::find_from_simple_rels(rel_kind, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
-    pub async fn paginate_simple_rel_roles(
+    pub async fn find_to_simple_rel_roles(
+        rel_kind: &IamRelKind,
+        res_id: &str,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_to_simple_rels(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx).await
+    }
+
+    pub async fn paginate_from_simple_rel_roles(
         rel_kind: &IamRelKind,
         res_id: &str,
         with_sub: bool,
@@ -305,6 +327,19 @@ impl<'a> IamResServ {
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         IamRelServ::paginate_from_simple_rels(rel_kind, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
+    }
+
+    pub async fn paginate_to_simple_rel_roles(
+        rel_kind: &IamRelKind,
+        res_id: &str,
+        page_number: u64,
+        page_size: u64,
+        desc_by_create: Option<bool>,
+        desc_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        IamRelServ::paginate_to_simple_rels(rel_kind, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
     }
 
     pub async fn add_res_agg(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {

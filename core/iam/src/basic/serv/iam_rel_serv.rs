@@ -88,8 +88,9 @@ impl<'a> IamRelServ {
                 funs,
             )
             .await?;
-        } else if rel_kind == &IamRelKind::IamResRole {
-            let iam_res = IamResServ::peek_item(
+        } else if rel_kind == &IamRelKind::IamResApi {
+            // TODO test
+            let iam_api_res = IamResServ::peek_item(
                 from_iam_item_id,
                 &IamResFilterReq {
                     basic: RbumBasicFilterReq {
@@ -102,26 +103,26 @@ impl<'a> IamRelServ {
                 ctx,
             )
             .await?;
-            let rel_res = if iam_res.kind != IamResKind::Api {
-                vec![iam_res]
-            } else {
-                let rel_res_api_ids = Self::find_to_id_rels(&IamRelKind::IamResApi, &from_iam_item_id, None, None, funs, ctx).await?;
-                IamResServ::find_items(
-                    &IamResFilterReq {
-                        basic: RbumBasicFilterReq {
-                            ids: Some(rel_res_api_ids),
-                            with_sub_own_paths: true,
-                            ..Default::default()
-                        },
+            if iam_api_res.kind != IamResKind::Api {
+                return Err(funs.err().conflict("iam_rel", "add", "when add IamResApi kind from item must be api kind"));
+            }
+
+            let rel_res_api_ids = Self::find_from_id_rels(&IamRelKind::IamResApi, true, &iam_api_res.id, None, None, funs, ctx).await?;
+            let rel_res = IamResServ::find_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ids: Some(rel_res_api_ids),
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
-                    None,
-                    None,
-                    funs,
-                    ctx,
-                )
-                .await?
-            };
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
             for res in rel_res {
                 IamResCacheServ::add_or_modify_res_rel(
                     &res.code,
@@ -201,7 +202,8 @@ impl<'a> IamRelServ {
                 .await?;
             }
             IamRelKind::IamResApi => {
-                let iam_res = IamResServ::peek_item(
+                // TODO test
+                let iam_api_res = IamResServ::peek_item(
                     from_iam_item_id,
                     &IamResFilterReq {
                         basic: RbumBasicFilterReq {
@@ -214,13 +216,13 @@ impl<'a> IamRelServ {
                     ctx,
                 )
                 .await?;
-                if iam_res.kind != IamResKind::Api {
-                    return Ok(());
+                if iam_api_res.kind != IamResKind::Api {
+                    return Err(funs.err().conflict("iam_rel", "delete", "when delete IamResApi kind from item must be api kind"));
                 }
-                let rel_menu_or_ele_res_ids = IamResServ::find_id_rel_roles(&IamRelKind::IamResApi, from_iam_item_id, true, None, None, funs, ctx).await?;
+                let rel_menu_or_ele_res_ids = IamResServ::find_from_id_rel_roles(&IamRelKind::IamResApi, true, &iam_api_res.id, None, None, funs, ctx).await?;
                 let mut rel_roles_ids: HashMap<String, i64> = HashMap::new();
                 for rel_menu_or_ele_res_id in rel_menu_or_ele_res_ids {
-                    IamResServ::find_id_rel_roles(&IamRelKind::IamResRole, &rel_menu_or_ele_res_id, true, None, None, funs, ctx).await?.into_iter().for_each(|rel_role_id| {
+                    IamResServ::find_from_id_rel_roles(&IamRelKind::IamResRole, true, &rel_menu_or_ele_res_id, None, None, funs, ctx).await?.into_iter().for_each(|rel_role_id| {
                         rel_roles_ids.entry(rel_role_id).and_modify(|count| *count += 1).or_insert(0);
                     });
                 }
@@ -230,8 +232,8 @@ impl<'a> IamRelServ {
                 }
                 for only_one_rel_res_role_id in only_one_rel_res_role_ids {
                     IamResCacheServ::delete_res_rel(
-                        &iam_res.code,
-                        &iam_res.method,
+                        &iam_api_res.code,
+                        &iam_api_res.method,
                         &IamCacheResRelDeleteReq {
                             accounts: vec![],
                             roles: vec![only_one_rel_res_role_id.to_string()],
