@@ -88,7 +88,7 @@ impl BIOSWebTestClient {
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[GET]|{}:{:#?}", url, result);
+        info!("<<<<[GET]|{}:{:#?}", url, result);
         result.data.unwrap()
     }
 
@@ -100,7 +100,7 @@ impl BIOSWebTestClient {
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[GET]|{}:{:#?}", url, result);
+        info!("<<<<[GET]|{}:{:#?}", url, result);
         result
     }
 
@@ -109,7 +109,7 @@ impl BIOSWebTestClient {
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[DELETE]|{}:{:#?}", url, result);
+        info!("<<<<[DELETE]|{}:{:#?}", url, result);
     }
 
     pub async fn delete_resp(&self, url: &str) -> TardisResp<Void> {
@@ -117,79 +117,85 @@ impl BIOSWebTestClient {
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[DELETE]|{}:{:#?}", url, result);
+        info!("<<<<[DELETE]|{}:{:#?}", url, result);
         result
     }
 
-    pub async fn post<B: Serialize, T>(&self, url: &str, body: &B) -> T
+    pub async fn post<B: Serialize + Debug, T>(&self, url: &str, body: &B) -> T
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
     {
+        info!(">>>>[POST]|{}:{:#?}", url, body);
         let result: TardisResp<T> = self.client.post::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[POST]|{}:{:#?}", url, result);
+        info!("<<<<[POST]|{}:{:#?}", url, result);
         result.data.unwrap()
     }
 
-    pub async fn post_resp<B: Serialize, T>(&self, url: &str, body: &B) -> TardisResp<T>
+    pub async fn post_resp<B: Serialize + Debug, T>(&self, url: &str, body: &B) -> TardisResp<T>
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
     {
+        info!(">>>>[POST]|{}:{:#?}", url, body);
         let result: TardisResp<T> = self.client.post::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[POST]|{}:{:#?}", url, result);
+        info!("<<<<[POST]|{}:{:#?}", url, result);
         result
     }
 
-    pub async fn put<B: Serialize, T>(&self, url: &str, body: &B) -> T
+    pub async fn put<B: Serialize + Debug, T>(&self, url: &str, body: &B) -> T
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
     {
+        info!(">>>>[PUT]|{}:{:#?}", url, body);
         let result: TardisResp<T> = self.client.put::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[PUT]|{}:{:#?}", url, result);
+        info!("<<<<[PUT]|{}:{:#?}", url, result);
         result.data.unwrap()
     }
 
-    pub async fn put_resp<B: Serialize, T>(&self, url: &str, body: &B) -> TardisResp<T>
+    pub async fn put_resp<B: Serialize + Debug, T>(&self, url: &str, body: &B) -> TardisResp<T>
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
     {
+        info!(">>>>[PUT]|{}:{:#?}", url, body);
         let result: TardisResp<T> = self.client.put::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[PUT]|{}:{:#?}", url, result);
+        info!("<<<<[PUT]|{}:{:#?}", url, result);
         result
     }
 
-    pub async fn patch<B: Serialize, T>(&self, url: &str, body: &B) -> T
+    pub async fn patch<B: Serialize + Debug, T>(&self, url: &str, body: &B) -> T
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
     {
+        info!(">>>>[PATCH]|{}:{:#?}", url, body);
         let result: TardisResp<T> = self.client.patch::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[PATCH]|{}:{:#?}", url, result);
+        info!("<<<<[PATCH]|{}:{:#?}", url, result);
         result.data.unwrap()
     }
 
-    pub async fn patch_resp<B: Serialize, T>(&self, url: &str, body: &B) -> TardisResp<T>
+    pub async fn patch_resp<B: Serialize + Debug, T>(&self, url: &str, body: &B) -> TardisResp<T>
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
     {
+        info!(">>>>[PATCH]|{}:{:#?}", url, body);
         let result: TardisResp<T> = self.client.patch::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
-        info!("#####[PATCH]|{}:{:#?}", url, result);
+        info!("<<<<[PATCH]|{}:{:#?}", url, result);
         result
     }
 }
