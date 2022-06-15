@@ -177,7 +177,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> 
     Ok(())
 }
 
-async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, String)> {
+pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, String)> {
     let default_account_id = TardisFuns::field.nanoid();
 
     let ctx = TardisContext {

@@ -35,7 +35,7 @@ async fn test_iam_api() -> TardisResult<()> {
 }
 
 async fn init_data() -> TardisResult<(String, String)> {
-    bios_iam::iam_initializer::truncate_data(&iam_constants::get_tardis_inst()).await?;
-    let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst()).await?.unwrap();
-    Ok((sysadmin_name, sysadmin_password))
+    let funs = iam_constants::get_tardis_inst();
+    bios_iam::iam_initializer::truncate_data(&funs).await?;
+    bios_iam::iam_initializer::init_rbum_data(&funs).await
 }
