@@ -45,7 +45,8 @@ impl IamCsAccountApi {
 
     /// Get Account By Account Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
+    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_item(
             &id.0,
@@ -57,7 +58,7 @@ impl IamCsAccountApi {
                 ..Default::default()
             },
             &funs,
-            &ctx.0,
+            &ctx,
         )
         .await?;
         TardisResp::ok(result)
@@ -110,20 +111,22 @@ impl IamCsAccountApi {
 
     /// Delete Account By Account Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAccountServ::delete_item(&id.0, &funs, &ctx.0).await?;
+        IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Token By Account Id
     #[oai(path = "/:id/token", method = "delete")]
-    async fn offline(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn offline(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAccountServ::delete_tokens(&id.0, &funs, &ctx.0).await?;
+        IamAccountServ::delete_tokens(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

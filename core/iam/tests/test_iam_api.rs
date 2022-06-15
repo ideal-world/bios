@@ -9,6 +9,7 @@ use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 mod test_basic;
 mod test_iam_scenes_passport;
+mod test_iam_scenes_system;
 
 #[tokio::test]
 async fn test_iam_api() -> TardisResult<()> {
@@ -30,6 +31,8 @@ async fn test_iam_api() -> TardisResult<()> {
     test_iam_scenes_passport::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
 
     let (sysadmin_name, sysadmin_password) = init_data().await?;
+
+    test_iam_scenes_system::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
 
     Ok(())
 }

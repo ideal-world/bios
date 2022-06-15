@@ -404,9 +404,9 @@ async fn add_res<'a>(
                 set_cate_id: cate_menu_id.to_string(),
             },
         },
-        &set_res_id,
+        set_res_id,
         funs,
-        &ctx,
+        ctx,
     )
     .await?;
     let res_api_id = IamResServ::add_res_agg(
@@ -427,9 +427,9 @@ async fn add_res<'a>(
                 set_cate_id: cate_api_id.to_string(),
             },
         },
-        &set_res_id,
+        set_res_id,
         funs,
-        &ctx,
+        ctx,
     )
     .await?;
     Ok((res_menu_id, res_api_id))

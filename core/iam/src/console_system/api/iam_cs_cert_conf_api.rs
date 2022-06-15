@@ -21,17 +21,25 @@ impl IamCsCertConfApi {
     /// Find Cert Conf
     #[oai(path = "/", method = "get")]
     async fn find_cert_conf(&self, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumCertConfDetailResp>> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertServ::find_cert_conf_detail_without_token_kind(None, None, None, true, tenant_id.0, None, None, &funs, &ctx.0).await?;
+        let result = IamCertServ::find_cert_conf_detail_without_token_kind(None, None, None, true, tenant_id.0, None, None, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 
     /// Modify UserPwd Kind Cert Conf By Cert Conf Id
     #[oai(path = "/:id/user-pwd", method = "put")]
-    async fn modify_cert_conf_user_pwd(&self, id: Path<String>, modify_req: Json<IamUserPwdCertConfAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_cert_conf_user_pwd(
+        &self,
+        id: Path<String>,
+        tenant_id: Query<Option<String>>,
+        modify_req: Json<IamUserPwdCertConfAddOrModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertUserPwdServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        IamCertUserPwdServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -54,10 +62,17 @@ impl IamCsCertConfApi {
 
     /// Modify MailVCode Kind Cert Conf By Cert Conf Id
     #[oai(path = "/:id/mail-vcode", method = "put")]
-    async fn modify_cert_conf_mail_vcode(&self, id: Path<String>, modify_req: Json<IamMailVCodeCertConfAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_cert_conf_mail_vcode(
+        &self,
+        id: Path<String>,
+        tenant_id: Query<Option<String>>,
+        modify_req: Json<IamMailVCodeCertConfAddOrModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertMailVCodeServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        IamCertMailVCodeServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -80,20 +95,28 @@ impl IamCsCertConfApi {
 
     /// Modify PhoneVCode Kind Cert Conf By Cert Conf Id
     #[oai(path = "/:id/phone-vcode", method = "put")]
-    async fn modify_cert_conf_phone_vcode(&self, id: Path<String>, modify_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_cert_conf_phone_vcode(
+        &self,
+        id: Path<String>,
+        tenant_id: Query<Option<String>>,
+        modify_req: Json<IamPhoneVCodeCertConfAddOrModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        IamCertPhoneVCodeServ::modify_cert_conf(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Cert Conf By Cert Conf Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertServ::delete_cert_conf(&id.0, &funs, &ctx.0).await?;
+        IamCertServ::delete_cert_conf(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
