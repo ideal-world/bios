@@ -10,7 +10,7 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
 
-use crate::basic::dto::iam_account_dto::AccountInfoResp;
+use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
@@ -150,7 +150,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn add_contexts(account_info: &AccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn add_contexts(account_info: &IamAccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         log::trace!("add contexts: account_id={:?}", account_info);
         funs.cache()
             .hset(

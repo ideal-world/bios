@@ -6,7 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 
-use crate::basic::dto::iam_account_dto::AccountInfoResp;
+use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::{IamContextFetchReq, IamPwdNewReq, IamUserPwdCertModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
@@ -31,7 +31,7 @@ impl IamCpCertApi {
 
     /// Login by Username and Password
     #[oai(path = "/login/userpwd", method = "put")]
-    async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>) -> TardisApiResult<AccountInfoResp> {
+    async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>) -> TardisApiResult<IamAccountInfoResp> {
         let funs = iam_constants::get_tardis_inst();
         let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, &funs).await?;
         TardisResp::ok(resp)
@@ -88,7 +88,7 @@ impl IamCpCertApi {
     async fn modify_cert_user_pwd(&self, modify_req: Json<IamUserPwdCertModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let ctx = IamCertServ::use_tenant_ctx_unsafe(ctx.0)?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamCpCertUserPwdServ::modify_cert_user_pwd(&ctx.owner, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
