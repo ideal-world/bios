@@ -1,15 +1,19 @@
+use std::fmt::Debug;
+
 use poem_openapi::types::{ParseFromJSON, ToJSON};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::fmt::Debug;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::{info, warn};
 use tardis::web::web_client::TardisWebClient;
 use tardis::web::web_resp::{TardisResp, Void};
 use tardis::TardisFuns;
 
+use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
+use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 
 pub struct BIOSWebTestClient {
     client: TardisWebClient,
@@ -44,6 +48,34 @@ impl BIOSWebTestClient {
         self.client.set_default_header(key, value);
     }
 
+    pub async fn login(
+        &mut self,
+        user_name: &str,
+        password: &str,
+        tenant_id: Option<String>,
+        app_id: Option<String>,
+        flag: Option<String>,
+        set_auth: bool,
+    ) -> TardisResult<IamAccountInfoResp> {
+        // Login
+        let account: IamAccountInfoResp = self
+            .put(
+                "/cp/login/userpwd",
+                &IamCpUserPwdLoginReq {
+                    ak: TrimString(user_name.to_string()),
+                    sk: TrimString(password.to_string()),
+                    tenant_id,
+                    flag,
+                },
+            )
+            .await;
+        // Find Context
+        if set_auth {
+            self.set_auth(&account.token, app_id).await?;
+        }
+        Ok(account)
+    }
+
     pub async fn get_to_str(&self, url: &str) -> String {
         self.client.get_to_str(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap()
     }
@@ -60,12 +92,33 @@ impl BIOSWebTestClient {
         result.data.unwrap()
     }
 
+    pub async fn get_resp<T>(&self, url: &str) -> TardisResp<T>
+    where
+        T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
+    {
+        let result: TardisResp<T> = self.client.get::<TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
+        if result.code != "200000000000" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
+        info!("#####[GET]|{}:{:#?}", url, result);
+        result
+    }
+
     pub async fn delete(&self, url: &str) {
         let result: TardisResp<Void> = self.client.delete(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
         if result.code != "200000000000" {
             warn!("========[{}]|{}", result.code, result.msg);
         }
         info!("#####[DELETE]|{}:{:#?}", url, result);
+    }
+
+    pub async fn delete_resp(&self, url: &str) -> TardisResp<Void> {
+        let result: TardisResp<Void> = self.client.delete(format!("{}{}", self.base_url, url).as_str(), None).await.unwrap().body.unwrap();
+        if result.code != "200000000000" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
+        info!("#####[DELETE]|{}:{:#?}", url, result);
+        result
     }
 
     pub async fn post<B: Serialize, T>(&self, url: &str, body: &B) -> T
@@ -80,6 +133,18 @@ impl BIOSWebTestClient {
         result.data.unwrap()
     }
 
+    pub async fn post_resp<B: Serialize, T>(&self, url: &str, body: &B) -> TardisResp<T>
+    where
+        T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
+    {
+        let result: TardisResp<T> = self.client.post::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
+        if result.code != "200000000000" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
+        info!("#####[POST]|{}:{:#?}", url, result);
+        result
+    }
+
     pub async fn put<B: Serialize, T>(&self, url: &str, body: &B) -> T
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
@@ -92,6 +157,18 @@ impl BIOSWebTestClient {
         result.data.unwrap()
     }
 
+    pub async fn put_resp<B: Serialize, T>(&self, url: &str, body: &B) -> TardisResp<T>
+    where
+        T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
+    {
+        let result: TardisResp<T> = self.client.put::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
+        if result.code != "200000000000" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
+        info!("#####[PUT]|{}:{:#?}", url, result);
+        result
+    }
+
     pub async fn patch<B: Serialize, T>(&self, url: &str, body: &B) -> T
     where
         T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
@@ -102,5 +179,17 @@ impl BIOSWebTestClient {
         }
         info!("#####[PATCH]|{}:{:#?}", url, result);
         result.data.unwrap()
+    }
+
+    pub async fn patch_resp<B: Serialize, T>(&self, url: &str, body: &B) -> TardisResp<T>
+    where
+        T: DeserializeOwned + ParseFromJSON + ToJSON + Serialize + Send + Sync + Debug,
+    {
+        let result: TardisResp<T> = self.client.patch::<B, TardisResp<T>>(format!("{}{}", self.base_url, url).as_str(), body, None).await.unwrap().body.unwrap();
+        if result.code != "200000000000" {
+            warn!("========[{}]|{}", result.code, result.msg);
+        }
+        info!("#####[PATCH]|{}:{:#?}", url, result);
+        result
     }
 }

@@ -2,6 +2,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_query::Table;
 use tardis::log::info;
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -9,22 +10,26 @@ use tardis::{TardisFuns, TardisFunsInst};
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
+use bios_basic::rbum::rbum_initializer;
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
-use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::basic::dto::iam_role_dto::IamRoleAddReq;
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq};
+use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
+use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_account_attr_api, iam_ca_app_api, iam_ca_cert_api, iam_ca_res_api, iam_ca_role_api};
-use crate::console_common::api::{iam_cc_account_api, iam_cc_role_api};
+use crate::console_common::api::{iam_cc_account_api, iam_cc_org_api, iam_cc_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_account_attr_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{
@@ -32,6 +37,8 @@ use crate::console_tenant::api::{
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
+use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
+use crate::iam_enumeration::IamResKind;
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -44,7 +51,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
         .add_module(
             iam_constants::COMPONENT_CODE,
             (
-                (iam_cc_account_api::IamCcAccountApi, iam_cc_role_api::IamCcRoleApi),
+                (iam_cc_account_api::IamCcAccountApi, iam_cc_role_api::IamCcRoleApi, iam_cc_org_api::IamCcOrgApi),
                 (
                     iam_cp_account_api::IamCpAccountApi,
                     iam_cp_cert_api::IamCpCertApi,
@@ -201,8 +208,16 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
         role_app_admin_id: "".to_string(),
     })?;
 
+    // Init resources
     IamSetServ::init_set(true, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
-    IamSetServ::init_set(false, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
+    let (set_res_id, cate_ids) = IamSetServ::init_set(false, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
+    let (cate_menu_id, cate_api_id) = cate_ids.unwrap();
+
+    let (set_menu_cs_id, set_api_cs_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "cs", "System Console", funs, &ctx).await?;
+    let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
+    let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
+
+    // Init certs
     IamCertServ::init_default_ident_conf(
         IamUserPwdCertConfAddOrModifyReq {
             ak_note: None,
@@ -239,14 +254,18 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     )
     .await?;
 
-    let role_sys_admin_id = IamRoleServ::add_item(
-        &mut IamRoleAddReq {
-            code: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
-            name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
-            icon: None,
-            sort: None,
-            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
-            disabled: None,
+    // Init some roles
+    let role_sys_admin_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
+                name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE.to_string()),
+                icon: None,
+                sort: None,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
+                disabled: None,
+            },
+            res_ids: Some(vec![set_menu_cs_id, set_api_cs_id]),
         },
         funs,
         &ctx,
@@ -268,27 +287,34 @@ async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, Stri
     )
     .await?;
 
-    let role_tenant_admin_id = IamRoleServ::add_item(
-        &mut IamRoleAddReq {
-            code: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
-            name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
-            icon: None,
-            sort: None,
-            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
-            disabled: None,
+    let role_tenant_admin_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
+                name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE.to_string()),
+                icon: None,
+                sort: None,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+            },
+            res_ids: Some(vec![set_menu_ct_id, set_api_ct_id]),
         },
         funs,
         &ctx,
     )
     .await?;
-    let role_app_admin_id = IamRoleServ::add_item(
-        &mut IamRoleAddReq {
-            code: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
-            name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
-            icon: None,
-            sort: None,
-            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
-            disabled: None,
+
+    let role_app_admin_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
+                name: TrimString(iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE.to_string()),
+                icon: None,
+                sort: None,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
+                disabled: None,
+            },
+            res_ids: Some(vec![set_menu_ca_id, set_api_ca_id]),
         },
         funs,
         &ctx,
@@ -349,4 +375,72 @@ async fn add_domain<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> Tardi
         ctx,
     )
     .await
+}
+
+async fn add_res<'a>(
+    set_res_id: &str,
+    cate_menu_id: &str,
+    cate_api_id: &str,
+    code: &str,
+    name: &str,
+    funs: &TardisFunsInst<'a>,
+    ctx: &TardisContext,
+) -> TardisResult<(String, String)> {
+    let res_menu_id = IamResServ::add_res_agg(
+        &mut IamResAggAddReq {
+            res: IamResAddReq {
+                code: TrimString(code.to_string()),
+                name: TrimString(name.to_string()),
+                kind: IamResKind::Menu,
+                icon: None,
+                sort: None,
+                method: None,
+                hide: None,
+                action: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+                disabled: None,
+            },
+            set: IamSetItemAggAddReq {
+                set_cate_id: cate_menu_id.to_string(),
+            },
+        },
+        &set_res_id,
+        funs,
+        &ctx,
+    )
+    .await?;
+    let res_api_id = IamResServ::add_res_agg(
+        &mut IamResAggAddReq {
+            res: IamResAddReq {
+                code: TrimString(format!("{}/**", code)),
+                name: TrimString(name.to_string()),
+                kind: IamResKind::Api,
+                icon: None,
+                sort: None,
+                method: None,
+                hide: None,
+                action: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+                disabled: None,
+            },
+            set: IamSetItemAggAddReq {
+                set_cate_id: cate_api_id.to_string(),
+            },
+        },
+        &set_res_id,
+        funs,
+        &ctx,
+    )
+    .await?;
+    Ok((res_menu_id, res_api_id))
+}
+
+pub async fn truncate_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    rbum_initializer::truncate_data(funs).await?;
+    funs.db().execute(Table::truncate().table(iam_account::Entity)).await?;
+    funs.db().execute(Table::truncate().table(iam_app::Entity)).await?;
+    funs.db().execute(Table::truncate().table(iam_res::Entity)).await?;
+    funs.db().execute(Table::truncate().table(iam_role::Entity)).await?;
+    funs.db().execute(Table::truncate().table(iam_tenant::Entity)).await?;
+    Ok(())
 }

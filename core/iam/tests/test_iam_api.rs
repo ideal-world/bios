@@ -8,15 +8,14 @@ use bios_iam::iam_constants;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 mod test_basic;
-mod test_iam_scenes;
+mod test_iam_scenes_passport;
 
 #[tokio::test]
 async fn test_iam_api() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = test_basic::init(&docker).await?;
 
-    let funs = iam_constants::get_tardis_inst();
-    let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
+    let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst()).await?.unwrap();
 
     tokio::spawn(async move {
         let web_server = TardisFuns::web_server();
@@ -27,7 +26,16 @@ async fn test_iam_api() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     let mut client = BIOSWebTestClient::new("https://127.0.0.1:8080/iam".to_string());
-    test_iam_scenes::test(&mut client, &sysadmin_name, &sysadmin_password).await?;
+
+    test_iam_scenes_passport::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+
+    let (sysadmin_name, sysadmin_password) = init_data().await?;
 
     Ok(())
+}
+
+async fn init_data() -> TardisResult<(String, String)> {
+    bios_iam::iam_initializer::truncate_data(&iam_constants::get_tardis_inst()).await?;
+    let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst()).await?.unwrap();
+    Ok((sysadmin_name, sysadmin_password))
 }
