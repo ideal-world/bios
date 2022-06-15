@@ -144,7 +144,7 @@ impl<'a> IamAccountServ {
             funs,
             ctx,
         )
-            .await?;
+        .await?;
         if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
             IamCertUserPwdServ::add_cert(
                 &IamUserPwdCertAddReq {
@@ -156,7 +156,7 @@ impl<'a> IamAccountServ {
                 funs,
                 ctx,
             )
-                .await?;
+            .await?;
         }
         if let Some(cert_phone) = &add_req.cert_phone {
             if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
@@ -169,7 +169,7 @@ impl<'a> IamAccountServ {
                     funs,
                     ctx,
                 )
-                    .await?;
+                .await?;
             }
         }
         if let Some(cert_mail) = &add_req.cert_mail {
@@ -198,7 +198,7 @@ impl<'a> IamAccountServ {
             funs,
             ctx,
         )
-            .await?;
+        .await?;
         if let Some(input_role_ids) = &modify_req.role_ids {
             let stored_roles = Self::find_simple_rel_roles(id, true, None, None, funs, ctx).await?;
             let stored_role_ids: Vec<String> = stored_roles.into_iter().map(|r| r.rel_id).collect();
@@ -230,7 +230,7 @@ impl<'a> IamAccountServ {
             funs,
             ctx,
         )
-            .await?;
+        .await?;
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;
         Ok(())
     }
@@ -250,5 +250,4 @@ impl<'a> IamAccountServ {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await
     }
-
 }

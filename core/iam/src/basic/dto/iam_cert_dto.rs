@@ -20,7 +20,6 @@ pub struct IamPwdNewReq {
     pub new_sk: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub tenant_id: Option<String>,
-    
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

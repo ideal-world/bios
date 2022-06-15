@@ -40,7 +40,7 @@ impl IamCtResApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamResServ::find_simple_rel_roles(&IamRelKind::IamResRole, &id.0, false, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let result = IamResServ::find_from_simple_rel_roles(&IamRelKind::IamResRole, false, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }

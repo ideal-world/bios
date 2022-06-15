@@ -136,12 +136,12 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert!(res.records.iter().any(|i| i.name == "测试资源"));
 
     info!("【test_cc_res】 : test_single_level : Find Rel Roles By Res Id");
-    let res_roles = IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole,&res_id1, false, 1, 10, None, None, &funs, context).await?;
+    let res_roles = IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_id1, false, 1, 10, None, None, &funs, context).await?;
     assert_eq!(res_roles.total_size, 0);
     info!("【test_cc_res】 : test_single_level : Add Rel Res By Id");
     assert!(IamRoleServ::add_rel_res(&role_id, &res_id1, &funs, another_context).await.is_err());
     IamRoleServ::add_rel_res(&role_id, &res_id1, &funs, context).await?;
-    let res_roles = IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole,&res_id1, false, 1, 10, None, None, &funs, context).await?;
+    let res_roles = IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_id1, false, 1, 10, None, None, &funs, context).await?;
     assert_eq!(res_roles.total_size, 1);
 
     info!("【test_cc_res】 : test_single_level : Delete Res By Id");
@@ -430,21 +430,21 @@ pub async fn test_multi_level_by_sys_context(
 
     info!("【test_cc_res】 : test_multi_level : Test Rel Roles By sys_context");
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_sys_id, &funs, sys_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_sys_global_id, &funs, sys_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, sys_context).await?.total_size,
         1
     );
     assert!(IamRoleServ::add_rel_res(&role_id, &res_t1_id, &funs, sys_context).await.is_err());
@@ -598,21 +598,21 @@ pub async fn test_multi_level_by_tenant_context(
 
     info!("【test_cc_res】 : test_multi_level : Test Rel Roles By tenant_context");
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_sys_global_id, &funs, t2_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_t2_id, &funs, t2_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_id, false, 1, 10, None, None, &funs, t2_context).await?.total_size,
         1
     );
     assert!(IamRoleServ::add_rel_res(&role_id, &res_sys_id, &funs, t2_context).await.is_err());
@@ -774,34 +774,34 @@ pub async fn test_multi_level_by_app_context(
 
     info!("【test_cc_res】 : test_multi_level : Test Rel Roles By app_context");
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_sys_global_id, &funs, t2_a1_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_a1_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_a1_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_t2_a1_id, &funs, t2_a1_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_a1_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_a1_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_sys_global_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         1
     );
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_tenant_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_tenant_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         0
     );
     IamRoleServ::add_rel_res(&role_id, &res_t2_tenant_id, &funs, t2_a1_context).await?;
     assert_eq!(
-        IamResServ::paginate_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_tenant_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
+        IamResServ::paginate_from_simple_rel_roles(&IamRelKind::IamResRole, &res_t2_tenant_id, false, 1, 10, None, None, &funs, t2_a1_context).await?.total_size,
         1
     );
     assert!(IamRoleServ::add_rel_res(&role_id, &res_sys_id, &funs, t2_a1_context).await.is_err());
