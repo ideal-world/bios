@@ -23,7 +23,7 @@ impl<'a> IamCpCertUserPwdServ {
         let (_, _, rbum_item_id) = RbumCertServ::validate(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await?;
         let ctx = TardisContext {
             own_paths: tenant_id.clone(),
-            ak: "".to_string(),
+            ak: pwd_new_req.ak.to_string(),
             owner: rbum_item_id.to_string(),
             roles: vec![],
             groups: vec![],
