@@ -619,8 +619,39 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p3))),
                         ),
                     );
-                };
-            };
+                } else if with_sub_own_paths {
+                    // System admin (own_paths = "") created Tenant admin (scope_level = 1 & own_paths = "") and App admin (scope_level = 2 & own_paths = "").
+                    //
+                    // A tenant admin needs to query the roles under that tenant and app, the corresponding condition should be (with_sub_own_paths = true):
+                    //
+                    // ```sql
+                    // scope_level = 0
+                    // OR own_paths LIKE '<tenant_id>%'
+                    // OR (scope_level = 1 AND (own_paths = '' OR own_paths LIKE '<tenant_id>%'))
+                    // OR (scope_level = 2 AND (own_paths = '' OR own_paths LIKE '<tenant_id>%'))
+                    // ```
+                    cond = cond.add(
+                        Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3)).add(
+                            Cond::any()
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                                .add(
+                                    Cond::all()
+                                        .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                                )
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
+                        ),
+                    );
+                }
+            } else if with_sub_own_paths {
+                cond = cond.add(
+                    Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
+                        Cond::any()
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                    ),
+                );
+            }
         };
 
         self.cond_where(Cond::all().add(cond));
