@@ -48,7 +48,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                     ak_rule: None,
                     sk_note: None,
                     sk_rule: None,
-                    repeatable: None,
+                    repeatable: Some(false),
                     expire_sec: None,
                 },
                 cert_conf_by_phone_vcode: None,
@@ -431,6 +431,19 @@ pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: 
         )
         .await;
     assert!(result.code.starts_with("401"));
+
+    let result: TardisResp<Void> = client
+        .put_resp(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString("654321".to_string()),
+                new_sk: TrimString("654321".to_string()),
+                tenant_id: Some(tenant_id.to_string()),
+            },
+        )
+        .await;
+    assert!(result.code.starts_with("400"));
 
     let _: Void = client
         .put(
