@@ -5,7 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::Void;
+use tardis::web::web_resp::{TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
@@ -13,7 +13,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
-use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertModifyReq;
+use bios_iam::basic::dto::iam_cert_dto::{IamPwdNewReq, IamUserPwdCertModifyReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantBoneResp;
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
@@ -29,7 +29,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     info!("【test_iam_scenes_passport:system】");
     login_page(sysadmin_name, sysadmin_password, None, None, true, client).await?;
     account_mgr_by_sys_admin(client).await?;
-    security_mgr_page_by_sys_admin(sysadmin_password, client).await?;
+    security_mgr_page_by_sys_admin(sysadmin_name, sysadmin_password, client).await?;
 
     info!("【test_iam_scenes_passport:tenant】");
     let tenant_id: String = client
@@ -74,7 +74,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
         )
         .await;
     account_mgr_by_tenant_account(client).await?;
-    security_mgr_by_tenant_account(&"123456", client).await?;
+    security_mgr_by_tenant_account("tenant_admin", "123456", &tenant_id, client).await?;
 
     info!("【test_iam_scenes_passport:app】");
     let account_id: String = client
@@ -121,7 +121,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     sleep(Duration::from_secs(1)).await;
     login_page("user1", "123456", Some(tenant_id.clone()), Some(app_id.clone()), true, client).await?;
     account_mgr_by_app_account(client).await?;
-    security_mgr_by_app_account("123456", client).await?;
+    security_mgr_by_app_account("user1", "123456", &tenant_id, &app_id, client).await?;
     Ok(())
 }
 
@@ -190,7 +190,7 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
     Ok(())
 }
 
-pub async fn security_mgr_page_by_sys_admin(password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
+pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【security_mgr_page_by_sys_admin】");
 
     // Modify Password
@@ -203,6 +203,34 @@ pub async fn security_mgr_page_by_sys_admin(password: &str, client: &mut BIOSWeb
             },
         )
         .await;
+    client.login(name, "654321", None, None, Some(IamCertTokenKind::TokenPc.to_string()), true).await?;
+
+    // Modify Password without login
+    let result: TardisResp<Void> = client
+        .put_resp(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString(password.to_string()),
+                new_sk: TrimString("654321".to_string()),
+                tenant_id: None,
+            },
+        )
+        .await;
+    assert!(result.code.starts_with("401"));
+
+    let _: Void = client
+        .put(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString("654321".to_string()),
+                new_sk: TrimString("xxxxx".to_string()),
+                tenant_id: None,
+            },
+        )
+        .await;
+    client.login(name, "xxxxx", None, None, Some(IamCertTokenKind::TokenPc.to_string()), true).await?;
 
     Ok(())
 }
@@ -289,7 +317,7 @@ pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> Ta
     Ok(())
 }
 
-pub async fn security_mgr_by_tenant_account(password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
+pub async fn security_mgr_by_tenant_account(name: &str, password: &str, tenant_id: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【security_mgr_by_tenant_account】");
 
     // Modify Password
@@ -302,6 +330,34 @@ pub async fn security_mgr_by_tenant_account(password: &str, client: &mut BIOSWeb
             },
         )
         .await;
+    client.login(name, "654321", Some(tenant_id.to_string()), None, Some(IamCertTokenKind::TokenPc.to_string()), true).await?;
+
+    // Modify Password without login
+    let result: TardisResp<Void> = client
+        .put_resp(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString(password.to_string()),
+                new_sk: TrimString("654321".to_string()),
+                tenant_id: Some(tenant_id.to_string()),
+            },
+        )
+        .await;
+    assert!(result.code.starts_with("401"));
+
+    let _: Void = client
+        .put(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString("654321".to_string()),
+                new_sk: TrimString("xxxxx".to_string()),
+                tenant_id: Some(tenant_id.to_string()),
+            },
+        )
+        .await;
+    client.login(name, "xxxxx", Some(tenant_id.to_string()), None, Some(IamCertTokenKind::TokenPc.to_string()), true).await?;
 
     Ok(())
 }
@@ -338,7 +394,7 @@ pub async fn account_mgr_by_app_account(client: &mut BIOSWebTestClient) -> Tardi
     Ok(())
 }
 
-pub async fn security_mgr_by_app_account(password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
+pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: &str, app_id: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【security_mgr_by_app_account】");
 
     // Modify Password
@@ -351,6 +407,52 @@ pub async fn security_mgr_by_app_account(password: &str, client: &mut BIOSWebTes
             },
         )
         .await;
+    client
+        .login(
+            name,
+            "654321",
+            Some(tenant_id.to_string()),
+            Some(app_id.to_string()),
+            Some(IamCertTokenKind::TokenPc.to_string()),
+            true,
+        )
+        .await?;
+
+    // Modify Password without login
+    let result: TardisResp<Void> = client
+        .put_resp(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString(password.to_string()),
+                new_sk: TrimString("654321".to_string()),
+                tenant_id: Some(tenant_id.to_string()),
+            },
+        )
+        .await;
+    assert!(result.code.starts_with("401"));
+
+    let _: Void = client
+        .put(
+            "/cp/cert/userpwd/new",
+            &IamPwdNewReq {
+                ak: TrimString(name.to_string()),
+                original_sk: TrimString("654321".to_string()),
+                new_sk: TrimString("xxxxx".to_string()),
+                tenant_id: Some(tenant_id.to_string()),
+            },
+        )
+        .await;
+    client
+        .login(
+            name,
+            "xxxxx",
+            Some(tenant_id.to_string()),
+            Some(app_id.to_string()),
+            Some(IamCertTokenKind::TokenPc.to_string()),
+            true,
+        )
+        .await?;
 
     Ok(())
 }
