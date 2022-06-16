@@ -16,7 +16,7 @@ codegen-units = 1
 opt-level = "z"
 
 [dependencies]
-tardis = { version = "0.1.0-alpha10", features = ["web-server"] }
+tardis = { version = "0.1.0-alpha11", features = ["web-server"] }
 
 serde = { version = "^1", features = ["derive"] }
 
