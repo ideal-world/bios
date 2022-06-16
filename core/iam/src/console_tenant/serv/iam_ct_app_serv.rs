@@ -42,7 +42,7 @@ impl<'a> IamCtAppServ {
         .await?;
 
         IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_ctx).await?;
-        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, funs, &app_ctx).await?;
+        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, None, funs, &app_ctx).await?;
 
         IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;

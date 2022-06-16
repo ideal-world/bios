@@ -97,7 +97,7 @@ impl IamCtRoleApi {
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::add_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
+        IamRoleServ::add_rel_account(&id.0, &account_id.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -107,7 +107,7 @@ impl IamCtRoleApi {
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::delete_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
+        IamRoleServ::delete_rel_account(&id.0, &account_id.0, None, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
