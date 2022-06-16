@@ -247,6 +247,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
             disabled: None,
             scope_level: None,
             role_ids: None,
+            org_node_ids: None,
             exts: Default::default(),
         },
         funs,
@@ -280,6 +281,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
             disabled: None,
             icon: None,
             role_ids: Some(vec![role_sys_admin_id.clone()]),
+            org_cate_ids: None,
             exts: Default::default(),
         },
         funs,
@@ -442,5 +444,6 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(iam_res::Entity)).await?;
     funs.db().execute(Table::truncate().table(iam_role::Entity)).await?;
     funs.db().execute(Table::truncate().table(iam_tenant::Entity)).await?;
+    funs.cache().flushdb().await?;
     Ok(())
 }
