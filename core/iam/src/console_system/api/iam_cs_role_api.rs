@@ -102,7 +102,7 @@ impl IamCsRoleApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::add_rel_account(&id.0, &account_id.0, &funs, &ctx).await?;
+        IamRoleServ::add_rel_account(&id.0, &account_id.0, None, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -113,7 +113,7 @@ impl IamCsRoleApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::delete_rel_account(&id.0, &account_id.0, &funs, &ctx).await?;
+        IamRoleServ::delete_rel_account(&id.0, &account_id.0, None, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

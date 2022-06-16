@@ -75,6 +75,7 @@ impl<'a> IamCsTenantServ {
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
                 role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
+                org_node_ids: None,
                 exts: Default::default(),
             },
             funs,
