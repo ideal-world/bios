@@ -12,7 +12,7 @@ use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyR
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::helper::rbum_scope_helper::get_scope_level_by_context;
-use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
@@ -227,19 +227,43 @@ impl<'a> IamRoleServ {
         Ok(())
     }
 
-    pub async fn add_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_rel_account(
+        role_id: &str,
+        account_id: &str,
+        spec_scope_level: Option<RbumScopeLevelKind>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let scope_level = get_scope_level_by_context(ctx)?;
         if scope_level == RBUM_SCOPE_LEVEL_APP && (role_id == funs.iam_basic_role_sys_admin_id() || role_id == funs.iam_basic_role_tenant_admin_id())
             || scope_level == RBUM_SCOPE_LEVEL_TENANT && role_id == funs.iam_basic_role_sys_admin_id()
         {
             return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid"));
         }
+        if let Some(spec_scope_level) = spec_scope_level {
+            let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+            if role.scope_level != spec_scope_level {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid"));
+            }
+        }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
         IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, ctx).await
     }
 
-    pub async fn delete_rel_account(role_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel_account(
+        role_id: &str,
+        account_id: &str,
+        spec_scope_level: Option<RbumScopeLevelKind>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        if let Some(spec_scope_level) = spec_scope_level {
+            let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
+            if role.scope_level != spec_scope_level {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid"));
+            }
+        }
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await
     }
 

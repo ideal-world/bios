@@ -13,6 +13,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
+use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCaRoleApi;
@@ -44,7 +45,20 @@ impl IamCaRoleApi {
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamRoleDetailResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamRoleServ::get_item(&id.0, &IamRoleFilterReq::default(), &funs, &ctx.0).await?;
+        let result = IamRoleServ::get_item(
+            &id.0,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    // Only fetch app-level roles
+                    scope_level: Some(RBUM_SCOPE_LEVEL_APP),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 
@@ -64,6 +78,8 @@ impl IamCaRoleApi {
         let result = IamRoleServ::paginate_items(
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
+                    // Only fetch app-level roles
+                    scope_level: Some(RBUM_SCOPE_LEVEL_APP),
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     ..Default::default()
@@ -100,7 +116,7 @@ impl IamCaRoleApi {
         if !IamAppServ::exist_rel_accounts(&app_id, &account_id.0, &funs, &ctx.0).await? {
             IamAppServ::add_rel_account(&app_id, &account_id.0, &funs, &ctx.0).await?;
         }
-        IamRoleServ::add_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
+        IamRoleServ::add_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -110,7 +126,7 @@ impl IamCaRoleApi {
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::delete_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
+        IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
