@@ -88,6 +88,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
+                org_node_ids: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
                 icon: None,
