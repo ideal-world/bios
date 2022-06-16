@@ -91,5 +91,6 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(rbum_set::Entity)).await?;
     funs.db().execute(Table::truncate().table(rbum_set_cate::Entity)).await?;
     funs.db().execute(Table::truncate().table(rbum_set_item::Entity)).await?;
+    funs.cache().flushdb().await?;
     Ok(())
 }
