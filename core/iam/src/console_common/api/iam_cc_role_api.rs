@@ -7,8 +7,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
+use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
+use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 
 pub struct IamCcRoleApi;
 
@@ -35,6 +37,7 @@ impl IamCcRoleApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     enabled: Some(true),
+                    scope_level: if IamAppServ::is_app_level_by_ctx(&ctx.0) { Some(RBUM_SCOPE_LEVEL_APP) } else { None },
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
