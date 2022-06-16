@@ -32,15 +32,15 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
 
     client.login(sysadmin_name, sysadmin_password, None, None, None, true).await?;
 
-    let (tenant_id, tenant_admin_user_name, tenant_admin_password) = sys_console_tenant_mgr_page(sysadmin_name, sysadmin_password, client).await?;
-    sys_console_account_mgr_page(&tenant_id, client).await?;
+    sys_console_tenant_mgr_page(sysadmin_name, sysadmin_password, client).await?;
+    sys_console_account_mgr_page(client).await?;
     let res_menu_id = sys_console_res_mgr_page(client).await?;
     sys_console_auth_mgr_page(&res_menu_id, client).await?;
 
     Ok(())
 }
 
-pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIOSWebTestClient) -> TardisResult<(String, String, String)> {
+pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【sys_console_tenant_mgr_page】");
     // Add Tenant
     let tenant_id: String = client
@@ -99,6 +99,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
+                org_node_ids: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
                 icon: None,
@@ -232,6 +233,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 disabled: Some(true),
                 icon: None,
                 role_ids: None,
+                org_cate_ids: None,
                 exts: Default::default(),
             },
         )
@@ -255,10 +257,10 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     // Offline By Account Id
     client.delete(&format!("/cs/account/{}/token?tenant_id={}", sys_admin_account_id, tenant_id)).await;
 
-    Ok((tenant_id, "admin".to_string(), "123456".to_string()))
+    Ok(())
 }
 
-pub async fn sys_console_account_mgr_page(tenant_id: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
+pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【sys_console_account_mgr_page】");
     // -------------------- Account Attr --------------------
 
@@ -361,7 +363,7 @@ pub async fn sys_console_account_mgr_page(tenant_id: &str, client: &mut BIOSWebT
     // -------------------- Account --------------------
 
     // =============== Prepare ===============
-    let role_id: String = client
+    let _: String = client
         .post(
             "/cs/role",
             &IamRoleAggAddReq {
@@ -399,6 +401,7 @@ pub async fn sys_console_account_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 cert_phone: None,
                 cert_mail: Some(TrimString("i@sunisle.org".to_string())),
                 role_ids: Some(vec![role_id.to_string()]),
+                org_node_ids: None,
                 scope_level: None,
                 disabled: None,
                 icon: None,
@@ -435,6 +438,7 @@ pub async fn sys_console_account_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 disabled: None,
                 icon: None,
                 role_ids: Some(vec![]),
+                org_cate_ids: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "".to_string())]),
             },
         )
@@ -556,7 +560,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
         .await;
 
     // Add Element Res
-    let res_ele_id: String = client
+    let _: String = client
         .post(
             "/cs/res",
             &IamResAggAddReq {
@@ -747,7 +751,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
 
     // Find Accounts
     let accounts: TardisPage<IamAccountSummaryResp> = client.get("/cs/account?with_sub=true&page_number=1&page_size=10").await;
-    let account_id = accounts.records.get(0).unwrap().id.clone();
+    let account_id = accounts.records.iter().find(|r| r.name == "bios").unwrap().id.clone();
     assert_eq!(accounts.total_size, 2);
 
     // Add Rel Account
