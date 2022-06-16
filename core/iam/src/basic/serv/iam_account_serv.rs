@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -17,6 +18,7 @@ use crate::basic::dto::iam_account_dto::{
 };
 use crate::basic::dto::iam_cert_dto::{IamMailVCodeCertAddReq, IamPhoneVCodeCertAddReq, IamUserPwdCertAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -25,6 +27,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::{IamCertKind, IamRelKind};
 
@@ -179,7 +182,23 @@ impl<'a> IamAccountServ {
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {
-                IamRoleServ::add_rel_account(role_id, &account_id, funs, ctx).await?;
+                IamRoleServ::add_rel_account(role_id, &account_id, None, funs, ctx).await?;
+            }
+        }
+        if let Some(org_cate_ids) = &add_req.org_node_ids {
+            let set_id = IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?;
+            for org_node_id in org_cate_ids {
+                IamSetServ::add_set_item(
+                    &IamSetItemAddReq {
+                        set_id: set_id.clone(),
+                        set_cate_id: org_node_id.to_string(),
+                        sort: 0,
+                        rel_rbum_item_id: account_id.to_string(),
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             }
         }
         IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, ctx).await?;
@@ -204,13 +223,39 @@ impl<'a> IamAccountServ {
             let stored_role_ids: Vec<String> = stored_roles.into_iter().map(|r| r.rel_id).collect();
             for input_role_id in input_role_ids {
                 if !stored_role_ids.contains(input_role_id) {
-                    IamRoleServ::add_rel_account(input_role_id, id, funs, ctx).await?;
+                    IamRoleServ::add_rel_account(input_role_id, id, None, funs, ctx).await?;
                 }
             }
             for stored_role_id in stored_role_ids {
                 if !input_role_ids.contains(&stored_role_id) {
-                    IamRoleServ::delete_rel_account(&stored_role_id, id, funs, ctx).await?;
+                    IamRoleServ::delete_rel_account(&stored_role_id, id, None, funs, ctx).await?;
                 }
+            }
+        }
+        // TODO test
+        if let Some(input_org_cate_ids) = &modify_req.org_cate_ids {
+            let set_id = IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?;
+            let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), false, funs, ctx).await?;
+            let mut stored_cate_ids: Vec<String> = stored_cates.iter().map(|r| r.rel_rbum_set_cate_id.to_string()).collect();
+            stored_cate_ids.dedup();
+            for input_org_cate_id in input_org_cate_ids {
+                if !stored_cate_ids.contains(input_org_cate_id) {
+                    IamSetServ::add_set_item(
+                        &IamSetItemAddReq {
+                            set_id: set_id.clone(),
+                            set_cate_id: input_org_cate_id.to_string(),
+                            sort: 0,
+                            rel_rbum_item_id: id.to_string(),
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                }
+            }
+            let deleted_item_ids: Vec<String> = stored_cates.into_iter().filter(|r| !input_org_cate_ids.contains(&r.rel_rbum_set_cate_id)).map(|r| r.id).unique().collect();
+            for deleted_item_id in deleted_item_ids {
+                IamSetServ::delete_set_item(&deleted_item_id, funs, ctx).await?;
             }
         }
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;

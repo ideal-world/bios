@@ -115,6 +115,10 @@ impl<'a> IamAppServ {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_APP_LEN as usize)
     }
 
+    pub fn is_app_level_by_ctx(ctx: &TardisContext) -> bool {
+        rbum_scope_helper::get_scope_level_by_context(ctx).unwrap() == RBUM_SCOPE_LEVEL_APP
+    }
+
     pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
             Ok(id)

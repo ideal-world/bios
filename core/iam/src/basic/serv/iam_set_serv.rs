@@ -92,7 +92,9 @@ impl<'a> IamSetServ {
     }
 
     pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
-        RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, ctx).await?.ok_or_else(|| funs.err().not_found("set", "get_id", &format!("not found set by code {}", code)))
+        RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, ctx)
+            .await?
+            .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {}", code)))
     }
 
     pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {

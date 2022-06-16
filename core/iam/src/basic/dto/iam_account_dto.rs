@@ -24,6 +24,7 @@ pub struct IamAccountAggAddReq {
     pub cert_mail: Option<TrimString>,
 
     pub role_ids: Option<Vec<String>>,
+    pub org_node_ids: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -57,6 +58,7 @@ pub struct IamAccountAggModifyReq {
     pub icon: Option<String>,
 
     pub role_ids: Option<Vec<String>>,
+    pub org_cate_ids: Option<Vec<String>>,
 
     pub exts: HashMap<String, String>,
 }
