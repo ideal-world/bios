@@ -8,8 +8,11 @@ use bios_iam::iam_constants;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 mod test_basic;
+mod test_iam_scenes_app;
+mod test_iam_scenes_common;
 mod test_iam_scenes_passport;
 mod test_iam_scenes_system;
+mod test_iam_scenes_tenant;
 
 #[tokio::test]
 async fn test_iam_api() -> TardisResult<()> {
@@ -29,10 +32,14 @@ async fn test_iam_api() -> TardisResult<()> {
     let mut client = BIOSWebTestClient::new("https://127.0.0.1:8080/iam".to_string());
 
     test_iam_scenes_passport::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
-
     let (sysadmin_name, sysadmin_password) = init_data().await?;
-
     test_iam_scenes_system::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+    let (sysadmin_name, sysadmin_password) = init_data().await?;
+    test_iam_scenes_tenant::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+    let (sysadmin_name, sysadmin_password) = init_data().await?;
+    test_iam_scenes_app::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+    let (sysadmin_name, sysadmin_password) = init_data().await?;
+    test_iam_scenes_common::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
 
     Ok(())
 }

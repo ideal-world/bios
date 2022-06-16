@@ -257,6 +257,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
             role_ids: None,
+            org_node_ids: None,
             exts: Default::default(),
         },
         &funs,
@@ -546,7 +547,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     );
 
     info!("【test_key_cache】 Delete role rel, expected no token record");
-    IamRoleServ::delete_rel_account(role_id, &account_id, &funs, &app_admin_context).await?;
+    IamRoleServ::delete_rel_account(role_id, &account_id, None, &funs, &app_admin_context).await?;
     assert!(TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.is_none());
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,

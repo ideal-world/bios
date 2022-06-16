@@ -111,8 +111,8 @@ async fn test_single_level(context: &TardisContext, account_name: &str, role_nam
     assert_eq!(account_roles.get(0).unwrap().rel_name, role_name);
 
     info!("【test_cc_account】 : test_single_level : Add Rel Account By Id");
-    assert!(IamRoleServ::add_rel_account(&role_id, &account_id, &funs, another_context).await.is_err());
-    IamRoleServ::add_rel_account(&role_id, &account_id, &funs, context).await?;
+    assert!(IamRoleServ::add_rel_account(&role_id, &account_id, None, &funs, another_context).await.is_err());
+    IamRoleServ::add_rel_account(&role_id, &account_id, None, &funs, context).await?;
     let account_roles = IamAccountServ::find_simple_rel_roles(&account_id, false, None, None, &funs, context).await?;
     assert_eq!(account_roles.len(), 1);
 
