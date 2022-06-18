@@ -25,3 +25,133 @@ The core requirements of Bios from a technical perspective are:
 
 image::architecture.png[architecture]
 
+== Quick experience
+
+[TIP]
+.Environmental requirements
+====
+Docker, MySQL, Redis, RabbitMQ services installed.
+====
+
+. Configuration services(E.g. /opt/config/conf-default.toml)
++
+[sources,toml]
+----
+[fw]
+[fw.app]
+id = "bios-serv-all"
+name = "BIOS All Services"
+desc = "BIOS All Services"
+version = "0.1.0"
+
+[fw.web_server]
+# Service port
+port = 8080
+[fw.web_server.modules.iam]
+title = "IAM Component"
+# Change to the corresponding IP
+doc_urls = [["test env", "http://x.x.x.x:8080/"]]
+
+[fw.db]
+# Change to the corresponding MySQL connection information
+url = "mysql://root:123456@x.x.x.x:3306/test"
+
+[fw.cache]
+# Change to the corresponding Redis connection information
+url = "redis://:123456@x.x.x.x:6379"
+
+[fw.mq]
+# Change to the corresponding Rabbit connection information
+url = "amqp://user:123456@x.x.x.x:5672/%2f"
+----
++
+. Name the configuration file `conf-default.toml` and store it in the `config` directory
+. Start the service
++
+[sources,sh]
+-----
+# Change the volume to the corresponding directory
+docker run --name bios-serv-all -d -p 8080:8080 -v /opt/bios/config:/bios/config ghcr.io/ideal-world/bios-serv-all:latest
+-----
++
+. Obtain system administrator username and password
++
+[sources,sh]
+-----
+docker logs -f bios-serv-all | grep "Initial password"
+-----
++
+. Test the service
++
+[sources,sh]
+-----
+Open http://x.x.x.x:8080/iam/ui
+-----
++
+. Start the gateway
++
+[sources,sh]
+-----
+# Change the volume to the corresponding directory
+docker run --name bios-gateway -d -p 9080:9080 ghcr.io/ideal-world/bios-gateway:latest
+-----
++
+. Configuration gateway
++
+[sources,sh]
+-----
+# Add the service address (modify it to the corresponding IP and port)
+curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "type": "roundrobin",
+  "nodes": {
+    "x.x.x.x:8080": 1
+  }
+}'
+curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "uri": "/*",
+  "upstream_id": "1"
+}'
+
+# Add permission plugin (modified to have the same Redis information as the service)
+curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+{
+  "plugins": {
+    "auth-bios": {
+      "redis_host": "x.x.x.x",
+      "redis_password": "123456",
+      "redis_database": 0
+    }
+  }
+}'
+-----
++
+. Launching tests from the gateway
++
+[sources,sh]
+-----
+# Login, replace ak and sk with the above username and password
+curl -H 'Content-Type: application/json' -X PUT \
+    -d '{"ak":"bios",
+         "sk":"xxx"}' \
+    http://x.x.x.x:9080/iam/cp/login/userpwd
+
+# Successful login returns a message similar to the following
+
+{
+    "code": "200",
+    "data":{
+        "account_id": "NeL1HCHKqMhHZRhWai3BC",
+        "account_name": "bios",
+        "apps":[],
+        "groups":{},
+        "roles":{
+            "iU8IFtIHPsmDPGNV_3-Bx": "sys_admin"
+        },
+        "token": "tkwVf5J2y4XIjjwwpfnjiBt"
+    },
+    "msg": ""
+}
+-----
+
