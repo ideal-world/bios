@@ -699,12 +699,12 @@ impl<'a> RbumSetItemServ {
             )
             .await?
             .into_iter()
+            .sorted_by(|a, b| Ord::cmp(&a.sys_code, &b.sys_code))
             .map(|item| RbumSetPathResp {
                 id: item.id,
                 name: item.name,
                 own_paths: item.own_paths,
             })
-            .sorted_by(|a, b| Ord::cmp(&a.own_paths.len(), &b.own_paths.len()))
             .collect();
             result.push(rbum_set_paths);
         }
