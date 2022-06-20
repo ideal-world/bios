@@ -20,6 +20,8 @@ pub struct Model {
     /// The target resource id of the relationship
     pub to_rbum_item_id: String,
     pub to_own_paths: String,
+    /// Extended Information  \
+    /// E.g. the record from or to is in another service, to avoid remote calls, you can redundantly add the required information to this field.
     pub ext: String,
 
     pub own_paths: String,

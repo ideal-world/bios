@@ -506,7 +506,13 @@ where
                 query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Tag).eq(tag.to_string()));
             }
             if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
-                query.and_where(Expr::tbl(rel_table, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+            }
+            if let Some(ext_eq) = &rbum_item_rel_filter_req.ext_eq {
+                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).eq(ext_eq.to_string()));
+            }
+            if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
+                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).like(format!("%{}%", ext_like).as_str()));
             }
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel() {
