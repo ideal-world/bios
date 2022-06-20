@@ -71,6 +71,8 @@ pub struct RbumRelFilterReq {
     pub from_rbum_id: Option<String>,
     pub to_rbum_item_id: Option<String>,
     pub to_own_paths: Option<String>,
+    pub ext_eq: Option<String>,
+    pub ext_like: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -116,6 +118,8 @@ pub struct RbumItemRelFilterReq {
     pub tag: Option<String>,
     pub from_rbum_kind: Option<RbumRelFromKind>,
     pub rel_item_id: Option<String>,
+    pub ext_eq: Option<String>,
+    pub ext_like: Option<String>,
 }
 
 pub trait RbumItemFilterFetcher {

@@ -179,6 +179,12 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         if let Some(to_own_paths) = &filter.to_own_paths {
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOwnPaths).eq(to_own_paths.to_string()));
         }
+        if let Some(ext_eq) = &filter.ext_eq {
+            query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Ext).eq(ext_eq.to_string()));
+        }
+        if let Some(ext_like) = &filter.ext_like {
+            query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Ext).like(format!("%{}%", ext_like).as_str()));
+        }
         query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
     }
@@ -271,8 +277,7 @@ impl<'a> RbumRelServ {
                 tag: Some(tag.to_string()),
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_string()),
-                to_rbum_item_id: None,
-                to_own_paths: None,
+                ..Default::default()
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -302,8 +307,7 @@ impl<'a> RbumRelServ {
                 tag: Some(tag.to_string()),
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_string()),
-                to_rbum_item_id: None,
-                to_own_paths: None,
+                ..Default::default()
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -367,8 +371,7 @@ impl<'a> RbumRelServ {
                 tag: Some(tag.to_string()),
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_string()),
-                to_rbum_item_id: None,
-                to_own_paths: None,
+                ..Default::default()
             },
             page_number,
             page_size,
@@ -407,8 +410,7 @@ impl<'a> RbumRelServ {
                 tag: Some(tag.to_string()),
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_string()),
-                to_rbum_item_id: None,
-                to_own_paths: None,
+                ..Default::default()
             },
             page_number,
             page_size,
@@ -437,8 +439,7 @@ impl<'a> RbumRelServ {
                 tag: Some(tag.to_string()),
                 from_rbum_kind: Some(from_rbum_kind.clone()),
                 from_rbum_id: Some(from_rbum_id.to_string()),
-                to_rbum_item_id: None,
-                to_own_paths: None,
+                ..Default::default()
             },
             funs,
             ctx,
@@ -474,10 +475,8 @@ impl<'a> RbumRelServ {
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
-                from_rbum_kind: None,
-                from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: None,
+                ..Default::default()
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -505,10 +504,8 @@ impl<'a> RbumRelServ {
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
-                from_rbum_kind: None,
-                from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: None,
+                ..Default::default()
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -556,10 +553,8 @@ impl<'a> RbumRelServ {
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
-                from_rbum_kind: None,
-                from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: None,
+                ..Default::default()
             },
             page_number,
             page_size,
@@ -596,10 +591,8 @@ impl<'a> RbumRelServ {
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
-                from_rbum_kind: None,
-                from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: None,
+                ..Default::default()
             },
             page_number,
             page_size,
@@ -621,10 +614,8 @@ impl<'a> RbumRelServ {
                     ..Default::default()
                 },
                 tag: Some(tag.to_string()),
-                from_rbum_kind: None,
-                from_rbum_id: None,
                 to_rbum_item_id: Some(to_rbum_item_id.to_string()),
-                to_own_paths: None,
+                ..Default::default()
             },
             funs,
             ctx,
