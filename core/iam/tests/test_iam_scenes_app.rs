@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -10,8 +9,7 @@ use tardis::web::web_resp::{TardisPage, Void};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountSummaryResp};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppDetailResp;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
@@ -131,19 +129,23 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
 pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【app_console_auth_mgr_page】");
 
-    // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ca/account?page_number=1&page_size=10").await;
-    assert_eq!(accounts.total_size, 1);
-    let account_id = accounts.records.iter().find(|i| i.name == "devops应用管理员").unwrap().id.clone();
-
     // Find Roles
     let roles: TardisPage<IamRoleSummaryResp> = client.get("/ca/role?page_number=1&page_size=10").await;
     assert_eq!(roles.total_size, 1);
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
 
+    // Find Accounts
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/ca/account?page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 1);
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/ca/account?name=devops&page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 1);
+    assert_eq!(accounts.records[0].name, "devops应用管理员");
+    assert!(accounts.records[0].certs.contains_key("UserPwd"));
+    let account_id = accounts.records.iter().find(|i| i.name == "devops应用管理员").unwrap().id.clone();
+
     // Find Res Tree
     let res_tree: Vec<RbumSetTreeResp> = client.get("/ca/res/tree?sys_res=true").await;
-    assert_eq!(res_tree.len(), 2);
+    assert_eq!(res_tree.len(), 1);
     let res = res_tree.iter().find(|i| i.name == "Menus").unwrap().rbum_set_items.get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
@@ -204,23 +206,17 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     let _: Void = client.put(&format!("/ca/role/{}/account/{}", role_id, account_id), &Void {}).await;
 
     // Find Accounts By Role Id
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/ca/account?role_id={}&page_number=1&page_size=10", role_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ca/account?role_id={}&page_number=1&page_size=10", role_id)).await;
     assert_eq!(accounts.total_size, 1);
-    assert_eq!(accounts.records.get(0).unwrap().name, "devops应用管理员");
+    assert_eq!(accounts.records[0].name, "devops应用管理员");
+    assert_eq!(accounts.records[0].certs.len(), 2);
+    assert_eq!(accounts.records[0].orgs.len(), 0);
+    assert!(accounts.records[0].certs.contains_key("UserPwd"));
     let account_id = accounts.records.get(0).unwrap().id.clone();
 
     // Count Account By Role Id
     let accounts: u64 = client.get(&format!("/ca/role/{}/account/total", role_id)).await;
     assert_eq!(accounts, 1);
-
-    // Find Certs By Account Id
-    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ca/cert?account_id={}", account_id)).await;
-    assert_eq!(certs.len(), 2);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
-
-    // Find Set Paths By Account Id
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ca/account/{}/set-path", account_id)).await;
-    assert_eq!(org_path.len(), 0);
 
     // Delete Account By Res Id
     client.delete(&format!("/ca/role/{}/account/{}", role_id, account_id)).await;

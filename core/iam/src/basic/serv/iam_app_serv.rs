@@ -149,6 +149,7 @@ impl<'a> IamAppServ {
             tag: Some(IamRelKind::IamAccountApp.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(Self::get_id_by_ctx(ctx, funs)?),
+            ..Default::default()
         }))
     }
 }

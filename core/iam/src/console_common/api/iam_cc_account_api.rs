@@ -37,6 +37,7 @@ impl IamCcAccountApi {
             tag: Some(IamRelKind::IamAccountRole.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(role_id),
+            ..Default::default()
         });
         let result = IamAccountServ::paginate_items(
             &IamAccountFilterReq {
@@ -72,5 +73,14 @@ impl IamCcAccountApi {
                 })
                 .collect(),
         })
+    }
+
+    /// Find Account Name By Ids
+    #[oai(path = "/name", method = "get")]
+    async fn find_name_by_ids(&self, ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(';').map(|s| s.to_string()).collect();
+        let result = IamAccountServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
     }
 }

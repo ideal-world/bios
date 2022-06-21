@@ -127,7 +127,25 @@ pub struct IamAccountDetailResp {
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
-pub struct IamAccountDetailWithExtResp {
+pub struct IamAccountSummaryAggResp {
+    pub id: String,
+    pub name: String,
+
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
+
+    pub icon: String,
+
+    pub roles: Vec<String>,
+    pub certs: HashMap<String, String>,
+    pub orgs: Vec<String>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountDetailAggResp {
     pub id: String,
     pub name: String,
 
@@ -141,7 +159,19 @@ pub struct IamAccountDetailWithExtResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub exts: HashMap<String, String>,
+
+    pub roles: Vec<String>,
+    pub certs: HashMap<String, String>,
+    pub orgs: Vec<String>,
+
+    pub exts: Vec<IamAccountExtResp>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountExtResp {
+    pub name: String,
+    pub label: String,
+    pub value: String,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

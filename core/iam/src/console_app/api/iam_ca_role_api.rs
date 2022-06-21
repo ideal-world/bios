@@ -143,6 +143,7 @@ impl IamCaRoleApi {
                     tag: Some(IamRelKind::IamAccountRole.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
                     rel_item_id: Some(id.0.to_string()),
+                    ..Default::default()
                 }),
                 ..Default::default()
             },

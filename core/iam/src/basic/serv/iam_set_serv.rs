@@ -3,13 +3,14 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
+use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
@@ -24,9 +25,9 @@ pub struct IamSetServ;
 impl<'a> IamSetServ {
     pub async fn init_set(is_org: bool, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<(String, Option<(String, String)>)> {
         let code = if is_org {
-            Self::get_default_org_code_by_ctx(ctx)
+            Self::get_default_org_code_by_own_paths(&ctx.own_paths)
         } else {
-            Self::get_default_res_code_by_ctx(ctx)
+            Self::get_default_res_code_by_own_paths(&ctx.own_paths)
         };
         let set_id = RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
@@ -48,7 +49,7 @@ impl<'a> IamSetServ {
             let cate_menu_id = RbumSetCateServ::add_rbum(
                 &mut RbumSetCateAddReq {
                     name: TrimString("Menus".to_string()),
-                    bus_code: TrimString("menus".to_string()),
+                    bus_code: TrimString("__menus__".to_string()),
                     icon: None,
                     sort: None,
                     ext: None,
@@ -63,7 +64,7 @@ impl<'a> IamSetServ {
             let cate_api_id = RbumSetCateServ::add_rbum(
                 &mut RbumSetCateAddReq {
                     name: TrimString("Apis".to_string()),
-                    bus_code: TrimString("apis".to_string()),
+                    bus_code: TrimString("__apis__".to_string()),
                     icon: None,
                     sort: None,
                     ext: None,
@@ -84,9 +85,9 @@ impl<'a> IamSetServ {
 
     pub async fn get_default_set_id_by_ctx(is_org: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let code = if is_org {
-            Self::get_default_org_code_by_ctx(ctx)
+            Self::get_default_org_code_by_own_paths(&ctx.own_paths)
         } else {
-            Self::get_default_res_code_by_ctx(ctx)
+            Self::get_default_res_code_by_own_paths(&ctx.own_paths)
         };
         Self::get_set_id_by_code(&code, true, funs, ctx).await
     }
@@ -95,6 +96,34 @@ impl<'a> IamSetServ {
         RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, ctx)
             .await?
             .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {}", code)))
+    }
+
+    pub fn get_default_res_code_by_own_paths(own_paths: &str) -> String {
+        format!("{}:res", own_paths)
+    }
+
+    pub fn get_default_org_code_by_system() -> String {
+        Self::get_default_org_code_by_own_paths("")
+    }
+
+    pub fn get_default_org_code_by_tenant(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths) {
+            Ok(Self::get_default_org_code_by_own_paths(&own_paths))
+        } else {
+            Err(funs.err().not_found("iam_set", "get_org_code", "not found tenant own_paths"))
+        }
+    }
+
+    pub fn get_default_org_code_by_app(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+        if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
+            Ok(Self::get_default_org_code_by_own_paths(&own_paths))
+        } else {
+            Err(funs.err().not_found("iam_set", "get_org_code", "not found app own_paths"))
+        }
+    }
+
+    pub fn get_default_org_code_by_own_paths(own_paths: &str) -> String {
+        format!("{}:org", own_paths)
     }
 
     pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
@@ -138,6 +167,38 @@ impl<'a> IamSetServ {
 
     pub async fn get_tree(set_id: &str, parent_set_cate_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         RbumSetServ::get_tree(set_id, parent_set_cate_id.as_deref(), funs, ctx).await
+    }
+
+    pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+        let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
+        let menu_sys_code = String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?;
+        Self::get_tree_with_sys_code(set_id, &menu_sys_code, funs, ctx).await
+    }
+
+    pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+        let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
+        let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?).unwrap();
+        Self::get_tree_with_sys_code(set_id, &api_sys_code, funs, ctx).await
+    }
+
+    async fn get_tree_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+        let parent_set_cate_id = RbumSetCateServ::find_id_rbums(
+            &RbumSetCateFilterReq {
+                rel_rbum_set_id: Some(set_id.to_string()),
+                sys_code: Some(filter_sys_code.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(parent_set_cate_id) = parent_set_cate_id.get(0) {
+            RbumSetServ::get_tree(set_id, Some(parent_set_cate_id), funs, ctx).await
+        } else {
+            Err(funs.err().not_found("set_cate", "get", &format!("not found set cate by sys_code {}", filter_sys_code)))
+        }
     }
 
     pub async fn add_set_item(add_req: &IamSetItemAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
@@ -204,41 +265,5 @@ impl<'a> IamSetServ {
             })
             .collect();
         Ok(items)
-    }
-
-    pub fn get_default_res_code_by_ctx(ctx: &TardisContext) -> String {
-        Self::get_default_res_code_by_own_paths(&ctx.own_paths)
-    }
-
-    pub fn get_default_res_code_by_own_paths(own_paths: &str) -> String {
-        format!("{}:res", own_paths)
-    }
-
-    pub fn get_default_org_code_by_ctx(ctx: &TardisContext) -> String {
-        Self::get_default_org_code_by_own_paths(&ctx.own_paths)
-    }
-
-    pub fn get_default_org_code_by_system() -> String {
-        Self::get_default_org_code_by_own_paths("")
-    }
-
-    pub fn get_default_org_code_by_tenant(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
-        if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths) {
-            Ok(Self::get_default_org_code_by_own_paths(&own_paths))
-        } else {
-            Err(funs.err().not_found("iam_set", "get_org_code", "not found tenant own_paths"))
-        }
-    }
-
-    pub fn get_default_org_code_by_app(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
-        if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
-            Ok(Self::get_default_org_code_by_own_paths(&own_paths))
-        } else {
-            Err(funs.err().not_found("iam_set", "get_org_code", "not found app own_paths"))
-        }
-    }
-
-    pub fn get_default_org_code_by_own_paths(own_paths: &str) -> String {
-        format!("{}:org", own_paths)
     }
 }

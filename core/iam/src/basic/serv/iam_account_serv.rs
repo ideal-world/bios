@@ -5,8 +5,10 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
+use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -14,7 +16,8 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
-    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryResp,
+    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountExtResp, IamAccountModifyReq, IamAccountSelfModifyReq,
+    IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamMailVCodeCertAddReq, IamPhoneVCodeCertAddReq, IamUserPwdCertAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
@@ -28,6 +31,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::{IamCertKind, IamRelKind};
 
@@ -278,6 +282,144 @@ impl<'a> IamAccountServ {
         .await?;
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;
         Ok(())
+    }
+
+    pub async fn get_account_detail_aggs(
+        account_id: &str,
+        filter: &IamAccountFilterReq,
+        use_sys_org: bool,
+        use_sys_cert: bool,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<IamAccountDetailAggResp> {
+        let account = IamAccountServ::get_item(account_id, filter, funs, ctx).await?;
+        let set_id = if use_sys_org {
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, funs, ctx).await?
+        } else {
+            IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?
+        };
+        let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
+        let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
+        let account = IamAccountDetailAggResp {
+            id: account.id.clone(),
+            name: account.name,
+            own_paths: account.own_paths,
+            owner: account.owner,
+            owner_name: account.owner_name,
+            create_time: account.create_time,
+            update_time: account.update_time,
+            scope_level: account.scope_level,
+            disabled: account.disabled,
+            icon: account.icon,
+            roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_name).collect(),
+            certs: IamCertServ::find_certs(
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(if use_sys_cert { "".to_string() } else { IamTenantServ::get_id_by_ctx(ctx, funs)? }),
+                        ..Default::default()
+                    },
+                    rel_rbum_id: Some(account.id.clone()),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .into_iter()
+            .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
+            .collect(),
+            orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
+            exts: account_attrs
+                .into_iter()
+                .map(|r| IamAccountExtResp {
+                    name: r.name.clone(),
+                    label: r.label,
+                    value: account_attr_values.get(&r.name).unwrap_or(&("".to_string())).to_string(),
+                })
+                .collect(),
+        };
+        Ok(account)
+    }
+
+    pub async fn paginate_account_summary_aggs(
+        filter: &IamAccountFilterReq,
+        use_sys_org: bool,
+        use_sys_cert: bool,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<IamAccountSummaryAggResp>> {
+        let accounts = IamAccountServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        let mut account_aggs = Vec::with_capacity(accounts.total_size as usize);
+        let set_id = if use_sys_org {
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, funs, ctx).await?
+        } else {
+            IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?
+        };
+        for account in accounts.records {
+            account_aggs.push(IamAccountSummaryAggResp {
+                id: account.id.clone(),
+                name: account.name,
+                create_time: account.create_time,
+                update_time: account.update_time,
+                scope_level: account.scope_level,
+                disabled: account.disabled,
+                icon: account.icon,
+                roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_name).collect(),
+                certs: IamCertServ::find_certs(
+                    &RbumCertFilterReq {
+                        basic: RbumBasicFilterReq {
+                            own_paths: if use_sys_cert {
+                                Some("".to_string())
+                            } else {
+                                Some(IamTenantServ::get_id_by_ctx(ctx, funs)?)
+                            },
+                            ..Default::default()
+                        },
+                        rel_rbum_id: Some(account.id.clone()),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?
+                .into_iter()
+                .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
+                .collect(),
+                orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
+            });
+        }
+        Ok(TardisPage {
+            page_size: accounts.page_size,
+            page_number: accounts.page_number,
+            total_size: accounts.total_size,
+            records: account_aggs,
+        })
+    }
+
+    pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        IamAccountServ::find_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(ids),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await
+        .map(|r| r.into_iter().map(|r| r.name).collect())
     }
 
     pub async fn find_simple_rel_roles(

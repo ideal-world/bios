@@ -137,6 +137,10 @@ pub async fn common_console_by_tenant(client: &mut BIOSWebTestClient) -> TardisR
     assert_eq!(accounts.total_size, 1);
     assert!(accounts.records.iter().any(|i| i.name == "测试管理员"));
 
+    // Find Account Name By Ids
+    let accounts: Vec<String> = client.get(&format!("/cc/account/name?ids={}", accounts.records[0].id)).await;
+    assert_eq!(accounts[0], "测试管理员");
+
     // Find Roles
     let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?page_number=1&page_size=10").await;
     assert_eq!(roles.total_size, 1);
@@ -156,13 +160,24 @@ pub async fn common_console_by_app(client: &mut BIOSWebTestClient) -> TardisResu
     info!("【common_console_by_app】");
 
     // Find Accounts
+    let accounts: TardisPage<IamAccountBoneResp> = client.get("/cc/account?name=devops&page_number=1&page_size=10").await;
+    assert_eq!(accounts.total_size, 1);
+    assert!(accounts.records.iter().any(|i| i.name == "devops应用管理员"));
     let accounts: TardisPage<IamAccountBoneResp> = client.get("/cc/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 2);
     assert!(accounts.records.iter().any(|i| i.name == "devops应用管理员"));
 
+    // Find Account Name By Ids
+    let accounts: Vec<String> = client.get(&format!("/cc/account/name?ids={};{}", accounts.records[0].id, accounts.records[1].id)).await;
+    assert_eq!(accounts.len(), 2);
+    assert!(accounts.contains(&"devops应用管理员".to_string()));
+
     // Find Roles
     let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?page_number=1&page_size=10").await;
     assert_eq!(roles.total_size, 2);
+    assert!(roles.records.iter().any(|i| i.name == "app_admin"));
+    let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?name=app&page_number=1&page_size=10").await;
+    assert_eq!(roles.total_size, 1);
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
 
     // Find Org Cates By Current Tenant
