@@ -286,8 +286,12 @@ impl<'a> RbumSetServ {
             } else {
                 query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(funs.rbum_conf_set_cate_sys_code_node_len() as i32));
             }
-            query.order_by(rbum_set_cate::Column::Sort, Order::Asc);
+        } else if let Some(parent_set_cate_id) = rbum_parent_set_cate_id {
+            Self::check_scope(parent_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
+            let parent_sys_code = RbumSetCateServ::get_sys_code(parent_set_cate_id, funs, ctx).await?;
+            query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
         }
+        query.order_by(rbum_set_cate::Column::Sort, Order::Asc);
         funs.db().find_dtos(&query).await
     }
 
@@ -477,6 +481,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                         query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
                     }
                 }
+            } else {
+                query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).eq(sys_code.as_str()));
             }
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel {
