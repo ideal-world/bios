@@ -8,7 +8,6 @@ use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
-use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
@@ -153,19 +152,14 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
     assert_eq!(account.roles.len(), 1);
     assert!(account.roles.iter().any(|(_, v)| v == "sys_admin"));
     assert!(account.org.is_empty());
+    assert_eq!(account.certs.len(), 1);
+    assert!(account.certs.contains_key("UserPwd"));
+    assert!(account.exts.is_empty());
 
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
     assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
-
-    // Find Account Attrs
-    let attrs: Vec<RbumKindAttrSummaryResp> = client.get("/cp/account/attr").await;
-    assert_eq!(attrs.len(), 0);
-
-    // Find Account Attr Value
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
-    assert_eq!(account_attrs.len(), 0);
 
     // Modify Account By Current Account
     let _: Void = client
@@ -183,10 +177,6 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
     // Get Current Account
     let account: IamCpAccountInfoResp = client.get("/cp/account").await;
     assert_eq!(account.account_name, "租户admin");
-
-    // Find Account Attr Value
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
-    assert_eq!(account_attrs.len(), 0);
 
     Ok(())
 }
@@ -247,19 +237,14 @@ pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> Ta
     assert_eq!(account.roles.len(), 1);
     assert!(account.roles.iter().any(|(_, v)| v == "tenant_admin"));
     assert!(account.org.is_empty());
+    assert_eq!(account.certs.len(), 1);
+    assert!(account.certs.contains_key("UserPwd"));
+    assert!(account.exts.is_empty());
 
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
     assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
-
-    // Find Account Attrs By Current Tenant
-    let attrs: Vec<RbumKindAttrSummaryResp> = client.get("/cp/account/attr").await;
-    assert_eq!(attrs.len(), 0);
-
-    // Find Account Attr Value By Current Account
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
-    assert_eq!(account_attrs.len(), 0);
 
     let _: String = client
         .post(
@@ -305,15 +290,20 @@ pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> Ta
     let account: IamCpAccountInfoResp = client.get("/cp/account").await;
     assert_eq!(account.account_name, "租户管理员");
 
-    // Find Account Attrs By Current Tenant
-    let attrs: Vec<RbumKindAttrSummaryResp> = client.get("/cp/account/attr").await;
-    assert_eq!(attrs.len(), 1);
-    assert_eq!(attrs.iter().any(|i| i.name == "ext9"), true);
-
-    // Find Account Attr Value By Current Account
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
-    assert_eq!(account_attrs.len(), 1);
-    assert_eq!(account_attrs.get("ext9"), Some(&"00001".to_string()));
+    // Get Current Account
+    let account: IamCpAccountInfoResp = client.get("/cp/account").await;
+    assert_eq!(account.account_name, "租户管理员");
+    assert_eq!(account.tenant_name, Some("测试公司1".to_string()));
+    assert!(account.apps.is_empty());
+    assert_eq!(account.roles.len(), 1);
+    assert!(account.roles.iter().any(|(_, v)| v == "tenant_admin"));
+    assert!(account.org.is_empty());
+    assert_eq!(account.certs.len(), 1);
+    assert!(account.certs.contains_key("UserPwd"));
+    assert_eq!(account.exts.len(), 1);
+    assert_eq!(account.exts[0].name, "ext9");
+    assert_eq!(account.exts[0].label, "岗级");
+    assert_eq!(account.exts[0].value, "00001");
 
     Ok(())
 }
@@ -375,22 +365,18 @@ pub async fn account_mgr_by_app_account(client: &mut BIOSWebTestClient) -> Tardi
     assert_eq!(account.roles.len(), 1);
     assert_eq!(account.roles.len(), 1);
     assert_eq!(account.org.len(), 1);
-    assert!(account.org.get(0).unwrap().iter().any(|i| i.name == "综合服务中心"));
+    assert_eq!(account.org[0], "综合服务中心");
+    assert_eq!(account.certs.len(), 1);
+    assert!(account.certs.contains_key("UserPwd"));
+    assert_eq!(account.exts.len(), 1);
+    assert_eq!(account.exts[0].name, "ext9");
+    assert_eq!(account.exts[0].label, "岗级");
+    assert_eq!(account.exts[0].value, "00001");
 
     // Find Certs By Current Account
     let certs: Vec<RbumCertSummaryResp> = client.get("/cp/cert").await;
     assert_eq!(certs.len(), 1);
     assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
-
-    // Find Account Attrs By Current Tenant
-    let attrs: Vec<RbumKindAttrSummaryResp> = client.get("/cp/account/attr").await;
-    assert_eq!(attrs.len(), 1);
-    assert_eq!(attrs.iter().any(|i| i.name == "ext9"), true);
-
-    // Find Account Attr Value By Current Account
-    let account_attrs: HashMap<String, String> = client.get("/cp/account/attr/value").await;
-    assert_eq!(account_attrs.len(), 1);
-    assert_eq!(account_attrs.get("ext9"), Some(&"00001".to_string()));
 
     Ok(())
 }

@@ -1,20 +1,19 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 
+use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
@@ -197,31 +196,25 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     assert_eq!(accounts, 1);
 
     // Find Accounts By Tenant Id
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/cs/account?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
     assert_eq!(accounts.total_size, 2);
+    assert!(accounts.records.iter().find(|r| r.id == account_id).unwrap().orgs.contains(&("综合服务中心".to_string())));
 
     // Find Accounts By Role Id
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/cs/account?role_id={}&with_sub=true&page_number=1&page_size=10", sys_admin_role_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client
+        .get(&format!(
+            "/cs/account?role_id={}&tenant_id={}&with_sub=true&page_number=1&page_size=10",
+            sys_admin_role_id, tenant_id
+        ))
+        .await;
     let sys_admin_account_id = &accounts.records.get(0).unwrap().id;
     assert_eq!(accounts.total_size, 1);
     assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
-
-    // Find Role By Account Id
-    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/cs/account/{}/role?tenant_id={}", sys_admin_account_id, tenant_id)).await;
-    assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel_name, "tenant_admin");
-
-    // Find Set Paths By Account Id
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/cs/account/{}/set-path?tenant_id={}", sys_admin_account_id, tenant_id)).await;
-    assert_eq!(org_path.len(), 0);
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/cs/account/{}/set-path?tenant_id={}", account_id, tenant_id)).await;
-    assert_eq!(org_path.len(), 1);
-    assert!(org_path.get(0).unwrap().iter().any(|i| i.name == "综合服务中心"));
-
-    // Find Certs By Account Id
-    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/cs/cert?account_id={}&tenant_id={}", sys_admin_account_id, tenant_id)).await;
-    assert_eq!(certs.len(), 1);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    assert_eq!(accounts.records.get(0).unwrap().roles.len(), 1);
+    assert_eq!(accounts.records.get(0).unwrap().roles[0], "tenant_admin");
+    assert_eq!(accounts.records.get(0).unwrap().orgs.len(), 0);
+    assert_eq!(accounts.records.get(0).unwrap().certs.len(), 1);
+    assert!(accounts.records.get(0).unwrap().certs.contains_key("UserPwd"));
 
     // Lock/Unlock Account By Account Id
     let _: Void = client
@@ -251,7 +244,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
 
     // Delete By Account Id
     client.delete(&format!("/cs/account/{}?tenant_id={}", account_id, tenant_id)).await;
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/cs/account?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
     assert_eq!(accounts.total_size, 1);
 
     // Offline By Account Id
@@ -411,22 +404,16 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
         .await;
 
     // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/cs/account?page_number=1&page_size=10").await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/cs/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 2);
 
     // Get Account By Account Id
-    let account: IamAccountDetailResp = client.get(&format!("/cs/account/{}", account_id)).await;
+    let account: IamAccountDetailAggResp = client.get(&format!("/cs/account/{}", account_id)).await;
     assert_eq!(account.name, "系统用户1");
-
-    // Find Account Attr Value By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/cs/account/attr/value?account_id={}", account_id)).await;
-    assert_eq!(account_attrs.len(), 1);
-    assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
-
-    // Find Rel Roles By Account Id
-    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
-    assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel_name, "审计管理员");
+    assert_eq!(account.roles.len(), 1);
+    assert!(account.roles.contains(&("审计管理员".to_string())));
+    assert_eq!(account.exts.len(), 1);
+    assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "00001".to_string());
 
     // Modify Account By Account Id
     let _: Void = client
@@ -445,17 +432,13 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
         .await;
 
     // Get Account By Account Id
-    let account: IamAccountDetailResp = client.get(&format!("/cs/account/{}", account_id)).await;
+    let account: IamAccountDetailAggResp = client.get(&format!("/cs/account/{}", account_id)).await;
     assert_eq!(account.name, "用户2");
-
-    // Find Rel Roles By Account Id
-    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/cs/account/{}/role", account_id)).await;
-    assert_eq!(roles.len(), 0);
-
-    // Find Account Attr By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/cs/account/attr/value?account_id={}", account_id)).await;
-    assert_eq!(account_attrs.len(), 1);
-    assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
+    assert_eq!(account.roles.len(), 0);
+    assert_eq!(account.exts.len(), 1);
+    assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "".to_string());
+    assert_eq!(account.certs.len(), 2);
+    assert!(account.certs.contains_key(&("UserPwd".to_string())));
 
     // Find Certs By Account Id
     let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/cs/cert?account_id={}", account_id)).await;
@@ -484,8 +467,8 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
     // Find Res Tree
     let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/tree").await;
     assert_eq!(res_tree.len(), 2);
-    let cate_menus_id = res_tree.iter().find(|i| i.bus_code == "menus").map(|i| i.id.clone()).unwrap();
-    let cate_apis_id = res_tree.iter().find(|i| i.bus_code == "apis").map(|i| i.id.clone()).unwrap();
+    let cate_menus_id = res_tree.iter().find(|i| i.bus_code == "__menus__").map(|i| i.id.clone()).unwrap();
+    let cate_apis_id = res_tree.iter().find(|i| i.bus_code == "__apis__").map(|i| i.id.clone()).unwrap();
 
     // Add Res Cate
     let cate_work_spaces_id: String = client
@@ -750,7 +733,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
     assert_eq!(res, 2);
 
     // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/cs/account?with_sub=true&page_number=1&page_size=10").await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/cs/account?with_sub=true&page_number=1&page_size=10").await;
     let account_id = accounts.records.iter().find(|r| r.name == "bios").unwrap().id.clone();
     assert_eq!(accounts.total_size, 2);
 
@@ -758,7 +741,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
     let _: Void = client.put(&format!("/cs/role/{}/account/{}", test_role_id, account_id), &Void {}).await;
 
     // Find Rel Account By Role Id
-    let rel_accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/cs/account?role_id={}&page_number=1&page_size=10", test_role_id)).await;
+    let rel_accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?role_id={}&page_number=1&page_size=10", test_role_id)).await;
     assert_eq!(rel_accounts.total_size, 1);
     assert_eq!(rel_accounts.records.get(0).unwrap().id, account_id);
 

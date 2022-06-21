@@ -19,14 +19,14 @@ pub struct IamCaResApi;
 impl IamCaResApi {
     /// Find Res Tree
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, sys_res: Query<Option<bool>>, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_menu_tree(&self, sys_res: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_res.0.unwrap_or(false) {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_res_code_by_own_paths(""), true, &funs, &ctx.0).await?
         } else {
             IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?
         };
-        let result = IamSetServ::get_tree(&set_id, parent_cate_id.0, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_menu_tree(&set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

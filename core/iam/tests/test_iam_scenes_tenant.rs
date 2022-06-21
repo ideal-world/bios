@@ -8,14 +8,12 @@ use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp;
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
@@ -191,23 +189,15 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     assert_eq!(accounts, 1);
 
     // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/ct/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 1);
-    let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
-
-    // Find Role By Account Id
-    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
-    assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel_name, "tenant_admin");
-
-    // Find Set Paths By Account Id
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
-    assert_eq!(org_path.len(), 0);
-
-    // Find Certs By Account Id
-    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
-    assert_eq!(certs.len(), 1);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    let account = accounts.records.into_iter().find(|i| i.name == "测试管理员").unwrap();
+    assert_eq!(account.roles.len(), 1);
+    assert!(account.roles.contains(&("tenant_admin".to_string())));
+    assert!(account.orgs.is_empty());
+    assert_eq!(account.certs.len(), 1);
+    assert!(account.certs.contains_key("UserPwd"));
+    let account_id = account.id.clone();
 
     // Add Org Item
     let _: String = client
@@ -224,8 +214,8 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     // Find Org Items
     let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 1);
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
-    assert!(org_path.get(0).unwrap().iter().any(|i| i.name == "综合服务中心"));
+    let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
+    assert!(account.orgs.contains(&("综合服务中心".to_string())));
 
     client.login(tenant_admin_user_name, tenant_admin_password, Some(tenant_id.to_string()), None, None, true).await?;
     assert_eq!(client.context().groups.len(), 1);
@@ -235,8 +225,8 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
     let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 0);
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
-    assert_eq!(org_path.len(), 0);
+    let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
+    assert!(account.orgs.is_empty());
 
     client.login(tenant_admin_user_name, tenant_admin_password, Some(tenant_id.to_string()), None, None, true).await?;
     assert_eq!(client.context().groups.len(), 0);
@@ -400,27 +390,18 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
         .await;
 
     // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/ct/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 2);
 
     // Get Account By Account Id
-    let account: IamAccountDetailResp = client.get(&format!("/ct/account/{}", account_id)).await;
+    let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
     assert_eq!(account.name, "用户3");
-
-    // Find Set Paths By Account Id
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
-    assert_eq!(org_path.len(), 1);
-    assert!(org_path.get(0).unwrap().iter().any(|i| i.name == "综合服务中心"));
-
-    // Find Account Attr Value By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/value?account_id={}", account_id)).await;
-    assert_eq!(account_attrs.len(), 1);
-    assert_eq!(account_attrs.get("ext1_idx"), Some(&"00001".to_string()));
-
-    // Find Rel Role By Account Id
-    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
-    assert_eq!(roles.len(), 1);
-    assert_eq!(roles.get(0).unwrap().rel_name, "审计管理员");
+    assert_eq!(account.orgs.len(), 1);
+    assert!(account.orgs.contains(&("综合服务中心".to_string())));
+    assert_eq!(account.exts.len(), 1);
+    assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "00001");
+    assert_eq!(account.roles.len(), 1);
+    assert!(account.roles.contains(&("审计管理员".to_string())));
 
     // Modify Account By Account Id
     let _: Void = client
@@ -439,26 +420,14 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
         .await;
 
     // Get Account By Account Id
-    let account: IamAccountDetailResp = client.get(&format!("/ct/account/{}", account_id)).await;
+    let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
     assert_eq!(account.name, "用户3_new");
-
-    // Find Rel Role By Account Id
-    let roles: Vec<RbumRelBoneResp> = client.get(&format!("/ct/account/{}/role", account_id)).await;
-    assert_eq!(roles.len(), 0);
-
-    // Find Set Paths By Account Id
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
-    assert_eq!(org_path.len(), 0);
-
-    // Find Account Attr Value By Account Id
-    let account_attrs: HashMap<String, String> = client.get(&format!("/ct/account/attr/value?account_id={}", account_id)).await;
-    assert_eq!(account_attrs.len(), 1);
-    assert_eq!(account_attrs.get("ext1_idx"), Some(&"".to_string()));
-
-    // Find Certs By Account Id
-    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
-    assert_eq!(certs.len(), 2);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
+    assert_eq!(account.roles.len(), 0);
+    assert_eq!(account.orgs.len(), 0);
+    assert_eq!(account.exts.len(), 1);
+    assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "");
+    assert_eq!(account.certs.len(), 2);
+    assert!(account.certs.contains_key("UserPwd"));
 
     // Rest Password By Account Id
     let _: Void = client
@@ -480,7 +449,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     info!("【tenant_console_auth_mgr_page】");
 
     // Find Accounts
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get("/ct/account?page_number=1&page_size=10").await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/ct/account?page_number=1&page_size=10").await;
     assert_eq!(accounts.total_size, 2);
     let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
 
@@ -552,23 +521,18 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     let _: Void = client.put(&format!("/ct/role/{}/account/{}", role_id, account_id), &Void {}).await;
 
     // Find Accounts By Role Id
-    let accounts: TardisPage<IamAccountSummaryResp> = client.get(&format!("/ct/account?role_id={}&with_sub=false&page_number=1&page_size=10", role_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ct/account?role_id={}&with_sub=false&page_number=1&page_size=10", role_id)).await;
     assert_eq!(accounts.total_size, 1);
     assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
-    let account_id = accounts.records.get(0).unwrap().id.clone();
+    let account = accounts.records.get(0).unwrap();
+    assert_eq!(account.certs.len(), 1);
+    assert!(account.certs.contains_key("UserPwd"));
+    assert!(account.orgs.is_empty());
+    let account_id = account.id.clone();
 
     // Count Account By Role Id
     let accounts: u64 = client.get(&format!("/ct/role/{}/account/total", role_id)).await;
     assert_eq!(accounts, 1);
-
-    // Find Certs By Account Id
-    let certs: Vec<RbumCertSummaryResp> = client.get(&format!("/ct/cert?account_id={}", account_id)).await;
-    assert_eq!(certs.len(), 1);
-    assert!(certs.into_iter().any(|i| i.rel_rbum_cert_conf_code == Some("UserPwd".to_string())));
-
-    // Find Set Paths By Account Id
-    let org_path: Vec<Vec<RbumSetPathResp>> = client.get(&format!("/ct/account/{}/set-path", account_id)).await;
-    assert_eq!(org_path.len(), 0);
 
     // Delete Account By Res Id
     client.delete(&format!("/ct/role/{}/account/{}", role_id, account_id)).await;

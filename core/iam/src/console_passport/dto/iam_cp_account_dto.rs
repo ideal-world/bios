@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
+use crate::basic::dto::iam_account_dto::IamAccountExtResp;
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi::Object;
 
@@ -8,10 +8,13 @@ use tardis::web::poem_openapi::Object;
 pub struct IamCpAccountInfoResp {
     pub account_id: String,
     pub account_name: String,
+    pub account_icon: String,
     pub tenant_name: Option<String>,
     pub roles: HashMap<String, String>,
-    pub org: Vec<Vec<RbumSetPathResp>>,
+    pub org: Vec<String>,
     pub apps: Vec<IamCpAccountAppInfoResp>,
+    pub certs: HashMap<String, String>,
+    pub exts: Vec<IamAccountExtResp>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]

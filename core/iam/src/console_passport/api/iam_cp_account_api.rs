@@ -29,7 +29,7 @@ impl IamCpAccountApi {
     #[oai(path = "/", method = "get")]
     async fn get_current_account_info(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamCpAccountInfoResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCpAccountServ::get_current_account_info(&funs, &ctx.0).await?;
+        let result = IamCpAccountServ::get_current_account_info(ctx.0.own_paths.is_empty(), &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }

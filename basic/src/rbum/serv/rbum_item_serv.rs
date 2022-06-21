@@ -512,7 +512,7 @@ where
                 query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).eq(ext_eq.to_string()));
             }
             if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
-                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).like(format!("%{}%", ext_like).as_str()));
+                query.and_where(Expr::tbl(rel_table, rbum_rel::Column::Ext).like(format!("%{}%", ext_like).as_str()));
             }
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel() {

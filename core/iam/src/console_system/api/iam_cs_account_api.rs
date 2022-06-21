@@ -3,16 +3,13 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenAp
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetPathResp;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailResp, IamAccountSummaryResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
@@ -45,10 +42,10 @@ impl IamCsAccountApi {
 
     /// Get Account By Account Id
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailResp> {
+    async fn get(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailAggResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::get_item(
+        let result = IamAccountServ::get_account_detail_aggs(
             &id.0,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
@@ -57,6 +54,8 @@ impl IamCsAccountApi {
                 },
                 ..Default::default()
             },
+            true,
+            false,
             &funs,
             &ctx,
         )
@@ -78,16 +77,17 @@ impl IamCsAccountApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<IamAccountSummaryResp>> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+    ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         let funs = iam_constants::get_tardis_inst();
         let rel = role_id.0.map(|role_id| RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountRole.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(role_id),
+            ..Default::default()
         });
-        let result = IamAccountServ::paginate_items(
+        let result = IamAccountServ::paginate_account_summary_aggs(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
@@ -98,6 +98,8 @@ impl IamCsAccountApi {
                 rel,
                 ..Default::default()
             },
+            tenant_id.0.is_none(),
+            tenant_id.0.is_none(),
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -129,32 +131,6 @@ impl IamCsAccountApi {
         IamAccountServ::delete_tokens(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
-    }
-
-    /// Find Rel Roles By Account Id
-    #[oai(path = "/:id/role", method = "get")]
-    async fn find_rel_roles(
-        &self,
-        id: Path<String>,
-        tenant_id: Query<Option<String>>,
-        desc_by_create: Query<Option<bool>>,
-        desc_by_update: Query<Option<bool>>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        let funs = iam_constants::get_tardis_inst();
-        let result = IamAccountServ::find_simple_rel_roles(&id.0, true, desc_by_create.0, desc_by_update.0, &funs, &ctx).await?;
-        TardisResp::ok(result)
-    }
-
-    /// Find Rel Set By Account Id
-    #[oai(path = "/:id/set-path", method = "get")]
-    async fn find_rel_set_paths(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<Vec<RbumSetPathResp>>> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_paths(&id.0, &set_id, &funs, &ctx).await?;
-        TardisResp::ok(result)
     }
 
     /// Count Accounts By Tenant Id
