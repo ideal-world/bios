@@ -31,9 +31,9 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
 use crate::console_common::api::{iam_cc_account_api, iam_cc_org_api, iam_cc_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
-use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_cert_conf_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
+use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{
-    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_cert_conf_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api,
+    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api,
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -58,13 +58,11 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cs_account_api::IamCsAccountApi,
                     iam_cs_account_attr_api::IamCsAccountAttrApi,
                     iam_cs_cert_api::IamCsCertApi,
-                    iam_cs_cert_conf_api::IamCsCertConfApi,
                     iam_cs_role_api::IamCsRoleApi,
                     iam_cs_res_api::IamCsResApi,
                 ),
                 (
                     iam_ct_tenant_api::IamCtTenantApi,
-                    iam_ct_cert_conf_api::IamCtCertConfApi,
                     iam_ct_org_api::IamCtOrgApi,
                     iam_ct_account_api::IamCtAccountApi,
                     iam_ct_account_attr_api::IamCtAccountAttrApi,
@@ -217,6 +215,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
             ak_rule: None,
             sk_note: None,
             sk_rule: None,
+            ext: None,
             repeatable: Some(true),
             expire_sec: None,
         },
