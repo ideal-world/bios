@@ -19,6 +19,7 @@ pub struct RbumCertConfAddReq {
     pub sk_note: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_rule: Option<String>,
+    pub ext: Option<String>,
     pub sk_need: Option<bool>,
     pub sk_dynamic: Option<bool>,
     pub sk_encrypted: Option<bool>,
@@ -52,6 +53,7 @@ pub struct RbumCertConfModifyReq {
     pub sk_note: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk_rule: Option<String>,
+    pub ext: Option<String>,
     pub sk_need: Option<bool>,
     pub sk_encrypted: Option<bool>,
     pub repeatable: Option<bool>,
@@ -72,6 +74,7 @@ pub struct RbumCertConfSummaryResp {
     pub name: String,
     pub ak_rule: String,
     pub sk_rule: String,
+    pub ext: String,
     pub sk_need: bool,
     pub sk_dynamic: bool,
     pub sk_encrypted: bool,
@@ -102,6 +105,7 @@ pub struct RbumCertConfDetailResp {
     pub ak_rule: String,
     pub sk_note: String,
     pub sk_rule: String,
+    pub ext: String,
     pub sk_need: bool,
     pub sk_dynamic: bool,
     pub sk_encrypted: bool,

@@ -19,6 +19,7 @@ pub struct Model {
     pub ak_rule: String,
     pub sk_note: String,
     pub sk_rule: String,
+    pub ext: String,
     pub sk_need: bool,
     /// Whether dynamic sk \
     /// If true, the sk will be stored in the cache
@@ -78,6 +79,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::AkRule).not_null().string())
             .col(ColumnDef::new(Column::SkNote).not_null().string())
             .col(ColumnDef::new(Column::SkRule).not_null().string())
+            .col(ColumnDef::new(Column::Ext).text())
             .col(ColumnDef::new(Column::SkNeed).not_null().boolean())
             .col(ColumnDef::new(Column::SkDynamic).not_null().boolean())
             .col(ColumnDef::new(Column::SkEncrypted).not_null().boolean())
