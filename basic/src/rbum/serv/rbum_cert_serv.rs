@@ -6,9 +6,10 @@ use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
-use tardis::regex::Regex;
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
+
+use fancy_regex::Regex;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -44,6 +45,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             ak_rule: Set(add_req.ak_rule.as_ref().unwrap_or(&"".to_string()).to_string()),
             sk_note: Set(add_req.sk_note.as_ref().unwrap_or(&"".to_string()).to_string()),
             sk_rule: Set(add_req.sk_rule.as_ref().unwrap_or(&"".to_string()).to_string()),
+            ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             sk_dynamic: Set(add_req.sk_dynamic.unwrap_or(false)),
             sk_need: Set(add_req.sk_need.unwrap_or(true)),
             sk_encrypted: Set(add_req.sk_encrypted.unwrap_or(false)),
@@ -111,6 +113,9 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         if let Some(sk_rule) = &modify_req.sk_rule {
             rbum_cert_conf.sk_rule = Set(sk_rule.to_string());
         }
+        if let Some(ext) = &modify_req.ext {
+            rbum_cert_conf.ext = Set(ext.to_string());
+        }
         if let Some(sk_need) = modify_req.sk_need {
             rbum_cert_conf.sk_need = Set(sk_need);
         }
@@ -175,6 +180,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::AkRule),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkNote),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkRule),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Ext),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkNeed),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkDynamic),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkEncrypted),
@@ -599,7 +605,12 @@ impl<'a> RbumCertServ {
                 ctx,
             )
             .await?;
-            if !rbum_cert_conf.sk_rule.is_empty() && !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(new_sk) {
+            if !rbum_cert_conf.sk_rule.is_empty()
+                && !Regex::new(&rbum_cert_conf.sk_rule)
+                    .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "reset_sk", &format!("sk rule is invalid:{}", e)))?
+                    .is_match(new_sk)
+                    .unwrap_or(false)
+            {
                 return Err(funs.err().bad_request("cert", "reset_sk", &format!("sk {} is not match sk rule", new_sk)));
             }
             if rbum_cert_conf.sk_encrypted {
@@ -636,7 +647,12 @@ impl<'a> RbumCertServ {
             if original_sk != stored_sk {
                 return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match"));
             }
-            if !rbum_cert_conf.sk_rule.is_empty() && !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(input_sk) {
+            if !rbum_cert_conf.sk_rule.is_empty()
+                && !Regex::new(&rbum_cert_conf.sk_rule)
+                    .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk rule is invalid:{}", e)))?
+                    .is_match(input_sk)
+                    .unwrap_or(false)
+            {
                 return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} is not match sk rule", input_sk)));
             }
             let new_sk = if rbum_cert_conf.sk_encrypted {
@@ -684,12 +700,21 @@ impl<'a> RbumCertServ {
         if rbum_cert_conf.sk_dynamic && add_req.vcode.is_none() {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "vcode is required when dynamic model"));
         }
-        if !rbum_cert_conf.ak_rule.is_empty() && !Regex::new(&rbum_cert_conf.ak_rule)?.is_match(&add_req.ak.to_string()) {
+        if !rbum_cert_conf.ak_rule.is_empty()
+            && !Regex::new(&rbum_cert_conf.ak_rule)
+                .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{}", e)))?
+                .is_match(&add_req.ak.to_string())
+                .unwrap_or(false)
+        {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak {} is not match ak rule", add_req.ak)));
         }
         if rbum_cert_conf.sk_need && !rbum_cert_conf.sk_rule.is_empty() {
             let sk = add_req.sk.as_ref().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required"))?.to_string();
-            if !Regex::new(&rbum_cert_conf.sk_rule)?.is_match(&sk) {
+            if !Regex::new(&rbum_cert_conf.sk_rule)
+                .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{}", e)))?
+                .is_match(&sk)
+                .unwrap_or(false)
+            {
                 return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk {} is not match sk rule", &sk)));
             }
         }
