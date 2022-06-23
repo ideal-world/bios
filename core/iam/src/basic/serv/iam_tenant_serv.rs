@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
@@ -10,11 +11,23 @@ use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
+use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
+use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq, IamUserPwdCertConfInfo};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
-use crate::basic::dto::iam_tenant_dto::{IamTenantAddReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp};
+use crate::basic::dto::iam_tenant_dto::{
+    IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
+};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
+use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
+use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_enumeration::IamCertKind;
 
 pub struct IamTenantServ;
 
@@ -124,5 +137,190 @@ impl<'a> IamTenantServ {
         } else {
             Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("tenant id not found in tardis content {}", ctx.own_paths)))
         }
+    }
+
+    pub async fn add_tenant_agg(add_req: &IamTenantAggAddReq, funs: &TardisFunsInst<'a>) -> TardisResult<(String, String)> {
+        let tenant_admin_id = TardisFuns::field.nanoid();
+        // TODO security check
+        let tenant_id = IamTenantServ::get_new_id();
+        let tenant_ctx = TardisContext {
+            own_paths: tenant_id.clone(),
+            ak: "".to_string(),
+            roles: vec![],
+            groups: vec![],
+            owner: tenant_admin_id.to_string(),
+        };
+        Self::add_item(
+            &mut IamTenantAddReq {
+                id: Some(TrimString(tenant_id.clone())),
+                name: add_req.name.clone(),
+                icon: add_req.icon.clone(),
+                sort: None,
+                contact_phone: add_req.contact_phone.clone(),
+                disabled: add_req.disabled,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+                note: add_req.note.clone(),
+            },
+            funs,
+            &tenant_ctx,
+        )
+        .await?;
+
+        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
+        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
+
+        // Init cert conf
+        let cert_conf_by_user_pwd = IamUserPwdCertConfAddOrModifyReq {
+            ak_note: None,
+            ak_rule: Some(Self::parse_ak_rule(&add_req.cert_conf_by_user_pwd, funs)?),
+            sk_note: None,
+            sk_rule: Some(Self::parse_sk_rule(&add_req.cert_conf_by_user_pwd, funs)?),
+            ext: Some(TardisFuns::json.obj_to_string(&add_req.cert_conf_by_user_pwd)?),
+            repeatable: Some(add_req.cert_conf_by_user_pwd.repeatable),
+            expire_sec: Some(add_req.cert_conf_by_user_pwd.expire_sec),
+        };
+        let cert_conf_by_phone_vcode = if add_req.cert_conf_by_phone_vcode {
+            Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
+        } else {
+            None
+        };
+        let cert_conf_by_mail_vcode = if add_req.cert_conf_by_mail_vcode {
+            Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
+        } else {
+            None
+        };
+        IamCertServ::init_default_ident_conf(cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, funs, &tenant_ctx).await?;
+
+        // Init pwd
+        let pwd = if let Some(admin_password) = &add_req.admin_password {
+            admin_password.to_string()
+        } else {
+            IamCertServ::get_new_pwd()
+        };
+
+        IamAccountServ::add_account_agg(
+            &IamAccountAggAddReq {
+                id: Some(TrimString(tenant_admin_id.clone())),
+                name: add_req.admin_name.clone(),
+                cert_user_name: TrimString(add_req.admin_username.0.to_string()),
+                cert_password: TrimString(pwd.to_string()),
+                cert_phone: None,
+                cert_mail: None,
+                icon: None,
+                disabled: add_req.disabled,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
+                org_node_ids: None,
+                exts: Default::default(),
+            },
+            funs,
+            &tenant_ctx,
+        )
+        .await?;
+
+        Ok((tenant_id, pwd))
+    }
+
+    pub async fn modify_tenant_agg(id: &str, modify_req: &IamTenantAggModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        Self::modify_item(
+            id,
+            &mut IamTenantModifyReq {
+                name: modify_req.name.clone(),
+                scope_level: None,
+                disabled: modify_req.disabled,
+                icon: modify_req.icon.clone(),
+                sort: modify_req.sort,
+                contact_phone: modify_req.contact_phone.clone(),
+                note: modify_req.note.clone(),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
+        // Init cert conf
+        let cert_confs = IamCertServ::find_cert_conf_without_token_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
+        let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
+        IamCertUserPwdServ::modify_cert_conf(
+            &cert_conf_by_user_pwd_id,
+            &IamUserPwdCertConfAddOrModifyReq {
+                ak_note: None,
+                ak_rule: Some(Self::parse_ak_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
+                sk_note: None,
+                sk_rule: Some(Self::parse_sk_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
+                ext: Some(TardisFuns::json.obj_to_string(&modify_req.cert_conf_by_user_pwd)?),
+                repeatable: Some(modify_req.cert_conf_by_user_pwd.repeatable),
+                expire_sec: Some(modify_req.cert_conf_by_user_pwd.expire_sec),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
+            if !modify_req.cert_conf_by_phone_vcode {
+                IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
+            }
+        } else if modify_req.cert_conf_by_phone_vcode {
+            IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+        }
+        if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKind::MailVCode.to_string()).map(|r| r.id.clone()) {
+            if !modify_req.cert_conf_by_mail_vcode {
+                IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
+            }
+        } else if modify_req.cert_conf_by_mail_vcode {
+            IamCertMailVCodeServ::add_cert_conf(&IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
+        let tenant = Self::get_item(id, filter, funs, ctx).await?;
+        let cert_confs = IamCertServ::find_cert_conf_without_token_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
+        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKind::UserPwd.to_string()).unwrap();
+
+        let tenant = IamTenantAggDetailResp {
+            id: tenant.id.clone(),
+            name: tenant.name.clone(),
+            own_paths: tenant.own_paths.clone(),
+            owner: tenant.owner.clone(),
+            owner_name: tenant.owner_name.clone(),
+            create_time: tenant.create_time,
+            update_time: tenant.update_time,
+            disabled: tenant.disabled,
+            icon: tenant.icon.clone(),
+            sort: tenant.sort,
+            contact_phone: tenant.contact_phone.clone(),
+            note: tenant.note.clone(),
+            cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
+            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.code == IamCertKind::PhoneVCode.to_string()),
+            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.code == IamCertKind::MailVCode.to_string()),
+        };
+
+        Ok(tenant)
+    }
+
+    fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
+            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [ak_rule_len_min] or [ak_rule_len_max]"));
+        }
+        Ok(format!(
+            "^[0-9a-zA-Z-_@\\.]{{{},{}}}$",
+            cert_conf_by_user_pwd.ak_rule_len_min, cert_conf_by_user_pwd.ak_rule_len_max
+        ))
+    }
+
+    fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        if cert_conf_by_user_pwd.sk_rule_len_max < cert_conf_by_user_pwd.sk_rule_len_min {
+            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [sk_rule_len_min] or [sk_rule_len_max]"));
+        }
+        Ok(format!(
+            "^{}{}{}{}.{{{},{}}}$",
+            if cert_conf_by_user_pwd.sk_rule_need_num { "(?=.*\\d)" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_lowercase { "(?=.*[a-z])" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_uppercase { "(?=.*[A-Z])" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_spec_char { "(?=.*[$@!%*#?&])" } else { "" },
+            cert_conf_by_user_pwd.sk_rule_len_min,
+            cert_conf_by_user_pwd.sk_rule_len_max
+        ))
     }
 }
