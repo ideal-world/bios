@@ -26,7 +26,6 @@ pub struct RbumKindAttrAddReq {
     pub widget_type: RbumWidgetTypeKind,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub default_value: Option<String>,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub options: Option<String>,
     pub required: Option<bool>,
     pub min_length: Option<u32>,
@@ -59,7 +58,6 @@ pub struct RbumKindAttrModifyReq {
     pub widget_type: Option<RbumWidgetTypeKind>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub default_value: Option<String>,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub options: Option<String>,
     pub required: Option<bool>,
     pub min_length: Option<u32>,
