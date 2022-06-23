@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::{Expr, SelectStatement};
@@ -12,11 +13,14 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::basic::serv::iam_role_serv::IamRoleServ;
+use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
+use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::IamRelKind;
 
@@ -125,6 +129,39 @@ impl<'a> IamAppServ {
         } else {
             Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("app id not found in tardis content {}", ctx.own_paths)))
         }
+    }
+
+    pub async fn add_app_agg(add_req: &IamAppAggAddReq, funs: &TardisFunsInst<'a>, tenant_ctx: &TardisContext) -> TardisResult<String> {
+        let app_id = Self::get_new_id();
+        let app_ctx = TardisContext {
+            own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
+            ak: "".to_string(),
+            roles: vec![],
+            groups: vec![],
+            owner: add_req.admin_id.clone(),
+        };
+        Self::add_item(
+            &mut IamAppAddReq {
+                id: Some(TrimString(app_id.clone())),
+                name: add_req.app_name.clone(),
+                icon: add_req.app_icon.clone(),
+                sort: add_req.app_sort,
+                contact_phone: add_req.app_contact_phone.clone(),
+                disabled: add_req.disabled,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+            },
+            funs,
+            &app_ctx,
+        )
+        .await?;
+
+        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_ctx).await?;
+        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, None, funs, &app_ctx).await?;
+
+        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+
+        Ok(app_id)
     }
 
     pub async fn add_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {

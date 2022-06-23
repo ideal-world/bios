@@ -123,6 +123,36 @@ impl<'a> IamCertServ {
         .await
     }
 
+    pub async fn find_cert_conf_without_token_kind(
+        with_sub: bool,
+        iam_item_id: Option<String>,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumCertConfSummaryResp>> {
+        let result = RbumCertConfServ::find_rbums(
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
+                rel_rbum_item_id: iam_item_id,
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            funs,
+            ctx,
+        )
+        .await?;
+        let result = result
+            .into_iter()
+            .filter(|r| r.code == IamCertKind::UserPwd.to_string() || r.code == IamCertKind::PhoneVCode.to_string() || r.code == IamCertKind::MailVCode.to_string())
+            .collect();
+        Ok(result)
+    }
+
     pub async fn find_cert_conf_detail_without_token_kind(
         id: Option<String>,
         code: Option<String>,

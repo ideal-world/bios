@@ -17,7 +17,7 @@ pub struct IamCaResApi;
 /// Note: the current res only supports sys level.
 #[OpenApi(prefix_path = "/ca/res", tag = "crate::iam_enumeration::Tag::App")]
 impl IamCaResApi {
-    /// Find Res Tree
+    /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]
     async fn get_menu_tree(&self, sys_res: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();

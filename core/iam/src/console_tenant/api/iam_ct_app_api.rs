@@ -5,11 +5,9 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_app_dto::{IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
-use crate::console_tenant::dto::iam_ct_app_dto::{IamCtAppAddReq, IamCtAppModifyReq};
-use crate::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use crate::iam_constants;
 
 pub struct IamCtAppApi;
@@ -19,33 +17,20 @@ pub struct IamCtAppApi;
 impl IamCtAppApi {
     /// Add App
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<IamCtAppAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamCtAppServ::add_app(&mut add_req.0, &funs, &ctx.0).await?;
+        let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify App By Id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, modify_req: Json<IamCtAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::modify_item(
-            &id.0,
-            &mut IamAppModifyReq {
-                name: modify_req.0.name.clone(),
-                icon: modify_req.0.icon.clone(),
-                sort: modify_req.0.sort,
-                contact_phone: modify_req.0.contact_phone.clone(),
-                disabled: modify_req.0.disabled,
-                scope_level: None,
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        IamAppServ::modify_item(&id.0, &mut modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

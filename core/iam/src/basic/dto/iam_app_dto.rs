@@ -7,27 +7,51 @@ use tardis::web::poem_openapi::Object;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 #[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamAppAggAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub app_name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "1000"))]
+    pub app_icon: Option<String>,
+    pub app_sort: Option<u32>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub app_contact_phone: Option<String>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub admin_id: String,
+
+    pub disabled: Option<bool>,
+}
+
+#[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamAppAddReq {
+    #[oai(skip = true)]
     pub id: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamAppModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
 }
 

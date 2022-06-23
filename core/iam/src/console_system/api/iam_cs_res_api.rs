@@ -1,13 +1,13 @@
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq};
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use crate::basic::dto::iam_filer_dto::IamResFilterReq;
+use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
@@ -49,6 +49,24 @@ impl IamCsResApi {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(&set_id, parent_cate_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Menu Tree
+    #[oai(path = "/tree/menu", method = "get")]
+    async fn get_menu_tree(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_menu_tree(&set_id, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Api Tree
+    #[oai(path = "/tree/api", method = "get")]
+    async fn get_api_tree(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_api_tree(&set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
