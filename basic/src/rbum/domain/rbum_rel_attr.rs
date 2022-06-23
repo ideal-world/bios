@@ -46,6 +46,9 @@ impl TardisActiveModel for ActiveModel {
         Table::create()
             .table(Entity.table_ref())
             .if_not_exists()
+            .engine("InnoDB")
+            .character_set("utf8mb4")
+            .collate("utf8mb4_0900_as_cs")
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::IsFrom).not_null().boolean())
