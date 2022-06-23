@@ -1,8 +1,8 @@
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, param::Query, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 
 use crate::basic::serv::iam_res_serv::IamResServ;
@@ -17,16 +17,16 @@ pub struct IamCtResApi;
 /// Note: the current res only supports sys level.
 #[OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtResApi {
-    /// Find Res Tree
+    /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, sys_res: Query<Option<bool>>, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_menu_tree(&self, sys_res: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = if sys_res.0.unwrap_or(false) {
             IamSetServ::get_set_id_by_code(&IamSetServ::get_default_res_code_by_own_paths(""), true, &funs, &ctx.0).await?
         } else {
             IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?
         };
-        let result = IamSetServ::get_tree(&set_id, parent_cate_id.0, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_menu_tree(&set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

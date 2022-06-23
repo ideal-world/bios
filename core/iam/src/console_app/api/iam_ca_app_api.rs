@@ -7,7 +7,6 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_app_dto::{IamAppDetailResp, IamAppModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
-use crate::console_app::dto::iam_ca_app_dto::IamCaAppModifyReq;
 use crate::iam_constants;
 
 pub struct IamCaAppApi;
@@ -17,23 +16,10 @@ pub struct IamCaAppApi;
 impl IamCaAppApi {
     /// Modify Current App
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, modify_req: Json<IamCaAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::modify_item(
-            &IamAppServ::get_id_by_ctx(&ctx.0, &funs)?,
-            &mut IamAppModifyReq {
-                name: modify_req.0.name.clone(),
-                icon: modify_req.0.icon.clone(),
-                sort: modify_req.0.sort,
-                contact_phone: modify_req.0.contact_phone.clone(),
-                disabled: modify_req.0.disabled,
-                scope_level: None,
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        IamAppServ::modify_item(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &mut modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

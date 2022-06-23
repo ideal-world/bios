@@ -14,11 +14,14 @@ pub struct IamRoleAggAddReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
 }
@@ -31,11 +34,13 @@ pub struct IamRoleAggModifyReq {
 
 #[derive(Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
 }
