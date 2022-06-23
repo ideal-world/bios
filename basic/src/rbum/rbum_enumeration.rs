@@ -203,6 +203,7 @@ pub enum RbumDataTypeKind {
     Dates,
     DateTimes,
     Array,
+    Label,
 }
 
 #[cfg(feature = "default")]
