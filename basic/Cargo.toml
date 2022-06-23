@@ -30,7 +30,7 @@ derive_more = { version = "^0" }
 async-trait = { version = "^0.1" }
 lazy_static = { version = "^1" }
 itertools = { version = "^0" }
-
+fancy-regex = { version = "^0" }
 tardis = { version = "0.1.0-alpha11", optional = true }
 poem-openapi = { version = "^2", optional = true }
 sea-orm = { version = "^0.8", features = ["macros"], optional = true }
