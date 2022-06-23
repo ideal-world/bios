@@ -9,14 +9,12 @@ use tardis::TardisFuns;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use bios_iam::basic::dto::iam_app_dto::IamAppModifyReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{
-    IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfModifyReq, IamUserPwdCertConfAddOrModifyReq,
-};
+use bios_iam::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamTokenCertConfModifyReq, IamUserPwdCertConfInfo};
 use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggModifyReq, IamRoleModifyReq};
-use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
+use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantModifyReq};
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_app_serv::IamAppServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
@@ -28,10 +26,6 @@ use bios_iam::basic::serv::iam_role_serv::IamRoleServ;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
-use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
-use bios_iam::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
-use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
-use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_config::IamConfig;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_GLOBAL};
@@ -40,25 +34,32 @@ use bios_iam::iam_enumeration::{IamCertKind, IamCertTokenKind, IamResKind};
 pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
 
-    let (tenant_id, tenant_admin_pwd) = IamCsTenantServ::add_tenant(
-        &mut IamCsTenantAddReq {
-            tenant_name: TrimString("缓存测试租户".to_string()),
-            tenant_icon: None,
-            tenant_contact_phone: None,
-            tenant_note: None,
+    let (tenant_id, tenant_admin_pwd) = IamTenantServ::add_tenant_agg(
+        &IamTenantAggAddReq {
+            name: TrimString("缓存测试租户".to_string()),
+            icon: None,
+            contact_phone: None,
+            note: None,
             admin_username: TrimString("bios".to_string()),
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(true),
-                expire_sec: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                ak_rule_len_min: 2,
+                ak_rule_len_max: 20,
+                sk_rule_len_min: 2,
+                sk_rule_len_max: 20,
+                sk_rule_need_num: false,
+                sk_rule_need_uppercase: false,
+                sk_rule_need_lowercase: false,
+                sk_rule_need_spec_char: false,
+                sk_lock_cycle_sec: 0,
+                sk_lock_err_times: 0,
+                repeatable: true,
+                expire_sec: 111,
+                sk_lock_duration_sec: 0,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+            cert_conf_by_phone_vcode: true,
+            cert_conf_by_mail_vcode: true,
             disabled: None,
         },
         &funs,
@@ -266,8 +267,8 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     .await?;
     sleep(Duration::from_secs(1)).await;
 
-    let app_id = IamCtAppServ::add_app(
-        &mut IamCtAppAddReq {
+    let app_id = IamAppServ::add_app_agg(
+        &IamAppAggAddReq {
             app_name: TrimString("缓存测试应用".to_string()),
             app_icon: None,
             app_sort: None,

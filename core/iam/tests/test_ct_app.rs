@@ -1,15 +1,13 @@
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_app_dto::IamAppModifyReq;
+use bios_iam::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppModifyReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAppFilterReq;
 use bios_iam::basic::serv::iam_app_serv::IamAppServ;
-use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
-use bios_iam::console_tenant::serv::iam_ct_app_serv::IamCtAppServ;
 use bios_iam::iam_constants;
 
 pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisResult<()> {
@@ -17,8 +15,8 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     funs.begin().await?;
 
     info!("【test_ct_app】 : Add App");
-    let app_id1 = IamCtAppServ::add_app(
-        &mut IamCtAppAddReq {
+    let app_id1 = IamAppServ::add_app_agg(
+        &IamAppAggAddReq {
             app_name: TrimString("测试应用1".to_string()),
             app_icon: None,
             app_sort: None,
@@ -31,8 +29,8 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     )
     .await?;
 
-    IamCtAppServ::add_app(
-        &mut IamCtAppAddReq {
+    IamAppServ::add_app_agg(
+        &IamAppAggAddReq {
             app_name: TrimString("测试应用2".to_string()),
             app_icon: None,
             app_sort: None,

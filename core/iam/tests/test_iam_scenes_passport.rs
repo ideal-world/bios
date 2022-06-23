@@ -10,14 +10,13 @@ use tardis::web::web_resp::{TardisResp, Void};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq};
+use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
+use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
 use bios_iam::basic::dto::iam_cert_dto::{IamPwdNewReq, IamUserPwdCertModifyReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
-use bios_iam::basic::dto::iam_tenant_dto::IamTenantBoneResp;
+use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
-use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
-use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_enumeration::IamCertTokenKind;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
@@ -28,30 +27,37 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     info!("【test_iam_scenes_passport:system】");
     login_page(sysadmin_name, sysadmin_password, None, None, true, client).await?;
     account_mgr_by_sys_admin(client).await?;
-    security_mgr_page_by_sys_admin(sysadmin_name, sysadmin_password, client).await?;
+    let sysadmin_password = security_mgr_page_by_sys_admin(sysadmin_name, sysadmin_password, client).await?;
 
     info!("【test_iam_scenes_passport:tenant】");
     let tenant_id: String = client
         .post(
             "/cs/tenant",
-            &IamCsTenantAddReq {
-                tenant_name: TrimString("测试公司1".to_string()),
-                tenant_icon: Some("https://oss.minio.io/xxx.icon".to_string()),
-                tenant_contact_phone: None,
-                tenant_note: None,
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                    ak_note: None,
-                    ak_rule: None,
-                    sk_note: None,
-                    sk_rule: None,
-                    repeatable: Some(false),
-                    expire_sec: None,
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: false,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
                 },
-                cert_conf_by_phone_vcode: None,
-                cert_conf_by_mail_vcode: None,
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
                 disabled: None,
             },
         )
@@ -108,7 +114,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     let app_id: String = client
         .post(
             "/ct/app",
-            &IamCtAppAddReq {
+            &IamAppAggAddReq {
                 app_name: TrimString("devops project".to_string()),
                 app_icon: None,
                 app_sort: None,
@@ -122,6 +128,8 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     login_page("user1", "123456", Some(tenant_id.clone()), Some(app_id.clone()), true, client).await?;
     account_mgr_by_app_account(client).await?;
     security_mgr_by_app_account("user1", "123456", &tenant_id, &app_id, client).await?;
+    login_page(sysadmin_name, &sysadmin_password, None, None, true, client).await?;
+    security_password(client).await?;
     Ok(())
 }
 
@@ -181,7 +189,7 @@ pub async fn account_mgr_by_sys_admin(client: &mut BIOSWebTestClient) -> TardisR
     Ok(())
 }
 
-pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
+pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: &mut BIOSWebTestClient) -> TardisResult<String> {
     info!("【security_mgr_page_by_sys_admin】");
 
     // Modify Password
@@ -223,7 +231,7 @@ pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: 
         .await;
     client.login(name, "xxxxx", None, None, Some(IamCertTokenKind::TokenPc.to_string()), true).await?;
 
-    Ok(())
+    Ok("xxxxx".to_string())
 }
 
 pub async fn account_mgr_by_tenant_account(client: &mut BIOSWebTestClient) -> TardisResult<()> {
@@ -453,6 +461,187 @@ pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: 
             true,
         )
         .await?;
+
+    Ok(())
+}
+
+pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【security_password】");
+
+    assert!(client
+        .post_resp::<IamTenantAggAddReq, String>(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员".to_string()),
+                admin_username: TrimString("tenant_admin".to_string()),
+                admin_password: Some("aaaa".to_string()),
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: true,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+            },
+        )
+        .await
+        .code
+        .starts_with("400"));
+
+    assert!(client
+        .post_resp::<IamTenantAggAddReq, String>(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员".to_string()),
+                admin_username: TrimString("tenant_admin".to_string()),
+                admin_password: Some("aa22".to_string()),
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: true,
+                    sk_rule_need_uppercase: true,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+            },
+        )
+        .await
+        .code
+        .starts_with("400"));
+
+    assert!(client
+        .post_resp::<IamTenantAggAddReq, String>(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员".to_string()),
+                admin_username: TrimString("tenant_admin".to_string()),
+                admin_password: Some("aa22A".to_string()),
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: true,
+                    sk_rule_need_uppercase: true,
+                    sk_rule_need_lowercase: true,
+                    sk_rule_need_spec_char: true,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+            },
+        )
+        .await
+        .code
+        .starts_with("400"));
+
+    assert!(client
+        .post_resp::<IamTenantAggAddReq, String>(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员".to_string()),
+                admin_username: TrimString("tenant_admin".to_string()),
+                admin_password: Some("aa22A#".to_string()),
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 7,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: true,
+                    sk_rule_need_uppercase: true,
+                    sk_rule_need_lowercase: true,
+                    sk_rule_need_spec_char: true,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+            },
+        )
+        .await
+        .code
+        .starts_with("400"));
+
+    let tenant_id: String = client
+        .post(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员".to_string()),
+                admin_username: TrimString("tenant_admin".to_string()),
+                admin_password: Some("A3a#f".to_string()),
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: true,
+                    sk_rule_need_uppercase: true,
+                    sk_rule_need_lowercase: true,
+                    sk_rule_need_spec_char: true,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+            },
+        )
+        .await;
+    sleep(Duration::from_secs(1)).await;
+    login_page("tenant_admin", "A3a#f", Some(tenant_id.clone()), None, true, client).await?;
 
     Ok(())
 }
