@@ -9,11 +9,11 @@ use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp};
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
+use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
-use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
-use bios_iam::console_tenant::dto::iam_ct_app_dto::IamCtAppAddReq;
+use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
@@ -26,24 +26,31 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     let tenant_id: String = client
         .post(
             "/cs/tenant",
-            &IamCsTenantAddReq {
-                tenant_name: TrimString("测试公司1".to_string()),
-                tenant_icon: Some("https://oss.minio.io/xxx.icon".to_string()),
-                tenant_contact_phone: None,
-                tenant_note: None,
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                    ak_note: None,
-                    ak_rule: None,
-                    sk_note: None,
-                    sk_rule: None,
-                    repeatable: Some(false),
-                    expire_sec: None,
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: false,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
                 },
-                cert_conf_by_phone_vcode: None,
-                cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: true,
                 disabled: None,
             },
         )
@@ -112,7 +119,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     let app_id: String = client
         .post(
             "/ct/app",
-            &IamCtAppAddReq {
+            &IamAppAggAddReq {
                 app_name: TrimString("devops project".to_string()),
                 app_icon: None,
                 app_sort: None,

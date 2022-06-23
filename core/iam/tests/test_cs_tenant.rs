@@ -5,13 +5,11 @@ use tardis::log::info;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
 use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
-use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
+use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantModifyReq};
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
-use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
-use bios_iam::console_system::serv::iam_cs_tenant_serv::IamCsTenantServ;
 use bios_iam::iam_constants;
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
@@ -19,79 +17,97 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     funs.begin().await?;
 
     info!("【test_cs_tenant】 : Add Tenant");
-    let (tenant_id, _) = IamCsTenantServ::add_tenant(
-        &mut IamCsTenantAddReq {
-            tenant_name: TrimString("测试租户1".to_string()),
-            tenant_icon: None,
-            tenant_contact_phone: None,
-            tenant_note: None,
+    let (tenant_id, _) = IamTenantServ::add_tenant_agg(
+        &IamTenantAggAddReq {
+            name: TrimString("测试租户1".to_string()),
+            icon: None,
+            contact_phone: None,
+            note: None,
             admin_username: TrimString("admin".to_string()),
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(true),
-                expire_sec: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                ak_rule_len_min: 2,
+                ak_rule_len_max: 20,
+                sk_rule_len_min: 2,
+                sk_rule_len_max: 20,
+                sk_rule_need_num: false,
+                sk_rule_need_uppercase: false,
+                sk_rule_need_lowercase: false,
+                sk_rule_need_spec_char: false,
+                sk_lock_cycle_sec: 0,
+                sk_lock_err_times: 0,
+                sk_lock_duration_sec: 0,
+                repeatable: true,
+                expire_sec: 111,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+            cert_conf_by_phone_vcode: true,
+            cert_conf_by_mail_vcode: true,
         },
         &funs,
     )
     .await?;
 
-    IamCsTenantServ::add_tenant(
-        &mut IamCsTenantAddReq {
-            tenant_name: TrimString("测试租户2".to_string()),
-            tenant_icon: None,
-            tenant_contact_phone: Some("12345678901".to_string()),
+    IamTenantServ::add_tenant_agg(
+        &IamTenantAggAddReq {
+            name: TrimString("测试租户2".to_string()),
+            icon: None,
+            contact_phone: Some("12345678901".to_string()),
             admin_username: TrimString("admin".to_string()),
-            tenant_note: None,
+            note: None,
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(true),
-                expire_sec: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                ak_rule_len_min: 2,
+                ak_rule_len_max: 20,
+                sk_rule_len_min: 2,
+                sk_rule_len_max: 20,
+                sk_rule_need_num: false,
+                sk_rule_need_uppercase: false,
+                sk_rule_need_lowercase: false,
+                sk_rule_need_spec_char: false,
+                sk_lock_cycle_sec: 0,
+                sk_lock_err_times: 0,
+                sk_lock_duration_sec: 0,
+                repeatable: true,
+                expire_sec: 111,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+            cert_conf_by_phone_vcode: true,
+            cert_conf_by_mail_vcode: true,
         },
         &funs,
     )
     .await?;
 
-    let tenant_id2 = IamCsTenantServ::add_tenant(
-        &mut IamCsTenantAddReq {
-            tenant_name: TrimString("测试租户2".to_string()),
-            tenant_icon: None,
-            tenant_contact_phone: Some("12345678901".to_string()),
-            tenant_note: None,
+    let tenant_id2 = IamTenantServ::add_tenant_agg(
+        &IamTenantAggAddReq {
+            name: TrimString("测试租户2".to_string()),
+            icon: None,
+            contact_phone: Some("12345678901".to_string()),
+            note: None,
             admin_username: TrimString("admin1".to_string()),
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(true),
-                expire_sec: None,
+            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                ak_rule_len_min: 2,
+                ak_rule_len_max: 20,
+                sk_rule_len_min: 2,
+                sk_rule_len_max: 20,
+                sk_rule_need_num: false,
+                sk_rule_need_uppercase: false,
+                sk_rule_need_lowercase: false,
+                sk_rule_need_spec_char: false,
+                sk_lock_cycle_sec: 0,
+                sk_lock_err_times: 0,
+                sk_lock_duration_sec: 0,
+                repeatable: true,
+                expire_sec: 111,
             },
-            cert_conf_by_phone_vcode: Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-
-            cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+            cert_conf_by_phone_vcode: true,
+            cert_conf_by_mail_vcode: true,
         },
         &funs,
     )

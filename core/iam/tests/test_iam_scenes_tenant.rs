@@ -7,7 +7,6 @@ use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 
-use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
@@ -15,14 +14,12 @@ use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemWithDefaultSetAddReq};
-use bios_iam::basic::dto::iam_tenant_dto::{IamTenantDetailResp, IamTenantModifyReq};
-use bios_iam::console_system::dto::iam_cs_tenant_dto::IamCsTenantAddReq;
+use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq};
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_GLOBAL, RBUM_SCOPE_LEVEL_TENANT};
-use bios_iam::iam_enumeration::IamCertKind;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
@@ -34,26 +31,31 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     let tenant_id: String = client
         .post(
             "/cs/tenant",
-            &IamCsTenantAddReq {
-                tenant_name: TrimString("测试公司1".to_string()),
-                tenant_icon: Some("https://oss.minio.io/xxx.icon".to_string()),
-                tenant_contact_phone: None,
-                tenant_note: None,
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司1".to_string()),
+                icon: Some("https://oss.minio.io/xxx.icon".to_string()),
+                contact_phone: None,
+                note: None,
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq {
-                    ak_note: None,
-                    ak_rule: None,
-                    // 密码长度，密码复杂度等使用前端自定义格式写入到sk_node字段
-                    sk_note: None,
-                    // 前端生成正则判断写入到sk_rule字段
-                    sk_rule: None,
-                    repeatable: Some(false),
-                    expire_sec: None,
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: false,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
                 },
-                cert_conf_by_phone_vcode: None,
-                cert_conf_by_mail_vcode: Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: true,
                 disabled: None,
             },
         )
@@ -73,55 +75,50 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
     info!("【tenant_console_tenant_mgr_page】");
 
     // Get Current Tenant
-    let tenant: IamTenantDetailResp = client.get("/ct/tenant").await;
+    let tenant: IamTenantAggDetailResp = client.get("/ct/tenant").await;
     assert_eq!(tenant.name, "测试公司1");
     assert_eq!(tenant.icon, "https://oss.minio.io/xxx.icon");
-
-    // Find Cert Conf by Current Tenant
-    let cert_conf: Vec<RbumCertConfDetailResp> = client.get("/ct/cert-conf").await;
-    assert_eq!(cert_conf.len(), 2);
-    assert!(cert_conf.iter().any(|x| x.code == IamCertKind::MailVCode.to_string()));
-    let cert_conf_user_pwd = cert_conf.iter().find(|x| x.code == IamCertKind::UserPwd.to_string()).unwrap();
-    assert!(cert_conf_user_pwd.sk_encrypted);
-    assert!(!cert_conf_user_pwd.repeatable);
+    assert!(!tenant.cert_conf_by_user_pwd.repeatable);
+    assert!(!tenant.cert_conf_by_phone_vcode);
+    assert!(tenant.cert_conf_by_mail_vcode);
 
     // Modify Current Tenant
     let _: Void = client
         .put(
             "/ct/tenant",
-            &IamTenantModifyReq {
+            &IamTenantAggModifyReq {
                 name: Some(TrimString("测试公司".to_string())),
-                scope_level: None,
                 disabled: None,
                 icon: None,
                 sort: None,
                 contact_phone: None,
                 note: None,
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: false,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: true,
+                    expire_sec: 111,
+                },
+                cert_conf_by_phone_vcode: true,
+                cert_conf_by_mail_vcode: true,
             },
         )
         .await;
-    let tenant: IamTenantDetailResp = client.get("/ct/tenant").await;
+    let tenant: IamTenantAggDetailResp = client.get("/ct/tenant").await;
     assert_eq!(tenant.name, "测试公司");
-
-    // Modify Cert Conf by User Pwd Id
-    let _: Void = client
-        .put(
-            &format!("/ct/cert-conf/{}/user-pwd", cert_conf_user_pwd.id),
-            &IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                repeatable: Some(false),
-                expire_sec: Some(111),
-            },
-        )
-        .await;
-
-    // Add Cert Conf by Tenant Id
-    let _: Void = client.post("/ct/cert-conf/phone-vcode", &IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }).await;
-    let cert_conf: Vec<RbumCertConfDetailResp> = client.get("/ct/cert-conf").await;
-    assert_eq!(cert_conf.len(), 3);
+    assert!(tenant.cert_conf_by_user_pwd.repeatable);
+    assert_eq!(tenant.cert_conf_by_user_pwd.expire_sec, 111);
+    assert!(tenant.cert_conf_by_phone_vcode);
+    assert!(tenant.cert_conf_by_mail_vcode);
 
     Ok(())
 }
@@ -458,9 +455,9 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert_eq!(roles.total_size, 2);
     assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
 
-    // Find Res Tree
+    // Find Menu Tree
     let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/tree?sys_res=true").await;
-    assert_eq!(res_tree.len(), 2);
+    assert_eq!(res_tree.len(), 1);
     let res = res_tree.iter().find(|i| i.name == "Menus").unwrap().rbum_set_items.get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
