@@ -2,13 +2,13 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use itertools::Itertools;
-use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::tokio::time::sleep;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq};
@@ -534,11 +534,11 @@ impl<'a> RbumSetCateServ {
     }
 
     async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
-        let lock_key = format!("rbum_set_cate_sys_code_{}",rbum_set_id);
-        if !funs.cache().set_nx(&lock_key,"waiting").await? {
+        let lock_key = format!("rbum_set_cate_sys_code_{}", rbum_set_id);
+        if !funs.cache().set_nx(&lock_key, "waiting").await? {
             sleep(Duration::from_millis(100)).await;
         }
-        funs.cache().expire(&lock_key,10).await?;
+        funs.cache().expire(&lock_key, 10).await?;
         let sys_code = if let Some(rbum_set_parent_cate_id) = rbum_set_parent_cate_id {
             let rel_parent_sys_code = Self::get_sys_code(rbum_set_parent_cate_id, funs, ctx).await?;
             Self::get_max_sys_code_by_level(rbum_set_id, Some(&rel_parent_sys_code), funs, ctx).await
