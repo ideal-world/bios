@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use fancy_regex::Regex;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -8,8 +9,6 @@ use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
-
-use fancy_regex::Regex;
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
 use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -306,7 +305,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
             // Encrypt Sk
             if rbum_cert_conf.sk_encrypted {
                 if let Some(sk) = &add_req.sk {
-                    let sk = Self::encrypt_sk(sk.0.as_str(), add_req.ak.0.as_str())?;
+                    let sk = Self::encrypt_sk(&sk.0, &add_req.ak.0, rel_rbum_cert_conf_id)?;
                     add_req.sk = Some(TrimString(sk));
                 }
             }
@@ -535,7 +534,7 @@ impl<'a> RbumCertServ {
                 .await?
                 .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf"))?;
             let input_sk = if cert_conf_peek_resp.sk_encrypted {
-                Self::encrypt_sk(input_sk, ak)?
+                Self::encrypt_sk(input_sk, ak, rbum_cert_conf_id)?
             } else {
                 input_sk.to_string()
             };
@@ -614,7 +613,7 @@ impl<'a> RbumCertServ {
                 return Err(funs.err().bad_request("cert", "reset_sk", &format!("sk {} is not match sk rule", new_sk)));
             }
             if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(new_sk, rbum_cert.ak.as_str())?
+                Self::encrypt_sk(new_sk, &rbum_cert.ak, rel_rbum_cert_conf_id)?
             } else {
                 new_sk.to_string()
             }
@@ -640,7 +639,7 @@ impl<'a> RbumCertServ {
         let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::peek_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
             let original_sk = if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(original_sk, rbum_cert.ak.as_str())?
+                Self::encrypt_sk(original_sk, &rbum_cert.ak, &rbum_cert_conf.id)?
             } else {
                 original_sk.to_string()
             };
@@ -656,7 +655,7 @@ impl<'a> RbumCertServ {
                 return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} is not match sk rule", input_sk)));
             }
             let new_sk = if rbum_cert_conf.sk_encrypted {
-                Self::encrypt_sk(input_sk, rbum_cert.ak.as_str())?
+                Self::encrypt_sk(input_sk, &rbum_cert.ak, &rbum_cert_conf.id)?
             } else {
                 input_sk.to_string()
             };
@@ -736,7 +735,7 @@ impl<'a> RbumCertServ {
         Ok(())
     }
 
-    fn encrypt_sk(sk: &str, ak: &str) -> TardisResult<String> {
-        TardisFuns::crypto.digest.sha512(format!("{}-{}", sk, ak).as_str())
+    fn encrypt_sk(sk: &str, ak: &str, rbum_cert_conf_id: &str) -> TardisResult<String> {
+        TardisFuns::crypto.digest.sha512(format!("{}-{}-{}", sk, ak, rbum_cert_conf_id).as_str())
     }
 }
