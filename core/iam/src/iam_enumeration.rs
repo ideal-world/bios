@@ -19,7 +19,7 @@ pub enum Tag {
     App,
     #[oai(rename = "System Console")]
     System,
-    #[oai(rename = "Passport")]
+    #[oai(rename = "Passport Console")]
     Passport,
 }
 

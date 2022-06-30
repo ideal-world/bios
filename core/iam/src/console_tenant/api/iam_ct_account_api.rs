@@ -18,7 +18,7 @@ pub struct IamCtAccountApi;
 /// Tenant Console Account API
 #[OpenApi(prefix_path = "/ct/account", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtAccountApi {
-    /// Add Account By Tenant Id
+    /// Add Account
     #[oai(path = "/", method = "post")]
     async fn add(&self, app_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
@@ -29,7 +29,7 @@ impl IamCtAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Account By Account Id
+    /// Modify Account
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, app_id: Query<Option<String>>, modify_req: Json<IamAccountAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
@@ -40,7 +40,7 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get Account By Account Id
+    /// Get Account
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountDetailAggResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -110,7 +110,7 @@ impl IamCtAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Account By Account Id
+    /// Delete Account
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -120,7 +120,7 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    /// Count Accounts By Current Tenant
+    /// Count Accounts
     #[oai(path = "/total", method = "get")]
     async fn count(&self, app_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;

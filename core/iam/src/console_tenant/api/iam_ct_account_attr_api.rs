@@ -17,7 +17,7 @@ pub struct IamCtAccountAttrApi;
 /// Note: the current account attr only supports tenant level.
 #[OpenApi(prefix_path = "/ct/account/attr", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtAccountAttrApi {
-    /// Add Account Attr By Current Tenant
+    /// Add Account Attr
     #[oai(path = "/", method = "post")]
     async fn add_attr(&self, add_req: Json<IamKindAttrAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -45,7 +45,7 @@ impl IamCtAccountAttrApi {
         TardisResp::ok(result)
     }
 
-    /// Find Account Attrs By Current Tenant
+    /// Find Account Attrs
     #[oai(path = "/", method = "get")]
     async fn find_attrs(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
