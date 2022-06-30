@@ -27,6 +27,7 @@ pub struct RbumCertConfAddReq {
     pub is_basic: Option<bool>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
     pub expire_sec: Option<u32>,
     pub coexist_num: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
@@ -60,6 +61,7 @@ pub struct RbumCertConfModifyReq {
     pub is_basic: Option<bool>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
     pub expire_sec: Option<u32>,
     pub coexist_num: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
