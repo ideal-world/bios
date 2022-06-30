@@ -76,10 +76,17 @@ impl IamCcAccountApi {
     }
 
     /// Find Account Name By Ids
+    ///
+    /// Return format: ["<id>,<name>"]
     #[oai(path = "/name", method = "get")]
-    async fn find_name_by_ids(&self, ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+    async fn find_name_by_ids(
+        &self,
+        // Account Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<String>> {
         let funs = iam_constants::get_tardis_inst();
-        let ids = ids.0.split(';').map(|s| s.to_string()).collect();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamAccountServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
