@@ -25,7 +25,7 @@ impl IamCtAppApi {
         TardisResp::ok(result)
     }
 
-    /// Modify App By Id
+    /// Modify App By App Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -35,7 +35,7 @@ impl IamCtAppApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get App By Id
+    /// Get App By App Id
     #[oai(path = "/:id", method = "get")]
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -77,7 +77,7 @@ impl IamCtAppApi {
         TardisResp::ok(result)
     }
 
-    /// Delete App By Id
+    /// Delete App By App Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

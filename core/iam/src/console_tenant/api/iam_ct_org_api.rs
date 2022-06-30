@@ -16,7 +16,7 @@ pub struct IamCtOrgApi;
 /// Note: the current org only supports tenant level.
 #[OpenApi(prefix_path = "/ct/org", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtOrgApi {
-    /// Add Org Cate By Current Tenant
+    /// Add Org Cate
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();

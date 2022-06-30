@@ -71,7 +71,7 @@ impl IamCaAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Count Accounts By Current Tenant
+    /// Count Accounts
     #[oai(path = "/total", method = "get")]
     async fn count(&self, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
         let funs = iam_constants::get_tardis_inst();
