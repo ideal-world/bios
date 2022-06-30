@@ -1,7 +1,7 @@
-use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
@@ -22,10 +22,17 @@ pub struct IamCpCertApi;
 #[OpenApi(prefix_path = "/cp", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpCertApi {
     /// Fetch TardisContext By Token
+    ///
+    /// This api is for testing only!
+    ///
+    /// First access `PUT /cp/login/userpwd` api to get `token` .
+    /// This api input  `token` and return base64 encoded `tardis context` ,
+    /// set `tardis context` to the `Tardis-Context` request header.
     #[oai(path = "/context", method = "put")]
-    async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<TardisContext> {
+    async fn fetch_context(&self, fetch_req: Json<IamContextFetchReq>) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamIdentCacheServ::get_context(&fetch_req.0, &funs).await?;
+        let ctx = TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
         TardisResp::ok(ctx)
     }
 
