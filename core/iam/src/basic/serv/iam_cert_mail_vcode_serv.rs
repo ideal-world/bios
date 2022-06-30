@@ -84,9 +84,6 @@ impl<'a> IamCertMailVCodeServ {
             ctx,
         )
         .await?;
-        if modify_req.ak_rule.is_some() {
-            IamCertServ::clean_cache_by_cert_conf(id, None, funs, ctx).await?;
-        }
         Ok(())
     }
 
