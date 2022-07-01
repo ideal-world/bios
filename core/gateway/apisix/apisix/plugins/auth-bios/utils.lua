@@ -27,7 +27,7 @@ local function split(str, sep)
 end
 
 local function contain(str, char)
-    return string.find(str, char) ~= nil
+    return string.find(str, char, 1, true) ~= nil
 end
 
 local function table_length(t)
