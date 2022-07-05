@@ -17,10 +17,13 @@ title = "IAM Component"
 doc_urls = [["test env", "http://localhost:8080/"]]
 
 [fw.db]
-url = "mysql://root:123456@localhost:3306/test"
+url = "mysql://root:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@localhost:3306/test"
 
 [fw.cache]
-url = "redis://:123456@127.0.0.1:6379"
+url = "redis://:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:6379"
 
 [fw.mq]
-url = "amqp://user:123456@127.0.0.1:5672/%2f"
+url = "amqp://user:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:5672/%2f"
+
+[fw.adv]
+salt = "qa2df6gr452lfr3e"
