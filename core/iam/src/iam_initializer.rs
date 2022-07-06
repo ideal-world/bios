@@ -211,6 +211,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
     // Init certs
     IamCertServ::init_default_ident_conf(
         IamUserPwdCertConfAddOrModifyReq {
+            // TODO config
             ak_note: None,
             ak_rule: None,
             sk_note: None,
@@ -218,6 +219,9 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
             ext: None,
             repeatable: Some(true),
             expire_sec: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None,
         },
         Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
         Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),

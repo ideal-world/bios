@@ -152,27 +152,27 @@ impl<'a> IamAccountServ {
             ctx,
         )
         .await?;
-        if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+        if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
             IamCertUserPwdServ::add_cert(
                 &IamUserPwdCertAddReq {
                     ak: add_req.cert_user_name.clone(),
                     sk: add_req.cert_password.clone(),
                 },
                 &account_id,
-                Some(cert_conf_id),
+                Some(cert_conf.id),
                 funs,
                 ctx,
             )
             .await?;
         }
         if let Some(cert_phone) = &add_req.cert_phone {
-            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertPhoneVCodeServ::add_cert(
                     &IamPhoneVCodeCertAddReq {
                         phone: TrimString(cert_phone.to_string()),
                     },
                     &account_id,
-                    &cert_conf_id,
+                    &cert_conf.id,
                     funs,
                     ctx,
                 )
@@ -180,8 +180,8 @@ impl<'a> IamAccountServ {
             }
         }
         if let Some(cert_mail) = &add_req.cert_mail {
-            if let Some(cert_conf_id) = IamCertServ::get_cert_conf_id_opt_by_code(&IamCertKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
-                IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf_id, funs, ctx).await?;
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
         }
         if let Some(role_ids) = &add_req.role_ids {
