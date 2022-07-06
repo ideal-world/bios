@@ -29,6 +29,11 @@ pub struct RbumCertConfAddReq {
     pub rest_by_kinds: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
     pub expire_sec: Option<u32>,
+    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    pub sk_lock_cycle_sec: Option<u32>,
+    pub sk_lock_err_times: Option<u8>,
+    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    pub sk_lock_duration_sec: Option<u32>,
     pub coexist_num: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
@@ -63,6 +68,11 @@ pub struct RbumCertConfModifyReq {
     pub rest_by_kinds: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
     pub expire_sec: Option<u32>,
+    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    pub sk_lock_cycle_sec: Option<u32>,
+    pub sk_lock_err_times: Option<u8>,
+    #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
+    pub sk_lock_duration_sec: Option<u32>,
     pub coexist_num: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
@@ -84,6 +94,9 @@ pub struct RbumCertConfSummaryResp {
     pub is_basic: bool,
     pub rest_by_kinds: String,
     pub expire_sec: u32,
+    pub sk_lock_cycle_sec: u32,
+    pub sk_lock_err_times: u8,
+    pub sk_lock_duration_sec: u32,
     pub coexist_num: u32,
     pub conn_uri: String,
 
@@ -115,6 +128,9 @@ pub struct RbumCertConfDetailResp {
     pub is_basic: bool,
     pub rest_by_kinds: String,
     pub expire_sec: u32,
+    pub sk_lock_cycle_sec: u32,
+    pub sk_lock_err_times: u8,
+    pub sk_lock_duration_sec: u32,
     pub coexist_num: u32,
     pub conn_uri: String,
     pub rel_rbum_domain_id: String,
@@ -127,4 +143,11 @@ pub struct RbumCertConfDetailResp {
     pub owner_name: String,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+pub struct RbumCertConfIdAndExtResp {
+    pub id: String,
+    pub ext: String,
 }
