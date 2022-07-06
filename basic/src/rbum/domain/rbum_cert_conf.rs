@@ -38,6 +38,9 @@ pub struct Model {
     pub rest_by_kinds: String,
     /// The expiration time of the Sk
     pub expire_sec: u32,
+    pub sk_lock_cycle_sec: u32,
+    pub sk_lock_err_times: u8,
+    pub sk_lock_duration_sec: u32,
     /// The number of simultaneously valid \
     /// Used to control the number of certs in effect, E.g.
     /// * Single terminal sign-on: configure a record：`code` = 'token' & `coexist_num` = 1
@@ -90,6 +93,9 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
             .col(ColumnDef::new(Column::RestByKinds).not_null().string())
             .col(ColumnDef::new(Column::ExpireSec).not_null().unsigned())
+            .col(ColumnDef::new(Column::SkLockCycleSec).not_null().unsigned())
+            .col(ColumnDef::new(Column::SkLockErrTimes).not_null().unsigned())
+            .col(ColumnDef::new(Column::SkLockDurationSec).not_null().unsigned())
             .col(ColumnDef::new(Column::CoexistNum).not_null().unsigned())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
