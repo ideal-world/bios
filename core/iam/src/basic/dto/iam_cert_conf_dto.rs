@@ -16,6 +16,11 @@ pub struct IamUserPwdCertConfAddOrModifyReq {
     pub repeatable: Option<bool>,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<u32>,
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
+    pub sk_lock_cycle_sec: Option<u32>,
+    pub sk_lock_err_times: Option<u8>,
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
+    pub sk_lock_duration_sec: Option<u32>,
 }
 
 #[derive(Object, Serialize, Deserialize, Debug, Clone)]

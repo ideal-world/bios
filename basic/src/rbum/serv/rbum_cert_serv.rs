@@ -4,14 +4,13 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, Utc};
-use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_query::*;
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
 
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item};
-use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
+use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use crate::rbum::rbum_config::RbumConfigApi;
@@ -52,6 +51,9 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             is_basic: Set(add_req.is_basic.unwrap_or(true)),
             rest_by_kinds: Set(add_req.rest_by_kinds.as_ref().unwrap_or(&"".to_string()).to_string()),
             expire_sec: Set(add_req.expire_sec.unwrap_or(u32::MAX)),
+            sk_lock_cycle_sec: Set(add_req.sk_lock_cycle_sec.unwrap_or(0)),
+            sk_lock_err_times: Set(add_req.sk_lock_err_times.unwrap_or(0)),
+            sk_lock_duration_sec: Set(add_req.sk_lock_duration_sec.unwrap_or(0)),
             coexist_num: Set(add_req.coexist_num.unwrap_or(1)),
             conn_uri: Set(add_req.conn_uri.as_ref().unwrap_or(&"".to_string()).to_string()),
             rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
@@ -133,6 +135,15 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         if let Some(expire_sec) = modify_req.expire_sec {
             rbum_cert_conf.expire_sec = Set(expire_sec);
         }
+        if let Some(sk_lock_cycle_sec) = modify_req.sk_lock_cycle_sec {
+            rbum_cert_conf.sk_lock_cycle_sec = Set(sk_lock_cycle_sec);
+        }
+        if let Some(sk_lock_err_times) = modify_req.sk_lock_err_times {
+            rbum_cert_conf.sk_lock_err_times = Set(sk_lock_err_times);
+        }
+        if let Some(sk_lock_duration_sec) = modify_req.sk_lock_duration_sec {
+            rbum_cert_conf.sk_lock_duration_sec = Set(sk_lock_duration_sec);
+        }
         if let Some(coexist_num) = modify_req.coexist_num {
             rbum_cert_conf.coexist_num = Set(coexist_num);
         }
@@ -140,6 +151,29 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             rbum_cert_conf.conn_uri = Set(conn_uri.to_string());
         }
         Ok(rbum_cert_conf)
+    }
+
+    async fn after_modify_rbum(id: &str, _: &mut RbumCertConfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        let rbum_cert_conf = Self::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
+        let key = &format!(
+            "{}{}",
+            funs.rbum_conf_cache_key_cert_code_(),
+            TardisFuns::crypto.base64.encode(&format!(
+                "{}{}{}",
+                &rbum_cert_conf.code, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
+            ))
+        );
+        funs.cache()
+            .set_ex(
+                key,
+                &TardisFuns::json.obj_to_string(&RbumCertConfIdAndExtResp {
+                    id: rbum_cert_conf.id.clone(),
+                    ext: rbum_cert_conf.ext.clone(),
+                })?,
+                funs.rbum_conf_cache_key_cert_code_expire_sec(),
+            )
+            .await?;
+        Ok(())
     }
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
@@ -187,6 +221,9 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RestByKinds),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::ExpireSec),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkLockCycleSec),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkLockErrTimes),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkLockDurationSec),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::CoexistNum),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::ConnUri),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId),
@@ -222,29 +259,40 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
 }
 
 impl<'a> RbumCertConfServ {
-    pub async fn get_rbum_cert_conf_id_by_code(code: &str, rbum_domain_id: &str, rbum_item_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+    pub async fn get_rbum_cert_conf_id_and_ext_by_code(
+        code: &str,
+        rbum_domain_id: &str,
+        rbum_item_id: &str,
+        funs: &TardisFunsInst<'a>,
+    ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
             TardisFuns::crypto.base64.encode(&format!("{}{}{}", code, rbum_domain_id, rbum_item_id))
         );
-        if let Some(cached_id) = funs.cache().get(key).await? {
-            Ok(Some(cached_id))
-        } else if let Some(id) = funs
+        if let Some(cached_info) = funs.cache().get(key).await? {
+            Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))
+        } else if let Some(rbum_cert_conf_id_and_ext) = funs
             .db()
-            .get_dto::<IdResp>(
+            .get_dto::<RbumCertConfIdAndExtResp>(
                 Query::select()
                     .column(rbum_cert_conf::Column::Id)
+                    .column(rbum_cert_conf::Column::Ext)
                     .from(rbum_cert_conf::Entity)
                     .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(code))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
             )
             .await?
-            .map(|r| r.id)
         {
-            funs.cache().set_ex(key, &id, funs.rbum_conf_cache_key_cert_code_expire_sec()).await?;
-            Ok(Some(id))
+            funs.cache()
+                .set_ex(
+                    key,
+                    &TardisFuns::json.obj_to_string(&rbum_cert_conf_id_and_ext)?,
+                    funs.rbum_conf_cache_key_cert_code_expire_sec(),
+                )
+                .await?;
+            Ok(Some(rbum_cert_conf_id_and_ext))
         } else {
             Ok(None)
         }
@@ -502,8 +550,10 @@ impl<'a> RbumCertServ {
         struct CertConfPeekResp {
             pub sk_encrypted: bool,
             pub sk_dynamic: bool,
+            pub sk_lock_cycle_sec: u32,
+            pub sk_lock_err_times: u8,
+            pub sk_lock_duration_sec: u32,
         }
-
         let mut query = Query::select();
         query
             .column(rbum_cert::Column::Id)
@@ -519,6 +569,9 @@ impl<'a> RbumCertServ {
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
+            if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked"));
+            }
             if !ignore_end_time && rbum_cert.end_time < Utc::now() {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired"));
             }
@@ -528,6 +581,9 @@ impl<'a> RbumCertServ {
                     Query::select()
                         .column(rbum_cert_conf::Column::SkEncrypted)
                         .column(rbum_cert_conf::Column::SkDynamic)
+                        .column(rbum_cert_conf::Column::SkLockCycleSec)
+                        .column(rbum_cert_conf::Column::SkLockErrTimes)
+                        .column(rbum_cert_conf::Column::SkLockDurationSec)
                         .from(rbum_cert_conf::Entity)
                         .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id)),
                 )
@@ -548,26 +604,57 @@ impl<'a> RbumCertServ {
                         rbum_cert_conf_id,
                         own_paths
                     );
+                    Self::process_lock_in_cache(
+                        &rbum_cert.rel_rbum_id,
+                        cert_conf_peek_resp.sk_lock_cycle_sec,
+                        cert_conf_peek_resp.sk_lock_err_times,
+                        cert_conf_peek_resp.sk_lock_duration_sec,
+                        funs,
+                    )
+                    .await?;
                     return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"));
                 }
             } else {
                 rbum_cert.sk
             };
             if storage_sk == input_sk {
+                funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), &rbum_cert.rel_rbum_id)).await?;
                 Ok((rbum_cert.id, rbum_cert.rel_rbum_kind, rbum_cert.rel_rbum_id))
             } else {
-                tardis::log::warn!(
+                log::warn!(
                     "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, own_paths {}",
                     ak,
                     rbum_cert_conf_id,
                     own_paths
                 );
+                Self::process_lock_in_cache(
+                    &rbum_cert.rel_rbum_id,
+                    cert_conf_peek_resp.sk_lock_cycle_sec,
+                    cert_conf_peek_resp.sk_lock_err_times,
+                    cert_conf_peek_resp.sk_lock_duration_sec,
+                    funs,
+                )
+                .await?;
                 Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
             }
         } else {
             log::warn!("validation error by ak {},rbum_cert_conf_id {}, own_paths {}", ak, rbum_cert_conf_id, own_paths);
             Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
         }
+    }
+
+    async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: u32, sk_lock_err_times: u8, sk_lock_duration_sec: u32, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+        if sk_lock_cycle_sec == 0 || sk_lock_err_times == 0 || sk_lock_duration_sec == 0 {
+            return Ok(());
+        }
+        let err_times = funs.cache().incr(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id), 1).await?;
+        if sk_lock_err_times <= err_times as u8 {
+            funs.cache().set_ex(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_item_id), "", sk_lock_duration_sec as usize).await?;
+            funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id)).await?;
+        } else if err_times == 1 {
+            funs.cache().expire(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id), sk_lock_cycle_sec as usize).await?;
+        }
+        Ok(())
     }
 
     pub async fn show_sk(id: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {

@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfSummaryResp};
+use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
@@ -303,13 +303,17 @@ impl<'a> IamCertServ {
     }
 
     pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        Self::get_cert_conf_id_opt_by_code(code, rel_iam_item_id, funs)
+        Self::get_cert_conf_id_and_ext_by_code(code, rel_iam_item_id, funs).await.map(|r| r.id)
+    }
+
+    pub async fn get_cert_conf_id_and_ext_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<RbumCertConfIdAndExtResp> {
+        Self::get_cert_conf_id_and_ext_opt_by_code(code, rel_iam_item_id, funs)
             .await?
             .ok_or_else(|| funs.err().not_found("cert_conf", "get", &format!("not found cert conf code {}", code)))
     }
 
-    pub async fn get_cert_conf_id_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_by_code(code, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(), funs).await
+    pub async fn get_cert_conf_id_and_ext_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
+        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_code(code, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(), funs).await
     }
 
     pub async fn package_tardis_context_and_resp(
