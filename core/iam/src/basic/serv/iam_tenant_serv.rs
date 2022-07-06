@@ -178,6 +178,9 @@ impl<'a> IamTenantServ {
             ext: Some(TardisFuns::json.obj_to_string(&add_req.cert_conf_by_user_pwd)?),
             repeatable: Some(add_req.cert_conf_by_user_pwd.repeatable),
             expire_sec: Some(add_req.cert_conf_by_user_pwd.expire_sec),
+            sk_lock_cycle_sec: Some(add_req.cert_conf_by_user_pwd.sk_lock_cycle_sec),
+            sk_lock_err_times: Some(add_req.cert_conf_by_user_pwd.sk_lock_err_times),
+            sk_lock_duration_sec: Some(add_req.cert_conf_by_user_pwd.sk_lock_duration_sec),
         };
         let cert_conf_by_phone_vcode = if add_req.cert_conf_by_phone_vcode {
             Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
@@ -251,6 +254,9 @@ impl<'a> IamTenantServ {
                 ext: Some(TardisFuns::json.obj_to_string(&modify_req.cert_conf_by_user_pwd)?),
                 repeatable: Some(modify_req.cert_conf_by_user_pwd.repeatable),
                 expire_sec: Some(modify_req.cert_conf_by_user_pwd.expire_sec),
+                sk_lock_cycle_sec: Some(modify_req.cert_conf_by_user_pwd.sk_lock_cycle_sec),
+                sk_lock_err_times: Some(modify_req.cert_conf_by_user_pwd.sk_lock_err_times),
+                sk_lock_duration_sec: Some(modify_req.cert_conf_by_user_pwd.sk_lock_duration_sec),
             },
             funs,
             ctx,
