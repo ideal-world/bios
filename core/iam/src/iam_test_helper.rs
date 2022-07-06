@@ -31,11 +31,9 @@ impl BIOSWebTestClient {
     }
 
     pub async fn set_auth(&mut self, token: &str, app_id: Option<String>) -> TardisResult<()> {
-        self.context = self.put("/cp/context", &IamContextFetchReq { token: token.to_string(), app_id }).await;
-        self.set_default_header(
-            &TardisFuns::fw_config().web_server.context_conf.context_header_name,
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&self.context)?).as_str(),
-        );
+        let context: String = self.put("/cp/context", &IamContextFetchReq { token: token.to_string(), app_id }).await;
+        self.context = TardisFuns::json.str_to_obj(&TardisFuns::crypto.base64.decode(&context)?)?;
+        self.set_default_header(&TardisFuns::fw_config().web_server.context_conf.context_header_name, &context);
         Ok(())
     }
 
