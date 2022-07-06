@@ -106,8 +106,10 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
-        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+        if modify_req.disabled.is_some() || modify_req.scope_level.is_some() {
+            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
+        }
         Ok(())
     }
 
