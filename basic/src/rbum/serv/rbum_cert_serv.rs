@@ -529,6 +529,19 @@ impl<'a> RbumCertServ {
         Ok(vcode)
     }
 
+    pub async fn check_exist(ak: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<bool> {
+        let mut query = Query::select();
+        query
+            .column(rbum_cert::Column::Id)
+            .from(rbum_cert::Entity)
+            .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
+            .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
+            .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
+            .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
+            .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
+        funs.db().count(&query).await.map(|r| r > 0)
+    }
+
     pub async fn validate(
         ak: &str,
         input_sk: &str,
