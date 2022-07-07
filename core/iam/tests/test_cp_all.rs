@@ -46,9 +46,9 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
                 sk_rule_need_uppercase: false,
                 sk_rule_need_lowercase: false,
                 sk_rule_need_spec_char: false,
-                sk_lock_cycle_sec: 0,
-                sk_lock_err_times: 0,
-                sk_lock_duration_sec: 0,
+                sk_lock_cycle_sec: 10,
+                sk_lock_err_times: 3,
+                sk_lock_duration_sec: 10,
                 repeatable: true,
                 expire_sec: 111,
             },
@@ -124,6 +124,70 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert_eq!(account_resp.roles.len(), 1);
     assert!(account_resp.roles.iter().any(|i| i.1 == "tenant_admin"));
     assert!(!account_resp.token.is_empty());
+
+    info!("【test_cp_all】 : Login by Username and Password, error 3");
+    assert!(IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios".to_string()),
+            sk: TrimString("123456".to_string()),
+            tenant_id: Some(tenant_id.clone()),
+            flag: None
+        },
+        &funs,
+    )
+    .await
+    .is_err());
+    assert!(IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios".to_string()),
+            sk: TrimString("123456".to_string()),
+            tenant_id: Some(tenant_id.clone()),
+            flag: None
+        },
+        &funs,
+    )
+    .await
+    .is_err());
+    assert!(IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios".to_string()),
+            sk: TrimString("123456".to_string()),
+            tenant_id: Some(tenant_id.clone()),
+            flag: None
+        },
+        &funs,
+    )
+    .await
+    .is_err());
+    info!("【test_cp_all】 : Login by Username and Password, By tenant admin lock");
+    assert!(IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios".to_string()),
+            sk: TrimString(tenant_admin_pwd.to_string()),
+            tenant_id: Some(tenant_id.clone()),
+            flag: None,
+        },
+        &funs,
+    )
+    .await
+    .is_err());
+    info!("【test_cp_all】 : Login by Username and Password, By tenant admin wait unlock");
+    // 线程休息
+    sleep(Duration::from_secs(10)).await;
+    let account_unlock_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios".to_string()),
+            sk: TrimString(tenant_admin_pwd.to_string()),
+            tenant_id: Some(tenant_id.clone()),
+            flag: None,
+        },
+        &funs,
+    )
+    .await?;
+    assert_eq!(account_unlock_resp.account_name, "测试管理员");
+    assert_eq!(account_unlock_resp.roles.len(), 1);
+    assert!(account_unlock_resp.roles.iter().any(|i| i.1 == "tenant_admin"));
+    assert!(!account_unlock_resp.token.is_empty());
 
     info!("【test_cp_all】 : Login by Username and Password, By sys admin");
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
