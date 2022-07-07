@@ -54,7 +54,7 @@ impl<'a> IamCpCertUserPwdServ {
         Ok(resp)
     }
 
-    async fn get_tenant_id(tenant_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub async fn get_tenant_id(tenant_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         let tenant_id = if let Some(tenant_id) = &tenant_id {
             if IamTenantServ::is_disabled(tenant_id, funs).await? {
                 return Err(funs.err().conflict("cert_user_pwd", "login", &format!("tenant {} is disabled", tenant_id)));
