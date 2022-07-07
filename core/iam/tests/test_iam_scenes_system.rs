@@ -141,7 +141,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     // Modify Tenant by Tenant Id
     let _: Void = client
         .put(
-            &format!("/cs/tenant/{}", tenant_id),
+            &format!("/cs/tenant/{}?tenant_id={}", tenant_id, tenant_id),
             &IamTenantAggModifyReq {
                 name: Some(TrimString("测试公司_new".to_string())),
                 disabled: None,
@@ -171,7 +171,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
         .await;
 
     // Get Tenant by Tenant Id
-    let tenant: IamTenantAggDetailResp = client.get(&format!("/cs/tenant/{}", tenant_id)).await;
+    let tenant: IamTenantAggDetailResp = client.get(&format!("/cs/tenant/{}?tenant_id={}", tenant_id, tenant_id)).await;
     assert_eq!(tenant.name, "测试公司_new");
     assert_eq!(tenant.icon, "https://oss.minio.io/xxx.icon");
     assert!(tenant.cert_conf_by_user_pwd.repeatable);

@@ -33,7 +33,7 @@ use bios_iam::iam_enumeration::{IamCertKind, IamCertTokenKind, IamResKind};
 
 pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
-
+    info!("【test_cc_cert】 : test_key_cache");
     let (tenant_id, tenant_admin_pwd) = IamTenantServ::add_tenant_agg(
         &IamTenantAggAddReq {
             name: TrimString("缓存测试租户".to_string()),
@@ -73,7 +73,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             expire_sec: None,
         },
         &funs,
-        system_admin_context,
+        &IamCertServ::try_use_tenant_ctx(system_admin_context.clone(), Some(tenant_id.clone()))?,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
