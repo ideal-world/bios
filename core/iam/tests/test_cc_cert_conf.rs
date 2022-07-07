@@ -46,6 +46,9 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
             ext: None,
             repeatable: None,
             expire_sec: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None
         },
         &funs,
         another_context,
@@ -62,6 +65,9 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
             ext: None,
             repeatable: None,
             expire_sec: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None
         },
         &funs,
         context,
