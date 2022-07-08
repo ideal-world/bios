@@ -10,7 +10,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
-use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
+use crate::basic::dto::iam_cert_conf_dto::{IamUserPwdCertConfAddOrModifyReq, IamUserPwdCertConfInfo};
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
@@ -165,5 +165,30 @@ impl<'a> IamCertUserPwdServ {
         } else {
             Err(funs.err().not_found("cert_user_pwd", "reset_sk", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
         }
+    }
+
+    pub fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
+            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [ak_rule_len_min] or [ak_rule_len_max]"));
+        }
+        Ok(format!(
+            "^[0-9a-z-_@\\.]{{{},{}}}$",
+            cert_conf_by_user_pwd.ak_rule_len_min, cert_conf_by_user_pwd.ak_rule_len_max
+        ))
+    }
+
+    pub fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+        if cert_conf_by_user_pwd.sk_rule_len_max < cert_conf_by_user_pwd.sk_rule_len_min {
+            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [sk_rule_len_min] or [sk_rule_len_max]"));
+        }
+        Ok(format!(
+            "^{}{}{}{}.{{{},{}}}$",
+            if cert_conf_by_user_pwd.sk_rule_need_num { "(?=.*\\d)" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_lowercase { "(?=.*[a-z])" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_uppercase { "(?=.*[A-Z])" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_spec_char { "(?=.*[$@!%*#?&])" } else { "" },
+            cert_conf_by_user_pwd.sk_rule_len_min,
+            cert_conf_by_user_pwd.sk_rule_len_max
+        ))
     }
 }
