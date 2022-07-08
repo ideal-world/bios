@@ -33,6 +33,28 @@ pub struct IamConfig {
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
     pub mail_template_cert_login_content: String,
+
+    pub ldap: IamLdapConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct IamLdapConfig {
+    pub port: u16,
+    pub dc: String,
+    pub bind_dn: String,
+    pub bind_password: String,
+}
+
+impl Default for IamLdapConfig {
+    fn default() -> Self {
+        IamLdapConfig {
+            port: 10389,
+            dc: "bios".to_string(),
+            bind_dn: "CN=ldapadmin,DC=bios".to_string(),
+            bind_password: "KDi234!ds".to_string(),
+        }
+    }
 }
 
 impl Default for IamConfig {
@@ -50,6 +72,7 @@ impl Default for IamConfig {
             mail_template_cert_activate_content: "Your account [{account_name}] is activating email credentials, verification code: {vcode}".to_string(),
             mail_template_cert_login_title: "IAM Service Mail login verification".to_string(),
             mail_template_cert_login_content: "Your account is trying to login, verification code: {vcode}".to_string(),
+            ldap: IamLdapConfig::default(),
         }
     }
 }

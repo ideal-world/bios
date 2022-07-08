@@ -1,5 +1,5 @@
+#[macro_use]
 extern crate lazy_static;
-
 pub mod basic;
 pub mod console_app;
 pub mod console_common;
@@ -11,3 +11,4 @@ pub mod iam_constants;
 pub mod iam_enumeration;
 pub mod iam_initializer;
 pub mod iam_test_helper;
+pub mod integration;
