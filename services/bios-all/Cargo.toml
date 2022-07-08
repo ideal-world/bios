@@ -20,5 +20,5 @@ tardis = { version = "0.1.0-alpha15", features = ["web-server"] }
 
 serde = { version = "^1", features = ["derive"] }
 
-bios-iam = { path = "../../core/iam" }
+bios-iam = { path = "../../core/iam", features = ["ldap"] }
 
