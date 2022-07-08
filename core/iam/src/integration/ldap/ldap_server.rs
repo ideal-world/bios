@@ -44,7 +44,6 @@
 //! ### Start
 //!
 //! docker run --name gitlab -p 9980:80 -p 9443:443 -p 9922:22 \
-//!   --hostname 192.168.99.105 \
 //!   -v /opt/volumes/gitlab/etc/gitlab:/etc/gitlab \
 //!   -v /opt/volumes/gitlab/var/log/gitlab:/var/log/gitlab \
 //!   -v /opt/volumes/gitlab/var/opt/gitlab:/var/opt/gitlab \
@@ -120,18 +119,22 @@ impl LdapSession {
                                     atype: "sAMAccountName".to_string(),
                                     vals: vec![cn.to_string()],
                                 },
+                                // TODO
                                 LdapPartialAttribute {
                                     atype: "mail".to_string(),
                                     vals: vec![format!("{}@example.com", cn)],
                                 },
+                                // TODO
                                 LdapPartialAttribute {
                                     atype: "cn".to_string(),
                                     vals: vec![cn.to_string()],
                                 },
+                                // TODO
                                 LdapPartialAttribute {
                                     atype: "givenName".to_string(),
                                     vals: vec!["".to_string()],
                                 },
+                                // TODO
                                 LdapPartialAttribute {
                                     atype: "sn".to_string(),
                                     vals: vec![cn.to_string()],
@@ -170,18 +173,22 @@ impl LdapSession {
                                         atype: "sAMAccountName".to_string(),
                                         vals: vec![cn.clone()],
                                     },
+                                    // TODO
                                     LdapPartialAttribute {
                                         atype: "mail".to_string(),
                                         vals: vec![format!("{}@example.com", cn.clone())],
                                     },
+                                    // TODO
                                     LdapPartialAttribute {
                                         atype: "cn".to_string(),
                                         vals: vec![cn.clone()],
                                     },
+                                    // TODO
                                     LdapPartialAttribute {
                                         atype: "givenName".to_string(),
                                         vals: vec!["".to_string()],
                                     },
+                                    // TODO
                                     LdapPartialAttribute {
                                         atype: "sn".to_string(),
                                         vals: vec![cn.clone()],
