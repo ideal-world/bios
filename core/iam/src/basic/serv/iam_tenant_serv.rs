@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq, IamUserPwdCertConfInfo};
+use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
@@ -172,9 +172,9 @@ impl<'a> IamTenantServ {
         // Init cert conf
         let cert_conf_by_user_pwd = IamUserPwdCertConfAddOrModifyReq {
             ak_note: None,
-            ak_rule: Some(Self::parse_ak_rule(&add_req.cert_conf_by_user_pwd, funs)?),
+            ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(&add_req.cert_conf_by_user_pwd, funs)?),
             sk_note: None,
-            sk_rule: Some(Self::parse_sk_rule(&add_req.cert_conf_by_user_pwd, funs)?),
+            sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(&add_req.cert_conf_by_user_pwd, funs)?),
             ext: Some(TardisFuns::json.obj_to_string(&add_req.cert_conf_by_user_pwd)?),
             repeatable: Some(add_req.cert_conf_by_user_pwd.repeatable),
             expire_sec: Some(add_req.cert_conf_by_user_pwd.expire_sec),
@@ -248,9 +248,9 @@ impl<'a> IamTenantServ {
             &cert_conf_by_user_pwd_id,
             &IamUserPwdCertConfAddOrModifyReq {
                 ak_note: None,
-                ak_rule: Some(Self::parse_ak_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
+                ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
                 sk_note: None,
-                sk_rule: Some(Self::parse_sk_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
+                sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
                 ext: Some(TardisFuns::json.obj_to_string(&modify_req.cert_conf_by_user_pwd)?),
                 repeatable: Some(modify_req.cert_conf_by_user_pwd.repeatable),
                 expire_sec: Some(modify_req.cert_conf_by_user_pwd.expire_sec),
@@ -303,30 +303,5 @@ impl<'a> IamTenantServ {
         };
 
         Ok(tenant)
-    }
-
-    fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
-            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [ak_rule_len_min] or [ak_rule_len_max]"));
-        }
-        Ok(format!(
-            "^[0-9a-zA-Z-_@\\.]{{{},{}}}$",
-            cert_conf_by_user_pwd.ak_rule_len_min, cert_conf_by_user_pwd.ak_rule_len_max
-        ))
-    }
-
-    fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
-        if cert_conf_by_user_pwd.sk_rule_len_max < cert_conf_by_user_pwd.sk_rule_len_min {
-            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [sk_rule_len_min] or [sk_rule_len_max]"));
-        }
-        Ok(format!(
-            "^{}{}{}{}.{{{},{}}}$",
-            if cert_conf_by_user_pwd.sk_rule_need_num { "(?=.*\\d)" } else { "" },
-            if cert_conf_by_user_pwd.sk_rule_need_lowercase { "(?=.*[a-z])" } else { "" },
-            if cert_conf_by_user_pwd.sk_rule_need_uppercase { "(?=.*[A-Z])" } else { "" },
-            if cert_conf_by_user_pwd.sk_rule_need_spec_char { "(?=.*[$@!%*#?&])" } else { "" },
-            cert_conf_by_user_pwd.sk_rule_len_min,
-            cert_conf_by_user_pwd.sk_rule_len_max
-        ))
     }
 }
