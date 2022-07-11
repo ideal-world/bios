@@ -1,14 +1,16 @@
 use std::default::Default;
+use std::ops::Index;
 use std::str::FromStr;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
+
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
@@ -295,11 +297,14 @@ impl<'a> IamResCacheServ {
     }
 
     fn package_uri_mixed(item_code: &str, action: &str) -> String {
+        let domain_idx = item_code.find("/").unwrap_or(item_code.len());
+        let domain = &item_code[0..domain_idx];
+        let path_and_query = &item_code[domain_idx + 1..];
         format!(
             "{}://{}/{}##{}",
             iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-            iam_constants::COMPONENT_CODE.to_lowercase(),
-            item_code,
+            domain.to_lowercase(),
+            path_and_query,
             action
         )
     }

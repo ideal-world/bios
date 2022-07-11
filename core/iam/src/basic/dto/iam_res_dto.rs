@@ -37,6 +37,9 @@ pub struct IamResAddReq {
 
 impl IamResAddReq {
     pub fn encoding(&mut self) -> &mut Self {
+        if self.code.0.starts_with("/") {
+            self.code.0 = self.code.0[1..].to_string();
+        }
         self.code = TrimString(format!(
             "{}/{}/{}",
             self.kind.to_int(),
