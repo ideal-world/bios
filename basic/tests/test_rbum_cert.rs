@@ -129,7 +129,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
         },
         &funs,
         context,
@@ -194,7 +194,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             conn_uri: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
         },
         &funs,
         context,
@@ -289,7 +289,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
         },
         &funs,
         context,
@@ -319,7 +319,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
         },
         &funs,
         context,
@@ -632,7 +632,7 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
         },
         &funs,
         context,
