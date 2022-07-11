@@ -27,7 +27,7 @@
 //!   'active_directory' => false,
 //!   'allow_username_or_email_login' => false,
 //!   'block_auto_created_users' => false,
-//!   'base' => 'OU=gitlab,DC=starsys,DC=tech',
+//!   'base' => 'DC=bios',
 //!   'user_filter' => '',
 //!   'attributes' => {
 //!     'username' => ['uid', 'userid', 'sAMAccountName'],
