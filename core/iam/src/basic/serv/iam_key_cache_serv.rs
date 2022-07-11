@@ -1,5 +1,4 @@
 use std::default::Default;
-use std::ops::Index;
 use std::str::FromStr;
 
 use itertools::Itertools;
