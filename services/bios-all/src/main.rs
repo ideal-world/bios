@@ -11,7 +11,7 @@ mod initializer;
 ///
 #[tokio::main]
 async fn main() -> TardisResult<()> {
-    TardisFuns::init("services/bios-all/config").await?;
+    TardisFuns::init("config").await?;
     let web_server = TardisFuns::web_server();
     initializer::init(web_server).await?;
     ldap_server::start().await?;
