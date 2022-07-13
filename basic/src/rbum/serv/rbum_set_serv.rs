@@ -580,10 +580,10 @@ impl<'a> RbumSetCateServ {
             }
         } else if let Some(parent_sys_code) = parent_sys_code {
             // if level N (N!=1) is empty
-            Ok(format!("{}{}", parent_sys_code, String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?))
+            Ok(format!("{}{}", parent_sys_code, String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?))
         } else {
             // if level 1 is empty
-            Ok(String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?)
+            Ok(String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?)
         }
     }
 
