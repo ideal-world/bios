@@ -535,7 +535,7 @@ impl<'a> RbumSetCateServ {
 
     async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let lock_key = format!("rbum_set_cate_sys_code_{}", rbum_set_id);
-        if !funs.cache().set_nx(&lock_key, "waiting").await? {
+        while !funs.cache().set_nx(&lock_key, "waiting").await? {
             sleep(Duration::from_millis(100)).await;
         }
         funs.cache().expire(&lock_key, 10).await?;
