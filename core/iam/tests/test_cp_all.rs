@@ -46,9 +46,9 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
                 sk_rule_need_uppercase: false,
                 sk_rule_need_lowercase: false,
                 sk_rule_need_spec_char: false,
-                sk_lock_cycle_sec: 10,
+                sk_lock_cycle_sec: 5,
                 sk_lock_err_times: 3,
-                sk_lock_duration_sec: 10,
+                sk_lock_duration_sec: 5,
                 repeatable: true,
                 expire_sec: 111,
             },
@@ -173,7 +173,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     .is_err());
     info!("【test_cp_all】 : Login by Username and Password, By tenant admin wait unlock");
     // 线程休息
-    sleep(Duration::from_secs(10)).await;
+    sleep(Duration::from_secs(5)).await;
     let account_unlock_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),
@@ -309,6 +309,22 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         &funs,
     )
     .await?;
+
+    info!("【test_cp_all】 : Login by Mail And Pwd");
+    let mail_account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("i@sunisle.org".to_string()),
+            sk: TrimString(tenant_admin_pwd.to_string()),
+            tenant_id: Some(tenant_admin_context.own_paths.clone()),
+            flag: None,
+        },
+        &funs,
+    )
+    .await?;
+    assert_eq!(mail_account_resp.account_name, "测试管理员");
+    assert_eq!(mail_account_resp.roles.len(), 1);
+    assert!(mail_account_resp.roles.iter().any(|i| i.1 == "tenant_admin"));
+    assert!(!mail_account_resp.token.is_empty());
 
     info!("【test_cp_all】 : Delete Mail-VCode Cert");
     IamCertServ::delete_cert(&mail_vcode_cert_id, &funs, &tenant_admin_context).await?;

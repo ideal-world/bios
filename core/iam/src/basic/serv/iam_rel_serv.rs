@@ -352,6 +352,7 @@ impl<'a> IamRelServ {
             IamRelKind::IamAccountApp => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
             }
+            IamRelKind::IamAccountRel => todo!(),
         }
         Ok(())
     }
