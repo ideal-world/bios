@@ -16,6 +16,7 @@ COPY --from=etcd-stage /tmp/etcd/etcdctl /usr/bin/etcdctl
 COPY apisix/apisix/plugins/auth-bios.lua /usr/local/apisix/apisix/plugins/auth-bios.lua
 COPY apisix/apisix/plugins/auth-bios /usr/local/apisix/apisix/plugins/auth-bios
 COPY apisix/conf/config-default.yaml /usr/local/apisix/conf/config-default.yaml
+COPY apisix/conf/config.yaml /usr/local/apisix/conf/config.yaml
 
 EXPOSE 9080 9443 2379 2380
 
