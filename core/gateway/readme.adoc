@@ -71,7 +71,7 @@ You need to modify the `allow_admin` in the `config-default.yaml` file to add an
 [source,sh]
 ----
 # add upstream
-curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b6acecs1" -X PUT -d '
 {
   "type": "roundrobin",
   "nodes": {
@@ -80,7 +80,7 @@ curl "http://127.0.0.1:9080/apisix/admin/upstreams/1" -H "X-API-KEY: edd1c9f0343
 }'
 
 # add route
-curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f136f87ad84b6acecs1" -X PUT -d '
 {
   "uri": "/anything/*",
   "upstream_id": "1"
@@ -90,7 +90,7 @@ curl "http://127.0.0.1:9080/apisix/admin/routes/1" -H "X-API-KEY: edd1c9f034335f
 curl -i -X GET "http://127.0.0.1:9080/anything/foo?arg=10"
 
 # add a global plugin (redis needs to be enabled)
-curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b625c8f1" -X PUT -d '
+curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: application/json" -H "X-API-KEY: edd1c9f034335f136f87ad84b6acecs1" -X PUT -d '
 {
   "plugins": {
     "auth-bios": {
@@ -102,7 +102,7 @@ curl "http://127.0.0.1:9080/apisix/admin/global_rules/1" -H "Content-Type: appli
 }'
 
 # get global plugin list
-curl http://127.0.0.1:9080/apisix/admin/global_rules -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1'
+curl http://127.0.0.1:9080/apisix/admin/global_rules -H 'X-API-KEY: edd1c9f034335f136f87ad84b6acecs1'
 
 
 # test failed with missing token error
@@ -116,4 +116,33 @@ curl -i -X GET "http://127.0.0.1:9080/anything/foo?arg=10" -H 'Bios-Token: token
 [source,sh]
 ----
 docker run --name bios-gateway -d -p 9080:9080 ghcr.io/ideal-world/bios-gateway:latest
+----
+
+.Add dashboard (optional)
+
+[source,sh]
+----
+// @see https://github.com/apache/apisix-docker/blob/master/all-in-one/apisix-dashboard/conf.yaml
+
+cat > ./dashboard.yml <<EOF
+conf:
+  listen:
+    host: 0.0.0.0
+    port: 9000
+  etcd:
+    endpoints:
+      - gateway:2379
+authentication:
+  secret: biossec           
+  expire_time: 3600  
+  users:
+    - username: admin
+      password: dsfDs3#￥2
+EOF
+
+docker run -d --name dashboard \
+           -p 9000:9000        \
+           -v ${PWD}/dashboard.yml:/usr/local/apisix-dashboard/conf/conf.yaml \
+           --link bios-gateway:gateway \
+           apache/apisix-dashboard
 ----

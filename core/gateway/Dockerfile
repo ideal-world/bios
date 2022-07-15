@@ -18,8 +18,11 @@ COPY apisix/apisix/plugins/auth-bios /usr/local/apisix/apisix/plugins/auth-bios
 COPY apisix/conf/config-default.yaml /usr/local/apisix/conf/config-default.yaml
 COPY apisix/conf/config.yaml /usr/local/apisix/conf/config.yaml
 
+VOLUME /usr/local/apisix/conf
+VOLUME /etcd_data
+
 EXPOSE 9080 9443 2379 2380
 
-CMD ["sh", "-c", "(nohup etcd >/tmp/etcd.log 2>&1 &) && sleep 10 && /usr/bin/apisix init && /usr/bin/apisix init_etcd && /usr/local/openresty/bin/openresty -p /usr/local/apisix -g 'daemon off;'"]
+CMD ["sh", "-c", "(nohup etcd --data-dir=/etcd_data --listen-client-urls=http://0.0.0.0:2379 --advertise-client-urls=http://localhost:2379 >/tmp/etcd.log 2>&1 &) && sleep 10 && /usr/bin/apisix init && /usr/bin/apisix init_etcd && /usr/local/openresty/bin/openresty -p /usr/local/apisix -g 'daemon off;'"]
 
 STOPSIGNAL SIGQUIT
