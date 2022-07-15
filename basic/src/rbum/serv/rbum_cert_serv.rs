@@ -63,6 +63,26 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
     }
 
     async fn before_add_rbum(add_req: &mut RbumCertConfAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(is_basic) = add_req.is_basic {
+            if is_basic {
+                add_req.sk_dynamic = Some(false);
+                if funs
+                    .db()
+                    .count(
+                        Query::select()
+                            .column(rbum_cert_conf::Column::Id)
+                            .from(rbum_cert_conf::Entity)
+                            .and_where(Expr::col(rbum_cert_conf::Column::IsBasic).eq(true))
+                            .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(add_req.rel_rbum_domain_id.as_str()))
+                            .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).as_str())),
+                    )
+                    .await?
+                    > 0
+                {
+                    return Err(funs.err().conflict("cert_conf", "add", "is_basic already exists"));
+                }
+            }
+        }
         Self::check_scope(&add_req.rel_rbum_domain_id, RbumDomainServ::get_table_name(), funs, ctx).await?;
         if let Some(rel_rbum_item_id) = &add_req.rel_rbum_item_id {
             Self::check_scope(rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
@@ -91,7 +111,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         let mut rbum_cert_conf = rbum_cert_conf::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -128,6 +148,26 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         }
         if let Some(is_basic) = modify_req.is_basic {
             rbum_cert_conf.is_basic = Set(is_basic);
+            let rbum_cert_conf_resp = Self::peek_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
+            if is_basic {
+                rbum_cert_conf.sk_dynamic = Set(!is_basic);
+                if funs
+                    .db()
+                    .count(
+                        Query::select()
+                            .column(rbum_cert_conf::Column::Id)
+                            .from(rbum_cert_conf::Entity)
+                            .and_where(Expr::col(rbum_cert_conf::Column::IsBasic).eq(true))
+                            .and_where(Expr::col(rbum_cert_conf::Column::Id).ne(id))
+                            .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_cert_conf_resp.rel_rbum_domain_id.as_str()))
+                            .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_cert_conf_resp.rel_rbum_item_id.as_str())),
+                    )
+                    .await?
+                    > 0
+                {
+                    return Err(funs.err().conflict("cert_conf", "modify", "is_basic already exists"));
+                }
+            }
         }
         if let Some(rest_by_kinds) = &modify_req.rest_by_kinds {
             rbum_cert_conf.rest_by_kinds = Set(rest_by_kinds.to_string());
@@ -177,6 +217,20 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
     }
 
     async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column(rbum_cert_conf::Column::Id)
+                    .from(rbum_cert_conf::Entity)
+                    .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(id))
+                    .and_where(Expr::col(rbum_cert_conf::Column::IsBasic).eq(true)),
+            )
+            .await?
+            > 0
+        {
+            return Err(funs.err().conflict("cert_conf", "delete", "is_basic is true"));
+        }
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
         let result = Self::peek_rbum(
@@ -656,6 +710,189 @@ impl<'a> RbumCertServ {
         }
     }
 
+    pub async fn validate_agree_pwd(
+        ak: &str,
+        input_sk: &str,
+        rel_rbum_kind: &RbumCertRelKind,
+        ignore_end_time: bool,
+        own_paths: &str,
+        funs: &TardisFunsInst<'a>,
+    ) -> TardisResult<(String, RbumCertRelKind, String)> {
+        #[derive(Debug, FromQueryResult)]
+        struct IdAndSkResp {
+            pub id: String,
+            pub sk: String,
+            pub rel_rbum_id: String,
+            pub rel_rbum_cert_conf_id: String,
+            pub end_time: DateTime<Utc>,
+        }
+
+        #[derive(Debug, FromQueryResult)]
+        struct CertConfPeekResp {
+            pub is_basic: bool,
+            pub sk_encrypted: bool,
+            pub rel_rbum_domain_id: String,
+            pub sk_lock_cycle_sec: u32,
+            pub sk_lock_err_times: u8,
+            pub sk_lock_duration_sec: u32,
+        }
+        let mut query = Query::select();
+        query
+            .column(rbum_cert::Column::Id)
+            .column(rbum_cert::Column::Sk)
+            .column(rbum_cert::Column::RelRbumId)
+            .column(rbum_cert::Column::EndTime)
+            .column(rbum_cert::Column::RelRbumCertConfId)
+            .from(rbum_cert::Entity)
+            .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
+            .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(rel_rbum_kind.to_int()))
+            .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
+            .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
+            .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
+        let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
+        if let Some(rbum_cert) = rbum_cert {
+            if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked"));
+            }
+            if !ignore_end_time && rbum_cert.end_time < Utc::now() {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired"));
+            }
+            if let Some(rbum_cert_conf_id) = Some(rbum_cert.rel_rbum_cert_conf_id) {
+                let cert_conf_peek_resp = funs
+                    .db()
+                    .get_dto::<CertConfPeekResp>(
+                        Query::select()
+                            .column(rbum_cert_conf::Column::IsBasic)
+                            .column(rbum_cert_conf::Column::RelRbumDomainId)
+                            .column(rbum_cert_conf::Column::SkEncrypted)
+                            .column(rbum_cert_conf::Column::SkLockCycleSec)
+                            .column(rbum_cert_conf::Column::SkLockErrTimes)
+                            .column(rbum_cert_conf::Column::SkLockDurationSec)
+                            .from(rbum_cert_conf::Entity)
+                            .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id.as_str())),
+                    )
+                    .await?
+                    .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf"))?;
+                let verify_input_sk = if cert_conf_peek_resp.sk_encrypted {
+                    Self::encrypt_sk(input_sk, ak, rbum_cert_conf_id.as_str())?
+                } else {
+                    input_sk.to_string()
+                };
+                if rbum_cert.sk == verify_input_sk {
+                    funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), &rbum_cert.rel_rbum_id)).await?;
+                    Ok((rbum_cert.id, rel_rbum_kind.clone(), rbum_cert.rel_rbum_id))
+                } else if !cert_conf_peek_resp.is_basic {
+                    Ok(Self::validate_agree_pwd_secondary(
+                        rbum_cert.rel_rbum_id.as_str(),
+                        cert_conf_peek_resp.rel_rbum_domain_id.as_str(),
+                        input_sk,
+                        ignore_end_time,
+                        funs,
+                    )
+                    .await?)
+                } else {
+                    log::warn!(
+                        "validation error [sk is not match] by ak {},rel_rbum_cert_conf_id {}, own_paths {}",
+                        ak,
+                        rbum_cert_conf_id,
+                        own_paths
+                    );
+                    Self::process_lock_in_cache(
+                        &rbum_cert.rel_rbum_id,
+                        cert_conf_peek_resp.sk_lock_cycle_sec,
+                        cert_conf_peek_resp.sk_lock_err_times,
+                        cert_conf_peek_resp.sk_lock_duration_sec,
+                        funs,
+                    )
+                    .await?;
+                    Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+                }
+            } else {
+                log::warn!("validation error by ak {},rbum_cert_conf_id is None, own_paths {}", ak, own_paths);
+                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+            }
+        } else {
+            log::warn!("validation error by ak {},rel_rbum_kind {}, own_paths {}", ak, rel_rbum_kind, own_paths);
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+        }
+    }
+
+    async fn validate_agree_pwd_secondary(
+        rel_rbum_id: &str,
+        rel_rbum_domain_id: &str,
+        input_sk: &str,
+        ignore_end_time: bool,
+        funs: &TardisFunsInst<'a>,
+    ) -> TardisResult<(String, RbumCertRelKind, String)> {
+        #[derive(Debug, FromQueryResult)]
+        struct CertAggConfPeekResp {
+            pub id: String,
+            pub ak: String,
+            pub sk: String,
+            pub rel_rbum_kind: RbumCertRelKind,
+            pub end_time: DateTime<Utc>,
+            pub sk_encrypted: bool,
+            pub rel_rbum_cert_conf_id: String,
+            pub sk_lock_cycle_sec: u32,
+            pub sk_lock_err_times: u8,
+            pub sk_lock_duration_sec: u32,
+        }
+        let rbum_cert_agg_conf_peek_resp = funs
+            .db()
+            .get_dto::<CertAggConfPeekResp>(
+                Query::select()
+                    .expr_as(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Id).if_null(""), Alias::new("id"))
+                    .column(rbum_cert::Column::Ak)
+                    .column(rbum_cert::Column::Sk)
+                    .column(rbum_cert::Column::RelRbumKind)
+                    .column(rbum_cert::Column::EndTime)
+                    .column(rbum_cert::Column::RelRbumCertConfId)
+                    .column(rbum_cert_conf::Column::SkEncrypted)
+                    .column(rbum_cert_conf::Column::SkLockCycleSec)
+                    .column(rbum_cert_conf::Column::SkLockErrTimes)
+                    .column(rbum_cert_conf::Column::SkLockDurationSec)
+                    .from(rbum_cert::Entity)
+                    .inner_join(
+                        rbum_cert_conf::Entity,
+                        Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Id).equals(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
+                    )
+                    .and_where(Expr::col(rbum_cert::Column::RelRbumId).eq(rel_rbum_id))
+                    .and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId).eq(rel_rbum_domain_id))
+                    .and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic).eq(true)),
+            )
+            .await?
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "validate_agree_pwd_not_basic", "not found cert conf"))?;
+        if !ignore_end_time && rbum_cert_agg_conf_peek_resp.end_time < Utc::now() {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "validate_agree_pwd_not_basic", "sk is expired"));
+        }
+        let verify_input_sk = if rbum_cert_agg_conf_peek_resp.sk_encrypted {
+            Self::encrypt_sk(input_sk, &rbum_cert_agg_conf_peek_resp.ak, &rbum_cert_agg_conf_peek_resp.rel_rbum_cert_conf_id)?
+        } else {
+            input_sk.to_string()
+        };
+
+        if rbum_cert_agg_conf_peek_resp.sk == verify_input_sk {
+            funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rel_rbum_id)).await?;
+            Ok((rbum_cert_agg_conf_peek_resp.id, rbum_cert_agg_conf_peek_resp.rel_rbum_kind, rel_rbum_id.to_string()))
+        } else {
+            log::warn!(
+                "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, rel_rbum_id {}",
+                rbum_cert_agg_conf_peek_resp.ak,
+                rbum_cert_agg_conf_peek_resp.rel_rbum_cert_conf_id,
+                rel_rbum_id
+            );
+            Self::process_lock_in_cache(
+                rel_rbum_id,
+                rbum_cert_agg_conf_peek_resp.sk_lock_cycle_sec,
+                rbum_cert_agg_conf_peek_resp.sk_lock_err_times,
+                rbum_cert_agg_conf_peek_resp.sk_lock_duration_sec,
+                funs,
+            )
+            .await?;
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+        }
+    }
+
     async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: u32, sk_lock_err_times: u8, sk_lock_duration_sec: u32, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         if sk_lock_cycle_sec == 0 || sk_lock_err_times == 0 || sk_lock_duration_sec == 0 {
             return Ok(());
@@ -823,7 +1060,7 @@ impl<'a> RbumCertServ {
                 Query::select()
                     .column(rbum_cert::Column::Id)
                     .from(rbum_cert::Entity)
-                    .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.as_str()))
+                    .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
                     .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
                     .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
             )

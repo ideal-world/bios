@@ -54,6 +54,7 @@ pub enum IamRelKind {
     IamResRole,
     IamAccountApp,
     IamResApi,
+    IamAccountRel,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum)]
