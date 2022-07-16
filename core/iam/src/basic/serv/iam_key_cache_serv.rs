@@ -295,10 +295,10 @@ impl<'a> IamResCacheServ {
         Ok(())
     }
 
-    fn package_uri_mixed(item_code: &str, action: &str) -> String {
-        let domain_idx = item_code.find("/").unwrap_or(item_code.len());
+    pub fn package_uri_mixed(item_code: &str, action: &str) -> String {
+        let domain_idx = item_code.find('/').unwrap_or(item_code.len());
         let domain = &item_code[0..domain_idx];
-        let path_and_query = &item_code[domain_idx + 1..];
+        let path_and_query = if domain_idx != item_code.len() { &item_code[domain_idx + 1..] } else { "" };
         format!(
             "{}://{}/{}##{}",
             iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
