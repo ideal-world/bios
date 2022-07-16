@@ -387,7 +387,7 @@ async fn add_res<'a>(
     let res_menu_id = IamResServ::add_res_agg(
         &mut IamResAggAddReq {
             res: IamResAddReq {
-                code: TrimString(format!("{}/{}", iam_constants::COMPONENT_CODE.to_lowercase(), code.to_string())),
+                code: TrimString(format!("{}/{}", iam_constants::COMPONENT_CODE.to_lowercase(), code)),
                 name: TrimString(name.to_string()),
                 kind: IamResKind::Menu,
                 icon: None,
@@ -410,7 +410,7 @@ async fn add_res<'a>(
     let res_api_id = IamResServ::add_res_agg(
         &mut IamResAggAddReq {
             res: IamResAddReq {
-                code: TrimString(format!("{}/{}/**", iam_constants::COMPONENT_CODE.to_lowercase(), code.to_string())),
+                code: TrimString(format!("{}/{}/**", iam_constants::COMPONENT_CODE.to_lowercase(), code)),
                 name: TrimString(name.to_string()),
                 kind: IamResKind::Api,
                 icon: None,
