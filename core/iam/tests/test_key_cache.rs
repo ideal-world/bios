@@ -20,7 +20,7 @@ use bios_iam::basic::serv::iam_app_serv::IamAppServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use bios_iam::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
-use bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
+use bios_iam::basic::serv::iam_key_cache_serv::{IamIdentCacheServ, IamResCacheServ};
 use bios_iam::basic::serv::iam_res_serv::IamResServ;
 use bios_iam::basic::serv::iam_role_serv::IamRoleServ;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -827,7 +827,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Add res, expected two res records");
     let res_cs_id = IamResServ::add_item(
         &mut IamResAddReq {
-            code: TrimString("cs-2/**".to_string()),
+            code: TrimString("iam/cs-2/**".to_string()),
             name: TrimString("系统控制台".to_string()),
             kind: IamResKind::Api,
             icon: None,
@@ -844,7 +844,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     .await?;
     let res_ca_id = IamResServ::add_item(
         &mut IamResAddReq {
-            code: TrimString("ca-2/**".to_string()),
+            code: TrimString("iam/ca-2/**".to_string()),
             name: TrimString("应用控制台".to_string()),
             kind: IamResKind::Api,
             icon: None,
@@ -860,7 +860,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 2);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs-2/**", "*")).await?.unwrap().contains(r#""roles":"""#));
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.unwrap().contains(r#""roles":"""#));
 
     info!("【test_key_cache】 Disable res, expected one res record");
     IamResServ::modify_item(
@@ -879,7 +879,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs-2/**", "*")).await?.is_none());
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.is_none());
 
     info!("【test_key_cache】 Enable res, expected two res records");
     IamResServ::modify_item(
@@ -898,17 +898,22 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 2);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs-2/**", "*")).await?.unwrap().contains(r#""roles":"""#));
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.unwrap().contains(r#""roles":"""#));
 
     info!("【test_key_cache】 Delete res, expected one res record");
     IamResServ::delete_item(&res_cs_id, &funs, system_admin_context).await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("cs-2/**", "*")).await?.is_none());
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.is_none());
 
     info!("【test_key_cache】 Add role rel, expected one role rel record");
     IamRoleServ::add_rel_res(role_id, &res_ca_id, &funs, &app_admin_context).await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca-2/**", "*")).await?.unwrap().contains(&format!(r##""roles":"#{}#""##, role_id)));
+    assert!(funs
+        .cache()
+        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*"))
+        .await?
+        .unwrap()
+        .contains(&format!(r##""roles":"#{}#""##, role_id)));
 
     info!("【test_key_cache】 Add role rel, expected two role rel records");
     let role_id1 = IamRoleServ::add_item(
@@ -928,7 +933,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
     assert!(funs
         .cache()
-        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca-2/**", "*"))
+        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*"))
         .await?
         .unwrap()
         .contains(&format!(r##""roles":"#{}#{}#""##, role_id1, role_id)));
@@ -938,23 +943,13 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
     assert!(funs
         .cache()
-        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca-2/**", "*"))
+        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*"))
         .await?
         .unwrap()
         .contains(&format!(r##""roles":"#{}#""##, role_id1)));
     IamRoleServ::delete_rel_res(&role_id1, &res_ca_id, &funs, &app_admin_context).await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &package_uri_mixed("ca-2/**", "*")).await?.unwrap().contains(r##""roles":"#""##));
+    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/ca-2/**", "*")).await?.unwrap().contains(r##""roles":"#""##));
 
     Ok(())
-}
-
-fn package_uri_mixed(item_code: &str, action: &str) -> String {
-    format!(
-        "{}://{}/{}##{}",
-        iam_constants::RBUM_KIND_CODE_IAM_RES.to_lowercase(),
-        iam_constants::COMPONENT_CODE.to_lowercase(),
-        item_code,
-        action
-    )
 }
