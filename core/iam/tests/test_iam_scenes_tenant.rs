@@ -216,7 +216,7 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
 
     client.login(tenant_admin_user_name, tenant_admin_password, Some(tenant_id.to_string()), None, None, true).await?;
     assert_eq!(client.context().groups.len(), 1);
-    assert!(client.context().groups.get(0).unwrap().contains(":aaaa"));
+    assert!(client.context().groups.get(0).unwrap().contains(":0000"));
 
     // Delete Org Item By Org Item Id
     client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
@@ -447,7 +447,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
 
     // Find Accounts
     let accounts: TardisPage<IamAccountSummaryAggResp> = client.get("/ct/account?page_number=1&page_size=10").await;
-    assert_eq!(accounts.total_size, 2);
+    assert_eq!(accounts.total_size, 1);
     let account_id = accounts.records.iter().find(|i| i.name == "测试管理员").unwrap().id.clone();
 
     // Find Roles
