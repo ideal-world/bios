@@ -115,6 +115,7 @@ pub struct RbumSetItemFilterReq {
 #[serde(default)]
 pub struct RbumItemRelFilterReq {
     pub rel_by_from: bool,
+    pub is_left: bool,
     pub tag: Option<String>,
     pub from_rbum_kind: Option<RbumRelFromKind>,
     pub rel_item_id: Option<String>,
