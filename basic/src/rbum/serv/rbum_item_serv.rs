@@ -482,22 +482,40 @@ where
         .await?;
         fn package_rel(query: &mut SelectStatement, rel_table: Alias, rbum_item_rel_filter_req: &RbumItemRelFilterReq) {
             if rbum_item_rel_filter_req.rel_by_from {
-                query.join_as(
-                    JoinType::InnerJoin,
-                    rbum_rel::Entity,
-                    rel_table.clone(),
-                    Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).equals(rbum_item::Entity, rbum_item::Column::Id),
-                );
+                if rbum_item_rel_filter_req.is_left {
+                    query.join_as(
+                        JoinType::LeftJoin,
+                        rbum_rel::Entity,
+                        rel_table.clone(),
+                        Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                    );
+                } else {
+                    query.join_as(
+                        JoinType::InnerJoin,
+                        rbum_rel::Entity,
+                        rel_table.clone(),
+                        Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                    );
+                }
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
                     query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
                 }
             } else {
-                query.join_as(
-                    JoinType::InnerJoin,
-                    rbum_rel::Entity,
-                    rel_table.clone(),
-                    Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).equals(rbum_item::Entity, rbum_item::Column::Id),
-                );
+                if rbum_item_rel_filter_req.is_left {
+                    query.join_as(
+                        JoinType::LeftJoin,
+                        rbum_rel::Entity,
+                        rel_table.clone(),
+                        Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                    );
+                } else {
+                    query.join_as(
+                        JoinType::InnerJoin,
+                        rbum_rel::Entity,
+                        rel_table.clone(),
+                        Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                    );
+                }
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
                     query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
                 }
