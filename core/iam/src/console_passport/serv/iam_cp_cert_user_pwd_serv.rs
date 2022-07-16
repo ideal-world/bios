@@ -21,7 +21,7 @@ impl<'a> IamCpCertUserPwdServ {
     pub async fn new_pwd_without_login(pwd_new_req: &IamPwdNewReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         let tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
-        let (_, _, rbum_item_id) = RbumCertServ::validate(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await?;
+        let (_, _, rbum_item_id) = RbumCertServ::validate_by_spec_cert_conf(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await?;
         let ctx = TardisContext {
             own_paths: tenant_id.clone(),
             ak: pwd_new_req.ak.to_string(),
@@ -51,7 +51,7 @@ impl<'a> IamCpCertUserPwdServ {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
         // let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         // let (_, _, rbum_item_id) = RbumCertServ::validate(&login_req.ak.0, &login_req.sk.0, &rbum_cert_conf_id, false, &tenant_id, funs).await?;
-        let (_, _, rbum_item_id) = RbumCertServ::validate_agree_pwd(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, &tenant_id, funs).await?;
+        let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, &tenant_id, funs).await?;
         let resp = IamCertServ::package_tardis_context_and_resp(login_req.tenant_id.clone(), &login_req.ak.0, &rbum_item_id, login_req.flag.clone(), funs).await?;
         Ok(resp)
     }

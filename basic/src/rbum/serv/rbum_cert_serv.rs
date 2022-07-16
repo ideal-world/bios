@@ -596,7 +596,7 @@ impl<'a> RbumCertServ {
         funs.db().count(&query).await.map(|r| r > 0)
     }
 
-    pub async fn validate(
+    pub async fn validate_by_spec_cert_conf(
         ak: &str,
         input_sk: &str,
         rbum_cert_conf_id: &str,
@@ -710,7 +710,8 @@ impl<'a> RbumCertServ {
         }
     }
 
-    pub async fn validate_agree_pwd(
+    /// Support different credentials of ak + basic credentials of sk as validation method
+    pub async fn validate_by_ak_and_basic_sk(
         ak: &str,
         input_sk: &str,
         rel_rbum_kind: &RbumCertRelKind,
@@ -782,7 +783,7 @@ impl<'a> RbumCertServ {
                     funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), &rbum_cert.rel_rbum_id)).await?;
                     Ok((rbum_cert.id, rel_rbum_kind.clone(), rbum_cert.rel_rbum_id))
                 } else if !cert_conf_peek_resp.is_basic {
-                    Ok(Self::validate_agree_pwd_secondary(
+                    Ok(Self::validate_by_non_basic_cert_conf_with_basic_sk(
                         rbum_cert.rel_rbum_id.as_str(),
                         cert_conf_peek_resp.rel_rbum_domain_id.as_str(),
                         input_sk,
@@ -817,7 +818,7 @@ impl<'a> RbumCertServ {
         }
     }
 
-    async fn validate_agree_pwd_secondary(
+    async fn validate_by_non_basic_cert_conf_with_basic_sk(
         rel_rbum_id: &str,
         rel_rbum_domain_id: &str,
         input_sk: &str,
@@ -825,7 +826,7 @@ impl<'a> RbumCertServ {
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, FromQueryResult)]
-        struct CertAggConfPeekResp {
+        struct BasicCertInfoResp {
             pub id: String,
             pub ak: String,
             pub sk: String,
@@ -837,9 +838,9 @@ impl<'a> RbumCertServ {
             pub sk_lock_err_times: u8,
             pub sk_lock_duration_sec: u32,
         }
-        let rbum_cert_agg_conf_peek_resp = funs
+        let rbum_basic_cert_info_resp = funs
             .db()
-            .get_dto::<CertAggConfPeekResp>(
+            .get_dto::<BasicCertInfoResp>(
                 Query::select()
                     .expr_as(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Id).if_null(""), Alias::new("id"))
                     .column(rbum_cert::Column::Ak)
@@ -861,35 +862,35 @@ impl<'a> RbumCertServ {
                     .and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic).eq(true)),
             )
             .await?
-            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "validate_agree_pwd_not_basic", "not found cert conf"))?;
-        if !ignore_end_time && rbum_cert_agg_conf_peek_resp.end_time < Utc::now() {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "validate_agree_pwd_not_basic", "sk is expired"));
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found basic cert conf"))?;
+        if !ignore_end_time && rbum_basic_cert_info_resp.end_time < Utc::now() {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "basic sk is expired"));
         }
-        let verify_input_sk = if rbum_cert_agg_conf_peek_resp.sk_encrypted {
-            Self::encrypt_sk(input_sk, &rbum_cert_agg_conf_peek_resp.ak, &rbum_cert_agg_conf_peek_resp.rel_rbum_cert_conf_id)?
+        let verify_input_sk = if rbum_basic_cert_info_resp.sk_encrypted {
+            Self::encrypt_sk(input_sk, &rbum_basic_cert_info_resp.ak, &rbum_basic_cert_info_resp.rel_rbum_cert_conf_id)?
         } else {
             input_sk.to_string()
         };
 
-        if rbum_cert_agg_conf_peek_resp.sk == verify_input_sk {
+        if rbum_basic_cert_info_resp.sk == verify_input_sk {
             funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rel_rbum_id)).await?;
-            Ok((rbum_cert_agg_conf_peek_resp.id, rbum_cert_agg_conf_peek_resp.rel_rbum_kind, rel_rbum_id.to_string()))
+            Ok((rbum_basic_cert_info_resp.id, rbum_basic_cert_info_resp.rel_rbum_kind, rel_rbum_id.to_string()))
         } else {
             log::warn!(
                 "validation error [sk is not match] by ak {},rbum_cert_conf_id {}, rel_rbum_id {}",
-                rbum_cert_agg_conf_peek_resp.ak,
-                rbum_cert_agg_conf_peek_resp.rel_rbum_cert_conf_id,
+                rbum_basic_cert_info_resp.ak,
+                rbum_basic_cert_info_resp.rel_rbum_cert_conf_id,
                 rel_rbum_id
             );
             Self::process_lock_in_cache(
                 rel_rbum_id,
-                rbum_cert_agg_conf_peek_resp.sk_lock_cycle_sec,
-                rbum_cert_agg_conf_peek_resp.sk_lock_err_times,
-                rbum_cert_agg_conf_peek_resp.sk_lock_duration_sec,
+                rbum_basic_cert_info_resp.sk_lock_cycle_sec,
+                rbum_basic_cert_info_resp.sk_lock_err_times,
+                rbum_basic_cert_info_resp.sk_lock_duration_sec,
                 funs,
             )
             .await?;
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "basic validation error"))
         }
     }
 
