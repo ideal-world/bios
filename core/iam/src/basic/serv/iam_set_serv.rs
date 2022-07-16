@@ -171,13 +171,13 @@ impl<'a> IamSetServ {
 
     pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let menu_sys_code = String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?;
+        let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
         Self::get_tree_with_sys_code(set_id, &menu_sys_code, funs, ctx).await
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'a'; set_cate_sys_code_node_len])?).unwrap();
+        let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?).unwrap();
         Self::get_tree_with_sys_code(set_id, &api_sys_code, funs, ctx).await
     }
 
