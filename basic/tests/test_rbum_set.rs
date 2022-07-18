@@ -120,7 +120,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             rbum_parent_cate_id: None,
             scope_level: Some(RbumScopeLevelKind::L2),
-            rel_rbum_set_id: "".to_string()
+            rel_rbum_set_id: "".to_string(),
         },
         &funs,
         context,
@@ -441,7 +441,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             sort: 0,
             rel_rbum_set_id: "".to_string(),
             rel_rbum_set_cate_id: "".to_string(),
-            rel_rbum_item_id: "".to_string()
+            rel_rbum_item_id: "".to_string(),
         },
         &funs,
         context,
@@ -454,7 +454,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             sort: 0,
             rel_rbum_set_id: set_id.to_string(),
             rel_rbum_set_cate_id: "".to_string(),
-            rel_rbum_item_id: "".to_string()
+            rel_rbum_item_id: "".to_string(),
         },
         &funs,
         context,
@@ -467,7 +467,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             sort: 0,
             rel_rbum_set_id: set_id.to_string(),
             rel_rbum_set_cate_id: "".to_string(),
-            rel_rbum_item_id: item_account_a1_id.to_string()
+            rel_rbum_item_id: item_account_a1_id.to_string(),
         },
         &funs,
         context,
@@ -486,6 +486,22 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
+
+    assert!(RbumSetItemServ::add_rbum(
+        &mut RbumSetItemAddReq {
+            sort: 0,
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: set_cate_id.to_string(),
+            rel_rbum_item_id: item_account_a1_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await
+    .err()
+    .unwrap()
+    .message()
+    .contains("item already exists"));
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all");
     let set_infos = RbumSetServ::get_tree(&set_id, None, &funs, context).await?;
@@ -553,7 +569,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
         },
         &funs,
-        context
+        context,
     )
     .await
     .is_err());

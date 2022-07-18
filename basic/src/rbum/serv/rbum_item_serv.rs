@@ -198,11 +198,7 @@ where
     fn get_ext_table_name() -> &'static str;
 
     fn get_obj_name() -> String {
-        Self::get_obj_name_from(Self::get_ext_table_name())
-    }
-
-    fn get_obj_name_from(table_name: &str) -> String {
-        table_name.replace("rbum_", "")
+        Self::get_ext_table_name().to_string()
     }
 
     fn get_rbum_kind_id() -> String;

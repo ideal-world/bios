@@ -23,7 +23,9 @@ use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 pub struct RbumSetServ;
+
 pub struct RbumSetCateServ;
+
 pub struct RbumSetItemServ;
 
 #[async_trait]
@@ -625,6 +627,22 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
         Self::check_scope(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
+        let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?;
+        if funs
+            .db()
+            .count(
+                Query::select()
+                    .column(rbum_set_item::Column::Id)
+                    .from(rbum_set_item::Entity)
+                    .and_where(Expr::col(rbum_set_item::Column::RelRbumSetId).eq(add_req.rel_rbum_set_id.as_str()))
+                    .and_where(Expr::col(rbum_set_item::Column::RelRbumItemId).eq(add_req.rel_rbum_item_id.as_str()))
+                    .and_where(Expr::col(rbum_set_item::Column::RelRbumSetCateCode).eq(rel_sys_code.as_str())),
+            )
+            .await?
+            > 0
+        {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "item already exists"));
+        }
         Ok(())
     }
 
