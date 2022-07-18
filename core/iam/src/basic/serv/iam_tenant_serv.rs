@@ -96,7 +96,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
             iam_tenant.contact_phone = Set(contact_phone.to_string());
         }
         if let Some(note) = &modify_req.note {
-            iam_tenant.contact_phone = Set(note.to_string());
+            iam_tenant.note = Set(note.to_string());
         }
         Ok(Some(iam_tenant))
     }
