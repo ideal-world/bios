@@ -137,7 +137,7 @@ impl<'a> IamCertUserPwdServ {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
-            Err(funs.err().not_found("cert_user_pwd", "modify", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
+            Err(funs.err().not_found("iam_cert_user_pwd", "modify", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
         }
     }
 
@@ -163,13 +163,13 @@ impl<'a> IamCertUserPwdServ {
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
-            Err(funs.err().not_found("cert_user_pwd", "reset_sk", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
+            Err(funs.err().not_found("iam_cert_user_pwd", "reset_sk", &format!("not found credential of kind {:?}", IamCertKind::UserPwd)))
         }
     }
 
     pub fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
-            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [ak_rule_len_min] or [ak_rule_len_max]"));
+            return Err(funs.err().bad_request("iam_cert_conf", "add_tenant", "incorrect [ak_rule_len_min] or [ak_rule_len_max]"));
         }
         Ok(format!(
             "^[0-9a-z-_@\\.]{{{},{}}}$",
@@ -179,7 +179,7 @@ impl<'a> IamCertUserPwdServ {
 
     pub fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
         if cert_conf_by_user_pwd.sk_rule_len_max < cert_conf_by_user_pwd.sk_rule_len_min {
-            return Err(funs.err().bad_request("cert_conf", "add_tenant", "incorrect [sk_rule_len_min] or [sk_rule_len_max]"));
+            return Err(funs.err().bad_request("iam_cert_conf", "add_tenant", "incorrect [sk_rule_len_min] or [sk_rule_len_max]"));
         }
         Ok(format!(
             "^{}{}{}{}.{{{},{}}}$",

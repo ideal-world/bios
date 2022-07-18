@@ -25,13 +25,13 @@ impl<'a> IamAttrServ {
         let main_column = add_req.main_column.unwrap_or(false);
         let name = add_req.name.0.as_str();
         if idx && !main_column {
-            return Err(funs.err().bad_request("account_attr", "add", "only the main table columns support indexes"));
+            return Err(funs.err().bad_request("iam_account_attr", "add", "only the main table columns support indexes"));
         }
         if idx && !ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name) {
-            return Err(funs.err().bad_request("account_attr", "add", "index column name is invalid"));
+            return Err(funs.err().bad_request("iam_account_attr", "add", "index column name is invalid"));
         }
         if main_column && !(ACCOUNT_IDX_MAIN_COLUMN_NAMES.contains(&name) || ACCOUNT_NO_IDX_MAIN_COLUMN_NAMES.contains(&name)) {
-            return Err(funs.err().bad_request("account_attr", "add", "main column name is invalid"));
+            return Err(funs.err().bad_request("iam_account_attr", "add", "main column name is invalid"));
         }
         RbumKindAttrServ::add_rbum(
             &mut RbumKindAttrAddReq {

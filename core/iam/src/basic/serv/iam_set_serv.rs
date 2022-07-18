@@ -197,7 +197,7 @@ impl<'a> IamSetServ {
         if let Some(parent_set_cate_id) = parent_set_cate_id.get(0) {
             RbumSetServ::get_tree(set_id, Some(parent_set_cate_id), funs, ctx).await
         } else {
-            Err(funs.err().not_found("set_cate", "get", &format!("not found set cate by sys_code {}", filter_sys_code)))
+            Err(funs.err().not_found("iam_set_cate", "get", &format!("not found set cate by sys_code {}", filter_sys_code)))
         }
     }
 

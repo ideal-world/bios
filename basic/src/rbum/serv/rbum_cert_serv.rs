@@ -79,7 +79,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                     .await?
                     > 0
                 {
-                    return Err(funs.err().conflict("cert_conf", "add", "is_basic already exists"));
+                    return Err(funs.err().conflict(&Self::get_obj_name(), "add", "is_basic already exists"));
                 }
             }
         }
@@ -106,7 +106,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             .await?
             > 0
         {
-            return Err(funs.err().conflict("cert_conf", "add", &format!("code {} already exists", add_req.code)));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code)));
         }
         Ok(())
     }
@@ -165,7 +165,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                     .await?
                     > 0
                 {
-                    return Err(funs.err().conflict("cert_conf", "modify", "is_basic already exists"));
+                    return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "is_basic already exists"));
                 }
             }
         }
@@ -229,7 +229,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             .await?
             > 0
         {
-            return Err(funs.err().conflict("cert_conf", "delete", "is_basic is true"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "is_basic is true"));
         }
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
@@ -948,7 +948,7 @@ impl<'a> RbumCertServ {
                     .is_match(new_sk)
                     .unwrap_or(false)
             {
-                return Err(funs.err().bad_request("cert", "reset_sk", &format!("sk {} is not match sk rule", new_sk)));
+                return Err(funs.err().bad_request(&Self::get_obj_name(), "reset_sk", &format!("sk {} is not match sk rule", new_sk)));
             }
             if rbum_cert_conf.sk_encrypted {
                 Self::encrypt_sk(new_sk, &rbum_cert.ak, rel_rbum_cert_conf_id)?
