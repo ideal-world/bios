@@ -198,7 +198,7 @@ impl<'a> IamIdentCacheServ {
                 return TardisFuns::json.str_to_obj(&context);
             }
         }
-        Err(funs.err().not_found("iam_cache_context", "get", "not found context"))
+        Err(funs.err().not_found("iam_cache_context", "get", "not found context", "404-iam-cache-context-not-exist"))
     }
 }
 
@@ -228,7 +228,7 @@ impl<'a> IamResCacheServ {
     pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
         if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
             // TODO support time range
-            return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none"));
+            return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none", "409-iam-cache-res-date-not-none"));
         }
         let mut res_dto = IamCacheResRelAddOrModifyDto {
             accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
@@ -281,7 +281,7 @@ impl<'a> IamResCacheServ {
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;
         }
-        Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel"))
+        Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel", "404-iam-cache-res-rel-not-exist"))
     }
 
     async fn add_change_trigger(uri: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {

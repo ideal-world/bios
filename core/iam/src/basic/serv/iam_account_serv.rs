@@ -3,8 +3,8 @@ use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
@@ -140,7 +140,7 @@ impl<'a> IamAccountServ {
     pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field"));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
         }
         let account_id = IamAccountServ::add_item(
             &mut IamAccountAddReq {

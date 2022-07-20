@@ -4,8 +4,8 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, Utc};
+use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::*;
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
 
@@ -79,7 +79,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                     .await?
                     > 0
                 {
-                    return Err(funs.err().conflict(&Self::get_obj_name(), "add", "is_basic already exists"));
+                    return Err(funs.err().conflict(&Self::get_obj_name(), "add", "is_basic already exists", "409-rbum-cert-conf-basic-exist"));
                 }
             }
         }
@@ -88,10 +88,10 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             Self::check_scope(rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
         }
         if let Some(ak_rule) = &add_req.ak_rule {
-            Regex::new(ak_rule).map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{}", e)))?;
+            Regex::new(ak_rule).map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{}", e), "400-rbum-cert-conf-ak-rule-invalid"))?;
         }
         if let Some(sk_rule) = &add_req.sk_rule {
-            Regex::new(sk_rule).map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{}", e)))?;
+            Regex::new(sk_rule).map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{}", e), "400-rbum-cert-conf-sk-rule-invalid"))?;
         }
         if funs
             .db()
@@ -106,7 +106,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             .await?
             > 0
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code)));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
         }
         Ok(())
     }
@@ -165,7 +165,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
                     .await?
                     > 0
                 {
-                    return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "is_basic already exists"));
+                    return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "is_basic already exists", "409-rbum-cert-conf-basic-exist"));
                 }
             }
         }
@@ -229,7 +229,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
             .await?
             > 0
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "is_basic is true"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "is_basic is true", "409-rbum-cert-conf-basic-delete"));
         }
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumCertServ::get_table_name(), rbum_cert::Column::RelRbumCertConfId.as_str(), funs).await?;
@@ -378,7 +378,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
 
     async fn before_add_rbum(add_req: &mut RbumCertAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         if add_req.sk.is_some() && add_req.vcode.is_some() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk and vcode can only have one"));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk and vcode can only have one", "400-rbum-cert-sk-vcode-only-one"));
         }
         if let Some(rel_rbum_cert_conf_id) = &add_req.rel_rbum_cert_conf_id {
             Self::check_ownership_with_table_name(rel_rbum_cert_conf_id, RbumCertConfServ::get_table_name(), funs, ctx).await?;
@@ -637,10 +637,10 @@ impl<'a> RbumCertServ {
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
             if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
-                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked"));
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked", "400-rbum-cert-lock"));
             }
             if !ignore_end_time && rbum_cert.end_time < Utc::now() {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired", "409-rbum-cert-sk-expire"));
             }
             let cert_conf_peek_resp = funs
                 .db()
@@ -655,7 +655,7 @@ impl<'a> RbumCertServ {
                         .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id)),
                 )
                 .await?
-                .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf"))?;
+                .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf", "404-rbum-cert-conf-not-exist"))?;
             let input_sk = if cert_conf_peek_resp.sk_encrypted {
                 Self::encrypt_sk(input_sk, ak, rbum_cert_conf_id)?
             } else {
@@ -679,7 +679,7 @@ impl<'a> RbumCertServ {
                         funs,
                     )
                     .await?;
-                    return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"));
+                    return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"));
                 }
             } else {
                 rbum_cert.sk
@@ -702,11 +702,11 @@ impl<'a> RbumCertServ {
                     funs,
                 )
                 .await?;
-                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
             }
         } else {
             log::warn!("validation error by ak {},rbum_cert_conf_id {}, own_paths {}", ak, rbum_cert_conf_id, own_paths);
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
         }
     }
 
@@ -753,10 +753,10 @@ impl<'a> RbumCertServ {
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
             if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
-                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked"));
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "cert is locked", "401-rbum-cert-lock"));
             }
             if !ignore_end_time && rbum_cert.end_time < Utc::now() {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired", "409-rbum-cert-sk-expire"));
             }
             if let Some(rbum_cert_conf_id) = Some(rbum_cert.rel_rbum_cert_conf_id) {
                 let cert_conf_peek_resp = funs
@@ -773,7 +773,7 @@ impl<'a> RbumCertServ {
                             .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id.as_str())),
                     )
                     .await?
-                    .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf"))?;
+                    .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf", "404-rbum-cert-conf-not-exist"))?;
                 let verify_input_sk = if cert_conf_peek_resp.sk_encrypted {
                     Self::encrypt_sk(input_sk, ak, rbum_cert_conf_id.as_str())?
                 } else {
@@ -806,15 +806,15 @@ impl<'a> RbumCertServ {
                         funs,
                     )
                     .await?;
-                    Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+                    Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
                 }
             } else {
                 log::warn!("validation error by ak {},rbum_cert_conf_id is None, own_paths {}", ak, own_paths);
-                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
             }
         } else {
             log::warn!("validation error by ak {},rel_rbum_kind {}, own_paths {}", ak, rel_rbum_kind, own_paths);
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
         }
     }
 
@@ -862,9 +862,9 @@ impl<'a> RbumCertServ {
                     .and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic).eq(true)),
             )
             .await?
-            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found basic cert conf"))?;
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found basic cert conf", "404-rbum-cert-conf-not-exist"))?;
         if !ignore_end_time && rbum_basic_cert_info_resp.end_time < Utc::now() {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "basic sk is expired"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "basic sk is expired", "409-rbum-cert-sk-expire"));
         }
         let verify_input_sk = if rbum_basic_cert_info_resp.sk_encrypted {
             Self::encrypt_sk(input_sk, &rbum_basic_cert_info_resp.ak, &rbum_basic_cert_info_resp.rel_rbum_cert_conf_id)?
@@ -890,7 +890,7 @@ impl<'a> RbumCertServ {
                 funs,
             )
             .await?;
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "basic validation error"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "basic validation error", "401-rbum-cert-valid-error"))
         }
     }
 
@@ -925,7 +925,7 @@ impl<'a> RbumCertServ {
         if let Some(sk_resp) = sk_resp {
             Ok(sk_resp.sk)
         } else {
-            Err(funs.err().not_found(&Self::get_obj_name(), "show_sk", "not found cert record"))
+            Err(funs.err().not_found(&Self::get_obj_name(), "show_sk", "not found cert record", "404-rbum-*-obj-not-exist"))
         }
     }
 
@@ -944,11 +944,23 @@ impl<'a> RbumCertServ {
             .await?;
             if !rbum_cert_conf.sk_rule.is_empty()
                 && !Regex::new(&rbum_cert_conf.sk_rule)
-                    .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "reset_sk", &format!("sk rule is invalid:{}", e)))?
+                    .map_err(|e| {
+                        funs.err().bad_request(
+                            &Self::get_obj_name(),
+                            "reset_sk",
+                            &format!("sk rule is invalid:{}", e),
+                            "400-rbum-cert-conf-sk-rule-invalid",
+                        )
+                    })?
                     .is_match(new_sk)
                     .unwrap_or(false)
             {
-                return Err(funs.err().bad_request(&Self::get_obj_name(), "reset_sk", &format!("sk {} is not match sk rule", new_sk)));
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "reset_sk",
+                    &format!("sk {} is not match sk rule", new_sk),
+                    "400-rbum-cert-conf-sk-rule-not-match",
+                ));
             }
             if rbum_cert_conf.sk_encrypted {
                 Self::encrypt_sk(new_sk, &rbum_cert.ak, rel_rbum_cert_conf_id)?
@@ -982,15 +994,27 @@ impl<'a> RbumCertServ {
                 original_sk.to_string()
             };
             if original_sk != stored_sk {
-                return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match"));
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match", "401-rbum-cert-ori-sk-not-match"));
             }
             if !rbum_cert_conf.sk_rule.is_empty()
                 && !Regex::new(&rbum_cert_conf.sk_rule)
-                    .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk rule is invalid:{}", e)))?
+                    .map_err(|e| {
+                        funs.err().bad_request(
+                            &Self::get_obj_name(),
+                            "change_sk",
+                            &format!("sk rule is invalid:{}", e),
+                            "400-rbum-cert-conf-sk-rule-invalid",
+                        )
+                    })?
                     .is_match(input_sk)
                     .unwrap_or(false)
             {
-                return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} is not match sk rule", input_sk)));
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "change_sk",
+                    &format!("sk {} is not match sk rule", input_sk),
+                    "400-rbum-cert-conf-sk-rule-not-match",
+                ));
             }
             let new_sk = if rbum_cert_conf.sk_encrypted {
                 Self::encrypt_sk(input_sk, &rbum_cert.ak, &rbum_cert_conf.id)?
@@ -998,13 +1022,18 @@ impl<'a> RbumCertServ {
                 input_sk.to_string()
             };
             if !rbum_cert_conf.repeatable && original_sk == new_sk {
-                return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", &format!("sk {} cannot be duplicated", input_sk)));
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "change_sk",
+                    &format!("sk {} cannot be duplicated", input_sk),
+                    "400-rbum-cert-ak-duplicate",
+                ));
             }
             let end_time = Utc::now() + Duration::seconds(rbum_cert_conf.expire_sec as i64);
             (new_sk, end_time)
         } else {
             if original_sk != stored_sk {
-                return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match"));
+                return Err(funs.err().unauthorized(&Self::get_obj_name(), "change_sk", "sk not match", "401-rbum-cert-ori-sk-not-match"));
             }
             (input_sk.to_string(), rbum_cert.start_time + (rbum_cert.end_time - rbum_cert.start_time))
         };
@@ -1029,30 +1058,40 @@ impl<'a> RbumCertServ {
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         if rbum_cert_conf.sk_need && add_req.sk.is_none() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required"));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required", "400-rbum-cert-sk-require"));
         }
         if rbum_cert_conf.sk_dynamic && add_req.sk.is_some() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk should be empty when dynamic model"));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk should be empty when dynamic model", "400-rbum-cert-sk-need-empty"));
         }
         if rbum_cert_conf.sk_dynamic && add_req.vcode.is_none() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "vcode is required when dynamic model"));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "vcode is required when dynamic model", "400-rbum-cert-vcode-require"));
         }
         if !rbum_cert_conf.ak_rule.is_empty()
             && !Regex::new(&rbum_cert_conf.ak_rule)
-                .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{}", e)))?
+                .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{}", e), "400-rbum-cert-conf-ak-rule-invalid"))?
                 .is_match(&add_req.ak.to_string())
                 .unwrap_or(false)
         {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak {} is not match ak rule", add_req.ak)));
+            return Err(funs.err().bad_request(
+                &Self::get_obj_name(),
+                "add",
+                &format!("ak {} is not match ak rule", add_req.ak),
+                "400-rbum-cert-conf-ak-rule-not-match",
+            ));
         }
         if rbum_cert_conf.sk_need && !rbum_cert_conf.sk_rule.is_empty() {
-            let sk = add_req.sk.as_ref().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required"))?.to_string();
+            let sk = add_req.sk.as_ref().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required", "400-rbum-cert-sk-require"))?.to_string();
             if !Regex::new(&rbum_cert_conf.sk_rule)
-                .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{}", e)))?
+                .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{}", e), "400-rbum-cert-conf-sk-rule-invalid"))?
                 .is_match(&sk)
                 .unwrap_or(false)
             {
-                return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk {} is not match sk rule", &sk)));
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "add",
+                    &format!("sk {} is not match sk rule", &sk),
+                    "400-rbum-cert-conf-sk-rule-not-match",
+                ));
             }
         }
         if funs
@@ -1068,7 +1107,7 @@ impl<'a> RbumCertServ {
             .await?
             > 0
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
         }
         Ok(())
     }

@@ -5,8 +5,8 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm::sea_query::Expr;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::Expr;
 use tardis::log::info;
 use tardis::TardisFuns;
 
@@ -30,7 +30,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_item】 : Prepare : RbumKindServ::add_rbum");
@@ -179,7 +179,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_item_attr】 : Prepare : RbumKindServ::add_rbum");
@@ -339,10 +339,10 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
-    TardisFuns::inst_with_db_conn("".to_string())
+    TardisFuns::inst_with_db_conn("".to_string(), None)
         .db()
         .create_table_and_index(&test_iam_account::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend()))
         .await?;
@@ -615,8 +615,8 @@ pub struct IamAccountResp {
 mod test_iam_account {
     use tardis::basic::dto::TardisContext;
     use tardis::db::reldb_client::TardisActiveModel;
+    use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
     use tardis::db::sea_orm::*;
-    use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
     #[sea_orm(table_name = "iam_account")]

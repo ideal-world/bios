@@ -5,8 +5,8 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::db::reldb_client::IdResp;
+use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::*;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
@@ -60,7 +60,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
         // where the account belongs to the tenant but scope=1, so it can be used by the application.
         Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
         if add_req.to_rbum_item_id.trim().is_empty() {
-            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty"));
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty", "400-rbum-rel-not-empty-item"));
         }
         // It may not be possible to get the data of to_rbum_item_id when there are multiple database instances
         if !add_req.to_is_outside {
@@ -100,6 +100,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModi
                 &Self::get_obj_name(),
                 "delete",
                 &format!("ownership {}.{} is illegal by {}", Self::get_obj_name(), id, ctx.owner),
+                "404-rbum-*-ownership-illegal",
             ));
         }
         Self::check_exist_before_delete(id, RbumRelAttrServ::get_table_name(), rbum_rel_attr::Column::RelRbumRelId.as_str(), funs).await?;
@@ -931,6 +932,7 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_attr::ActiveModel, RbumRelAttrAddReq, Rb
                     &Self::get_obj_name(),
                     "add",
                     &format!("not found rbum_kind_attr {}", add_req.rel_rbum_kind_attr_id.as_str()),
+                    "404-rbum-rel-not-exist-kind-attr",
                 )
             })?
             .name;

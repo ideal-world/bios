@@ -1,0 +1,40 @@
+409-rbum-*-delete-conflict	不能删除存在关联记录的数据
+404-rbum-*-obj-not-exist	找不到指定的数据
+409-rbum-*-obj-multi-exist	找到多条相同的数据
+400-rbum-*-code-illegal	无效的编码
+409-rbum-*-code-exist	编码已存在
+409-rbum-*-name-exist	名称已存在
+404-rbum-*-ownership-illegal	无效的所有权
+404-rbum-*-scope-illegal	无效的作用域
+409-rbum-*-downgrade-error	作用领降级错误
+406-rbum-*-enum-init-error	输入的枚举值错误
+
+500-rbum-crud-id-type	数据类型无效，目前仅支持字符串
+
+400-rbum-kind-attr-main-illegal	主表扩展字段添加不能使用此方法
+400-rbum-kind-attr-idx-illegal	索引扩展字段添加不能使用此方法
+
+404-rbum-rel-not-exist-kind-attr	找不到指定的资源属性
+400-rbum-rel-not-empty-item	资源项不能为空
+
+409-rbum-set-item-exist	资源项已存在
+400-rbum-set-sys-code-saturated	当前节点的数量已超出范围
+404-rbum-set-cate-not-exist	找不到对应的资源集目录
+
+409-rbum-cert-conf-basic-exist	基础认证配置已存在
+409-rbum-cert-conf-basic-delete	基础认证配置不能删除
+400-rbum-cert-conf-ak-rule-invalid	凭证名规则错误
+400-rbum-cert-conf-sk-rule-invalid	凭证密钥规则错误
+400-rbum-cert-conf-ak-rule-not-match	凭证名不满足规则
+400-rbum-cert-conf-sk-rule-not-match	凭证密钥不满足规则
+400-rbum-cert-sk-vcode-only-one	凭证密钥与动态码只能二选一
+401-rbum-cert-lock	账号已锁定
+409-rbum-cert-sk-expire	凭证密钥已过期
+404-rbum-cert-conf-not-exist	找不到对应的凭证配置
+401-rbum-cert-valid-error	凭证不合法
+401-rbum-cert-ori-sk-not-match	当前凭证密钥输入错误
+400-rbum-cert-ak-duplicate	新的凭证名不能等于现有凭证名
+400-rbum-cert-ak-duplicate	凭证名不能重复
+400-rbum-cert-sk-require	凭证密钥不能为空
+400-rbum-cert-sk-need-empty	动态密钥模式下凭证密钥不用填写
+400-rbum-cert-vcode-require	动态码不能为空

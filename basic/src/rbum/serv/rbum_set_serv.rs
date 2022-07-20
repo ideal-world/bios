@@ -5,8 +5,8 @@ use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
+use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::*;
 use tardis::tokio::time::sleep;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -411,6 +411,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 &Self::get_obj_name(),
                 "delete",
                 &format!("can not delete {}.{} when there are associated by set_item", Self::get_obj_name(), id),
+                "409-rbum-*-delete-conflict",
             ));
         }
         let set = Self::peek_rbum(
@@ -443,6 +444,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
                 &Self::get_obj_name(),
                 "delete",
                 &format!("can not delete {}.{} when there are associated by sub set_cate", Self::get_obj_name(), id),
+                "409-rbum-*-delete-conflict",
             ));
         }
         Ok(None)
@@ -570,15 +572,25 @@ impl<'a> RbumSetCateServ {
                 // if level N (N!=1) not empty
                 let curr_level_sys_code = max_sys_code[max_sys_code.len() - set_cate_sys_code_node_len..].to_string();
                 let parent_sys_code = max_sys_code[..max_sys_code.len() - set_cate_sys_code_node_len].to_string();
-                let curr_level_sys_code = TardisFuns::field
-                    .incr_by_base36(&curr_level_sys_code)
-                    .ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "get_sys_code", "current number of nodes is saturated"))?;
+                let curr_level_sys_code = TardisFuns::field.incr_by_base36(&curr_level_sys_code).ok_or_else(|| {
+                    funs.err().bad_request(
+                        &Self::get_obj_name(),
+                        "get_sys_code",
+                        "current number of nodes is saturated",
+                        "400-rbum-set-sys-code-saturated",
+                    )
+                })?;
                 Ok(format!("{}{}", parent_sys_code, curr_level_sys_code))
             } else {
                 // if level 1 not empty
-                Ok(TardisFuns::field
-                    .incr_by_base36(&max_sys_code)
-                    .ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "get_sys_code", "current number of nodes is saturated"))?)
+                Ok(TardisFuns::field.incr_by_base36(&max_sys_code).ok_or_else(|| {
+                    funs.err().bad_request(
+                        &Self::get_obj_name(),
+                        "get_sys_code",
+                        "current number of nodes is saturated",
+                        "400-rbum-set-sys-code-saturated",
+                    )
+                })?)
             }
         } else if let Some(parent_sys_code) = parent_sys_code {
             // if level N (N!=1) is empty
@@ -597,7 +609,14 @@ impl<'a> RbumSetCateServ {
                 Query::select().column(rbum_set_cate::Column::SysCode).from(rbum_set_cate::Entity).and_where(Expr::col(rbum_set_cate::Column::Id).eq(rbum_set_cate_id)),
             )
             .await?
-            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "get_sys_code", &format!("not found set cate {}", rbum_set_cate_id)))?
+            .ok_or_else(|| {
+                funs.err().not_found(
+                    &Self::get_obj_name(),
+                    "get_sys_code",
+                    &format!("not found set cate {}", rbum_set_cate_id),
+                    "404-rbum-set-cate-not-exist",
+                )
+            })?
             .sys_code;
         Ok(sys_code)
     }
@@ -641,7 +660,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
             .await?
             > 0
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "item already exists"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "item already exists", "409-rbum-set-item-exist"));
         }
         Ok(())
     }

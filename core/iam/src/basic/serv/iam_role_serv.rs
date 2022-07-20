@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use sea_orm::EntityName;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::db::sea_orm::sea_query::SelectStatement;
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::SelectStatement;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -238,12 +238,12 @@ impl<'a> IamRoleServ {
         if scope_level == RBUM_SCOPE_LEVEL_APP && (role_id == funs.iam_basic_role_sys_admin_id() || role_id == funs.iam_basic_role_tenant_admin_id())
             || scope_level == RBUM_SCOPE_LEVEL_TENANT && role_id == funs.iam_basic_role_sys_admin_id()
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
         }
         if let Some(spec_scope_level) = spec_scope_level {
             let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
             if role.scope_level != spec_scope_level {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }
         // TODO only bind the same own_paths roles
@@ -261,7 +261,7 @@ impl<'a> IamRoleServ {
         if let Some(spec_scope_level) = spec_scope_level {
             let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
             if role.scope_level != spec_scope_level {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await
@@ -398,7 +398,7 @@ impl<'a> IamRoleServ {
         )
         .await?;
         if !exist {
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "need_role", "illegal operation"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "need_role", "illegal operation", "401-iam-role-illegal"))
         } else {
             Ok(())
         }

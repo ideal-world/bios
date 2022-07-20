@@ -1,0 +1,30 @@
+406-iam-ldap-addr-error	LDAP服务地址格式错误
+400-iam-account-field-missing	缺少必填字段信息
+
+409-iam-tenant-can-not-delete	租户只能禁用不能删除
+401-iam-tenant-context-not-exist	请求中找不到租户信息
+409-iam-tenant-is-disabled	租户已禁用
+
+409-iam-app-can-not-delete	应用只能禁用不能删除
+401-iam-app-context-not-exist	请求中找不到应用信息
+
+400-iam-attr-idx-not-in-main	索引类型字段只能选择在主表中的字段
+404-iam-attr-idx-not-exist	索引类型字段名称不存在
+404-iam-attr-main-not-exist	主表字段名称不存在
+
+404-iam-cert-kind-not-exist	凭证类型不存在
+401-iam-cert-valid	凭证激活错误
+401-iam-cert-code-not-exist	凭证编码不存在
+400-iam-cert-ak-len-incorrect	凭证名长度不正确
+400-iam-cert-sk-len-incorrect	凭证密钥长度不正确
+
+404-iam-cache-context-not-exist	缓存上下文不存在
+409-iam-cache-res-date-not-none	当前不支持资源时间设置
+404-iam-cache-res-rel-not-exist	缓存资源关联不存在
+
+409-iam-rel-kind-api-conflict	请求来源类型必须是API类型
+
+404-iam-res-not-exist	资源不存在
+
+409-iam-role-rel-conflict	当前账号不能关联此角色
+401-iam-role-illegal	角色不合法

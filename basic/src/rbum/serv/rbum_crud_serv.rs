@@ -4,8 +4,8 @@ use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
+use tardis::db::sea_orm::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::regex::Regex;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
@@ -65,6 +65,7 @@ where
                 &Self::get_obj_name_from(table_name),
                 "check",
                 &format!("ownership {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, ctx.owner),
+                "404-rbum-*-ownership-illegal",
             ));
         }
         Ok(())
@@ -103,6 +104,7 @@ where
                 &Self::get_obj_name_from(table_name),
                 "check",
                 &format!("scope {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, ctx.owner),
+                "404-rbum-*-scope-illegal",
             ));
         }
         Ok(())
@@ -132,6 +134,7 @@ where
                     Self::get_obj_name_from(rel_table_name),
                     rel_field_name
                 ),
+                "409-rbum-*-delete-conflict",
             ));
         }
         Ok(())
@@ -147,6 +150,7 @@ where
                     Self::get_obj_name(),
                     Self::get_obj_name_from(rel_table_name)
                 ),
+                "409-rbum-*-delete-conflict",
             ));
         }
         Ok(())
@@ -184,7 +188,12 @@ where
             rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, ctx).await?;
             Ok(id)
         } else {
-            return Err(funs.err().internal_error(&Self::get_obj_name(), "add", "id data type is invalid, currently only the string is supported"));
+            return Err(funs.err().internal_error(
+                &Self::get_obj_name(),
+                "add",
+                "id data type is invalid, currently only the string is supported",
+                "500-rbum-crud-id-type",
+            ));
         }
     }
 
@@ -262,7 +271,12 @@ where
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            None => Err(funs.err().not_found(&Self::get_obj_name(), "peek", &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner))),
+            None => Err(funs.err().not_found(
+                &Self::get_obj_name(),
+                "peek",
+                &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner),
+                "404-rbum-*-obj-not-exist",
+            )),
         }
     }
 
@@ -276,7 +290,12 @@ where
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
-            None => Err(funs.err().not_found(&Self::get_obj_name(), "get", &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner))),
+            None => Err(funs.err().not_found(
+                &Self::get_obj_name(),
+                "get",
+                &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner),
+                "404-rbum-*-obj-not-exist",
+            )),
         }
     }
 
@@ -398,7 +417,7 @@ where
     async fn do_find_one_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<SummaryResp>> {
         let result = Self::find_rbums(filter, None, None, funs, ctx).await?;
         if result.len() > 1 {
-            Err(funs.err().conflict(&Self::get_obj_name(), "find_one", "found multiple records"))
+            Err(funs.err().conflict(&Self::get_obj_name(), "find_one", "found multiple records", "409-rbum-*-obj-multi-exist"))
         } else {
             Ok(result.into_iter().next())
         }
@@ -465,7 +484,7 @@ where
     async fn do_find_one_detail_rbum(filter: &FilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<DetailResp>> {
         let result = Self::find_detail_rbums(filter, None, None, funs, ctx).await?;
         if result.len() > 1 {
-            Err(funs.err().conflict(&Self::get_obj_name(), "find_one_detail", "found multiple records"))
+            Err(funs.err().conflict(&Self::get_obj_name(), "find_one_detail", "found multiple records", "409-rbum-*-obj-multi-exist"))
         } else {
             Ok(result.into_iter().next())
         }
@@ -573,7 +592,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         let mut cond = Cond::any().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0));
 
         let own_cond = if with_sub_own_paths {
-            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", filter_own_paths))
+            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths))
         } else {
             Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths)
         };
@@ -584,7 +603,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1)).add(
                     Cond::any()
                         .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
                 ),
             );
             if let Some(p2) = rbum_scope_helper::get_pre_paths(2, &ctx.own_paths) {
@@ -596,9 +615,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                             .add(
                                 Cond::all()
                                     .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
                             )
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p2))),
                     ),
                 );
                 if let Some(p3) = rbum_scope_helper::get_pre_paths(3, &ctx.own_paths) {
@@ -609,14 +628,14 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
                                 )
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len * 2 + 1))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p2))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p3))),
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p3))),
                         ),
                     );
                 } else if with_sub_own_paths {
@@ -637,9 +656,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p2))),
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p2))),
                         ),
                     );
                 }
@@ -648,7 +667,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                     Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
                         Cond::any()
                             .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(&format!("{}%", p1))),
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
                     ),
                 );
             }

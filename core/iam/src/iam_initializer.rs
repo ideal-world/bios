@@ -2,7 +2,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
-use tardis::db::sea_query::Table;
+use tardis::db::sea_orm::sea_query::Table;
 use tardis::log::info;
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -106,19 +106,20 @@ pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(Strin
 async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
     let kind_tenant_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_TENANT, funs)
         .await?
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant kind"))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant kind", ""))?;
     let kind_app_id =
-        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_APP, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found app kind"))?;
-    let kind_role_id =
-        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_ROLE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found role kind"))?;
+        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_APP, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found app kind", ""))?;
+    let kind_role_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_ROLE, funs)
+        .await?
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found role kind", ""))?;
     let kind_account_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, funs)
         .await?
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found account kind"))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found account kind", ""))?;
     let kind_res_id =
-        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_RES, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found res kind"))?;
+        RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_RES, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found res kind", ""))?;
 
     let domain_iam_id =
-        RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found iam domain"))?;
+        RbumDomainServ::get_rbum_domain_id_by_code(iam_constants::COMPONENT_CODE, funs).await?.ok_or_else(|| funs.err().not_found("iam", "init", "not found iam domain", ""))?;
 
     let roles = RbumItemServ::paginate_rbums(
         &RbumBasicFilterReq {
@@ -140,19 +141,19 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> 
         .iter()
         .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role"))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role", ""))?;
 
     let role_tenant_admin_id = roles
         .iter()
         .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant admin role"))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant admin role", ""))?;
 
     let role_app_admin_id = roles
         .iter()
         .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found app admin role"))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found app admin role", ""))?;
 
     IamBasicInfoManager::set(BasicInfo {
         kind_tenant_id,

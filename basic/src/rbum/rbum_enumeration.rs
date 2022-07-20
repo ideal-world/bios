@@ -25,7 +25,7 @@ impl RbumScopeLevelKind {
             1 => Ok(RbumScopeLevelKind::L1),
             2 => Ok(RbumScopeLevelKind::L2),
             3 => Ok(RbumScopeLevelKind::L3),
-            _ => Err(TardisError::FormatError(format!("invalid RbumScopeLevelKind: {}", s))),
+            _ => Err(TardisError::format_error(&format!("invalid RbumScopeLevelKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -62,7 +62,7 @@ impl RbumCertRelKind {
             0 => Ok(RbumCertRelKind::Item),
             1 => Ok(RbumCertRelKind::Set),
             2 => Ok(RbumCertRelKind::Rel),
-            _ => Err(TardisError::FormatError(format!("invalid RbumCertRelKind: {}", s))),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertRelKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -97,7 +97,7 @@ impl RbumRelFromKind {
             0 => Ok(RbumRelFromKind::Item),
             1 => Ok(RbumRelFromKind::Set),
             2 => Ok(RbumRelFromKind::SetCate),
-            _ => Err(TardisError::FormatError(format!("invalid RbumRelFromKind: {}", s))),
+            _ => Err(TardisError::format_error(&format!("invalid RbumRelFromKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -132,7 +132,7 @@ impl RbumCertStatusKind {
             0 => Ok(RbumCertStatusKind::Disabled),
             1 => Ok(RbumCertStatusKind::Enabled),
             2 => Ok(RbumCertStatusKind::Pending),
-            _ => Err(TardisError::FormatError(format!("invalid RbumCertStatusKind: {}", s))),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertStatusKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -167,7 +167,7 @@ impl RbumRelEnvKind {
             0 => Ok(RbumRelEnvKind::DatetimeRange),
             1 => Ok(RbumRelEnvKind::TimeRange),
             2 => Ok(RbumRelEnvKind::Ips),
-            _ => Err(TardisError::FormatError(format!("invalid RbumRelEnvKind: {}", s))),
+            _ => Err(TardisError::format_error(&format!("invalid RbumRelEnvKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
 

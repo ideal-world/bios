@@ -16,9 +16,9 @@ codegen-units = 1
 opt-level = "z"
 
 [dependencies]
-tardis = { version = "0.1.0-alpha15", features = ["web-server"] }
+tardis = { verison = "0.1.0-alpha16", features = ["web-server"] }
 
-serde = { version = "^1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 
 bios-iam = { path = "../../core/iam", features = ["ldap"] }
 

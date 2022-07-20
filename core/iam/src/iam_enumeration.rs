@@ -70,7 +70,7 @@ impl IamResKind {
             0 => Ok(IamResKind::Menu),
             1 => Ok(IamResKind::Api),
             2 => Ok(IamResKind::Ele),
-            _ => Err(TardisError::FormatError(format!("invalid IamResKind: {}", s))),
+            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
 

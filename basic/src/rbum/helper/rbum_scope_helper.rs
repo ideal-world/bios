@@ -81,7 +81,7 @@ pub fn get_max_level_id_by_context(ctx: &TardisContext) -> Option<String> {
 
 pub fn degrade_own_paths(mut ctx: TardisContext, new_own_paths: &str) -> TardisResult<TardisContext> {
     if !new_own_paths.contains(&ctx.own_paths) {
-        return Err(TardisError::Conflict("not qualified for downgrade".to_string()));
+        return Err(TardisError::conflict("not qualified for downgrade", "409-rbum-*-downgrade-error"));
     }
     ctx.own_paths = new_own_paths.to_string();
     Ok(ctx)

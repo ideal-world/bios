@@ -23,21 +23,21 @@ path = "src/lib.rs"
 ldap = ["ldap3_proto", "futures", "tokio-util"]
 
 [dependencies]
-serde = { version = "^1", features = ["derive"] }
-derive_more = { version = "^0" }
-async-trait = { version = "^0" }
-lazy_static = { version = "^1" }
-itertools = { version = "^0" }
+serde = { version = "1", features = ["derive"] }
+derive_more = { version = "0" }
+async-trait = { version = "0" }
+lazy_static = { version = "1" }
+itertools = { version = "0" }
 
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
-tardis = { version = "0.1.0-alpha15", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
-poem-openapi = { version = "^2", features = ["chrono"] }
-sea-orm = { version = "^0.8", features = ["macros"] }
+tardis = { verison = "0.1.0-alpha16", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
+poem-openapi = { version = "2", features = ["chrono"] }
+sea-orm = { version = "0.9", features = ["macros"] }
 
 # ldap
 ldap3_proto = { version = "0.2.3", optional = true }
-futures = { version = "^0.3", optional = true }
-tokio-util = { version = "^0.7", optional = true }
+futures = { version = "0.3", optional = true }
+tokio-util = { version = "0.7", optional = true }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha15", features = ["test"] }
+tardis = { verison = "0.1.0-alpha16", features = ["test"] }
