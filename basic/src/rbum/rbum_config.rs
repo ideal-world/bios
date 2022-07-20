@@ -58,7 +58,7 @@ pub struct RbumConfigManager;
 
 impl RbumConfigManager {
     pub fn add(code: &str, config: RbumConfig) -> TardisResult<()> {
-        let mut conf = RBUM_CONFIG.lock().map_err(|e| TardisError::InternalError(format!("{:?}", e)))?;
+        let mut conf = RBUM_CONFIG.lock().map_err(|e| TardisError::internal_error(&format!("{:?}", e), ""))?;
         conf.insert(code.to_string(), config);
         Ok(())
     }

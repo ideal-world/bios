@@ -151,7 +151,7 @@ impl<'a> IamRelServ {
             )
             .await?;
             if res_api.kind != IamResKind::Api {
-                return Err(funs.err().conflict("iam_rel", "add", "when add IamResApi kind from item must be api kind"));
+                return Err(funs.err().conflict("iam_rel", "add", "when add IamResApi kind from item must be api kind", "409-iam-rel-kind-api-conflict"));
             }
             // See example (1) / (4)
             // Find the list of roles associated with a menu or element resource
@@ -305,7 +305,12 @@ impl<'a> IamRelServ {
                 )
                 .await?;
                 if res_api.kind != IamResKind::Api {
-                    return Err(funs.err().conflict("iam_rel", "delete", "when delete IamResApi kind from item must be api kind"));
+                    return Err(funs.err().conflict(
+                        "iam_rel",
+                        "delete",
+                        "when delete IamResApi kind from item must be api kind",
+                        "409-iam-rel-kind-api-conflict",
+                    ));
                 }
                 // See example (1) / (4)
                 // 1) Find the list of roles associated with a menu or element resource (ready to remove the binding to the API resource from the cache)

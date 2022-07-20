@@ -179,11 +179,16 @@ impl<'a> IamCertMailVCodeServ {
                     .await?;
                     Ok(())
                 } else {
-                    Err(funs.err().not_found("iam_cert_mail_vcode", "activate", &format!("not found credential of kind {:?}", IamCertKind::MailVCode)))
+                    Err(funs.err().not_found(
+                        "iam_cert_mail_vcode",
+                        "activate",
+                        &format!("not found credential of kind {:?}", IamCertKind::MailVCode),
+                        "404-iam-cert-kind-not-exist",
+                    ))
                 };
             }
         }
-        Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error"))
+        Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
     }
 
     pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {

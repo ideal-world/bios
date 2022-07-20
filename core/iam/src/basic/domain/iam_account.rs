@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "iam_account")]

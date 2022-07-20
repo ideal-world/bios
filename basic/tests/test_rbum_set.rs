@@ -26,7 +26,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_set】 : Test Add : RbumSetServ::add_rbum");
@@ -87,7 +87,7 @@ async fn test_rbum_set(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_set_cate】 : Prepare Set : RbumSetServ::add_rbum");
@@ -332,7 +332,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_set_item】 : Prepare : RbumKindServ::add_rbum");
@@ -500,7 +500,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await
     .err()
     .unwrap()
-    .message()
+    .message
     .contains("item already exists"));
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all");

@@ -98,7 +98,7 @@ pub struct IamBasicInfoManager;
 
 impl IamBasicInfoManager {
     pub fn set(basic_info: BasicInfo) -> TardisResult<()> {
-        let mut conf = BASIC_INFO.lock().map_err(|e| TardisError::InternalError(format!("{:?}", e)))?;
+        let mut conf = BASIC_INFO.lock().map_err(|e| TardisError::internal_error(&format!("{:?}", e), ""))?;
         *conf = Some(basic_info);
         Ok(())
     }

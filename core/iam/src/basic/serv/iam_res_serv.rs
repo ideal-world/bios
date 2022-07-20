@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
@@ -172,7 +172,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
             }
             Ok(())
         } else {
-            Err(funs.err().not_found(&Self::get_obj_name(), "delete", "not found resource"))
+            Err(funs.err().not_found(&Self::get_obj_name(), "delete", "not found resource", "404-iam-res-not-exist"))
         }
     }
 

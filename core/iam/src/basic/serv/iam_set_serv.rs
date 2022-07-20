@@ -95,7 +95,7 @@ impl<'a> IamSetServ {
     pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, ctx)
             .await?
-            .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {}", code)))
+            .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {}", code), "404-rbum-set-code-not-exist"))
     }
 
     pub fn get_default_res_code_by_own_paths(own_paths: &str) -> String {
@@ -110,7 +110,7 @@ impl<'a> IamSetServ {
         if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths) {
             Ok(Self::get_default_org_code_by_own_paths(&own_paths))
         } else {
-            Err(funs.err().not_found("iam_set", "get_org_code", "not found tenant own_paths"))
+            Err(funs.err().not_found("iam_set", "get_org_code", "not found tenant own_paths", "404-rbum-set-code-not-exist"))
         }
     }
 
@@ -118,7 +118,7 @@ impl<'a> IamSetServ {
         if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
             Ok(Self::get_default_org_code_by_own_paths(&own_paths))
         } else {
-            Err(funs.err().not_found("iam_set", "get_org_code", "not found app own_paths"))
+            Err(funs.err().not_found("iam_set", "get_org_code", "not found app own_paths", "404-rbum-set-code-not-exist"))
         }
     }
 
@@ -197,7 +197,12 @@ impl<'a> IamSetServ {
         if let Some(parent_set_cate_id) = parent_set_cate_id.get(0) {
             RbumSetServ::get_tree(set_id, Some(parent_set_cate_id), funs, ctx).await
         } else {
-            Err(funs.err().not_found("iam_set_cate", "get", &format!("not found set cate by sys_code {}", filter_sys_code)))
+            Err(funs.err().not_found(
+                "iam_set_cate",
+                "get",
+                &format!("not found set cate by sys_code {}", filter_sys_code),
+                "404-rbum-set-cate-sys-code-not-exist",
+            ))
         }
     }
 

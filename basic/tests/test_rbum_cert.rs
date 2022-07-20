@@ -23,7 +23,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_cert_conf】 : Prepare Domain : RbumDomainServ::add_rbum");
@@ -232,7 +232,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_cert】 : Prepare Domain : RbumDomainServ::add_rbum");
@@ -589,7 +589,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> {
-    let mut funs = TardisFuns::inst_with_db_conn("".to_string());
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
     info!("【test_rbum_cert】 : Prepare Domain : RbumDomainServ::add_rbum");

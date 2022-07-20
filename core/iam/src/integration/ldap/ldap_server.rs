@@ -265,7 +265,7 @@ pub async fn start() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<IamConfig>(iam_constants::COMPONENT_CODE);
     let config = &config.ldap;
     let addr_str = format!("0.0.0.0:{}", config.port);
-    let addr = net::SocketAddr::from_str(&addr_str).map_err(|e| TardisError::Box(Box::new(e)))?;
+    let addr = net::SocketAddr::from_str(&addr_str).map_err(|e| TardisError::format_error(&format!("[TardisLdapServer] Address error: {:?}", e), "406-iam-ldap-addr-error"))?;
     let listener = Box::new(TcpListener::bind(&addr).await.unwrap());
     tokio::spawn(async move {
         loop {

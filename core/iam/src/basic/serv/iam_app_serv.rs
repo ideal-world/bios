@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::db::sea_query::{Expr, SelectStatement};
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
@@ -100,7 +100,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 
     async fn before_delete_item(_: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamAppDetailResp>> {
-        Err(funs.err().conflict(&Self::get_obj_name(), "delete", "app can only be disabled but not deleted"))
+        Err(funs.err().conflict(&Self::get_obj_name(), "delete", "app can only be disabled but not deleted", "409-iam-app-can-not-delete"))
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
@@ -127,7 +127,12 @@ impl<'a> IamAppServ {
         if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
             Ok(id)
         } else {
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "get_id", &format!("app id not found in tardis content {}", ctx.own_paths)))
+            Err(funs.err().unauthorized(
+                &Self::get_obj_name(),
+                "get_id",
+                &format!("app id not found in tardis content {}", ctx.own_paths),
+                "401-iam-app-context-not-exist",
+            ))
         }
     }
 

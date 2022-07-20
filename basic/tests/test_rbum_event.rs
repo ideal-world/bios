@@ -15,7 +15,7 @@ use bios_basic::rbum::serv::rbum_set_serv::RbumSetServ;
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
-    let funs = TardisFuns::inst_with_db_conn("".to_string());
+    let funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     info!("【test_rbum_event】 : receive events");
     rbum_event_helper::receive(
         |(_, msg)| async move {

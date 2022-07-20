@@ -9,6 +9,7 @@ id = "bios-serv-all"
 name = "BIOS All Services"
 desc = "BIOS All Services"
 version = "0.1.0"
+default_lang = "zh-cn"
 
 [fw.web_server]
 port = 8080
