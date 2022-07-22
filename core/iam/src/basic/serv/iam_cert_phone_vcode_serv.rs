@@ -13,7 +13,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use crate::basic::dto::iam_cert_conf_dto::IamPhoneVCodeCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::IamPhoneVCodeCertAddReq;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_enumeration::IamCertKind;
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertPhoneVCodeServ;
 
@@ -26,8 +26,8 @@ impl<'a> IamCertPhoneVCodeServ {
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(IamCertKind::PhoneVCode.to_string()),
-                name: TrimString(IamCertKind::PhoneVCode.to_string()),
+                code: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
+                name: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
                 ak_rule: add_req.ak_rule.clone(),

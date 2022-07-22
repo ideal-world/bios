@@ -33,7 +33,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_enumeration::{IamCertKind, IamRelKind};
+use crate::iam_enumeration::{IamCertKernelKind, IamRelKind};
 
 pub struct IamAccountServ;
 
@@ -154,7 +154,7 @@ impl<'a> IamAccountServ {
             ctx,
         )
         .await?;
-        if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+        if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
             IamCertUserPwdServ::add_cert(
                 &IamUserPwdCertAddReq {
                     ak: add_req.cert_user_name.clone(),
@@ -168,7 +168,7 @@ impl<'a> IamAccountServ {
             .await?;
         }
         if let Some(cert_phone) = &add_req.cert_phone {
-            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertPhoneVCodeServ::add_cert(
                     &IamPhoneVCodeCertAddReq {
                         phone: TrimString(cert_phone.to_string()),
@@ -182,7 +182,7 @@ impl<'a> IamAccountServ {
             }
         }
         if let Some(cert_mail) = &add_req.cert_mail {
-            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
         }

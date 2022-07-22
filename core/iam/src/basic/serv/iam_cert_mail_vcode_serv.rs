@@ -20,7 +20,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
-use crate::iam_enumeration::IamCertKind;
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertMailVCodeServ;
 
@@ -33,8 +33,8 @@ impl<'a> IamCertMailVCodeServ {
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(IamCertKind::MailVCode.to_string()),
-                name: TrimString(IamCertKind::MailVCode.to_string()),
+                code: TrimString(IamCertKernelKind::MailVCode.to_string()),
+                name: TrimString(IamCertKernelKind::MailVCode.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
                 ak_rule: add_req.ak_rule.clone(),
@@ -155,7 +155,7 @@ impl<'a> IamCertMailVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_id: Some(
-                            IamCertServ::get_cert_conf_id_by_code(IamCertKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
                         ),
                         ..Default::default()
                     },
@@ -182,7 +182,7 @@ impl<'a> IamCertMailVCodeServ {
                     Err(funs.err().not_found(
                         "iam_cert_mail_vcode",
                         "activate",
-                        &format!("not found credential of kind {:?}", IamCertKind::MailVCode),
+                        &format!("not found credential of kind {:?}", IamCertKernelKind::MailVCode),
                         "404-iam-cert-kind-not-exist",
                     ))
                 };

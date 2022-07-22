@@ -29,7 +29,7 @@ use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPw
 use bios_iam::iam_config::IamConfig;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_GLOBAL};
-use bios_iam::iam_enumeration::{IamCertKind, IamCertTokenKind, IamResKind};
+use bios_iam::iam_enumeration::{IamCertKernelKind, IamCertTokenKind, IamResKind};
 
 pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -189,7 +189,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             new_sk: TrimString("45678".to_string()),
         },
         &account_resp.account_id,
-        &IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
+        &IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
         &funs,
         &tenant_admin_context,
     )

@@ -24,10 +24,18 @@ pub enum Tag {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
-pub enum IamCertKind {
+pub enum IamCertKernelKind {
     UserPwd,
     MailVCode,
     PhoneVCode,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
+pub enum IamCertExtKind {
+    Gitlab,
+    Github,
+    Wechat,
+    // TODO
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]

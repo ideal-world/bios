@@ -69,3 +69,11 @@ pub struct IamPhoneVCodeCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: TrimString,
 }
+
+#[derive(Object, Serialize, Deserialize, Debug)]
+pub struct IamExtCertAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub ak: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub sk: Option<String>,
+}

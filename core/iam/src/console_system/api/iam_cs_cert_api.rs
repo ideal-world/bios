@@ -6,11 +6,11 @@ use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
+use crate::basic::dto::iam_cert_dto::{IamExtCertAddReq, IamUserPwdCertRestReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertKind;
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 
 pub struct IamCsCertApi;
 
@@ -29,7 +29,7 @@ impl IamCsCertApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
         IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
@@ -52,5 +52,22 @@ impl IamCsCertApi {
         )
         .await?;
         TardisResp::ok(rbum_certs)
+    }
+
+    /// Add Gitlab Cert
+    #[oai(path = "/gitlab", method = "put")]
+    async fn add_gitlab_cert(
+        &self,
+        account_id: Query<String>,
+        tenant_id: Query<Option<String>>,
+        mut add_req: Json<IamExtCertAddReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertServ::add_global_ext_cert(&mut add_req.0, &account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 }
