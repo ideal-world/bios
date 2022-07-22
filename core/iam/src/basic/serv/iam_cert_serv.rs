@@ -5,16 +5,18 @@ use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertSummaryResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::helper::rbum_scope_helper;
+use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountInfoResp};
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamExtCertAddReq, IamMailVCodeCertAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
@@ -28,7 +30,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
-use crate::iam_enumeration::{IamCertKind, IamCertTokenKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind};
 
 pub struct IamCertServ;
 
@@ -123,7 +125,7 @@ impl<'a> IamCertServ {
         .await
     }
 
-    pub async fn find_cert_conf_without_token_kind(
+    pub async fn find_cert_conf_with_kernel_kind(
         with_sub: bool,
         iam_item_id: Option<String>,
         desc_sort_by_create: Option<bool>,
@@ -148,12 +150,14 @@ impl<'a> IamCertServ {
         .await?;
         let result = result
             .into_iter()
-            .filter(|r| r.code == IamCertKind::UserPwd.to_string() || r.code == IamCertKind::PhoneVCode.to_string() || r.code == IamCertKind::MailVCode.to_string())
+            .filter(|r| {
+                r.code == IamCertKernelKind::UserPwd.to_string() || r.code == IamCertKernelKind::PhoneVCode.to_string() || r.code == IamCertKernelKind::MailVCode.to_string()
+            })
             .collect();
         Ok(result)
     }
 
-    pub async fn find_cert_conf_detail_without_token_kind(
+    pub async fn find_cert_conf_detail_with_kernel_kind(
         id: Option<String>,
         code: Option<String>,
         name: Option<String>,
@@ -184,7 +188,9 @@ impl<'a> IamCertServ {
         .await?;
         let result = result
             .into_iter()
-            .filter(|r| r.code == IamCertKind::UserPwd.to_string() || r.code == IamCertKind::PhoneVCode.to_string() || r.code == IamCertKind::MailVCode.to_string())
+            .filter(|r| {
+                r.code == IamCertKernelKind::UserPwd.to_string() || r.code == IamCertKernelKind::PhoneVCode.to_string() || r.code == IamCertKernelKind::MailVCode.to_string()
+            })
             .collect();
         Ok(result)
     }
@@ -238,7 +244,7 @@ impl<'a> IamCertServ {
             ctx,
         )
         .await?;
-        if rbum_cert_conf.code == IamCertKind::UserPwd.to_string() {
+        if rbum_cert_conf.code == IamCertKernelKind::UserPwd.to_string() {
             return Err(funs.err().conflict("iam_cert_conf", "delete", "can not delete default credential", "409-rbum-cert-conf-basic-delete"));
         }
         let result = RbumCertConfServ::delete_rbum(id, funs, ctx).await?;
@@ -264,13 +270,43 @@ impl<'a> IamCertServ {
             )
             .await?
         };
-        if rbum_cert_conf.code == IamCertKind::UserPwd.to_string()
-            || rbum_cert_conf.code == IamCertKind::MailVCode.to_string()
-            || rbum_cert_conf.code == IamCertKind::PhoneVCode.to_string()
+        if rbum_cert_conf.code == IamCertKernelKind::UserPwd.to_string()
+            || rbum_cert_conf.code == IamCertKernelKind::MailVCode.to_string()
+            || rbum_cert_conf.code == IamCertKernelKind::PhoneVCode.to_string()
         {
             IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(&rbum_cert_conf.rel_rbum_item_id, false, funs, ctx).await?;
         }
         Ok(())
+    }
+
+    pub async fn add_global_ext_cert(
+        add_req: &mut IamExtCertAddReq,
+        account_id: &str,
+        rel_iam_cert_kind: &IamCertExtKind,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        // TODO find rel_rbum_cert_conf_id by rel_rbum_cert_kind
+        let rel_rbum_cert_conf_id = "";
+        let id = RbumCertServ::add_rbum(
+            &mut RbumCertAddReq {
+                ak: TrimString(add_req.ak.trim().to_string()),
+                sk: add_req.sk.map(|sk| TrimString(sk.trim().to_string())),
+                vcode: None,
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: RbumCertStatusKind::Enabled,
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: account_id.to_string(),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(id)
     }
 
     pub async fn find_certs(

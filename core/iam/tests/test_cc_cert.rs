@@ -11,7 +11,7 @@ use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::{RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_SCOPE_LEVEL_TENANT};
-use bios_iam::iam_enumeration::IamCertKind;
+use bios_iam::iam_enumeration::IamCertKernelKind;
 
 pub async fn test(
     sys_context: &TardisContext,
@@ -32,7 +32,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
 
     info!("【test_cc_cert】 : test_single_level : Rest Password");
     let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(
-        IamCertKind::UserPwd.to_string().as_str(),
+        IamCertKernelKind::UserPwd.to_string().as_str(),
         get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &context.own_paths),
         &funs,
     )

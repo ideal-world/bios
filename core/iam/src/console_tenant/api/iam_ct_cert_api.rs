@@ -10,7 +10,7 @@ use crate::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertKind;
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCtCertApi;
 
@@ -29,7 +29,7 @@ impl IamCtCertApi {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
         IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})

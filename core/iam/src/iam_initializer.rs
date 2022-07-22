@@ -209,7 +209,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
     let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
-    // Init certs
+    // Init kernel certs
     IamCertServ::init_default_ident_conf(
         IamUserPwdCertConfAddOrModifyReq {
             // TODO config
@@ -230,6 +230,9 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
         &ctx,
     )
     .await?;
+
+    // Init ext certs
+    // TODO
 
     let pwd = IamCertServ::get_new_pwd();
     IamAccountServ::add_account_agg(

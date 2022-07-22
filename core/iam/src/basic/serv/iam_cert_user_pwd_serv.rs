@@ -14,7 +14,7 @@ use crate::basic::dto::iam_cert_conf_dto::{IamUserPwdCertConfAddOrModifyReq, Iam
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_enumeration::IamCertKind;
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertUserPwdServ;
 
@@ -27,8 +27,8 @@ impl<'a> IamCertUserPwdServ {
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(IamCertKind::UserPwd.to_string()),
-                name: TrimString(IamCertKind::UserPwd.to_string()),
+                code: TrimString(IamCertKernelKind::UserPwd.to_string()),
+                name: TrimString(IamCertKernelKind::UserPwd.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
                 ak_rule: add_req.ak_rule.clone(),
@@ -40,7 +40,7 @@ impl<'a> IamCertUserPwdServ {
                 sk_encrypted: Some(true),
                 repeatable: add_req.repeatable,
                 is_basic: Some(true),
-                rest_by_kinds: Some(format!("{},{}", IamCertKind::MailVCode, IamCertKind::PhoneVCode)),
+                rest_by_kinds: Some(format!("{},{}", IamCertKernelKind::MailVCode, IamCertKernelKind::PhoneVCode)),
                 expire_sec: add_req.expire_sec,
                 sk_lock_cycle_sec: add_req.sk_lock_cycle_sec,
                 sk_lock_err_times: add_req.sk_lock_err_times,
@@ -140,7 +140,7 @@ impl<'a> IamCertUserPwdServ {
             Err(funs.err().not_found(
                 "iam_cert_user_pwd",
                 "modify",
-                &format!("not found credential of kind {:?}", IamCertKind::UserPwd),
+                &format!("not found credential of kind {:?}", IamCertKernelKind::UserPwd),
                 "404-iam-cert-kind-not-exist",
             ))
         }
@@ -171,7 +171,7 @@ impl<'a> IamCertUserPwdServ {
             Err(funs.err().not_found(
                 "iam_cert_user_pwd",
                 "reset_sk",
-                &format!("not found credential of kind {:?}", IamCertKind::UserPwd),
+                &format!("not found credential of kind {:?}", IamCertKernelKind::UserPwd),
                 "404-iam-cert-kind-not-exist",
             ))
         }

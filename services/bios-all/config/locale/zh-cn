@@ -17,7 +17,7 @@
 404-rbum-rel-not-exist-kind-attr	找不到指定的资源属性
 400-rbum-rel-not-empty-item	资源项不能为空
 
-409-rbum-set-item-exist	资源项已存在
+409-rbum-set-item-exist	绑定关系已存在
 400-rbum-set-sys-code-saturated	当前节点的数量已超出范围
 404-rbum-set-cate-not-exist	找不到对应的资源集目录
 

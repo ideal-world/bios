@@ -27,7 +27,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::IamCertKind;
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamTenantServ;
 
@@ -252,8 +252,8 @@ impl<'a> IamTenantServ {
         .await?;
 
         // Init cert conf
-        let cert_confs = IamCertServ::find_cert_conf_without_token_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
+        let cert_confs = IamCertServ::find_cert_conf_with_kernel_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
+        let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
         IamCertUserPwdServ::modify_cert_conf(
             &cert_conf_by_user_pwd_id,
             &IamUserPwdCertConfAddOrModifyReq {
@@ -272,14 +272,14 @@ impl<'a> IamTenantServ {
             ctx,
         )
         .await?;
-        if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
+        if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
             if !modify_req.cert_conf_by_phone_vcode {
                 IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
             }
         } else if modify_req.cert_conf_by_phone_vcode {
             IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
         }
-        if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKind::MailVCode.to_string()).map(|r| r.id.clone()) {
+        if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::MailVCode.to_string()).map(|r| r.id.clone()) {
             if !modify_req.cert_conf_by_mail_vcode {
                 IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
             }
@@ -291,8 +291,8 @@ impl<'a> IamTenantServ {
 
     pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
         let tenant = Self::get_item(id, filter, funs, ctx).await?;
-        let cert_confs = IamCertServ::find_cert_conf_without_token_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKind::UserPwd.to_string()).unwrap();
+        let cert_confs = IamCertServ::find_cert_conf_with_kernel_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
+        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
         let tenant = IamTenantAggDetailResp {
             id: tenant.id.clone(),
@@ -308,8 +308,8 @@ impl<'a> IamTenantServ {
             contact_phone: tenant.contact_phone.clone(),
             note: tenant.note.clone(),
             cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
-            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.code == IamCertKind::PhoneVCode.to_string()),
-            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.code == IamCertKind::MailVCode.to_string()),
+            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()),
+            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::MailVCode.to_string()),
         };
 
         Ok(tenant)
