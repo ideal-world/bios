@@ -513,6 +513,11 @@ impl<'a> IamCertServ {
         Ok(ctx)
     }
 
+    pub fn use_sys_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
+        ctx.own_paths = "".to_string();
+        Ok(ctx)
+    }
+
     pub fn use_tenant_ctx(ctx: TardisContext, tenant_id: &str) -> TardisResult<TardisContext> {
         rbum_scope_helper::degrade_own_paths(ctx, tenant_id.to_string().as_str())
     }
