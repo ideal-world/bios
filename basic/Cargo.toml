@@ -31,12 +31,12 @@ async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { verison = "0.1.0-alpha16", optional = true }
+tardis = { verison = "0.1.0-alpha17", optional = true }
 poem-openapi = { version = "2", optional = true }
 sea-orm = { version = "0.9", features = ["macros"], optional = true }
 
 [dev-dependencies]
-tardis = { verison = "0.1.0-alpha16", features = ["test", "reldb", "sea-orm"] }
+tardis = { verison = "0.1.0-alpha17", features = ["test", "reldb", "sea-orm"] }
 sea-orm = { version = "0.9", features = ["macros"] }
 
 [[test]]

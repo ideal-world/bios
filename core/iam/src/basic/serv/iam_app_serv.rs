@@ -24,6 +24,8 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::IamRelKind;
 
+use super::iam_cert_serv::IamCertServ;
+
 pub struct IamAppServ;
 
 #[async_trait]
@@ -165,7 +167,7 @@ impl<'a> IamAppServ {
 
         IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
-
+        IamCertServ::init_default_ext_conf(funs, &app_ctx).await?;
         Ok(app_id)
     }
 
