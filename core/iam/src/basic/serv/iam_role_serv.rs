@@ -248,7 +248,7 @@ impl<'a> IamRoleServ {
         }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, funs, ctx).await
     }
 
     pub async fn delete_rel_account(
@@ -316,7 +316,7 @@ impl<'a> IamRoleServ {
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, false, funs, ctx).await
     }
 
     pub async fn delete_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {

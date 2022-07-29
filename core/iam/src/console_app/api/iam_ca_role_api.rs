@@ -114,9 +114,7 @@ impl IamCaRoleApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
-        if !IamAppServ::exist_rel_accounts(&app_id, &account_id.0, &funs, &ctx.0).await? {
-            IamAppServ::add_rel_account(&app_id, &account_id.0, &funs, &ctx.0).await?;
-        }
+        IamAppServ::add_rel_account(&app_id, &account_id.0, true, &funs, &ctx.0).await?;
         IamRoleServ::add_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
