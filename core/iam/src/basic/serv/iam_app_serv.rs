@@ -162,7 +162,7 @@ impl<'a> IamAppServ {
         )
         .await?;
 
-        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, funs, &app_ctx).await?;
+        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, false, funs, &app_ctx).await?;
         IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, None, funs, &app_ctx).await?;
 
         IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
@@ -171,8 +171,8 @@ impl<'a> IamAppServ {
         Ok(app_id)
     }
 
-    pub async fn add_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, funs, ctx).await
+    pub async fn add_rel_account(app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, ignore_exist_error, funs, ctx).await
     }
 
     pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
@@ -181,10 +181,6 @@ impl<'a> IamAppServ {
 
     pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
         IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, ctx).await
-    }
-
-    pub async fn exist_rel_accounts(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
-        IamRelServ::exist_rels(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await
     }
 
     pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumItemRelFilterReq>> {

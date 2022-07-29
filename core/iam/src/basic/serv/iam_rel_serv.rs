@@ -33,9 +33,17 @@ impl<'a> IamRelServ {
         to_iam_item_id: &str,
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
+        ignore_exist_error: bool,
         funs: &TardisFunsInst<'a>,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        if Self::exist_rels(rel_kind, from_iam_item_id, to_iam_item_id, funs, ctx).await? {
+            return if ignore_exist_error {
+                Ok(())
+            } else {
+                Err(funs.err().conflict(&rel_kind.to_string(), "add_simple_rel", "associated already exists", "409-rbum-rel-exist"))
+            };
+        }
         let value1 = start_timestamp.unwrap_or_else(|| Utc::now().timestamp());
         let value2 = end_timestamp.unwrap_or_else(|| (Utc::now() + Duration::days(365 * 100)).timestamp());
         let req = &mut RbumRelAggAddReq {
@@ -535,6 +543,7 @@ impl<'a> IamRelServ {
     }
 
     pub async fn exist_rels(rel_kind: &IamRelKind, from_iam_item_id: &str, to_iam_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        // TODO In-depth inspection
         RbumRelServ::exist_simple_rel(
             &RbumRelFindReq {
                 tag: Some(rel_kind.to_string()),
