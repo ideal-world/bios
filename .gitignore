@@ -11,6 +11,8 @@
 !/core/gateway/apisix/t/error_page
 !/core/gateway/apisix/t/APISIX.pm
 
+*-prod.toml
+
 # CI
 /.github/deploy_key
 out
