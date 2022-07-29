@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use sea_orm::EntityName;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::SelectStatement;
+use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};

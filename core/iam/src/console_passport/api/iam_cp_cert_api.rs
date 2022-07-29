@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Path, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use tardis::TardisFuns;
 
@@ -19,7 +20,7 @@ use crate::iam_constants;
 pub struct IamCpCertApi;
 
 /// Passport Console Cert API
-#[OpenApi(prefix_path = "/cp", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpCertApi {
     /// Fetch TardisContext By Token
     ///

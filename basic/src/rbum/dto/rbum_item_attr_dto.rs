@@ -2,9 +2,13 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
+#[cfg(feature = "default")]
+use tardis::db::sea_orm;
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumItemAttrAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
     pub value: String,
@@ -16,7 +20,7 @@ pub struct RbumItemAttrAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumItemAttrsAddOrModifyReq {
     // name -> value
     pub values: HashMap<String, String>,
@@ -26,14 +30,14 @@ pub struct RbumItemAttrsAddOrModifyReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumItemAttrModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
     pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumItemAttrSummaryResp {
     pub id: String,
     pub value: String,
@@ -49,7 +53,7 @@ pub struct RbumItemAttrSummaryResp {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumItemAttrDetailResp {
     pub id: String,
     pub value: String,

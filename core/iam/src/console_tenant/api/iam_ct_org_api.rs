@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
@@ -14,7 +15,7 @@ pub struct IamCtOrgApi;
 /// Tenant Console Org API
 ///
 /// Note: the current org only supports tenant level.
-#[OpenApi(prefix_path = "/ct/org", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtOrgApi {
     /// Add Org Cate
     #[oai(path = "/cate", method = "post")]

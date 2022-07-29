@@ -4,6 +4,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, Utc};
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::TardisFunsInst;
@@ -604,7 +605,7 @@ impl<'a> RbumCertServ {
         own_paths: &str,
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
-        #[derive(Debug, FromQueryResult)]
+        #[derive(Debug, sea_orm::FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
             pub sk: String,
@@ -613,7 +614,7 @@ impl<'a> RbumCertServ {
             pub end_time: DateTime<Utc>,
         }
 
-        #[derive(Debug, FromQueryResult)]
+        #[derive(Debug, sea_orm::FromQueryResult)]
         struct CertConfPeekResp {
             pub sk_encrypted: bool,
             pub sk_dynamic: bool,
@@ -719,7 +720,7 @@ impl<'a> RbumCertServ {
         own_paths: &str,
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
-        #[derive(Debug, FromQueryResult)]
+        #[derive(Debug, sea_orm::FromQueryResult)]
         struct IdAndSkResp {
             pub id: String,
             pub sk: String,
@@ -728,7 +729,7 @@ impl<'a> RbumCertServ {
             pub end_time: DateTime<Utc>,
         }
 
-        #[derive(Debug, FromQueryResult)]
+        #[derive(Debug, sea_orm::FromQueryResult)]
         struct CertConfPeekResp {
             pub is_basic: bool,
             pub sk_encrypted: bool,
@@ -825,7 +826,7 @@ impl<'a> RbumCertServ {
         ignore_end_time: bool,
         funs: &TardisFunsInst<'a>,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
-        #[derive(Debug, FromQueryResult)]
+        #[derive(Debug, sea_orm::FromQueryResult)]
         struct BasicCertInfoResp {
             pub id: String,
             pub ak: String,
@@ -909,7 +910,7 @@ impl<'a> RbumCertServ {
     }
 
     pub async fn show_sk(id: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
-        #[derive(FromQueryResult)]
+        #[derive(sea_orm::FromQueryResult)]
         struct SkResp {
             pub sk: String,
         }

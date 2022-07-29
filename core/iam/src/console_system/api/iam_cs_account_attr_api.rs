@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
@@ -16,7 +17,7 @@ pub struct IamCsAccountAttrApi;
 /// System Console Account Attr API
 ///
 /// Note: the current account attr only supports tenant level.
-#[OpenApi(prefix_path = "/cs/account/attr", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/account/attr", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsAccountAttrApi {
     /// Add Account Attr By Tenant Id
     #[oai(path = "/", method = "post")]

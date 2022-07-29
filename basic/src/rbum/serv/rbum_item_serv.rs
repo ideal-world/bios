@@ -5,6 +5,7 @@ use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
@@ -346,7 +347,7 @@ where
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
             rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, ctx).await?;
-            Ok(delete_records.len() as u64)
+            Ok(delete_records)
         }
     }
 
@@ -851,7 +852,7 @@ where
     }
 
     async fn is_disabled(id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<bool> {
-        #[derive(Debug, FromQueryResult)]
+        #[derive(Debug, sea_orm::FromQueryResult)]
         pub struct StatusResp {
             pub disabled: bool,
         }
@@ -1086,7 +1087,7 @@ impl<'a> RbumItemAttrServ {
     }
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 pub struct CodeResp {
     pub code: String,
 }

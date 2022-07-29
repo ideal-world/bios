@@ -4,6 +4,7 @@ use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::db::sea_orm::*;
 use tardis::regex::Regex;
@@ -678,7 +679,7 @@ impl RbumCrudQueryPackage for SelectStatement {
     }
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 pub struct NameResp {
     pub name: String,
 }

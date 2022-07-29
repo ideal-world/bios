@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-use tardis::web::poem_openapi::Object;
+use tardis::web::poem_openapi;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpUserPwdLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,
@@ -14,7 +14,7 @@ pub struct IamCpUserPwdLoginReq {
     pub flag: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpMailVCodeLoginGenVCodeReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
@@ -22,7 +22,7 @@ pub struct IamCpMailVCodeLoginGenVCodeReq {
     pub tenant_id: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpMailVCodeLoginReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
@@ -34,7 +34,7 @@ pub struct IamCpMailVCodeLoginReq {
     pub flag: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpPhoneVCodeLoginGenVCodeReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: TrimString,
@@ -42,7 +42,7 @@ pub struct IamCpPhoneVCodeLoginGenVCodeReq {
     pub tenant_id: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpPhoneVCodeLoginSendVCodeReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: TrimString,

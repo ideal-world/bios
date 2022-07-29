@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
-use tardis::db::sea_orm::*;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
@@ -39,7 +39,7 @@ pub async fn init(code: &str, config: RbumConfig) -> TardisResult<()> {
 }
 
 pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_code: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<TardisContext>> {
-    #[derive(Deserialize, FromQueryResult, Serialize, Clone, Debug)]
+    #[derive(Deserialize, sea_orm::FromQueryResult, Serialize, Clone, Debug)]
     struct TmpContext {
         pub id: String,
         pub own_paths: String,

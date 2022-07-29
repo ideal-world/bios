@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Query, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -15,7 +16,7 @@ use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 pub struct IamCcRoleApi;
 
 /// Common Console Role API
-#[OpenApi(prefix_path = "/cc/role", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/role", tag = "crate::iam_enumeration::Tag::Common")]
 impl IamCcRoleApi {
     /// Find Roles
     #[oai(path = "/", method = "get")]

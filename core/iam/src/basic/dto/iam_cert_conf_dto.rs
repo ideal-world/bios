@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-use tardis::web::poem_openapi::Object;
+use tardis::web::poem_openapi;
 
-#[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamUserPwdCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -23,7 +23,7 @@ pub struct IamUserPwdCertConfAddOrModifyReq {
     pub sk_lock_duration_sec: Option<u32>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamUserPwdCertConfInfo {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub ak_rule_len_min: u8,
@@ -45,7 +45,7 @@ pub struct IamUserPwdCertConfInfo {
     pub expire_sec: u32,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamMailVCodeCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -53,7 +53,7 @@ pub struct IamMailVCodeCertConfAddOrModifyReq {
     pub ak_rule: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug, Clone)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamPhoneVCodeCertConfAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak_note: Option<String>,
@@ -61,7 +61,7 @@ pub struct IamPhoneVCodeCertConfAddOrModifyReq {
     pub ak_rule: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTokenCertConfAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
@@ -70,7 +70,7 @@ pub struct IamTokenCertConfAddReq {
     pub expire_sec: Option<u32>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTokenCertConfModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,

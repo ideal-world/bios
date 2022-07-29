@@ -20,24 +20,20 @@ name = "bios_basic"
 path = "src/lib.rs"
 
 [features]
-default = ["tardis", "tardis/crypto", "tardis/web-server", "tardis/web-client", "tardis/reldb", "tardis/cache", "poem-openapi", "sea-orm"]
+default = ["tardis", "tardis/crypto", "tardis/web-server", "tardis/web-client", "tardis/reldb", "tardis/cache", "tardis/reldb"]
 with-mq = ["tardis/mq"]
-sdk = ["tardis", "tardis/web-client", "poem-openapi"]
+sdk = ["tardis", "tardis/web-client"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-derive_more = { version = "0" }
 async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { verison = "0.1.0-alpha17", optional = true }
-poem-openapi = { version = "2", optional = true }
-sea-orm = { version = "0.9", features = ["macros"], optional = true }
+tardis = { version = "0.1.0-alpha18", optional = true }
 
 [dev-dependencies]
-tardis = { verison = "0.1.0-alpha17", features = ["test", "reldb", "sea-orm"] }
-sea-orm = { version = "0.9", features = ["macros"] }
+tardis = { version = "0.1.0-alpha18", features = ["test", "reldb", "sea-orm"] }
 
 [[test]]
 name = "test_rbum"

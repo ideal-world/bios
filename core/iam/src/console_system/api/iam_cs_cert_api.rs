@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
@@ -15,7 +16,7 @@ use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 pub struct IamCsCertApi;
 
 /// System Console Cert API
-#[OpenApi(prefix_path = "/cs/cert", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/cert", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsCertApi {
     /// Rest Password By Account Id
     #[oai(path = "/user-pwd", method = "put")]

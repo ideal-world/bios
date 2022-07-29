@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
@@ -16,7 +17,7 @@ use crate::iam_enumeration::IamRelKind;
 pub struct IamCsAccountApi;
 
 /// System Console Account API
-#[OpenApi(prefix_path = "/cs/account", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/account", tag = "crate::iam_enumeration::Tag::System")]
 impl IamCsAccountApi {
     /// Add Account By Tenant Id
     #[oai(path = "/", method = "post")]

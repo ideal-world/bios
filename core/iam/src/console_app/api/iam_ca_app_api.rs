@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Path, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -12,7 +13,7 @@ use crate::iam_constants;
 pub struct IamCaAppApi;
 
 /// App Console App API
-#[OpenApi(prefix_path = "/ca/app", tag = "crate::iam_enumeration::Tag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ca/app", tag = "crate::iam_enumeration::Tag::App")]
 impl IamCaAppApi {
     /// Modify Current App
     #[oai(path = "/", method = "put")]

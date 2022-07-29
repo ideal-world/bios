@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 
 use crate::rbum::dto::rbum_rel_attr_dto::RbumRelAttrDetailResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp};
@@ -6,7 +8,7 @@ use crate::rbum::dto::rbum_rel_env_dto::RbumRelEnvDetailResp;
 use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAggAddReq {
     pub rel: RbumRelAddReq,
 
@@ -15,7 +17,7 @@ pub struct RbumRelAggAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAttrAggAddReq {
     pub is_from: bool,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
@@ -28,7 +30,7 @@ pub struct RbumRelAttrAggAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelEnvAggAddReq {
     pub kind: RbumRelEnvKind,
     #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
@@ -38,7 +40,7 @@ pub struct RbumRelEnvAggAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAggResp {
     pub rel: RbumRelDetailResp,
     pub attrs: Vec<RbumRelAttrDetailResp>,

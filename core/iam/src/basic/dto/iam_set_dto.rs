@@ -1,9 +1,10 @@
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-use tardis::web::poem_openapi::Object;
+use tardis::web::poem_openapi;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
@@ -19,7 +20,7 @@ pub struct IamSetCateAddReq {
     pub rbum_parent_cate_id: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetCateModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
@@ -33,13 +34,13 @@ pub struct IamSetCateModifyReq {
     pub ext: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetItemAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_cate_id: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetItemWithDefaultSetAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_cate_id: String,
@@ -49,7 +50,7 @@ pub struct IamSetItemWithDefaultSetAddReq {
     pub rel_rbum_item_id: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetItemAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_id: String,

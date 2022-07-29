@@ -1,5 +1,6 @@
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
 use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
 use tardis::db::sea_orm::*;
@@ -33,7 +34,7 @@ pub struct Model {
 }
 
 impl TardisActiveModel for ActiveModel {
-    fn fill_cxt(&mut self, ctx: &TardisContext, is_insert: bool) {
+    fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
         if is_insert {
             self.own_paths = Set(ctx.own_paths.to_string());
             self.owner = Set(ctx.owner.to_string());

@@ -1,15 +1,14 @@
 use std::str::FromStr;
 
-use derive_more::Display;
-use sea_orm::strum::EnumString;
-use sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 use serde::{Deserialize, Serialize};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
-use tardis::web::poem_openapi::Enum;
-use tardis::web::poem_openapi::Tags;
+use tardis::db::sea_orm;
+use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
+use tardis::derive_more::Display;
+use tardis::web::poem_openapi;
 
-#[derive(Tags, Display, Debug)]
+#[derive(poem_openapi::Tags, Display, Debug)]
 pub enum Tag {
     #[oai(rename = "Common Console")]
     Common,
@@ -23,14 +22,14 @@ pub enum Tag {
     Passport,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertKernelKind {
     UserPwd,
     MailVCode,
     PhoneVCode,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertExtKind {
     Gitlab,
     Github,
@@ -38,7 +37,7 @@ pub enum IamCertExtKind {
     // TODO
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertTokenKind {
     TokenDefault,
     TokenPc,
@@ -56,7 +55,7 @@ impl IamCertTokenKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum, EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamRelKind {
     IamAccountRole,
     IamResRole,
@@ -65,7 +64,7 @@ pub enum IamRelKind {
     IamAccountRel,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamResKind {
     Menu,
     Api,

@@ -5,6 +5,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::db::reldb_client::IdResp;
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
@@ -1060,14 +1061,14 @@ impl<'a> RbumCrudOperation<'a, rbum_rel_env::ActiveModel, RbumRelEnvAddReq, Rbum
     }
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 struct KindAndValueResp {
     pub kind: RbumRelEnvKind,
     pub value1: String,
     pub value2: String,
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 struct NameAndValueResp {
     pub is_from: bool,
     pub name: String,

@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::basic::dto::iam_account_dto::IamAccountExtResp;
 use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi::Object;
+use tardis::web::poem_openapi;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpAccountInfoResp {
     pub account_id: String,
     pub account_name: String,
@@ -17,7 +17,7 @@ pub struct IamCpAccountInfoResp {
     pub exts: Vec<IamAccountExtResp>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,

@@ -1,15 +1,17 @@
+use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::payload::Json;
+use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
+
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAggDetailResp, IamTenantAggModifyReq};
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
-use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{payload::Json, OpenApi};
-use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 pub struct IamCtTenantApi;
 
 /// Tenant Console Tenant API
-#[OpenApi(prefix_path = "/ct/tenant", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/tenant", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtTenantApi {
     /// Get Current Tenant
     #[oai(path = "/", method = "get")]
