@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
+#[cfg(feature = "default")]
+use tardis::db::sea_orm;
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak: TrimString,
@@ -29,7 +33,7 @@ pub struct RbumCertAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
@@ -41,7 +45,7 @@ pub struct RbumCertModifyReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertSummaryResp {
     pub id: String,
     pub ak: String,
@@ -62,7 +66,7 @@ pub struct RbumCertSummaryResp {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertDetailResp {
     pub id: String,
     pub ak: String,

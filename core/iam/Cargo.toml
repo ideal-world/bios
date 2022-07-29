@@ -20,24 +20,19 @@ name = "bios_iam"
 path = "src/lib.rs"
 
 [features]
-ldap = ["ldap3_proto", "futures", "tokio-util"]
+ldap = ["ldap3_proto", "tardis/future", "tokio-util"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-derive_more = { version = "0" }
 async-trait = { version = "0" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
-
+tardis = { version = "0.1.0-alpha18", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
-tardis = { verison = "0.1.0-alpha17", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
-poem-openapi = { version = "2", features = ["chrono"] }
-sea-orm = { version = "0.9", features = ["macros"] }
 
 # ldap
 ldap3_proto = { version = "0.2.3", optional = true }
-futures = { version = "0.3", optional = true }
 tokio-util = { version = "0.7", optional = true }
 
 [dev-dependencies]
-tardis = { verison = "0.1.0-alpha17", features = ["test"] }
+tardis = { version = "0.1.0-alpha18", features = ["test"] }

@@ -1,10 +1,14 @@
 use serde::{Deserialize, Serialize};
 use tardis::chrono::{DateTime, Utc};
+#[cfg(feature = "default")]
+use tardis::db::sea_orm;
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 
 use crate::rbum::rbum_enumeration::RbumRelEnvKind;
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelEnvAddReq {
     pub kind: RbumRelEnvKind,
     #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
@@ -17,7 +21,7 @@ pub struct RbumRelEnvAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelEnvModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "1", max_length = "2000")))]
     pub value1: Option<String>,
@@ -26,7 +30,7 @@ pub struct RbumRelEnvModifyReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumRelEnvDetailResp {
     pub id: String,
     pub kind: RbumRelEnvKind,

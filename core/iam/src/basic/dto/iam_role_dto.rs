@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::FromQueryResult;
-use tardis::web::poem_openapi::Object;
+use tardis::db::sea_orm;
+use tardis::web::poem_openapi;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAggAddReq {
     pub role: IamRoleAddReq,
     pub res_ids: Option<Vec<String>>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
@@ -26,13 +26,13 @@ pub struct IamRoleAddReq {
     pub sort: Option<u32>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAggModifyReq {
     pub role: IamRoleModifyReq,
     pub res_ids: Option<Vec<String>>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
@@ -45,14 +45,14 @@ pub struct IamRoleModifyReq {
     pub sort: Option<u32>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamRoleBoneResp {
     pub id: String,
     pub name: String,
     pub icon: String,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamRoleSummaryResp {
     pub id: String,
     pub name: String,
@@ -69,7 +69,7 @@ pub struct IamRoleSummaryResp {
     pub sort: u32,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamRoleDetailResp {
     pub id: String,
     pub name: String,

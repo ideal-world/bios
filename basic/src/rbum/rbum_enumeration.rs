@@ -1,14 +1,18 @@
 use std::str::FromStr;
 
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 #[cfg(feature = "default")]
+use tardis::db::sea_orm;
+#[cfg(feature = "default")]
 use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
+use tardis::derive_more::Display;
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumScopeLevelKind {
     Private,
     Root,
@@ -49,7 +53,7 @@ impl TryGetable for RbumScopeLevelKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumCertRelKind {
     Item,
     Set,
@@ -84,7 +88,7 @@ impl TryGetable for RbumCertRelKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumRelFromKind {
     Item,
     Set,
@@ -119,7 +123,7 @@ impl TryGetable for RbumRelFromKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumCertStatusKind {
     Disabled,
     Enabled,
@@ -154,7 +158,7 @@ impl TryGetable for RbumCertStatusKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumRelEnvKind {
     DatetimeRange,
     TimeRange,
@@ -189,7 +193,7 @@ impl TryGetable for RbumRelEnvKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumDataTypeKind {
     String,
     Number,
@@ -215,7 +219,7 @@ impl TryGetable for RbumDataTypeKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum, sea_orm::strum::EnumString))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum, sea_orm::strum::EnumString))]
 pub enum RbumWidgetTypeKind {
     Input,
     InputTxt,
@@ -240,7 +244,7 @@ impl TryGetable for RbumWidgetTypeKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Enum))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumSetCateLevelQueryKind {
     Sub,
     CurrentAndParent,

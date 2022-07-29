@@ -53,12 +53,12 @@ use std::convert::TryFrom;
 use std::net;
 use std::str::FromStr;
 
-use futures::SinkExt;
-use futures::StreamExt;
 use ldap3_proto::simple::*;
 use ldap3_proto::LdapCodec;
 use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
+use tardis::futures::SinkExt;
+use tardis::futures::StreamExt;
 use tardis::log::{error, info, trace};
 
 use tardis::regex::Regex;

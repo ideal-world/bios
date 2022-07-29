@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Query, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
@@ -12,7 +13,7 @@ pub struct IamCcOrgApi;
 /// Common Console Org API
 ///
 /// Note: the current org only supports tenant level.
-#[OpenApi(prefix_path = "/cc/org", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/org", tag = "crate::iam_enumeration::Tag::Common")]
 impl IamCcOrgApi {
     /// Find Org Tree By Current Tenant
     #[oai(path = "/tree", method = "get")]

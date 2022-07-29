@@ -5,6 +5,7 @@ use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::tokio::time::sleep;
@@ -765,12 +766,12 @@ impl<'a> RbumSetItemServ {
     }
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 struct SysCodeResp {
     pub sys_code: String,
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 struct RbumSetCateWithLevelResp {
     pub id: String,
     pub sys_code: String,

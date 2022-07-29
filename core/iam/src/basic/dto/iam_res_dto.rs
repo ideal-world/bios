@@ -1,21 +1,21 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::FromQueryResult;
-use tardis::web::poem_openapi::Object;
+use tardis::db::sea_orm;
+use tardis::web::poem_openapi;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
 use crate::iam_enumeration::IamResKind;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAggAddReq {
     pub res: IamResAddReq,
     pub set: IamSetItemAggAddReq,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
@@ -50,7 +50,7 @@ impl IamResAddReq {
     }
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamResModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
@@ -65,7 +65,7 @@ pub struct IamResModifyReq {
     pub disabled: Option<bool>,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamResSummaryResp {
     pub id: String,
     pub code: String,
@@ -95,7 +95,7 @@ impl IamResSummaryResp {
     }
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamResDetailResp {
     pub id: String,
     pub code: String,

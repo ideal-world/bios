@@ -1,4 +1,4 @@
-use tardis::web::poem_openapi::OpenApi;
+use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -13,7 +13,7 @@ use crate::iam_constants;
 pub struct IamCpTenantApi;
 
 /// Passport Console Tenant API
-#[OpenApi(prefix_path = "/cp/tenant", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp/tenant", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpTenantApi {
     /// Find Tenants
     #[oai(path = "/all", method = "get")]

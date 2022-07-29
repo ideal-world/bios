@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{payload::Json, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use crate::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
@@ -12,7 +13,7 @@ use crate::iam_constants;
 pub struct IamCpAccountApi;
 
 /// Passport Console Account API
-#[OpenApi(prefix_path = "/cp/account", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp/account", tag = "crate::iam_enumeration::Tag::Passport")]
 impl IamCpAccountApi {
     /// Modify Current Account
     #[oai(path = "/", method = "put")]

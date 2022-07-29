@@ -1,13 +1,12 @@
+use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
-use tardis::db::sea_orm::FromQueryResult;
-use tardis::web::poem_openapi::Object;
+use tardis::db::sea_orm;
+use tardis::web::poem_openapi;
 
-use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
-
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAddReq {
     #[oai(skip = true)]
     pub id: Option<TrimString>,
@@ -26,7 +25,7 @@ pub struct IamTenantAddReq {
     pub note: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
@@ -43,7 +42,7 @@ pub struct IamTenantModifyReq {
     pub note: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
@@ -61,7 +60,7 @@ pub struct IamTenantAggModifyReq {
     pub cert_conf_by_mail_vcode: bool,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
@@ -87,7 +86,7 @@ pub struct IamTenantAggAddReq {
     pub disabled: Option<bool>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAggDetailResp {
     pub id: String,
     pub name: String,
@@ -110,14 +109,14 @@ pub struct IamTenantAggDetailResp {
     pub cert_conf_by_mail_vcode: bool,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamTenantBoneResp {
     pub id: String,
     pub name: String,
     pub icon: String,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamTenantSummaryResp {
     pub id: String,
     pub name: String,
@@ -136,7 +135,7 @@ pub struct IamTenantSummaryResp {
     pub note: String,
 }
 
-#[derive(Object, FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
 pub struct IamTenantDetailResp {
     pub id: String,
     pub name: String,

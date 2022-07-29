@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use sea_orm::sea_query::Query;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::Expr;
-use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::sea_query::Query;
 use tardis::log::info;
 use tardis::TardisFuns;
 
@@ -605,7 +605,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     Ok(())
 }
 
-#[derive(Debug, FromQueryResult)]
+#[derive(Debug, sea_orm::FromQueryResult)]
 pub struct IamAccountResp {
     pub id: String,
     pub ext1_idx: String,
@@ -615,6 +615,7 @@ pub struct IamAccountResp {
 mod test_iam_account {
     use tardis::basic::dto::TardisContext;
     use tardis::db::reldb_client::TardisActiveModel;
+    use tardis::db::sea_orm;
     use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Table, TableCreateStatement};
     use tardis::db::sea_orm::*;
 
@@ -630,7 +631,7 @@ mod test_iam_account {
     }
 
     impl TardisActiveModel for ActiveModel {
-        fn fill_cxt(&mut self, ctx: &TardisContext, is_insert: bool) {
+        fn fill_ctx(&mut self, ctx: &TardisContext, is_insert: bool) {
             if is_insert {
                 self.own_paths = Set(ctx.own_paths.to_string());
             }

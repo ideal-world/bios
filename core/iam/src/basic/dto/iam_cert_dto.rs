@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
-use tardis::web::poem_openapi::Object;
+use tardis::web::poem_openapi;
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamContextFetchReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub token: String,
@@ -10,7 +10,7 @@ pub struct IamContextFetchReq {
     pub app_id: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamPwdNewReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,
@@ -22,7 +22,7 @@ pub struct IamPwdNewReq {
     pub tenant_id: Option<String>,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamUserPwdCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,
@@ -30,7 +30,7 @@ pub struct IamUserPwdCertAddReq {
     pub sk: TrimString,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamUserPwdCertModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub original_sk: TrimString,
@@ -38,25 +38,25 @@ pub struct IamUserPwdCertModifyReq {
     pub new_sk: TrimString,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamUserPwdCertRestReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub new_sk: TrimString,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamMailVCodeCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamMailVCodeCertResendActivationReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamMailVCodeCertActivateReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
@@ -64,13 +64,13 @@ pub struct IamMailVCodeCertActivateReq {
     pub vcode: String,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamPhoneVCodeCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: TrimString,
 }
 
-#[derive(Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamExtCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: String,

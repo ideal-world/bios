@@ -1,5 +1,6 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem_openapi::{param::Path, param::Query, OpenApi};
+use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::{param::Path, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
@@ -15,7 +16,7 @@ pub struct IamCtResApi;
 /// Tenant Console Res API
 ///
 /// Note: the current res only supports sys level.
-#[OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtResApi {
     /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]

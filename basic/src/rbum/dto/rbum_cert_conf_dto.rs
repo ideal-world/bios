@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
+#[cfg(feature = "default")]
+use tardis::db::sea_orm;
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertConfAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub code: TrimString,
@@ -45,7 +49,7 @@ pub struct RbumCertConfAddReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertConfModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: Option<TrimString>,
@@ -79,7 +83,7 @@ pub struct RbumCertConfModifyReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertConfSummaryResp {
     pub id: String,
     pub code: String,
@@ -110,7 +114,7 @@ pub struct RbumCertConfSummaryResp {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertConfDetailResp {
     pub id: String,
     pub code: String,
@@ -146,7 +150,7 @@ pub struct RbumCertConfDetailResp {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(tardis::web::poem_openapi::Object, tardis::db::sea_orm::FromQueryResult))]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertConfIdAndExtResp {
     pub id: String,
     pub ext: String,
