@@ -30,7 +30,7 @@ lazy_static = { version = "1" }
 itertools = { version = "0" }
 
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
-tardis = { verison = "0.1.0-alpha16", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
+tardis = { verison = "0.1.0-alpha17", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
 poem-openapi = { version = "2", features = ["chrono"] }
 sea-orm = { version = "0.9", features = ["macros"] }
 
@@ -40,4 +40,4 @@ futures = { version = "0.3", optional = true }
 tokio-util = { version = "0.7", optional = true }
 
 [dev-dependencies]
-tardis = { verison = "0.1.0-alpha16", features = ["test"] }
+tardis = { verison = "0.1.0-alpha17", features = ["test"] }

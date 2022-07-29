@@ -119,7 +119,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let cert_conf = IamCertServ::paginate_cert_conf(None, None, None, false, None, 1, 10, None, None, &funs, context).await?;
     assert_eq!(cert_conf.page_number, 1);
     assert_eq!(cert_conf.page_size, 10);
-    assert_eq!(cert_conf.total_size, 7);
+    assert_eq!(cert_conf.total_size, 10);
 
     info!("【test_ct_cert_conf】 : test_single_level : Delete Cert Conf By Id");
     assert!(IamCertServ::delete_cert_conf("11111", &funs, &context).await.is_err());
