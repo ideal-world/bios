@@ -13,6 +13,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
@@ -107,7 +108,8 @@ impl<'a> IamRelServ {
                 // If add is a menu or element resource
                 // See example (2) / (5)
                 // 1) Find the list of associated API resources
-                let rel_res_api_ids = Self::find_to_id_rels(&IamRelKind::IamResApi, res_id, None, None, funs, ctx).await?;
+                let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+                let rel_res_api_ids = Self::find_to_id_rels(&IamRelKind::IamResApi, res_id, None, None, funs, &sys_ctx).await?;
                 let rel_res_apis = IamResServ::find_items(
                     &IamResFilterReq {
                         basic: RbumBasicFilterReq {
@@ -120,7 +122,7 @@ impl<'a> IamRelServ {
                     None,
                     None,
                     funs,
-                    ctx,
+                    &sys_ctx,
                 )
                 .await?;
                 // 2) Create bindings of associated API resources to roles in the cache
@@ -163,7 +165,8 @@ impl<'a> IamRelServ {
             }
             // See example (1) / (4)
             // Find the list of roles associated with a menu or element resource
-            let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, ctx).await?;
+            let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+            let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, &sys_ctx).await?;
             // Create API bindings to associated roles in the cache
             IamResCacheServ::add_or_modify_res_rel(
                 &res_api.code,
@@ -246,14 +249,15 @@ impl<'a> IamRelServ {
                     // If delete is a menu or element resource
                     // See example (2) / (5)
                     // 1) Find the list of associated API resources (ready to remove the binding to the role from the cache)
-                    let rel_res_api_ids = Self::find_to_id_rels(&IamRelKind::IamResApi, res_id, None, None, funs, ctx).await?;
+                    let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+                    let rel_res_api_ids = Self::find_to_id_rels(&IamRelKind::IamResApi, res_id, None, None, funs, &sys_ctx).await?;
                     for rel_res_api_id in rel_res_api_ids {
                         // 2) If the associated API resource is explicitly associated with a role, it cannot be removed
-                        if Self::exist_rels(&IamRelKind::IamResRole, &rel_res_api_id, role_id, funs, ctx).await? {
+                        if Self::exist_rels(&IamRelKind::IamResRole, &rel_res_api_id, role_id, funs, &sys_ctx).await? {
                             continue;
                         }
                         // 3) Find the list of menu or element resources associated with the associated API resource (indirect relationship)
-                        let rel_res_other_ids = Self::find_from_id_rels(&IamRelKind::IamResApi, true, &rel_res_api_id, None, None, funs, ctx)
+                        let rel_res_other_ids = Self::find_from_id_rels(&IamRelKind::IamResApi, true, &rel_res_api_id, None, None, funs, &sys_ctx)
                             .await?
                             .into_iter()
                             // 4) Exclude own Id
@@ -261,7 +265,7 @@ impl<'a> IamRelServ {
                             .collect::<Vec<String>>();
                         // 5) If these associated menus or element resources are explicitly associated with a role, they cannot be removed
                         for rel_res_other_id in rel_res_other_ids {
-                            if Self::exist_rels(&IamRelKind::IamResRole, &rel_res_other_id, role_id, funs, ctx).await? {
+                            if Self::exist_rels(&IamRelKind::IamResRole, &rel_res_other_id, role_id, funs, &sys_ctx).await? {
                                 break;
                             }
                         }
@@ -276,7 +280,7 @@ impl<'a> IamRelServ {
                                 ..Default::default()
                             },
                             funs,
-                            ctx,
+                            &sys_ctx,
                         )
                         .await?;
                         // 7) Remove API resources from binding to roles in the cache
@@ -322,15 +326,16 @@ impl<'a> IamRelServ {
                 }
                 // See example (1) / (4)
                 // 1) Find the list of roles associated with a menu or element resource (ready to remove the binding to the API resource from the cache)
-                let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, ctx).await?;
+                let sys_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+                let rel_role_ids = Self::find_from_id_rels(&IamRelKind::IamResRole, true, res_other_id, None, None, funs, &sys_ctx).await?;
                 let mut remove_role_ids = Vec::new();
                 for rel_role_id in rel_role_ids {
                     // 2) If an API resource is explicitly associated with a role, it cannot be removed
-                    if Self::exist_rels(&IamRelKind::IamResRole, res_api_id, &rel_role_id, funs, ctx).await? {
+                    if Self::exist_rels(&IamRelKind::IamResRole, res_api_id, &rel_role_id, funs, &sys_ctx).await? {
                         continue;
                     }
                     // 3) Find the list of resources associated with the associated role (indirect relationship)
-                    let rel_res_ids = Self::find_to_id_rels(&IamRelKind::IamResRole, &rel_role_id, None, None, funs, ctx)
+                    let rel_res_ids = Self::find_to_id_rels(&IamRelKind::IamResRole, &rel_role_id, None, None, funs, &sys_ctx)
                         .await?
                         .into_iter()
                         // 4) Exclude own Id
@@ -338,7 +343,7 @@ impl<'a> IamRelServ {
                         .collect::<Vec<String>>();
                     // 5) If these associated resources are explicitly associated with API resources, they cannot be removed
                     for rel_res_id in rel_res_ids {
-                        if Self::exist_rels(&IamRelKind::IamResApi, res_api_id, &rel_res_id, funs, ctx).await? {
+                        if Self::exist_rels(&IamRelKind::IamResApi, res_api_id, &rel_res_id, funs, &sys_ctx).await? {
                             break;
                         }
                     }
