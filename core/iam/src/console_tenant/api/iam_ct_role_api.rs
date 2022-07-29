@@ -93,7 +93,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Rel Account
+    /// Add Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -103,7 +103,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Rel Account
+    /// Delete Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -121,7 +121,7 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Add Rel Res
+    /// Add Role Rel Res
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -131,7 +131,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Rel Res
+    /// Delete Role Rel Res
     #[oai(path = "/:id/res/:res_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

@@ -134,7 +134,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Add Rel Res
+    /// Add Res Rel Api Res
     #[oai(path = "/:id/res/:res_api_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -144,7 +144,7 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Rel Res
+    /// Delete Res Rel Api Res
     #[oai(path = "/:id/res/:res_api_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

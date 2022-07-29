@@ -97,7 +97,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Rel Account
+    /// Add Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -108,7 +108,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Rel Account
+    /// Delete Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -128,7 +128,7 @@ impl IamCsRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Add Rel Res
+    /// Add Role Rel Res
     #[oai(path = "/:id/res/:res_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -139,7 +139,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Rel Res
+    /// Delete Role Rel Res
     #[oai(path = "/:id/res/:res_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
