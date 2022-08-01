@@ -5,7 +5,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
-use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertSummaryResp};
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::helper::rbum_scope_helper;
@@ -28,8 +28,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants;
-use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind};
 
 pub struct IamCertServ;
@@ -111,9 +110,9 @@ impl<'a> IamCertServ {
     }
 
     pub async fn init_default_ext_conf(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
-        let _ = &Self::add_global_ext_cert_conf(&IamCertExtKind::Gitlab, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        let _ = &Self::add_global_ext_cert_conf(&IamCertExtKind::Github, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        let _ = &Self::add_global_ext_cert_conf(&IamCertExtKind::Wechat, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_ext_cert_conf(&IamCertExtKind::Gitlab, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_ext_cert_conf(&IamCertExtKind::Github, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_ext_cert_conf(&IamCertExtKind::Wechat, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Ok(())
     }
 
@@ -285,12 +284,7 @@ impl<'a> IamCertServ {
         Ok(())
     }
 
-    pub async fn add_global_ext_cert_conf(
-        rel_iam_cert_kind: &IamCertExtKind,
-        rel_iam_item_id: Option<String>,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    pub async fn add_ext_cert_conf(rel_iam_cert_kind: &IamCertExtKind, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(rel_iam_cert_kind.to_string()),
@@ -323,14 +317,13 @@ impl<'a> IamCertServ {
         Ok(id)
     }
 
-    pub async fn add_global_ext_cert(
+    pub async fn add_ext_cert(
         add_req: &mut IamExtCertAddReq,
         account_id: &str,
         rel_iam_cert_kind: &IamCertExtKind,
         funs: &TardisFunsInst<'a>,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        // TODO find rel_rbum_cert_conf_id by rel_rbum_cert_kind
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_code(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -353,7 +346,7 @@ impl<'a> IamCertServ {
         Ok(id)
     }
 
-    pub async fn get_global_ext_cert(account_id: &str, rel_iam_cert_kind: &IamCertExtKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumCertSummaryResp> {
+    pub async fn get_ext_cert(account_id: &str, rel_iam_cert_kind: &IamCertExtKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_code(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
@@ -366,11 +359,28 @@ impl<'a> IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
-            Ok(ext_cert)
+            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+            Ok(RbumCertSummaryWithSkResp {
+                id: ext_cert.id,
+                ak: ext_cert.ak,
+                sk: now_sk,
+                start_time: ext_cert.start_time,
+                end_time: ext_cert.end_time,
+                status: ext_cert.status,
+                rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
+                rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
+                rel_rbum_cert_conf_code: ext_cert.rel_rbum_cert_conf_code,
+                rel_rbum_kind: ext_cert.rel_rbum_kind,
+                rel_rbum_id: ext_cert.rel_rbum_id,
+                own_paths: ext_cert.own_paths,
+                owner: ext_cert.owner,
+                create_time: ext_cert.create_time,
+                update_time: ext_cert.update_time,
+            })
         } else {
             Err(funs.err().not_found(
-                "iam_cert_ext",
-                "activate",
+                "iam_cert",
+                "get_ext_cert",
                 &format!("not found credential of kind {:?}", rel_iam_cert_kind),
                 "404-iam-cert-kind-not-exist",
             ))
