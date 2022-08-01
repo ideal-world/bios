@@ -31,7 +31,7 @@ function _M.auth(ident_info)
     end
     if auth_info.groups ~= nil and auth_info.groups ~= '' and iam_groups ~= nil then
         for _, iam_group in pairs(iam_groups) do
-            if iam_group ~= nil and iam_group ~= '' and m_utils.contain(auth_info.groups, "#" .. iam_group .. "%w-#") then
+            if iam_group ~= nil and iam_group ~= '' and m_utils.contain_with_regex(auth_info.groups, "#" .. iam_group .. "%w-#") then
                 return 200, { message = "" }
             end
         end
