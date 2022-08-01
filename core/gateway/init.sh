@@ -38,12 +38,12 @@ init_dev_env(){
     nohup etcd </dev/null >/dev/null 2>&1 &
     echo "[5/9] download apisix"
     echo ""
-    wget https://mirrors.bfsu.edu.cn/apache/apisix/2.14.1/apache-apisix-2.14.1-src.tgz
+    wget https://mirrors.bfsu.edu.cn/apache/apisix/2.15.0/apache-apisix-2.15.0-src.tgz
     tar -cvf apisix.tar apisix
-    tar -xf apache-apisix-2.14.1-src.tgz -C apisix
+    tar -xf apache-apisix-2.15.0-src.tgz -C apisix
     tar -xf apisix.tar
     rm apisix.tar
-    rm apache-apisix-2.14.1-src.tgz
+    rm apache-apisix-2.15.0-src.tgz
     echo "[6/9] make deps"
     echo ""
     cd apisix

@@ -8,7 +8,7 @@ RUN wget https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-
     && tar -zxvf etcd-${ETCD_VERSION}-linux-amd64.tar.gz \
     && mv etcd-${ETCD_VERSION}-linux-amd64 etcd
 
-FROM apache/apisix:2.14.1-alpine
+FROM apache/apisix:2.15.0-alpine
 
 COPY --from=etcd-stage /tmp/etcd/etcd /usr/bin/etcd
 COPY --from=etcd-stage /tmp/etcd/etcdctl /usr/bin/etcdctl
