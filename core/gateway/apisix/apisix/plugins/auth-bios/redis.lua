@@ -1,54 +1,101 @@
 local core = require("apisix.core")
 local redis_new = require("resty.redis").new
 
-local redis_client = redis_new()
+local redis_client = {}
 local CACHES = {}
 
-local function init(host, port, database, timeout, password, max_size, max_idle_time)
+local function init(host, port, database, timeout, password, max_size, redis_max_idle_ms)
     core.log.info("Init redis connection, host:", host, " port: ", port, " db: ", database)
-    redis_client:set_timeouts(timeout, timeout, timeout)
-    local _, conn_err = redis_client:connect(host, port)
+    redis_client.client = redis_new()
+    redis_client.client:set_timeouts(timeout, timeout, timeout)
+    local _, conn_err = redis_client.client:connect(host, port)
     if conn_err then
         if conn_err == "already connected" then
-            redis_client:close()
-            init(host, port, database, timeout, password)
+            core.log.warn("Redis reconnection, host:", host, " port: ", port, " db: ", database)
+            redis_client.client:close()
+            init(host, port, database, timeout, password, max_size, redis_max_idle_ms)
         else
             error("Redis connection failure:" .. conn_err)
         end
     end
     if password and password ~= '' then
-        local _, err = redis_client:auth(password)
+        local _, err = redis_client.client:auth(password)
         if err then
             error("Redis connection failure:" .. err)
         end
     end
     if database ~= 0 then
-        local _, err = redis_client:select(database)
+        local _, err = redis_client.client:select(database)
         if err then
             error("Redis change db failure:" .. err)
         end
     end
-    if max_size and max_size ~= '' and max_idle_time and max_idle_time ~= '' then
-        redis_client:set_keepalive(max_idle_time, max_size)
+    if max_size and max_size ~= '' and redis_max_idle_ms and redis_max_idle_ms ~= '' then
+        local _, keepalive_err = redis_client.client:set_keepalive(redis_max_idle_ms, max_size)
+        if keepalive_err then
+            error("Redis failed to set keepalive: ", keepalive_err)
+        end
     end
+    redis_client.host = host
+    redis_client.port = port
+    redis_client.database = database
+    redis_client.timeout = timeout
+    redis_client.password = password
+    redis_client.max_size = max_size
+    redis_client.redis_max_idle_ms = redis_max_idle_ms
     return true
 end
 
-local function set(key, value, cache_sec)
-    redis_client:set(key, value)
+local function close()
+    core.log.info("Close redis connection, host:", redis_client.host, " port: ", redis_client.port, " db: ", redis_client.database)
+    local _, err = redis_client.client:close()
+    if err then
+        error("Redis operation failure [close]:" .. err)
+    end
+end
+
+local function reconnect(err)
+    if err == "closed" then
+        core.log.warn("Redis reconnect, host:", redis_client.host, " port: ", redis_client.port, " db: ", redis_client.database)
+        init(redis_client.host, redis_client.port, redis_client.database, redis_client.timeout, redis_client.password, redis_client.max_size, redis_client.redis_max_idle_ms)
+        return true
+    end
+    return false
+end
+
+local function set(key, value, cache_sec, retry)
+    local _, err = redis_client.client:set(key, value)
+    if err then
+        if retry and reconnect(err) then
+            set(key, value, cache_sec, false)
+        else
+            error("Redis operation failure [set]:" .. err)
+        end
+    end
     if cache_sec and cache_sec > 0 then
-        redis_client:expire(key, cache_sec)
+        local _, exp_err = redis_client.client:expire(key, cache_sec)
+        if exp_err then
+            if retry and reconnect(exp_err) then
+                redis_client.client:expire(key, cache_sec)
+            else
+                error("Redis operation failure [expire]:" .. exp_err)
+            end
+        end
     end
 end
 
 -- TODO auto remove local caches
-local function get(key, cache_sec)
+local function get(key, cache_sec, retry)
     if cache_sec and cache_sec > 0 and CACHES[key] and CACHES[key][1] > os.time() then
         return CACHES[key][2]
     else
-        local value, err = redis_client:get(key)
+        local value, err = redis_client.client:get(key)
         if err then
-            error("Redis operation failure [get]:" .. err)
+            if retry and reconnect(err) then
+                return get(key, cache_sec, false)
+            else
+                error("Redis operation failure [get]:" .. err)
+            end
         end
         if value == ngx.null then
             return nil
@@ -60,22 +107,47 @@ local function get(key, cache_sec)
     end
 end
 
-local function del(key)
-    redis_client:del(key)
-end
-
-local function hset(key, field, value)
-    redis_client:hset(key, field, value)
-end
-
-local function hdel(key, field)
-    redis_client:hdel(key, field)
-end
-
-local function hget(key, field)
-    local value, err = redis_client:hget(key, field)
+local function del(key, retry)
+    local _, err = redis_client.client:del(key)
     if err then
-        error("Redis operation failure [hget]:" .. err)
+        if retry and reconnect(err) then
+            del(key, false)
+        else
+            error("Redis operation failure [del]:" .. err)
+        end
+    end
+end
+
+local function hset(key, field, value, retry)
+    local _, err = redis_client.client:hset(key, field, value)
+    if err then
+        if retry and reconnect(err) then
+            hset(key, field, value, false)
+        else
+            error("Redis operation failure [hset]:" .. err)
+        end
+    end
+end
+
+local function hdel(key, field, retry)
+    local _, err = redis_client.client:hdel(key, field)
+    if err then
+        if retry and reconnect(err) then
+            hdel(key, field, false)
+        else
+            error("Redis operation failure [hdel]:" .. err)
+        end
+    end
+end
+
+local function hget(key, field, retry)
+    local value, err = redis_client.client:hget(key, field)
+    if err then
+        if retry and reconnect(err) then
+            return hget(key, field, false)
+        else
+            error("Redis operation failure [hget]:" .. err)
+        end
     end
     if value == ngx.null then
         return nil
@@ -83,49 +155,72 @@ local function hget(key, field)
     return value
 end
 
-local function lpush(key, value)
-    redis_client:lpush(key, value)
+local function lpush(key, value, retry)
+    local _, err = redis_client.client:lpush(key, value)
+    if err then
+        if retry and reconnect(err) then
+            lpush(key, value, false)
+        else
+            error("Redis operation failure [lpush]:" .. err)
+        end
+    end
 end
 
-local function lrangeall(key)
-    return redis_client:lrange(key, 0, -1)
+local function lrangeall(key, retry)
+    local value, err = redis_client.client:lrange(key, 0, -1)
+    if err then
+        if retry and reconnect(err) then
+            return lrangeall(key, false)
+        else
+            error("Redis operation failure [lrangeall]:" .. err)
+        end
+    end
+    return value
 end
 
-local function hscan(key, field, max_number, func)
+local function hscan(key, field, max_number, func, retry)
     local cursor = "0"
     repeat
-        local value, err = redis_client:hscan(key, cursor, "count", max_number, "match", field)
+        local value, err = redis_client.client:hscan(key, cursor, "count", max_number, "match", field)
         if err then
-            error("Redis operation failure [hscan]:" .. err)
+            if retry and reconnect(err) then
+                return hscan(key, field, max_number, func, false)
+            else
+                error("Redis operation failure [hscan]:" .. err)
+            end
         end
         local data
         cursor, data = unpack(value)
         if next(data) then
-            local key
+            local k
             for _, v in pairs(data) do
-                if key == nil then
-                    key = v
+                if k == nil then
+                    k = v
                 else
-                    func(key, v)
-                    key = nil
+                    func(k, v)
+                    k = nil
                 end
             end
         end
     until cursor == "0"
 end
 
-local function scan(key, max_number, func)
+local function scan(key, max_number, func, retry)
     local cursor = "0"
     repeat
-        local value, err = redis_client:scan(cursor, "match", key .. "*", "count", max_number)
+        local value, err = redis_client.client:scan(cursor, "match", key .. "*", "count", max_number)
         if err then
-            error("Redis operation failure [scan]:" .. err)
+            if retry and reconnect(err) then
+                return scan(key, max_number, func, false)
+            else
+                error("Redis operation failure [scan]:" .. err)
+            end
         end
         local data
         cursor, data = unpack(value)
         if next(data) then
             for _, k in pairs(data) do
-                func(k, redis_client:get(k))
+                func(k, redis_client.client:get(k))
             end
         end
     until cursor == "0"
@@ -133,14 +228,35 @@ end
 
 return {
     init = init,
-    set = set,
-    get = get,
-    del = del,
-    lpush = lpush,
-    lrangeall = lrangeall,
-    hset = hset,
-    hdel = hdel,
-    hget = hget,
-    hscan = hscan,
-    scan = scan,
+    close = close,
+    set = function(key, value, cache_sec)
+        set(key, value, cache_sec, true)
+    end,
+    get = function(key, cache_sec)
+        return get(key, cache_sec, true)
+    end,
+    del = function(key)
+        del(key, true)
+    end,
+    lpush = function(key, value)
+        lpush(key, value, true)
+    end,
+    lrangeall = function(key)
+        return lrangeall(key, true)
+    end,
+    hset = function(key, field, value)
+        hset(key, field, value, true)
+    end,
+    hdel = function(key, field)
+        hdel(key, field, true)
+    end,
+    hget = function(key, field)
+        return hget(key, field, true)
+    end,
+    hscan = function(key, field, max_number, func)
+        hscan(key, field, max_number, func, true)
+    end,
+    scan = function(key, max_number, func)
+        scan(key, max_number, func, true)
+    end,
 }
