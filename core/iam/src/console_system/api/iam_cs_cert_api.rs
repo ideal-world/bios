@@ -3,7 +3,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
@@ -67,17 +67,17 @@ impl IamCsCertApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertServ::add_global_ext_cert(&mut add_req.0, &account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
+        IamCertServ::add_ext_cert(&mut add_req.0, &account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Gitlab Certs By Account Id
     #[oai(path = "/gitlab", method = "get")]
-    async fn get_gitlab_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryResp> {
+    async fn get_gitlab_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let rbum_cert = IamCertServ::get_global_ext_cert(&account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
+        let rbum_cert = IamCertServ::get_ext_cert(&account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
         TardisResp::ok(rbum_cert)
     }
 }

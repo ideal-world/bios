@@ -1,3 +1,6 @@
+use bios_iam::basic::dto::iam_cert_dto::IamExtCertAddReq;
+use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
+use bios_iam::iam_enumeration::IamCertExtKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -5,7 +8,6 @@ use tardis::log::info;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_path_item;
 use bios_iam::basic::dto::iam_cert_dto::{IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
-use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -136,6 +138,24 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
         &funs,
     )
     .await?;
+
+    info!("【test_cc_account】 : test_single_level : Add Ext Cert - Gitlab");
+    assert!(IamCertServ::get_ext_cert(&account_info.account_id, &IamCertExtKind::Gitlab, &funs, context).await.is_err());
+    IamCertServ::add_ext_cert(
+        &mut IamExtCertAddReq {
+            ak: "GitlabUserId".to_string(),
+            sk: Some("ssssssssss".to_string()),
+        },
+        &account_info.account_id,
+        &IamCertExtKind::Gitlab,
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(
+        IamCertServ::get_ext_cert(&account_info.account_id, &IamCertExtKind::Gitlab, &funs, context).await?.ak,
+        "GitlabUserId"
+    );
 
     funs.rollback().await?;
     Ok(())
