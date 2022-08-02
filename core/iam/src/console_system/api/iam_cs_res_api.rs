@@ -8,13 +8,13 @@ use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq};
+use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 pub struct IamCsResApi;
 
@@ -42,6 +42,24 @@ impl IamCsResApi {
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
+    }
+
+    // Find Res
+    #[oai(path = "/", method = "get")]
+    async fn find(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<IamResSummaryResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamResServ::find_items(
+            &IamResFilterReq {
+                kind: Some(IamResKind::Api),
+                ..Default::default()
+            },
+            desc_by_create.0,
+            desc_by_update.0,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(result)
     }
 
     /// Find Res Tree
