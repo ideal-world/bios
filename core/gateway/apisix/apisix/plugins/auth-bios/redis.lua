@@ -4,7 +4,7 @@ local redis_new = require("resty.redis").new
 local redis_client = {}
 local CACHES = {}
 
-local function init(host, port, database, timeout, password, max_size, redis_max_idle_ms)
+local function init(host, port, database, timeout, password)
     core.log.info("Init redis connection, host:", host, " port: ", port, " db: ", database)
     redis_client.client = redis_new()
     redis_client.client:set_timeouts(timeout, timeout, timeout)
@@ -13,7 +13,7 @@ local function init(host, port, database, timeout, password, max_size, redis_max
         if conn_err == "already connected" then
             core.log.warn("Redis reconnection, host:", host, " port: ", port, " db: ", database)
             redis_client.client:close()
-            init(host, port, database, timeout, password, max_size, redis_max_idle_ms)
+            init(host, port, database, timeout, password)
         else
             error("Redis connection failure:" .. conn_err)
         end
@@ -30,35 +30,28 @@ local function init(host, port, database, timeout, password, max_size, redis_max
             error("Redis change db failure:" .. err)
         end
     end
-    if max_size and max_size ~= '' and redis_max_idle_ms and redis_max_idle_ms ~= '' then
-        local _, keepalive_err = redis_client.client:set_keepalive(redis_max_idle_ms, max_size)
-        if keepalive_err then
-            error("Redis failed to set keepalive: ", keepalive_err)
-        end
-    end
     redis_client.host = host
     redis_client.port = port
     redis_client.database = database
     redis_client.timeout = timeout
     redis_client.password = password
-    redis_client.max_size = max_size
-    redis_client.redis_max_idle_ms = redis_max_idle_ms
     return true
 end
 
 local function close()
-    core.log.info("Close redis connection, host:", redis_client.host, " port: ", redis_client.port, " db: ", redis_client.database)
-    local _, err = redis_client.client:close()
-    if err then
-        error("Redis operation failure [close]:" .. err)
+    if redis_client and redis_client.client then
+        core.log.info("Close redis connection, host:", redis_client.host, " port: ", redis_client.port, " db: ", redis_client.database)
+        local _, err = redis_client.client:close()
+        if err then
+            error("Redis operation failure [close]:" .. err)
+        end
     end
 end
 
 local function reconnect(err)
     if err == "closed" then
         core.log.warn("Redis reconnect, host:", redis_client.host, " port: ", redis_client.port, " db: ", redis_client.database)
-        init(redis_client.host, redis_client.port, redis_client.database, redis_client.timeout, redis_client.password, redis_client.max_size, redis_client.redis_max_idle_ms)
-        return true
+        return init(redis_client.host, redis_client.port, redis_client.database, redis_client.timeout, redis_client.password)
     end
     return false
 end
