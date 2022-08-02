@@ -50,13 +50,15 @@ make stop
 
 [source,sh]
 ----
+# start etcd. E.g. nohup etcd </dev/null >/dev/null 2>&1 &
+
 export PERL5LIB=.:$PERL5LIB
 
 TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-bios/utils.t
 
 TEST_NGINX_BINARY=/usr/bin/openresty prove -Itest-nginx/lib -r t/plugin/auth-bios/redis.t
 
-...
+# ...
 ----
 
 ===== Integration test
