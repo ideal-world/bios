@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,8 +17,16 @@
 # limitations under the License.
 #
 
-wget https://github.com/etcd-io/etcd/releases/download/v3.4.18/etcd-v3.4.18-linux-amd64.tar.gz
-tar xf etcd-v3.4.18-linux-amd64.tar.gz
-sudo cp etcd-v3.4.18-linux-amd64/etcdctl etcd-v3.4.18-linux-amd64/etcd /usr/local/bin/
-rm -rf etcd-v3.4.18-linux-amd64
-rm etcd-v3.4.18-linux-amd64.tar.gz
+ETCD_ARCH="amd64"
+ETCD_VERSION=${ETCD_VERSION:-'3.5.4'}
+ARCH=${ARCH:-`(uname -m | tr '[:upper:]' '[:lower:]')`}
+
+if [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
+    ETCD_ARCH="arm64"
+fi
+
+wget https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${ETCD_ARCH}.tar.gz
+tar xf etcd-v${ETCD_VERSION}-linux-${ETCD_ARCH}.tar.gz
+sudo cp etcd-v${ETCD_VERSION}-linux-${ETCD_ARCH}/etcdctl etcd-v${ETCD_VERSION}-linux-${ETCD_ARCH}/etcd /usr/local/bin/
+rm -rf etcd-v${ETCD_VERSION}-linux-${ETCD_ARCH}
+rm etcd-v${ETCD_VERSION}-linux-${ETCD_ARCH}.tar.gz
