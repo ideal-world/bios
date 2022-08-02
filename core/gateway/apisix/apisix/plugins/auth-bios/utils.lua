@@ -30,6 +30,10 @@ local function contain(str, char)
     return string.find(str, char, 1, true) ~= nil
 end
 
+local function contain_with_regex(str, char)
+    return string.find(str, char) ~= nil
+end
+
 local function table_length(t)
     local count = 0
     for _ in pairs(t) do
@@ -66,6 +70,7 @@ return {
     end_with = end_with,
     split = split,
     contain = contain,
+    contain_with_regex = contain_with_regex,
     table_length = table_length,
     sort_query = sort_query,
 }
