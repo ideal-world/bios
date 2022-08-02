@@ -16,8 +16,6 @@ local schema = {
         redis_password = { type = "string" },
         redis_timeout = { type = "integer", default = 1000 },
         redis_database = { type = "integer", default = 0 },
-        redis_max_size = { type = "integer", default = 100 },
-        redis_max_idle_ms = { type = "integer", default = 1000 },
 
         head_key_token = { type = "string", default = "Bios-Token" },
         head_key_app = { type = "string", default = "Bios-App" },
@@ -50,7 +48,7 @@ function _M.check_schema(conf)
         core.log.error("Configuration parameter error")
         return false, check_err
     end
-    local _, redis_err = m_redis.init(conf.redis_host, conf.redis_port, conf.redis_database, conf.redis_timeout, conf.redis_password, conf.redis_max_size, conf.redis_max_idle_ms)
+    local _, redis_err = m_redis.init(conf.redis_host, conf.redis_port, conf.redis_database, conf.redis_timeout, conf.redis_password)
     if redis_err then
         core.log.error("Connect redis error", redis_err)
         return false, redis_err
