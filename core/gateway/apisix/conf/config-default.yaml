@@ -35,18 +35,18 @@ apisix:
   show_upstream_status_in_response_header: false # when true all upstream status write to `X-APISIX-Upstream-Status` otherwise only 5xx code
   enable_ipv6: true
   config_center: etcd               # etcd: use etcd to store the config value
-                                    # yaml: fetch the config value from local yaml file `/your_path/conf/apisix.yaml`
+    # yaml: fetch the config value from local yaml file `/your_path/conf/apisix.yaml`
 
-  #proxy_protocol:                  # Proxy Protocol configuration
-  #listen_http_port: 9181           # The port with proxy protocol for http, it differs from node_listen and port_admin.
-                                    # This port can only receive http request with proxy protocol, but node_listen & port_admin
-                                    # can only receive http request. If you enable proxy protocol, you must use this port to
-                                    # receive http request with proxy protocol
+    #proxy_protocol:                  # Proxy Protocol configuration
+    #listen_http_port: 9181           # The port with proxy protocol for http, it differs from node_listen and port_admin.
+    # This port can only receive http request with proxy protocol, but node_listen & port_admin
+    # can only receive http request. If you enable proxy protocol, you must use this port to
+  # receive http request with proxy protocol
   #listen_https_port: 9182          # The port with proxy protocol for https
   #enable_tcp_pp: true              # Enable the proxy protocol for tcp proxy, it works for stream_proxy.tcp option
   #enable_tcp_pp_to_upstream: true  # Enables the proxy protocol to the upstream server
   enable_server_tokens: true        # Whether the APISIX version number should be shown in Server header.
-                                    # It's enabled by default.
+  # It's enabled by default.
 
   # configurations to load third party code and/or override the builtin one.
   extra_lua_path: ""                # extend lua_package_path to load third party code
@@ -57,9 +57,9 @@ apisix:
     cache_ttl: 10s                  # The default caching time in disk if the upstream does not specify the cache time
     zones:                          # The parameters of a cache
       - name: disk_cache_one        # The name of the cache, administrator can specify
-                                    # which cache to use by name in the admin api (disk|memory)
+        # which cache to use by name in the admin api (disk|memory)
         memory_size: 50m            # The size of shared memory, it's used to store the cache index for
-                                    # disk strategy, store cache content for memory strategy (disk|memory)
+        # disk strategy, store cache content for memory strategy (disk|memory)
         disk_size: 1G               # The size of disk, it's used to store the cache data (disk)
         disk_path: /tmp/disk_cache_one  # The path to store the cache data (disk)
         cache_levels: 1:2           # The hierarchy levels of a cache (disk)
@@ -71,15 +71,15 @@ apisix:
       - name: memory_cache
         memory_size: 50m
 
-  #allow_admin:                  # http://nginx.org/en/docs/http/ngx_http_access_module.html#allow
-  #  - 127.0.0.0/24              # If we don't set any IP list, then any IP access is allowed by default.
-    #- "::/64"
-  #admin_listen:                # use a separate port
-  #  ip: 127.0.0.1              # Specific IP, if not set, the default value is `0.0.0.0`.
-  #  port: 9180
-  #port_admin: 9180             # Not recommend: This parameter should be set via the `admin_listen`.
-  #https_admin: true            # enable HTTPS when use a separate port for Admin API.
-                                # Admin API will use conf/apisix_admin_api.crt and conf/apisix_admin_api.key as certificate.
+  allow_admin:                  # http://nginx.org/en/docs/http/ngx_http_access_module.html#allow
+    - 127.0.0.0/24              # If we don't set any IP list, then any IP access is allowed by default.
+      #- "::/64"
+      #admin_listen:                # use a separate port
+      #  ip: 127.0.0.1              # Specific IP, if not set, the default value is `0.0.0.0`.
+      #  port: 9180
+      #port_admin: 9180             # Not recommend: This parameter should be set via the `admin_listen`.
+      #https_admin: true            # enable HTTPS when use a separate port for Admin API.
+    # Admin API will use conf/apisix_admin_api.crt and conf/apisix_admin_api.key as certificate.
   admin_api_mtls:               # Depends on `port_admin` and `https_admin`.
     admin_ssl_cert: ""          # Path of your self-signed server side cert.
     admin_ssl_cert_key: ""      # Path of your self-signed server side key.
@@ -94,7 +94,7 @@ apisix:
       name: admin
       key: edd1c9f034335f136f87ad84b6acecs1
       role: admin                 # admin: manage all configuration data
-                                  # viewer: only can view configuration data
+      # viewer: only can view configuration data
     -
       name: viewer
       key: 4054f7cf07e344346cd3f2879acsesa2
@@ -108,10 +108,10 @@ apisix:
   normalize_uri_like_servlet: false
   router:
     http: radixtree_uri         # radixtree_uri: match route by uri(base on radixtree)
-                                  # radixtree_host_uri: match route by host + uri(base on radixtree)
-                                  # radixtree_uri_with_parameter: like radixtree_uri but match uri with parameters,
-                                  #   see https://github.com/api7/lua-resty-radixtree/#parameters-in-path for
-                                  #   more details.
+      # radixtree_host_uri: match route by host + uri(base on radixtree)
+      # radixtree_uri_with_parameter: like radixtree_uri but match uri with parameters,
+      #   see https://github.com/api7/lua-resty-radixtree/#parameters-in-path for
+    #   more details.
     ssl: radixtree_sni          # radixtree_sni: match route by SNI(base on radixtree)
   #stream_proxy:                  # TCP/UDP proxy
   #  only: true                   # use stream proxy only, don't enable HTTP stuff
@@ -138,18 +138,18 @@ apisix:
     #     port: 9445
     #     enable_http2: true
     enable_http2: true            # Not recommend: This parameter should be set via the `listen`.
-    # listen_port: 9443           # Not recommend: This parameter should be set via the `listen`.
-    #ssl_trusted_certificate: /path/to/ca-cert  # Specifies a file path with trusted CA certificates in the PEM format
-                                                # used to verify the certificate when APISIX needs to do SSL/TLS handshaking
-                                                # with external services (e.g. etcd)
+      # listen_port: 9443           # Not recommend: This parameter should be set via the `listen`.
+      #ssl_trusted_certificate: /path/to/ca-cert  # Specifies a file path with trusted CA certificates in the PEM format
+      # used to verify the certificate when APISIX needs to do SSL/TLS handshaking
+    # with external services (e.g. etcd)
     ssl_protocols: TLSv1.2 TLSv1.3
     ssl_ciphers: ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
     ssl_session_tickets: false              #  disable ssl_session_tickets by default for 'ssl_session_tickets' would make Perfect Forward Secrecy useless.
-                                            #  ref: https://github.com/mozilla/server-side-tls/issues/135
+    #  ref: https://github.com/mozilla/server-side-tls/issues/135
 
     key_encrypt_salt: edd1c9f0985e76a2      #  If not set, will save origin ssl key into etcd.
-                                            #  If set this, must be a string of length 16. And it will encrypt ssl key with AES-128-CBC
-                                            #  !!! So do not change it after saving your ssl, it can't decrypt the ssl keys have be saved if you change !!
+      #  If set this, must be a string of length 16. And it will encrypt ssl key with AES-128-CBC
+    #  !!! So do not change it after saving your ssl, it can't decrypt the ssl keys have be saved if you change !!
 
     #fallback_sni: "my.default.domain"      # If set this, when the client doesn't send SNI during handshake, the fallback SNI will be used instead
   enable_control: true
@@ -160,8 +160,8 @@ apisix:
 
 nginx_config:                     # config for render the template to generate nginx.conf
   #user: root                     # specifies the execution user of the worker process.
-                                  # the "user" directive makes sense only if the master process runs with super-user privileges.
-                                  # if you're not root user,the default is current user.
+  # the "user" directive makes sense only if the master process runs with super-user privileges.
+  # if you're not root user,the default is current user.
   error_log: logs/error.log
   error_log_level:  warn          # warn,error
   worker_processes: auto          # if you want use multiple cores in container, you can inject the number of cpu as environment variable "APISIX_WORKER_PROCESSES"
@@ -177,11 +177,15 @@ nginx_config:                     # config for render the template to generate n
   #envs:                          # allow to get a list of environment variables
   #  - TEST_ENV
 
+  meta:
+    lua_shared_dict:
+      prometheus-metrics: 15m
+
   stream:
     enable_access_log: false         # enable access log or not, default false
     access_log: logs/access_stream.log
     access_log_format: "$remote_addr [$time_local] $protocol $status $bytes_sent $bytes_received $session_time"
-                                            # create your custom log format by visiting http://nginx.org/en/docs/varindex.html
+    # create your custom log format by visiting http://nginx.org/en/docs/varindex.html
     access_log_format_escape: default       # allows setting json or default characters escaping in variables
     lua_shared_dict:
       etcd-cluster-health-check-stream: 10m
@@ -222,8 +226,8 @@ nginx_config:                     # config for render the template to generate n
     client_header_timeout: 60s      # timeout for reading client request header, then 408 (Request Time-out) error is returned to the client
     client_body_timeout: 60s        # timeout for reading client request body, then 408 (Request Time-out) error is returned to the client
     client_max_body_size: 0         # The maximum allowed size of the client request body.
-                                    # If exceeded, the 413 (Request Entity Too Large) error is returned to the client.
-                                    # Note that unlike Nginx, we don't limit the body size by default.
+      # If exceeded, the 413 (Request Entity Too Large) error is returned to the client.
+    # Note that unlike Nginx, we don't limit the body size by default.
 
     send_timeout: 10s              # timeout for transmitting a response to the client.then the connection is closed
     underscores_in_headers: "on"   # default enables the use of underscores in client request header fields
@@ -240,12 +244,12 @@ nginx_config:                     # config for render the template to generate n
     proxy_ssl_server_name: true
     upstream:
       keepalive: 320                # Sets the maximum number of idle keepalive connections to upstream servers that are preserved in the cache of each worker process.
-                                    # When this number is exceeded, the least recently used connections are closed.
+      # When this number is exceeded, the least recently used connections are closed.
       keepalive_requests: 1000      # Sets the maximum number of requests that can be served through one keepalive connection.
-                                    # After the maximum number of requests is made, the connection is closed.
+      # After the maximum number of requests is made, the connection is closed.
       keepalive_timeout: 60s        # Sets a timeout during which an idle keepalive connection to an upstream server will stay open.
     charset: utf-8                  # Adds the specified charset to the "Content-Type" response header field, see
-                                    # http://nginx.org/en/docs/http/ngx_http_charset_module.html#charset
+    # http://nginx.org/en/docs/http/ngx_http_charset_module.html#charset
     variables_hash_max_size: 2048   # Sets the maximum size of the variables hash table.
 
     lua_shared_dict:
@@ -275,35 +279,35 @@ nginx_config:                     # config for render the template to generate n
 etcd:
   host:                           # it's possible to define multiple etcd hosts addresses of the same etcd cluster.
     - "http://127.0.0.1:2379"     # multiple etcd address, if your etcd cluster enables TLS, please use https scheme,
-                                  # e.g. https://127.0.0.1:2379.
+    # e.g. https://127.0.0.1:2379.
   prefix: /apisix                 # apisix configurations prefix
-  timeout: 30                     # 30 seconds
+  #timeout: 30                    # 30 seconds
   #resync_delay: 5                # when sync failed and a rest is needed, resync after the configured seconds plus 50% random jitter
   #health_check_timeout: 10       # etcd retry the unhealthy nodes after the configured seconds
-  health_check_retry: 2           # etcd retry time that only affects the health check, default 2
+  startup_retry: 2                # the number of retry to etcd during the startup, default to 2
   #user: root                     # root username for etcd
   #password: 5tHkHhYkjr6cQY       # root password for etcd
   tls:
     # To enable etcd client certificate you need to build APISIX-Base, see
-    # https://apisix.apache.org/docs/apisix/FAQ#how-do-i-build-the-apisix-base-environment?
+    # https://apisix.apache.org/docs/apisix/FAQ#how-do-i-build-the-apisix-base-environment
     #cert: /path/to/cert          # path of certificate used by the etcd client
     #key: /path/to/key            # path of key used by the etcd client
 
     verify: true                  # whether to verify the etcd endpoint certificate when setup a TLS connection to etcd,
-                                  # the default value is true, e.g. the certificate will be verified strictly.
-    #sni:                         # the SNI for etcd TLS requests. If missed, the host part of the URL will be used.
+      # the default value is true, e.g. the certificate will be verified strictly.
+      #sni:                         # the SNI for etcd TLS requests. If missed, the host part of the URL will be used.
 
-# HashiCorp Vault storage backend for sensitive data retrieval. The config shows an example of what APISIX expects if you
-# wish to integrate Vault for secret (sensetive string, public private keys etc.) retrieval. APISIX communicates with Vault
-# server HTTP APIs. By default, APISIX doesn't need this configuration.
-# vault:
-#   host: "http://0.0.0.0:8200"   # The host address where the vault server is running.
-#   timeout: 10                   # request timeout 30 seconds
-#   token: root                   # Authentication token to access Vault HTTP APIs
-#   prefix: kv/apisix             # APISIX supports vault kv engine v1, where sensitive data are being stored
-                                  # and retrieved through vault HTTP APIs. enabling a prefix allows you to better enforcement of
-                                  # policies, generate limited scoped tokens and tightly control the data that can be accessed
-                                  # from APISIX.
+      # HashiCorp Vault storage backend for sensitive data retrieval. The config shows an example of what APISIX expects if you
+      # wish to integrate Vault for secret (sensetive string, public private keys etc.) retrieval. APISIX communicates with Vault
+      # server HTTP APIs. By default, APISIX doesn't need this configuration.
+      # vault:
+      #   host: "http://0.0.0.0:8200"   # The host address where the vault server is running.
+      #   timeout: 10                   # request timeout 30 seconds
+      #   token: root                   # Authentication token to access Vault HTTP APIs
+      #   prefix: kv/apisix             # APISIX supports vault kv engine v1, where sensitive data are being stored
+      # and retrieved through vault HTTP APIs. enabling a prefix allows you to better enforcement of
+      # policies, generate limited scoped tokens and tightly control the data that can be accessed
+    # from APISIX.
 
 
 #discovery:                       # service discovery center
@@ -320,22 +324,86 @@ etcd:
 #      connect: 2000              # default 2000ms
 #      send: 2000                 # default 2000ms
 #      read: 5000                 # default 5000ms
+#  nacos:
+#    host:
+#      - "http://${username}:${password}@${host1}:${port1}"
+#    prefix: "/nacos/v1/"
+#    fetch_interval: 30    # default 30 sec
+#    weight: 100           # default 100
+#    timeout:
+#      connect: 2000       # default 2000 ms
+#      send: 2000          # default 2000 ms
+#      read: 5000          # default 5000 ms
+#  consul_kv:
+#    servers:
+#      - "http://127.0.0.1:8500"
+#      - "http://127.0.0.1:8600"
+#    prefix: "upstreams"
+#    skip_keys:                    # if you need to skip special keys
+#      - "upstreams/unused_api/"
+#    timeout:
+#      connect: 2000               # default 2000 ms
+#      read: 2000                  # default 2000 ms
+#      wait: 60                    # default 60 sec
+#    weight: 1                     # default 1
+#    fetch_interval: 3             # default 3 sec, only take effect for keepalive: false way
+#    keepalive: true               # default true, use the long pull way to query consul servers
+#    default_server:               # you can define default server when missing hit
+#      host: "127.0.0.1"
+#      port: 20999
+#      metadata:
+#        fail_timeout: 1           # default 1 ms
+#        weight: 1                 # default 1
+#        max_fails: 1              # default 1
+#    dump:                         # if you need, when registered nodes updated can dump into file
+#       path: "logs/consul_kv.dump"
+#       expire: 2592000            # unit sec, here is 30 day
+#  kubernetes:
+#    service:
+#      schema: https                     #apiserver schema, options [http, https], default https
+#      host: ${KUBERNETES_SERVICE_HOST}  #apiserver host, options [ipv4, ipv6, domain, environment variable], default ${KUBERNETES_SERVICE_HOST}
+#      port: ${KUBERNETES_SERVICE_PORT}  #apiserver port, options [port number, environment variable], default ${KUBERNETES_SERVICE_PORT}
+#    client:
+#      # serviceaccount token or path of serviceaccount token_file
+#      token_file: ${KUBERNETES_CLIENT_TOKEN_FILE}
+#      # token: |-
+#       # eyJhbGciOiJSUzI1NiIsImtpZCI6Ikx5ME1DNWdnbmhQNkZCNlZYMXBsT3pYU3BBS2swYzBPSkN3ZnBESGpkUEEif
+#       # 6Ikx5ME1DNWdnbmhQNkZCNlZYMXBsT3pYU3BBS2swYzBPSkN3ZnBESGpkUEEifeyJhbGciOiJSUzI1NiIsImtpZCI
+#    # kubernetes discovery plugin support use namespace_selector
+#    # you can use one of [equal, not_equal, match, not_match] filter namespace
+#    namespace_selector:
+#      # only save endpoints with namespace equal default
+#      equal: default
+#      # only save endpoints with namespace not equal default
+#      #not_equal: default
+#      # only save endpoints with namespace match one of [default, ^my-[a-z]+$]
+#      #match:
+#      #- default
+#      #- ^my-[a-z]+$
+#      # only save endpoints with namespace not match one of [default, ^my-[a-z]+$ ]
+#      #not_match:
+#      #- default
+#      #- ^my-[a-z]+$
+#    # kubernetes discovery plugin support use label_selector
+#    # for the expression of label_selector, please refer to https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+#    label_selector: |-
+#      first="a",second="b"
 
 graphql:
   max_size: 1048576               # the maximum size limitation of graphql in bytes, default 1MiB
 
-#ext-plugin:
+  #ext-plugin:
   #cmd: ["ls", "-l"]
 
 plugins:                          # plugin list (sorted by priority)
   - real-ip                        # priority: 23000
   - client-control                 # priority: 22000
   - proxy-control                  # priority: 21990
+  - request-id                     # priority: 12015
   - zipkin                         # priority: 12011
   #- skywalking                    # priority: 12010
   #- opentelemetry                 # priority: 12009
   - ext-plugin-pre-req             # priority: 12000
-  - request-id                     # priority: 11010
   - fault-injection                # priority: 11000
   - mocking                        # priority: 10900
   - serverless-pre-function        # priority: 10000
@@ -374,6 +442,7 @@ plugins:                          # plugin list (sorted by priority)
   - traffic-split                  # priority: 966
   - redirect                       # priority: 900
   - response-rewrite               # priority: 899
+  - kafka-proxy                    # priority: 508
   #- dubbo-proxy                   # priority: 507
   - grpc-transcode                 # priority: 506
   - grpc-web                       # priority: 505
@@ -409,18 +478,19 @@ stream_plugins: # sorted by priority
   - ip-restriction                 # priority: 3000
   - limit-conn                     # priority: 1003
   - mqtt-proxy                     # priority: 1000
+  #- prometheus                    # priority: 500
   - syslog                         # priority: 401
-  # <- recommend to use priority (0, 100) for your custom plugins
+    # <- recommend to use priority (0, 100) for your custom plugins
 
-#wasm:
-  #plugins:
+    #wasm:
+    #plugins:
     #- name: wasm_log
-      #priority: 7999
-      #file: t/wasm/log/main.go.wasm
+    #priority: 7999
+    #file: t/wasm/log/main.go.wasm
 
-#xrpc:
-  #protocols:
-    #- name: pingpong
+    #xrpc:
+    #protocols:
+  #- name: pingpong
 
 plugin_attr:
   log-rotate:
@@ -472,3 +542,14 @@ plugin_attr:
       send: 60s
 #  redirect:
 #    https_port: 8443   # the default port for use by HTTP redirects to HTTPS
+
+#deployment:
+#    role: traditional
+#    role_traditional:
+#        config_provider: etcd
+#    etcd:
+#        host:                           # it's possible to define multiple etcd hosts addresses of the same etcd cluster.
+#          - "http://127.0.0.1:2379"     # multiple etcd address, if your etcd cluster enables TLS, please use https scheme,
+#                                        # e.g. https://127.0.0.1:2379.
+#        prefix: /apisix                 # configuration prefix in etcd
+#        timeout: 30                     # 30 seconds

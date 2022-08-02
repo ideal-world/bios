@@ -135,7 +135,7 @@ conf:
     endpoints:
       - gateway:2379
 authentication:
-  secret: biossec           
+  secret: biossec
   expire_time: 3600  
   users:
     - username: admin
