@@ -10,7 +10,7 @@ use tardis::web::web_resp::{TardisPage, Void};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;

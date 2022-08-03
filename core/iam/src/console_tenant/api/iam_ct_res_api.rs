@@ -4,7 +4,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query};
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;

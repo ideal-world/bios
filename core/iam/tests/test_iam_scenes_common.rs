@@ -7,7 +7,7 @@ use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::TardisPage;
 
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;

@@ -8,7 +8,7 @@ use tardis::tokio::time::sleep;
 use tardis::web::web_resp::{TardisPage, Void};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq};
 use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;

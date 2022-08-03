@@ -66,37 +66,6 @@ pub struct RbumSetCateSummaryResp {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct RbumSetTreeResp {
-    pub id: String,
-    pub bus_code: String,
-    pub name: String,
-    pub icon: String,
-    pub sort: u32,
-    pub ext: String,
-
-    pub own_paths: String,
-    pub owner: String,
-
-    pub scope_level: RbumScopeLevelKind,
-    pub pid: Option<String>,
-
-    pub rbum_set_items: Vec<RbumSetItemInfoResp>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
-pub struct RbumSetItemInfoResp {
-    pub id: String,
-    pub sort: u32,
-    pub rel_rbum_item_id: String,
-    pub rel_rbum_item_name: String,
-
-    pub own_paths: String,
-    pub owner: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSetCateDetailResp {
     pub id: String,
