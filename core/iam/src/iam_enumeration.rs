@@ -96,3 +96,10 @@ impl TryGetable for IamResKind {
         IamResKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
+
+#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum IamSetKind {
+    Org,
+    Res,
+    Apps,
+}
