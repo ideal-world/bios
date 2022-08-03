@@ -29,7 +29,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamSetKind};
 
 pub struct IamCertServ;
 
@@ -480,7 +480,7 @@ impl<'a> IamCertServ {
 
             let mut apps: Vec<IamAccountAppInfoResp> = vec![];
             for app in enabled_apps {
-                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&app.own_paths), true, funs, &context).await?;
+                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, &context).await?;
                 let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, true, funs, &context).await?;
                 apps.push(IamAccountAppInfoResp {
                     app_id: app.id,
@@ -494,7 +494,7 @@ impl<'a> IamCertServ {
             vec![]
         };
 
-        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(&context.own_paths), false, funs, &context).await?;
+        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &context.own_paths), false, funs, &context).await?;
         let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, false, funs, &context).await?;
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),

@@ -33,7 +33,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_enumeration::{IamCertKernelKind, IamRelKind};
+use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
 
 pub struct IamAccountServ;
 
@@ -192,7 +192,7 @@ impl<'a> IamAccountServ {
             }
         }
         if let Some(org_cate_ids) = &add_req.org_node_ids {
-            let set_id = IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?;
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
             for org_node_id in org_cate_ids {
                 IamSetServ::add_set_item(
                     &IamSetItemAddReq {
@@ -240,7 +240,7 @@ impl<'a> IamAccountServ {
         }
         // TODO test
         if let Some(input_org_cate_ids) = &modify_req.org_cate_ids {
-            let set_id = IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?;
+            let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
             let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), false, funs, ctx).await?;
             let mut stored_cate_ids: Vec<String> = stored_cates.iter().map(|r| r.rel_rbum_set_cate_id.to_string()).collect();
             stored_cate_ids.dedup();
@@ -296,9 +296,9 @@ impl<'a> IamAccountServ {
     ) -> TardisResult<IamAccountDetailAggResp> {
         let account = IamAccountServ::get_item(account_id, filter, funs, ctx).await?;
         let set_id = if use_sys_org {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?
+            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
@@ -359,9 +359,9 @@ impl<'a> IamAccountServ {
         let accounts = IamAccountServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         let mut account_aggs = Vec::with_capacity(accounts.total_size as usize);
         let set_id = if use_sys_org {
-            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_own_paths(""), true, funs, ctx).await?
+            IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
         } else {
-            IamSetServ::get_default_set_id_by_ctx(true, funs, ctx).await?
+            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
         for account in accounts.records {
             account_aggs.push(IamAccountSummaryAggResp {

@@ -24,7 +24,7 @@ impl IamCcOrgApi {
         let result = IamSetServ::get_tree(
             &set_id,
             parent_cate_id.0,
-            &RbumSetTreeFilterReq {
+            &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
                 ..Default::default()
             },

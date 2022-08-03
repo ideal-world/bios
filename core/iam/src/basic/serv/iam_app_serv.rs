@@ -22,7 +22,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 
 pub struct IamAppServ;
 
@@ -163,8 +163,8 @@ impl<'a> IamAppServ {
         IamAppServ::add_rel_account(&app_id, &add_req.admin_id, false, funs, &app_ctx).await?;
         IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, None, funs, &app_ctx).await?;
 
-        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
-        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         Ok(app_id)
     }
 

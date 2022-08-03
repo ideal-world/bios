@@ -33,12 +33,12 @@ use crate::console_common::api::{iam_cc_account_api, iam_cc_org_api, iam_cc_role
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{
-    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_cert_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api,
+    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api,
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
-use crate::iam_enumeration::IamResKind;
+use crate::iam_enumeration::{IamResKind, IamSetKind};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -67,6 +67,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ct_account_api::IamCtAccountApi,
                     iam_ct_account_attr_api::IamCtAccountAttrApi,
                     iam_ct_app_api::IamCtAppApi,
+                    iam_ct_app_set_api::IamCtAppSetApi,
                     iam_ct_cert_api::IamCtCertApi,
                     iam_ct_role_api::IamCtRoleApi,
                     iam_ct_res_api::IamCtResApi,
@@ -201,8 +202,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, 
     })?;
 
     // Init resources
-    IamSetServ::init_set(true, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
-    let (set_res_id, cate_ids) = IamSetServ::init_set(false, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
+    IamSetServ::init_set(IamSetKind::Org, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
+    let (set_res_id, cate_ids) = IamSetServ::init_set(IamSetKind::Res, iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, &ctx).await?;
     let (cate_menu_id, cate_api_id) = cate_ids.unwrap();
 
     let (set_menu_cs_id, set_api_cs_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "cs", "System Console", funs, &ctx).await?;
