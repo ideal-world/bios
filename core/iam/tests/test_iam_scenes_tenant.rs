@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
+use itertools::Itertools;
 
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -10,7 +11,7 @@ use tardis::web::web_resp::{TardisPage, Void};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
@@ -19,6 +20,7 @@ use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq};
+use bios_iam::iam_config::IamBasicInfoManager;
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_GLOBAL, RBUM_SCOPE_LEVEL_TENANT};
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
@@ -209,8 +211,9 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
         .await;
 
     // Find Org Items
-    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
+    let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 1);
+    assert_eq!(items.get(0).unwrap().rel_rbum_item_name, "测试管理员");
     let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
     assert!(account.orgs.contains(&("综合服务中心".to_string())));
 
@@ -220,7 +223,7 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
 
     // Delete Org Item By Org Item Id
     client.delete(&format!("/ct/org/item/{}", items.get(0).unwrap().id)).await;
-    let items: Vec<RbumSetItemSummaryResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
+    let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/org/item?cate_id={}", cate_node1_id)).await;
     assert_eq!(items.len(), 0);
     let account: IamAccountDetailAggResp = client.get(&format!("/ct/account/{}", account_id)).await;
     assert!(account.orgs.is_empty());

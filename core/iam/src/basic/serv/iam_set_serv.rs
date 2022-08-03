@@ -8,7 +8,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeResp};
-use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
+use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
@@ -235,8 +235,8 @@ impl<'a> IamSetServ {
         with_sub: bool,
         funs: &TardisFunsInst<'a>,
         ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumSetItemSummaryResp>> {
-        RbumSetItemServ::find_rbums(
+    ) -> TardisResult<Vec<RbumSetItemDetailResp>> {
+        RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
