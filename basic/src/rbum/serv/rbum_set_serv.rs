@@ -2,14 +2,14 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use itertools::Itertools;
+use tardis::{TardisFuns, TardisFunsInst};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
-use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::sea_query::*;
 use tardis::tokio::time::sleep;
-use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq};
@@ -175,7 +175,7 @@ impl<'a> RbumSetServ {
         let mut resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, true, funs, ctx).await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
-        let rbum_set_items = RbumSetItemServ::find_rbums(
+        let rbum_set_items = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     // set cate item is only used for connection,
@@ -218,7 +218,15 @@ impl<'a> RbumSetServ {
                         id: i.id.to_string(),
                         sort: i.sort,
                         rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
+                        rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
                         rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
+                        rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
+                        rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
+                        rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
+                        rel_rbum_item_create_time: i.rel_rbum_item_create_time.clone(),
+                        rel_rbum_item_update_time: i.rel_rbum_item_update_time.clone(),
+                        rel_rbum_item_disabled: i.rel_rbum_item_disabled,
+                        rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
                         own_paths: i.own_paths.to_string(),
                         owner: i.owner.to_string(),
                     })
@@ -704,8 +712,19 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
                 JoinType::InnerJoin,
                 rbum_item::Entity,
                 rel_item_table.clone(),
-                Expr::tbl(rel_item_table, rbum_item::Column::Id).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
+                Expr::tbl(rel_item_table.clone(), rbum_item::Column::Id).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
             );
+        if is_detail {
+            query
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Code), Alias::new("rel_rbum_item_code"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumKindId), Alias::new("rel_rbum_item_kind_id"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumDomainId), Alias::new("rel_rbum_item_domain_id"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Owner), Alias::new("rel_rbum_item_owner"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::CreateTime), Alias::new("rel_rbum_item_create_time"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::UpdateTime), Alias::new("rel_rbum_item_update_time"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Disabled), Alias::new("rel_rbum_item_disabled"))
+                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::ScopeLevel), Alias::new("rel_rbum_item_scope_level"));
+        }
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
             query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
         }

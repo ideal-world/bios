@@ -4,7 +4,7 @@ use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemSummaryResp;
+use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -80,7 +80,7 @@ impl IamCtOrgApi {
 
     /// Find Org Items
     #[oai(path = "/item", method = "get")]
-    async fn find_items(&self, cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemSummaryResp>> {
+    async fn find_items(&self, cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, &ctx.0).await?;
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx.0).await?;

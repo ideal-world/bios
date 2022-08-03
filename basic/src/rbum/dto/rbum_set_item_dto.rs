@@ -5,6 +5,8 @@ use tardis::db::sea_orm;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
+use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
+
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetItemAddReq {
@@ -52,7 +54,15 @@ pub struct RbumSetItemDetailResp {
     pub rel_rbum_set_cate_sys_code: String,
     pub rel_rbum_set_cate_name: String,
     pub rel_rbum_item_id: String,
+    pub rel_rbum_item_code: String,
     pub rel_rbum_item_name: String,
+    pub rel_rbum_item_kind_id: String,
+    pub rel_rbum_item_domain_id: String,
+    pub rel_rbum_item_owner: String,
+    pub rel_rbum_item_create_time: DateTime<Utc>,
+    pub rel_rbum_item_update_time: DateTime<Utc>,
+    pub rel_rbum_item_disabled: bool,
+    pub rel_rbum_item_scope_level: RbumScopeLevelKind,
 
     pub own_paths: String,
     pub owner: String,
@@ -67,7 +77,15 @@ pub struct RbumSetItemInfoResp {
     pub id: String,
     pub sort: u32,
     pub rel_rbum_item_id: String,
+    pub rel_rbum_item_code: String,
     pub rel_rbum_item_name: String,
+    pub rel_rbum_item_kind_id: String,
+    pub rel_rbum_item_domain_id: String,
+    pub rel_rbum_item_owner: String,
+    pub rel_rbum_item_create_time: DateTime<Utc>,
+    pub rel_rbum_item_update_time: DateTime<Utc>,
+    pub rel_rbum_item_disabled: bool,
+    pub rel_rbum_item_scope_level: RbumScopeLevelKind,
 
     pub own_paths: String,
     pub owner: String,
