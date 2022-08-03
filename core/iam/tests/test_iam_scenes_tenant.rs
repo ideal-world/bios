@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
-use itertools::Itertools;
 
+use itertools::Itertools;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -20,7 +20,6 @@ use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq};
-use bios_iam::iam_config::IamBasicInfoManager;
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_GLOBAL, RBUM_SCOPE_LEVEL_TENANT};
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 

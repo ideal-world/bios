@@ -15,7 +15,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamRelKind, IamResKind};
+use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetKind};
 
 pub struct IamCsResApi;
 
@@ -29,7 +29,7 @@ impl IamCsResApi {
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
@@ -67,11 +67,11 @@ impl IamCsResApi {
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(&self, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(
             &set_id,
             parent_cate_id.0,
-            &RbumSetTreeFilterReq {
+            &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
                 ..Default::default()
             },
@@ -86,7 +86,7 @@ impl IamCsResApi {
     #[oai(path = "/tree/menu", method = "get")]
     async fn get_menu_tree(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree(&set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
@@ -95,7 +95,7 @@ impl IamCsResApi {
     #[oai(path = "/tree/api", method = "get")]
     async fn get_api_tree(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_api_tree(&set_id, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
@@ -115,7 +115,7 @@ impl IamCsResApi {
     async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(false, &funs, &ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamResServ::add_res_agg(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)

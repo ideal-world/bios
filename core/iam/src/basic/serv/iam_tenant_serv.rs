@@ -27,7 +27,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::IamCertKernelKind;
+use crate::iam_enumeration::{IamCertKernelKind, IamSetKind};
 
 pub struct IamTenantServ;
 
@@ -176,8 +176,8 @@ impl<'a> IamTenantServ {
         )
         .await?;
 
-        IamSetServ::init_set(true, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
-        IamSetServ::init_set(false, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
 
         // Init cert conf
         let cert_conf_by_user_pwd = IamUserPwdCertConfAddOrModifyReq {
