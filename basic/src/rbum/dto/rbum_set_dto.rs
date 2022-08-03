@@ -1,3 +1,4 @@
+use crate::rbum::dto::rbum_set_item_dto::RbumSetItemInfoResp;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
@@ -95,4 +96,23 @@ pub struct RbumSetPathResp {
     pub name: String,
 
     pub own_paths: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumSetTreeResp {
+    pub id: String,
+    pub bus_code: String,
+    pub name: String,
+    pub icon: String,
+    pub sort: u32,
+    pub ext: String,
+
+    pub own_paths: String,
+    pub owner: String,
+
+    pub scope_level: RbumScopeLevelKind,
+    pub pid: Option<String>,
+
+    pub rbum_set_items: Vec<RbumSetItemInfoResp>,
 }

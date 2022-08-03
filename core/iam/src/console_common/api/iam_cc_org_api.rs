@@ -3,7 +3,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetTreeResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;

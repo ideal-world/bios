@@ -60,3 +60,15 @@ pub struct RbumSetItemDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
+pub struct RbumSetItemInfoResp {
+    pub id: String,
+    pub sort: u32,
+    pub rel_rbum_item_id: String,
+    pub rel_rbum_item_name: String,
+
+    pub own_paths: String,
+    pub owner: String,
+}

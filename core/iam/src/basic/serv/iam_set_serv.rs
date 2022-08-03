@@ -6,8 +6,8 @@ use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
-use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetTreeResp};
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp};
+use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
