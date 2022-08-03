@@ -118,7 +118,7 @@ pub struct RbumSetCateFilterReq {
 pub struct RbumSetItemFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel_rbum_set_id: Option<String>,
-    pub rel_rbum_set_cate_id: Option<String>,
+    pub rel_rbum_set_cate_ids: Option<Vec<String>>,
     pub rel_rbum_item_ids: Option<Vec<String>>,
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,

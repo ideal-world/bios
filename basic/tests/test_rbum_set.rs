@@ -646,6 +646,21 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
 
+    let item_account_a2_id = RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            id: None,
+            code: None,
+            name: TrimString("用户2".to_string()),
+            scope_level: Some(RbumScopeLevelKind::L2),
+            disabled: None,
+            rel_rbum_kind_id: kind_account_id.to_string(),
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
     info!("【test_rbum_set_item】 : Prepare Set : RbumSetServ::add_rbum");
     let set_id = RbumSetServ::add_rbum(
         &mut RbumSetAddReq {
@@ -681,7 +696,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
 
-    let set_cate_id = RbumSetCateServ::add_rbum(
+    let set_cate_l1_1_id = RbumSetCateServ::add_rbum(
         &mut RbumSetCateAddReq {
             bus_code: TrimString("".to_string()),
             name: TrimString("l2".to_string()),
@@ -739,11 +754,35 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await
     .is_err());
 
+    RbumSetItemServ::add_rbum(
+        &mut RbumSetItemAddReq {
+            sort: 0,
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: set_cate_l1_id.to_string(),
+            rel_rbum_item_id: context.owner.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    RbumSetItemServ::add_rbum(
+        &mut RbumSetItemAddReq {
+            sort: 0,
+            rel_rbum_set_id: set_id.to_string(),
+            rel_rbum_set_cate_id: set_cate_l1_1_id.to_string(),
+            rel_rbum_item_id: item_account_a2_id.to_string(),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
     let id = RbumSetItemServ::add_rbum(
         &mut RbumSetItemAddReq {
             sort: 0,
             rel_rbum_set_id: set_id.to_string(),
-            rel_rbum_set_cate_id: set_cate_id.to_string(),
+            rel_rbum_set_cate_id: set_cate_l1_1_id.to_string(),
             rel_rbum_item_id: item_account_a1_id.to_string(),
         },
         &funs,
@@ -755,7 +794,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         &mut RbumSetItemAddReq {
             sort: 0,
             rel_rbum_set_id: set_id.to_string(),
-            rel_rbum_set_cate_id: set_cate_id.to_string(),
+            rel_rbum_set_cate_id: set_cate_l1_1_id.to_string(),
             rel_rbum_item_id: item_account_a1_id.to_string(),
         },
         &funs,
@@ -766,6 +805,19 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .unwrap()
     .message
     .contains("item already exists"));
+
+    info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::check_a_is_parent_of_b");
+    assert!(RbumSetItemServ::check_a_is_parent_of_b(&context.owner, &item_account_a1_id, &set_id, &funs, context,).await?);
+    assert!(!RbumSetItemServ::check_a_is_parent_of_b("xxxx", &item_account_a1_id, &set_id, &funs, context,).await?);
+    assert!(!RbumSetItemServ::check_a_is_parent_of_b(&item_account_a1_id, &item_account_a2_id, &set_id, &funs, context,).await?);
+
+    info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::check_a_is_sibling_of_b");
+    assert!(!RbumSetItemServ::check_a_is_sibling_of_b(&context.owner, &item_account_a1_id, &set_id, &funs, context,).await?);
+    assert!(RbumSetItemServ::check_a_is_sibling_of_b(&item_account_a1_id, &item_account_a2_id, &set_id, &funs, context,).await?);
+
+    info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::check_a_is_parent_or_sibling_of_b");
+    assert!(RbumSetItemServ::check_a_is_parent_or_sibling_of_b(&context.owner, &item_account_a1_id, &set_id, &funs, context,).await?);
+    assert!(RbumSetItemServ::check_a_is_parent_or_sibling_of_b(&item_account_a1_id, &item_account_a2_id, &set_id, &funs, context,).await?);
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all");
     let set_infos = RbumSetServ::get_tree(
@@ -780,8 +832,8 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     assert_eq!(set_infos.len(), 2);
-    assert_eq!(set_infos.get(1).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(set_infos.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "用户1");
+    assert_eq!(set_infos.get(1).unwrap().rbum_set_items.len(), 2);
+    assert!(set_infos.get(1).unwrap().rbum_set_items.iter().any(|r| r.rel_rbum_item_name == "用户1"));
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::get_rbum");
     let rbum = RbumSetItemServ::get_rbum(
@@ -827,8 +879,8 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await?;
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
-    assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().sort, 10);
+    assert_eq!(rbums.total_size, 3);
+    assert!(rbums.records.iter().any(|r| r.sort == 10));
 
     info!("【test_rbum_set_item】 : Test Delete : RbumSetItemServ::delete_rbum");
     RbumSetItemServ::delete_rbum(&id, &funs, context).await?;
