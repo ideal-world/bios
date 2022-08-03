@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -43,7 +44,17 @@ impl IamCtOrgApi {
     async fn get_tree(&self, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(true, &funs, &ctx.0).await?;
-        let result = IamSetServ::get_tree(&set_id, parent_cate_id.0, &funs, &ctx.0).await?;
+        let result = IamSetServ::get_tree(
+            &set_id,
+            parent_cate_id.0,
+            &RbumSetTreeFilterReq {
+                fetch_cate_item: true,
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 

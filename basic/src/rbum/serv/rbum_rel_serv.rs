@@ -737,9 +737,8 @@ impl<'a> RbumRelServ {
             RbumSetItemServ::find_rbums(
                 &RbumSetItemFilterReq {
                     basic: Default::default(),
-                    rel_rbum_set_id: None,
-                    rel_rbum_set_cate_id: None,
-                    rel_rbum_item_id: Some(check_req.from_rbum_id.clone()),
+                    rel_rbum_item_ids: Some(vec![check_req.from_rbum_id.clone()]),
+                    ..Default::default()
                 },
                 None,
                 None,

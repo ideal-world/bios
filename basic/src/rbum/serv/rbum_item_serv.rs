@@ -389,7 +389,7 @@ where
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel_rbum_item_id: Some(id.to_string()),
+                rel_rbum_item_ids: Some(vec![id.to_string()]),
                 ..Default::default()
             },
             None,

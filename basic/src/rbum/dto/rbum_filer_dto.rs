@@ -95,12 +95,12 @@ pub struct RbumSetFilterReq {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
-pub struct RbumTreeFilterReq {
+pub struct RbumSetTreeFilterReq {
     pub fetch_cate_item: bool,
     pub hide_cate_with_empty_item: bool,
-    pub filter_cate_item_kind: Option<Vec<String>>,
-    pub filter_cate_item_domain: Option<Vec<String>>,
-    pub filter_cate_item_id: Option<Vec<String>>,
+    pub filter_cate_item_ids: Option<Vec<String>>,
+    pub filter_cate_item_kind_ids: Option<Vec<String>>,
+    pub filter_cate_item_domain_ids: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -119,7 +119,9 @@ pub struct RbumSetItemFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel_rbum_set_id: Option<String>,
     pub rel_rbum_set_cate_id: Option<String>,
-    pub rel_rbum_item_id: Option<String>,
+    pub rel_rbum_item_ids: Option<Vec<String>>,
+    pub rel_rbum_item_kind_ids: Option<Vec<String>>,
+    pub rel_rbum_item_domain_ids: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

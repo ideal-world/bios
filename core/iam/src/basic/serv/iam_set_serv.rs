@@ -5,7 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
@@ -165,8 +165,14 @@ impl<'a> IamSetServ {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await
     }
 
-    pub async fn get_tree(set_id: &str, parent_set_cate_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
-        RbumSetServ::get_tree(set_id, parent_set_cate_id.as_deref(), funs, ctx).await
+    pub async fn get_tree(
+        set_id: &str,
+        parent_set_cate_id: Option<String>,
+        filter: &RbumSetTreeFilterReq,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumSetTreeResp>> {
+        RbumSetServ::get_tree(set_id, parent_set_cate_id.as_deref(), filter, funs, ctx).await
     }
 
     pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
@@ -195,7 +201,17 @@ impl<'a> IamSetServ {
         )
         .await?;
         if let Some(parent_set_cate_id) = parent_set_cate_id.get(0) {
-            RbumSetServ::get_tree(set_id, Some(parent_set_cate_id), funs, ctx).await
+            RbumSetServ::get_tree(
+                set_id,
+                Some(parent_set_cate_id),
+                &RbumSetTreeFilterReq {
+                    fetch_cate_item: true,
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await
         } else {
             Err(funs.err().not_found(
                 "iam_set_cate",
@@ -244,7 +260,8 @@ impl<'a> IamSetServ {
                 },
                 rel_rbum_set_id: set_id.clone(),
                 rel_rbum_set_cate_id: set_cate_id.clone(),
-                rel_rbum_item_id: item_id.clone(),
+                rel_rbum_item_ids: item_id.map(|i| vec![i]),
+                ..Default::default()
             },
             None,
             None,
