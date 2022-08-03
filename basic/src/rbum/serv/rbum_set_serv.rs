@@ -215,7 +215,7 @@ impl<'a> RbumSetServ {
                     ..Default::default()
                 },
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
-                rel_rbum_set_cate_id: None,
+                rel_rbum_set_cate_ids: None,
                 rel_rbum_item_ids: filter.filter_cate_item_ids.clone(),
                 rel_rbum_item_kind_ids: filter.filter_cate_item_kind_ids.clone(),
                 rel_rbum_item_domain_ids: filter.filter_cate_item_domain_ids.clone(),
@@ -239,8 +239,8 @@ impl<'a> RbumSetServ {
                     rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
                     rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
                     rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
-                    rel_rbum_item_create_time: i.rel_rbum_item_create_time.clone(),
-                    rel_rbum_item_update_time: i.rel_rbum_item_update_time.clone(),
+                    rel_rbum_item_create_time: i.rel_rbum_item_create_time,
+                    rel_rbum_item_update_time: i.rel_rbum_item_update_time,
                     rel_rbum_item_disabled: i.rel_rbum_item_disabled,
                     rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
                     own_paths: i.own_paths.to_string(),
@@ -764,8 +764,8 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
             query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
         }
-        if let Some(rel_rbum_set_cate_id) = &filter.rel_rbum_set_cate_id {
-            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).eq(rel_rbum_set_cate_id.to_string()));
+        if let Some(rel_rbum_set_cate_ids) = &filter.rel_rbum_set_cate_ids {
+            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).is_in(rel_rbum_set_cate_ids.clone()));
         }
         if let Some(rel_rbum_item_ids) = &filter.rel_rbum_item_ids {
             query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId).is_in(rel_rbum_item_ids.clone()));
@@ -774,7 +774,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
             query.and_where(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumDomainId).is_in(rel_rbum_item_domain_ids.clone()));
         }
         if let Some(rel_rbum_item_kind_ids) = &filter.rel_rbum_item_kind_ids {
-            query.and_where(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumKindId).is_in(rel_rbum_item_kind_ids.clone()));
+            query.and_where(Expr::tbl(rel_item_table, rbum_item::Column::RelRbumKindId).is_in(rel_rbum_item_kind_ids.clone()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
@@ -824,6 +824,61 @@ impl<'a> RbumSetItemServ {
             result.push(rbum_set_paths);
         }
         Ok(result)
+    }
+
+    pub async fn check_a_is_parent_of_b(rbum_item_a_id: &str, rbum_item_b_id: &str, rbum_set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        Self::check_a_and_b(rbum_item_a_id, rbum_item_b_id, true, false, rbum_set_id, funs, ctx).await
+    }
+
+    pub async fn check_a_is_sibling_of_b(rbum_item_a_id: &str, rbum_item_b_id: &str, rbum_set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+        Self::check_a_and_b(rbum_item_a_id, rbum_item_b_id, false, true, rbum_set_id, funs, ctx).await
+    }
+
+    pub async fn check_a_is_parent_or_sibling_of_b(
+        rbum_item_a_id: &str,
+        rbum_item_b_id: &str,
+        rbum_set_id: &str,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<bool> {
+        Self::check_a_and_b(rbum_item_a_id, rbum_item_b_id, true, true, rbum_set_id, funs, ctx).await
+    }
+
+    async fn check_a_and_b(
+        rbum_item_a_id: &str,
+        rbum_item_b_id: &str,
+        is_parent: bool,
+        is_sibling: bool,
+        rbum_set_id: &str,
+        funs: &TardisFunsInst<'a>,
+        ctx: &TardisContext,
+    ) -> TardisResult<bool> {
+        let set_items: Vec<RbumSetItemSummaryResp> = Self::find_rbums(
+            &RbumSetItemFilterReq {
+                rel_rbum_set_id: Some(rbum_set_id.to_string()),
+                rel_rbum_item_ids: Some(vec![rbum_item_a_id.to_string(), rbum_item_b_id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let set_items_a = set_items.iter().filter(|item| item.rel_rbum_item_id == rbum_item_a_id).map(|item| item.rel_rbum_set_cate_sys_code.clone()).collect::<Vec<String>>();
+        let set_items_b = set_items.iter().filter(|item| item.rel_rbum_item_id == rbum_item_b_id).map(|item| item.rel_rbum_set_cate_sys_code.clone()).collect::<Vec<String>>();
+
+        Ok(set_items_a.iter().any(|sys_code_a| {
+            set_items_b.iter().any(|sys_code_b| {
+                if is_parent && is_sibling {
+                    sys_code_b.starts_with(sys_code_a)
+                } else if is_parent {
+                    sys_code_b.starts_with(sys_code_a) && sys_code_a != sys_code_b
+                } else {
+                    sys_code_a == sys_code_b
+                }
+            })
+        }))
     }
 }
 
