@@ -102,6 +102,7 @@ pub struct RbumSetPathResp {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeResp {
     pub id: String,
+    pub sys_code: String,
     pub bus_code: String,
     pub name: String,
     pub icon: String,
