@@ -773,8 +773,8 @@ impl<'a> RbumRelServ {
                 &RbumSetCateFilterReq {
                     basic: Default::default(),
                     rel_rbum_set_id: Some(rbum_set_cate_base.rel_rbum_set_id.clone()),
-                    sys_code: Some(rbum_set_cate_base.sys_code.clone()),
-                    find_filter: Some(RbumSetCateLevelQueryKind::Parent),
+                    sys_codes: Some(vec![rbum_set_cate_base.sys_code.clone()]),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Parent),
                     ..Default::default()
                 },
                 None,

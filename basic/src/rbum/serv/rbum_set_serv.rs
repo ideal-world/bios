@@ -1,10 +1,10 @@
+use std::collections::HashMap;
 use std::time::Duration;
 
 use async_trait::async_trait;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
@@ -170,21 +170,45 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 }
 
 impl<'a> RbumSetServ {
-    pub async fn get_tree(
-        rbum_set_id: &str,
-        rbum_parent_set_cate_id: Option<&str>,
-        filter: &RbumSetTreeFilterReq,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_tree(rbum_set_id: &str, filter: &RbumSetTreeFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+        Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
+        // check filter.filter_cate_sys_codes scope
+        if let Some(sys_codes) = &filter.sys_codes {
+            Self::check_scopes(
+                HashMap::from([("sys_code".to_string(), sys_codes), ("rel_rbum_set_id".to_string(), &vec![rbum_set_id.to_string()])]),
+                sys_codes.len() as u64,
+                RbumSetCateServ::get_table_name(),
+                funs,
+                ctx,
+            )
+            .await?;
+        }
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let mut resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, true, funs, ctx).await?;
+        let mut resp = RbumSetCateServ::find_rbums(
+            &RbumSetCateFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel: None,
+                rel_rbum_set_id: Some(rbum_set_id.to_string()),
+                sys_codes: filter.sys_codes.clone(),
+                sys_code_query_kind: filter.sys_code_query_kind.clone(),
+                sys_code_query_depth: filter.sys_code_query_depth,
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
         let mut tree = resp
             .iter()
             .map(|r| RbumSetTreeResp {
                 id: r.id.to_string(),
+                sys_code: r.sys_code.to_string(),
                 bus_code: r.bus_code.to_string(),
                 name: r.name.to_string(),
                 icon: r.icon.to_string(),
@@ -215,10 +239,13 @@ impl<'a> RbumSetServ {
                     ..Default::default()
                 },
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
+                sys_code_query_kind: filter.sys_code_query_kind.clone(),
+                sys_code_query_depth: filter.sys_code_query_depth,
+                rel_rbum_set_cate_sys_codes: filter.sys_codes.clone(),
                 rel_rbum_set_cate_ids: None,
-                rel_rbum_item_ids: filter.filter_cate_item_ids.clone(),
-                rel_rbum_item_kind_ids: filter.filter_cate_item_kind_ids.clone(),
-                rel_rbum_item_domain_ids: filter.filter_cate_item_domain_ids.clone(),
+                rel_rbum_item_ids: filter.rel_rbum_item_ids.clone(),
+                rel_rbum_item_kind_ids: filter.rel_rbum_item_kind_ids.clone(),
+                rel_rbum_item_domain_ids: filter.rel_rbum_item_domain_ids.clone(),
             },
             None,
             None,
@@ -269,80 +296,6 @@ impl<'a> RbumSetServ {
             sub_cates.insert(0, cate.id.to_string());
             sub_cates
         }
-    }
-
-    pub async fn get_tree_by_level(
-        rbum_set_id: &str,
-        rbum_parent_set_cate_id: Option<&str>,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumSetCateSummaryResp>> {
-        let resp = Self::do_get_tree(rbum_set_id, rbum_parent_set_cate_id, false, funs, ctx).await?;
-        Ok(resp
-            .into_iter()
-            .map(|r| RbumSetCateSummaryResp {
-                id: r.id.to_string(),
-                sys_code: r.sys_code.to_string(),
-                bus_code: r.bus_code.to_string(),
-                name: r.name.to_string(),
-                icon: r.icon.to_string(),
-                sort: r.sort,
-                ext: r.ext.to_string(),
-                rel_rbum_set_id: rbum_set_id.to_string(),
-                own_paths: r.own_paths.to_string(),
-                owner: r.owner.to_string(),
-                create_time: r.create_time,
-                update_time: r.update_time,
-                scope_level: r.scope_level,
-            })
-            .collect())
-    }
-
-    async fn do_get_tree(
-        rbum_set_id: &str,
-        rbum_parent_set_cate_id: Option<&str>,
-        fetch_all: bool,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<Vec<RbumSetCateWithLevelResp>> {
-        Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
-        let mut query = Query::select();
-        query
-            .columns(vec![
-                (rbum_set_cate::Column::Id),
-                (rbum_set_cate::Column::SysCode),
-                (rbum_set_cate::Column::BusCode),
-                (rbum_set_cate::Column::Name),
-                (rbum_set_cate::Column::Icon),
-                (rbum_set_cate::Column::Sort),
-                (rbum_set_cate::Column::Ext),
-                (rbum_set_cate::Column::OwnPaths),
-                (rbum_set_cate::Column::Owner),
-                (rbum_set_cate::Column::CreateTime),
-                (rbum_set_cate::Column::UpdateTime),
-                (rbum_set_cate::Column::ScopeLevel),
-            ])
-            .from(rbum_set_cate::Entity)
-            .and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(rbum_set_id));
-
-        if !fetch_all {
-            if let Some(parent_set_cate_id) = rbum_parent_set_cate_id {
-                Self::check_scope(parent_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
-                let parent_sys_code = RbumSetCateServ::get_sys_code(parent_set_cate_id, funs, ctx).await?;
-                query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
-                query.and_where(
-                    Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len()) as i32),
-                );
-            } else {
-                query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(funs.rbum_conf_set_cate_sys_code_node_len() as i32));
-            }
-        } else if let Some(parent_set_cate_id) = rbum_parent_set_cate_id {
-            Self::check_scope(parent_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
-            let parent_sys_code = RbumSetCateServ::get_sys_code(parent_set_cate_id, funs, ctx).await?;
-            query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
-        }
-        query.order_by(rbum_set_cate::Column::Sort, Order::Asc);
-        funs.db().find_dtos(&query).await
     }
 
     pub async fn get_rbum_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<String>> {
@@ -517,24 +470,75 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
             query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
         }
-        if let Some(sys_code) = &filter.sys_code {
-            if let Some(find_filter) = &filter.find_filter {
-                match find_filter {
-                    RbumSetCateLevelQueryKind::Sub => {
-                        query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
-                    }
-                    RbumSetCateLevelQueryKind::CurrentAndParent => {
-                        let mut sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
-                        sys_codes.insert(0, sys_code.to_string());
-                        query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(sys_codes));
-                    }
-                    RbumSetCateLevelQueryKind::Parent => {
-                        let parent_sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
-                        query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
-                    }
+        if let Some(sys_codes) = &filter.sys_codes {
+            let query_kind = filter.sys_code_query_kind.clone().unwrap_or(RbumSetCateLevelQueryKind::Current);
+            if sys_codes.is_empty() {
+                if query_kind == RbumSetCateLevelQueryKind::Current {
+                    // query the first level
+                    query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(funs.rbum_conf_set_cate_sys_code_node_len() as i32));
                 }
             } else {
-                query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).eq(sys_code.as_str()));
+                let mut cond = Cond::any();
+                match query_kind {
+                    RbumSetCateLevelQueryKind::CurrentAndSub => {
+                        if let Some(depth) = filter.sys_code_query_depth {
+                            for sys_code in sys_codes {
+                                cond = cond.add(
+                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str())).add(
+                                        Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
+                                            .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                    ),
+                                );
+                            }
+                        } else {
+                            for sys_code in sys_codes {
+                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+                            }
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::Sub => {
+                        if let Some(depth) = filter.sys_code_query_depth {
+                            for sys_code in sys_codes {
+                                cond = cond.add(
+                                    Cond::all()
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
+                                        .add(
+                                            Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
+                                                .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                        ),
+                                );
+                            }
+                        } else {
+                            for sys_code in sys_codes {
+                                cond = cond.add(
+                                    Cond::all()
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
+                                );
+                            }
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::CurrentAndParent => {
+                        for sys_code in sys_codes {
+                            let mut sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
+                            sys_codes.insert(0, sys_code.to_string());
+                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(sys_codes));
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::Parent => {
+                        for sys_code in sys_codes {
+                            let parent_sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
+                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::Current => {
+                        for sys_code in sys_codes {
+                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).eq(sys_code.as_str()));
+                        }
+                    }
+                }
+                query.cond_where(Cond::all().add(cond));
             }
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel {
@@ -563,6 +567,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_cate::ActiveModel, RbumSetCateAddReq, Rb
             }
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
+        query.order_by(rbum_set_cate::Column::Sort, Order::Asc);
         Ok(query)
     }
 }
@@ -718,7 +723,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         })
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
 
         let mut query = Query::select();
@@ -776,6 +781,77 @@ impl<'a> RbumCrudOperation<'a, rbum_set_item::ActiveModel, RbumSetItemAddReq, Rb
         if let Some(rel_rbum_item_kind_ids) = &filter.rel_rbum_item_kind_ids {
             query.and_where(Expr::tbl(rel_item_table, rbum_item::Column::RelRbumKindId).is_in(rel_rbum_item_kind_ids.clone()));
         }
+        if let Some(sys_codes) = &filter.rel_rbum_set_cate_sys_codes {
+            let query_kind = filter.sys_code_query_kind.clone().unwrap_or(RbumSetCateLevelQueryKind::Current);
+            if sys_codes.is_empty() {
+                if query_kind == RbumSetCateLevelQueryKind::Current {
+                    // query the first level
+                    query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq(funs.rbum_conf_set_cate_sys_code_node_len() as i32));
+                }
+            } else {
+                let mut cond = Cond::any();
+                match query_kind {
+                    RbumSetCateLevelQueryKind::CurrentAndSub => {
+                        if let Some(depth) = filter.sys_code_query_depth {
+                            for sys_code in sys_codes {
+                                cond = cond.add(
+                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str())).add(
+                                        Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
+                                            .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                    ),
+                                );
+                            }
+                        } else {
+                            for sys_code in sys_codes {
+                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+                            }
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::Sub => {
+                        if let Some(depth) = filter.sys_code_query_depth {
+                            for sys_code in sys_codes {
+                                cond = cond.add(
+                                    Cond::all()
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
+                                        .add(
+                                            Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
+                                                .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
+                                        ),
+                                );
+                            }
+                        } else {
+                            for sys_code in sys_codes {
+                                cond = cond.add(
+                                    Cond::all()
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
+                                );
+                            }
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::CurrentAndParent => {
+                        for sys_code in sys_codes {
+                            let mut sys_codes = RbumSetCateServ::get_parent_sys_codes(sys_code, funs)?;
+                            sys_codes.insert(0, sys_code.to_string());
+                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(sys_codes));
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::Parent => {
+                        for sys_code in sys_codes {
+                            let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(sys_code, funs)?;
+                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
+                        }
+                    }
+                    RbumSetCateLevelQueryKind::Current => {
+                        for sys_code in sys_codes {
+                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).eq(sys_code.as_str()));
+                        }
+                    }
+                }
+                query.cond_where(Cond::all().add(cond));
+            }
+        }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
     }
@@ -803,8 +879,8 @@ impl<'a> RbumSetItemServ {
             let rbum_set_paths = RbumSetCateServ::find_rbums(
                 &RbumSetCateFilterReq {
                     rel_rbum_set_id: Some(rbum_set_id.to_string()),
-                    sys_code: Some(rbum_set_cate_sys_code),
-                    find_filter: Some(RbumSetCateLevelQueryKind::CurrentAndParent),
+                    sys_codes: Some(vec![rbum_set_cate_sys_code]),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndParent),
                     ..Default::default()
                 },
                 None,
@@ -885,22 +961,4 @@ impl<'a> RbumSetItemServ {
 #[derive(Debug, sea_orm::FromQueryResult)]
 struct SysCodeResp {
     pub sys_code: String,
-}
-
-#[derive(Debug, sea_orm::FromQueryResult)]
-struct RbumSetCateWithLevelResp {
-    pub id: String,
-    pub sys_code: String,
-    pub bus_code: String,
-    pub name: String,
-    pub icon: String,
-    pub sort: u32,
-    pub ext: String,
-
-    pub own_paths: String,
-    pub owner: String,
-    pub create_time: DateTime<Utc>,
-    pub update_time: DateTime<Utc>,
-
-    pub scope_level: RbumScopeLevelKind,
 }

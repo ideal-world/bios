@@ -98,9 +98,12 @@ pub struct RbumSetFilterReq {
 pub struct RbumSetTreeFilterReq {
     pub fetch_cate_item: bool,
     pub hide_cate_with_empty_item: bool,
-    pub filter_cate_item_ids: Option<Vec<String>>,
-    pub filter_cate_item_kind_ids: Option<Vec<String>>,
-    pub filter_cate_item_domain_ids: Option<Vec<String>>,
+    pub sys_codes: Option<Vec<String>>,
+    pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
+    pub sys_code_query_depth: Option<i16>,
+    pub rel_rbum_item_ids: Option<Vec<String>>,
+    pub rel_rbum_item_kind_ids: Option<Vec<String>>,
+    pub rel_rbum_item_domain_ids: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -109,8 +112,9 @@ pub struct RbumSetCateFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel_rbum_set_id: Option<String>,
-    pub sys_code: Option<String>,
-    pub find_filter: Option<RbumSetCateLevelQueryKind>,
+    pub sys_codes: Option<Vec<String>>,
+    pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
+    pub sys_code_query_depth: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -118,6 +122,9 @@ pub struct RbumSetCateFilterReq {
 pub struct RbumSetItemFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel_rbum_set_id: Option<String>,
+    pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
+    pub sys_code_query_depth: Option<i16>,
+    pub rel_rbum_set_cate_sys_codes: Option<Vec<String>>,
     pub rel_rbum_set_cate_ids: Option<Vec<String>>,
     pub rel_rbum_item_ids: Option<Vec<String>>,
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,

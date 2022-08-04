@@ -11,7 +11,7 @@ use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetModifyReq};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemModifyReq};
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::rbum_enumeration::{RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -353,7 +353,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.records.get(0).unwrap().bus_code, "dddddd");
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all");
-    let rbums = RbumSetServ::get_tree(&set_id, None, &RbumSetTreeFilterReq::default(), &funs, context).await?;
+    let rbums = RbumSetServ::get_tree(&set_id, &RbumSetTreeFilterReq::default(), &funs, context).await?;
     assert_eq!(rbums.len(), 7);
     assert_eq!(rbums.get(0).unwrap().id, l1_id);
     assert_eq!(rbums.get(0).unwrap().pid, None);
@@ -373,7 +373,6 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all, fetch_cate_item=true");
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
             ..Default::default()
@@ -403,13 +402,56 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.get(6).unwrap().id, l3_id);
     assert_eq!(rbums.get(6).unwrap().pid, None);
 
+    info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_sys_codes=0000,0001");
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec!["0000".to_string(), "0001".to_string()]),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(rbums.len(), 2);
+    assert_eq!(rbums.get(0).unwrap().id, l1_id);
+    assert_eq!(rbums.get(1).unwrap().id, l2_id);
+
+    info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_sys_codes=0001,filter_sys_code_query_kind=CurrentAndSub");
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec!["0001".to_string()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(rbums.len(), 4);
+    assert_eq!(rbums.get(0).unwrap().id, l2_id);
+    assert_eq!(rbums.get(0).unwrap().pid, None);
+    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
+    assert_eq!(rbums.get(1).unwrap().rbum_set_items.len(), 1);
+    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.get(1).unwrap().pid, Some(l2_id.clone()));
+    assert_eq!(rbums.get(2).unwrap().id, l2_1_1_id);
+    assert_eq!(rbums.get(2).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_id, context.owner);
+    assert_eq!(rbums.get(2).unwrap().pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.get(3).unwrap().id, l2_1_2_id);
+    assert_eq!(rbums.get(3).unwrap().pid, Some(l2_1_id.clone()));
+
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some1");
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
-            filter_cate_item_ids: Some(vec![item_app_id.clone()]),
+            rel_rbum_item_ids: Some(vec![item_app_id.clone()]),
             ..Default::default()
         },
         &funs,
@@ -440,10 +482,9 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2");
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
-            filter_cate_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
+            rel_rbum_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
             ..Default::default()
         },
         &funs,
@@ -474,11 +515,10 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2, hide");
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
             hide_cate_with_empty_item: true,
-            filter_cate_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
+            rel_rbum_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
             ..Default::default()
         },
         &funs,
@@ -498,12 +538,11 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2, filter_cate_item_kind_ids=some, hide");
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
             hide_cate_with_empty_item: true,
-            filter_cate_item_kind_ids: Some(vec![kind_app_id.clone()]),
-            filter_cate_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
+            rel_rbum_item_kind_ids: Some(vec![kind_app_id.clone()]),
+            rel_rbum_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
             ..Default::default()
         },
         &funs,
@@ -524,13 +563,12 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     );
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
             hide_cate_with_empty_item: true,
-            filter_cate_item_kind_ids: Some(vec![kind_app_id.clone()]),
-            filter_cate_item_domain_ids: Some(vec![domain_iam_id.clone()]),
-            filter_cate_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
+            rel_rbum_item_kind_ids: Some(vec![kind_app_id.clone()]),
+            rel_rbum_item_domain_ids: Some(vec![domain_iam_id.clone()]),
+            rel_rbum_item_ids: Some(vec![item_app_id.clone(), context.owner.clone()]),
             ..Default::default()
         },
         &funs,
@@ -551,13 +589,12 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     );
     let rbums = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
             hide_cate_with_empty_item: true,
-            filter_cate_item_kind_ids: Some(vec![kind_app_id.clone()]),
-            filter_cate_item_domain_ids: Some(vec![domain_iam_id.clone()]),
-            filter_cate_item_ids: Some(vec![context.owner.clone()]),
+            rel_rbum_item_kind_ids: Some(vec![kind_app_id.clone()]),
+            rel_rbum_item_domain_ids: Some(vec![domain_iam_id.clone()]),
+            rel_rbum_item_ids: Some(vec![context.owner.clone()]),
             ..Default::default()
         },
         &funs,
@@ -566,21 +603,99 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     .await?;
     assert!(rbums.is_empty());
 
-    info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_by_level");
-    let rbums = RbumSetServ::get_tree_by_level(&set_id, None, &funs, context).await?;
+    info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree by_level");
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![]),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbums.len(), 3);
     assert_eq!(rbums.get(0).unwrap().id, l1_id);
     assert_eq!(rbums.get(1).unwrap().id, l2_id);
     assert_eq!(rbums.get(2).unwrap().id, l3_id);
-    let rbums = RbumSetServ::get_tree_by_level(&set_id, Some(&l1_id), &funs, context).await?;
+    let l1_sys_code = rbums.get(0).unwrap().sys_code.clone();
+    let l2_sys_code = rbums.get(1).unwrap().sys_code.clone();
+    let l3_sys_code = rbums.get(2).unwrap().sys_code.clone();
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![l1_sys_code.clone()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbums.len(), 1);
     assert_eq!(rbums.get(0).unwrap().id, l1_1_id);
-    let rbums = RbumSetServ::get_tree_by_level(&set_id, Some(&l3_id), &funs, context).await?;
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![l1_sys_code.clone(), l2_sys_code.clone()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    assert_eq!(rbums.len(), 2);
+    assert_eq!(rbums.get(0).unwrap().id, l1_1_id);
+    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![l3_sys_code.clone()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbums.len(), 0);
-    let rbums = RbumSetServ::get_tree_by_level(&set_id, Some(&l2_id), &funs, context).await?;
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![l2_sys_code.clone()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbums.len(), 1);
     assert_eq!(rbums.get(0).unwrap().id, l2_1_id);
-    let rbums = RbumSetServ::get_tree_by_level(&set_id, Some(&l2_1_id), &funs, context).await?;
+    let l2_1_sys_code = rbums.get(0).unwrap().sys_code.clone();
+    let rbums = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![l2_1_sys_code.clone()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        context,
+    )
+    .await?;
     assert_eq!(rbums.len(), 2);
     assert_eq!(rbums.get(0).unwrap().id, l2_1_1_id);
     assert_eq!(rbums.get(1).unwrap().id, l2_1_2_id);
@@ -822,7 +937,6 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_item】 : Test Get : RbumSetServ::get_tree_all");
     let set_infos = RbumSetServ::get_tree(
         &set_id,
-        None,
         &RbumSetTreeFilterReq {
             fetch_cate_item: true,
             ..Default::default()

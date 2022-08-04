@@ -246,7 +246,9 @@ impl TryGetable for RbumWidgetTypeKind {
 #[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumSetCateLevelQueryKind {
-    Sub,
+    CurrentAndSub,
     CurrentAndParent,
+    Sub,
     Parent,
+    Current,
 }
