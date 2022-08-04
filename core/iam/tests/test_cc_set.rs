@@ -116,7 +116,6 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     info!("【test_cc_set】 : test_single_level : Find Set Cate");
     let set_cates = IamSetServ::get_tree(
         &set_id,
-        None,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
             ..Default::default()
@@ -400,7 +399,6 @@ pub async fn test_multi_level_by_sys_context(
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By sys_context");
     let set_cates = IamSetServ::get_tree(
         &sys_set_id,
-        None,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
             ..Default::default()
@@ -529,7 +527,6 @@ pub async fn test_multi_level_by_tenant_context(
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By tenant_context");
     let set_cates = IamSetServ::get_tree(
         &sys_set_id,
-        None,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
             ..Default::default()
@@ -538,7 +535,7 @@ pub async fn test_multi_level_by_tenant_context(
         t2_context,
     )
     .await?;
-    assert_eq!(set_cates.len(), 7);
+    assert_eq!(set_cates.len(), 5);
     assert!(set_cates.iter().find(|i| i.name == "t2私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By tenant_context");
@@ -660,7 +657,6 @@ pub async fn test_multi_level_by_app_context(
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By app_context");
     let set_cates = IamSetServ::get_tree(
         &sys_set_id,
-        None,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
             ..Default::default()
@@ -669,7 +665,7 @@ pub async fn test_multi_level_by_app_context(
         t2_a1_context,
     )
     .await?;
-    assert_eq!(set_cates.len(), 7);
+    assert_eq!(set_cates.len(), 3);
     assert!(set_cates.iter().find(|i| i.name == "t2_a1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By app_context");

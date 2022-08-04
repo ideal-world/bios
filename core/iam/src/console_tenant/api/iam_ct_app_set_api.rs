@@ -6,6 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -40,24 +41,32 @@ impl IamCtAppSetApi {
     }
 
     /// Find App Tree By Current Tenant
+    ///
+    /// * Without parameters: Query the whole tree
+    /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
+    /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_cate_id: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
         let only_related = only_related.0.unwrap_or(false);
-        let result = IamSetServ::get_tree_with_adv_filter(
-            &set_id,
-            parent_cate_id.0,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: true,
-                hide_cate_with_empty_item: only_related,
-                filter_cate_item_ids: if only_related { Some(vec![ctx.0.owner.clone()]) } else { None },
-                ..Default::default()
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
+        let result = if only_related {
+            IamSetServ::get_tree_with_auth_by_account(&set_id, &ctx.0.owner, &funs, &ctx.0).await?
+        } else {
+            IamSetServ::get_tree(
+                &set_id,
+                &mut RbumSetTreeFilterReq {
+                    fetch_cate_item: true,
+                    sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+                    sys_code_query_depth: Some(1),
+                    ..Default::default()
+                },
+                &funs,
+                &ctx.0,
+            )
+            .await?
+        };
         TardisResp::ok(result)
     }
 
@@ -111,7 +120,7 @@ impl IamCtAppSetApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find App Set Items (App Or Account)
+    /// Check App Scope with Account
     #[oai(path = "/scope", method = "get")]
     async fn check_scope(&self, app_id: Query<String>, account_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();

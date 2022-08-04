@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::format;
 use std::time::Duration;
 
 use itertools::Itertools;
@@ -14,6 +15,7 @@ use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
+use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
 use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
@@ -68,6 +70,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     tenant_console_org_mgr_page("admin", "123456", &tenant_id, client).await?;
     tenant_console_account_mgr_page(client).await?;
     tenant_console_auth_mgr_page(client).await?;
+    tenant_console_app_set_mgr_page(client).await?;
 
     Ok(())
 }
@@ -458,7 +461,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
 
     // Find Menu Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/tree?sys_res=true").await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/tree").await;
     assert_eq!(res_tree.len(), 1);
     let res = res_tree.iter().find(|i| i.name == "Menus").unwrap().rbum_set_items.get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
@@ -537,6 +540,305 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     client.delete(&format!("/ct/role/{}/account/{}", role_id, account_id)).await;
     let accounts: u64 = client.get(&format!("/ct/role/{}/account/total", role_id)).await;
     assert_eq!(accounts, 0);
+
+    Ok(())
+}
+
+pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【tenant_console_app_set_mgr_page】");
+
+    // =============== Prepare ===============
+    // Add Account
+    let app_account1_id: String = client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: None,
+                name: TrimString("admin1".to_string()),
+                cert_user_name: TrimString("apps_test1".to_string()),
+                cert_password: TrimString("123456".to_string()),
+                cert_phone: None,
+                cert_mail: None,
+                role_ids: None,
+                org_node_ids: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                icon: None,
+                exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+            },
+        )
+        .await;
+    let app_account2_id: String = client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: None,
+                name: TrimString("admin2".to_string()),
+                cert_user_name: TrimString("apps_test2".to_string()),
+                cert_password: TrimString("123456".to_string()),
+                cert_phone: None,
+                cert_mail: None,
+                role_ids: None,
+                org_node_ids: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                icon: None,
+                exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+            },
+        )
+        .await;
+
+    // Add App
+    let app1_id: String = client
+        .post(
+            "/ct/app",
+            &IamAppAggAddReq {
+                app_name: TrimString("app1".to_string()),
+                app_icon: None,
+                app_sort: None,
+                app_contact_phone: None,
+                admin_id: app_account1_id.clone(),
+                disabled: None,
+            },
+        )
+        .await;
+    let app2_id: String = client
+        .post(
+            "/ct/app",
+            &IamAppAggAddReq {
+                app_name: TrimString("app2".to_string()),
+                app_icon: None,
+                app_sort: None,
+                app_contact_phone: None,
+                admin_id: app_account2_id.clone(),
+                disabled: None,
+            },
+        )
+        .await;
+    // =============== Prepare ===============
+
+    // Find App Set Cates By Current Tenant
+    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree").await;
+    assert_eq!(app_tree.len(), 0);
+
+    // Add App Set Cate
+    let cate_node1_id: String = client
+        .post(
+            "/ct/apps/cate",
+            &IamSetCateAddReq {
+                name: TrimString("x事业部".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: None,
+            },
+        )
+        .await;
+    let cate_node2_id: String = client
+        .post(
+            "/ct/apps/cate",
+            &IamSetCateAddReq {
+                name: TrimString("yy事业部".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: None,
+            },
+        )
+        .await;
+    let cate_node2_1_id: String = client
+        .post(
+            "/ct/apps/cate",
+            &IamSetCateAddReq {
+                name: TrimString("yy事业部aa中心".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: Some(cate_node2_id.clone()),
+            },
+        )
+        .await;
+    let cate_node2_1_1_id: String = client
+        .post(
+            "/ct/apps/cate",
+            &IamSetCateAddReq {
+                name: TrimString("yy事业部aa中心bb组".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: Some(cate_node2_1_id.clone()),
+            },
+        )
+        .await;
+    let cate_node3_id: String = client
+        .post(
+            "/ct/apps/cate",
+            &IamSetCateAddReq {
+                name: TrimString("z事业部".to_string()),
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+                rbum_parent_cate_id: None,
+            },
+        )
+        .await;
+
+    // Delete App Set Cate By App Set Id
+    client.delete(&format!("/ct/apps/cate/{}", cate_node3_id)).await;
+
+    // Modify App Set Cate By App Set Id
+    let _: Void = client
+        .put(
+            &format!("/ct/apps/cate/{}", cate_node1_id),
+            &IamSetCateModifyReq {
+                name: Some(TrimString("xx事业部".to_string())),
+                scope_level: None,
+                bus_code: None,
+                icon: None,
+                sort: None,
+                ext: None,
+            },
+        )
+        .await;
+    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree").await;
+    assert_eq!(res_tree.len(), 4);
+    assert!(res_tree.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone())));
+
+    // Add App Set Item
+    let _: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: app1_id.clone(),
+            },
+        )
+        .await;
+    let _: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: app_account1_id.clone(),
+            },
+        )
+        .await;
+    let item_2_id_with_current_account: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: client.context().owner.clone(),
+            },
+        )
+        .await;
+    let _: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_1_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: app2_id.clone(),
+            },
+        )
+        .await;
+    let _: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_1_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: app_account2_id.clone(),
+            },
+        )
+        .await;
+    let _: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_1_1_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: app2_id.clone(),
+            },
+        )
+        .await;
+    let item_2_1_1_id_with_current_account: String = client
+        .put(
+            "/ct/apps/item",
+            &IamSetItemWithDefaultSetAddReq {
+                set_cate_id: cate_node2_1_1_id.to_string(),
+                sort: 0,
+                rel_rbum_item_id: client.context().owner.clone(),
+            },
+        )
+        .await;
+
+    // Find App Set Items
+    let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/apps/item?cate_id={}", cate_node1_id)).await;
+    assert_eq!(items.len(), 0);
+    let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/apps/item?cate_id={}", cate_node2_id)).await;
+    assert_eq!(items.len(), 3);
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "admin1"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "app1"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_id == client.context().owner));
+    let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/apps/item?cate_id={}", cate_node2_1_id)).await;
+    assert_eq!(items.len(), 2);
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "admin2"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "app2"));
+    let items: Vec<RbumSetItemDetailResp> = client.get("/ct/apps/item").await;
+    assert_eq!(items.len(), 7);
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "admin1"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "app1"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "admin2"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_name == "app2"));
+    assert!(items.iter().any(|item| item.rel_rbum_item_id == client.context().owner));
+
+    // Find App Set Cates By Current Tenant
+    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree").await;
+    assert_eq!(app_tree.len(), 4);
+    assert!(app_tree.iter().any(|cate| cate.name == "xx事业部" && cate.pid == None && cate.rbum_set_items.is_empty()));
+    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && cate.rbum_set_items.len() == 3));
+    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && cate.rbum_set_items.len() == 2));
+    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && cate.rbum_set_items.len() == 2));
+    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree?only_related=true").await;
+    assert_eq!(app_tree.len(), 3);
+    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && cate.rbum_set_items.len() == 3));
+    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && cate.rbum_set_items.len() == 2));
+    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && cate.rbum_set_items.len() == 2));
+
+    // Check App Scope with Account
+    assert!(client.get(&format!("/ct/apps/scope?app_id={}&account={}", app1_id, app_account1_id)).await);
+    assert!(client.get(&format!("/ct/apps/scope?app_id={}&account={}", app1_id, app_account2_id)).await);
+    assert!(client.get(&format!("/ct/apps/scope?app_id={}&account={}", app2_id, app_account1_id)).await);
+    assert!(client.get(&format!("/ct/apps/scope?app_id={}", app1_id)).await);
+    assert!(client.get(&format!("/ct/apps/scope?app_id={}", app2_id)).await);
+
+    // Delete App Set Item By App Set Item Id
+    client.delete(&format!("/ct/apps/item/{}", item_2_1_1_id_with_current_account)).await;
+    let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/apps/item?cate_id={}", cate_node2_1_1_id)).await;
+    assert_eq!(items.len(), 1);
+    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree?only_related=true").await;
+    assert_eq!(app_tree.len(), 3);
+
+    client.delete(&format!("/ct/apps/item/{}", item_2_id_with_current_account)).await;
+    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree?only_related=true").await;
+    assert_eq!(app_tree.len(), 0);
+    assert!(!client.get(&format!("/ct/apps/scope?app_id={}&account={}", app1_id, app_account2_id)).await);
+    assert!(!client.get(&format!("/ct/apps/scope?app_id={}", app1_id)).await);
+    assert!(!client.get(&format!("/ct/apps/scope?app_id={}", app2_id)).await);
 
     Ok(())
 }
