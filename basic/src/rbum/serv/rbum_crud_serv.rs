@@ -1,6 +1,8 @@
 use async_trait::async_trait;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::Serialize;
+use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
@@ -105,6 +107,24 @@ where
                 &Self::get_obj_name_from(table_name),
                 "check",
                 &format!("scope {}.{} is illegal by {}", Self::get_obj_name_from(table_name), id, ctx.owner),
+                "404-rbum-*-scope-illegal",
+            ));
+        }
+        Ok(())
+    }
+
+    async fn check_scopes(values: HashMap<String, &Vec<String>>, expect_number: u64, table_name: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+        let mut query = Query::select();
+        let msg = values.iter().map(|(k, v)| format!("{}={:?}", k, v)).join(",");
+        query.column((Alias::new(table_name), ID_FIELD.clone())).from(Alias::new(table_name)).with_scope(table_name, &ctx.own_paths, false, ctx);
+        for (k, v) in values {
+            query.and_where(Expr::tbl(Alias::new(table_name), Alias::new(&k)).is_in(v.clone()));
+        }
+        if funs.db().count(&query).await? != expect_number {
+            return Err(funs.err().not_found(
+                &Self::get_obj_name_from(table_name),
+                "check",
+                &format!("scopes {}.{} is illegal by {}", Self::get_obj_name_from(table_name), msg, ctx.owner),
                 "404-rbum-*-scope-illegal",
             ));
         }
