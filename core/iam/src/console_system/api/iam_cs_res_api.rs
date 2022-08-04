@@ -6,6 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
@@ -64,15 +65,20 @@ impl IamCsResApi {
     }
 
     /// Find Res Tree
+    ///
+    /// * Without parameters: Query the whole tree
+    /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(
             &set_id,
-            parent_cate_id.0,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
+                sys_codes: parent_sys_code.0.map(|parent_sys_code| vec![parent_sys_code]),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+                sys_code_query_depth: Some(1),
                 ..Default::default()
             },
             &funs,
