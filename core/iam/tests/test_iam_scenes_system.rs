@@ -458,14 +458,14 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
     info!("【sys_console_res_mgr_page】");
 
     // Find Menu Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/tree/menu").await;
-    assert_eq!(res_tree.len(), 1);
-    let cate_menus_id = res_tree.iter().find(|i| i.bus_code == "__menus__").map(|i| i.id.clone()).unwrap();
+    let res_tree: RbumSetTreeResp = client.get("/cs/res/tree/menu").await;
+    assert_eq!(res_tree.main.len(), 1);
+    let cate_menus_id = res_tree.main.iter().find(|i| i.bus_code == "__menus__").map(|i| i.id.clone()).unwrap();
 
     // Find Api Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/tree/api").await;
-    assert_eq!(res_tree.len(), 1);
-    let cate_apis_id = res_tree.iter().find(|i| i.bus_code == "__apis__").map(|i| i.id.clone()).unwrap();
+    let res_tree: RbumSetTreeResp = client.get("/cs/res/tree/api").await;
+    assert_eq!(res_tree.main.len(), 1);
+    let cate_apis_id = res_tree.main.iter().find(|i| i.bus_code == "__apis__").map(|i| i.id.clone()).unwrap();
 
     // Add Res Cate
     let cate_work_spaces_id: String = client
@@ -709,8 +709,8 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
     assert_eq!(res, 1);
 
     // Find Res Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cs/res/tree").await;
-    assert_eq!(res_tree.len(), 3);
+    let res_tree: RbumSetTreeResp = client.get("/cs/res/tree").await;
+    assert_eq!(res_tree.main.len(), 3);
 
     // Add Res To Role
     let _: Void = client.put(&format!("/cs/role/{}/res/{}", sys_admin_role_id, res_menu_id), &Void {}).await;

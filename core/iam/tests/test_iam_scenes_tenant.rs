@@ -1,8 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::format;
 use std::time::Duration;
-
-use itertools::Itertools;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -131,8 +128,8 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     info!("【tenant_console_org_mgr_page】");
 
     // Find Org Cates By Current Tenant
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/tree").await;
-    assert_eq!(res_tree.len(), 0);
+    let res_tree: RbumSetTreeResp = client.get("/ct/org/tree").await;
+    assert_eq!(res_tree.main.len(), 0);
 
     // Add Org Cate
     let cate_node1_id: String = client
@@ -181,9 +178,9 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
             },
         )
         .await;
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/tree").await;
-    assert_eq!(res_tree.len(), 1);
-    assert_eq!(res_tree.get(0).unwrap().name, "综合服务中心");
+    let res_tree: RbumSetTreeResp = client.get("/ct/org/tree").await;
+    assert_eq!(res_tree.main.len(), 1);
+    assert_eq!(res_tree.main.get(0).unwrap().name, "综合服务中心");
 
     // Count Accounts
     let accounts: u64 = client.get("/ct/account/total").await;
@@ -367,8 +364,8 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     assert!(roles.records.iter().any(|i| i.name == "审计管理员"));
 
     // Find Org Cates By Current Tenant
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/org/tree").await;
-    assert_eq!(res_tree.len(), 1);
+    let res_tree: RbumSetTreeResp = client.get("/ct/org/tree").await;
+    assert_eq!(res_tree.main.len(), 1);
 
     // Add Account
     let account_id: String = client
@@ -382,7 +379,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 cert_phone: None,
                 cert_mail: Some(TrimString("gudaoxuri@outlook.com".to_string())),
                 role_ids: Some(vec![role_id.to_string()]),
-                org_node_ids: Some(vec![res_tree[0].id.to_string()]),
+                org_node_ids: Some(vec![res_tree.main[0].id.to_string()]),
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
                 icon: None,
@@ -461,9 +458,9 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert!(!roles.records.iter().any(|i| i.name == "sys_admin"));
 
     // Find Menu Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/res/tree").await;
-    assert_eq!(res_tree.len(), 1);
-    let res = res_tree.iter().find(|i| i.name == "Menus").unwrap().rbum_set_items.get(0).unwrap();
+    let res_tree: RbumSetTreeResp = client.get("/ct/res/tree").await;
+    assert_eq!(res_tree.main.len(), 1);
+    let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
 
@@ -618,8 +615,8 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
     // =============== Prepare ===============
 
     // Find App Set Cates By Current Tenant
-    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree").await;
-    assert_eq!(app_tree.len(), 0);
+    let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree").await;
+    assert_eq!(app_tree.main.len(), 0);
 
     // Add App Set Cate
     let cate_node1_id: String = client
@@ -710,9 +707,9 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
             },
         )
         .await;
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree").await;
-    assert_eq!(res_tree.len(), 4);
-    assert!(res_tree.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone())));
+    let res_tree: RbumSetTreeResp = client.get("/ct/apps/tree").await;
+    assert_eq!(res_tree.main.len(), 4);
+    assert!(res_tree.main.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone())));
 
     // Add App Set Item
     let _: String = client
@@ -807,17 +804,23 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
     assert!(items.iter().any(|item| item.rel_rbum_item_id == client.context().owner));
 
     // Find App Set Cates By Current Tenant
-    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree").await;
-    assert_eq!(app_tree.len(), 4);
-    assert!(app_tree.iter().any(|cate| cate.name == "xx事业部" && cate.pid == None && cate.rbum_set_items.is_empty()));
-    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && cate.rbum_set_items.len() == 3));
-    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && cate.rbum_set_items.len() == 2));
-    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && cate.rbum_set_items.len() == 2));
-    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree?only_related=true").await;
-    assert_eq!(app_tree.len(), 3);
-    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && cate.rbum_set_items.len() == 3));
-    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && cate.rbum_set_items.len() == 2));
-    assert!(app_tree.iter().any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && cate.rbum_set_items.len() == 2));
+    let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree").await;
+    assert_eq!(app_tree.main.len(), 4);
+    assert!(app_tree.main.iter().any(|cate| cate.name == "xx事业部" && cate.pid == None && app_tree.ext.as_ref().unwrap().items[&cate.id].is_empty()));
+    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 3));
+    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
+    assert!(app_tree
+        .main
+        .iter()
+        .any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
+    let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree?only_related=true").await;
+    assert_eq!(app_tree.main.len(), 3);
+    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部" && cate.pid == None && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 3));
+    assert!(app_tree.main.iter().any(|cate| cate.name == "yy事业部aa中心" && cate.pid == Some(cate_node2_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
+    assert!(app_tree
+        .main
+        .iter()
+        .any(|cate| cate.name == "yy事业部aa中心bb组" && cate.pid == Some(cate_node2_1_id.clone()) && app_tree.ext.as_ref().unwrap().items[&cate.id].len() == 2));
 
     // Check App Scope with Account
     assert!(client.get(&format!("/ct/apps/scope?app_id={}&account={}", app1_id, app_account1_id)).await);
@@ -830,12 +833,12 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
     client.delete(&format!("/ct/apps/item/{}", item_2_1_1_id_with_current_account)).await;
     let items: Vec<RbumSetItemDetailResp> = client.get(&format!("/ct/apps/item?cate_id={}", cate_node2_1_1_id)).await;
     assert_eq!(items.len(), 1);
-    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree?only_related=true").await;
-    assert_eq!(app_tree.len(), 3);
+    let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree?only_related=true").await;
+    assert_eq!(app_tree.main.len(), 3);
 
     client.delete(&format!("/ct/apps/item/{}", item_2_id_with_current_account)).await;
-    let app_tree: Vec<RbumSetTreeResp> = client.get("/ct/apps/tree?only_related=true").await;
-    assert_eq!(app_tree.len(), 0);
+    let app_tree: RbumSetTreeResp = client.get("/ct/apps/tree?only_related=true").await;
+    assert_eq!(app_tree.main.len(), 0);
     assert!(!client.get(&format!("/ct/apps/scope?app_id={}&account={}", app1_id, app_account2_id)).await);
     assert!(!client.get(&format!("/ct/apps/scope?app_id={}", app1_id)).await);
     assert!(!client.get(&format!("/ct/apps/scope?app_id={}", app2_id)).await);

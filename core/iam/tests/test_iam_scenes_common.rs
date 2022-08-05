@@ -155,11 +155,11 @@ pub async fn common_console_by_tenant(client: &mut BIOSWebTestClient) -> TardisR
     assert!(roles.records.iter().any(|i| i.name == "tenant_admin"));
 
     // Find Org Cates By Current Tenant
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cc/org/tree").await;
-    assert_eq!(res_tree.len(), 1);
-    assert!(res_tree.iter().any(|i| i.name == "综合服务中心"));
-    assert_eq!(res_tree[0].rbum_set_items.len(), 1);
-    assert_eq!(res_tree[0].rbum_set_items[0].rel_rbum_item_name, "测试管理员");
+    let res_tree: RbumSetTreeResp = client.get("/cc/org/tree").await;
+    assert_eq!(res_tree.main.len(), 1);
+    assert!(res_tree.main.iter().any(|i| i.name == "综合服务中心"));
+    assert_eq!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].len(), 1);
+    assert_eq!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].get(0).unwrap().rel_rbum_item_name, "测试管理员");
 
     Ok(())
 }
@@ -188,12 +188,12 @@ pub async fn common_console_by_app(client: &mut BIOSWebTestClient) -> TardisResu
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
 
     // Find Org Cates By Current Tenant
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/cc/org/tree").await;
-    assert_eq!(res_tree.len(), 1);
-    assert!(res_tree.iter().any(|i| i.name == "综合服务中心"));
-    assert_eq!(res_tree[0].rbum_set_items.len(), 2);
-    assert!(res_tree[0].rbum_set_items.iter().any(|i| i.rel_rbum_item_name == "测试管理员"));
-    assert!(res_tree[0].rbum_set_items.iter().any(|i| i.rel_rbum_item_name == "devops应用管理员"));
+    let res_tree: RbumSetTreeResp = client.get("/cc/org/tree").await;
+    assert_eq!(res_tree.main.len(), 1);
+    assert!(res_tree.main.iter().any(|i| i.name == "综合服务中心"));
+    assert_eq!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].len(), 2);
+    assert!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].iter().any(|i| i.rel_rbum_item_name == "测试管理员"));
+    assert!(res_tree.ext.as_ref().unwrap().items[&res_tree.main[0].id].iter().any(|i| i.rel_rbum_item_name == "devops应用管理员"));
 
     Ok(())
 }

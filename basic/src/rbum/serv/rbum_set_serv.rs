@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -14,13 +14,17 @@ use tardis::{TardisFuns, TardisFunsInst};
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp};
-use crate::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp, RbumSetTreeResp};
+use crate::rbum::dto::rbum_set_dto::{
+    RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp, RbumSetTreeExtResp, RbumSetTreeMainResp, RbumSetTreeResp,
+};
 use crate::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemInfoResp, RbumSetItemModifyReq, RbumSetItemSummaryResp};
 use crate::rbum::rbum_config::RbumConfigApi;
 use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use crate::rbum::serv::rbum_cert_serv::RbumCertServ;
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
+use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
+use crate::rbum::serv::rbum_kind_serv::RbumKindServ;
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 pub struct RbumSetServ;
@@ -170,7 +174,7 @@ impl<'a> RbumCrudOperation<'a, rbum_set::ActiveModel, RbumSetAddReq, RbumSetModi
 }
 
 impl<'a> RbumSetServ {
-    pub async fn get_tree(rbum_set_id: &str, filter: &RbumSetTreeFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_tree(rbum_set_id: &str, filter: &RbumSetTreeFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         // check filter.filter_cate_sys_codes scope
         if let Some(sys_codes) = &filter.sys_codes {
@@ -204,9 +208,9 @@ impl<'a> RbumSetServ {
         .await?;
         resp.sort_by(|a, b| a.sys_code.cmp(&b.sys_code));
         resp.sort_by(|a, b| a.sort.cmp(&b.sort));
-        let mut tree = resp
+        let mut tree_main = resp
             .iter()
-            .map(|r| RbumSetTreeResp {
+            .map(|r| RbumSetTreeMainResp {
                 id: r.id.to_string(),
                 sys_code: r.sys_code.to_string(),
                 bus_code: r.bus_code.to_string(),
@@ -218,11 +222,10 @@ impl<'a> RbumSetServ {
                 owner: r.owner.to_string(),
                 scope_level: r.scope_level.clone(),
                 pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - set_cate_sys_code_node_len]).map(|i| i.id.to_string()),
-                rbum_set_items: vec![],
             })
             .collect();
         if !filter.fetch_cate_item {
-            return Ok(tree);
+            return Ok(RbumSetTreeResp { main: tree_main, ext: None });
         }
         let rbum_set_items = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
@@ -253,41 +256,99 @@ impl<'a> RbumSetServ {
             ctx,
         )
         .await?;
-        tree.iter_mut().for_each(|cate| {
-            cate.rbum_set_items = rbum_set_items
-                .iter()
-                .filter(|i| i.rel_rbum_set_cate_id == cate.id)
-                .map(|i| RbumSetItemInfoResp {
-                    id: i.id.to_string(),
-                    sort: i.sort,
-                    rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
-                    rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
-                    rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
-                    rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
-                    rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
-                    rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
-                    rel_rbum_item_create_time: i.rel_rbum_item_create_time,
-                    rel_rbum_item_update_time: i.rel_rbum_item_update_time,
-                    rel_rbum_item_disabled: i.rel_rbum_item_disabled,
-                    rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
-                    own_paths: i.own_paths.to_string(),
-                    owner: i.owner.to_string(),
-                })
-                .collect()
-        });
         if filter.hide_cate_with_empty_item {
-            let exist_cate_ids = tree.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree, &cate.id)).collect::<Vec<String>>();
-            tree = tree.into_iter().filter(|cate| exist_cate_ids.contains(&cate.id)).collect();
+            let exist_cate_ids =
+                tree_main.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree_main, &cate.id, &rbum_set_items)).collect::<Vec<String>>();
+            tree_main = tree_main.into_iter().filter(|cate| exist_cate_ids.contains(&cate.id)).collect();
         }
-        Ok(tree)
+        let items = tree_main
+            .iter()
+            .map(|cate| {
+                (
+                    cate.id.clone(),
+                    rbum_set_items
+                        .iter()
+                        .filter(|i| i.rel_rbum_set_cate_id == cate.id)
+                        .map(|i| RbumSetItemInfoResp {
+                            id: i.id.to_string(),
+                            sort: i.sort,
+                            rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
+                            rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
+                            rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
+                            rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
+                            rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
+                            rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
+                            rel_rbum_item_create_time: i.rel_rbum_item_create_time,
+                            rel_rbum_item_update_time: i.rel_rbum_item_update_time,
+                            rel_rbum_item_disabled: i.rel_rbum_item_disabled,
+                            rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
+                            own_paths: i.own_paths.to_string(),
+                            owner: i.owner.to_string(),
+                        })
+                        .collect(),
+                )
+            })
+            .collect::<HashMap<String, Vec<RbumSetItemInfoResp>>>();
+        let mut item_number_agg = tree_main
+            .iter()
+            .map(|cate| {
+                (
+                    cate.id.to_string(),
+                    tree_main
+                        .iter()
+                        .filter(|c| c.sys_code.starts_with(&cate.sys_code))
+                        .flat_map(|c| items.get(&c.id).unwrap())
+                        .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                        .into_iter()
+                        .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
+                        .collect::<HashMap<String, u64>>(),
+                )
+            })
+            .collect::<HashMap<String, HashMap<String, u64>>>();
+        // add an aggregate to root
+        item_number_agg.insert(
+            "".to_string(),
+            items
+                .values()
+                .flat_map(|item| item.iter())
+                .group_by(|c| c.rel_rbum_item_kind_id.clone())
+                .into_iter()
+                .map(|(g, c)| (g, c.map(|i| i.rel_rbum_item_id.clone()).collect::<HashSet<String>>().len() as u64))
+                .collect::<HashMap<String, u64>>(),
+        );
+        let kind_ids = items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_kind_id.clone())).collect::<HashSet<String>>();
+        let domain_ids = items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_domain_id.clone())).collect::<HashSet<String>>();
+        let mut item_kinds = HashMap::new();
+        for kind_id in kind_ids {
+            let kind = RbumKindServ::peek_rbum(&kind_id, &RbumBasicFilterReq::default(), funs, ctx).await?;
+            item_kinds.insert(kind_id, kind);
+        }
+        let mut item_domains = HashMap::new();
+        for domain_id in domain_ids {
+            let domain = RbumDomainServ::peek_rbum(&domain_id, &RbumBasicFilterReq::default(), funs, ctx).await?;
+            item_domains.insert(domain_id, domain);
+        }
+        Ok(RbumSetTreeResp {
+            main: tree_main,
+            ext: Some(RbumSetTreeExtResp {
+                items,
+                item_number_agg,
+                item_kinds,
+                item_domains,
+            }),
+        })
     }
 
-    fn filter_exist_items(tree: &Vec<RbumSetTreeResp>, cate_id: &str) -> Vec<String> {
-        let mut sub_cates = tree.iter().filter(|cate| cate.pid == Some(cate_id.to_string())).flat_map(|cate| Self::filter_exist_items(tree, &cate.id)).collect::<Vec<String>>();
-        let cate = tree.iter().find(|cate| cate.id == cate_id).unwrap();
+    fn filter_exist_items(tree_main: &Vec<RbumSetTreeMainResp>, cate_id: &str, rbum_set_items: &Vec<RbumSetItemDetailResp>) -> Vec<String> {
+        let mut sub_cates = tree_main
+            .iter()
+            .filter(|cate| cate.pid == Some(cate_id.to_string()))
+            .flat_map(|cate| Self::filter_exist_items(tree_main, &cate.id, rbum_set_items))
+            .collect::<Vec<String>>();
+        let cate = tree_main.iter().find(|cate| cate.id == cate_id).unwrap();
         if sub_cates.is_empty() {
             // leaf node
-            if cate.rbum_set_items.is_empty() {
+            if !rbum_set_items.iter().any(|item| item.rel_rbum_set_cate_id == cate.id) {
                 vec![]
             } else {
                 vec![cate.id.to_string()]

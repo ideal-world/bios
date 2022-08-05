@@ -46,7 +46,7 @@ impl IamCtAppSetApi {
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
         let only_related = only_related.0.unwrap_or(false);
