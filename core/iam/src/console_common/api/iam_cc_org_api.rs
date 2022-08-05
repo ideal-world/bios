@@ -22,7 +22,7 @@ impl IamCcOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_tenant(&funs, &ctx.0)?, true, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(

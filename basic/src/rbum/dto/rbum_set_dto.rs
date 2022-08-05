@@ -1,5 +1,8 @@
+use crate::rbum::dto::rbum_domain_dto::RbumDomainSummaryResp;
+use crate::rbum::dto::rbum_kind_dto::RbumKindSummaryResp;
 use crate::rbum::dto::rbum_set_item_dto::RbumSetItemInfoResp;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 #[cfg(feature = "default")]
@@ -101,6 +104,13 @@ pub struct RbumSetPathResp {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeResp {
+    pub main: Vec<RbumSetTreeMainResp>,
+    pub ext: Option<RbumSetTreeExtResp>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumSetTreeMainResp {
     pub id: String,
     pub sys_code: String,
     pub bus_code: String,
@@ -114,6 +124,17 @@ pub struct RbumSetTreeResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub pid: Option<String>,
+}
 
-    pub rbum_set_items: Vec<RbumSetItemInfoResp>,
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct RbumSetTreeExtResp {
+    // cate.id -> items
+    pub items: HashMap<String, Vec<RbumSetItemInfoResp>>,
+    // cate.id -> kind.id -> item number
+    pub item_number_agg: HashMap<String, HashMap<String, u64>>,
+    // kind.id -> kind info
+    pub item_kinds: HashMap<String, RbumKindSummaryResp>,
+    // domain.id -> domain info
+    pub item_domains: HashMap<String, RbumDomainSummaryResp>,
 }

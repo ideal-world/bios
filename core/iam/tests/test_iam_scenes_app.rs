@@ -148,9 +148,9 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     let account_id = accounts.records.iter().find(|i| i.name == "devops应用管理员").unwrap().id.clone();
 
     // Find Res Tree
-    let res_tree: Vec<RbumSetTreeResp> = client.get("/ca/res/tree").await;
-    assert_eq!(res_tree.len(), 1);
-    let res = res_tree.iter().find(|i| i.name == "Menus").unwrap().rbum_set_items.get(0).unwrap();
+    let res_tree: RbumSetTreeResp = client.get("/ca/res/tree").await;
+    assert_eq!(res_tree.main.len(), 1);
+    let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
 

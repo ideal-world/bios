@@ -114,7 +114,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .await?;
 
     info!("【test_cc_set】 : test_single_level : Find Set Cate");
-    let set_cates = IamSetServ::get_tree(
+    let tree = IamSetServ::get_tree(
         &set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
@@ -124,8 +124,8 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
         context,
     )
     .await?;
-    assert_eq!(set_cates.len(), 3);
-    assert!(set_cates.iter().any(|i| i.bus_code == "bc2-xxxxx"));
+    assert_eq!(tree.main.len(), 3);
+    assert!(tree.main.iter().any(|i| i.bus_code == "bc2-xxxxx"));
 
     info!("【test_cc_set】 : test_single_level : Delete Set Cate By Id");
     assert!(IamSetServ::delete_set_cate(&set_cate_id4, &funs, another_context).await.is_err());
@@ -397,7 +397,7 @@ pub async fn test_multi_level_by_sys_context(
     .await?;
 
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By sys_context");
-    let set_cates = IamSetServ::get_tree(
+    let tree = IamSetServ::get_tree(
         &sys_set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
@@ -407,8 +407,8 @@ pub async fn test_multi_level_by_sys_context(
         sys_context,
     )
     .await?;
-    assert_eq!(set_cates.len(), 7);
-    assert!(set_cates.iter().find(|i| i.name == "t1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
+    assert_eq!(tree.main.len(), 7);
+    assert!(tree.main.iter().find(|i| i.name == "t1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By sys_context");
     assert!(IamSetServ::delete_set_cate(&set_cate_t2_tenant_id, &funs, sys_context).await.is_err());
@@ -525,7 +525,7 @@ pub async fn test_multi_level_by_tenant_context(
     .await?;
 
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By tenant_context");
-    let set_cates = IamSetServ::get_tree(
+    let tree = IamSetServ::get_tree(
         &sys_set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
@@ -535,8 +535,8 @@ pub async fn test_multi_level_by_tenant_context(
         t2_context,
     )
     .await?;
-    assert_eq!(set_cates.len(), 5);
-    assert!(set_cates.iter().find(|i| i.name == "t2私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
+    assert_eq!(tree.main.len(), 5);
+    assert!(tree.main.iter().find(|i| i.name == "t2私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By tenant_context");
     assert!(IamSetServ::delete_set_cate(&set_cate_t2_tenant_id, &funs, t2_context).await.is_err());
@@ -655,7 +655,7 @@ pub async fn test_multi_level_by_app_context(
     .await?;
 
     info!("【test_cc_set】 : test_multi_level : Find Set Cate By app_context");
-    let set_cates = IamSetServ::get_tree(
+    let tree = IamSetServ::get_tree(
         &sys_set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
@@ -665,8 +665,8 @@ pub async fn test_multi_level_by_app_context(
         t2_a1_context,
     )
     .await?;
-    assert_eq!(set_cates.len(), 3);
-    assert!(set_cates.iter().find(|i| i.name == "t2_a1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
+    assert_eq!(tree.main.len(), 3);
+    assert!(tree.main.iter().find(|i| i.name == "t2_a1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By app_context");
     let item_id1 = IamSetServ::add_set_item(

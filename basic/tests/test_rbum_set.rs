@@ -1,9 +1,3 @@
-use tardis::basic::dto::TardisContext;
-use tardis::basic::field::TrimString;
-use tardis::basic::result::TardisResult;
-use tardis::log::info;
-use tardis::TardisFuns;
-
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
@@ -17,6 +11,11 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
+use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
+use tardis::basic::result::TardisResult;
+use tardis::log::info;
+use tardis::TardisFuns;
 
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_set(context).await?;
@@ -349,26 +348,27 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(rbums.page_number, 1);
     assert_eq!(rbums.page_size, 10);
     assert_eq!(rbums.total_size, 1);
-    assert_eq!(rbums.records.get(0).unwrap().name, "l2_1_2");
-    assert_eq!(rbums.records.get(0).unwrap().bus_code, "dddddd");
+    assert_eq!(rbums.records[0].name, "l2_1_2");
+    assert_eq!(rbums.records[0].bus_code, "dddddd");
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all");
     let rbums = RbumSetServ::get_tree(&set_id, &RbumSetTreeFilterReq::default(), &funs, context).await?;
-    assert_eq!(rbums.len(), 7);
-    assert_eq!(rbums.get(0).unwrap().id, l1_id);
-    assert_eq!(rbums.get(0).unwrap().pid, None);
-    assert_eq!(rbums.get(1).unwrap().id, l1_1_id);
-    assert_eq!(rbums.get(1).unwrap().pid, Some(l1_id.clone()));
-    assert_eq!(rbums.get(2).unwrap().id, l2_id);
-    assert_eq!(rbums.get(2).unwrap().pid, None);
-    assert_eq!(rbums.get(3).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(3).unwrap().pid, Some(l2_id.clone()));
-    assert_eq!(rbums.get(4).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(4).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(5).unwrap().id, l2_1_2_id);
-    assert_eq!(rbums.get(5).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(6).unwrap().id, l3_id);
-    assert_eq!(rbums.get(6).unwrap().pid, None);
+    assert_eq!(rbums.main.len(), 7);
+    assert_eq!(rbums.main[0].id, l1_id);
+    assert_eq!(rbums.main[0].pid, None);
+    assert_eq!(rbums.main[1].id, l1_1_id);
+    assert_eq!(rbums.main[1].pid, Some(l1_id.clone()));
+    assert_eq!(rbums.main[2].id, l2_id);
+    assert_eq!(rbums.main[2].pid, None);
+    assert_eq!(rbums.main[3].id, l2_1_id);
+    assert_eq!(rbums.main[3].pid, Some(l2_id.clone()));
+    assert_eq!(rbums.main[4].id, l2_1_1_id);
+    assert_eq!(rbums.main[4].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[5].id, l2_1_2_id);
+    assert_eq!(rbums.main[5].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[6].id, l3_id);
+    assert_eq!(rbums.main[6].pid, None);
+    assert!(rbums.ext.is_none());
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all, fetch_cate_item=true");
     let rbums = RbumSetServ::get_tree(
@@ -381,26 +381,47 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 7);
-    assert_eq!(rbums.get(0).unwrap().id, l1_id);
-    assert_eq!(rbums.get(0).unwrap().pid, None);
-    assert_eq!(rbums.get(1).unwrap().id, l1_1_id);
-    assert_eq!(rbums.get(1).unwrap().pid, Some(l1_id.clone()));
-    assert_eq!(rbums.get(2).unwrap().id, l2_id);
-    assert_eq!(rbums.get(2).unwrap().pid, None);
-    assert_eq!(rbums.get(3).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
-    assert_eq!(rbums.get(3).unwrap().pid, Some(l2_id.clone()));
-    assert_eq!(rbums.get(4).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(4).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_id, context.owner);
-    assert_eq!(rbums.get(4).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(5).unwrap().id, l2_1_2_id);
-    assert_eq!(rbums.get(5).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(6).unwrap().id, l3_id);
-    assert_eq!(rbums.get(6).unwrap().pid, None);
+    assert_eq!(rbums.main.len(), 7);
+    assert_eq!(rbums.main[0].id, l1_id);
+    assert_eq!(rbums.main[0].pid, None);
+    assert_eq!(rbums.main[1].id, l1_1_id);
+    assert_eq!(rbums.main[1].pid, Some(l1_id.clone()));
+    assert_eq!(rbums.main[2].id, l2_id);
+    assert_eq!(rbums.main[2].pid, None);
+    assert_eq!(rbums.main[3].id, l2_1_id);
+    assert_eq!(rbums.main[3].pid, Some(l2_id.clone()));
+    assert_eq!(rbums.main[4].id, l2_1_1_id);
+    assert_eq!(rbums.main[4].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[5].id, l2_1_2_id);
+    assert_eq!(rbums.main[5].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[6].id, l3_id);
+    assert_eq!(rbums.main[6].pid, None);
+    let ext = rbums.ext.unwrap();
+    assert!(ext.items[&rbums.main[0].id].is_empty());
+    assert!(ext.items[&rbums.main[1].id].is_empty());
+    assert!(ext.items[&rbums.main[2].id].is_empty());
+    assert_eq!(ext.items[&rbums.main[3].id].len(), 1);
+    assert_eq!(ext.items[&rbums.main[3].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(ext.items[&rbums.main[3].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(ext.items[&rbums.main[3].id][0].rel_rbum_item_name, "应用1");
+    assert_eq!(ext.items[&rbums.main[4].id].len(), 1);
+    assert_eq!(ext.items[&rbums.main[4].id][0].rel_rbum_item_id, context.owner);
+    assert!(ext.items[&rbums.main[5].id].is_empty());
+    assert_eq!(ext.item_kinds.len(), 2);
+    assert_eq!(ext.item_kinds[&kind_app_id].name, "APP");
+    let kind_account_id = ext.item_kinds.keys().find(|k| *k != &kind_app_id).unwrap();
+    assert_eq!(ext.item_domains.len(), 2);
+    assert_eq!(ext.item_domains[&domain_iam_id].name, "IAM2");
+    assert_eq!(ext.item_number_agg[""].len(), 2);
+    assert_eq!(ext.item_number_agg[""][&kind_app_id], 1);
+    assert_eq!(ext.item_number_agg[""][kind_account_id], 1);
+    assert_eq!(ext.item_number_agg[&rbums.main[2].id].len(), 2);
+    assert_eq!(ext.item_number_agg[&rbums.main[2].id][&kind_app_id], 1);
+    assert_eq!(ext.item_number_agg[&rbums.main[2].id][kind_account_id], 1);
+    assert_eq!(ext.item_number_agg[&rbums.main[3].id].len(), 2);
+    assert_eq!(ext.item_number_agg[&rbums.main[3].id][&kind_app_id], 1);
+    assert_eq!(ext.item_number_agg[&rbums.main[4].id].len(), 1);
+    assert_eq!(ext.item_number_agg[&rbums.main[4].id][kind_account_id], 1);
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_sys_codes=0000,0001");
     let rbums = RbumSetServ::get_tree(
@@ -414,9 +435,9 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 2);
-    assert_eq!(rbums.get(0).unwrap().id, l1_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_id);
+    assert_eq!(rbums.main.len(), 2);
+    assert_eq!(rbums.main[0].id, l1_id);
+    assert_eq!(rbums.main[1].id, l2_id);
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_sys_codes=0001,filter_sys_code_query_kind=CurrentAndSub");
     let rbums = RbumSetServ::get_tree(
@@ -431,20 +452,20 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 4);
-    assert_eq!(rbums.get(0).unwrap().id, l2_id);
-    assert_eq!(rbums.get(0).unwrap().pid, None);
-    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
-    assert_eq!(rbums.get(1).unwrap().pid, Some(l2_id.clone()));
-    assert_eq!(rbums.get(2).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(2).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_id, context.owner);
-    assert_eq!(rbums.get(2).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(3).unwrap().id, l2_1_2_id);
-    assert_eq!(rbums.get(3).unwrap().pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main.len(), 4);
+    assert_eq!(rbums.main[0].id, l2_id);
+    assert_eq!(rbums.main[0].pid, None);
+    assert_eq!(rbums.main[1].id, l2_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id].len(), 1);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.main[1].pid, Some(l2_id.clone()));
+    assert_eq!(rbums.main[2].id, l2_1_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[2].id][0].rel_rbum_item_id, context.owner);
+    assert_eq!(rbums.main[2].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[3].id, l2_1_2_id);
+    assert_eq!(rbums.main[3].pid, Some(l2_1_id.clone()));
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some1");
     let rbums = RbumSetServ::get_tree(
@@ -458,26 +479,26 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 7);
-    assert_eq!(rbums.get(0).unwrap().id, l1_id);
-    assert_eq!(rbums.get(0).unwrap().pid, None);
-    assert_eq!(rbums.get(1).unwrap().id, l1_1_id);
-    assert_eq!(rbums.get(1).unwrap().pid, Some(l1_id.clone()));
-    assert_eq!(rbums.get(2).unwrap().id, l2_id);
-    assert_eq!(rbums.get(2).unwrap().pid, None);
-    assert_eq!(rbums.get(3).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
-    assert_eq!(rbums.get(3).unwrap().pid, Some(l2_id.clone()));
-    assert_eq!(rbums.get(4).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(4).unwrap().rbum_set_items.len(), 0);
-    assert_eq!(rbums.get(4).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(5).unwrap().id, l2_1_2_id);
-    assert_eq!(rbums.get(5).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(6).unwrap().id, l3_id);
-    assert_eq!(rbums.get(6).unwrap().pid, None);
+    assert_eq!(rbums.main.len(), 7);
+    assert_eq!(rbums.main[0].id, l1_id);
+    assert_eq!(rbums.main[0].pid, None);
+    assert_eq!(rbums.main[1].id, l1_1_id);
+    assert_eq!(rbums.main[1].pid, Some(l1_id.clone()));
+    assert_eq!(rbums.main[2].id, l2_id);
+    assert_eq!(rbums.main[2].pid, None);
+    assert_eq!(rbums.main[3].id, l2_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id].len(), 1);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id][0].rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.main[3].pid, Some(l2_id.clone()));
+    assert_eq!(rbums.main[4].id, l2_1_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[4].id].len(), 0);
+    assert_eq!(rbums.main[4].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[5].id, l2_1_2_id);
+    assert_eq!(rbums.main[5].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[6].id, l3_id);
+    assert_eq!(rbums.main[6].pid, None);
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2");
     let rbums = RbumSetServ::get_tree(
@@ -491,26 +512,26 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 7);
-    assert_eq!(rbums.get(0).unwrap().id, l1_id);
-    assert_eq!(rbums.get(0).unwrap().pid, None);
-    assert_eq!(rbums.get(1).unwrap().id, l1_1_id);
-    assert_eq!(rbums.get(1).unwrap().pid, Some(l1_id.clone()));
-    assert_eq!(rbums.get(2).unwrap().id, l2_id);
-    assert_eq!(rbums.get(2).unwrap().pid, None);
-    assert_eq!(rbums.get(3).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(3).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
-    assert_eq!(rbums.get(3).unwrap().pid, Some(l2_id.clone()));
-    assert_eq!(rbums.get(4).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(4).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_id, context.owner);
-    assert_eq!(rbums.get(4).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(5).unwrap().id, l2_1_2_id);
-    assert_eq!(rbums.get(5).unwrap().pid, Some(l2_1_id.clone()));
-    assert_eq!(rbums.get(6).unwrap().id, l3_id);
-    assert_eq!(rbums.get(6).unwrap().pid, None);
+    assert_eq!(rbums.main.len(), 7);
+    assert_eq!(rbums.main[0].id, l1_id);
+    assert_eq!(rbums.main[0].pid, None);
+    assert_eq!(rbums.main[1].id, l1_1_id);
+    assert_eq!(rbums.main[1].pid, Some(l1_id.clone()));
+    assert_eq!(rbums.main[2].id, l2_id);
+    assert_eq!(rbums.main[2].pid, None);
+    assert_eq!(rbums.main[3].id, l2_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id].len(), 1);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[3].id][0].rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.main[3].pid, Some(l2_id.clone()));
+    assert_eq!(rbums.main[4].id, l2_1_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[4].id][0].rel_rbum_item_id, context.owner);
+    assert_eq!(rbums.main[4].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[5].id, l2_1_2_id);
+    assert_eq!(rbums.main[5].pid, Some(l2_1_id.clone()));
+    assert_eq!(rbums.main[6].id, l3_id);
+    assert_eq!(rbums.main[6].pid, None);
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2, hide");
     let rbums = RbumSetServ::get_tree(
@@ -525,15 +546,15 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 3);
-    assert_eq!(rbums.get(0).unwrap().id, l2_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
-    assert_eq!(rbums.get(2).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(2).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_id, context.owner);
+    assert_eq!(rbums.main.len(), 3);
+    assert_eq!(rbums.main[0].id, l2_id);
+    assert_eq!(rbums.main[1].id, l2_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id].len(), 1);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.main[2].id, l2_1_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[2].id][0].rel_rbum_item_id, context.owner);
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2, filter_cate_item_kind_ids=some, hide");
     let rbums = RbumSetServ::get_tree(
@@ -549,13 +570,13 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 2);
-    assert_eq!(rbums.get(0).unwrap().id, l2_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.main.len(), 2);
+    assert_eq!(rbums.main[0].id, l2_id);
+    assert_eq!(rbums.main[1].id, l2_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id].len(), 1);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_name, "应用1");
 
     info!(
         "【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some2, filter_cate_item_kind_ids=some, \
@@ -575,13 +596,13 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 2);
-    assert_eq!(rbums.get(0).unwrap().id, l2_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.len(), 1);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_kind_id, kind_app_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_domain_id, domain_iam_id);
-    assert_eq!(rbums.get(1).unwrap().rbum_set_items.get(0).unwrap().rel_rbum_item_name, "应用1");
+    assert_eq!(rbums.main.len(), 2);
+    assert_eq!(rbums.main[0].id, l2_id);
+    assert_eq!(rbums.main[1].id, l2_1_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id].len(), 1);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_kind_id, kind_app_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_domain_id, domain_iam_id);
+    assert_eq!(rbums.ext.as_ref().unwrap().items[&rbums.main[1].id][0].rel_rbum_item_name, "应用1");
 
     info!(
         "【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree_all,fetch_cate_item=true,filter_cate_item_ids=some3, filter_cate_item_kind_ids=some, \
@@ -601,7 +622,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert!(rbums.is_empty());
+    assert!(rbums.main.is_empty());
 
     info!("【test_rbum_set_cate】 : Test Find By Set : RbumSetCateServ::get_tree by_level");
     let rbums = RbumSetServ::get_tree(
@@ -615,13 +636,13 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 3);
-    assert_eq!(rbums.get(0).unwrap().id, l1_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_id);
-    assert_eq!(rbums.get(2).unwrap().id, l3_id);
-    let l1_sys_code = rbums.get(0).unwrap().sys_code.clone();
-    let l2_sys_code = rbums.get(1).unwrap().sys_code.clone();
-    let l3_sys_code = rbums.get(2).unwrap().sys_code.clone();
+    assert_eq!(rbums.main.len(), 3);
+    assert_eq!(rbums.main[0].id, l1_id);
+    assert_eq!(rbums.main[1].id, l2_id);
+    assert_eq!(rbums.main[2].id, l3_id);
+    let l1_sys_code = rbums.main[0].sys_code.clone();
+    let l2_sys_code = rbums.main[1].sys_code.clone();
+    let l3_sys_code = rbums.main[2].sys_code.clone();
     let rbums = RbumSetServ::get_tree(
         &set_id,
         &RbumSetTreeFilterReq {
@@ -635,8 +656,8 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 1);
-    assert_eq!(rbums.get(0).unwrap().id, l1_1_id);
+    assert_eq!(rbums.main.len(), 1);
+    assert_eq!(rbums.main[0].id, l1_1_id);
     let rbums = RbumSetServ::get_tree(
         &set_id,
         &RbumSetTreeFilterReq {
@@ -650,9 +671,9 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 2);
-    assert_eq!(rbums.get(0).unwrap().id, l1_1_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_1_id);
+    assert_eq!(rbums.main.len(), 2);
+    assert_eq!(rbums.main[0].id, l1_1_id);
+    assert_eq!(rbums.main[1].id, l2_1_id);
     let rbums = RbumSetServ::get_tree(
         &set_id,
         &RbumSetTreeFilterReq {
@@ -666,7 +687,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 0);
+    assert_eq!(rbums.main.len(), 0);
     let rbums = RbumSetServ::get_tree(
         &set_id,
         &RbumSetTreeFilterReq {
@@ -680,9 +701,9 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 1);
-    assert_eq!(rbums.get(0).unwrap().id, l2_1_id);
-    let l2_1_sys_code = rbums.get(0).unwrap().sys_code.clone();
+    assert_eq!(rbums.main.len(), 1);
+    assert_eq!(rbums.main[0].id, l2_1_id);
+    let l2_1_sys_code = rbums.main[0].sys_code.clone();
     let rbums = RbumSetServ::get_tree(
         &set_id,
         &RbumSetTreeFilterReq {
@@ -696,9 +717,9 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(rbums.len(), 2);
-    assert_eq!(rbums.get(0).unwrap().id, l2_1_1_id);
-    assert_eq!(rbums.get(1).unwrap().id, l2_1_2_id);
+    assert_eq!(rbums.main.len(), 2);
+    assert_eq!(rbums.main[0].id, l2_1_1_id);
+    assert_eq!(rbums.main[1].id, l2_1_2_id);
 
     info!("【test_rbum_set_cate】 : Test Delete : RbumSetCateServ::delete_rbum");
     assert!(RbumSetCateServ::delete_rbum(&l2_1_id, &funs, context).await.is_err());
@@ -945,9 +966,9 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-    assert_eq!(set_infos.len(), 2);
-    assert_eq!(set_infos.get(1).unwrap().rbum_set_items.len(), 2);
-    assert!(set_infos.get(1).unwrap().rbum_set_items.iter().any(|r| r.rel_rbum_item_name == "用户1"));
+    assert_eq!(set_infos.main.len(), 2);
+    assert_eq!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].len(), 2);
+    assert!(set_infos.ext.as_ref().unwrap().items[&set_infos.main[1].id].iter().any(|r| r.rel_rbum_item_name == "用户1"));
 
     info!("【test_rbum_set_item】 : Test Get : RbumSetItemServ::get_rbum");
     let rbum = RbumSetItemServ::get_rbum(
@@ -969,7 +990,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_set_item】 : Test Find Set Paths : RbumSetItemServ::get_rbum");
     let set_paths = RbumSetItemServ::find_set_paths(&item_account_a1_id, &set_id, &funs, context).await?;
     assert_eq!(set_paths.len(), 1);
-    assert_eq!(set_paths.get(0).unwrap().len(), 2);
+    assert_eq!(set_paths[0].len(), 2);
     assert!(set_paths.get(0).unwrap().iter().any(|i| i.name == "l2"));
     assert!(set_paths.get(0).unwrap().iter().any(|i| i.name == "l1"));
 

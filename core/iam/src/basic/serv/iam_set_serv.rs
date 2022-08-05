@@ -159,13 +159,13 @@ impl<'a> IamSetServ {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await
     }
 
-    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
         RbumSetServ::get_tree(set_id, filter, funs, ctx).await
     }
 
-    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
-        let account_rel_sys_codes = Self::get_tree(
+    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let tree_with_account = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
@@ -176,13 +176,11 @@ impl<'a> IamSetServ {
             funs,
             ctx,
         )
-        .await?
-        .into_iter()
-        .filter(|cate| !cate.rbum_set_items.is_empty())
-        .map(|cate| cate.sys_code)
-        .collect::<Vec<String>>();
+        .await?;
+        let tree_ext = tree_with_account.ext.as_ref().unwrap();
+        let account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
         if account_rel_sys_codes.is_empty() {
-            return Ok(vec![]);
+            return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
         Self::get_tree(
             set_id,
@@ -198,19 +196,19 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
         Self::get_tree_with_sys_code(set_id, &menu_sys_code, funs, ctx).await
     }
 
-    pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?).unwrap();
         Self::get_tree_with_sys_code(set_id, &api_sys_code, funs, ctx).await
     }
 
-    async fn get_tree_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<RbumSetTreeResp>> {
+    async fn get_tree_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         RbumSetServ::get_tree(
             set_id,
             &RbumSetTreeFilterReq {

@@ -20,7 +20,7 @@ pub struct IamCtResApi;
 impl IamCtResApi {
     /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]
-    async fn get_menu_tree(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetTreeResp>> {
+    async fn get_menu_tree(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Res, ""), true, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree(&set_id, &funs, &ctx.0).await?;
