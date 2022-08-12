@@ -1,14 +1,14 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::Serialize;
-use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
-use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
-use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::{self, Condition, EntityTrait, FromQueryResult, QueryFilter, Select};
 use tardis::regex::Regex;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
@@ -207,7 +207,7 @@ where
         if let Some(id) = id {
             Self::after_add_rbum(&id, add_req, funs, ctx).await?;
             rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, ctx).await?;
-            Ok(id)
+            Ok(id.to_string())
         } else {
             return Err(funs.err().internal_error(
                 &Self::get_obj_name(),
