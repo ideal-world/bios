@@ -10,7 +10,7 @@ use tardis::db::sea_orm::*;
 /// A resource kind is a set of common resources. \
 /// E.g. `/tenant/**` , `/app/**` these are all APIs, and these are all API-kind resources; `/tenant/list` ,
 /// `/tenant/detail#more` these are all menus, and these are all  menu-kind resources.
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

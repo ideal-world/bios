@@ -6,7 +6,7 @@ use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Tab
 use tardis::db::sea_orm::*;
 
 /// Resource extended attribute value model
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_item_attr")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

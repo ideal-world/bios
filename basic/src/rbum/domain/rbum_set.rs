@@ -8,7 +8,7 @@ use tardis::db::sea_orm::*;
 /// Resource set model
 ///
 /// Resource set is essentially a general tree structure processing model
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_set")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

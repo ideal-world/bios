@@ -12,7 +12,7 @@ use tardis::db::sea_orm::*;
 ///
 /// E.g. All menu resources are provided by IAM components, and all IaaS resources are provided by CMDB components.
 /// IAM components and CMDB components are resource domains.
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_domain")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

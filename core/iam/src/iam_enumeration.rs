@@ -22,14 +22,14 @@ pub enum Tag {
     Passport,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertKernelKind {
     UserPwd,
     MailVCode,
     PhoneVCode,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertExtKind {
     Gitlab,
     Github,
@@ -37,7 +37,7 @@ pub enum IamCertExtKind {
     // TODO
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertTokenKind {
     TokenDefault,
     TokenPc,
@@ -55,7 +55,7 @@ impl IamCertTokenKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamRelKind {
     IamAccountRole,
     IamResRole,
@@ -64,7 +64,7 @@ pub enum IamRelKind {
     IamAccountRel,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamResKind {
     Menu,
     Api,
@@ -97,7 +97,7 @@ impl TryGetable for IamResKind {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamSetKind {
     Org,
     Res,
