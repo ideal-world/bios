@@ -3,6 +3,7 @@ FROM ubuntu
 WORKDIR /bios
 
 RUN mkdir ./config
+COPY ./config/locale/ ./config/
 COPY ./bios-serv-all ./bios-serv-all
 
 EXPOSE 8080

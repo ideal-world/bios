@@ -1,3 +1,4 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, payload::Json};
@@ -16,13 +17,19 @@ pub struct IamCaAppApi;
 #[poem_openapi::OpenApi(prefix_path = "/ca/app", tag = "crate::iam_enumeration::Tag::App")]
 impl IamCaAppApi {
     /// Modify Current App
+    ///
+    /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(&self, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::modify_item(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &mut modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     /// Get Current App

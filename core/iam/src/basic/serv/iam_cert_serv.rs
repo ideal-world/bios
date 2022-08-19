@@ -446,6 +446,7 @@ impl<'a> IamCertServ {
             owner: account_id.to_string(),
             roles: vec![],
             groups: vec![],
+            ..Default::default()
         };
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
         IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
@@ -552,6 +553,7 @@ impl<'a> IamCertServ {
             owner: "".to_string(),
             roles: vec![],
             groups: vec![],
+            ..Default::default()
         }
     }
 }

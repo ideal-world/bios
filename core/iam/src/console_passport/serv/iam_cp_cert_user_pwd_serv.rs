@@ -28,6 +28,7 @@ impl<'a> IamCpCertUserPwdServ {
             owner: rbum_item_id.to_string(),
             roles: vec![],
             groups: vec![],
+            ..Default::default()
         };
         IamCertUserPwdServ::modify_cert(
             &IamUserPwdCertModifyReq {

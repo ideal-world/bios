@@ -213,6 +213,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         roles: account_resp.roles.iter().map(|i| i.0.to_string()).collect(),
         // TODO
         groups: vec![],
+        ..Default::default()
     };
 
     info!("【test_cp_all】 : Modify Password, original password error");

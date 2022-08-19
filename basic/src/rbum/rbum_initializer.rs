@@ -71,6 +71,7 @@ pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_cod
             ak: "_".to_string(),
             roles: vec![],
             groups: vec![],
+            ext: Default::default(),
         }))
     } else {
         Ok(None)
