@@ -1070,7 +1070,7 @@ impl<'a> RbumCertServ {
         if !rbum_cert_conf.ak_rule.is_empty()
             && !Regex::new(&rbum_cert_conf.ak_rule)
                 .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("ak rule is invalid:{}", e), "400-rbum-cert-conf-ak-rule-invalid"))?
-                .is_match(&add_req.ak.to_string())
+                .is_match(add_req.ak.as_ref())
                 .unwrap_or(false)
         {
             return Err(funs.err().bad_request(

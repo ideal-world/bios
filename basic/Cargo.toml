@@ -30,10 +30,10 @@ async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { version = "0.1.0-alpha18", optional = true }
+tardis = { version = "0.1.0-alpha22", optional = true }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha18", features = ["test", "reldb", "sea-orm"] }
+tardis = { version = "0.1.0-alpha22", features = ["test", "reldb", "sea-orm"] }
 
 [[test]]
 name = "test_rbum"

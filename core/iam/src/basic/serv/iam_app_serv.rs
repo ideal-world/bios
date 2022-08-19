@@ -144,6 +144,7 @@ impl<'a> IamAppServ {
             roles: vec![],
             groups: vec![],
             owner: add_req.admin_id.clone(),
+            ..Default::default()
         };
         Self::add_item(
             &mut IamAppAddReq {

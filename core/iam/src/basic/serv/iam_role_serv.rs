@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::SelectStatement;
@@ -134,21 +135,28 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
             )
             .await?;
         let role_id = id.to_string();
+        let ctx_clone = ctx.clone();
         if modify_req.disabled.unwrap_or(false) {
-            let ctx = ctx.clone();
-            tardis::tokio::spawn(async move {
-                let funs = iam_constants::get_tardis_inst();
-                let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx).await.unwrap() as isize;
-                let mut page_number = 1;
-                while count > 0 {
-                    let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
-                    for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+            TaskProcessor::execute_task_with_ctx(
+                &funs.conf::<IamConfig>().cache_key_async_task_status,
+                || async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap() as isize;
+                    let mut page_number = 1;
+                    while count > 0 {
+                        let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                        for id in ids {
+                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                        }
+                        page_number += 1;
+                        count -= 100;
                     }
-                    page_number += 1;
-                    count -= 100;
-                }
-            });
+                    Ok(())
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
         Ok(())
     }
@@ -156,20 +164,27 @@ impl<'a> RbumItemCrudOperation<'a, iam_role::ActiveModel, IamRoleAddReq, IamRole
     async fn after_delete_item(id: &str, _: &Option<IamRoleDetailResp>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
         funs.cache().del(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await?;
         let role_id = id.to_string();
-        let ctx = ctx.clone();
-        tardis::tokio::spawn(async move {
-            let funs = iam_constants::get_tardis_inst();
-            let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx).await.unwrap() as isize;
-            let mut page_number = 1;
-            while count > 0 {
-                let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
-                for id in ids {
-                    IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+        let ctx_clone = ctx.clone();
+        TaskProcessor::execute_task_with_ctx(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            || async move {
+                let funs = iam_constants::get_tardis_inst();
+                let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap() as isize;
+                let mut page_number = 1;
+                while count > 0 {
+                    let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                    for id in ids {
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                    }
+                    page_number += 1;
+                    count -= 100;
                 }
-                page_number += 1;
-                count -= 100;
-            }
-        });
+                Ok(())
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 

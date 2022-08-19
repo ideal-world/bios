@@ -5,7 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
@@ -139,8 +139,8 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     assert!(!tenant.cert_conf_by_mail_vcode);
 
     // Modify Tenant by Tenant Id
-    let _: Void = client
-        .put(
+    let modify_tenant_resp: TardisResp<Option<String>> = client
+        .put_resp(
             &format!("/cs/tenant/{}?tenant_id={}", tenant_id, tenant_id),
             &IamTenantAggModifyReq {
                 name: Some(TrimString("测试公司_new".to_string())),
@@ -169,6 +169,13 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
             },
         )
         .await;
+
+    assert_eq!(modify_tenant_resp.code, "202");
+    let task_id = modify_tenant_resp.data.unwrap().unwrap();
+    print!("modify tenant task id: {}", task_id);
+
+    let task_status: bool = client.get(&format!("/cc/system/task/{}", task_id)).await;
+    assert!(!task_status);
 
     // Get Tenant by Tenant Id
     let tenant: IamTenantAggDetailResp = client.get(&format!("/cs/tenant/{}?tenant_id={}", tenant_id, tenant_id)).await;
@@ -674,8 +681,8 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
         )
         .await;
 
-    let _: Void = client
-        .put(
+    let modify_role_resp: TardisResp<Option<String>> = client
+        .put_resp(
             &format!("/cs/role/{}", role_id),
             &IamRoleAggModifyReq {
                 role: IamRoleModifyReq {
@@ -689,6 +696,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
             },
         )
         .await;
+    assert_eq!(modify_role_resp.code, "200");
 
     // Find Roles
     let roles: TardisPage<IamRoleSummaryResp> = client.get("/cs/role?with_sub=true&page_number=1&page_size=10").await;

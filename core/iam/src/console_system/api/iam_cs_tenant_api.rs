@@ -1,7 +1,8 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
-use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -28,14 +29,26 @@ impl IamCsTenantApi {
     }
 
     /// Modify Tenant By Tenant Id
+    ///
+    /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, tenant_id: Query<Option<String>>, modify_req: Json<IamTenantAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify(
+        &self,
+        id: Path<String>,
+        tenant_id: Query<Option<String>>,
+        modify_req: Json<IamTenantAggModifyReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         funs.begin().await?;
         IamTenantServ::modify_tenant_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx)? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     /// Get Tenant By Tenant Id

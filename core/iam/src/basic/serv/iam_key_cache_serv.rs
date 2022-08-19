@@ -1,6 +1,7 @@
 use std::default::Default;
 use std::str::FromStr;
 
+use bios_basic::process::task_processor::TaskProcessor;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
@@ -103,40 +104,48 @@ impl<'a> IamIdentCacheServ {
         } else {
             tenant_or_app_id.clone()
         };
-        let ctx = ctx.clone();
-        tardis::tokio::spawn(async move {
-            let funs = iam_constants::get_tardis_inst();
-            let filter = IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some(own_paths),
-                    with_sub_own_paths: true,
+        let ctx_clone = ctx.clone();
+        TaskProcessor::execute_task_with_ctx(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move || async move {
+                let funs = iam_constants::get_tardis_inst();
+                let filter = IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(own_paths),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            };
-            let mut count = IamAccountServ::count_items(&filter, &funs, &ctx).await.unwrap() as isize;
-            let mut page_number = 1;
-            while count > 0 {
-                let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
-                for id in ids {
-                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
-                }
-                page_number += 1;
-                count -= 100;
-            }
-            if is_app {
-                let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx).await.unwrap() as isize;
+                };
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx).await.unwrap().records;
+                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
                     for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                        Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
                     }
                     page_number += 1;
                     count -= 100;
                 }
-            }
-        });
+                if is_app {
+                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap() as isize;
+                    let mut page_number = 1;
+                    while count > 0 {
+                        let ids =
+                            IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                        for id in ids {
+                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                        }
+                        page_number += 1;
+                        count -= 100;
+                    }
+                }
+                Ok(())
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 
@@ -163,6 +172,7 @@ impl<'a> IamIdentCacheServ {
                     owner: account_info.account_id.to_string(),
                     roles: account_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
                     groups: account_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
+                    ..Default::default()
                 })?,
             )
             .await?;
@@ -177,6 +187,7 @@ impl<'a> IamIdentCacheServ {
                         owner: account_info.account_id.to_string(),
                         roles: account_app_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
                         groups: account_app_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
+                        ..Default::default()
                     })?,
                 )
                 .await?;

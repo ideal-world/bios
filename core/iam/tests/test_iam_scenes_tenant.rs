@@ -4,7 +4,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
@@ -84,8 +84,8 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
     assert!(tenant.cert_conf_by_mail_vcode);
 
     // Modify Current Tenant
-    let _: Void = client
-        .put(
+    let modify_tenant_resp: TardisResp<Option<String>> = client
+        .put_resp(
             "/ct/tenant",
             &IamTenantAggModifyReq {
                 name: Some(TrimString("测试公司".to_string())),
@@ -114,6 +114,8 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
             },
         )
         .await;
+    assert_eq!(modify_tenant_resp.code, "200");
+
     let tenant: IamTenantAggDetailResp = client.get("/ct/tenant").await;
     assert_eq!(tenant.name, "测试公司");
     assert!(tenant.cert_conf_by_user_pwd.repeatable);
@@ -492,8 +494,8 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     assert!(res.get(0).unwrap().rel_name.contains("Console"));
 
     // Modify Role by Role Id
-    let _: Void = client
-        .put(
+    let modify_role_resp: TardisResp<Option<String>> = client
+        .put_resp(
             &format!("/ct/role/{}", role_id),
             &IamRoleAggModifyReq {
                 role: IamRoleModifyReq {
@@ -507,6 +509,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
             },
         )
         .await;
+    assert_eq!(modify_role_resp.code, "200");
 
     // Get Role By Role Id
     let role: IamRoleDetailResp = client.get(&format!("/ct/role/{}", role_id)).await;

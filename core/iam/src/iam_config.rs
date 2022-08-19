@@ -29,6 +29,7 @@ pub struct IamConfig {
     // time_stamp -> res_uri##action
     pub cache_key_res_changed_info_: String,
     pub cache_key_res_changed_expire_sec: usize,
+    pub cache_key_async_task_status: String,
     pub mail_template_cert_activate_title: String,
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
@@ -73,6 +74,7 @@ impl Default for IamConfig {
             mail_template_cert_login_title: "IAM Service Mail login verification".to_string(),
             mail_template_cert_login_content: "Your account is trying to login, verification code: {vcode}".to_string(),
             ldap: IamLdapConfig::default(),
+            cache_key_async_task_status: "iam:cache:task:status".to_string(),
         }
     }
 }

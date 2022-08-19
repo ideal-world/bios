@@ -5,7 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
@@ -109,8 +109,8 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
     assert_eq!(client.context().own_paths, format!("{}/{}", tenant_id, app_id));
 
     // Modify App
-    let _: Void = client
-        .put(
+    let modify_app_resp: TardisResp<Option<String>> = client
+        .put_resp(
             "/ca/app",
             &IamAppModifyReq {
                 name: Some(TrimString("DevOps项目".to_string())),
@@ -122,6 +122,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
             },
         )
         .await;
+    assert_eq!(modify_app_resp.code, "200");
 
     // Get App
     let app: IamAppDetailResp = client.get("/ca/app").await;
@@ -182,8 +183,8 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     assert!(res.get(0).unwrap().rel_name.contains("Console"));
 
     // Modify Role by Role Id
-    let _: Void = client
-        .put(
+    let modify_role_resp: TardisResp<Option<String>> = client
+        .put_resp(
             &format!("/ca/role/{}", role_id),
             &IamRoleAggModifyReq {
                 role: IamRoleModifyReq {
@@ -197,6 +198,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
             },
         )
         .await;
+    assert_eq!(modify_role_resp.code, "200");
 
     // Get Role By Role Id
     let role: IamRoleDetailResp = client.get(&format!("/ca/role/{}", role_id)).await;

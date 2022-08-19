@@ -159,6 +159,7 @@ impl<'a> IamTenantServ {
             roles: vec![],
             groups: vec![],
             owner: tenant_admin_id.to_string(),
+            ..Default::default()
         };
         Self::add_item(
             &mut IamTenantAddReq {
