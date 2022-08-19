@@ -2,8 +2,8 @@ FROM ubuntu
 
 WORKDIR /bios
 
-RUN mkdir ./config
-COPY ./config/locale/ ./config/
+RUN mkdir -p ./config/locale/
+COPY ./config/locale/ ./config/locale/
 COPY ./bios-serv-all ./bios-serv-all
 
 EXPOSE 8080
