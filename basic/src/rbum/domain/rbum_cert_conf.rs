@@ -8,7 +8,7 @@ use tardis::db::sea_orm::*;
 /// Credential or authentication configuration model
 ///
 /// Uniform use of cert refers to credentials or authentication
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_cert_conf")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

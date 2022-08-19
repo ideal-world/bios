@@ -9,7 +9,7 @@ use tardis::db::sea_orm::*;
 /// Relationship environment condition model
 ///
 /// This model is used to further qualify the conditions under which the relationship is established
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_rel_env")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

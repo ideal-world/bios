@@ -12,7 +12,7 @@ use tardis::db::sea_orm::*;
 ///
 /// Each resource corresponds to a unique uri,
 /// and the uri consists of `<resource kind>://<resource domain>/<resource code>`
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_item")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]

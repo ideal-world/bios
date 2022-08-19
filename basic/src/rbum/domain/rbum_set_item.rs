@@ -8,7 +8,7 @@ use tardis::db::sea_orm::*;
 /// Resource item model
 ///
 /// Used to bind resources to resource set categories
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_set_cate_item")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
