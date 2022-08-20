@@ -27,7 +27,7 @@ use crate::iam_enumeration::{IamRelKind, IamSetKind};
 pub struct IamAppServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, IamAppSummaryResp, IamAppDetailResp, IamAppFilterReq> for IamAppServ {
+impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, IamAppSummaryResp, IamAppDetailResp, IamAppFilterReq> for IamAppServ {
     fn get_ext_table_name() -> &'static str {
         iam_app::Entity.table_name()
     }
@@ -40,7 +40,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
-    async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+    async fn package_item_add(add_req: &IamAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
             code: None,
@@ -50,7 +50,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &IamAppAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_app::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamAppAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<iam_app::ActiveModel> {
         Ok(iam_app::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -60,7 +60,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
@@ -72,7 +72,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_app::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamAppModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_app::ActiveModel>> {
         if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() {
             return Ok(None);
         }
@@ -92,18 +92,18 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
         Ok(Some(iam_app))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
         }
         Ok(())
     }
 
-    async fn before_delete_item(_: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamAppDetailResp>> {
+    async fn before_delete_item(_: &str, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<IamAppDetailResp>> {
         Err(funs.err().conflict(&Self::get_obj_name(), "delete", "app can only be disabled but not deleted", "409-iam-app-can-not-delete"))
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAppFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_app::Entity, iam_app::Column::ContactPhone));
         query.column((iam_app::Entity, iam_app::Column::Icon));
         query.column((iam_app::Entity, iam_app::Column::Sort));
@@ -114,7 +114,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_app::ActiveModel, IamAppAddReq, IamAppMod
     }
 }
 
-impl<'a> IamAppServ {
+impl IamAppServ {
     pub fn get_new_id() -> String {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_APP_LEN as usize)
     }
@@ -123,7 +123,7 @@ impl<'a> IamAppServ {
         rbum_scope_helper::get_scope_level_by_context(ctx).unwrap() == RBUM_SCOPE_LEVEL_APP
     }
 
-    pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
         if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
             Ok(id)
         } else {
@@ -136,7 +136,7 @@ impl<'a> IamAppServ {
         }
     }
 
-    pub async fn add_app_agg(add_req: &IamAppAggAddReq, funs: &TardisFunsInst<'a>, tenant_ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_app_agg(add_req: &IamAppAggAddReq, funs: &TardisFunsInst, tenant_ctx: &TardisContext) -> TardisResult<String> {
         let app_id = Self::get_new_id();
         let app_ctx = TardisContext {
             own_paths: format!("{}/{}", tenant_ctx.own_paths, app_id),
@@ -169,19 +169,19 @@ impl<'a> IamAppServ {
         Ok(app_id)
     }
 
-    pub async fn add_rel_account(app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_rel_account(app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, ignore_exist_error, funs, ctx).await
     }
 
-    pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await
     }
 
-    pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+    pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, app_id, funs, ctx).await
     }
 
-    pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumItemRelFilterReq>> {
+    pub fn with_app_rel_filter(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<Option<RbumItemRelFilterReq>> {
         Ok(Some(RbumItemRelFilterReq {
             rel_by_from: true,
             tag: Some(IamRelKind::IamAccountApp.to_string()),

@@ -25,7 +25,7 @@ use crate::iam_enumeration::{IamRelKind, IamResKind};
 pub struct IamResServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResModifyReq, IamResSummaryResp, IamResDetailResp, IamResFilterReq> for IamResServ {
+impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, IamResSummaryResp, IamResDetailResp, IamResFilterReq> for IamResServ {
     fn get_ext_table_name() -> &'static str {
         iam_res::Entity.table_name()
     }
@@ -38,7 +38,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
-    async fn package_item_add(add_req: &IamResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+    async fn package_item_add(add_req: &IamResAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: None,
             code: Some(add_req.code.clone()),
@@ -48,7 +48,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &IamResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_res::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamResAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<iam_res::ActiveModel> {
         Ok(iam_res::ActiveModel {
             id: Set(id.to_string()),
             kind: Set(add_req.kind.to_int()),
@@ -61,12 +61,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         })
     }
 
-    async fn before_add_item(add_req: &mut IamResAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn before_add_item(add_req: &mut IamResAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         add_req.encoding();
         Ok(())
     }
 
-    async fn after_add_item(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let res = Self::peek_item(
             id,
             &IamResFilterReq {
@@ -86,7 +86,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         Ok(())
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
@@ -98,7 +98,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_res::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_res::ActiveModel>> {
         if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.hide.is_none() && modify_req.action.is_none() {
             return Ok(None);
         }
@@ -121,7 +121,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         Ok(Some(iam_res))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamResModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamResModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(disabled) = modify_req.disabled {
             let res = Self::peek_item(
                 id,
@@ -147,7 +147,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         Ok(())
     }
 
-    async fn before_delete_item(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
+    async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
         Ok(Some(
             Self::get_item(
                 id,
@@ -165,7 +165,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         ))
     }
 
-    async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         if let Some(deleted_item) = deleted_item {
             if deleted_item.kind == IamResKind::Api {
                 IamResCacheServ::delete_res(&deleted_item.code, &deleted_item.method, funs).await?;
@@ -176,7 +176,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         }
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamResFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamResFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_res::Entity, iam_res::Column::Kind));
         query.column((iam_res::Entity, iam_res::Column::Icon));
         query.column((iam_res::Entity, iam_res::Column::Sort));
@@ -189,12 +189,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         Ok(())
     }
 
-    async fn peek_item(id: &str, filter: &IamResFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<IamResSummaryResp> {
+    async fn peek_item(id: &str, filter: &IamResFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResSummaryResp> {
         let res = Self::do_peek_item(id, filter, funs, ctx).await?;
         Ok(res.decoding())
     }
 
-    async fn get_item(id: &str, filter: &IamResFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<IamResDetailResp> {
+    async fn get_item(id: &str, filter: &IamResFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamResDetailResp> {
         let res = Self::do_get_item(id, filter, funs, ctx).await?;
         Ok(res.decoding())
     }
@@ -205,7 +205,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<IamResSummaryResp>> {
         let mut res = Self::do_paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
@@ -219,7 +219,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<IamResDetailResp>> {
         let mut res = Self::do_paginate_detail_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
@@ -227,7 +227,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         Ok(res)
     }
 
-    async fn find_one_item(filter: &IamResFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<IamResSummaryResp>> {
+    async fn find_one_item(filter: &IamResFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamResSummaryResp>> {
         let res = Self::do_find_one_item(filter, funs, ctx).await?;
         if let Some(r) = res {
             Ok(Some(r.decoding()))
@@ -240,14 +240,14 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         filter: &IamResFilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<IamResSummaryResp>> {
         let res = Self::do_find_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         Ok(res.into_iter().map(|r| r.decoding()).collect())
     }
 
-    async fn find_one_detail_item(filter: &IamResFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
+    async fn find_one_detail_item(filter: &IamResFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamResDetailResp>> {
         let res = Self::do_find_one_detail_item(filter, funs, ctx).await?;
         if let Some(r) = res {
             Ok(Some(r.decoding()))
@@ -260,7 +260,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
         filter: &IamResFilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<IamResDetailResp>> {
         let res = Self::do_find_detail_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
@@ -268,14 +268,14 @@ impl<'a> RbumItemCrudOperation<'a, iam_res::ActiveModel, IamResAddReq, IamResMod
     }
 }
 
-impl<'a> IamResServ {
+impl IamResServ {
     pub async fn find_from_id_rel_roles(
         rel_kind: &IamRelKind,
         with_sub: bool,
         res_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
         IamRelServ::find_from_id_rels(rel_kind, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
@@ -286,7 +286,7 @@ impl<'a> IamResServ {
         res_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
         IamRelServ::find_to_id_rels(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx).await
@@ -298,7 +298,7 @@ impl<'a> IamResServ {
         res_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_from_simple_rels(rel_kind, with_sub, res_id, desc_by_create, desc_by_update, funs, ctx).await
@@ -309,7 +309,7 @@ impl<'a> IamResServ {
         res_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_to_simple_rels(rel_kind, res_id, desc_by_create, desc_by_update, funs, ctx).await
@@ -323,7 +323,7 @@ impl<'a> IamResServ {
         page_size: u64,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         IamRelServ::paginate_from_simple_rels(rel_kind, with_sub, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
@@ -336,13 +336,13 @@ impl<'a> IamResServ {
         page_size: u64,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
         IamRelServ::paginate_to_simple_rels(rel_kind, res_id, page_number, page_size, desc_by_create, desc_by_update, funs, ctx).await
     }
 
-    pub async fn add_res_agg(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_res_agg(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let res_id = Self::add_item(&mut add_req.res, funs, ctx).await?;
         IamSetServ::add_set_item(
             &IamSetItemAddReq {

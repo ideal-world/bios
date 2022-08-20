@@ -24,13 +24,8 @@ use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertMailVCodeServ;
 
-impl<'a> IamCertMailVCodeServ {
-    pub async fn add_cert_conf(
-        add_req: &IamMailVCodeCertConfAddOrModifyReq,
-        rel_iam_item_id: Option<String>,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+impl IamCertMailVCodeServ {
+    pub async fn add_cert_conf(add_req: &IamMailVCodeCertConfAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKernelKind::MailVCode.to_string()),
@@ -63,7 +58,7 @@ impl<'a> IamCertMailVCodeServ {
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -93,7 +88,7 @@ impl<'a> IamCertMailVCodeServ {
         Ok(())
     }
 
-    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let vcode = Self::get_vcode();
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -117,13 +112,13 @@ impl<'a> IamCertMailVCodeServ {
         Ok(id)
     }
 
-    pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
         Self::send_activation_mail(account_id, mail, &vcode, funs, ctx).await
     }
 
-    async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
         let mut subject = funs.conf::<IamConfig>().mail_template_cert_activate_title.clone();
         let mut content = funs.conf::<IamConfig>().mail_template_cert_activate_content.clone();
@@ -146,7 +141,7 @@ impl<'a> IamCertMailVCodeServ {
         Ok(())
     }
 
-    pub async fn activate_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn activate_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let cert = RbumCertServ::find_one_rbum(
@@ -191,7 +186,7 @@ impl<'a> IamCertMailVCodeServ {
         Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
     }
 
-    pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(mail, &vcode, own_paths, funs).await?;
         let mut subject = funs.conf::<IamConfig>().mail_template_cert_login_title.clone();

@@ -32,7 +32,7 @@ use crate::iam_enumeration::{IamCertKernelKind, IamSetKind};
 pub struct IamTenantServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, IamTenantModifyReq, IamTenantSummaryResp, IamTenantDetailResp, IamTenantFilterReq> for IamTenantServ {
+impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantModifyReq, IamTenantSummaryResp, IamTenantDetailResp, IamTenantFilterReq> for IamTenantServ {
     fn get_ext_table_name() -> &'static str {
         iam_tenant::Entity.table_name()
     }
@@ -45,7 +45,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
-    async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+    async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
             code: None,
@@ -55,7 +55,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &IamTenantAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_tenant::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamTenantAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<iam_tenant::ActiveModel> {
         Ok(iam_tenant::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -66,7 +66,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
@@ -78,7 +78,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_tenant::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_tenant::ActiveModel>> {
         if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.contact_phone.is_none() && modify_req.note.is_none() {
             return Ok(None);
         }
@@ -101,14 +101,14 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         Ok(Some(iam_tenant))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, false, funs, ctx).await?;
         }
         Ok(())
     }
 
-    async fn before_delete_item(_: &str, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<IamTenantDetailResp>> {
+    async fn before_delete_item(_: &str, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<IamTenantDetailResp>> {
         Err(funs.err().conflict(
             &Self::get_obj_name(),
             "delete",
@@ -117,7 +117,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
         ))
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamTenantFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamTenantFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_tenant::Entity, iam_tenant::Column::Icon));
         query.column((iam_tenant::Entity, iam_tenant::Column::Sort));
         query.column((iam_tenant::Entity, iam_tenant::Column::ContactPhone));
@@ -129,12 +129,12 @@ impl<'a> RbumItemCrudOperation<'a, iam_tenant::ActiveModel, IamTenantAddReq, Iam
     }
 }
 
-impl<'a> IamTenantServ {
+impl IamTenantServ {
     pub fn get_new_id() -> String {
         TardisFuns::field.nanoid_len(RBUM_ITEM_ID_TENANT_LEN as usize)
     }
 
-    pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {
         if ctx.own_paths.is_empty() {
             Ok("".to_string())
         } else if let Some(id) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths) {
@@ -149,7 +149,7 @@ impl<'a> IamTenantServ {
         }
     }
 
-    pub async fn add_tenant_agg(add_req: &IamTenantAggAddReq, funs: &TardisFunsInst<'a>) -> TardisResult<(String, String)> {
+    pub async fn add_tenant_agg(add_req: &IamTenantAggAddReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let tenant_admin_id = TardisFuns::field.nanoid();
         // TODO security check
         let tenant_id = IamTenantServ::get_new_id();
@@ -235,7 +235,7 @@ impl<'a> IamTenantServ {
         Ok((tenant_id, pwd))
     }
 
-    pub async fn modify_tenant_agg(id: &str, modify_req: &IamTenantAggModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_tenant_agg(id: &str, modify_req: &IamTenantAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::modify_item(
             id,
             &mut IamTenantModifyReq {
@@ -290,7 +290,7 @@ impl<'a> IamTenantServ {
         Ok(())
     }
 
-    pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
+    pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
         let tenant = Self::get_item(id, filter, funs, ctx).await?;
         let cert_confs = IamCertServ::find_cert_conf_with_kernel_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
         let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).unwrap();

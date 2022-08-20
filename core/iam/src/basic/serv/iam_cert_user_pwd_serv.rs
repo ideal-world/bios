@@ -18,13 +18,8 @@ use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertUserPwdServ;
 
-impl<'a> IamCertUserPwdServ {
-    pub async fn add_cert_conf(
-        add_req: &IamUserPwdCertConfAddOrModifyReq,
-        rel_iam_item_id: Option<String>,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+impl IamCertUserPwdServ {
+    pub async fn add_cert_conf(add_req: &IamUserPwdCertConfAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKernelKind::UserPwd.to_string()),
@@ -57,7 +52,7 @@ impl<'a> IamCertUserPwdServ {
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -91,7 +86,7 @@ impl<'a> IamCertUserPwdServ {
         add_req: &IamUserPwdCertAddReq,
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: Option<String>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertServ::add_rbum(
@@ -119,7 +114,7 @@ impl<'a> IamCertUserPwdServ {
         modify_req: &IamUserPwdCertModifyReq,
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
@@ -146,13 +141,7 @@ impl<'a> IamCertUserPwdServ {
         }
     }
 
-    pub async fn reset_sk(
-        modify_req: &IamUserPwdCertRestReq,
-        rel_iam_item_id: &str,
-        rel_rbum_cert_conf_id: &str,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    pub async fn reset_sk(modify_req: &IamUserPwdCertRestReq, rel_iam_item_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
@@ -177,7 +166,7 @@ impl<'a> IamCertUserPwdServ {
         }
     }
 
-    pub fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst) -> TardisResult<String> {
         if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
             return Err(funs.err().bad_request(
                 "iam_cert_conf",
@@ -192,7 +181,7 @@ impl<'a> IamCertUserPwdServ {
         ))
     }
 
-    pub fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst) -> TardisResult<String> {
         if cert_conf_by_user_pwd.sk_rule_len_max < cert_conf_by_user_pwd.sk_rule_len_min {
             return Err(funs.err().bad_request(
                 "iam_cert_conf",

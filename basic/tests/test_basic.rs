@@ -71,6 +71,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         ak: "".to_string(),
         roles: vec![],
         groups: vec![],
+        ..Default::default()
     };
 
     let kind_tenant_id = RbumKindServ::add_rbum(
@@ -184,5 +185,6 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         ak: "".to_string(),
         roles: vec![],
         groups: vec![],
+        ..Default::default()
     })
 }

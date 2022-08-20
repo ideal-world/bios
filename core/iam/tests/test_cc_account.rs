@@ -151,7 +151,7 @@ async fn test_multi_level_add<'a>(
     t2_context: &TardisContext,
     t2_a1_context: &TardisContext,
     t2_a2_context: &TardisContext,
-    funs: &TardisFunsInst<'a>,
+    funs: &TardisFunsInst,
 ) -> TardisResult<(String, String, String, String, String)> {
     info!("【test_cc_account】 : test_multi_level : Add Account");
 

@@ -33,7 +33,7 @@ use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind
 
 pub struct IamCertServ;
 
-impl<'a> IamCertServ {
+impl IamCertServ {
     pub fn get_new_pwd() -> String {
         TardisFuns::field.nanoid_len(10)
     }
@@ -42,7 +42,7 @@ impl<'a> IamCertServ {
         user_pwd_cert_conf_add_req: IamUserPwdCertConfAddOrModifyReq,
         phone_vcode_cert_conf_add_req: Option<IamPhoneVCodeCertConfAddOrModifyReq>,
         mail_vcode_cert_conf_add_req: Option<IamMailVCodeCertConfAddOrModifyReq>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
         let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(&user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
@@ -109,14 +109,14 @@ impl<'a> IamCertServ {
         Ok(rbum_cert_conf_user_pwd_id)
     }
 
-    pub async fn init_default_ext_conf(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn init_default_ext_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::add_ext_cert_conf(&IamCertExtKind::Gitlab, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Self::add_ext_cert_conf(&IamCertExtKind::Github, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Self::add_ext_cert_conf(&IamCertExtKind::Wechat, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Ok(())
     }
 
-    pub async fn get_cert_conf(id: &str, iam_item_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
+    pub async fn get_cert_conf(id: &str, iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
         RbumCertConfServ::get_rbum(
             id,
             &RbumCertConfFilterReq {
@@ -135,7 +135,7 @@ impl<'a> IamCertServ {
         iam_item_id: Option<String>,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertConfSummaryResp>> {
         let result = RbumCertConfServ::find_rbums(
@@ -170,7 +170,7 @@ impl<'a> IamCertServ {
         iam_item_id: Option<String>,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertConfDetailResp>> {
         let result = RbumCertConfServ::find_detail_rbums(
@@ -210,7 +210,7 @@ impl<'a> IamCertServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<RbumCertConfSummaryResp>> {
         RbumCertConfServ::paginate_rbums(
@@ -235,7 +235,7 @@ impl<'a> IamCertServ {
         .await
     }
 
-    pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let rbum_cert_conf = RbumCertConfServ::peek_rbum(
             id,
             &RbumCertConfFilterReq {
@@ -257,7 +257,7 @@ impl<'a> IamCertServ {
         Ok(result)
     }
 
-    pub async fn clean_cache_by_cert_conf(id: &str, fetched_cert_conf: Option<RbumCertConfSummaryResp>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn clean_cache_by_cert_conf(id: &str, fetched_cert_conf: Option<RbumCertConfSummaryResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf = if let Some(rbum_cert_conf) = fetched_cert_conf {
             rbum_cert_conf
         } else {
@@ -284,7 +284,7 @@ impl<'a> IamCertServ {
         Ok(())
     }
 
-    pub async fn add_ext_cert_conf(rel_iam_cert_kind: &IamCertExtKind, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_ext_cert_conf(rel_iam_cert_kind: &IamCertExtKind, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(rel_iam_cert_kind.to_string()),
@@ -321,7 +321,7 @@ impl<'a> IamCertServ {
         add_req: &mut IamExtCertAddReq,
         account_id: &str,
         rel_iam_cert_kind: &IamCertExtKind,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_code(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
@@ -346,7 +346,7 @@ impl<'a> IamCertServ {
         Ok(id)
     }
 
-    pub async fn get_ext_cert(account_id: &str, rel_iam_cert_kind: &IamCertExtKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_ext_cert(account_id: &str, rel_iam_cert_kind: &IamCertExtKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_code(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
@@ -391,13 +391,13 @@ impl<'a> IamCertServ {
         filter: &RbumCertFilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertSummaryResp>> {
         RbumCertServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
-    pub async fn delete_cert(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let cert = RbumCertServ::peek_rbum(
             id,
             &RbumCertFilterReq {
@@ -416,17 +416,17 @@ impl<'a> IamCertServ {
         Ok(result)
     }
 
-    pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub async fn get_cert_conf_id_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<String> {
         Self::get_cert_conf_id_and_ext_by_code(code, rel_iam_item_id, funs).await.map(|r| r.id)
     }
 
-    pub async fn get_cert_conf_id_and_ext_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<RbumCertConfIdAndExtResp> {
+    pub async fn get_cert_conf_id_and_ext_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<RbumCertConfIdAndExtResp> {
         Self::get_cert_conf_id_and_ext_opt_by_code(code, rel_iam_item_id, funs)
             .await?
             .ok_or_else(|| funs.err().not_found("iam_cert_conf", "get", &format!("not found cert conf code {}", code), "401-iam-cert-code-not-exist"))
     }
 
-    pub async fn get_cert_conf_id_and_ext_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
+    pub async fn get_cert_conf_id_and_ext_opt_by_code(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
         RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_code(code, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(), funs).await
     }
 
@@ -435,7 +435,7 @@ impl<'a> IamCertServ {
         ak: &str,
         account_id: &str,
         token_kind: Option<String>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
     ) -> TardisResult<IamAccountInfoResp> {
         let token_kind = IamCertTokenKind::parse(&token_kind);
         let token = TardisFuns::crypto.key.generate_token()?;

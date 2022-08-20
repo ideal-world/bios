@@ -21,6 +21,7 @@ pub async fn test() -> TardisResult<()> {
         owner: "".to_string(),
         roles: vec![],
         groups: vec![],
+        ..Default::default()
     };
 
     let s1 = TardisContext {
@@ -29,6 +30,7 @@ pub async fn test() -> TardisResult<()> {
         owner: "".to_string(),
         roles: vec![],
         groups: vec![],
+        ..Default::default()
     };
 
     let s2 = TardisContext {
@@ -37,6 +39,7 @@ pub async fn test() -> TardisResult<()> {
         owner: "".to_string(),
         roles: vec![],
         groups: vec![],
+        ..Default::default()
     };
 
     let s3 = TardisContext {
@@ -45,6 +48,7 @@ pub async fn test() -> TardisResult<()> {
         owner: "".to_string(),
         roles: vec![],
         groups: vec![],
+        ..Default::default()
     };
 
     RbumDomainServ::add_rbum(
@@ -358,6 +362,7 @@ pub async fn test() -> TardisResult<()> {
             owner: "".to_string(),
             roles: vec![],
             groups: vec![],
+            ..Default::default()
         },
     )
     .await?;
@@ -378,6 +383,7 @@ pub async fn test() -> TardisResult<()> {
             owner: "".to_string(),
             roles: vec![],
             groups: vec![],
+            ..Default::default()
         },
     )
     .await?;

@@ -93,7 +93,7 @@ pub trait RbumConfigApi {
     fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool;
 }
 
-impl<'a> RbumConfigApi for TardisFunsInst<'a> {
+impl RbumConfigApi for TardisFunsInst {
     fn rbum_conf_set_cate_sys_code_node_len(&self) -> usize {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.set_cate_sys_code_node_len)
     }

@@ -11,7 +11,7 @@ const TASK_IN_CTX_FLAG: &str = "task_id";
 
 pub struct TaskProcessor;
 
-impl<'a> TaskProcessor {
+impl TaskProcessor {
     pub async fn init_task(cache_key: &str, cache_client: &TardisCacheClient) -> TardisResult<i64> {
         let task_id = Local::now().timestamp_nanos();
         let max: i64 = u32::MAX.into();
@@ -40,7 +40,7 @@ impl<'a> TaskProcessor {
         Ok(result1 && result2)
     }
 
-    pub async fn execute_task<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst<'a>) -> TardisResult<i64>
+    pub async fn execute_task<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst) -> TardisResult<i64>
     where
         P: FnOnce() -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,
@@ -63,7 +63,7 @@ impl<'a> TaskProcessor {
         Ok(task_id)
     }
 
-    pub async fn execute_task_with_ctx<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()>
+    pub async fn execute_task_with_ctx<P, T>(cache_key: &str, process: P, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
     where
         P: FnOnce() -> T + Send + Sync + 'static,
         T: Future<Output = TardisResult<()>> + Send + 'static,

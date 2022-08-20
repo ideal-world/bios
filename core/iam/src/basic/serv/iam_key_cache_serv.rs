@@ -24,8 +24,8 @@ use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 
 pub struct IamIdentCacheServ;
 
-impl<'a> IamIdentCacheServ {
-    pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: u32, coexist_num: u32, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+impl IamIdentCacheServ {
+    pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: u32, coexist_num: u32, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add token: token={}", token);
         if expire_sec > 0 {
             funs.cache()
@@ -74,7 +74,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn delete_token_by_token(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn delete_token_by_token(token: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete token: token={}", token);
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
@@ -84,7 +84,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn delete_tokens_and_contexts_by_tenant_or_app(tenant_or_app_id: &str, is_app: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_tokens_and_contexts_by_tenant_or_app(tenant_or_app_id: &str, is_app: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tenant_or_app_id = tenant_or_app_id.to_string();
         let own_paths = if is_app {
             IamAppServ::peek_item(
@@ -149,7 +149,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn delete_tokens_and_contexts_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete tokens and contexts: account_id={}", account_id);
         let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         for (token, _) in tokens.iter() {
@@ -160,7 +160,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn add_contexts(account_info: &IamAccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn add_contexts(account_info: &IamAccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add contexts: account_id={:?}", account_info);
         funs.cache()
             .hset(
@@ -195,7 +195,7 @@ impl<'a> IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst<'a>) -> TardisResult<TardisContext> {
+    pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, &fetch_req.token).as_str()).await? {
             let account_id = token_info.split(',').nth(1).unwrap_or("");
             if let Some(context) = funs
@@ -215,8 +215,8 @@ impl<'a> IamIdentCacheServ {
 
 pub struct IamResCacheServ;
 
-impl<'a> IamResCacheServ {
-    pub async fn add_res(item_code: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+impl IamResCacheServ {
+    pub async fn add_res(item_code: &str, action: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add res: uri_mixed={}", uri_mixed);
         funs.cache()
@@ -229,14 +229,14 @@ impl<'a> IamResCacheServ {
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
-    pub async fn delete_res(item_code: &str, action: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn delete_res(item_code: &str, action: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("delete res: uri_mixed={}", uri_mixed);
         funs.cache().hdel(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
-    pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
             // TODO support time range
             return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none", "409-iam-cache-res-date-not-none"));
@@ -268,7 +268,7 @@ impl<'a> IamResCacheServ {
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
-    pub async fn delete_res_rel(item_code: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn delete_res_rel(item_code: &str, action: &str, delete_req: &IamCacheResRelDeleteReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("delete res rel: uri_mixed={}", uri_mixed);
         let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
@@ -295,7 +295,7 @@ impl<'a> IamResCacheServ {
         Err(funs.err().not_found("iam_cache_res", "delete", "not found res rel", "404-iam-cache-res-rel-not-exist"))
     }
 
-    async fn add_change_trigger(uri: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    async fn add_change_trigger(uri: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         funs.cache()
             .set_ex(
                 &format!("{}{}", funs.conf::<IamConfig>().cache_key_res_changed_info_, Utc::now().timestamp_nanos()),

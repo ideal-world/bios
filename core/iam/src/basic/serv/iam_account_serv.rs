@@ -38,9 +38,7 @@ use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
 pub struct IamAccountServ;
 
 #[async_trait]
-impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, IamAccountModifyReq, IamAccountSummaryResp, IamAccountDetailResp, IamAccountFilterReq>
-    for IamAccountServ
-{
+impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccountModifyReq, IamAccountSummaryResp, IamAccountDetailResp, IamAccountFilterReq> for IamAccountServ {
     fn get_ext_table_name() -> &'static str {
         iam_account::Entity.table_name()
     }
@@ -53,7 +51,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
     }
 
-    async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+    async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
             code: None,
@@ -63,7 +61,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &IamAccountAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<iam_account::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &IamAccountAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<iam_account::ActiveModel> {
         Ok(iam_account::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -80,7 +78,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
@@ -92,7 +90,7 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         }))
     }
 
-    async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
+    async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
         if modify_req.icon.is_none() {
             return Ok(None);
         }
@@ -106,19 +104,19 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
         Ok(())
     }
 
-    async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         Ok(())
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAccountFilterReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAccountFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
         query.column((iam_account::Entity, iam_account::Column::Ext1Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext2Idx));
@@ -136,8 +134,8 @@ impl<'a> RbumItemCrudOperation<'a, iam_account::ActiveModel, IamAccountAddReq, I
     }
 }
 
-impl<'a> IamAccountServ {
-    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+impl IamAccountServ {
+    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
@@ -211,7 +209,7 @@ impl<'a> IamAccountServ {
         Ok(account_id)
     }
 
-    pub async fn modify_account_agg(id: &str, modify_req: &IamAccountAggModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_account_agg(id: &str, modify_req: &IamAccountAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamAccountServ::modify_item(
             id,
             &mut IamAccountModifyReq {
@@ -268,7 +266,7 @@ impl<'a> IamAccountServ {
         Ok(())
     }
 
-    pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let id = &ctx.owner;
         IamAccountServ::modify_item(
             id,
@@ -291,7 +289,7 @@ impl<'a> IamAccountServ {
         filter: &IamAccountFilterReq,
         use_sys_org: bool,
         use_sys_cert: bool,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<IamAccountDetailAggResp> {
         let account = IamAccountServ::get_item(account_id, filter, funs, ctx).await?;
@@ -353,7 +351,7 @@ impl<'a> IamAccountServ {
         page_size: u64,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<IamAccountSummaryAggResp>> {
         let accounts = IamAccountServ::paginate_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
@@ -406,7 +404,7 @@ impl<'a> IamAccountServ {
         })
     }
 
-    pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+    pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         IamAccountServ::find_items(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
@@ -429,13 +427,13 @@ impl<'a> IamAccountServ {
         with_sub: bool,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole, with_sub, account_id, desc_by_create, desc_by_update, funs, ctx).await
     }
 
-    pub async fn delete_tokens(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_tokens(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await
     }

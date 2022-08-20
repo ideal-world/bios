@@ -17,13 +17,8 @@ use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertPhoneVCodeServ;
 
-impl<'a> IamCertPhoneVCodeServ {
-    pub async fn add_cert_conf(
-        add_req: &IamPhoneVCodeCertConfAddOrModifyReq,
-        rel_iam_item_id: Option<String>,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+impl IamCertPhoneVCodeServ {
+    pub async fn add_cert_conf(add_req: &IamPhoneVCodeCertConfAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
@@ -56,7 +51,7 @@ impl<'a> IamCertPhoneVCodeServ {
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamPhoneVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -86,13 +81,7 @@ impl<'a> IamCertPhoneVCodeServ {
         Ok(())
     }
 
-    pub async fn add_cert(
-        add_req: &IamPhoneVCodeCertAddReq,
-        account_id: &str,
-        rel_rbum_cert_conf_id: &str,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamPhoneVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let vcode = Self::get_vcode();
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {

@@ -75,7 +75,7 @@ async fn test_multi_level_add<'a>(
     t2_context: &TardisContext,
     t2_a1_context: &TardisContext,
     t2_a2_context: &TardisContext,
-    funs: &TardisFunsInst<'a>,
+    funs: &TardisFunsInst,
 ) -> TardisResult<(String, String, String, String, String, String, String, String, String, String)> {
     info!("【test_cc_attr】 : test_multi_level : Add Account Attr");
     let sys_attr1_id = IamAttrServ::add_account_attr(&package_test_attr_add_req("sys_attr1", None), funs, sys_context).await?;

@@ -20,8 +20,8 @@ use crate::console_passport::dto::iam_cp_account_dto::{IamCpAccountAppInfoResp, 
 
 pub struct IamCpAccountServ;
 
-impl<'a> IamCpAccountServ {
-    pub async fn get_current_account_info(use_sys_cert: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<IamCpAccountInfoResp> {
+impl IamCpAccountServ {
+    pub async fn get_current_account_info(use_sys_cert: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCpAccountInfoResp> {
         let account = IamAccountServ::get_item(ctx.owner.as_str(), &IamAccountFilterReq::default(), funs, ctx).await?;
         let raw_roles = IamAccountServ::find_simple_rel_roles(&account.id, true, Some(true), None, funs, ctx).await?;
         let mut roles: Vec<RbumRelBoneResp> = vec![];

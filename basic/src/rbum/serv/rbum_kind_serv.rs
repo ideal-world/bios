@@ -21,12 +21,12 @@ pub struct RbumKindServ;
 pub struct RbumKindAttrServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp, RbumBasicFilterReq> for RbumKindServ {
+impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp, RbumBasicFilterReq> for RbumKindServ {
     fn get_table_name() -> &'static str {
         rbum_kind::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumKindAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind::ActiveModel> {
+    async fn package_add(add_req: &RbumKindAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_kind::ActiveModel> {
         Ok(rbum_kind::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             code: Set(add_req.code.to_string()),
@@ -40,7 +40,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumKindAddReq, funs: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumKindAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         if !R_URL_PART_CODE.is_match(add_req.code.0.as_str()) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", &format!("code {} is invalid", add_req.code), "400-rbum-*-code-illegal"));
         }
@@ -52,7 +52,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumKindModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumKindModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_kind::ActiveModel> {
         let mut rbum_kind = rbum_kind::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -78,14 +78,14 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
         Ok(rbum_kind)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumKindDetailResp>> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumKindDetailResp>> {
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumKindAttrServ::get_table_name(), rbum_kind_attr::Column::RelRbumKindId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumItemServ::get_table_name(), rbum_item::Column::RelRbumKindId.as_str(), funs).await?;
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query.columns(vec![
             (rbum_kind::Entity, rbum_kind::Column::Id),
@@ -106,8 +106,8 @@ impl<'a> RbumCrudOperation<'a, rbum_kind::ActiveModel, RbumKindAddReq, RbumKindM
     }
 }
 
-impl<'a> RbumKindServ {
-    pub async fn get_rbum_kind_id_by_code(code: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+impl RbumKindServ {
+    pub async fn get_rbum_kind_id_by_code(code: &str, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
         let resp = funs
             .db()
             .get_dto::<IdResp>(Query::select().column(rbum_kind::Column::Id).from(rbum_kind::Entity).and_where(Expr::col(rbum_kind::Column::Code).eq(code)))
@@ -118,14 +118,14 @@ impl<'a> RbumKindServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp, RbumKindAttrFilterReq>
+impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKindAttrModifyReq, RbumKindAttrSummaryResp, RbumKindAttrDetailResp, RbumKindAttrFilterReq>
     for RbumKindAttrServ
 {
     fn get_table_name() -> &'static str {
         rbum_kind_attr::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumKindAttrAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
+    async fn package_add(add_req: &RbumKindAttrAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
         Ok(rbum_kind_attr::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             name: Set(add_req.name.to_string()),
@@ -154,7 +154,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumKindAttrAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumKindAttrAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::check_scope(&add_req.rel_rbum_kind_id, RbumKindServ::get_table_name(), funs, ctx).await?;
         // TODO This check does not consider scope level
         if funs
@@ -176,7 +176,7 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumKindAttrModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumKindAttrModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_kind_attr::ActiveModel> {
         let mut rbum_kind_attr = rbum_kind_attr::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -241,14 +241,14 @@ impl<'a> RbumCrudOperation<'a, rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, 
         Ok(rbum_kind_attr)
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumKindAttrDetailResp>> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumKindAttrDetailResp>> {
         Self::check_ownership(id, funs, ctx).await?;
         Self::check_exist_before_delete(id, RbumItemAttrServ::get_table_name(), rbum_item_attr::Column::RelRbumKindAttrId.as_str(), funs).await?;
         Self::check_exist_before_delete(id, RbumRelAttrServ::get_table_name(), rbum_rel_attr::Column::RelRbumKindAttrId.as_str(), funs).await?;
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumKindAttrFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumKindAttrFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![

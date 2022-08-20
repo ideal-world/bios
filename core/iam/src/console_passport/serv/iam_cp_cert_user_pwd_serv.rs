@@ -17,8 +17,8 @@ use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCpCertUserPwdServ;
 
-impl<'a> IamCpCertUserPwdServ {
-    pub async fn new_pwd_without_login(pwd_new_req: &IamPwdNewReq, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+impl IamCpCertUserPwdServ {
+    pub async fn new_pwd_without_login(pwd_new_req: &IamPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_spec_cert_conf(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await?;
@@ -43,12 +43,12 @@ impl<'a> IamCpCertUserPwdServ {
         .await
     }
 
-    pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamUserPwdCertModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamUserPwdCertModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, ctx).await
     }
 
-    pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst<'a>) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
         // let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         // let (_, _, rbum_item_id) = RbumCertServ::validate(&login_req.ak.0, &login_req.sk.0, &rbum_cert_conf_id, false, &tenant_id, funs).await?;
@@ -57,7 +57,7 @@ impl<'a> IamCpCertUserPwdServ {
         Ok(resp)
     }
 
-    pub async fn get_tenant_id(tenant_id: Option<String>, funs: &TardisFunsInst<'a>) -> TardisResult<String> {
+    pub async fn get_tenant_id(tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<String> {
         let tenant_id = if let Some(tenant_id) = &tenant_id {
             if IamTenantServ::is_disabled(tenant_id, funs).await? {
                 return Err(funs.err().conflict("iam_cert_user_pwd", "login", &format!("tenant {} is disabled", tenant_id), "409-iam-tenant-is-disabled"));
