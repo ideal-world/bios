@@ -9,7 +9,7 @@ use tardis::TardisFunsInst;
 
 use crate::rbum::rbum_config::RbumConfigApi;
 
-pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
     #[cfg(feature = "with-mq")]
     {
         if funs.rbum_conf_match_event(table_name, operate) {
@@ -35,7 +35,7 @@ pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, fu
     }
 }
 
-pub async fn receive<'a, F, T>(fun: F, funs: &TardisFunsInst<'a>) -> TardisResult<bool>
+pub async fn receive<F, T>(fun: F, funs: &TardisFunsInst) -> TardisResult<bool>
 where
     F: Fn((HashMap<String, String>, String)) -> T + Send + Sync + 'static,
     T: Future<Output = TardisResult<()>> + Send + 'static,

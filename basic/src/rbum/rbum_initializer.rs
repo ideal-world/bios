@@ -38,7 +38,7 @@ pub async fn init(code: &str, config: RbumConfig) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_code: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<TardisContext>> {
+pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_code: &str, funs: &TardisFunsInst) -> TardisResult<Option<TardisContext>> {
     #[derive(Deserialize, sea_orm::FromQueryResult, Serialize, Clone, Debug)]
     struct TmpContext {
         pub id: String,
@@ -78,7 +78,7 @@ pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_cod
     }
 }
 
-pub async fn truncate_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(rbum_cert::Entity)).await?;
     funs.db().execute(Table::truncate().table(rbum_cert_conf::Entity)).await?;
     funs.db().execute(Table::truncate().table(rbum_domain::Entity)).await?;

@@ -31,7 +31,7 @@ pub async fn check_cert(account_name_with_tenant: &str, pwd: &str) -> TardisResu
 //
 // }
 
-async fn get_basic_info<'a>(account_name_with_tenant: &str, funs: &TardisFunsInst<'a>) -> TardisResult<(String, String)> {
+async fn get_basic_info<'a>(account_name_with_tenant: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
     let mut account_name_with_tenant = account_name_with_tenant.split('/');
     let (tenant_id, ak) = if account_name_with_tenant.clone().count() == 2 {
         (

@@ -89,7 +89,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(String, String)>> {
+pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, String)>> {
     bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<IamConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = get_first_account_context(iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT, iam_constants::COMPONENT_CODE, &funs).await?;
@@ -109,7 +109,7 @@ pub async fn init_db(mut funs: TardisFunsInst<'_>) -> TardisResult<Option<(Strin
     Ok(sysadmin_info)
 }
 
-async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let kind_tenant_id = RbumKindServ::get_rbum_kind_id_by_code(iam_constants::RBUM_KIND_CODE_IAM_TENANT, funs)
         .await?
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant kind", ""))?;
@@ -175,7 +175,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> 
     Ok(())
 }
 
-pub async fn init_rbum_data(funs: &TardisFunsInst<'_>) -> TardisResult<(String, String)> {
+pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, String)> {
     let default_account_id = TardisFuns::field.nanoid();
 
     let ctx = TardisContext {
@@ -353,7 +353,7 @@ System administrator name: {} ,Initial password: {}
     Ok((iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string(), pwd))
 }
 
-async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     RbumKindServ::add_rbum(
         &mut RbumKindAddReq {
             code: TrimString(scheme.to_string()),
@@ -370,7 +370,7 @@ async fn add_kind<'a>(scheme: &str, ext_table: &str, funs: &TardisFunsInst<'a>, 
     .await
 }
 
-async fn add_domain<'a>(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
             code: TrimString(iam_constants::COMPONENT_CODE.to_string()),
@@ -392,7 +392,7 @@ async fn add_res<'a>(
     cate_api_id: &str,
     code: &str,
     name: &str,
-    funs: &TardisFunsInst<'a>,
+    funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<(String, String)> {
     let res_menu_id = IamResServ::add_res_agg(
@@ -444,7 +444,7 @@ async fn add_res<'a>(
     Ok((res_menu_id, res_api_id))
 }
 
-pub async fn truncate_data<'a>(funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     rbum_initializer::truncate_data(funs).await?;
     funs.db().execute(Table::truncate().table(iam_account::Entity)).await?;
     funs.db().execute(Table::truncate().table(iam_app::Entity)).await?;

@@ -127,7 +127,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_role_app_admin_id(&self) -> String;
 }
 
-impl<'a> IamBasicConfigApi for TardisFunsInst<'a> {
+impl IamBasicConfigApi for TardisFunsInst {
     fn iam_basic_kind_tenant_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.kind_tenant_id.clone())
     }

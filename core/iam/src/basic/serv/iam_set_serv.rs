@@ -24,13 +24,8 @@ const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
 
 pub struct IamSetServ;
 
-impl<'a> IamSetServ {
-    pub async fn init_set(
-        set_kind: IamSetKind,
-        scope_level: RbumScopeLevelKind,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<(String, Option<(String, String)>)> {
+impl IamSetServ {
+    pub async fn init_set(set_kind: IamSetKind, scope_level: RbumScopeLevelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, Option<(String, String)>)> {
         let code = Self::get_default_code(&set_kind, &ctx.own_paths);
         let set_id = RbumSetServ::add_rbum(
             &mut RbumSetAddReq {
@@ -86,11 +81,11 @@ impl<'a> IamSetServ {
         Ok((set_id, cates))
     }
 
-    pub async fn get_default_set_id_by_ctx(kind: &IamSetKind, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_default_set_id_by_ctx(kind: &IamSetKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::get_set_id_by_code(&Self::get_default_code(kind, &ctx.own_paths), true, funs, ctx).await
     }
 
-    pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, ctx)
             .await?
             .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {}", code), "404-rbum-set-code-not-exist"))
@@ -100,7 +95,7 @@ impl<'a> IamSetServ {
         Self::get_default_code(&IamSetKind::Org, "")
     }
 
-    pub fn get_default_org_code_by_tenant(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub fn get_default_org_code_by_tenant(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths) {
             Ok(Self::get_default_code(&IamSetKind::Org, &own_paths))
         } else {
@@ -108,7 +103,7 @@ impl<'a> IamSetServ {
         }
     }
 
-    pub fn get_default_org_code_by_app(funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub fn get_default_org_code_by_app(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if let Some(own_paths) = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_APP.to_int(), &ctx.own_paths) {
             Ok(Self::get_default_code(&IamSetKind::Org, &own_paths))
         } else {
@@ -120,7 +115,7 @@ impl<'a> IamSetServ {
         format!("{}:{}", own_paths, kind.to_string().to_lowercase())
     }
 
-    pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
                 name: add_req.name.clone(),
@@ -138,7 +133,7 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn modify_set_cate(set_cate_id: &str, modify_req: &IamSetCateModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_set_cate(set_cate_id: &str, modify_req: &IamSetCateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumSetCateServ::modify_rbum(
             set_cate_id,
             &mut RbumSetCateModifyReq {
@@ -155,16 +150,16 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await
     }
 
-    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
         RbumSetServ::get_tree(set_id, filter, funs, ctx).await
     }
 
-    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let tree_with_account = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
@@ -196,19 +191,19 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
         Self::get_tree_with_sys_code(set_id, &menu_sys_code, funs, ctx).await
     }
 
-    pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?).unwrap();
         Self::get_tree_with_sys_code(set_id, &api_sys_code, funs, ctx).await
     }
 
-    async fn get_tree_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+    async fn get_tree_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         RbumSetServ::get_tree(
             set_id,
             &RbumSetTreeFilterReq {
@@ -223,7 +218,7 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn add_set_item(add_req: &IamSetItemAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_set_item(add_req: &IamSetItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         RbumSetItemServ::add_rbum(
             &mut RbumSetItemAddReq {
                 sort: add_req.sort,
@@ -237,11 +232,11 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn modify_set_item(set_item_id: &str, modify_req: &mut RbumSetItemModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_set_item(set_item_id: &str, modify_req: &mut RbumSetItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumSetItemServ::modify_rbum(set_item_id, modify_req, funs, ctx).await
     }
 
-    pub async fn delete_set_item(set_item_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<u64> {
+    pub async fn delete_set_item(set_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         RbumSetItemServ::delete_rbum(set_item_id, funs, ctx).await
     }
 
@@ -250,7 +245,7 @@ impl<'a> IamSetServ {
         set_cate_id: Option<String>,
         item_id: Option<String>,
         with_sub: bool,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumSetItemDetailResp>> {
         RbumSetItemServ::find_detail_rbums(
@@ -272,11 +267,11 @@ impl<'a> IamSetServ {
         .await
     }
 
-    pub async fn find_set_paths(set_item_id: &str, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
+    pub async fn find_set_paths(set_item_id: &str, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
         RbumSetItemServ::find_set_paths(set_item_id, set_id, funs, ctx).await
     }
 
-    pub async fn find_flat_set_items(set_id: &str, item_id: &str, with_sub: bool, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+    pub async fn find_flat_set_items(set_id: &str, item_id: &str, with_sub: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
         let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), with_sub, funs, ctx).await?;
         let items = items
             .into_iter()
@@ -290,7 +285,7 @@ impl<'a> IamSetServ {
         Ok(items)
     }
 
-    pub async fn check_scope(app_id: &str, account_id: &str, set_id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<bool> {
+    pub async fn check_scope(app_id: &str, account_id: &str, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         RbumSetItemServ::check_a_is_parent_or_sibling_of_b(account_id, app_id, set_id, funs, ctx).await
     }
 }

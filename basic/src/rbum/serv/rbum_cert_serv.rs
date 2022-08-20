@@ -27,14 +27,14 @@ pub struct RbumCertConfServ;
 pub struct RbumCertServ;
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCertConfModifyReq, RbumCertConfSummaryResp, RbumCertConfDetailResp, RbumCertConfFilterReq>
+impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCertConfModifyReq, RbumCertConfSummaryResp, RbumCertConfDetailResp, RbumCertConfFilterReq>
     for RbumCertConfServ
 {
     fn get_table_name() -> &'static str {
         rbum_cert_conf::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
+    async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         Ok(rbum_cert_conf::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             code: Set(add_req.code.to_string()),
@@ -63,7 +63,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumCertConfAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumCertConfAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(is_basic) = add_req.is_basic {
             if is_basic {
                 add_req.sk_dynamic = Some(false);
@@ -112,7 +112,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumCertConfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         let mut rbum_cert_conf = rbum_cert_conf::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -194,7 +194,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(rbum_cert_conf)
     }
 
-    async fn after_modify_rbum(id: &str, _: &mut RbumCertConfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_rbum(id: &str, _: &mut RbumCertConfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf = Self::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
         let key = &format!(
             "{}{}",
@@ -217,7 +217,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(())
     }
 
-    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
+    async fn before_delete_rbum(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumCertConfDetailResp>> {
         if funs
             .db()
             .count(
@@ -256,7 +256,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumCertConfFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumCertConfFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -313,12 +313,12 @@ impl<'a> RbumCrudOperation<'a, rbum_cert_conf::ActiveModel, RbumCertConfAddReq, 
     }
 }
 
-impl<'a> RbumCertConfServ {
+impl RbumCertConfServ {
     pub async fn get_rbum_cert_conf_id_and_ext_by_code(
         code: &str,
         rbum_domain_id: &str,
         rbum_item_id: &str,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
     ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
         let key = &format!(
             "{}{}",
@@ -355,12 +355,12 @@ impl<'a> RbumCertConfServ {
 }
 
 #[async_trait]
-impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq, RbumCertSummaryResp, RbumCertDetailResp, RbumCertFilterReq> for RbumCertServ {
+impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq, RbumCertSummaryResp, RbumCertDetailResp, RbumCertFilterReq> for RbumCertServ {
     fn get_table_name() -> &'static str {
         rbum_cert::Entity.table_name()
     }
 
-    async fn package_add(add_req: &RbumCertAddReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
+    async fn package_add(add_req: &RbumCertAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         Ok(rbum_cert::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             ak: Set(add_req.ak.to_string()),
@@ -377,7 +377,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         })
     }
 
-    async fn before_add_rbum(add_req: &mut RbumCertAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn before_add_rbum(add_req: &mut RbumCertAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if add_req.sk.is_some() && add_req.vcode.is_some() {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk and vcode can only have one", "400-rbum-cert-sk-vcode-only-one"));
         }
@@ -427,7 +427,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         Ok(())
     }
 
-    async fn after_add_rbum(id: &str, add_req: &RbumCertAddReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_rbum(id: &str, add_req: &RbumCertAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(
             id,
             &RbumCertFilterReq {
@@ -484,7 +484,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisFunsInst<'a>, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         let mut rbum_cert = rbum_cert::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -507,7 +507,7 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
         Ok(rbum_cert)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumCertFilterReq, _: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumCertFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query
             .columns(vec![
@@ -559,8 +559,8 @@ impl<'a> RbumCrudOperation<'a, rbum_cert::ActiveModel, RbumCertAddReq, RbumCertM
     }
 }
 
-impl<'a> RbumCertServ {
-    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+impl RbumCertServ {
+    pub async fn add_vcode_to_cache(ak: &str, vcode: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         funs.cache()
             .set_ex(
                 format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str(),
@@ -571,12 +571,12 @@ impl<'a> RbumCertServ {
         Ok(())
     }
 
-    pub async fn get_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+    pub async fn get_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
         let vcode = funs.cache().get(format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str()).await?;
         Ok(vcode)
     }
 
-    pub async fn get_and_delete_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<Option<String>> {
+    pub async fn get_and_delete_vcode_in_cache(ak: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<Option<String>> {
         let vcode = funs.cache().get(format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str()).await?;
         if vcode.is_some() {
             funs.cache().del(format!("{}{}:{}", funs.rbum_conf_cache_key_cert_vcode_info_(), own_paths, ak).as_str()).await?;
@@ -584,7 +584,7 @@ impl<'a> RbumCertServ {
         Ok(vcode)
     }
 
-    pub async fn check_exist(ak: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst<'a>) -> TardisResult<bool> {
+    pub async fn check_exist(ak: &str, rbum_cert_conf_id: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         let mut query = Query::select();
         query
             .column(rbum_cert::Column::Id)
@@ -603,7 +603,7 @@ impl<'a> RbumCertServ {
         rbum_cert_conf_id: &str,
         ignore_end_time: bool,
         own_paths: &str,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct IdAndSkResp {
@@ -718,7 +718,7 @@ impl<'a> RbumCertServ {
         rel_rbum_kind: &RbumCertRelKind,
         ignore_end_time: bool,
         own_paths: &str,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct IdAndSkResp {
@@ -824,7 +824,7 @@ impl<'a> RbumCertServ {
         rel_rbum_domain_id: &str,
         input_sk: &str,
         ignore_end_time: bool,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct BasicCertInfoResp {
@@ -895,7 +895,7 @@ impl<'a> RbumCertServ {
         }
     }
 
-    async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: u32, sk_lock_err_times: u8, sk_lock_duration_sec: u32, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: u32, sk_lock_err_times: u8, sk_lock_duration_sec: u32, funs: &TardisFunsInst) -> TardisResult<()> {
         if sk_lock_cycle_sec == 0 || sk_lock_err_times == 0 || sk_lock_duration_sec == 0 {
             return Ok(());
         }
@@ -909,7 +909,7 @@ impl<'a> RbumCertServ {
         Ok(())
     }
 
-    pub async fn show_sk(id: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn show_sk(id: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         #[derive(sea_orm::FromQueryResult)]
         struct SkResp {
             pub sk: String,
@@ -930,7 +930,7 @@ impl<'a> RbumCertServ {
         }
     }
 
-    pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(id, filter, funs, ctx).await?;
         let new_sk = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::peek_rbum(
@@ -984,7 +984,7 @@ impl<'a> RbumCertServ {
         Ok(())
     }
 
-    pub async fn change_sk(id: &str, original_sk: &str, input_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn change_sk(id: &str, original_sk: &str, input_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(id, filter, funs, ctx).await?;
         let stored_sk = Self::show_sk(id, filter, funs, ctx).await?;
         let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
@@ -1052,12 +1052,7 @@ impl<'a> RbumCertServ {
         Ok(())
     }
 
-    async fn check_cert_conf_constraint_by_add(
-        add_req: &RbumCertAddReq,
-        rbum_cert_conf: &RbumCertConfSummaryResp,
-        funs: &TardisFunsInst<'a>,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+    async fn check_cert_conf_constraint_by_add(add_req: &RbumCertAddReq, rbum_cert_conf: &RbumCertConfSummaryResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if rbum_cert_conf.sk_need && add_req.sk.is_none() {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required", "400-rbum-cert-sk-require"));
         }

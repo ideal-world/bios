@@ -16,12 +16,12 @@ use crate::iam_enumeration::IamCertTokenKind;
 
 pub struct IamCertTokenServ;
 
-impl<'a> IamCertTokenServ {
+impl IamCertTokenServ {
     pub async fn add_cert_conf(
         add_req: &IamTokenCertConfAddReq,
         token_kind: IamCertTokenKind,
         rel_iam_item_id: Option<String>,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         RbumCertConfServ::add_rbum(
@@ -56,7 +56,7 @@ impl<'a> IamCertTokenServ {
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamTokenCertConfModifyReq, funs: &TardisFunsInst<'a>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamTokenCertConfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -94,7 +94,7 @@ impl<'a> IamCertTokenServ {
         token_kind: &IamCertTokenKind,
         rel_iam_item_id: &str,
         rel_rbum_cert_conf_id: &str,
-        funs: &TardisFunsInst<'a>,
+        funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let cert_conf = RbumCertConfServ::peek_rbum(
@@ -113,7 +113,7 @@ impl<'a> IamCertTokenServ {
         IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, cert_conf.expire_sec, cert_conf.coexist_num, funs).await
     }
 
-    pub async fn delete_cert(token: &str, funs: &TardisFunsInst<'a>) -> TardisResult<()> {
+    pub async fn delete_cert(token: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         IamIdentCacheServ::delete_token_by_token(token, funs).await
     }
 }
