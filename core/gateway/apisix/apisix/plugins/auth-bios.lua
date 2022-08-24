@@ -26,10 +26,13 @@ local schema = {
         cache_key_account_info = { type = "string", default = "iam:cache:account:info:" },
         cache_key_token_local_expire_sec = { type = "integer", default = 0 },
 
-
         cache_key_res_info = { type = "string", default = "iam:res:info" },
         cache_key_res_changed_info = { type = "string", default = "iam:res:changed:info:" },
         cache_key_res_changed_timer_sec = { type = "integer", default = 30 },
+
+        cors_allow_origin = { type = "string", default = "*" },
+        cors_allow_methods = { type = "string", default = "*" },
+        cors_allow_headers = { type = "string", default = "*" },
     },
     required = { "redis_host" }
 }
@@ -58,14 +61,29 @@ function _M.check_schema(conf)
     return true
 end
 
+local function cors(conf)
+    core.response.set_header("Access-Control-Allow-Origin", conf.cors_allow_origin)
+    core.response.set_header("Access-Control-Allow-Methods", conf.cors_allow_methods)
+    core.response.set_header("Access-Control-Allow-Headers", conf.cors_allow_headers)
+    core.response.set_header("Access-Control-Max-Age", "3600000")
+    core.response.set_header("Access-Control-Allow-Credentials", "true")
+    core.response.set_header("Content-Type", "application/json")
+end
+
 function _M.rewrite(conf, ctx)
+    if ctx.var.request_method == "OPTIONS" then
+        cors(conf)
+        return 200
+    end
     local ident_code, ident_message = m_ident.ident(conf, ctx)
     if ident_code ~= 200 then
-        return ident_code, ident_message
+        cors(conf)
+        return ident_code, { message = ident_message }
     end
     local auth_code, auth_message = m_auth.auth(ctx.ident_info)
     if auth_code ~= 200 then
-        return auth_code, auth_message
+        cors(conf)
+        return auth_code, { message = auth_message }
     end
     local context = json.encode({
         own_paths = ctx.ident_info.own_paths,
