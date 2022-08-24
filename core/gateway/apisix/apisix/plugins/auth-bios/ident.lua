@@ -21,11 +21,11 @@ function _M.ident(conf, ctx)
 
     -- check
     if resource_uri == nil or resource_uri == "" then
-        return 400, { message = "Request is not legal, missing [path]" }
+        return 400, "Request is not legal, missing [path]"
     end
     local domain_end_idx = string.find(string.sub(resource_uri, 2), "/")
     if domain_end_idx == nil then
-        return 400, { message = "Request is not legal, missing [domain] in path" }
+        return 400, "Request is not legal, missing [domain] in path"
     end
     local rbum_kind = core.request.header(ctx, protocol_flag)
     if rbum_kind == nil or rbum_kind == "" then
@@ -58,7 +58,7 @@ function _M.ident(conf, ctx)
             own_paths = nil,
             ak = nil,
         }
-        return 200, { message = "" }
+        return 200
     end
 
     -- token
@@ -68,7 +68,7 @@ function _M.ident(conf, ctx)
             error("Redis get error: " .. redis_err)
         end
         if account_info == nil or account_info == "" then
-            return 401, { message = "Token [" .. token .. "] is not legal" }
+            return 401, "Token [" .. token .. "] is not legal"
         end
         local account_id = m_utils.split(account_info, ',')[2]
         local context, redis_err = m_redis.hget(cache_account .. account_id, app_id)
@@ -76,7 +76,7 @@ function _M.ident(conf, ctx)
             error("Redis get error: " .. redis_err)
         end
         if context == nil or context == "" then
-            return 401, { message = "Token [" .. token .. "] with App [" .. app_id .. "] is not legal" }
+            return 401, "Token [" .. token .. "] with App [" .. app_id .. "] is not legal"
         end
         context = json.decode(context)
         local own_paths = m_utils.split(context.own_paths, '/')
@@ -91,10 +91,10 @@ function _M.ident(conf, ctx)
             own_paths = context.own_paths,
             ak = context.ak,
         }
-        return 200, { message = "" }
+        return 200
     end
 
-    return 200, { message = "" }
+    return 200
 end
 
 return _M
