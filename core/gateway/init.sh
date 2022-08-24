@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-set -o pipefail
 set -u
 
 APISIX_VERSION=${APISIX_VERSION:-'2.15.0'}
@@ -27,19 +26,19 @@ init_dev_env(){
     echo "------------------"
     echo "[1/9] install-dependencies"
     echo ""
-    ./utils/install-dependencies.sh
+    bash ./utils/install-dependencies.sh
     echo "[2/9] install LuaRocks"
     echo ""
-    ./utils/linux-install-luarocks.sh
+    bash ./utils/linux-install-luarocks.sh
     echo "[3/9] install etcd"
     echo ""
-    ./utils/linux-install-etcd.sh
+    bash ./utils/linux-install-etcd.sh
     echo "[4/9] start etcd"
     echo ""
     nohup etcd </dev/null >/dev/null 2>&1 &
     echo "[5/9] download apisix"
     echo ""
-    wget https://mirrors.bfsu.edu.cn/apache/apisix/${APISIX_VERSION}/apache-apisix-${APISIX_VERSION}-src.tgz
+    wget --no-check-certificate https://mirrors.bfsu.edu.cn/apache/apisix/${APISIX_VERSION}/apache-apisix-${APISIX_VERSION}-src.tgz
     tar -cvf apisix.tar apisix
     tar -xf apache-apisix-${APISIX_VERSION}-src.tgz -C apisix
     tar -xf apisix.tar

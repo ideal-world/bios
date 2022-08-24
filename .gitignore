@@ -1,15 +1,28 @@
 # Gateway
-/core/gateway/apisix
+/core/gateway/apisix/*
 /core/gateway/etcd
 /core/gateway/default.etcd
+/core/gateway/build.log
 
-!/core/gateway/apisix/apisix/plugins/auth-bios
-!/core/gateway/apisix/apisix/plugins/auth-bios.lua
-!/core/gateway/apisix/conf/config-default.yaml
+!/core/gateway/apisix/t
+/core/gateway/apisix/t/*
 !/core/gateway/apisix/t/plugin/auth-bios
 !/core/gateway/apisix/t/certs
 !/core/gateway/apisix/t/error_page
 !/core/gateway/apisix/t/APISIX.pm
+
+!/core/gateway/apisix/conf
+/core/gateway/apisix/conf/*
+!/core/gateway/apisix/conf/config-default.yaml
+!/core/gateway/apisix/conf/config.yaml
+
+!/core/gateway/apisix/apisix
+/core/gateway/apisix/apisix/*
+!/core/gateway/apisix/apisix/plugins
+/core/gateway/apisix/apisix/plugins/*
+!/core/gateway/apisix/apisix/plugins/auth-bios
+!/core/gateway/apisix/apisix/plugins/auth-bios.lua
+
 
 *-prod.toml
 

@@ -70,7 +70,7 @@ function install_dependencies_with_apt() {
     # add OpenResty source
     sudo apt-get update
     sudo apt-get -y install software-properties-common wget lsb-release
-    wget -qO - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
+    wget --no-check-certificate -qO - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
     arch=$(uname -m | tr '[:upper:]' '[:lower:]')
     arch_path=""
     if [[ $arch == "arm64" ]] || [[ $arch == "aarch64" ]]; then
