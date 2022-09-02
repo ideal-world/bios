@@ -251,7 +251,7 @@ impl IamRoleServ {
         }
         if let Some(spec_scope_level) = spec_scope_level {
             let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
-            if role.scope_level != spec_scope_level {
+            if role.scope_level.to_int() < spec_scope_level.to_int() {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }
