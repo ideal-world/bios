@@ -1,4 +1,7 @@
+use std::collections::HashSet;
+
 use async_trait::async_trait;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -13,7 +16,7 @@ use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_app;
-use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
+use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -143,7 +146,7 @@ impl IamAppServ {
             ak: "".to_string(),
             roles: vec![],
             groups: vec![],
-            owner: add_req.admin_id.clone(),
+            owner: tenant_ctx.owner.to_string(),
             ..Default::default()
         };
         Self::add_item(
@@ -160,13 +163,53 @@ impl IamAppServ {
             &app_ctx,
         )
         .await?;
-
-        IamAppServ::add_rel_account(&app_id, &add_req.admin_id, false, funs, &app_ctx).await?;
-        IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &add_req.admin_id, None, funs, &app_ctx).await?;
+        if let Some(admin_ids) = &add_req.admin_ids {
+            for admin_id in admin_ids {
+                IamAppServ::add_rel_account(&app_id, &admin_id, false, funs, &app_ctx).await?;
+                IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &admin_id, None, funs, &app_ctx).await?;
+            }
+        }
 
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         Ok(app_id)
+    }
+
+    pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let account_ids = IamAppServ::find_rel_account(id, funs, ctx).await?.iter().map(|item| item.rel_id.clone()).collect::<HashSet<String>>();
+        Self::modify_item(
+            id,
+            &mut IamAppModifyReq {
+                name: modify_req.name.clone(),
+                scope_level: modify_req.scope_level.clone(),
+                disabled: modify_req.disabled.clone(),
+                icon: modify_req.icon.clone(),
+                sort: modify_req.sort.clone(),
+                contact_phone: modify_req.contact_phone.clone(),
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        if let Some(admin_ids) = &modify_req.admin_ids {
+            // add new admins
+            for admin_id in admin_ids {
+                if !account_ids.contains(admin_id) {
+                    IamAppServ::add_rel_account(&id, &admin_id, false, funs, &ctx).await?;
+                    IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &admin_id, None, funs, &ctx).await?;
+                }
+            }
+            // delete old admins
+            for account_id in account_ids.difference(&admin_ids.iter().map(|item| item.clone()).collect::<HashSet<String>>()) {
+                IamAppServ::delete_rel_account(&id, &account_id, funs, &ctx).await?;
+                IamRoleServ::delete_rel_account(&funs.iam_basic_role_app_admin_id(), &account_id, None, funs, &ctx).await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn find_rel_account(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_to_simple_rels(&IamRelKind::IamAccountApp, app_id, None, None, funs, ctx).await
     }
 
     pub async fn add_rel_account(app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

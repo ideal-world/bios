@@ -17,8 +17,7 @@ pub struct IamAppAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub app_contact_phone: Option<String>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub admin_id: String,
+    pub admin_ids: Option<Vec<String>>,
 
     pub disabled: Option<bool>,
 }
@@ -38,6 +37,23 @@ pub struct IamAppAddReq {
     pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAppAggModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: Option<TrimString>,
+
+    pub scope_level: Option<RbumScopeLevelKind>,
+    pub disabled: Option<bool>,
+
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub icon: Option<String>,
+    pub sort: Option<u32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub contact_phone: Option<String>,
+
+    pub admin_ids: Option<Vec<String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

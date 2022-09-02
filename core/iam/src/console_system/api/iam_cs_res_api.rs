@@ -46,6 +46,7 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
+    // TODO
     // Find Res
     #[oai(path = "/", method = "get")]
     async fn find(&self, desc_by_create: Query<Option<bool>>, desc_by_update: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<IamResSummaryResp>> {
@@ -169,7 +170,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Add Res Rel Api Res
+    /// Add Api Res To Res
     #[oai(path = "/:id/res/:res_api_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -179,7 +180,7 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Res Rel Api Res
+    /// Delete Api Res By Res Id
     #[oai(path = "/:id/res/:res_api_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -189,7 +190,7 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    /// Count Rel Res By Role Id
+    /// Count Api Res By Res Id
     #[oai(path = "/:id/res/total", method = "get")]
     async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
         let funs = iam_constants::get_tardis_inst();
@@ -197,7 +198,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Find Rel Res By Role Id
+    /// Find Api Res By Res Id
     #[oai(path = "/:id/res", method = "get")]
     async fn find_rel_res(
         &self,
