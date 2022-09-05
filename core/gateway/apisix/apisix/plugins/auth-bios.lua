@@ -4,6 +4,7 @@ local m_init = require("apisix.plugins.auth-bios.init")
 local m_ident = require("apisix.plugins.auth-bios.ident")
 local m_auth = require("apisix.plugins.auth-bios.auth")
 local json = require("cjson")
+local ngx = ngx
 local ngx_encode_base64 = ngx.encode_base64
 
 local plugin_name = "auth-bios"
@@ -33,6 +34,14 @@ local schema = {
         cors_allow_origin = { type = "string", default = "*" },
         cors_allow_methods = { type = "string", default = "*" },
         cors_allow_headers = { type = "string", default = "*" },
+
+        exclude_prefix_paths = {
+            type = "array",
+            items = {
+                type = "string",
+            },
+            default = {}
+        },
     },
     required = { "redis_host" }
 }
@@ -71,6 +80,12 @@ local function cors(conf)
 end
 
 function _M.rewrite(conf, ctx)
+    local path = ngx.var.request_uri
+    for _, prefix_path in pairs(conf.exclude_prefix_paths) do
+        if string.sub(path, 1, string.len(prefix_path)) == prefix_path then
+            return 200
+        end
+    end
     if ctx.var.request_method == "OPTIONS" then
         cors(conf)
         return 200
