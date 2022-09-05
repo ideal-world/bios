@@ -6,7 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_app_dto::{IamAppDetailResp, IamAppModifyReq};
+use crate::basic::dto::iam_app_dto::{IamAppAggModifyReq, IamAppDetailResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
@@ -20,10 +20,10 @@ impl IamCaAppApi {
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, mut modify_req: Json<IamAppModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+    async fn modify(&self, mut modify_req: Json<IamAppAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::modify_item(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &mut modify_req, &funs, &ctx.0).await?;
+        IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &mut modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
             TardisResp::accepted(Some(task_id))

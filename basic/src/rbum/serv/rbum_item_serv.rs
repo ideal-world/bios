@@ -359,6 +359,7 @@ where
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(id.to_string()),
                 to_rbum_item_id: None,
+                ..Default::default()
             },
             funs,
             ctx,
@@ -373,6 +374,7 @@ where
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: None,
                 to_rbum_item_id: Some(id.to_string()),
+                ..Default::default()
             },
             funs,
             ctx,
