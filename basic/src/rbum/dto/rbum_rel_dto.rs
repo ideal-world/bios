@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::default::Default;
 use tardis::chrono::{DateTime, Utc};
 #[cfg(feature = "default")]
 use tardis::db::sea_orm;
@@ -53,8 +53,9 @@ pub struct RbumRelCheckReq {
     pub to_attrs: HashMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[serde(default)]
 pub struct RbumRelFindReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub tag: Option<String>,
@@ -63,6 +64,10 @@ pub struct RbumRelFindReq {
     pub from_rbum_id: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub to_rbum_item_id: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub from_own_paths: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub to_rbum_own_paths: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

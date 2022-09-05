@@ -555,6 +555,8 @@ impl IamRelServ {
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(from_iam_item_id.to_string()),
                 to_rbum_item_id: Some(to_iam_item_id.to_string()),
+                from_own_paths: Some(ctx.own_paths.to_string()),
+                ..Default::default()
             },
             funs,
             ctx,

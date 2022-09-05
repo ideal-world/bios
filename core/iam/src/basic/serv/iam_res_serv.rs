@@ -1,4 +1,8 @@
 use async_trait::async_trait;
+use bios_basic::rbum::rbum_config::RbumConfigApi;
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -7,7 +11,7 @@ use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -343,6 +347,45 @@ impl IamResServ {
     }
 
     pub async fn add_res_agg(add_req: &mut IamResAggAddReq, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        if add_req.res.kind == IamResKind::Menu {
+            let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
+            // todo: check menu cate
+            let menu_ids = &Self::find_id_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    kind: Some(IamResKind::Menu),
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            let count = RbumSetItemServ::count_rbums(
+                &RbumSetItemFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+                    rel_rbum_set_cate_sys_codes: Some(vec![String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?]),
+                    rel_rbum_item_ids: Some(menu_ids.iter().map(|id| id.to_string()).collect()),
+                    rel_rbum_set_id: Some(set_id.to_string()),
+                    rel_rbum_set_cate_ids: Some(vec![add_req.set.set_cate_id.to_string()]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            if count > 0 {
+                return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "conflict error", "409-iam-cate-menu-conflict"));
+            }
+        }
         let res_id = Self::add_item(&mut add_req.res, funs, ctx).await?;
         IamSetServ::add_set_item(
             &IamSetItemAddReq {

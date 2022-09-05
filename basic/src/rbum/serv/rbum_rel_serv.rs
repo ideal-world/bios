@@ -710,6 +710,12 @@ impl RbumRelServ {
         if let Some(to_rbum_item_id) = &find_req.to_rbum_item_id {
             query.and_where(Expr::col(rbum_rel::Column::ToRbumItemId).eq(to_rbum_item_id.to_string()));
         }
+        if let Some(from_own_paths) = &find_req.from_own_paths {
+            query.and_where(Expr::col(rbum_rel::Column::OwnPaths).eq(from_own_paths.to_string()));
+        }
+        if let Some(to_rbum_own_paths) = &find_req.to_rbum_own_paths {
+            query.and_where(Expr::col(rbum_rel::Column::ToOwnPaths).eq(to_rbum_own_paths.to_string()));
+        }
         query.cond_where(
             Cond::all().add(
                 Cond::any()
@@ -795,6 +801,7 @@ impl RbumRelServ {
                 from_rbum_kind: Some(check_req.from_rbum_kind.clone()),
                 from_rbum_id: Some(check_req.from_rbum_id.clone()),
                 to_rbum_item_id: Some(check_req.to_rbum_item_id.clone()),
+                ..Default::default()
             },
             funs,
             ctx,

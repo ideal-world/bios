@@ -97,7 +97,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,
-                admin_id: app_account_id.clone(),
+                admin_ids: Some(vec![app_account_id.clone()]),
                 disabled: None,
             },
         )

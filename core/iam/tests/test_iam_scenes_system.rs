@@ -643,16 +643,16 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
     // Add Rel Res
     let _: Void = client.put(&format!("/cs/res/{}/res/{}", res_menu_id, res_api_id), &Void {}).await;
 
-    // Find Rel Res By Role Id
+    // Find Api Res By Res Id
     let rel_api_res: Vec<RbumRelBoneResp> = client.get(&format!("/cs/res/{}/res", res_menu_id)).await;
     assert_eq!(rel_api_res.len(), 1);
     assert_eq!(rel_api_res.get(0).unwrap().rel_name, "系统控制台功能");
 
-    // Count Rel Res By Role Id
+    // Count Api Res By Res Id
     let rel_api_res: u64 = client.get(&format!("/cs/res/{}/res/total", res_menu_id)).await;
     assert_eq!(rel_api_res, 1);
 
-    // Delete Rel Res
+    // Delete Api Res By Res Id
     client.delete(&format!("/cs/res/{}/res/{}", res_menu_id, res_api_id)).await;
     let rel_api_res: u64 = client.get(&format!("/cs/res/{}/res/total", res_menu_id)).await;
     assert_eq!(rel_api_res, 0);
