@@ -50,13 +50,13 @@ function _M.ident(conf, ctx)
         ctx.ident_info = {
             rbum_uri = rbum_uri,
             rbum_action = rbum_action,
-            iam_app_id = nil,
-            iam_tenant_id = nil,
-            iam_account_id = nil,
-            iam_roles = nil,
-            iam_groups = nil,
-            own_paths = nil,
-            ak = nil,
+            iam_app_id = '',
+            iam_tenant_id = '',
+            iam_account_id = '',
+            iam_roles = {},
+            iam_groups = {},
+            own_paths = '',
+            ak = '',
         }
         return 200
     end
