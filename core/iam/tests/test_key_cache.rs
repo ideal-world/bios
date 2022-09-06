@@ -548,7 +548,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
         2
     );
-    
+
     // todo: test account disabled
     info!("【test_key_cache】 Delete role rel, expected no token record");
     assert!(IamRoleServ::delete_rel_account(role_id, &account_id, None, &funs, &app_admin_context).await.is_err());
