@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -18,7 +18,9 @@ use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, Rb
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::IamSetKind;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
+
+use super::iam_rel_serv::IamRelServ;
 
 const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
 
@@ -189,6 +191,26 @@ impl IamSetServ {
             ctx,
         )
         .await
+    }
+
+    pub async fn get_menu_tree_by_roles(set_id: &str, role_ids: &Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
+        let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
+        let mut res_ids = HashSet::new();
+        for role_id in role_ids {
+            let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &ctx).await?;
+            res_ids.extend(rel_res_ids.into_iter().map(|r| r));
+        }
+        let mut filter = RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![menu_sys_code]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            ..Default::default()
+        };
+        if !res_ids.is_empty() {
+            filter.rel_rbum_item_ids = Some(res_ids.into_iter().collect());
+        }
+        RbumSetServ::get_tree(set_id, &filter, funs, ctx).await
     }
 
     pub async fn get_menu_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
