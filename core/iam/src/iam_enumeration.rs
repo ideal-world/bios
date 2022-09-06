@@ -22,6 +22,39 @@ pub enum Tag {
     Passport,
 }
 
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum IamRoleKind {
+    System,
+    Tenant,
+    App,
+}
+
+impl IamRoleKind {
+    pub fn from_int(s: u8) -> TardisResult<IamRoleKind> {
+        match s {
+            0 => Ok(IamRoleKind::System),
+            1 => Ok(IamRoleKind::Tenant),
+            2 => Ok(IamRoleKind::App),
+            _ => Err(TardisError::format_error(&format!("invalid IamRoleKind: {}", s), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> u8 {
+        match self {
+            IamRoleKind::System => 0,
+            IamRoleKind::Tenant => 1,
+            IamRoleKind::App => 2,
+        }
+    }
+}
+
+impl TryGetable for IamRoleKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = u8::try_get(res, pre, col)?;
+        IamRoleKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+    }
+}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertKernelKind {
     UserPwd,

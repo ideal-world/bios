@@ -13,7 +13,7 @@ use bios_iam::basic::serv::iam_res_serv::IamResServ;
 use bios_iam::basic::serv::iam_role_serv::IamRoleServ;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_GLOBAL, RBUM_SCOPE_LEVEL_TENANT};
-use bios_iam::iam_enumeration::{IamRelKind, IamResKind};
+use bios_iam::iam_enumeration::{IamRelKind, IamResKind, IamRoleKind};
 
 pub async fn test(
     sys_context: &TardisContext,
@@ -43,6 +43,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
             sort: None,
             disabled: None,
             scope_level: None,
+            kind: None,
         },
         &funs,
         context,
@@ -331,6 +332,7 @@ pub async fn test_multi_level_by_sys_context(
             sort: None,
             disabled: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+            kind: None,
         },
         &funs,
         sys_context,
@@ -478,6 +480,7 @@ pub async fn test_multi_level_by_tenant_context(
             sort: None,
             disabled: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+            kind: Some(IamRoleKind::Tenant),
         },
         &funs,
         sys_context,
@@ -648,6 +651,7 @@ pub async fn test_multi_level_by_app_context(
             sort: None,
             disabled: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+            kind: Some(IamRoleKind::System),
         },
         &funs,
         sys_context,

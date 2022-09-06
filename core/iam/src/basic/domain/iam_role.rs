@@ -12,6 +12,8 @@ pub struct Model {
     pub icon: String,
     pub sort: u32,
 
+    pub kind: u8,
+
     pub own_paths: String,
 }
 
@@ -35,6 +37,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .col(ColumnDef::new(Column::Kind).not_null().unsigned())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .to_owned()
     }

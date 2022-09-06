@@ -25,7 +25,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
 pub struct IamRoleServ;
 
@@ -58,6 +58,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
+            kind: Set(add_req.kind.as_ref().unwrap_or(&IamRoleKind::Tenant).to_int()),
             ..Default::default()
         })
     }
@@ -110,6 +111,9 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
         if let Some(sort) = modify_req.sort {
             iam_role.sort = Set(sort);
+        }
+        if let Some(kind) = &modify_req.kind {
+            iam_role.kind = Set(kind.to_int());
         }
         Ok(Some(iam_role))
     }
@@ -191,6 +195,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
     async fn package_ext_query(query: &mut SelectStatement, _: bool, _: &IamRoleFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_role::Entity, iam_role::Column::Icon));
         query.column((iam_role::Entity, iam_role::Column::Sort));
+        query.column((iam_role::Entity, iam_role::Column::Kind));
         Ok(())
     }
 
@@ -264,6 +269,12 @@ impl IamRoleServ {
         if let Some(spec_scope_level) = spec_scope_level {
             let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
             if role.scope_level != spec_scope_level {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
+            }
+        }
+        if funs.iam_basic_role_sys_admin_id() == role_id || funs.iam_basic_role_tenant_admin_id() == role_id || funs.iam_basic_role_app_admin_id() == role_id {
+            let count = IamRelServ::count_to_rels(&IamRelKind::IamAccountRole, role_id, funs, ctx).await?;
+            if count == 1 {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }

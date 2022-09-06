@@ -29,7 +29,7 @@ use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
-use crate::console_common::api::{iam_cc_account_api, iam_cc_org_api, iam_cc_role_api, iam_cc_system_api};
+use crate::console_common::api::{iam_cc_account_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{
@@ -38,7 +38,7 @@ use crate::console_tenant::api::{
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
-use crate::iam_enumeration::{IamResKind, IamSetKind};
+use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetKind};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
@@ -55,6 +55,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cc_account_api::IamCcAccountApi,
                     iam_cc_role_api::IamCcRoleApi,
                     iam_cc_org_api::IamCcOrgApi,
+                    iam_cc_res_api::IamCcResApi,
                     iam_cc_system_api::IamCcSystemApi,
                 ),
                 (iam_cp_account_api::IamCpAccountApi, iam_cp_cert_api::IamCpCertApi, iam_cp_tenant_api::IamCpTenantApi),
@@ -272,6 +273,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
                 disabled: None,
+                kind: Some(IamRoleKind::System),
             },
             res_ids: Some(vec![set_menu_cs_id, set_api_cs_id]),
         },
@@ -305,6 +307,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
+                kind: Some(IamRoleKind::System),
             },
             res_ids: Some(vec![set_menu_ct_id, set_api_ct_id]),
         },
@@ -322,6 +325,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
                 disabled: None,
+                kind: Some(IamRoleKind::System),
             },
             res_ids: Some(vec![set_menu_ca_id, set_api_ca_id]),
         },

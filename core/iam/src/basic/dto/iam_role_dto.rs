@@ -6,6 +6,8 @@ use tardis::web::poem_openapi;
 
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 
+use crate::iam_enumeration::IamRoleKind;
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAggAddReq {
     pub role: IamRoleAddReq,
@@ -18,6 +20,7 @@ pub struct IamRoleAddReq {
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
+    pub kind: Option<IamRoleKind>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
@@ -37,6 +40,7 @@ pub struct IamRoleModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
 
+    pub kind: Option<IamRoleKind>,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
@@ -62,6 +66,7 @@ pub struct IamRoleSummaryResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
+    pub kind: IamRoleKind,
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
@@ -80,6 +85,7 @@ pub struct IamRoleDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
+    pub kind: IamRoleKind,
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
