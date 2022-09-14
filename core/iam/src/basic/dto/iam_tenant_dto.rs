@@ -55,9 +55,9 @@ pub struct IamTenantAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
 
-    pub cert_conf_by_user_pwd: IamUserPwdCertConfInfo,
-    pub cert_conf_by_phone_vcode: bool,
-    pub cert_conf_by_mail_vcode: bool,
+    pub cert_conf_by_user_pwd: Option<IamUserPwdCertConfInfo>,
+    pub cert_conf_by_phone_vcode: Option<bool>,
+    pub cert_conf_by_mail_vcode: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
