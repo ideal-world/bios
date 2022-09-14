@@ -20,10 +20,10 @@ impl IamCaAppApi {
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/", method = "put")]
-    async fn modify(&self, mut modify_req: Json<IamAppAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+    async fn modify(&self, modify_req: Json<IamAppAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &mut modify_req, &funs, &ctx.0).await?;
+        IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
             TardisResp::accepted(Some(task_id))

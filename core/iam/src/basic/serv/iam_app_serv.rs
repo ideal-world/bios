@@ -165,8 +165,8 @@ impl IamAppServ {
         .await?;
         if let Some(admin_ids) = &add_req.admin_ids {
             for admin_id in admin_ids {
-                IamAppServ::add_rel_account(&app_id, &admin_id, false, funs, &app_ctx).await?;
-                IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &admin_id, None, funs, &app_ctx).await?;
+                IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
+                IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), admin_id, None, funs, &app_ctx).await?;
             }
         }
 
@@ -182,27 +182,27 @@ impl IamAppServ {
             &mut IamAppModifyReq {
                 name: modify_req.name.clone(),
                 scope_level: modify_req.scope_level.clone(),
-                disabled: modify_req.disabled.clone(),
+                disabled: modify_req.disabled,
                 icon: modify_req.icon.clone(),
-                sort: modify_req.sort.clone(),
+                sort: modify_req.sort,
                 contact_phone: modify_req.contact_phone.clone(),
             },
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         if let Some(admin_ids) = &modify_req.admin_ids {
             // add new admins
             for admin_id in admin_ids {
                 if !account_ids.contains(admin_id) {
-                    IamAppServ::add_rel_account(&id, &admin_id, false, funs, &ctx).await?;
-                    IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), &admin_id, None, funs, &ctx).await?;
+                    IamAppServ::add_rel_account(id, admin_id, false, funs, ctx).await?;
+                    IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), admin_id, None, funs, ctx).await?;
                 }
             }
             // delete old admins
-            for account_id in account_ids.difference(&admin_ids.iter().map(|item| item.clone()).collect::<HashSet<String>>()) {
-                IamAppServ::delete_rel_account(&id, &account_id, funs, &ctx).await?;
-                IamRoleServ::delete_rel_account(&funs.iam_basic_role_app_admin_id(), &account_id, None, funs, &ctx).await?;
+            for account_id in account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
+                IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
+                IamRoleServ::delete_rel_account(&funs.iam_basic_role_app_admin_id(), account_id, None, funs, ctx).await?;
             }
         }
         Ok(())
