@@ -252,41 +252,54 @@ impl IamTenantServ {
         )
         .await?;
 
+        if modify_req.cert_conf_by_user_pwd.is_none() && modify_req.cert_conf_by_phone_vcode.is_none() && modify_req.cert_conf_by_mail_vcode.is_none() {
+            return Ok(());
+        }
+
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf_with_kernel_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
-        IamCertUserPwdServ::modify_cert_conf(
-            &cert_conf_by_user_pwd_id,
-            &IamUserPwdCertConfAddOrModifyReq {
-                ak_note: None,
-                ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
-                sk_note: None,
-                sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(&modify_req.cert_conf_by_user_pwd, funs)?),
-                ext: Some(TardisFuns::json.obj_to_string(&modify_req.cert_conf_by_user_pwd)?),
-                repeatable: Some(modify_req.cert_conf_by_user_pwd.repeatable),
-                expire_sec: Some(modify_req.cert_conf_by_user_pwd.expire_sec),
-                sk_lock_cycle_sec: Some(modify_req.cert_conf_by_user_pwd.sk_lock_cycle_sec),
-                sk_lock_err_times: Some(modify_req.cert_conf_by_user_pwd.sk_lock_err_times),
-                sk_lock_duration_sec: Some(modify_req.cert_conf_by_user_pwd.sk_lock_duration_sec),
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
-            if !modify_req.cert_conf_by_phone_vcode {
-                IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
-            }
-        } else if modify_req.cert_conf_by_phone_vcode {
-            IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+
+        if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
+            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
+            IamCertUserPwdServ::modify_cert_conf(
+                &cert_conf_by_user_pwd_id,
+                &IamUserPwdCertConfAddOrModifyReq {
+                    ak_note: None,
+                    ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(cert_conf_by_user_pwd, funs)?),
+                    sk_note: None,
+                    sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(cert_conf_by_user_pwd, funs)?),
+                    ext: Some(TardisFuns::json.obj_to_string(cert_conf_by_user_pwd)?),
+                    repeatable: Some(cert_conf_by_user_pwd.repeatable),
+                    expire_sec: Some(cert_conf_by_user_pwd.expire_sec),
+                    sk_lock_cycle_sec: Some(cert_conf_by_user_pwd.sk_lock_cycle_sec),
+                    sk_lock_err_times: Some(cert_conf_by_user_pwd.sk_lock_err_times),
+                    sk_lock_duration_sec: Some(cert_conf_by_user_pwd.sk_lock_duration_sec),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
-        if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::MailVCode.to_string()).map(|r| r.id.clone()) {
-            if !modify_req.cert_conf_by_mail_vcode {
-                IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
+        if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
+            if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
+                if !cert_conf_by_phone_vcode {
+                    IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
+                }
+            } else if cert_conf_by_phone_vcode {
+                IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
             }
-        } else if modify_req.cert_conf_by_mail_vcode {
-            IamCertMailVCodeServ::add_cert_conf(&IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
         }
+
+        if let Some(cert_conf_by_mail_vcode) = modify_req.cert_conf_by_mail_vcode {
+            if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::MailVCode.to_string()).map(|r| r.id.clone()) {
+                if !cert_conf_by_mail_vcode {
+                    IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
+                }
+            } else if cert_conf_by_mail_vcode {
+                IamCertMailVCodeServ::add_cert_conf(&IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+            }
+        }
+
         Ok(())
     }
 

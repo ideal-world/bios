@@ -149,7 +149,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 sort: None,
                 contact_phone: None,
                 note: None,
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: Some(IamUserPwdCertConfInfo {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -163,9 +163,9 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                     sk_lock_duration_sec: 60,
                     repeatable: true,
                     expire_sec: 111,
-                },
-                cert_conf_by_phone_vcode: false,
-                cert_conf_by_mail_vcode: true,
+                }),
+                cert_conf_by_phone_vcode: Some(false),
+                cert_conf_by_mail_vcode: Some(true),
             },
         )
         .await;
@@ -368,6 +368,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                     disabled: None,
                     icon: None,
                     sort: None,
+                    kind: None,
                 },
                 res_ids: None,
             },
@@ -675,6 +676,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
                     disabled: None,
                     icon: None,
                     sort: None,
+                    kind: None,
                 },
                 res_ids: None,
             },
@@ -691,6 +693,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
                     disabled: None,
                     icon: None,
                     sort: None,
+                    kind: None,
                 },
                 res_ids: Some(vec![res_menu_id.to_string()]),
             },

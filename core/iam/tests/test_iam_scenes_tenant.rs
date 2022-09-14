@@ -94,7 +94,7 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
                 sort: None,
                 contact_phone: None,
                 note: None,
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: Some(IamUserPwdCertConfInfo {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -108,9 +108,9 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
                     sk_lock_duration_sec: 60,
                     repeatable: true,
                     expire_sec: 111,
-                },
-                cert_conf_by_phone_vcode: true,
-                cert_conf_by_mail_vcode: true,
+                }),
+                cert_conf_by_phone_vcode: Some(true),
+                cert_conf_by_mail_vcode: Some(true),
             },
         )
         .await;
@@ -351,6 +351,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                     disabled: None,
                     icon: None,
                     sort: None,
+                    kind: None,
                 },
                 res_ids: None,
             },
@@ -478,6 +479,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                     disabled: None,
                     icon: None,
                     sort: None,
+                    kind: None,
                 },
                 res_ids: Some(vec![res_id.clone()]),
             },
@@ -504,6 +506,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                     disabled: None,
                     icon: None,
                     sort: None,
+                    kind: None,
                 },
                 res_ids: Some(vec![]),
             },
@@ -597,8 +600,8 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,
-                admin_id: app_account1_id.clone(),
                 disabled: None,
+                admin_ids: Some(vec![app_account1_id.clone()]),
             },
         )
         .await;
@@ -610,8 +613,8 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 app_icon: None,
                 app_sort: None,
                 app_contact_phone: None,
-                admin_id: app_account2_id.clone(),
                 disabled: None,
+                admin_ids: Some(vec![app_account2_id.clone()]),
             },
         )
         .await;
