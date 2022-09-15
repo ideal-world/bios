@@ -416,7 +416,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 icon: None,
                 role_ids: Some(vec![]),
                 org_cate_ids: Some(vec![]),
-                exts: HashMap::from([("ext1_idx".to_string(), "".to_string())]),
+                exts: Some(HashMap::from([("ext1_idx".to_string(), "".to_string())])),
             },
         )
         .await;

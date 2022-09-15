@@ -269,7 +269,9 @@ impl IamAccountServ {
                 IamSetServ::delete_set_item(&deleted_item_id, funs, ctx).await?;
             }
         }
-        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;
+        if let Some(exts) = &modify_req.exts {
+            IamAttrServ::add_or_modify_account_attr_values(id, exts.clone(), funs, ctx).await?;
+        }
         Ok(())
     }
 
