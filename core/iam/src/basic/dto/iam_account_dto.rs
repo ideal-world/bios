@@ -60,7 +60,7 @@ pub struct IamAccountAggModifyReq {
     pub role_ids: Option<Vec<String>>,
     pub org_cate_ids: Option<Vec<String>>,
 
-    pub exts: HashMap<String, String>,
+    pub exts: Option<HashMap<String, String>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

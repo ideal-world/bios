@@ -227,7 +227,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 icon: None,
                 role_ids: None,
                 org_cate_ids: None,
-                exts: Default::default(),
+                exts: None,
             },
         )
         .await;
@@ -427,7 +427,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 icon: None,
                 role_ids: Some(vec![]),
                 org_cate_ids: None,
-                exts: HashMap::from([("ext1_idx".to_string(), "".to_string())]),
+                exts: Some(HashMap::from([("ext1_idx".to_string(), "".to_string())])),
             },
         )
         .await;
