@@ -10,6 +10,9 @@ RUN wget https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd
 
 FROM apache/apisix:2.15.0-alpine
 
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 COPY --from=etcd-stage /tmp/etcd/etcd /usr/bin/etcd
 COPY --from=etcd-stage /tmp/etcd/etcdctl /usr/bin/etcdctl
 
