@@ -18,13 +18,24 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v3
 
-      - name: Build and push Docker images
+      - name: Build and push Docker image
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
           directory: core/gateway
-          dockerfile: core/gateway/Dockerfile
+          dockerfile: core/gateway/Apisix_Dockerfile
           registry: ghcr.io
           image: bios-gateway
+          tags: latest
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push Docker image with etcd
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          directory: core/gateway
+          dockerfile: core/gateway/Apisix_etcd_Dockerfile
+          registry: ghcr.io
+          image: bios-gateway-with-etcd
           tags: latest
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
