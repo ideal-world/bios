@@ -538,6 +538,7 @@ where
         if let Some(rbum_item_rel_filter_req) = &filter.rel2() {
             package_rel(&mut query, Alias::new("rbum_rel2"), rbum_item_rel_filter_req);
         }
+        query.distinct();
         Ok(query)
     }
 
