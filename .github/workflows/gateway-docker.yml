@@ -3,7 +3,8 @@ name: Publish gateway docker image
 on:
   push:
     paths:
-      - "core/gateway/Dockerfile"
+      - "core/gateway/Apisix_Dockerfile"
+      - "core/gateway/Apisix_etcd_Dockerfile"
       - "core/gateway/apisix/**"
       - ".github/workflows/gateway-docker.yml"
 
