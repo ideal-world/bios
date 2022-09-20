@@ -18,5 +18,5 @@ opt-level = "z"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 tardis = { version = "0.1.0-alpha24", features = ["web-server"] }
-bios-iam = { path = "../../core/iam", features = ["ldap"] }
+bios-iam = { path = "../../core/iam" }
 
