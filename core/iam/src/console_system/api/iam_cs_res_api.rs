@@ -175,7 +175,7 @@ impl IamCsResApi {
     async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, None, None, false, &funs, &ctx.0).await?;
+        IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, None, None, false, false, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

@@ -8,6 +8,7 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
@@ -23,6 +24,8 @@ use crate::rbum::serv::rbum_crud_serv::{NameResp, RbumCrudOperation, RbumCrudQue
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindAttrServ;
 use crate::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
+
+use super::rbum_cert_serv::RbumCertServ;
 
 pub struct RbumRelServ;
 
@@ -55,11 +58,17 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
             RbumRelFromKind::Item => RbumItemServ::get_table_name(),
             RbumRelFromKind::Set => RbumSetServ::get_table_name(),
             RbumRelFromKind::SetCate => RbumSetCateServ::get_table_name(),
+            RbumRelFromKind::Cert => RbumCertServ::get_table_name(),
         };
         // The relationship check is changed from check_ownership to check_scope.
         // for example, the account corresponding to the tenant can be associated to the app,
         // where the account belongs to the tenant but scope=1, so it can be used by the application.
-        Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
+        if RbumRelFromKind::Cert == add_req.from_rbum_kind {
+            RbumCertServ::check_ownership(&add_req.from_rbum_id, funs, ctx).await?;
+        } else {
+            Self::check_scope(&add_req.from_rbum_id, rel_rbum_table_name, funs, ctx).await?;
+        }
+
         if add_req.to_rbum_item_id.trim().is_empty() {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "to_rbum_item_id can not be empty", "400-rbum-rel-not-empty-item"));
         }
@@ -144,7 +153,7 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
                 rbum_item::Entity,
                 from_rbum_item_table.clone(),
                 Cond::all()
-                    .add(Expr::tbl(from_rbum_item_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::FromRbumId))
+                    .add(Expr::tbl(from_rbum_item_table.clone(), rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::FromRbumId))
                     .add(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(RbumRelFromKind::Item.to_int())),
             )
             .left_join(
@@ -163,7 +172,7 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
                 JoinType::LeftJoin,
                 rbum_item::Entity,
                 to_rbum_item_table.clone(),
-                Expr::tbl(to_rbum_item_table, rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
+                Expr::tbl(to_rbum_item_table.clone(), rbum_item::Column::Id).equals(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId),
             );
 
         if let Some(tag) = &filter.tag {
@@ -177,6 +186,12 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
         }
         if let Some(to_rbum_item_id) = &filter.to_rbum_item_id {
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(to_rbum_item_id.to_string()));
+        }
+        if let Some(from_rbum_scope_levels) = &filter.from_rbum_scope_levels {
+            query.and_where(Expr::tbl(from_rbum_item_table, rbum_item::Column::ScopeLevel).is_in(from_rbum_scope_levels.clone()));
+        }
+        if let Some(to_rbum_item_scope_levels) = &filter.to_rbum_item_scope_levels {
+            query.and_where(Expr::tbl(to_rbum_item_table, rbum_item::Column::ScopeLevel).is_in(to_rbum_item_scope_levels.clone()));
         }
         if let Some(to_own_paths) = &filter.to_own_paths {
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToOwnPaths).eq(to_own_paths.to_string()));
@@ -622,7 +637,20 @@ impl RbumRelServ {
         RbumRelServ::count_rbums(filter, funs, ctx).await
     }
 
-    async fn find_rels(
+    pub async fn find_simple_rels(
+        filter: &RbumRelFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        is_from: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        RbumRelServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx)
+            .await
+            .map(|r| r.into_iter().map(|item| RbumRelBoneResp::new(item, is_from)).collect())
+    }
+
+    pub async fn find_rels(
         filter: &RbumRelFilterReq,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
@@ -633,7 +661,26 @@ impl RbumRelServ {
         Self::package_agg_rels(rbum_rels, filter, funs, ctx).await
     }
 
-    async fn paginate_rels(
+    pub async fn paginate_simple_rels(
+        filter: &RbumRelFilterReq,
+        page_number: u64,
+        page_size: u64,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        is_from: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<RbumRelBoneResp>> {
+        let result = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
+        Ok(TardisPage {
+            page_size: result.page_size,
+            page_number: result.page_number,
+            total_size: result.total_size,
+            records: result.records.into_iter().map(|item| RbumRelBoneResp::new(item, is_from)).collect(),
+        })
+    }
+
+    pub async fn paginate_rels(
         filter: &RbumRelFilterReq,
         page_number: u64,
         page_size: u64,

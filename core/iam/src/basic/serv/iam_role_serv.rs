@@ -8,7 +8,7 @@ use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelBoneResp, RbumRelCheckReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
@@ -262,7 +262,7 @@ impl IamRoleServ {
         }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await
     }
 
     pub async fn delete_rel_account(role_id: &str, account_id: &str, spec_scope_level: Option<RbumScopeLevelKind>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -330,7 +330,7 @@ impl IamRoleServ {
     }
 
     pub async fn add_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, false, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamResRole, res_id, role_id, None, None, false, false, funs, ctx).await
     }
 
     pub async fn delete_rel_res(role_id: &str, res_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -359,6 +359,37 @@ impl IamRoleServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         IamRelServ::find_to_simple_rels(&IamRelKind::IamResRole, role_id, desc_by_create, desc_by_update, funs, ctx).await
+    }
+
+    pub async fn find_simple_rels(
+        role_id: &str,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        scope_levels: Option<Vec<u8>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        IamRelServ::find_simple_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamResRole.to_string()),
+                to_rbum_item_id: Some(role_id.to_string()),
+                from_rbum_scope_levels: scope_levels.clone(),
+                to_rbum_item_scope_levels: scope_levels.clone(),
+                ..Default::default()
+            },
+            desc_sort_by_create,
+            desc_sort_by_update,
+            false,
+            funs,
+            ctx,
+        )
+        .await
     }
 
     pub async fn paginate_id_rel_res(

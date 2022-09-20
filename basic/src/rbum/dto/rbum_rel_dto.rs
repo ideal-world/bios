@@ -100,6 +100,7 @@ impl RbumRelBoneResp {
                     RbumRelFromKind::Item => detail.from_rbum_item_name,
                     RbumRelFromKind::Set => detail.from_rbum_set_name,
                     RbumRelFromKind::SetCate => detail.from_rbum_set_cate_name,
+                    RbumRelFromKind::Cert => "".to_string(),
                 },
                 tag: detail.tag,
                 note: detail.note,

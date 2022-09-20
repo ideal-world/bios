@@ -160,10 +160,10 @@ pub struct IamAccountDetailAggResp {
 
     pub icon: String,
 
-    pub roles: Vec<String>,
+    pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
     pub orgs: Vec<String>,
-
+    pub apps: Vec<IamAccountAppInfoResp>,
     pub exts: Vec<IamAccountExtResp>,
 }
 

@@ -197,8 +197,10 @@ impl IamSetServ {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
         let mut res_ids = HashSet::new();
+        let mut global_ctx = ctx.clone();
+        global_ctx.own_paths = "".to_string();
         for role_id in role_ids {
-            let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, ctx).await?;
+            let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &global_ctx).await?;
             res_ids.extend(rel_res_ids.into_iter());
         }
         let mut filter = RbumSetTreeFilterReq {

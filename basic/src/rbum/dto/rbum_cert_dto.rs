@@ -30,6 +30,7 @@ pub struct RbumCertAddReq {
     pub rel_rbum_kind: RbumCertRelKind,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_id: String,
+    pub is_outside: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

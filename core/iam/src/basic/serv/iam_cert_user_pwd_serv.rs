@@ -102,6 +102,7 @@ impl IamCertUserPwdServ {
                 rel_rbum_cert_conf_id,
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: rel_iam_item_id.to_string(),
+                is_outside: false,
             },
             funs,
             ctx,

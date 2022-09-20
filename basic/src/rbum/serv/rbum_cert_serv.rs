@@ -385,7 +385,11 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             Self::check_ownership_with_table_name(rel_rbum_cert_conf_id, RbumCertConfServ::get_table_name(), funs, ctx).await?;
         }
         match add_req.rel_rbum_kind {
-            RbumCertRelKind::Item => Self::check_scope(&add_req.rel_rbum_id, RbumItemServ::get_table_name(), funs, ctx).await?,
+            RbumCertRelKind::Item => {
+                if !add_req.is_outside {
+                    Self::check_scope(&add_req.rel_rbum_id, RbumItemServ::get_table_name(), funs, ctx).await?;
+                }
+            }
             RbumCertRelKind::Set => Self::check_scope(&add_req.rel_rbum_id, RbumSetServ::get_table_name(), funs, ctx).await?,
             RbumCertRelKind::Rel => Self::check_ownership_with_table_name(&add_req.rel_rbum_id, RbumRelServ::get_table_name(), funs, ctx).await?,
         }
@@ -547,6 +551,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         }
         if let Some(rel_rbum_cert_conf_id) = &filter.rel_rbum_cert_conf_id {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).eq(rel_rbum_cert_conf_id.to_string()));
+        }
+        if let Some(rel_rbum_cert_conf_ids) = &filter.rel_rbum_cert_conf_ids {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).is_in(rel_rbum_cert_conf_ids.clone()));
         }
         if let Some(rel_rbum_kind) = &filter.rel_rbum_kind {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumKind).eq(rel_rbum_kind.to_int()));

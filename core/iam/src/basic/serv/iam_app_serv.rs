@@ -213,7 +213,7 @@ impl IamAppServ {
     }
 
     pub async fn add_rel_account(app_id: &str, account_id: &str, ignore_exist_error: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, ignore_exist_error, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, None, None, ignore_exist_error, false, funs, ctx).await
     }
 
     pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

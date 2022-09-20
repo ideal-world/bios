@@ -205,6 +205,7 @@ impl IamTenantServ {
         };
         IamCertServ::init_default_ident_conf(cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, funs, &tenant_ctx).await?;
         IamCertServ::init_default_ext_conf(funs, &tenant_ctx).await?;
+        IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
         // Init pwd
         let pwd = if let Some(admin_password) = &add_req.admin_password {
             admin_password.to_string()
