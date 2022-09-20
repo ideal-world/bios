@@ -71,6 +71,7 @@ pub struct IamRoleSummaryResp {
     pub disabled: bool,
 
     pub icon: String,
+    pub code: String,
     pub sort: u32,
 }
 
@@ -90,5 +91,6 @@ pub struct IamRoleDetailResp {
     pub disabled: bool,
 
     pub icon: String,
+    pub code: String,
     pub sort: u32,
 }

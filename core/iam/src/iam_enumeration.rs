@@ -63,6 +63,12 @@ pub enum IamCertKernelKind {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamCertManageKind {
+    ManageUserPwd,
+    ManageUserVisa,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertExtKind {
     Gitlab,
     Github,
@@ -95,6 +101,7 @@ pub enum IamRelKind {
     IamAccountApp,
     IamResApi,
     IamAccountRel,
+    IamCertRel,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]

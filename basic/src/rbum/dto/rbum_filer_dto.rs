@@ -45,6 +45,7 @@ pub struct RbumCertFilterReq {
     pub rel_rbum_kind: Option<RbumCertRelKind>,
     pub rel_rbum_id: Option<String>,
     pub rel_rbum_cert_conf_id: Option<String>,
+    pub rel_rbum_cert_conf_ids: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -71,7 +72,9 @@ pub struct RbumRelFilterReq {
     pub tag: Option<String>,
     pub from_rbum_kind: Option<RbumRelFromKind>,
     pub from_rbum_id: Option<String>,
+    pub from_rbum_scope_levels: Option<Vec<u8>>,
     pub to_rbum_item_id: Option<String>,
+    pub to_rbum_item_scope_levels: Option<Vec<u8>>,
     pub to_own_paths: Option<String>,
     pub ext_eq: Option<String>,
     pub ext_like: Option<String>,

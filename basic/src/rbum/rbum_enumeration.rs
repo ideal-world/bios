@@ -93,6 +93,7 @@ pub enum RbumRelFromKind {
     Item,
     Set,
     SetCate,
+    Cert,
 }
 
 impl RbumRelFromKind {
@@ -101,6 +102,7 @@ impl RbumRelFromKind {
             0 => Ok(RbumRelFromKind::Item),
             1 => Ok(RbumRelFromKind::Set),
             2 => Ok(RbumRelFromKind::SetCate),
+            3 => Ok(RbumRelFromKind::Cert),
             _ => Err(TardisError::format_error(&format!("invalid RbumRelFromKind: {}", s), "406-rbum-*-enum-init-error")),
         }
     }
@@ -110,6 +112,7 @@ impl RbumRelFromKind {
             RbumRelFromKind::Item => 0,
             RbumRelFromKind::Set => 1,
             RbumRelFromKind::SetCate => 2,
+            RbumRelFromKind::Cert => 3,
         }
     }
 }

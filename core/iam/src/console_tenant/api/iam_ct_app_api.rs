@@ -57,6 +57,7 @@ impl IamCtAppApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        account_id: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
@@ -64,6 +65,7 @@ impl IamCtAppApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
+
         let result = IamAppServ::paginate_items(
             &IamAppFilterReq {
                 basic: RbumBasicFilterReq {

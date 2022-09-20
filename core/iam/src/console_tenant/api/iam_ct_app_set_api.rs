@@ -103,10 +103,10 @@ impl IamCtAppSetApi {
 
     /// Find App Set Items (App Or Account)
     #[oai(path = "/item", method = "get")]
-    async fn find_items(&self, cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
+    async fn find_items(&self, cate_id: Query<Option<String>>, item_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx.0).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

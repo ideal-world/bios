@@ -3,6 +3,7 @@ pub mod iam_ct_account_attr_api;
 pub mod iam_ct_app_api;
 pub mod iam_ct_app_set_api;
 pub mod iam_ct_cert_api;
+pub mod iam_ct_cert_manage_api;
 pub mod iam_ct_org_api;
 pub mod iam_ct_res_api;
 pub mod iam_ct_role_api;

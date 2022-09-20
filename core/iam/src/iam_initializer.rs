@@ -1,8 +1,11 @@
+use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
+use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
+use tardis::futures_util::future::ok;
 use tardis::log::info;
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -33,7 +36,8 @@ use crate::console_common::api::{iam_cc_account_api, iam_cc_org_api, iam_cc_res_
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_res_api, iam_cs_role_api, iam_cs_tenant_api};
 use crate::console_tenant::api::{
-    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api, iam_ct_tenant_api,
+    iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_cert_manage_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api,
+    iam_ct_tenant_api,
 };
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
@@ -75,6 +79,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ct_app_api::IamCtAppApi,
                     iam_ct_app_set_api::IamCtAppSetApi,
                     iam_ct_cert_api::IamCtCertApi,
+                    iam_ct_cert_manage_api::IamCtCertManageApi,
                     iam_ct_role_api::IamCtRoleApi,
                     iam_ct_res_api::IamCtResApi,
                 ),
@@ -217,6 +222,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
+    init_menu(&set_res_id, &cate_menu_id, funs, &ctx).await?;
+
     // Init kernel certs
     IamCertServ::init_default_ident_conf(
         IamUserPwdCertConfAddOrModifyReq {
@@ -241,6 +248,9 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
 
     // Init ext certs
     IamCertServ::init_default_ext_conf(funs, &ctx).await?;
+
+    // Init manage certs
+    IamCertServ::init_default_manage_conf(funs, &ctx).await?;
 
     let pwd = IamCertServ::get_new_pwd();
     IamAccountServ::add_account_agg(
@@ -307,7 +317,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
-                kind: Some(IamRoleKind::System),
+                kind: Some(IamRoleKind::Tenant),
             },
             res_ids: Some(vec![set_menu_ct_id, set_api_ct_id]),
         },
@@ -325,7 +335,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_APP),
                 disabled: None,
-                kind: Some(IamRoleKind::System),
+                kind: Some(IamRoleKind::App),
             },
             res_ids: Some(vec![set_menu_ca_id, set_api_ca_id]),
         },
@@ -384,6 +394,56 @@ async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRes
             sort: None,
             scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
         },
+        funs,
+        ctx,
+    )
+    .await
+}
+
+async fn init_menu<'a>(set_id: &str, parent_cate_menu_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let menu_cate_id = add_cate_menu(set_id, parent_cate_menu_id, "菜单", "__menus_1__", funs, ctx).await?;
+    let _ = add_menu_res(set_id, menu_cate_id.as_str(), "菜单", "a", funs, ctx).await?;
+    Ok(())
+}
+
+async fn add_cate_menu<'a>(set_id: &str, parent_cate_menu_id: &str, name: &str, bus_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    RbumSetCateServ::add_rbum(
+        &mut RbumSetCateAddReq {
+            name: TrimString(name.to_string()),
+            bus_code: TrimString(bus_code.to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: Some(parent_cate_menu_id.to_string()),
+            rel_rbum_set_id: set_id.to_string(),
+            scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+        },
+        funs,
+        ctx,
+    )
+    .await
+}
+
+async fn add_menu_res<'a>(set_id: &str, cate_menu_id: &str, name: &str, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    IamResServ::add_res_agg(
+        &mut IamResAggAddReq {
+            res: IamResAddReq {
+                code: TrimString(format!("{}/{}", iam_constants::COMPONENT_CODE.to_lowercase(), code)),
+                name: TrimString(name.to_string()),
+                kind: IamResKind::Menu,
+                icon: None,
+                sort: None,
+                method: None,
+                hide: None,
+                action: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+                disabled: None,
+            },
+            set: IamSetItemAggAddReq {
+                set_cate_id: cate_menu_id.to_string(),
+            },
+        },
+        set_id,
         funs,
         ctx,
     )

@@ -16,11 +16,11 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
-    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountExtResp, IamAccountModifyReq, IamAccountSelfModifyReq,
-    IamAccountSummaryAggResp, IamAccountSummaryResp,
+    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountExtResp, IamAccountModifyReq,
+    IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamMailVCodeCertAddReq, IamPhoneVCodeCertAddReq, IamUserPwdCertAddReq};
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -34,6 +34,8 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
+
+use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
 
@@ -307,6 +309,45 @@ impl IamAccountServ {
         } else {
             IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?
         };
+        let raw_roles = Self::find_simple_rel_roles(&account.id, true, Some(true), None, funs, ctx).await?;
+        let mut roles: Vec<RbumRelBoneResp> = vec![];
+        for role in raw_roles {
+            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                roles.push(role)
+            }
+        }
+        let apps = if !account.own_paths.is_empty() {
+            let enabled_apps = IamAppServ::find_items(
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_ctx_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+
+            let mut apps: Vec<IamAccountAppInfoResp> = vec![];
+            for app in enabled_apps {
+                apps.push(IamAccountAppInfoResp {
+                    app_id: app.id,
+                    app_name: app.name,
+                    roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
+                    groups: todo!(),
+                });
+            }
+            apps
+        } else {
+            vec![]
+        };
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
         let account = IamAccountDetailAggResp {
@@ -320,7 +361,8 @@ impl IamAccountServ {
             scope_level: account.scope_level,
             disabled: account.disabled,
             icon: account.icon,
-            roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_name).collect(),
+            roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
+            apps,
             certs: IamCertServ::find_certs(
                 &RbumCertFilterReq {
                     basic: RbumBasicFilterReq {

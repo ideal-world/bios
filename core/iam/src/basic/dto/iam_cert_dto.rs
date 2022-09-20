@@ -77,3 +77,25 @@ pub struct IamExtCertAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: Option<String>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamManageCertAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub ak: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub sk: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub rel_rbum_cert_conf_id: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ext: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamManageCertModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub ak: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub sk: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ext: Option<String>,
+}

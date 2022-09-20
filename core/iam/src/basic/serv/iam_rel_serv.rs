@@ -35,6 +35,7 @@ impl IamRelServ {
         start_timestamp: Option<i64>,
         end_timestamp: Option<i64>,
         ignore_exist_error: bool,
+        to_is_outside: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -55,7 +56,7 @@ impl IamRelServ {
                 from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
-                to_is_outside: false,
+                to_is_outside: to_is_outside,
                 ext: None,
             },
             attrs: vec![],
@@ -371,6 +372,7 @@ impl IamRelServ {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
             }
             IamRelKind::IamAccountRel => todo!(),
+            IamRelKind::IamCertRel => todo!(),
         }
         Ok(())
     }
@@ -499,6 +501,17 @@ impl IamRelServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         RbumRelServ::find_to_simple_rels(&rel_kind.to_string(), to_iam_item_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    pub async fn find_simple_rels(
+        filter: &RbumRelFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        is_from: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelBoneResp>> {
+        RbumRelServ::find_simple_rels(filter, desc_sort_by_create, desc_sort_by_update, is_from, funs, ctx).await
     }
 
     pub async fn paginate_to_id_rels(
