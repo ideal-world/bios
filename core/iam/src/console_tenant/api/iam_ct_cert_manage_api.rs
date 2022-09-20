@@ -77,10 +77,7 @@ impl IamCtCertManageApi {
     #[oai(path = "/", method = "get")]
     async fn paginate_certs(
         &self,
-        id: Query<Option<String>>,
-        name: Query<Option<String>>,
         conf_id: Query<Option<String>>,
-        with_sub: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
         ctx: TardisContextExtractor,

@@ -57,7 +57,6 @@ impl IamCtAppApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
-        account_id: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         page_number: Query<u64>,
