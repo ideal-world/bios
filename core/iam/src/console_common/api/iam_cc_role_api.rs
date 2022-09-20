@@ -2,7 +2,7 @@ use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::{Query, Path};
+use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -86,7 +86,12 @@ impl IamCcRoleApi {
             &id.0,
             desc_by_create.0,
             desc_by_update.0,
-            Some(vec![RbumScopeLevelKind::Root.to_int().try_into().unwrap(), RbumScopeLevelKind::L1.to_int().try_into().unwrap(), RbumScopeLevelKind::L2.to_int().try_into().unwrap(), RbumScopeLevelKind::L3.to_int().try_into().unwrap()]),
+            Some(vec![
+                RbumScopeLevelKind::Root.to_int().try_into().unwrap(),
+                RbumScopeLevelKind::L1.to_int().try_into().unwrap(),
+                RbumScopeLevelKind::L2.to_int().try_into().unwrap(),
+                RbumScopeLevelKind::L3.to_int().try_into().unwrap(),
+            ]),
             &funs,
             &ctx,
         )

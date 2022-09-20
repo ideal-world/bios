@@ -6,7 +6,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind};
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq};
