@@ -370,14 +370,14 @@ impl IamCertServ {
     pub async fn get_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let manage_user_pwd_conf_id = &Self::get_cert_conf_id_by_code(
             IamCertManageKind::ManageUserPwd.to_string().as_str(),
-            rbum_scope_helper::get_max_level_id_by_context(&ctx),
-            &funs,
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
+            funs,
         )
         .await?;
         let manage_user_visa_conf_id = &Self::get_cert_conf_id_by_code(
             IamCertManageKind::ManageUserVisa.to_string().as_str(),
-            rbum_scope_helper::get_max_level_id_by_context(&ctx),
-            &funs,
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
+            funs,
         )
         .await?;
         let manage_cert = RbumCertServ::get_rbum(

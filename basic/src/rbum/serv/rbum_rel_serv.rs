@@ -8,7 +8,6 @@ use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
-use tardis::log::info;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;

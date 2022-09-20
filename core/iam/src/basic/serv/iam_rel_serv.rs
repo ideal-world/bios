@@ -56,7 +56,7 @@ impl IamRelServ {
                 from_rbum_id: from_iam_item_id.to_string(),
                 to_rbum_item_id: to_iam_item_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
-                to_is_outside: to_is_outside,
+                to_is_outside,
                 ext: None,
             },
             attrs: vec![],
