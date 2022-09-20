@@ -29,7 +29,7 @@ async fn test_iam_serv() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = test_basic::init(&docker).await?;
 
-    let funs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               = iam_constants::get_tardis_inst();
+    let funs = iam_constants::get_tardis_inst();
     let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
 
     sleep(Duration::from_secs(1)).await;
