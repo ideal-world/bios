@@ -404,6 +404,7 @@ async fn init_menu<'a>(set_id: &str, parent_cate_id: &str, funs: &TardisFunsInst
     init_menu_workbench(set_id, parent_cate_id, funs, ctx).await?;
     init_menu_account_info(set_id, parent_cate_id, funs, ctx).await?;
     init_menu_knoledge(set_id, parent_cate_id, funs, ctx).await?;
+    init_menu_app(set_id, parent_cate_id, funs, ctx).await?;
     init_menu_configuration(set_id, parent_cate_id, funs, ctx).await?;
 
     Ok(())
@@ -496,6 +497,949 @@ async fn init_menu_knoledge<'a>(set_id: &str, parent_cate_id: &str, funs: &Tardi
     Ok(())
 }
 
+async fn init_menu_app<'a>(set_id: &str, parent_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    // app
+    let app_cate_id = add_cate_menu(set_id, parent_cate_id, "项目", "__app__", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    // app -> manage
+    let app_manage_cate_id = add_cate_menu(set_id, app_cate_id.as_str(), "项目管理", "__app_manage__", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "项目管理",
+        "app_manage",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "创建",
+        "app*manage*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "更改状态",
+        "app*manage*update*state",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "归档",
+        "app*manage*archive",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "恢复",
+        "app*manage*recover",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "删除",
+        "app*manage*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "配置",
+        "app*manage*config",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config
+    let app_manage_config_cate_id = add_cate_menu(
+        set_id,
+        app_manage_cate_id.as_str(),
+        "配置",
+        "__app_manage_config__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    // app -> manage -> config -> info
+    let app_manage_config_info_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "项目信息",
+        "__app_manage_config_info__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_info_cate_id.as_str(),
+        "项目信息",
+        "app_manage_config_info",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_info_cate_id.as_str(),
+        "编辑",
+        "app*manage*config*info*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> notice
+    let app_manage_config_notice_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "通知配置",
+        "__app_manage_config_notice__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_notice_cate_id.as_str(),
+        "通知配置",
+        "app_manage_config_notice",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_notice_cate_id.as_str(),
+        "编辑",
+        "app*manage*config*notice*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> func
+    let app_manage_config_func_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "功能配置",
+        "__app_manage_config_func__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_func_cate_id.as_str(),
+        "功能配置",
+        "app_manage_config_func",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_func_cate_id.as_str(),
+        "编辑",
+        "app*manage*config*func*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> template
+    let app_manage_config_template_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "模板管理",
+        "__app_manage_config_template__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_template_cate_id.as_str(),
+        "功能配置",
+        "app_manage_config_template",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_template_cate_id.as_str(),
+        "编辑",
+        "app*manage*config*template*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> account
+    let app_manage_config_account_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "人员管理",
+        "__app_manage_config_account__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "人员管理",
+        "app_manage_config_account",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "创建",
+        "app*manage*config*account*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "编辑",
+        "app*manage*config*account*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "删除",
+        "app*manage*config*account*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "查看权限",
+        "app*manage*config*account*view_permissions",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "添加人员",
+        "app*manage*config*account*add",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_account_cate_id.as_str(),
+        "移除人员",
+        "app*manage*config*account*remove",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> res
+    let app_manage_config_res_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "资源管理",
+        "__app_manage_config_res__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_res_cate_id.as_str(),
+        "资源管理",
+        "app_manage_config_res",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_res_cate_id.as_str(),
+        "申请资源",
+        "app*manage*config*res*apply",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_manage_config_res_cate_id.as_str(),
+        "申请记录",
+        "app*manage*config*res*record",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> res -> apply page
+    let app_manage_config_res_apply_page_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "申请资源页面",
+        "__app_manage_config_res_apply_page__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_res_apply_page_cate_id.as_str(),
+        "申请资源页面",
+        "app_manage_config_res_apply_page",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> res -> inst page
+    let app_manage_config_res_inst_page_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "实例详情页面",
+        "__app_manage_config_res_inst_page__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_res_inst_page_cate_id.as_str(),
+        "实例详情页面",
+        "app_manage_config_res_inst_page",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> config -> res -> apply record page
+    let app_manage_config_res_apply_record_page_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "申请记录页面",
+        "__app_manage_config_res_apply_record_page__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_res_apply_record_page_cate_id.as_str(),
+        "申请记录页面",
+        "app_manage_config_res_inst_page",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    // app -> manage -> config -> res -> apply record page -> detail
+    let app_manage_config_res_apply_record_page_detail_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "申请记录页面",
+        "__app_manage_config_res_apply_record_page_detail__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_config_res_apply_record_page_detail_cate_id.as_str(),
+        "申请详情页面",
+        "app_manage_config_res_apply_record_page_detail",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> manage -> overview
+    let app_manage_overview_cate_id = add_cate_menu(
+        set_id,
+        app_manage_config_cate_id.as_str(),
+        "概览",
+        "__app_manage_config_overview__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_manage_overview_cate_id.as_str(),
+        "概览",
+        "app_manage_config_overview",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> milestone
+    let app_milestone_cate_id = add_cate_menu(set_id, app_cate_id.as_str(), "里程碑", "__app_milestone__", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_menu_res(
+        set_id,
+        app_milestone_cate_id.as_str(),
+        "里程碑",
+        "app_config_milestone",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_milestone_cate_id.as_str(),
+        "创建",
+        "app*milestone*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_milestone_cate_id.as_str(),
+        "编辑",
+        "app*milestone*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_milestone_cate_id.as_str(),
+        "更改状态",
+        "app*milestone*update*status",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_milestone_cate_id.as_str(),
+        "关闭",
+        "app*milestone*closed",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_milestone_cate_id.as_str(),
+        "删除",
+        "app*milestone*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> need
+    let app_need_cate_id = add_cate_menu(
+        set_id,
+        app_cate_id.as_str(),
+        "需求",
+        "__app_manage_config_need__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(set_id, app_need_cate_id.as_str(), "需求", "app_need", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "创建",
+        "app*need*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "变更状态",
+        "app*need*update*status",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "变更",
+        "app*need*change*status",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "编辑",
+        "app**need*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "指派",
+        "app*need*assign",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "建任务",
+        "app*need*create*task",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "关闭",
+        "app*need*closed",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_need_cate_id.as_str(),
+        "删除",
+        "app*need*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> task
+    let app_task_cate_id = add_cate_menu(set_id, app_cate_id.as_str(), "任务", "__app_task__", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_menu_res(set_id, app_task_cate_id.as_str(), "任务", "app_task", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_ele_res(
+        set_id,
+        app_task_cate_id.as_str(),
+        "创建",
+        "app*task*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_task_cate_id.as_str(),
+        "更改状态",
+        "app*task*update*status",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_task_cate_id.as_str(),
+        "编辑",
+        "app*task*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_task_cate_id.as_str(),
+        "删除",
+        "app*task*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> iterate
+    let app_iterate_cate_id = add_cate_menu(set_id, app_cate_id.as_str(), "迭代", "__app_iterate__", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_menu_res(set_id, app_iterate_cate_id.as_str(), "迭代", "app_iterate", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "创建",
+        "app*iterate*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "更改状态",
+        "app*iterate*update*status",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "编辑",
+        "app*iterate*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "人员",
+        "app*iterate*account",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "关联需求",
+        "app*iterate*link*need",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "建任务",
+        "app*iterate*task*need",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "关闭",
+        "app*iterate*close",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_iterate_cate_id.as_str(),
+        "删除",
+        "app*iterate*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> develop
+    let app_develop_cate_id = add_cate_menu(set_id, app_cate_id.as_str(), "开发", "__app_develop__", &iam_constants::RBUM_SCOPE_LEVEL_APP, funs, ctx).await?;
+
+    // app -> develop -> app
+    let app_develop_app_cate_id = add_cate_menu(
+        set_id,
+        app_develop_cate_id.as_str(),
+        "工程管理",
+        "__app_develop_app__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "工程管理",
+        "app_develop_app",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "创建",
+        "app*develop*app*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "配置",
+        "app*develop*app*config",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "编辑",
+        "app*develop*app*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "复制",
+        "app*develop*app*copy",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "删除",
+        "app*develop*app*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> develop -> env
+    let app_develop_env_cate_id = add_cate_menu(
+        set_id,
+        app_develop_cate_id.as_str(),
+        "环境管理",
+        "__app_develop_env__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_develop_env_cate_id.as_str(),
+        "环境管理",
+        "app_develop_env",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_env_cate_id.as_str(),
+        "创建",
+        "app*develop*env*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_env_cate_id.as_str(),
+        "配置工程",
+        "app*develop*env*config",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "编辑",
+        "app*develop*env*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_app_cate_id.as_str(),
+        "删除",
+        "app*develop*env*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // app -> develop -> api
+    let app_develop_api_cate_id = add_cate_menu(
+        set_id,
+        app_develop_cate_id.as_str(),
+        "接口管理",
+        "__app_develop_api__",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        app_develop_api_cate_id.as_str(),
+        "接口管理",
+        "app_develop_api",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_api_cate_id.as_str(),
+        "创建",
+        "app*develop*api*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_api_cate_id.as_str(),
+        "导入",
+        "app*develop*api*Import",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_api_cate_id.as_str(),
+        "编辑",
+        "app*develop*api*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_api_cate_id.as_str(),
+        "运行",
+        "app*develop*api*run",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        app_develop_api_cate_id.as_str(),
+        "删除",
+        "app*develop*api*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        funs,
+        ctx,
+    )
+    .await?;
+    Ok(())
+}
+
 async fn init_menu_configuration<'a>(set_id: &str, parent_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     // configuration
     let configuration_cate_id = add_cate_menu(set_id, parent_cate_id, "配置", "__configuration__", &iam_constants::RBUM_SCOPE_LEVEL_TENANT, funs, ctx).await?;
@@ -503,8 +1447,7 @@ async fn init_menu_configuration<'a>(set_id: &str, parent_cate_id: &str, funs: &
     init_menu_configuration_menu_and_role(set_id, configuration_cate_id.as_str(), funs, ctx).await?;
     init_menu_configuration_res_and_cert(set_id, configuration_cate_id.as_str(), funs, ctx).await?;
     init_menu_configuration_template_and_tag(set_id, configuration_cate_id.as_str(), funs, ctx).await?;
-    // init_menu_configuration_notice(set_id, configuration_cate_id.as_str(), funs, ctx).await?;
-
+    init_menu_configuration_notice(set_id, configuration_cate_id.as_str(), funs, ctx).await?;
     Ok(())
 }
 
@@ -1446,7 +2389,7 @@ async fn init_menu_configuration_template_and_tag<'a>(set_id: &str, parent_cate_
     )
     .await?;
     // configuration -> template and tag -> template -> app
-    let _ = add_cate_menu(
+    let template_app_cate_id = add_cate_menu(
         set_id,
         template_cate_id.as_str(),
         "项目",
@@ -1457,12 +2400,417 @@ async fn init_menu_configuration_template_and_tag<'a>(set_id: &str, parent_cate_
     )
     .await?;
 
+    // configuration -> template and tag -> template -> app -> app template
+    let template_app_app_cate_id = add_cate_menu(
+        set_id,
+        template_app_cate_id.as_str(),
+        "项目模板",
+        "__template_app_app_template__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        template_app_app_cate_id.as_str(),
+        "项目模板",
+        "template_app_app_template",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_app_cate_id.as_str(),
+        "创建",
+        "template*app*app*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_app_cate_id.as_str(),
+        "编辑",
+        "template*app*app*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_app_cate_id.as_str(),
+        "删除",
+        "template*app*app*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> template -> app -> page template
+    let template_app_page_cate_id = add_cate_menu(
+        set_id,
+        template_app_cate_id.as_str(),
+        "页面模板",
+        "__template_app_page_template__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        template_app_page_cate_id.as_str(),
+        "页面模板",
+        "template_app_page_template",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_page_cate_id.as_str(),
+        "创建",
+        "template*app*page*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_page_cate_id.as_str(),
+        "编辑",
+        "template*app*page*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_page_cate_id.as_str(),
+        "删除",
+        "template*app*page*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> template -> app -> project template
+    let template_app_project_cate_id = add_cate_menu(
+        set_id,
+        template_app_cate_id.as_str(),
+        "工程模板",
+        "__template_app_project_template__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        template_app_project_cate_id.as_str(),
+        "工程模板",
+        "template_app_project_template",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_project_cate_id.as_str(),
+        "创建",
+        "template*app*project*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_project_cate_id.as_str(),
+        "编辑",
+        "template*app*project*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_app_project_cate_id.as_str(),
+        "删除",
+        "template*app*project*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> template -> res
+    let template_res_cate_id = add_cate_menu(
+        set_id,
+        template_cate_id.as_str(),
+        "资源",
+        "__template_res__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> template -> res -> res template
+    let template_res_res_cate_id = add_cate_menu(
+        set_id,
+        template_res_cate_id.as_str(),
+        "资源模板",
+        "__template_res_res_template__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        template_res_res_cate_id.as_str(),
+        "资源模板",
+        "template_res_res_template",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_res_res_cate_id.as_str(),
+        "创建",
+        "template*res*res*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_res_res_cate_id.as_str(),
+        "编辑",
+        "template*res*res*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_res_res_cate_id.as_str(),
+        "页面配置",
+        "template*res*res*page",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_res_res_cate_id.as_str(),
+        "删除",
+        "template*res*res*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> template -> notice
+    let template_notice_cate_id = add_cate_menu(
+        set_id,
+        template_cate_id.as_str(),
+        "",
+        "__template_notice__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> template -> notice -> notice template
+    let template_notice_notice_cate_id = add_cate_menu(
+        set_id,
+        template_notice_cate_id.as_str(),
+        "通知模板",
+        "__template_notice_notice_template__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        template_notice_notice_cate_id.as_str(),
+        "通知模板",
+        "template_notice_notice_template",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_notice_notice_cate_id.as_str(),
+        "创建",
+        "template*notice*notice*create",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_notice_notice_cate_id.as_str(),
+        "编辑",
+        "template*notice*notice*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        template_notice_notice_cate_id.as_str(),
+        "删除",
+        "template*notice*notice*delete",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> template and tag -> tag
+    let tag_cate_id = add_cate_menu(
+        set_id,
+        template_and_tag_cate_id.as_str(),
+        "标签",
+        "__tag__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(set_id, tag_cate_id.as_str(), "标签", "tag", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+    let _ = add_ele_res(set_id, tag_cate_id.as_str(), "创建", "ttag*create", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+    let _ = add_ele_res(set_id, tag_cate_id.as_str(), "编辑", "tag*update", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+    let _ = add_ele_res(set_id, tag_cate_id.as_str(), "删除", "tag*delete", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+
     Ok(())
 }
 
-// async fn init_menu_configuration_notice<'a>(set_id: &str, parent_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-//     Ok(())
-// }
+async fn init_menu_configuration_notice<'a>(set_id: &str, parent_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    // configuration -> notice
+    let notice_cate_id = add_cate_menu(set_id, parent_cate_id, "通知", "__notice__", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+
+    // configuration -> notice -> sign
+    let sing_cate_id = add_cate_menu(
+        set_id,
+        notice_cate_id.as_str(),
+        "签名管理",
+        "__notice_sign__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(set_id, sing_cate_id.as_str(), "签名管理", "sign", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+    let _ = add_ele_res(set_id, sing_cate_id.as_str(), "创建", "sign*create", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+    let _ = add_ele_res(set_id, sing_cate_id.as_str(), "编辑", "sign*update", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+    let _ = add_ele_res(set_id, sing_cate_id.as_str(), "删除", "sign*delete", &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL, funs, ctx).await?;
+
+    // configuration -> notice -> config
+    let notice_config_cate_id = add_cate_menu(
+        set_id,
+        notice_cate_id.as_str(),
+        "通知配置",
+        "__notice_config__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        notice_config_cate_id.as_str(),
+        "通知配置",
+        "notice*config",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_ele_res(
+        set_id,
+        notice_config_cate_id.as_str(),
+        "编辑",
+        "notice*config*update",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> notice -> record
+    let notice_record_cate_id = add_cate_menu(
+        set_id,
+        notice_cate_id.as_str(),
+        "通知记录",
+        "__notice_record__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        notice_record_cate_id.as_str(),
+        "通知记录",
+        "notice*record",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    // configuration -> notice -> record -> detail
+    let notice_record_detail_cate_id = add_cate_menu(
+        set_id,
+        notice_record_cate_id.as_str(),
+        "详情页面",
+        "__notice_record_detail__",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+    let _ = add_menu_res(
+        set_id,
+        notice_record_detail_cate_id.as_str(),
+        "详情页面",
+        "notice*record*detail",
+        &iam_constants::RBUM_SCOPE_LEVEL_GLOBAL,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    Ok(())
+}
 
 async fn add_cate_menu<'a>(
     set_id: &str,
