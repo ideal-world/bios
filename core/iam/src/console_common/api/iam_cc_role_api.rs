@@ -70,7 +70,7 @@ impl IamCcRoleApi {
         })
     }
 
-    /// Find Rel Res By Role Id
+    /// Find pub Rel Res By Role Id
     #[oai(path = "/:id/pub_res", method = "get")]
     async fn find_rel_res_with_pub(
         &self,

@@ -14,24 +14,20 @@ use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAppInfoResp, IamAccountInfoResp};
+use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::{IamExtCertAddReq, IamManageCertAddReq};
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
-use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
-use crate::basic::serv::iam_role_serv::IamRoleServ;
-use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertManageKind, IamCertTokenKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertManageKind, IamCertTokenKind, IamRelKind};
 
 use super::iam_rel_serv::IamRelServ;
 
@@ -367,6 +363,11 @@ impl IamCertServ {
         Ok(())
     }
 
+    pub async fn delete_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumCertServ::delete_rbum(id, funs, ctx).await?;
+        Ok(())
+    }
+
     pub async fn get_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let manage_user_pwd_conf_id = &Self::get_cert_conf_id_by_code(
             IamCertManageKind::ManageUserPwd.to_string().as_str(),
@@ -647,59 +648,29 @@ impl IamCertServ {
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
         IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
 
-        let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, &context).await?.name;
-        let raw_roles = IamAccountServ::find_simple_rel_roles(account_id, true, Some(true), None, funs, &context).await?;
-        let mut roles: Vec<RbumRelBoneResp> = vec![];
-        for role in raw_roles {
-            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                roles.push(role)
-            }
-        }
-
-        let apps = if !tenant_id.is_empty() {
-            let enabled_apps = IamAppServ::find_items(
-                &IamAppFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ignore_scope: false,
-                        rel_ctx_owner: false,
-                        with_sub_own_paths: true,
-                        enabled: Some(true),
-                        ..Default::default()
-                    },
+        let account_agg = IamAccountServ::get_account_detail_aggs(
+            account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
-                None,
-                None,
-                funs,
-                &context,
-            )
-            .await?;
+                ..Default::default()
+            },
+            false,
+            false,
+            funs,
+            &context,
+        )
+        .await?;
 
-            let mut apps: Vec<IamAccountAppInfoResp> = vec![];
-            for app in enabled_apps {
-                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, &context).await?;
-                let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, true, funs, &context).await?;
-                apps.push(IamAccountAppInfoResp {
-                    app_id: app.id,
-                    app_name: app.name,
-                    roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-                    groups,
-                });
-            }
-            apps
-        } else {
-            vec![]
-        };
-
-        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &context.own_paths), false, funs, &context).await?;
-        let groups = IamSetServ::find_flat_set_items(&set_id, &context.owner, false, funs, &context).await?;
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
-            account_name: account_name.to_string(),
+            account_name: account_agg.name.to_string(),
             token,
-            roles: roles.iter().filter(|r| r.rel_own_paths == context.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-            groups,
-            apps,
+            roles: account_agg.roles,
+            groups: account_agg.groups,
+            apps: account_agg.apps,
         };
 
         IamIdentCacheServ::add_contexts(&account_info, ak, &tenant_id, funs).await?;
