@@ -46,7 +46,7 @@ impl IamCsResApi {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len]).ok().unwrap()).unwrap();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
-        let rbum_parent_cate_id = if add_req.0.rbum_parent_cate_id.is_some() {
+        let rbum_parent_cate_id = if add_req.0.rbum_parent_cate_id.is_none() {
             Some(IamSetServ::get_cate_id_with_sys_code(set_id.as_str(), api_sys_code.as_str(), &funs, &ctx.0).await?)
         } else {
             add_req.0.rbum_parent_cate_id
