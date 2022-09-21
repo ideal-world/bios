@@ -340,7 +340,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: Some("".to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: "".to_string()
+            rel_rbum_id: "".to_string(),
+            is_outside: false
         },
         &funs,
         context,
@@ -361,7 +362,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: Some("".to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: "".to_string()
+            rel_rbum_id: "".to_string(),
+            is_outside: false
         },
         &funs,
         context,
@@ -382,7 +384,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: Some("".to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: "".to_string()
+            rel_rbum_id: "".to_string(),
+            is_outside: false
         },
         &funs,
         context,
@@ -403,7 +406,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: Some("".to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: "".to_string()
+            rel_rbum_id: "".to_string(),
+            is_outside: false
         },
         &funs,
         context,
@@ -424,7 +428,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: Some(cert_conf_user_pwd_id.to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: "11".to_string()
+            rel_rbum_id: "11".to_string(),
+            is_outside: false,
         },
         &funs,
         context,
@@ -445,6 +450,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_cert_conf_id: Some(cert_conf_user_pwd_id.to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
             rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
         },
         &funs,
         context,
@@ -464,7 +470,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             status: RbumCertStatusKind::Enabled,
             rel_rbum_cert_conf_id: Some(cert_conf_user_pwd_id.to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
-            rel_rbum_id: context.owner.to_string()
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false
         },
         &funs,
         context,
@@ -485,6 +492,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_cert_conf_id: Some(cert_conf_ssh_id.to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
             rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
         },
         &funs,
         context,
@@ -653,6 +661,7 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
             rel_rbum_cert_conf_id: Some(cert_conf_mail_vcode_id.to_string()),
             rel_rbum_kind: RbumCertRelKind::Item,
             rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
         },
         &funs,
         context,
