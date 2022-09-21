@@ -120,9 +120,16 @@ impl IamCtCertManageApi {
 
     /// Add Manage rel cert
     #[oai(path = "/:id/rel/:item_id", method = "put")]
-    async fn add_rel_item(&self, id: Path<String>, item_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_rel_item(
+        &self,
+        id: Path<String>,
+        item_id: Path<String>,
+        note: Query<Option<String>>,
+        ext: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCertServ::add_rel_cert(&id.0, &item_id.0, &funs, &ctx.0).await?;
+        IamCertServ::add_rel_cert(&id.0, &item_id.0, note.0, ext.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
