@@ -5,7 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
@@ -225,6 +225,21 @@ impl IamSetServ {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?).unwrap();
         Self::get_tree_with_sys_code(set_id, &api_sys_code, funs, ctx).await
+    }
+
+    pub async fn get_cate_id_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let rbum_cate = RbumSetCateServ::find_one_rbum(
+            &RbumSetCateFilterReq {
+                rel_rbum_set_id: Some(set_id.to_string()),
+                sys_codes: Some(vec![filter_sys_code.to_string()]),
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(rbum_cate.as_ref().map(|r| r.id.clone()).unwrap_or_default())
     }
 
     async fn get_tree_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {

@@ -163,8 +163,9 @@ pub struct IamAccountDetailAggResp {
     pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
     pub orgs: Vec<String>,
-    pub apps: Vec<IamAccountAppInfoResp>,
     pub exts: Vec<IamAccountExtResp>,
+    pub groups: HashMap<String, String>,
+    pub apps: Vec<IamAccountAppInfoResp>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

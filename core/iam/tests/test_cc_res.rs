@@ -131,7 +131,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert!(!res.disabled);
 
     info!("【test_cc_res】 : test_single_level : Find Res");
-    let res = IamResServ::paginate_items(&IamResFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    let res = IamResServ::paginate_items(&IamResFilterReq::default(), 1, 10, Some(true), None, &funs, context).await?;
     assert_eq!(res.page_number, 1);
     assert_eq!(res.page_size, 10);
     assert!(res.records.iter().any(|i| i.name == "测试资源"));

@@ -21,7 +21,7 @@ pub struct IamCtCertManageApi;
 /// Tenant Console Cert manage API
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtCertManageApi {
-    /// Rest Password
+    /// Find Conf
     #[oai(path = "/conf", method = "get")]
     async fn find_conf(&self, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
@@ -53,7 +53,7 @@ impl IamCtCertManageApi {
     //     TardisResp::ok(Void {})
     // }
 
-    /// add manage cert
+    /// Add Manage Cert
     #[oai(path = "/", method = "post")]
     async fn add_manage_cert(&self, add_req: Json<IamManageCertAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -73,7 +73,17 @@ impl IamCtCertManageApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Certs By Account Id
+    /// delete manage cert ext
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete_manage_cert_ext(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertServ::delete_manage_cert(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Paginate Manage Certs
     #[oai(path = "/", method = "get")]
     async fn paginate_certs(
         &self,
@@ -108,7 +118,7 @@ impl IamCtCertManageApi {
         TardisResp::ok(result)
     }
 
-    /// add rel cert
+    /// Add Manage rel cert
     #[oai(path = "/:id/rel/:item_id", method = "put")]
     async fn add_rel_item(&self, id: Path<String>, item_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
@@ -116,7 +126,7 @@ impl IamCtCertManageApi {
         TardisResp::ok(Void {})
     }
 
-    /// delete rel cert
+    /// Delete Manage rel cert
     #[oai(path = "/:id/rel/:item_id", method = "delete")]
     async fn delete_rel_item(&self, id: Path<String>, item_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
@@ -124,7 +134,7 @@ impl IamCtCertManageApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Certs By item Id
+    /// Find Manage Certs By item Id
     #[oai(path = "/rel/:item_id", method = "get")]
     async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
