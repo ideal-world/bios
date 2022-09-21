@@ -527,17 +527,17 @@ impl IamCertServ {
         RbumCertServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
-    pub async fn add_rel_cert(cert_id: &str, item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_rel_cert(cert_id: &str, item_id: &str, note: Option<String>, ext: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: IamRelKind::IamCertRel.to_string(),
-                note: None,
+                note,
                 from_rbum_kind: RbumRelFromKind::Cert,
                 from_rbum_id: cert_id.to_string(),
                 to_rbum_item_id: item_id.to_string(),
                 to_own_paths: ctx.own_paths.to_string(),
                 to_is_outside: true,
-                ext: None,
+                ext,
             },
             attrs: vec![],
             envs: vec![],

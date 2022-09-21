@@ -210,9 +210,9 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await?;
     assert_eq!(manage_cert_result.records.len(), 2);
 
-    IamCertServ::add_rel_cert(&manage_cert_pwd_id, "123456", &funs, &another_context).await?;
+    IamCertServ::add_rel_cert(&manage_cert_pwd_id, "123456", None, None, &funs, &another_context).await?;
     assert_eq!(IamCertServ::find_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 1);
-    IamCertServ::add_rel_cert(&manage_cert_visa_id, "123456", &funs, &another_context).await?;
+    IamCertServ::add_rel_cert(&manage_cert_visa_id, "123456", None, None, &funs, &another_context).await?;
     assert_eq!(IamCertServ::find_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 2);
     IamCertServ::delete_rel_cert(&manage_cert_pwd_id, "123456", &funs, &another_context).await?;
     assert_eq!(IamCertServ::find_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 1);
