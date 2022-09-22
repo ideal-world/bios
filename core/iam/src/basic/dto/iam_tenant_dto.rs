@@ -6,6 +6,8 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
+use super::iam_cert_conf_dto::{IamOAuth2CertConfAddOrModifyReq, IamOAuth2CertConfInfo};
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAddReq {
     #[oai(skip = true)]
@@ -23,6 +25,7 @@ pub struct IamTenantAddReq {
     pub contact_phone: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
+    pub account_self_reg: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -40,24 +43,7 @@ pub struct IamTenantModifyReq {
     pub contact_phone: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamTenantAggModifyReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub name: Option<TrimString>,
-    pub disabled: Option<bool>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub icon: Option<String>,
-    pub sort: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub contact_phone: Option<String>,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub note: Option<String>,
-
-    pub cert_conf_by_user_pwd: Option<IamUserPwdCertConfInfo>,
-    pub cert_conf_by_phone_vcode: Option<bool>,
-    pub cert_conf_by_mail_vcode: Option<bool>,
+    pub account_self_reg: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -66,11 +52,12 @@ pub struct IamTenantAggAddReq {
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
+    pub account_self_reg: Option<bool>,
+    pub disabled: Option<bool>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub admin_username: TrimString,
@@ -82,8 +69,27 @@ pub struct IamTenantAggAddReq {
     pub cert_conf_by_user_pwd: IamUserPwdCertConfInfo,
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
+    pub cert_conf_by_wechat_mp: Option<IamOAuth2CertConfAddOrModifyReq>,
+}
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamTenantAggModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub icon: Option<String>,
+    pub sort: Option<u32>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub contact_phone: Option<String>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub note: Option<String>,
+    pub account_self_reg: Option<bool>,
     pub disabled: Option<bool>,
+
+    pub cert_conf_by_user_pwd: Option<IamUserPwdCertConfInfo>,
+    pub cert_conf_by_phone_vcode: Option<bool>,
+    pub cert_conf_by_mail_vcode: Option<bool>,
+    pub cert_conf_by_wechat_mp: Option<IamOAuth2CertConfAddOrModifyReq>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -103,10 +109,12 @@ pub struct IamTenantAggDetailResp {
     pub sort: u32,
     pub contact_phone: String,
     pub note: String,
+    pub account_self_reg: bool,
 
     pub cert_conf_by_user_pwd: IamUserPwdCertConfInfo,
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
+    pub cert_conf_by_wechat_mp: Option<IamOAuth2CertConfInfo>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -133,6 +141,7 @@ pub struct IamTenantSummaryResp {
     pub sort: u32,
     pub contact_phone: String,
     pub note: String,
+    pub account_self_reg: bool,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -153,4 +162,5 @@ pub struct IamTenantDetailResp {
     pub sort: u32,
     pub contact_phone: String,
     pub note: String,
+    pub account_self_reg: bool,
 }

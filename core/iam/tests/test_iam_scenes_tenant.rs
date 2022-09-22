@@ -57,6 +57,8 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: true,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None,
             },
         )
         .await;
@@ -111,6 +113,8 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
                 }),
                 cert_conf_by_phone_vcode: Some(true),
                 cert_conf_by_mail_vcode: Some(true),
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None,
             },
         )
         .await;
@@ -403,7 +407,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     assert_eq!(account.exts.len(), 1);
     assert_eq!(account.exts.into_iter().find(|r| r.name == "ext1_idx").unwrap().value, "00001");
     assert_eq!(account.roles.len(), 1);
-    assert!(account.roles.contains(&("审计管理员".to_string())));
+    assert!(account.roles.into_iter().any(|r| r.1 == "审计管理员"));
 
     // Modify Account By Account Id
     let _: Void = client

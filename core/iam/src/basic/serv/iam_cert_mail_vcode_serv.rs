@@ -150,9 +150,9 @@ impl IamCertMailVCodeServ {
                         ak: Some(mail.to_string()),
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
-                        rel_rbum_cert_conf_id: Some(
+                        rel_rbum_cert_conf_ids: Some(vec![
                             IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
-                        ),
+                        ]),
                         ..Default::default()
                     },
                     funs,
@@ -163,11 +163,13 @@ impl IamCertMailVCodeServ {
                     RbumCertServ::modify_rbum(
                         &cert.id,
                         &mut RbumCertModifyReq {
+                            status: Some(RbumCertStatusKind::Enabled),
+                            ak: None,
+                            sk: None,
                             ext: None,
                             start_time: None,
                             end_time: None,
                             conn_uri: None,
-                            status: Some(RbumCertStatusKind::Enabled),
                         },
                         funs,
                         ctx,

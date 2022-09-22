@@ -514,6 +514,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         "111",
         &mut RbumCertModifyReq {
             ext: Some("ext".to_string()),
+            ak: None,
+            sk: None,
             start_time: None,
             end_time: None,
             conn_uri: None,
@@ -529,6 +531,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
         &cert_gudaoxuri_id,
         &mut RbumCertModifyReq {
             ext: Some("ext".to_string()),
+            ak: None,
+            sk: None,
             start_time: None,
             end_time: None,
             conn_uri: None,

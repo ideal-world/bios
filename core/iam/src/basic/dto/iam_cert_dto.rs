@@ -99,3 +99,9 @@ pub struct IamManageCertModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamOAuth2CertAddOrModifyReq {
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ak: TrimString,
+}

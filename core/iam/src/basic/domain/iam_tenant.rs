@@ -13,6 +13,7 @@ pub struct Model {
     pub sort: u32,
     pub contact_phone: String,
     pub note: String,
+    pub account_self_reg: bool,
 
     pub own_paths: String,
 }
@@ -36,6 +37,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::ContactPhone).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
+            .col(ColumnDef::new(Column::AccountSelfReg).not_null().boolean())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .to_owned()
     }

@@ -109,13 +109,14 @@ impl IamCertServ {
         Ok(rbum_cert_conf_user_pwd_id)
     }
 
+    #[deprecated]
     pub async fn init_default_ext_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::add_ext_cert_conf(&IamCertExtKind::Gitlab, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Self::add_ext_cert_conf(&IamCertExtKind::Github, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Self::add_ext_cert_conf(&IamCertExtKind::Wechat, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Ok(())
     }
 
+    #[deprecated = "name needs consideration"]
     pub async fn init_default_manage_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::add_manage_cert_conf(&IamCertManageKind::ManageUserPwd, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Self::add_manage_cert_conf(&IamCertManageKind::ManageUserVisa, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
@@ -136,7 +137,7 @@ impl IamCertServ {
         .await
     }
 
-    pub async fn find_cert_conf_with_kernel_kind(
+    pub async fn find_cert_conf(
         with_sub: bool,
         iam_item_id: Option<String>,
         desc_sort_by_create: Option<bool>,
@@ -144,7 +145,7 @@ impl IamCertServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumCertConfSummaryResp>> {
-        let result = RbumCertConfServ::find_rbums(
+        RbumCertConfServ::find_rbums(
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
@@ -158,14 +159,7 @@ impl IamCertServ {
             funs,
             ctx,
         )
-        .await?;
-        let result = result
-            .into_iter()
-            .filter(|r| {
-                r.code == IamCertKernelKind::UserPwd.to_string() || r.code == IamCertKernelKind::PhoneVCode.to_string() || r.code == IamCertKernelKind::MailVCode.to_string()
-            })
-            .collect();
-        Ok(result)
+        .await
     }
 
     pub async fn find_cert_conf_detail_with_kernel_kind(
@@ -351,6 +345,8 @@ impl IamCertServ {
             id,
             &mut RbumCertModifyReq {
                 ext: Some(ext.to_string()),
+                ak: None,
+                sk: None,
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
@@ -479,7 +475,7 @@ impl IamCertServ {
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.to_string()),
-                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
             },
             funs,
@@ -629,9 +625,9 @@ impl IamCertServ {
 
     pub async fn package_tardis_context_and_resp(
         tenant_id: Option<String>,
-        ak: &str,
         account_id: &str,
         token_kind: Option<String>,
+        access_token: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<IamAccountInfoResp> {
         let token_kind = IamCertTokenKind::parse(&token_kind);
@@ -639,7 +635,6 @@ impl IamCertServ {
         let tenant_id = if let Some(tenant_id) = tenant_id { tenant_id } else { "".to_string() };
         let context = TardisContext {
             own_paths: tenant_id.clone(),
-            ak: ak.to_string(),
             owner: account_id.to_string(),
             roles: vec![],
             groups: vec![],
@@ -668,12 +663,13 @@ impl IamCertServ {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),
             token,
+            access_token,
             roles: account_agg.roles,
             groups: account_agg.groups,
             apps: account_agg.apps,
         };
 
-        IamIdentCacheServ::add_contexts(&account_info, ak, &tenant_id, funs).await?;
+        IamIdentCacheServ::add_contexts(&account_info, &tenant_id, funs).await?;
 
         Ok(account_info)
     }

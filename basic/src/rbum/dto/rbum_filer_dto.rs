@@ -44,7 +44,6 @@ pub struct RbumCertFilterReq {
     pub status: Option<RbumCertStatusKind>,
     pub rel_rbum_kind: Option<RbumCertRelKind>,
     pub rel_rbum_id: Option<String>,
-    pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_ids: Option<Vec<String>>,
 }
 

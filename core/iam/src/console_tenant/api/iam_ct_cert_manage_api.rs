@@ -19,6 +19,7 @@ use crate::iam_enumeration::IamCertManageKind;
 pub struct IamCtCertManageApi;
 
 /// Tenant Console Cert manage API
+#[deprecated = "name needs consideration"]
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "crate::iam_enumeration::Tag::Tenant")]
 impl IamCtCertManageApi {
     /// Find Conf
