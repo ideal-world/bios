@@ -24,6 +24,7 @@ pub async fn test(context1: &TardisContext, _: &TardisContext) -> TardisResult<(
             scope_level: None,
             disabled: None,
             note: None,
+            account_self_reg: None,
         },
         &funs,
         context1,

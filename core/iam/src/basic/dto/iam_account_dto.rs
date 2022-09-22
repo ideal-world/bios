@@ -180,6 +180,7 @@ pub struct IamAccountInfoResp {
     pub account_id: String,
     pub account_name: String,
     pub token: String,
+    pub access_token: Option<String>,
     pub roles: HashMap<String, String>,
     pub groups: HashMap<String, String>,
     pub apps: Vec<IamAccountAppInfoResp>,

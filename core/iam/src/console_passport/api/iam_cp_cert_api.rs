@@ -13,7 +13,8 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
+use crate::console_passport::dto::iam_cp_cert_dto::{IamCpOAuth2ByCodeLoginReq, IamCpUserPwdLoginReq};
+use crate::console_passport::serv::iam_cp_cert_oauth2_by_code_serv::IamCpCertOAuth2ByCodeServ;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
 
@@ -100,6 +101,24 @@ impl IamCpCertApi {
         IamCpCertUserPwdServ::modify_cert_user_pwd(&ctx.owner, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
+    }
+
+    /// Get AppId by Wechat MP
+    #[oai(path = "/ak/wechat-mp/:tenant_id", method = "get")]
+    async fn get_ak_by_wechat_mp(&self, tenant_id: Path<String>) -> TardisApiResult<String> {
+        let funs = iam_constants::get_tardis_inst();
+        let resp = IamCpCertOAuth2ByCodeServ::get_ak(crate::iam_enumeration::IamCertExtKind::WechatMp, tenant_id.0, &funs).await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Login by Wechat MP
+    #[oai(path = "/login/wechat-mp", method = "put")]
+    async fn login_or_register_by_wechat_mp(&self, login_req: Json<IamCpOAuth2ByCodeLoginReq>) -> TardisApiResult<IamAccountInfoResp> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let resp = IamCpCertOAuth2ByCodeServ::login_or_register(crate::iam_enumeration::IamCertExtKind::WechatMp, &login_req.0, &funs).await?;
+        funs.commit().await?;
+        TardisResp::ok(resp)
     }
 
     // /// Add Mail-VCode Cert
