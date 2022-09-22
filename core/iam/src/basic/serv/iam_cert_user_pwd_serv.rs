@@ -122,7 +122,7 @@ impl IamCertUserPwdServ {
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_id: Some(rel_iam_item_id.to_string()),
-                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
             },
             funs,
@@ -147,7 +147,7 @@ impl IamCertUserPwdServ {
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_id: Some(rel_iam_item_id.to_string()),
-                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
             },
             funs,

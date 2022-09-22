@@ -53,3 +53,11 @@ pub struct IamCpPhoneVCodeLoginSendVCodeReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub flag: Option<String>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpOAuth2ByCodeLoginReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tenant_id: String,
+}

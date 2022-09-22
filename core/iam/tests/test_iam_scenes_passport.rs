@@ -59,6 +59,8 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None,
             },
         )
         .await;
@@ -497,6 +499,8 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None
             },
         )
         .await
@@ -532,6 +536,8 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None
             },
         )
         .await
@@ -567,6 +573,8 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None
             },
         )
         .await
@@ -602,6 +610,8 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None
             },
         )
         .await
@@ -637,6 +647,8 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_phone_vcode: false,
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
+                account_self_reg: None,
+                cert_conf_by_wechat_mp: None,
             },
         )
         .await;

@@ -44,6 +44,8 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             },
             cert_conf_by_phone_vcode: true,
             cert_conf_by_mail_vcode: true,
+            account_self_reg: None,
+            cert_conf_by_wechat_mp: None,
         },
         &funs,
     )
@@ -76,6 +78,8 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             },
             cert_conf_by_phone_vcode: true,
             cert_conf_by_mail_vcode: true,
+            account_self_reg: None,
+            cert_conf_by_wechat_mp: None,
         },
         &funs,
     )
@@ -108,6 +112,8 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             },
             cert_conf_by_phone_vcode: true,
             cert_conf_by_mail_vcode: true,
+            account_self_reg: None,
+            cert_conf_by_wechat_mp: None,
         },
         &funs,
     )
@@ -135,6 +141,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: Some(true),
             scope_level: None,
             note: None,
+            account_self_reg: None,
         },
         &funs,
         context,
@@ -151,6 +158,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             scope_level: None,
             note: None,
+            account_self_reg: None,
         },
         &funs,
         context,

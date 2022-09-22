@@ -160,7 +160,7 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
-    pub async fn add_contexts(account_info: &IamAccountInfoResp, ak: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_contexts(account_info: &IamAccountInfoResp, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add contexts: account_id={:?}", account_info);
         funs.cache()
             .hset(
@@ -168,7 +168,6 @@ impl IamIdentCacheServ {
                 "",
                 &TardisFuns::json.obj_to_string(&TardisContext {
                     own_paths: tenant_id.to_string(),
-                    ak: ak.to_string(),
                     owner: account_info.account_id.to_string(),
                     roles: account_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
                     groups: account_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
@@ -183,7 +182,6 @@ impl IamIdentCacheServ {
                     &account_app_info.app_id,
                     &TardisFuns::json.obj_to_string(&TardisContext {
                         own_paths: format!("{}/{}", tenant_id, account_app_info.app_id).to_string(),
-                        ak: ak.to_string(),
                         owner: account_info.account_id.to_string(),
                         roles: account_app_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
                         groups: account_app_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
