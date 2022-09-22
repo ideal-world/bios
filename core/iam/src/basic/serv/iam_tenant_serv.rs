@@ -27,7 +27,9 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertKernelKind, IamSetKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamSetKind};
+
+use super::iam_cert_oauth2_by_code_serv::IamCertOAuth2ByCodeServ;
 
 pub struct IamTenantServ;
 
@@ -62,6 +64,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             sort: Set(add_req.sort.unwrap_or(0)),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
+            account_self_reg: Set(add_req.account_self_reg.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -98,6 +101,9 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         if let Some(note) = &modify_req.note {
             iam_tenant.note = Set(note.to_string());
         }
+        if let Some(account_self_reg) = modify_req.account_self_reg {
+            iam_tenant.account_self_reg = Set(account_self_reg);
+        }
         Ok(Some(iam_tenant))
     }
 
@@ -122,6 +128,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         query.column((iam_tenant::Entity, iam_tenant::Column::Sort));
         query.column((iam_tenant::Entity, iam_tenant::Column::ContactPhone));
         query.column((iam_tenant::Entity, iam_tenant::Column::Note));
+        query.column((iam_tenant::Entity, iam_tenant::Column::AccountSelfReg));
         if let Some(contact_phone) = &filter.contact_phone {
             query.and_where(Expr::col(iam_tenant::Column::ContactPhone).eq(contact_phone.as_str()));
         }
@@ -171,6 +178,7 @@ impl IamTenantServ {
                 disabled: add_req.disabled,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                 note: add_req.note.clone(),
+                account_self_reg: add_req.account_self_reg,
             },
             funs,
             &tenant_ctx,
@@ -206,6 +214,11 @@ impl IamTenantServ {
         IamCertServ::init_default_ident_conf(cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, funs, &tenant_ctx).await?;
         IamCertServ::init_default_ext_conf(funs, &tenant_ctx).await?;
         IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
+
+        if let Some(cert_conf_by_wechat_mp) = &add_req.cert_conf_by_wechat_mp {
+            IamCertOAuth2ByCodeServ::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
+        }
+
         // Init pwd
         let pwd = if let Some(admin_password) = &add_req.admin_password {
             admin_password.to_string()
@@ -247,6 +260,7 @@ impl IamTenantServ {
                 sort: modify_req.sort,
                 contact_phone: modify_req.contact_phone.clone(),
                 note: modify_req.note.clone(),
+                account_self_reg: modify_req.account_self_reg,
             },
             funs,
             ctx,
@@ -258,7 +272,7 @@ impl IamTenantServ {
         }
 
         // Init cert conf
-        let cert_confs = IamCertServ::find_cert_conf_with_kernel_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
+        let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
 
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
             let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
@@ -301,13 +315,29 @@ impl IamTenantServ {
             }
         }
 
+        if let Some(cert_conf_by_wechat_mp) = &modify_req.cert_conf_by_wechat_mp {
+            if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
+                IamCertOAuth2ByCodeServ::modify_cert_conf(&cert_conf_by_wechat_mp_id, cert_conf_by_wechat_mp, funs, ctx).await?;
+            } else {
+                IamCertOAuth2ByCodeServ::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, id.to_string(), funs, ctx).await?;
+            }
+        } else if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
+            IamCertServ::delete_cert_conf(&cert_conf_by_wechat_mp_id, funs, ctx).await?;
+        }
+
         Ok(())
     }
 
     pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
         let tenant = Self::get_item(id, filter, funs, ctx).await?;
-        let cert_confs = IamCertServ::find_cert_conf_with_kernel_kind(true, Some(id.to_string()), None, None, funs, ctx).await?;
+        let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
         let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).unwrap();
+
+        let cert_conf_by_wechat_mp = if let Some(cert_conf_by_wechat_mp) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()) {
+            Some(IamCertOAuth2ByCodeServ::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
+        } else {
+            None
+        };
 
         let tenant = IamTenantAggDetailResp {
             id: tenant.id.clone(),
@@ -322,9 +352,11 @@ impl IamTenantServ {
             sort: tenant.sort,
             contact_phone: tenant.contact_phone.clone(),
             note: tenant.note.clone(),
+            account_self_reg: tenant.account_self_reg,
             cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
             cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()),
             cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::MailVCode.to_string()),
+            cert_conf_by_wechat_mp,
         };
 
         Ok(tenant)

@@ -465,7 +465,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                     &RbumCertFilterReq {
                         rel_rbum_kind: Some(add_req.rel_rbum_kind.clone()),
                         rel_rbum_id: Some(add_req.rel_rbum_id.clone()),
-                        rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.clone()),
+                        rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.clone()]),
                         ..Default::default()
                     },
                     // Skip normal records
@@ -493,6 +493,12 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             id: Set(id.to_string()),
             ..Default::default()
         };
+        if let Some(ak) = &modify_req.ak {
+            rbum_cert.ak = Set(ak.to_string());
+        }
+        if let Some(sk) = &modify_req.sk {
+            rbum_cert.sk = Set(sk.to_string());
+        }
         if let Some(ext) = &modify_req.ext {
             rbum_cert.ext = Set(ext.to_string());
         }
@@ -548,9 +554,6 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         }
         if let Some(status) = &filter.status {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Status).eq(status.to_int()));
-        }
-        if let Some(rel_rbum_cert_conf_id) = &filter.rel_rbum_cert_conf_id {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).eq(rel_rbum_cert_conf_id.to_string()));
         }
         if let Some(rel_rbum_cert_conf_ids) = &filter.rel_rbum_cert_conf_ids {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).is_in(rel_rbum_cert_conf_ids.clone()));

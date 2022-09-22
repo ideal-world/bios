@@ -78,3 +78,19 @@ pub struct IamTokenCertConfModifyReq {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<u32>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamOAuth2CertConfAddOrModifyReq {
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ak: TrimString,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub sk: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamOAuth2CertConfInfo {
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ak: String,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub sk: String,
+}

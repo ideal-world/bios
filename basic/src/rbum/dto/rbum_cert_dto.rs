@@ -37,6 +37,10 @@ pub struct RbumCertAddReq {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub ak: Option<TrimString>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    pub sk: Option<TrimString>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,

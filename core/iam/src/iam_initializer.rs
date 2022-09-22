@@ -400,6 +400,7 @@ async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRes
     .await
 }
 
+#[deprecated]
 async fn init_menu<'a>(set_id: &str, parent_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     init_menu_workbench(set_id, parent_cate_id, funs, ctx).await?;
     init_menu_account_info(set_id, parent_cate_id, funs, ctx).await?;
