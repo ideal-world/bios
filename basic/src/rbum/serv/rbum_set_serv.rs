@@ -199,6 +199,7 @@ impl RbumSetServ {
                 sys_codes: filter.sys_codes.clone(),
                 sys_code_query_kind: filter.sys_code_query_kind.clone(),
                 sys_code_query_depth: filter.sys_code_query_depth,
+                cate_exts: filter.cate_exts.clone(),
             },
             None,
             None,
@@ -601,6 +602,9 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                 }
                 query.cond_where(Cond::all().add(cond));
             }
+        }
+        if let Some(cate_exts) = &filter.cate_exts {
+            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Ext).is_in(cate_exts.clone()));
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel {
             if rbum_item_rel_filter_req.rel_by_from {

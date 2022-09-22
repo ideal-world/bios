@@ -7,7 +7,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
-use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
@@ -519,8 +519,8 @@ impl IamCertServ {
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
-    ) -> TardisResult<TardisPage<RbumCertSummaryResp>> {
-        RbumCertServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    ) -> TardisResult<TardisPage<RbumCertDetailResp>> {
+        RbumCertServ::paginate_detail_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     pub async fn add_rel_cert(cert_id: &str, item_id: &str, note: Option<String>, ext: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
