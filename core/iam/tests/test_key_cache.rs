@@ -302,7 +302,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     );
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        0
+        2
     );
 
     info!("【test_key_cache】 Login by tenant again, expected one token record");
