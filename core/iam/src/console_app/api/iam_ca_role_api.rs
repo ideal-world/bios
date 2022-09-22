@@ -88,11 +88,12 @@ impl IamCaRoleApi {
             &IamRoleFilterReq {
                 basic: RbumBasicFilterReq {
                     // Only fetch app-level roles
-                    scope_level: Some(RBUM_SCOPE_LEVEL_APP),
+                    // scope_level: Some(RBUM_SCOPE_LEVEL_APP),
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     ..Default::default()
                 },
+                kind: Some(IamRoleKind::App),
                 ..Default::default()
             },
             page_number.0,
