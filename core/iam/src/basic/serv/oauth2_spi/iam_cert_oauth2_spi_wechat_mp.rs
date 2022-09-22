@@ -32,8 +32,8 @@ impl IamCertOAuth2ByCodeSpi for IamCertOAuth2SpiWeChatMp {
         trace!("iam oauth2 spi [wechat_mp] get access token response: {}", result);
         if let Some(err) = result.get("errcode") {
             // 0成功，-1系统繁忙，40029 code无效，45011 访问次数限制（100次/分钟）
-            let err = err.as_str().unwrap();
-            if err != "0" {
+            let err = err.as_i64().unwrap();
+            if err != 0 {
                 return Err(funs.err().not_found(
                     "oauth_spi_wechat_mp",
                     "get_access_token",
