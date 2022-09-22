@@ -5,7 +5,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamOAuth2CertConfAddOrModifyReq, IamOAuth2CertConfInfo};
@@ -47,7 +47,7 @@ impl IamCertOAuth2ByCodeServ {
                 sk_rule: None,
                 ext: None,
                 sk_need: Some(false),
-                sk_dynamic: Some(true),
+                sk_dynamic: Some(false),
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
@@ -220,7 +220,7 @@ impl IamCertOAuth2ByCodeServ {
 
     pub async fn get_or_add_account(cert_kind: IamCertExtKind, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&cert_kind.to_string(), Some(tenant_id.to_string()), funs).await?;
-        let mock_ctx = TardisContext {
+        let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
         };
@@ -246,12 +246,13 @@ impl IamCertOAuth2ByCodeServ {
             ));
         }
         // Register
+        mock_ctx.owner = TardisFuns::field.nanoid();
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
-                id: None,
+                id: Some(TrimString(mock_ctx.owner.clone())),
                 name: TrimString("".to_string()),
-                cert_user_name: TrimString(format!("{}_user", oauth_token_info.open_id)),
-                cert_password: TrimString(oauth_token_info.access_token.to_string()),
+                cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
+                cert_password: TrimString(format!("{}Pw$", TardisFuns::field.nanoid_len(6))),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
