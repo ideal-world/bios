@@ -27,7 +27,7 @@ serde = { version = "1", features = ["derive"] }
 async-trait = { version = "0" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
-tardis = { version = "0.1.0-alpha24", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
+tardis = { version = "0.1.0-alpha26", features = ["reldb", "cache", "mq", "web-server", "web-client", "mail"] }
 bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
 
 # ldap
@@ -35,4 +35,4 @@ ldap3_proto = { version = "0.2.3", optional = true }
 tokio-util = { version = "0.7", optional = true }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha24", features = ["test"] }
+tardis = { version = "0.1.0-alpha26", features = ["test"] }
