@@ -163,6 +163,8 @@ impl IamAppServ {
             &app_ctx,
         )
         .await?;
+        IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
+        IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         if let Some(admin_ids) = &add_req.admin_ids {
             for admin_id in admin_ids {
                 IamAppServ::add_rel_account(&app_id, admin_id, false, funs, &app_ctx).await?;
@@ -170,8 +172,6 @@ impl IamAppServ {
             }
         }
 
-        IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
-        IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         Ok(app_id)
     }
 
