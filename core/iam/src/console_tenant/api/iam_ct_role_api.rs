@@ -80,6 +80,7 @@ impl IamCtRoleApi {
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
+                kind: Some(IamRoleKind::Tenant),
                 ..Default::default()
             },
             page_number.0,
