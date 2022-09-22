@@ -133,7 +133,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     security_mgr_by_app_account("user1", "123456", &tenant_id, &app_id, client).await?;
     login_page(sysadmin_name, &sysadmin_password, None, None, true, client).await?;
     security_password(client).await?;
-    login_by_oauth2(client).await?;
+    // login_by_oauth2(client).await?;
     Ok(())
 }
 
@@ -663,9 +663,9 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
 pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【login_by_oauth2】");
 
-    let app_id = "wx09fbb098c515fc46";
-    let secret = "57bffaaea890725aff3571027bdc18ab";
-    let code = "091HIfll2niyW94254nl2UXBFn2HIflB";
+    let app_id = "";
+    let secret = "";
+    let code = "";
 
     let tenant_id: String = client
         .post(
