@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::SelectStatement;
+use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::EntityName;
 use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
@@ -18,7 +18,8 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
 use crate::basic::domain::iam_role;
-use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
+use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamRoleFilterReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -26,6 +27,9 @@ use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
+
+use super::iam_account_serv::IamAccountServ;
+use super::iam_cert_serv::IamCertServ;
 
 pub struct IamRoleServ;
 
@@ -192,10 +196,13 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         Ok(())
     }
 
-    async fn package_ext_query(query: &mut SelectStatement, _: bool, _: &IamRoleFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamRoleFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_role::Entity, iam_role::Column::Icon));
         query.column((iam_role::Entity, iam_role::Column::Sort));
         query.column((iam_role::Entity, iam_role::Column::Kind));
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::col(iam_role::Column::Kind).eq(kind.to_int()));
+        }
         Ok(())
     }
 
@@ -262,7 +269,12 @@ impl IamRoleServ {
         }
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
-        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await
+        IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
+
+        // TODO reset account cache
+        // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+        // IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
+        Ok(())
     }
 
     pub async fn delete_rel_account(role_id: &str, account_id: &str, spec_scope_level: Option<RbumScopeLevelKind>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -278,7 +290,12 @@ impl IamRoleServ {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }
-        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
+
+        // TODO reset account cache
+        // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+        // IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
+        Ok(())
     }
 
     pub async fn count_rel_accounts(role_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {

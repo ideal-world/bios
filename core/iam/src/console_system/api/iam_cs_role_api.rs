@@ -13,6 +13,7 @@ use crate::basic::dto::iam_role_dto::{IamRoleAggAddReq, IamRoleAggModifyReq, Iam
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
+use crate::iam_enumeration::IamRoleKind;
 
 pub struct IamCsRoleApi;
 
@@ -25,6 +26,7 @@ impl IamCsRoleApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        add_req.0.role.kind = Some(IamRoleKind::App);
         let result = IamRoleServ::add_role_agg(&mut add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(result)
@@ -86,6 +88,7 @@ impl IamCsRoleApi {
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
+                kind: Some(IamRoleKind::System),
                 ..Default::default()
             },
             page_number.0,
