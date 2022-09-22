@@ -14,6 +14,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
+use crate::iam_enumeration::IamRoleKind;
 
 pub struct IamCtRoleApi;
 
@@ -25,6 +26,7 @@ impl IamCtRoleApi {
     async fn add(&self, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
+        add_req.0.role.kind = Some(IamRoleKind::Tenant);
         let result = IamRoleServ::add_role_agg(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
