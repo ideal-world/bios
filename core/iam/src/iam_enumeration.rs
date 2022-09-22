@@ -145,3 +145,11 @@ pub enum IamSetKind {
     Res,
     Apps,
 }
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+pub enum IamSetCateKind {
+    Root,
+    System,
+    Tenant,
+    App,
+}

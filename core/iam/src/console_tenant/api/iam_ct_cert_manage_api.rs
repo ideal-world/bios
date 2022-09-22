@@ -7,7 +7,7 @@ use tardis::web::poem_openapi::param::Path;
 use tardis::web::poem_openapi::{param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertDetailResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
@@ -74,6 +74,14 @@ impl IamCtCertManageApi {
         TardisResp::ok(Void {})
     }
 
+    /// get manage cert
+    #[oai(path = "/:id", method = "get")]
+    async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+        let funs = iam_constants::get_tardis_inst();
+        let cert = IamCertServ::get_manage_cert(&id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(cert)
+    }
+
     /// delete manage cert ext
     #[oai(path = "/:id", method = "delete")]
     async fn delete_manage_cert_ext(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -92,7 +100,7 @@ impl IamCtCertManageApi {
         page_number: Query<u64>,
         page_size: Query<u64>,
         ctx: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<RbumCertSummaryResp>> {
+    ) -> TardisApiResult<TardisPage<RbumCertDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let conf_ids = if conf_id.0.is_some() {
             vec![conf_id.0.unwrap()]

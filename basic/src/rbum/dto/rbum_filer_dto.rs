@@ -103,6 +103,7 @@ pub struct RbumSetTreeFilterReq {
     pub sys_codes: Option<Vec<String>>,
     pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
     pub sys_code_query_depth: Option<i16>,
+    pub cate_exts: Option<Vec<String>>,
     pub rel_rbum_item_ids: Option<Vec<String>>,
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,
@@ -117,6 +118,7 @@ pub struct RbumSetCateFilterReq {
     pub sys_codes: Option<Vec<String>>,
     pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
     pub sys_code_query_depth: Option<i16>,
+    pub cate_exts: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
