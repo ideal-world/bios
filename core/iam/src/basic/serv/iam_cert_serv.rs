@@ -96,6 +96,19 @@ impl IamCertServ {
 
         IamCertTokenServ::add_cert_conf(
             &IamTokenCertConfAddReq {
+                name: TrimString(IamCertTokenKind::TokenWechatMp.to_string()),
+                coexist_num: 1,
+                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
+            },
+            IamCertTokenKind::TokenWechatMp,
+            rbum_scope_helper::get_max_level_id_by_context(ctx),
+            funs,
+            ctx,
+        )
+        .await?;
+
+        IamCertTokenServ::add_cert_conf(
+            &IamTokenCertConfAddReq {
                 name: TrimString(IamCertTokenKind::TokenPad.to_string()),
                 coexist_num: 1,
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),

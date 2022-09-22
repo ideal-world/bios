@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpOAuth2ByCodeLoginReq;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -12,7 +13,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamOAuth2CertConfAddOrModifyReq, IamUserPwdCertConfInfo};
 use bios_iam::basic::dto::iam_cert_dto::{IamPwdNewReq, IamUserPwdCertModifyReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
@@ -132,6 +133,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     security_mgr_by_app_account("user1", "123456", &tenant_id, &app_id, client).await?;
     login_page(sysadmin_name, &sysadmin_password, None, None, true, client).await?;
     security_password(client).await?;
+    login_by_oauth2(client).await?;
     Ok(())
 }
 
@@ -655,5 +657,68 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
     sleep(Duration::from_secs(1)).await;
     login_page("tenant_admin", "A3a#f", Some(tenant_id.clone()), None, true, client).await?;
 
+    Ok(())
+}
+
+pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    info!("【login_by_oauth2】");
+
+    let app_id = "wx09fbb098c515fc46";
+    let secret = "57bffaaea890725aff3571027bdc18ab";
+    let code = "091HIfll2niyW94254nl2UXBFn2HIflB";
+
+    let tenant_id: String = client
+        .post(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司2".to_string()),
+                icon: None,
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员".to_string()),
+                admin_username: TrimString("tenant_admin".to_string()),
+                admin_password: Some("123456".to_string()),
+                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: false,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+                account_self_reg: Some(true),
+                cert_conf_by_wechat_mp: Some(IamOAuth2CertConfAddOrModifyReq {
+                    ak: TrimString(app_id.to_string()),
+                    sk: TrimString(secret.to_string()),
+                }),
+            },
+        )
+        .await;
+    sleep(Duration::from_secs(1)).await;
+    let ak: String = client.get(&format!("/cp/ak/wechat-mp/{}", tenant_id)).await;
+    assert_eq!(app_id, ak);
+
+    let account: IamAccountInfoResp = client
+        .put(
+            "/cp/login/wechat-mp",
+            &IamCpOAuth2ByCodeLoginReq {
+                code: TrimString(code.to_string()),
+                tenant_id,
+            },
+        )
+        .await;
+    assert_eq!(account.account_name, "");
+    assert!(account.access_token.is_some());
+    assert!(account.roles.is_empty());
     Ok(())
 }
