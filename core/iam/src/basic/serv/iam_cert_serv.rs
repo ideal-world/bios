@@ -656,6 +656,18 @@ impl IamCertServ {
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
         IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
 
+        let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
+        Ok(account_info)
+    }
+
+    pub async fn package_tardis_account_context_and_resp(
+        account_id: &str,
+        tenant_id: &str,
+        token: String,
+        access_token: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<IamAccountInfoResp> {
         let account_agg = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
@@ -668,10 +680,9 @@ impl IamCertServ {
             false,
             false,
             funs,
-            &context,
+            ctx,
         )
         .await?;
-
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),
@@ -681,9 +692,7 @@ impl IamCertServ {
             groups: account_agg.groups,
             apps: account_agg.apps,
         };
-
-        IamIdentCacheServ::add_contexts(&account_info, &tenant_id, funs).await?;
-
+        IamIdentCacheServ::add_contexts(&account_info, tenant_id, funs).await?;
         Ok(account_info)
     }
 
