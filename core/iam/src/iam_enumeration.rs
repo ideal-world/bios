@@ -83,7 +83,6 @@ pub enum IamCertTokenKind {
     TokenPc,
     TokenPhone,
     TokenPad,
-    TokenWechatMp,
 }
 
 impl IamCertTokenKind {

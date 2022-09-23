@@ -29,7 +29,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamSetKind};
 
-use super::iam_cert_oauth2_by_code_serv::IamCertOAuth2ByCodeServ;
+use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 
 pub struct IamTenantServ;
 
@@ -216,7 +216,7 @@ impl IamTenantServ {
         IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
 
         if let Some(cert_conf_by_wechat_mp) = &add_req.cert_conf_by_wechat_mp {
-            IamCertOAuth2ByCodeServ::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
+            IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
         }
 
         // Init pwd
@@ -317,9 +317,9 @@ impl IamTenantServ {
 
         if let Some(cert_conf_by_wechat_mp) = &modify_req.cert_conf_by_wechat_mp {
             if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
-                IamCertOAuth2ByCodeServ::modify_cert_conf(&cert_conf_by_wechat_mp_id, cert_conf_by_wechat_mp, funs, ctx).await?;
+                IamCertOAuth2Serv::modify_cert_conf(&cert_conf_by_wechat_mp_id, cert_conf_by_wechat_mp, funs, ctx).await?;
             } else {
-                IamCertOAuth2ByCodeServ::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, id.to_string(), funs, ctx).await?;
+                IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, id.to_string(), funs, ctx).await?;
             }
         } else if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
             IamCertServ::delete_cert_conf(&cert_conf_by_wechat_mp_id, funs, ctx).await?;
@@ -334,7 +334,7 @@ impl IamTenantServ {
         let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
         let cert_conf_by_wechat_mp = if let Some(cert_conf_by_wechat_mp) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()) {
-            Some(IamCertOAuth2ByCodeServ::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
+            Some(IamCertOAuth2Serv::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
         } else {
             None
         };
