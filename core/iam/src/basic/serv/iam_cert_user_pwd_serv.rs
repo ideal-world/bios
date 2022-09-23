@@ -1,7 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
@@ -10,7 +10,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
-use crate::basic::dto::iam_cert_conf_dto::{IamUserPwdCertConfAddOrModifyReq, IamUserPwdCertConfInfo};
+use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamUserPwdCertAddReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
@@ -25,21 +25,21 @@ impl IamCertUserPwdServ {
                 code: TrimString(IamCertKernelKind::UserPwd.to_string()),
                 name: TrimString(IamCertKernelKind::UserPwd.to_string()),
                 note: None,
-                ak_note: add_req.ak_note.clone(),
-                ak_rule: add_req.ak_rule.clone(),
-                sk_note: add_req.sk_note.clone(),
-                sk_rule: add_req.sk_rule.clone(),
-                ext: add_req.ext.clone(),
+                ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(&add_req, funs)?),
+                ak_note: None,
+                sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(&add_req, funs)?),
+                sk_note: None,
+                ext: Some(TardisFuns::json.obj_to_string(&add_req)?),
                 sk_need: Some(true),
                 sk_dynamic: None,
                 sk_encrypted: Some(true),
-                repeatable: add_req.repeatable,
+                repeatable: Some(add_req.repeatable),
                 is_basic: Some(true),
                 rest_by_kinds: Some(format!("{},{}", IamCertKernelKind::MailVCode, IamCertKernelKind::PhoneVCode)),
-                expire_sec: add_req.expire_sec,
-                sk_lock_cycle_sec: add_req.sk_lock_cycle_sec,
-                sk_lock_err_times: add_req.sk_lock_err_times,
-                sk_lock_duration_sec: add_req.sk_lock_duration_sec,
+                expire_sec: Some(add_req.expire_sec),
+                sk_lock_cycle_sec: Some(add_req.sk_lock_cycle_sec),
+                sk_lock_err_times: Some(add_req.sk_lock_err_times),
+                sk_lock_duration_sec: Some(add_req.sk_lock_duration_sec),
                 coexist_num: Some(1),
                 conn_uri: None,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
@@ -58,20 +58,20 @@ impl IamCertUserPwdServ {
             &mut RbumCertConfModifyReq {
                 name: None,
                 note: None,
-                ak_note: modify_req.ak_note.clone(),
-                ak_rule: modify_req.ak_rule.clone(),
-                sk_note: modify_req.sk_note.clone(),
-                sk_rule: modify_req.sk_rule.clone(),
-                ext: modify_req.ext.clone(),
+                ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(modify_req, funs)?),
+                ak_note: None,
+                sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(modify_req, funs)?),
+                sk_note: None,
+                ext: Some(TardisFuns::json.obj_to_string(modify_req)?),
                 sk_need: None,
                 sk_encrypted: None,
-                repeatable: modify_req.repeatable,
+                repeatable: Some(modify_req.repeatable),
                 is_basic: None,
                 rest_by_kinds: None,
-                expire_sec: modify_req.expire_sec,
-                sk_lock_cycle_sec: modify_req.sk_lock_cycle_sec,
-                sk_lock_err_times: modify_req.sk_lock_err_times,
-                sk_lock_duration_sec: modify_req.sk_lock_duration_sec,
+                expire_sec: Some(modify_req.expire_sec),
+                sk_lock_cycle_sec: Some(modify_req.sk_lock_cycle_sec),
+                sk_lock_err_times: Some(modify_req.sk_lock_err_times),
+                sk_lock_duration_sec: Some(modify_req.sk_lock_duration_sec),
                 coexist_num: None,
                 conn_uri: None,
             },
@@ -167,7 +167,7 @@ impl IamCertUserPwdServ {
         }
     }
 
-    pub fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst) -> TardisResult<String> {
+    fn parse_ak_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<String> {
         if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
             return Err(funs.err().bad_request(
                 "iam_cert_conf",
@@ -182,7 +182,7 @@ impl IamCertUserPwdServ {
         ))
     }
 
-    pub fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfInfo, funs: &TardisFunsInst) -> TardisResult<String> {
+    fn parse_sk_rule(cert_conf_by_user_pwd: &IamUserPwdCertConfAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<String> {
         if cert_conf_by_user_pwd.sk_rule_len_max < cert_conf_by_user_pwd.sk_rule_len_min {
             return Err(funs.err().bad_request(
                 "iam_cert_conf",
