@@ -179,11 +179,16 @@ impl IamCsRoleApi {
     async fn find_rel_res(
         &self,
         id: Path<String>,
+        tenant_id: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
-        let ctx = IamCertServ::use_sys_ctx_unsafe(ctx.0)?;
+        let ctx = if let Some(tenant_id) = tenant_id.0 {
+            IamCertServ::try_use_tenant_ctx(ctx.0, Some(tenant_id))?
+        } else {
+            IamCertServ::use_sys_ctx_unsafe(ctx.0)?
+        };
         let funs = iam_constants::get_tardis_inst();
         let result = IamRoleServ::find_simple_rel_res(&id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx).await?;
         TardisResp::ok(result)
