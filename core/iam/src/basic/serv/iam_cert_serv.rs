@@ -39,13 +39,13 @@ impl IamCertServ {
     }
 
     pub async fn init_default_ident_conf(
-        user_pwd_cert_conf_add_req: IamUserPwdCertConfAddOrModifyReq,
+        user_pwd_cert_conf_add_req: &IamUserPwdCertConfAddOrModifyReq,
         phone_vcode_cert_conf_add_req: Option<IamPhoneVCodeCertConfAddOrModifyReq>,
         mail_vcode_cert_conf_add_req: Option<IamMailVCodeCertConfAddOrModifyReq>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(&user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
 
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
             IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
