@@ -55,7 +55,7 @@ pub struct IamCpPhoneVCodeLoginSendVCodeReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamCpOAuth2ByCodeLoginReq {
+pub struct IamCpOAuth2LoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]

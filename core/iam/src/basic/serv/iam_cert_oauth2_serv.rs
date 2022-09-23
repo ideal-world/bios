@@ -25,9 +25,9 @@ use super::iam_cert_serv::IamCertServ;
 use super::iam_tenant_serv::IamTenantServ;
 use super::oauth2_spi::iam_cert_oauth2_spi_wechat_mp::IamCertOAuth2SpiWeChatMp;
 
-pub struct IamCertOAuth2ByCodeServ;
+pub struct IamCertOAuth2Serv;
 
-impl IamCertOAuth2ByCodeServ {
+impl IamCertOAuth2Serv {
     pub async fn add_cert_conf(
         cert_kind: IamCertExtKind,
         add_req: &IamOAuth2CertConfAddOrModifyReq,
@@ -282,7 +282,7 @@ impl IamCertOAuth2ByCodeServ {
 }
 
 #[async_trait]
-pub trait IamCertOAuth2ByCodeSpi {
+pub trait IamCertOAuth2Spi {
     async fn get_access_token(code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
 }
 

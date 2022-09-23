@@ -2,7 +2,7 @@ pub mod iam_account_serv;
 pub mod iam_app_serv;
 pub mod iam_attr_serv;
 pub mod iam_cert_mail_vcode_serv;
-pub mod iam_cert_oauth2_by_code_serv;
+pub mod iam_cert_oauth2_serv;
 pub mod iam_cert_phone_vcode_serv;
 pub mod iam_cert_serv;
 pub mod iam_cert_token_serv;

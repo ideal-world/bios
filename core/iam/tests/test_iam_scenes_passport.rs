@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpOAuth2ByCodeLoginReq;
+use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpOAuth2LoginReq;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -711,7 +711,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
     let account: IamAccountInfoResp = client
         .put(
             "/cp/login/wechat-mp",
-            &IamCpOAuth2ByCodeLoginReq {
+            &IamCpOAuth2LoginReq {
                 code: TrimString(code.to_string()),
                 tenant_id,
             },
