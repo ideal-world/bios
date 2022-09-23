@@ -13,7 +13,7 @@ use crate::basic::dto::iam_cert_dto::IamOAuth2CertAddOrModifyReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertExtKind;
-use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfAddReq;
+use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
@@ -35,8 +35,8 @@ impl IamCertOAuth2Serv {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        // Add rbum cert conf （for label kind only）
-        let conf_id = RbumCertConfServ::add_rbum(
+        // Add rbum cert conf
+        RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(cert_kind.to_string()),
                 name: TrimString(cert_kind.to_string()),
@@ -45,7 +45,7 @@ impl IamCertOAuth2Serv {
                 ak_rule: None,
                 sk_note: None,
                 sk_rule: None,
-                ext: None,
+                ext: Some(TardisFuns::json.obj_to_string(&add_req)?),
                 sk_need: Some(false),
                 sk_dynamic: Some(false),
                 sk_encrypted: Some(false),
@@ -64,81 +64,40 @@ impl IamCertOAuth2Serv {
             funs,
             ctx,
         )
-        .await?;
-        // Add real cert conf (contains ak sk）
-        RbumCertServ::add_rbum(
-            &mut RbumCertAddReq {
-                ak: add_req.ak.clone(),
-                sk: Some(add_req.sk.clone()),
-                vcode: None,
-                ext: None,
-                start_time: None,
-                end_time: None,
-                conn_uri: None,
-                status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: Some(conf_id.clone()),
-                rel_rbum_kind: RbumCertRelKind::Item,
-                rel_rbum_id: rel_iam_item_id,
-                is_outside: false,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(conf_id)
+        .await
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &IamOAuth2CertConfAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let conf_id = RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?.id;
-        let cert_id = RbumCertServ::find_id_rbums(
-            &RbumCertFilterReq {
-                rel_rbum_cert_conf_ids: Some(vec![conf_id]),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        let cert_id = cert_id.first().ok_or_else(|| funs.err().not_found("rbum_cert", "modify", "not found oauth2 conf", "404-rbum-cert-conf-not-exist"))?;
-        RbumCertServ::modify_rbum(
-            cert_id,
-            &mut RbumCertModifyReq {
-                ak: Some(modify_req.ak.clone()),
-                sk: Some(modify_req.sk.clone()),
-                ext: None,
-                start_time: None,
-                end_time: None,
+        RbumCertConfServ::modify_rbum(
+            id,
+            &mut RbumCertConfModifyReq {
+                name: None,
+                note: None,
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                ext: Some(TardisFuns::json.obj_to_string(&modify_req)?),
+                sk_need: None,
+                sk_encrypted: None,
+                repeatable: None,
+                is_basic: None,
+                rest_by_kinds: None,
+                expire_sec: None,
+                sk_lock_cycle_sec: None,
+                sk_lock_err_times: None,
+                sk_lock_duration_sec: None,
+                coexist_num: None,
                 conn_uri: None,
-                status: None,
             },
             funs,
             ctx,
         )
-        .await?;
-        Ok(())
+        .await
     }
 
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamOAuth2CertConfInfo> {
-        let conf_id = RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await?.id;
-        let certs = RbumCertServ::find_rbums(
-            &RbumCertFilterReq {
-                rel_rbum_cert_conf_ids: Some(vec![conf_id]),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
-        if let Some(cert) = certs.first() {
-            let sk = RbumCertServ::show_sk(cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
-            Ok(IamOAuth2CertConfInfo { ak: cert.ak.to_string(), sk })
-        } else {
-            Err(funs.err().not_found("rbum_cert", "get", "not found oauth2 conf", "404-rbum-cert-conf-not-exist"))
-        }
+        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await.map(|i| TardisFuns::json.str_to_obj(&i.ext).unwrap())
     }
 
     pub async fn add_or_modify_cert(
