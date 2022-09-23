@@ -251,6 +251,7 @@ impl IamCertOAuth2ByCodeServ {
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
                 name: TrimString("".to_string()),
+                // TODO Auto match rule
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
                 cert_password: TrimString(format!("{}Pw$", TardisFuns::field.nanoid_len(6))),
                 cert_phone: None,
