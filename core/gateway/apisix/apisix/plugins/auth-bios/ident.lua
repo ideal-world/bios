@@ -72,6 +72,26 @@ function _M.ident(conf, ctx)
         end
         local account_id = m_utils.split(account_info, ',')[2]
         local context, redis_err = m_redis.hget(cache_account .. account_id, app_id)
+
+        if app_id ~= "" then
+            local tenant_context, tenant_redis_err = m_redis.hget(cache_account .. account_id, "")
+            if tenant_context ~= nil and tenant_context ~= "" then
+                if tenant_context.roles ~= nil and tenant_context.roles ~= "" then
+                    for  _, tenant_role in pairs(tenant_context.roles) do
+                        table.insert(context.roles, tenant_role)
+                    end
+                end
+                if tenant_context.groups ~= nil and tenant_context.groups ~= "" then
+                    for  _, tenant_groups in pairs(tenant_context.groups) do
+                        table.insert(context.groups, tenant_groups)
+                    end
+                end
+            end
+            if tenant_redis_err then
+                error("Redis get error: " .. tenant_redis_err)
+            end
+        end
+
         if redis_err then
             error("Redis get error: " .. redis_err)
         end
