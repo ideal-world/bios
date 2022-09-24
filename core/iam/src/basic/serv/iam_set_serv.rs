@@ -199,6 +199,8 @@ impl IamSetServ {
         let mut res_ids = HashSet::new();
         let mut global_ctx = ctx.clone();
         global_ctx.own_paths = "".to_string();
+        // todo default empty res
+        res_ids.insert("".to_string());
         for role_id in role_ids {
             let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &global_ctx).await?;
             res_ids.extend(rel_res_ids.into_iter());
