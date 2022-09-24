@@ -18,7 +18,7 @@ use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, Rb
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
 use super::iam_rel_serv::IamRelServ;
 
@@ -53,7 +53,7 @@ impl IamSetServ {
                     icon: None,
                     sort: None,
                     ext: None,
-                    rbum_parent_cate_id: None,
+                    rbum_parent_cate_id: Some(IamSetCateKind::Root.to_string()),
                     rel_rbum_set_id: set_id.clone(),
                     scope_level: Some(scope_level.clone()),
                 },
