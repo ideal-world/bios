@@ -74,7 +74,7 @@ pub enum IamCertExtKind {
     Gitlab,
     Github,
     WechatMp,
-    // TODO
+    Ldap, // TODO
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
@@ -83,7 +83,6 @@ pub enum IamCertTokenKind {
     TokenPc,
     TokenPhone,
     TokenPad,
-    TokenWechatMp,
 }
 
 impl IamCertTokenKind {

@@ -16,10 +16,10 @@ use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ
 
 use crate::basic::domain::iam_account;
 use crate::basic::dto::iam_account_dto::{
-    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountExtResp, IamAccountModifyReq,
+    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountModifyReq,
     IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
-use crate::basic::dto::iam_cert_dto::{IamMailVCodeCertAddReq, IamPhoneVCodeCertAddReq, IamUserPwdCertAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
@@ -163,7 +163,7 @@ impl IamAccountServ {
         .await?;
         if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
             IamCertUserPwdServ::add_cert(
-                &IamUserPwdCertAddReq {
+                &IamCertUserPwdAddReq {
                     ak: add_req.cert_user_name.clone(),
                     sk: add_req.cert_password.clone(),
                 },
@@ -177,7 +177,7 @@ impl IamAccountServ {
         if let Some(cert_phone) = &add_req.cert_phone {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertPhoneVCodeServ::add_cert(
-                    &IamPhoneVCodeCertAddReq {
+                    &IamCertPhoneVCodeAddReq {
                         phone: TrimString(cert_phone.to_string()),
                     },
                     &account_id,
@@ -190,7 +190,7 @@ impl IamAccountServ {
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
-                IamCertMailVCodeServ::add_cert(&IamMailVCodeCertAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
+                IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
         }
         if let Some(role_ids) = &add_req.role_ids {
@@ -390,7 +390,7 @@ impl IamAccountServ {
             orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             exts: account_attrs
                 .into_iter()
-                .map(|r| IamAccountExtResp {
+                .map(|r| IamAccountAttrResp {
                     name: r.name.clone(),
                     label: r.label,
                     value: account_attr_values.get(&r.name).unwrap_or(&("".to_string())).to_string(),

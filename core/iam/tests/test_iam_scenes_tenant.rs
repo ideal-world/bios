@@ -14,8 +14,8 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
-use bios_iam::basic::dto::iam_cert_dto::IamUserPwdCertRestReq;
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
+use bios_iam::basic::dto::iam_cert_dto::IamCertUserPwdRestReq;
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq};
@@ -39,7 +39,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -96,7 +96,7 @@ pub async fn tenant_console_tenant_mgr_page(client: &mut BIOSWebTestClient) -> T
                 sort: None,
                 contact_phone: None,
                 note: None,
-                cert_conf_by_user_pwd: Some(IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: Some(IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -439,7 +439,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
     let _: Void = client
         .put(
             &format!("/ct/cert/user-pwd?account_id={}", account_id),
-            &IamUserPwdCertRestReq {
+            &IamCertUserPwdRestReq {
                 new_sk: TrimString("123456".to_string()),
             },
         )

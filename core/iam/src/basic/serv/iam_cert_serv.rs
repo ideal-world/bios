@@ -16,8 +16,8 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
-use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamTokenCertConfAddReq, IamUserPwdCertConfAddOrModifyReq};
-use crate::basic::dto::iam_cert_dto::{IamExtCertAddReq, IamManageCertAddReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -39,13 +39,13 @@ impl IamCertServ {
     }
 
     pub async fn init_default_ident_conf(
-        user_pwd_cert_conf_add_req: IamUserPwdCertConfAddOrModifyReq,
-        phone_vcode_cert_conf_add_req: Option<IamPhoneVCodeCertConfAddOrModifyReq>,
-        mail_vcode_cert_conf_add_req: Option<IamMailVCodeCertConfAddOrModifyReq>,
+        user_pwd_cert_conf_add_req: &IamCertConfUserPwdAddOrModifyReq,
+        phone_vcode_cert_conf_add_req: Option<IamCertConfPhoneVCodeAddOrModifyReq>,
+        mail_vcode_cert_conf_add_req: Option<IamCertConfMailVCodeAddOrModifyReq>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(&user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
 
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
             IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
@@ -56,7 +56,7 @@ impl IamCertServ {
         }
 
         IamCertTokenServ::add_cert_conf(
-            &IamTokenCertConfAddReq {
+            &IamCertConfTokenAddReq {
                 name: TrimString(IamCertTokenKind::TokenDefault.to_string()),
                 coexist_num: iam_constants::RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM,
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
@@ -69,7 +69,7 @@ impl IamCertServ {
         .await?;
 
         IamCertTokenServ::add_cert_conf(
-            &IamTokenCertConfAddReq {
+            &IamCertConfTokenAddReq {
                 name: TrimString(IamCertTokenKind::TokenPc.to_string()),
                 coexist_num: 1,
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
@@ -82,7 +82,7 @@ impl IamCertServ {
         .await?;
 
         IamCertTokenServ::add_cert_conf(
-            &IamTokenCertConfAddReq {
+            &IamCertConfTokenAddReq {
                 name: TrimString(IamCertTokenKind::TokenPhone.to_string()),
                 coexist_num: 1,
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
@@ -95,20 +95,7 @@ impl IamCertServ {
         .await?;
 
         IamCertTokenServ::add_cert_conf(
-            &IamTokenCertConfAddReq {
-                name: TrimString(IamCertTokenKind::TokenWechatMp.to_string()),
-                coexist_num: 1,
-                expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
-            },
-            IamCertTokenKind::TokenWechatMp,
-            rbum_scope_helper::get_max_level_id_by_context(ctx),
-            funs,
-            ctx,
-        )
-        .await?;
-
-        IamCertTokenServ::add_cert_conf(
-            &IamTokenCertConfAddReq {
+            &IamCertConfTokenAddReq {
                 name: TrimString(IamCertTokenKind::TokenPad.to_string()),
                 coexist_num: 1,
                 expire_sec: Some(iam_constants::RBUM_CERT_CONF_TOKEN_EXPIRE_SEC),
@@ -330,7 +317,7 @@ impl IamCertServ {
         Ok(id)
     }
 
-    pub async fn add_manage_cert(add_req: &IamManageCertAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_manage_cert(add_req: &IamCertManageAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
@@ -454,7 +441,7 @@ impl IamCertServ {
     }
 
     pub async fn add_ext_cert(
-        add_req: &mut IamExtCertAddReq,
+        add_req: &mut IamCertExtAddReq,
         account_id: &str,
         rel_iam_cert_kind: &IamCertExtKind,
         funs: &TardisFunsInst,

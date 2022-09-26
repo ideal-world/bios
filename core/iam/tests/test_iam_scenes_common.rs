@@ -10,7 +10,7 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
@@ -34,7 +34,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,

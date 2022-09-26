@@ -9,8 +9,8 @@ use tardis::tokio::time::sleep;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
-use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamMailVCodeCertAddReq, IamUserPwdCertModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
+use bios_iam::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertUserPwdModifyReq, IamContextFetchReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
@@ -37,7 +37,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             admin_username: TrimString("bios".to_string()),
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,
@@ -221,7 +221,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     info!("【test_cp_all】 : Modify Password, original password error");
     assert!(IamCpCertUserPwdServ::modify_cert_user_pwd(
         &system_admin_context.owner,
-        &IamUserPwdCertModifyReq {
+        &IamCertUserPwdModifyReq {
             original_sk: TrimString("12345".to_string()),
             new_sk: TrimString("123456".to_string()),
         },
@@ -234,7 +234,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     info!("【test_cp_all】 : Modify Password");
     IamCpCertUserPwdServ::modify_cert_user_pwd(
         &system_admin_context.owner,
-        &IamUserPwdCertModifyReq {
+        &IamCertUserPwdModifyReq {
             original_sk: TrimString(sysadmin_info.1.to_string()),
             new_sk: TrimString("123456".to_string()),
         },
@@ -275,7 +275,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     info!("【test_cp_all】 : Add Mail-VCode Cert");
     let mail_vcode_cert_id = IamCpCertMailVCodeServ::add_cert_mail_vocde(
-        &IamMailVCodeCertAddReq {
+        &IamCertMailVCodeAddReq {
             mail: "i@sunisle.org".to_string(),
         },
         &funs,

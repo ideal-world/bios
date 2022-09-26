@@ -20,7 +20,8 @@ name = "bios_iam"
 path = "src/lib.rs"
 
 [features]
-ldap = ["ldap3_proto", "tardis/future", "tokio-util"]
+ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
+ldap_client = ["ldap3"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -33,6 +34,7 @@ bios-basic = { path = "../../basic", features = ["default", "with-mq"] }
 # ldap
 ldap3_proto = { version = "0.2.3", optional = true }
 tokio-util = { version = "0.7", optional = true }
+ldap3 = {version = "0.10.5", optional = true }
 
 [dev-dependencies]
 tardis = { version = "0.1.0-alpha26", features = ["test"] }

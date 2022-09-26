@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpOAuth2ByCodeLoginReq;
+use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpOAuth2LoginReq;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -13,8 +13,8 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamOAuth2CertConfAddOrModifyReq, IamUserPwdCertConfInfo};
-use bios_iam::basic::dto::iam_cert_dto::{IamPwdNewReq, IamUserPwdCertModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
@@ -42,7 +42,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -200,7 +200,7 @@ pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: 
     let _: Void = client
         .put(
             "/cp/cert/userpwd",
-            &IamUserPwdCertModifyReq {
+            &IamCertUserPwdModifyReq {
                 original_sk: TrimString(password.to_string()),
                 new_sk: TrimString("654321".to_string()),
             },
@@ -212,7 +212,7 @@ pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: 
     let result: TardisResp<Void> = client
         .put_resp(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString(password.to_string()),
                 new_sk: TrimString("654321".to_string()),
@@ -225,7 +225,7 @@ pub async fn security_mgr_page_by_sys_admin(name: &str, password: &str, client: 
     let _: Void = client
         .put(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString("654321".to_string()),
                 new_sk: TrimString("xxxxx".to_string()),
@@ -327,7 +327,7 @@ pub async fn security_mgr_by_tenant_account(name: &str, password: &str, tenant_i
     let _: Void = client
         .put(
             "/cp/cert/userpwd",
-            &IamUserPwdCertModifyReq {
+            &IamCertUserPwdModifyReq {
                 original_sk: TrimString(password.to_string()),
                 new_sk: TrimString("654321".to_string()),
             },
@@ -339,7 +339,7 @@ pub async fn security_mgr_by_tenant_account(name: &str, password: &str, tenant_i
     let result: TardisResp<Void> = client
         .put_resp(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString(password.to_string()),
                 new_sk: TrimString("654321".to_string()),
@@ -352,7 +352,7 @@ pub async fn security_mgr_by_tenant_account(name: &str, password: &str, tenant_i
     let _: Void = client
         .put(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString("654321".to_string()),
                 new_sk: TrimString("xxxxx".to_string()),
@@ -400,7 +400,7 @@ pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: 
     let _: Void = client
         .put(
             "/cp/cert/userpwd",
-            &IamUserPwdCertModifyReq {
+            &IamCertUserPwdModifyReq {
                 original_sk: TrimString(password.to_string()),
                 new_sk: TrimString("654321".to_string()),
             },
@@ -421,7 +421,7 @@ pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: 
     let result: TardisResp<Void> = client
         .put_resp(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString(password.to_string()),
                 new_sk: TrimString("654321".to_string()),
@@ -434,7 +434,7 @@ pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: 
     let result: TardisResp<Void> = client
         .put_resp(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString("654321".to_string()),
                 new_sk: TrimString("654321".to_string()),
@@ -447,7 +447,7 @@ pub async fn security_mgr_by_app_account(name: &str, password: &str, tenant_id: 
     let _: Void = client
         .put(
             "/cp/cert/userpwd/new",
-            &IamPwdNewReq {
+            &IamCertPwdNewReq {
                 ak: TrimString(name.to_string()),
                 original_sk: TrimString("654321".to_string()),
                 new_sk: TrimString("xxxxx".to_string()),
@@ -483,7 +483,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("aaaa".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -520,7 +520,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("aa22".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -557,7 +557,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("aa22A".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -594,7 +594,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("aa22A#".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 7,
@@ -631,7 +631,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("A3a#f".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -678,7 +678,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("tenant_admin".to_string()),
                 admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
                     ak_rule_len_max: 20,
                     sk_rule_len_min: 2,
@@ -697,7 +697,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: Some(true),
-                cert_conf_by_wechat_mp: Some(IamOAuth2CertConfAddOrModifyReq {
+                cert_conf_by_wechat_mp: Some(IamCertConfOAuth2AddOrModifyReq {
                     ak: TrimString(app_id.to_string()),
                     sk: TrimString(secret.to_string()),
                 }),
@@ -711,7 +711,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
     let account: IamAccountInfoResp = client
         .put(
             "/cp/login/wechat-mp",
-            &IamCpOAuth2ByCodeLoginReq {
+            &IamCpOAuth2LoginReq {
                 code: TrimString(code.to_string()),
                 tenant_id,
             },

@@ -1,7 +1,7 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_iam::basic::dto::iam_cert_dto::{IamExtCertAddReq, IamManageCertAddReq};
-use bios_iam::basic::dto::iam_cert_dto::{IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
@@ -40,7 +40,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     )
     .await?;
     assert!(IamCertUserPwdServ::reset_sk(
-        &IamUserPwdCertRestReq {
+        &IamCertUserPwdRestReq {
             new_sk: TrimString("sssssssssss".to_string())
         },
         &another_context.owner,
@@ -62,7 +62,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await
     .is_err());
     IamCertUserPwdServ::reset_sk(
-        &IamUserPwdCertRestReq {
+        &IamCertUserPwdRestReq {
             new_sk: TrimString("sssssssssss".to_string()),
         },
         &context.owner,
@@ -96,7 +96,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     info!("【test_cc_cert】 : test_single_level : Modify Cert");
     assert!(IamCpCertUserPwdServ::modify_cert_user_pwd(
         &another_context.owner,
-        &IamUserPwdCertModifyReq {
+        &IamCertUserPwdModifyReq {
             original_sk: TrimString("aaa".to_string()),
             new_sk: TrimString("123456789".to_string())
         },
@@ -107,7 +107,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .is_err());
     assert!(IamCpCertUserPwdServ::modify_cert_user_pwd(
         &context.owner,
-        &IamUserPwdCertModifyReq {
+        &IamCertUserPwdModifyReq {
             original_sk: TrimString("aaa".to_string()),
             new_sk: TrimString("123456789".to_string())
         },
@@ -119,7 +119,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
 
     IamCpCertUserPwdServ::modify_cert_user_pwd(
         &context.owner,
-        &IamUserPwdCertModifyReq {
+        &IamCertUserPwdModifyReq {
             original_sk: TrimString("sssssssssss".to_string()),
             new_sk: TrimString("123456789".to_string()),
         },
@@ -142,7 +142,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     info!("【test_cc_cert】 : test_single_level : Add Ext Cert - Gitlab");
     assert!(IamCertServ::get_ext_cert(&account_info.account_id, &IamCertExtKind::Gitlab, &funs, context).await.is_err());
     IamCertServ::add_ext_cert(
-        &mut IamExtCertAddReq {
+        &mut IamCertExtAddReq {
             ak: "GitlabUserId".to_string(),
             sk: Some("ssssssssss".to_string()),
         },
@@ -172,7 +172,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await?;
 
     let manage_cert_pwd_id = IamCertServ::add_manage_cert(
-        &IamManageCertAddReq {
+        &IamCertManageAddReq {
             ak: "manage_pwd_ak".to_string(),
             sk: Some("123456".to_string()),
             rel_rbum_cert_conf_id: Some(manage_user_pwd_conf_id.clone()),
@@ -184,7 +184,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await?;
 
     let manage_cert_visa_id = IamCertServ::add_manage_cert(
-        &IamManageCertAddReq {
+        &IamCertManageAddReq {
             ak: "manage_visa_ak".to_string(),
             sk: Some("123456".to_string()),
             rel_rbum_cert_conf_id: Some(manage_user_visa_conf_id.clone()),
