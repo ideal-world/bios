@@ -163,13 +163,13 @@ pub struct IamAccountDetailAggResp {
     pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
     pub orgs: Vec<String>,
-    pub exts: Vec<IamAccountExtResp>,
+    pub exts: Vec<IamAccountAttrResp>,
     pub groups: HashMap<String, String>,
     pub apps: Vec<IamAccountAppInfoResp>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamAccountExtResp {
+pub struct IamAccountAttrResp {
     pub name: String,
     pub label: String,
     pub value: String,
@@ -192,4 +192,17 @@ pub struct IamAccountAppInfoResp {
     pub app_name: String,
     pub roles: HashMap<String, String>,
     pub groups: HashMap<String, String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountExtSysResp {
+    pub account_id: String,
+    pub user_name: String,
+    pub display_name: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountExtSysAddReq {
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub account_id: String,
 }

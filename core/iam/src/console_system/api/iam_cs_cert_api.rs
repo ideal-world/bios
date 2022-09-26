@@ -7,7 +7,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::{IamExtCertAddReq, IamUserPwdCertRestReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertUserPwdRestReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
@@ -24,7 +24,7 @@ impl IamCsCertApi {
         &self,
         account_id: Query<String>,
         tenant_id: Query<Option<String>>,
-        modify_req: Json<IamUserPwdCertRestReq>,
+        modify_req: Json<IamCertUserPwdRestReq>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -62,7 +62,7 @@ impl IamCsCertApi {
         &self,
         account_id: Query<String>,
         tenant_id: Query<Option<String>>,
-        mut add_req: Json<IamExtCertAddReq>,
+        mut add_req: Json<IamCertExtAddReq>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;

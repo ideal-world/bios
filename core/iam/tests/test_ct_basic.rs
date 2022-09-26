@@ -6,7 +6,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::IamContextFetchReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -30,7 +30,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             disabled: None,
             admin_name: TrimString("测试管理员1".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,
@@ -84,7 +84,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             disabled: None,
             admin_name: TrimString("测试管理员2".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,

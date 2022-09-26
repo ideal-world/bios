@@ -5,7 +5,7 @@ use tardis::log::info;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantModifyReq};
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
@@ -27,7 +27,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,
@@ -61,7 +61,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,
@@ -95,7 +95,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: None,
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,

@@ -21,7 +21,7 @@ use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
-use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
@@ -56,12 +56,20 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
             (
                 (
                     iam_cc_account_api::IamCcAccountApi,
+                    #[cfg(feature = "ldap_client")]
+                    iam_cc_account_api::IamCcAccountLdapApi,
                     iam_cc_role_api::IamCcRoleApi,
                     iam_cc_org_api::IamCcOrgApi,
                     iam_cc_res_api::IamCcResApi,
                     iam_cc_system_api::IamCcSystemApi,
                 ),
-                (iam_cp_account_api::IamCpAccountApi, iam_cp_cert_api::IamCpCertApi, iam_cp_tenant_api::IamCpTenantApi),
+                (
+                    iam_cp_account_api::IamCpAccountApi,
+                    iam_cp_cert_api::IamCpCertApi,
+                    #[cfg(feature = "ldap_client")]
+                    iam_cp_cert_api::IamCpCertLdapApi,
+                    iam_cp_tenant_api::IamCpTenantApi,
+                ),
                 (
                     iam_cs_tenant_api::IamCsTenantApi,
                     iam_cs_account_api::IamCsAccountApi,
@@ -225,7 +233,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
 
     // Init kernel certs
     IamCertServ::init_default_ident_conf(
-        &IamUserPwdCertConfAddOrModifyReq {
+        &IamCertConfUserPwdAddOrModifyReq {
             // TODO config
             ak_rule_len_min: 0,
             ak_rule_len_max: 40,
@@ -241,8 +249,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             repeatable: true,
             expire_sec: 2592000,
         },
-        Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
-        Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }),
+        Some(IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None }),
+        Some(IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }),
         funs,
         &ctx,
     )
