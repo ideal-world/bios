@@ -11,7 +11,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertDetailResp, RbumCertSummaryWi
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::IamManageCertAddReq;
+use crate::basic::dto::iam_cert_dto::IamCertManageAddReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertManageKind;
@@ -56,7 +56,7 @@ impl IamCtCertManageApi {
 
     /// Add Manage Cert
     #[oai(path = "/", method = "post")]
-    async fn add_manage_cert(&self, add_req: Json<IamManageCertAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_manage_cert(&self, add_req: Json<IamCertManageAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let id = IamCertServ::add_manage_cert(&add_req.0, &funs, &ctx.0).await?;

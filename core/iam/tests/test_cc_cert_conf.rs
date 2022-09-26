@@ -3,7 +3,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use bios_iam::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use bios_iam::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
@@ -38,17 +38,20 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     info!("【test_ct_cert_conf】 : test_single_level : Modify Cert Conf By UserPwd Kind");
     assert!(IamCertUserPwdServ::modify_cert_conf(
         &cert_conf_user_pwd_id,
-        &IamUserPwdCertConfAddOrModifyReq {
-            ak_note: Some("ddddd1".to_string()),
-            ak_rule: None,
-            sk_note: None,
-            sk_rule: None,
-            ext: None,
-            repeatable: None,
-            expire_sec: None,
-            sk_lock_cycle_sec: None,
-            sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+        &IamCertConfUserPwdAddOrModifyReq {
+            ak_rule_len_min: 2,
+            ak_rule_len_max: 40,
+            sk_rule_len_min: 2,
+            sk_rule_len_max: 40,
+            sk_rule_need_num: false,
+            sk_rule_need_uppercase: false,
+            sk_rule_need_lowercase: false,
+            sk_rule_need_spec_char: false,
+            sk_lock_cycle_sec: 60,
+            sk_lock_err_times: 3,
+            sk_lock_duration_sec: 300,
+            repeatable: true,
+            expire_sec: 120,
         },
         &funs,
         another_context,
@@ -57,17 +60,20 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .is_err());
     IamCertUserPwdServ::modify_cert_conf(
         &cert_conf_user_pwd_id,
-        &IamUserPwdCertConfAddOrModifyReq {
-            ak_note: Some("ddddd1".to_string()),
-            ak_rule: None,
-            sk_note: None,
-            sk_rule: None,
-            ext: None,
-            repeatable: None,
-            expire_sec: None,
-            sk_lock_cycle_sec: None,
-            sk_lock_err_times: None,
-            sk_lock_duration_sec: None,
+        &IamCertConfUserPwdAddOrModifyReq {
+            ak_rule_len_min: 2,
+            ak_rule_len_max: 40,
+            sk_rule_len_min: 2,
+            sk_rule_len_max: 40,
+            sk_rule_need_num: false,
+            sk_rule_need_uppercase: false,
+            sk_rule_need_lowercase: false,
+            sk_rule_need_spec_char: false,
+            sk_lock_cycle_sec: 60,
+            sk_lock_err_times: 3,
+            sk_lock_duration_sec: 300,
+            repeatable: true,
+            expire_sec: 120,
         },
         &funs,
         context,
@@ -79,7 +85,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let cert_conf_mail_vcode_id = cert_conf_mail_vcode.records.get(0).unwrap().id.clone();
     IamCertMailVCodeServ::modify_cert_conf(
         &cert_conf_mail_vcode_id,
-        &IamMailVCodeCertConfAddOrModifyReq {
+        &IamCertConfMailVCodeAddOrModifyReq {
             ak_note: Some("ddddd1".to_string()),
             ak_rule: None,
         },
@@ -94,7 +100,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let cert_conf_phone_vcode_id = cert_conf_phone_vcode.records.get(0).unwrap().id.clone();
     IamCertPhoneVCodeServ::modify_cert_conf(
         &cert_conf_phone_vcode_id,
-        &IamPhoneVCodeCertConfAddOrModifyReq {
+        &IamCertConfPhoneVCodeAddOrModifyReq {
             ak_note: Some("ddddd1".to_string()),
             ak_rule: None,
         },
@@ -107,7 +113,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     assert!(IamCertServ::get_cert_conf(&cert_conf_user_pwd_id, get_max_level_id_by_context(&context), &funs, another_context).await.is_err());
     let cert_conf = IamCertServ::get_cert_conf(&cert_conf_user_pwd_id, get_max_level_id_by_context(&context), &funs, context).await?;
     assert_eq!(cert_conf.id, cert_conf_user_pwd_id);
-    assert_eq!(cert_conf.ak_note, "ddddd1");
+    assert_eq!(cert_conf.ak_note, "");
     let cert_conf = IamCertServ::get_cert_conf(&cert_conf_mail_vcode_id, get_max_level_id_by_context(&context), &funs, context).await?;
     assert_eq!(cert_conf.id, cert_conf_mail_vcode_id);
     assert_eq!(cert_conf.ak_note, "ddddd1");

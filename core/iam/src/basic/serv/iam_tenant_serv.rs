@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq, IamUserPwdCertConfAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
@@ -29,7 +29,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamSetKind};
 
-use super::iam_cert_oauth2_by_code_serv::IamCertOAuth2ByCodeServ;
+use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 
 pub struct IamTenantServ;
 
@@ -189,34 +189,22 @@ impl IamTenantServ {
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_TENANT, funs, &tenant_ctx).await?;
 
         // Init cert conf
-        let cert_conf_by_user_pwd = IamUserPwdCertConfAddOrModifyReq {
-            ak_note: None,
-            ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(&add_req.cert_conf_by_user_pwd, funs)?),
-            sk_note: None,
-            sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(&add_req.cert_conf_by_user_pwd, funs)?),
-            ext: Some(TardisFuns::json.obj_to_string(&add_req.cert_conf_by_user_pwd)?),
-            repeatable: Some(add_req.cert_conf_by_user_pwd.repeatable),
-            expire_sec: Some(add_req.cert_conf_by_user_pwd.expire_sec),
-            sk_lock_cycle_sec: Some(add_req.cert_conf_by_user_pwd.sk_lock_cycle_sec),
-            sk_lock_err_times: Some(add_req.cert_conf_by_user_pwd.sk_lock_err_times),
-            sk_lock_duration_sec: Some(add_req.cert_conf_by_user_pwd.sk_lock_duration_sec),
-        };
         let cert_conf_by_phone_vcode = if add_req.cert_conf_by_phone_vcode {
-            Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
+            Some(IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None })
         } else {
             None
         };
         let cert_conf_by_mail_vcode = if add_req.cert_conf_by_mail_vcode {
-            Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
+            Some(IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None })
         } else {
             None
         };
-        IamCertServ::init_default_ident_conf(cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, funs, &tenant_ctx).await?;
+        IamCertServ::init_default_ident_conf(&add_req.cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, funs, &tenant_ctx).await?;
         IamCertServ::init_default_ext_conf(funs, &tenant_ctx).await?;
         IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
 
         if let Some(cert_conf_by_wechat_mp) = &add_req.cert_conf_by_wechat_mp {
-            IamCertOAuth2ByCodeServ::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
+            IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
         }
 
         // Init pwd
@@ -276,24 +264,7 @@ impl IamTenantServ {
 
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
             let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
-            IamCertUserPwdServ::modify_cert_conf(
-                &cert_conf_by_user_pwd_id,
-                &IamUserPwdCertConfAddOrModifyReq {
-                    ak_note: None,
-                    ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(cert_conf_by_user_pwd, funs)?),
-                    sk_note: None,
-                    sk_rule: Some(IamCertUserPwdServ::parse_sk_rule(cert_conf_by_user_pwd, funs)?),
-                    ext: Some(TardisFuns::json.obj_to_string(cert_conf_by_user_pwd)?),
-                    repeatable: Some(cert_conf_by_user_pwd.repeatable),
-                    expire_sec: Some(cert_conf_by_user_pwd.expire_sec),
-                    sk_lock_cycle_sec: Some(cert_conf_by_user_pwd.sk_lock_cycle_sec),
-                    sk_lock_err_times: Some(cert_conf_by_user_pwd.sk_lock_err_times),
-                    sk_lock_duration_sec: Some(cert_conf_by_user_pwd.sk_lock_duration_sec),
-                },
-                funs,
-                ctx,
-            )
-            .await?;
+            IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
         }
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
             if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
@@ -301,7 +272,7 @@ impl IamTenantServ {
                     IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
                 }
             } else if cert_conf_by_phone_vcode {
-                IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+                IamCertPhoneVCodeServ::add_cert_conf(&IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
             }
         }
 
@@ -311,15 +282,15 @@ impl IamTenantServ {
                     IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
                 }
             } else if cert_conf_by_mail_vcode {
-                IamCertMailVCodeServ::add_cert_conf(&IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+                IamCertMailVCodeServ::add_cert_conf(&IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
             }
         }
 
         if let Some(cert_conf_by_wechat_mp) = &modify_req.cert_conf_by_wechat_mp {
             if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
-                IamCertOAuth2ByCodeServ::modify_cert_conf(&cert_conf_by_wechat_mp_id, cert_conf_by_wechat_mp, funs, ctx).await?;
+                IamCertOAuth2Serv::modify_cert_conf(&cert_conf_by_wechat_mp_id, cert_conf_by_wechat_mp, funs, ctx).await?;
             } else {
-                IamCertOAuth2ByCodeServ::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, id.to_string(), funs, ctx).await?;
+                IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, id.to_string(), funs, ctx).await?;
             }
         } else if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
             IamCertServ::delete_cert_conf(&cert_conf_by_wechat_mp_id, funs, ctx).await?;
@@ -334,7 +305,7 @@ impl IamTenantServ {
         let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
         let cert_conf_by_wechat_mp = if let Some(cert_conf_by_wechat_mp) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()) {
-            Some(IamCertOAuth2ByCodeServ::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
+            Some(IamCertOAuth2Serv::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
         } else {
             None
         };

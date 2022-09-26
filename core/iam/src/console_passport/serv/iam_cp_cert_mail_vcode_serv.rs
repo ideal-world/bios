@@ -6,7 +6,7 @@ use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
-use crate::basic::dto::iam_cert_dto::IamMailVCodeCertAddReq;
+use crate::basic::dto::iam_cert_dto::IamCertMailVCodeAddReq;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpMailVCodeLoginReq;
@@ -15,7 +15,7 @@ use crate::iam_enumeration::IamCertKernelKind;
 pub struct IamCpCertMailVCodeServ;
 
 impl IamCpCertMailVCodeServ {
-    pub async fn add_cert_mail_vocde(add_req: &IamMailVCodeCertAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert_mail_vocde(add_req: &IamCertMailVCodeAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         IamCertMailVCodeServ::add_cert(add_req, &ctx.owner, &rbum_cert_conf_id, funs, ctx).await
     }

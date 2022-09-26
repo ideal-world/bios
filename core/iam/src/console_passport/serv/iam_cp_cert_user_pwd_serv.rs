@@ -8,7 +8,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
-use crate::basic::dto::iam_cert_dto::{IamPwdNewReq, IamUserPwdCertModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -18,7 +18,7 @@ use crate::iam_enumeration::IamCertKernelKind;
 pub struct IamCpCertUserPwdServ;
 
 impl IamCpCertUserPwdServ {
-    pub async fn new_pwd_without_login(pwd_new_req: &IamPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_spec_cert_conf(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await?;
@@ -31,7 +31,7 @@ impl IamCpCertUserPwdServ {
             ..Default::default()
         };
         IamCertUserPwdServ::modify_cert(
-            &IamUserPwdCertModifyReq {
+            &IamCertUserPwdModifyReq {
                 original_sk: pwd_new_req.original_sk.clone(),
                 new_sk: pwd_new_req.new_sk.clone(),
             },
@@ -43,7 +43,7 @@ impl IamCpCertUserPwdServ {
         .await
     }
 
-    pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamUserPwdCertModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamCertUserPwdModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, ctx).await
     }

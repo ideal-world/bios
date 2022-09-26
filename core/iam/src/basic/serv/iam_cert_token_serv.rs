@@ -8,7 +8,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilt
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertConfServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
-use crate::basic::dto::iam_cert_conf_dto::{IamTokenCertConfAddReq, IamTokenCertConfModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfTokenAddReq, IamCertConfTokenModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
@@ -18,7 +18,7 @@ pub struct IamCertTokenServ;
 
 impl IamCertTokenServ {
     pub async fn add_cert_conf(
-        add_req: &IamTokenCertConfAddReq,
+        add_req: &IamCertConfTokenAddReq,
         token_kind: IamCertTokenKind,
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
@@ -56,7 +56,7 @@ impl IamCertTokenServ {
         Ok(())
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamTokenCertConfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfTokenModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {

@@ -10,8 +10,8 @@ use tardis::TardisFuns;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use bios_iam::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppModifyReq};
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamTokenCertConfModifyReq, IamUserPwdCertConfInfo};
-use bios_iam::basic::dto::iam_cert_dto::{IamContextFetchReq, IamUserPwdCertModifyReq, IamUserPwdCertRestReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfTokenModifyReq, IamCertConfUserPwdAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertUserPwdModifyReq, IamCertUserPwdRestReq, IamContextFetchReq};
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggModifyReq, IamRoleModifyReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantModifyReq};
@@ -43,7 +43,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             admin_username: TrimString("bios".to_string()),
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamUserPwdCertConfInfo {
+            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,
@@ -69,7 +69,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     .await?;
     IamCertTokenServ::modify_cert_conf(
         &IamCertServ::get_cert_conf_id_by_code(IamCertTokenKind::TokenDefault.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
-        &IamTokenCertConfModifyReq {
+        &IamCertConfTokenModifyReq {
             name: None,
             coexist_num: Some(2),
             expire_sec: None,
@@ -125,7 +125,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Change cert, expected no token record");
     IamCpCertUserPwdServ::modify_cert_user_pwd(
         &account_resp.account_id,
-        &IamUserPwdCertModifyReq {
+        &IamCertUserPwdModifyReq {
             original_sk: TrimString(tenant_admin_pwd.clone()),
             new_sk: TrimString("123456".to_string()),
         },
@@ -187,7 +187,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_key_cache】 Rest cert, expected no token record");
     IamCertUserPwdServ::reset_sk(
-        &IamUserPwdCertRestReq {
+        &IamCertUserPwdRestReq {
             new_sk: TrimString("45678".to_string()),
         },
         &account_resp.account_id,

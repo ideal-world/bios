@@ -1,19 +1,23 @@
 use tardis::web::context_extractor::TardisContextExtractor;
+use tardis::web::poem::web::Json;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
-use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::IamAccountBoneResp;
+use crate::basic::dto::iam_account_dto::{IamAccountBoneResp, IamAccountExtSysAddReq, IamAccountExtSysResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+#[cfg(feature = "ldap_client")]
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamRelKind;
 
 pub struct IamCcAccountApi;
+pub struct IamCcAccountLdapApi;
 
 /// Common Console Account API
 #[poem_openapi::OpenApi(prefix_path = "/cc/account", tag = "crate::iam_enumeration::Tag::Common")]
@@ -90,5 +94,26 @@ impl IamCcAccountApi {
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamAccountServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
         TardisResp::ok(result)
+    }
+}
+
+/// Common Console Account LDAP API
+#[cfg(feature = "ldap_client")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/account/ldap", tag = "crate::iam_enumeration::Tag::Common")]
+impl IamCcAccountLdapApi {
+    /// Find Accounts by LDAP
+    #[oai(path = "/", method = "get")]
+    async fn find_from_ldap(&self, name: Query<String>, tenant_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamCertLdapServ::search_accounts(&name.0, &tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Add Account by LDAP
+    #[oai(path = "/", method = "put")]
+    async fn add_account_from_ldap(&self, add_req: Json<IamAccountExtSysAddReq>, tenant_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamCertLdapServ::get_or_add_account_without_verify(&add_req.0.account_id, &tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
     }
 }

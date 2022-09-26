@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use tardis::{basic::result::TardisResult, log::trace, serde_json::Value, TardisFunsInst};
 
-use crate::basic::serv::iam_cert_oauth2_by_code_serv::{IamCertOAuth2ByCodeSpi, IamCertOAuth2TokenInfo};
+use crate::basic::serv::iam_cert_oauth2_serv::{IamCertOAuth2Spi, IamCertOAuth2TokenInfo};
 
 pub struct IamCertOAuth2SpiWeChatMp;
 
 #[async_trait]
-impl IamCertOAuth2ByCodeSpi for IamCertOAuth2SpiWeChatMp {
+impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
     // https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html
     async fn get_access_token(code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
         let result = funs
