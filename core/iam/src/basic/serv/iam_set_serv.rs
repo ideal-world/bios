@@ -18,7 +18,7 @@ use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, Rb
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
 use super::iam_rel_serv::IamRelServ;
 
@@ -53,7 +53,7 @@ impl IamSetServ {
                     icon: None,
                     sort: None,
                     ext: None,
-                    rbum_parent_cate_id: None,
+                    rbum_parent_cate_id: Some(IamSetCateKind::Root.to_string()),
                     rel_rbum_set_id: set_id.clone(),
                     scope_level: Some(scope_level.clone()),
                 },
@@ -199,6 +199,8 @@ impl IamSetServ {
         let mut res_ids = HashSet::new();
         let mut global_ctx = ctx.clone();
         global_ctx.own_paths = "".to_string();
+        // todo default empty res
+        res_ids.insert("".to_string());
         for role_id in role_ids {
             let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, role_id, None, None, funs, &global_ctx).await?;
             res_ids.extend(rel_res_ids.into_iter());
