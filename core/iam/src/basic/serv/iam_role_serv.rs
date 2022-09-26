@@ -260,7 +260,8 @@ impl IamRoleServ {
         }
         if let Some(spec_scope_level) = spec_scope_level {
             let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
-            if role.scope_level.to_int() < spec_scope_level.to_int() {
+            // The role is not private and current scope
+            if role.scope_level != RbumScopeLevelKind::Private && role.scope_level.to_int() < spec_scope_level.to_int() {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "add_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }
@@ -277,7 +278,8 @@ impl IamRoleServ {
     pub async fn delete_rel_account(role_id: &str, account_id: &str, spec_scope_level: Option<RbumScopeLevelKind>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(spec_scope_level) = spec_scope_level {
             let role = Self::peek_item(role_id, &IamRoleFilterReq::default(), funs, ctx).await?;
-            if role.scope_level != spec_scope_level {
+            // The role is not private and current scope
+            if role.scope_level != RbumScopeLevelKind::Private && role.scope_level != spec_scope_level {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
             }
         }
