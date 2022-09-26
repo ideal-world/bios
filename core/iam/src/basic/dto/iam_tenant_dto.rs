@@ -1,4 +1,4 @@
-use crate::basic::dto::iam_cert_conf_dto::IamUserPwdCertConfInfo;
+use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
@@ -6,7 +6,7 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
-use super::iam_cert_conf_dto::{IamOAuth2CertConfAddOrModifyReq, IamOAuth2CertConfInfo, IamUserPwdCertConfAddOrModifyReq};
+use super::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamCertConfOAuth2Resp, IamCertConfUserPwdAddOrModifyReq};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamTenantAddReq {
@@ -66,10 +66,10 @@ pub struct IamTenantAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub admin_name: TrimString,
 
-    pub cert_conf_by_user_pwd: IamUserPwdCertConfAddOrModifyReq,
+    pub cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq,
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
-    pub cert_conf_by_wechat_mp: Option<IamOAuth2CertConfAddOrModifyReq>,
+    pub cert_conf_by_wechat_mp: Option<IamCertConfOAuth2AddOrModifyReq>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -86,10 +86,10 @@ pub struct IamTenantAggModifyReq {
     pub account_self_reg: Option<bool>,
     pub disabled: Option<bool>,
 
-    pub cert_conf_by_user_pwd: Option<IamUserPwdCertConfAddOrModifyReq>,
+    pub cert_conf_by_user_pwd: Option<IamCertConfUserPwdAddOrModifyReq>,
     pub cert_conf_by_phone_vcode: Option<bool>,
     pub cert_conf_by_mail_vcode: Option<bool>,
-    pub cert_conf_by_wechat_mp: Option<IamOAuth2CertConfAddOrModifyReq>,
+    pub cert_conf_by_wechat_mp: Option<IamCertConfOAuth2AddOrModifyReq>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -111,10 +111,10 @@ pub struct IamTenantAggDetailResp {
     pub note: String,
     pub account_self_reg: bool,
 
-    pub cert_conf_by_user_pwd: IamUserPwdCertConfInfo,
+    pub cert_conf_by_user_pwd: IamCertConfUserPwdResp,
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
-    pub cert_conf_by_wechat_mp: Option<IamOAuth2CertConfInfo>,
+    pub cert_conf_by_wechat_mp: Option<IamCertConfOAuth2Resp>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]

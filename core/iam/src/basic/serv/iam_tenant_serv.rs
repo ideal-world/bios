@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamMailVCodeCertConfAddOrModifyReq, IamPhoneVCodeCertConfAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
@@ -190,12 +190,12 @@ impl IamTenantServ {
 
         // Init cert conf
         let cert_conf_by_phone_vcode = if add_req.cert_conf_by_phone_vcode {
-            Some(IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
+            Some(IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None })
         } else {
             None
         };
         let cert_conf_by_mail_vcode = if add_req.cert_conf_by_mail_vcode {
-            Some(IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None })
+            Some(IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None })
         } else {
             None
         };
@@ -272,7 +272,7 @@ impl IamTenantServ {
                     IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
                 }
             } else if cert_conf_by_phone_vcode {
-                IamCertPhoneVCodeServ::add_cert_conf(&IamPhoneVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+                IamCertPhoneVCodeServ::add_cert_conf(&IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
             }
         }
 
@@ -282,7 +282,7 @@ impl IamTenantServ {
                     IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
                 }
             } else if cert_conf_by_mail_vcode {
-                IamCertMailVCodeServ::add_cert_conf(&IamMailVCodeCertConfAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+                IamCertMailVCodeServ::add_cert_conf(&IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
             }
         }
 

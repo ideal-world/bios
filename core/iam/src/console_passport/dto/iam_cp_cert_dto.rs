@@ -61,3 +61,13 @@ pub struct IamCpOAuth2LoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub tenant_id: String,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpLdapLoginReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub password: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tenant_id: String,
+}

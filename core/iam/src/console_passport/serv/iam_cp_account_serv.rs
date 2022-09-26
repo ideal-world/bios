@@ -3,7 +3,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
-use crate::basic::dto::iam_account_dto::IamAccountExtResp;
+use crate::basic::dto::iam_account_dto::IamAccountAttrResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -111,7 +111,7 @@ impl IamCpAccountServ {
             .collect(),
             exts: account_attrs
                 .into_iter()
-                .map(|r| IamAccountExtResp {
+                .map(|r| IamAccountAttrResp {
                     name: r.name.clone(),
                     label: r.label,
                     value: account_attr_values.get(&r.name).unwrap_or(&("".to_string())).to_string(),

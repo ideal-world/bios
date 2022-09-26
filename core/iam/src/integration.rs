@@ -1,2 +1,2 @@
-#[cfg(feature = "ldap")]
+#[cfg(feature = "ldap_server")]
 pub mod ldap;

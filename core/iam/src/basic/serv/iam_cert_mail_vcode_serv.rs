@@ -13,8 +13,8 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_cert_conf_dto::IamMailVCodeCertConfAddOrModifyReq;
-use crate::basic::dto::iam_cert_dto::IamMailVCodeCertAddReq;
+use crate::basic::dto::iam_cert_conf_dto::IamCertConfMailVCodeAddOrModifyReq;
+use crate::basic::dto::iam_cert_dto::IamCertMailVCodeAddReq;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -25,7 +25,7 @@ use crate::iam_enumeration::IamCertKernelKind;
 pub struct IamCertMailVCodeServ;
 
 impl IamCertMailVCodeServ {
-    pub async fn add_cert_conf(add_req: &IamMailVCodeCertConfAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert_conf(add_req: &IamCertConfMailVCodeAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 code: TrimString(IamCertKernelKind::MailVCode.to_string()),
@@ -58,7 +58,7 @@ impl IamCertMailVCodeServ {
         Ok(id)
     }
 
-    pub async fn modify_cert_conf(id: &str, modify_req: &IamMailVCodeCertConfAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfMailVCodeAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -88,7 +88,7 @@ impl IamCertMailVCodeServ {
         Ok(())
     }
 
-    pub async fn add_cert(add_req: &IamMailVCodeCertAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamCertMailVCodeAddReq, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let vcode = Self::get_vcode();
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
