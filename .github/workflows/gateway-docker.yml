@@ -19,7 +19,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v3
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
           directory: core/gateway
@@ -30,7 +30,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Build and push Docker image with etcd
+      - name: Build and push Docker image with etcd to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
           directory: core/gateway
@@ -40,3 +40,25 @@ jobs:
           tags: latest
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push Docker image to dockerhub
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          directory: core/gateway
+          dockerfile: core/gateway/Apisix_Dockerfile
+          registry: docker.io
+          image: ecfront/bios-gateway
+          tags: latest
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image with etcd to dockerhub
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          directory: core/gateway
+          dockerfile: core/gateway/Apisix_etcd_Dockerfile
+          registry: docker.io
+          image: ecfront/bios-gateway-with-etcd
+          tags: latest
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
