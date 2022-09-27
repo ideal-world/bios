@@ -1,12 +1,6 @@
-name: Publish all services docker image
+name: Release all services docker image
 
-on:
-  push:
-    paths:
-      - "basic/**"
-      - "core/iam/**"
-      - "services/**"
-      - ".github/workflows/service-all-docker.yml"
+on: [ push ]
 
 jobs:
   push_to_registry:
