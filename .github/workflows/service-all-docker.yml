@@ -41,7 +41,7 @@ jobs:
       - name: Copy binary to workspace
         run: cp ./target/release/bios-serv-all ./services/bios-all/
 
-      - name: Build and push Docker images
+      - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
           directory: services/bios-all
@@ -51,3 +51,14 @@ jobs:
           tags: latest
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push Docker image to dockerhub
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          directory: services/bios-all
+          dockerfile: services/bios-all/Dockerfile
+          registry: docker.io
+          image: ecfront/bios-serv-all
+          tags: latest
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
