@@ -158,19 +158,19 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
 
     let role_sys_admin_id = roles
         .iter()
-        .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE)
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ROLE)
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found sys admin role", ""))?;
 
     let role_tenant_admin_id = roles
         .iter()
-        .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE)
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_TENANT_ADMIN_ROLE)
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant admin role", ""))?;
 
     let role_app_admin_id = roles
         .iter()
-        .find(|r| r.name == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found app admin role", ""))?;
 
