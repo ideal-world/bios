@@ -139,7 +139,7 @@ pub struct IamAccountSummaryAggResp {
 
     pub icon: String,
 
-    pub roles: Vec<String>,
+    pub roles: HashMap<String, String>,
     pub certs: HashMap<String, String>,
     pub orgs: Vec<String>,
 }
