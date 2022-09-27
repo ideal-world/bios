@@ -427,7 +427,7 @@ impl IamAccountServ {
                 scope_level: account.scope_level,
                 disabled: account.disabled,
                 icon: account.icon,
-                roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| r.rel_name).collect(),
+                roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
                 certs: IamCertServ::find_certs(
                     &RbumCertFilterReq {
                         basic: RbumBasicFilterReq {
