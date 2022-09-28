@@ -466,6 +466,8 @@ impl IamAccountServ {
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(ids),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     ..Default::default()
                 },
                 ..Default::default()
