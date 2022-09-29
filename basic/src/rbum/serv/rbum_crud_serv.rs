@@ -589,7 +589,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
         if with_owner {
             self.expr_as(Expr::tbl(OWNER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("owner_name")).join_as(
-                JoinType::InnerJoin,
+                JoinType::LeftJoin,
                 rbum_item::Entity,
                 OWNER_TABLE.clone(),
                 Expr::tbl(OWNER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), OWNER_FIELD.clone()),
