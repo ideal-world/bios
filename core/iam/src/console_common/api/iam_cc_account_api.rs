@@ -113,7 +113,7 @@ impl IamCcAccountLdapApi {
     #[oai(path = "/", method = "put")]
     async fn add_account_from_ldap(&self, add_req: Json<IamAccountExtSysAddReq>, tenant_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCertLdapServ::get_or_add_account_without_verify(&add_req.0.account_id, &tenant_id.0, &funs, &ctx.0).await?;
+        IamCertLdapServ::get_or_add_account_without_verify(add_req.0, &tenant_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }
