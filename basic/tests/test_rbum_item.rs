@@ -26,6 +26,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_item(context).await?;
     test_rbum_item_attr(context).await?;
     test_rbum_item_attr_has_main_table(context).await?;
+    test_rbum_item_with_none_owner_name(context).await?;
     Ok(())
 }
 
@@ -599,6 +600,77 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
         .unwrap();
     assert_eq!(main_values.ext1_idx, "false");
     assert_eq!(main_values.ext2, "/c/c/d/");
+
+    funs.rollback().await?;
+
+    Ok(())
+}
+
+async fn test_rbum_item_with_none_owner_name(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    let ctx_with_none_owner = TardisContext {
+        own_paths: context.own_paths.to_string(),
+        ak: context.ak.to_string(),
+        owner: "xxxxx".to_string(),
+        roles: context.roles.clone(),
+        groups: context.groups.clone(),
+        ext: context.ext.clone(),
+    };
+    info!("【test_rbum_item_with_none_owner_name】 : Prepare : RbumKindServ::add_rbum");
+    let kind_id = RbumKindServ::add_rbum(
+        &mut RbumKindAddReq {
+            code: TrimString("reldb".to_string()),
+            name: TrimString("关系型数据库".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            ext_table_name: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        &ctx_with_none_owner,
+    )
+    .await?;
+
+    info!("【test_rbum_item_with_none_owner_name】 : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("mysql-dev".to_string()),
+            name: TrimString("Mysql测试集群".to_string()),
+            note: Some("...".to_string()),
+            icon: Some("...".to_string()),
+            sort: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        &ctx_with_none_owner,
+    )
+    .await?;
+
+    // -----------------------------------
+
+    let id = RbumItemServ::add_rbum(
+        &mut RbumItemAddReq {
+            id: None,
+            code: None,
+            name: TrimString("实例xxx".to_string()),
+            disabled: None,
+            rel_rbum_kind_id: kind_id.to_string(),
+            rel_rbum_domain_id: domain_id.to_string(),
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        &ctx_with_none_owner,
+    )
+    .await?;
+
+    info!("【test_rbum_item_with_none_owner_name】 : Test Get : RbumItemServ::get_rbum");
+    let rbum = RbumItemServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    assert_eq!(rbum.id, id);
+    assert_eq!(rbum.name, "实例xxx");
+    assert_eq!(rbum.owner_name, None);
 
     funs.rollback().await?;
 
