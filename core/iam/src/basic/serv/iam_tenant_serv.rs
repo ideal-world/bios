@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -209,7 +210,7 @@ impl IamTenantServ {
         }
 
         if (!add_req.cert_conf_by_ldap.is_empty()) {
-            for cert_conf_by_ldap in add_req.cert_conf_by_ldap {
+            for cert_conf_by_ldap in &add_req.cert_conf_by_ldap {
                 IamCertLdapServ::add_cert_conf(&cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
             }
         }
