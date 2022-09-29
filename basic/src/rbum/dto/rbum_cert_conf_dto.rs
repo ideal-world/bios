@@ -144,7 +144,7 @@ pub struct RbumCertConfDetailResp {
 
     pub own_paths: String,
     pub owner: String,
-    pub owner_name: String,
+    pub owner_name: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
