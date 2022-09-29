@@ -207,12 +207,12 @@ impl IamCertLdapServ {
         Ok(result)
     }
 
-    pub async fn get_or_add_account_with_verify(user_name: &str, password: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
+    pub async fn get_or_add_account_with_verify(user_name: &str, password: &str, tenant_id: &str, code: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
         };
-        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(tenant_id, funs, &mock_ctx).await?;
+        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(tenant_id, code, funs, &mock_ctx).await?;
         let dn = if let Some(dn) = ldap_client.bind(user_name, password).await? {
             dn
         } else {
@@ -289,8 +289,8 @@ impl IamCertLdapServ {
         }
     }
 
-    pub async fn search_accounts(user_or_display_name: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountExtSysResp>> {
-        let (mut ldap_client, cert_conf, _) = Self::get_ldap_client(tenant_id, funs, ctx).await?;
+    pub async fn search_accounts(user_or_display_name: &str, tenant_id: &str, code: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountExtSysResp>> {
+        let (mut ldap_client, cert_conf, _) = Self::get_ldap_client(tenant_id, code, funs, ctx).await?;
         if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
@@ -337,8 +337,8 @@ impl IamCertLdapServ {
         Ok(account_id)
     }
 
-    async fn get_ldap_client(tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertExtKind::Ldap.to_string(), Some(tenant_id.to_string()), funs).await?;
+    async fn get_ldap_client(tenant_id: &str, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
+        let cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&&format!("{}{}", IamCertExtKind::Ldap.to_string(), code.clone()), Some(tenant_id.to_string()), funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
         let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.is_tls, &cert_conf.base_dn).await?;
         Ok((client, cert_conf, cert_conf_id))

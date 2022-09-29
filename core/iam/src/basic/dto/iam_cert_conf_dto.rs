@@ -142,7 +142,7 @@ pub struct IamCertConfLdapResp {
 impl IamCertConfLdapResp {
     pub fn package_fitler_by_search_account(&self, user_or_display_name: &str) -> String {
         format!(
-            "({}(|(cn=*{}*)({}=*{}*)))",
+            "(&({})(|(cn=*{}*)({}=*{}*)))",
             self.search_base_filter, user_or_display_name, self.field_display_name, user_or_display_name
         )
     }
