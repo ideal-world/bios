@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -9,7 +10,7 @@ use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -26,6 +27,8 @@ use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
+
+use super::iam_account_serv::IamAccountServ;
 
 pub struct IamAppServ;
 
@@ -202,8 +205,8 @@ impl IamAppServ {
                 }
                 // delete old admins
                 for account_id in account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
-                    IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
                     IamRoleServ::delete_rel_account(&funs.iam_basic_role_app_admin_id(), account_id, None, funs, ctx).await?;
+                    IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
                 }
             }
         }
@@ -219,7 +222,17 @@ impl IamAppServ {
     }
 
     pub async fn delete_rel_account(app_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await
+        IamRelServ::delete_simple_rel(&IamRelKind::IamAccountApp, account_id, app_id, funs, ctx).await?;
+        // todo delete app rel account and role
+        let rel_account_roles =
+            RbumRelServ::find_from_simple_rels(&IamRelKind::IamAccountRole.to_string(), &RbumRelFromKind::Item, true, account_id, None, None, funs, ctx).await?;
+        if rel_account_roles.is_empty() {
+            return Ok(());
+        }
+        for rel in rel_account_roles {
+            IamRoleServ::delete_rel_account(&rel.rel_id, account_id, Some(RBUM_SCOPE_LEVEL_APP), funs, ctx).await?;
+        }
+        Ok(())
     }
 
     pub async fn count_rel_accounts(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
