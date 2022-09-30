@@ -56,7 +56,6 @@ impl IamCaAppApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAppServ::delete_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
-        // todo delete app rel account
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
