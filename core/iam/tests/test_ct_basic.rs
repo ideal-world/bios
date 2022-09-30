@@ -43,7 +43,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
                 sk_lock_err_times: 0,
                 sk_lock_duration_sec: 0,
                 repeatable: true,
-                expire_sec: 111,
+                expire_sec: 604800,
             },
             cert_conf_by_phone_vcode: true,
             cert_conf_by_mail_vcode: true,
