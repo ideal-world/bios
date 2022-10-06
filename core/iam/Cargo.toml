@@ -20,6 +20,7 @@ name = "bios_iam"
 path = "src/lib.rs"
 
 [features]
+default = ["ldap_server", "ldap_client"]
 ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
 ldap_client = ["ldap3"]
 

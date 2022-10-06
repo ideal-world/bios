@@ -217,7 +217,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     assert_eq!(accounts.total_size, 1);
     assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
     assert_eq!(accounts.records.get(0).unwrap().roles.len(), 1);
-    assert_eq!(accounts.records.get(0).unwrap().roles[0], "tenant_admin");
+    assert!(accounts.records.get(0).unwrap().roles.iter().any(|i| i.1 == "tenant_admin"));
     assert_eq!(accounts.records.get(0).unwrap().orgs.len(), 0);
     assert_eq!(accounts.records.get(0).unwrap().certs.len(), 1);
     assert!(accounts.records.get(0).unwrap().certs.contains_key("UserPwd"));
