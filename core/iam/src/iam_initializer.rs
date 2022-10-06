@@ -229,7 +229,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
-    // init_menu(&set_res_id, &cate_menu_id, funs, &ctx).await?;
+    init_menu(&set_res_id, &cate_menu_id, funs, &ctx).await?;
 
     // Init kernel certs
     IamCertServ::init_default_ident_conf(
