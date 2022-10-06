@@ -98,6 +98,11 @@ pub struct IamCertConfOAuth2Resp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertConfLdapAddOrModifyReq {
+    /// Assign a code to the LdapCertConf,Used to distinguish different sources
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
     pub is_tls: bool,
@@ -137,7 +142,7 @@ pub struct IamCertConfLdapResp {
 impl IamCertConfLdapResp {
     pub fn package_fitler_by_search_account(&self, user_or_display_name: &str) -> String {
         format!(
-            "({}(|(cn=*{}*)({}=*{}*)))",
+            "(&({})(|(cn=*{}*)({}=*{}*)))",
             self.search_base_filter, user_or_display_name, self.field_display_name, user_or_display_name
         )
     }

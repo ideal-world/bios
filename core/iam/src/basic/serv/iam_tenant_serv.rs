@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -18,6 +19,7 @@ use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
 };
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -205,6 +207,12 @@ impl IamTenantServ {
 
         if let Some(cert_conf_by_wechat_mp) = &add_req.cert_conf_by_wechat_mp {
             IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
+        }
+
+        if (!add_req.cert_conf_by_ldap.is_empty()) {
+            for cert_conf_by_ldap in &add_req.cert_conf_by_ldap {
+                IamCertLdapServ::add_cert_conf(&cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
+            }
         }
 
         // Init pwd
