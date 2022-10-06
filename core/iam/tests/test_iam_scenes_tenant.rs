@@ -199,7 +199,7 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     assert_eq!(accounts.total_size, 1);
     let account = accounts.records.into_iter().find(|i| i.name == "测试管理员").unwrap();
     assert_eq!(account.roles.len(), 1);
-    assert!(account.roles.contains(&("tenant_admin".to_string())));
+    assert!(account.roles.iter().any(|i| i.1 == "tenant_admin"));
     assert!(account.orgs.is_empty());
     assert_eq!(account.certs.len(), 1);
     assert!(account.certs.contains_key("UserPwd"));

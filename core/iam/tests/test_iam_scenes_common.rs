@@ -1,35 +1,21 @@
 use std::collections::HashMap;
 use std::time::Duration;
-use std::env;
 
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
-use tardis::{TardisFuns, testcontainers, tokio};
-use tardis::basic::dto::TardisContext;
-use tardis::test::test_container::TardisTestContainer;
-use tardis::testcontainers::core::WaitFor;
-use tardis::testcontainers::images;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
-use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
-use bios_iam::basic::serv::iam_cert_ldap_serv::ldap::LdapClient;
-use bios_iam::iam_config::IamConfig;
-use bios_iam::iam_constants;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
-
-const LDAP_CODE: &str = "TEST";
 
 pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【test_iam_scenes_common】");
@@ -68,17 +54,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![IamCertConfLdapAddOrModifyReq {
-                    code: TrimString(LDAP_CODE.to_string()),
-                    name: "githubLdap".to_string(),
-                    conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
-                    is_tls: false,
-                    principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
-                    credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
-                    base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-                    field_display_name: "displayName".to_string(),
-                    search_base_filter: "objectClass=*".to_string(),
-                }],
+                cert_conf_by_ldap: Vec::new(),
             },
         )
         .await;

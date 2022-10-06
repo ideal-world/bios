@@ -1,5 +1,17 @@
 use std::collections::HashMap;
 
+use self::ldap::LdapClient;
+use crate::basic::dto::iam_account_dto::IamAccountExtSysAddReq;
+use crate::{
+    basic::dto::{
+        iam_account_dto::{IamAccountAggAddReq, IamAccountExtSysResp},
+        iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp},
+        iam_cert_dto::IamCertLdapAddOrModifyReq,
+        iam_filer_dto::IamTenantFilterReq,
+    },
+    iam_config::IamBasicConfigApi,
+    iam_enumeration::IamCertExtKind,
+};
 use bios_basic::rbum::{
     dto::{
         rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq},
@@ -18,20 +30,6 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
 };
-
-use crate::{
-    basic::dto::{
-        iam_account_dto::{IamAccountAggAddReq, IamAccountExtSysResp},
-        iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp},
-        iam_cert_dto::IamCertLdapAddOrModifyReq,
-        iam_filer_dto::IamTenantFilterReq,
-    },
-    iam_config::IamBasicConfigApi,
-    iam_enumeration::IamCertExtKind,
-};
-use crate::basic::dto::iam_account_dto::IamAccountExtSysAddReq;
-
-use self::ldap::LdapClient;
 
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 
@@ -257,7 +255,8 @@ impl IamCertLdapServ {
 
     pub async fn get_or_add_account_without_verify(add_req: IamAccountExtSysAddReq, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
         let dn = &add_req.account_id;
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap.to_string(), add_req.code.clone()), Some(tenant_id.to_string()), funs).await?;
+        let cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap.to_string(), add_req.code.clone()), Some(tenant_id.to_string()), funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
         if let Some(account_id) = Self::get_cert_rel_account_by_dn(dn, &cert_conf_id, funs, ctx).await? {
             return Ok((account_id, dn.to_string()));
@@ -289,7 +288,13 @@ impl IamCertLdapServ {
         }
     }
 
-    pub async fn search_accounts(user_or_display_name: &str, tenant_id: &str, code: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountExtSysResp>> {
+    pub async fn search_accounts(
+        user_or_display_name: &str,
+        tenant_id: &str,
+        code: &String,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<IamAccountExtSysResp>> {
         let (mut ldap_client, cert_conf, _) = Self::get_ldap_client(tenant_id, code, funs, ctx).await?;
         if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
