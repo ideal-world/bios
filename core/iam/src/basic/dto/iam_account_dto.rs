@@ -205,4 +205,5 @@ pub struct IamAccountExtSysResp {
 pub struct IamAccountExtSysAddReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub account_id: String,
+    pub code: TrimString,
 }
