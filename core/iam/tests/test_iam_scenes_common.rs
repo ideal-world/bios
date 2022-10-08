@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::time::Duration;
 
 use tardis::basic::field::TrimString;
@@ -10,12 +11,14 @@ use tardis::web::web_resp::TardisPage;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
+
+const LDAP_CODE: &str = "TEST";
 
 pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("【test_iam_scenes_common】");
@@ -54,7 +57,17 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: Vec::new(),
+                cert_conf_by_ldap: vec![IamCertConfLdapAddOrModifyReq {
+                    code: TrimString(LDAP_CODE.to_string()),
+                    name: "githubLdap".to_string(),
+                    conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
+                    is_tls: false,
+                    principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
+                    credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
+                    base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
+                    field_display_name: "displayName".to_string(),
+                    search_base_filter: "objectClass=*".to_string(),
+                }],
             },
         )
         .await;
@@ -135,6 +148,48 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     client.login("user_dp", "123456", Some(tenant_id.clone()), Some(app_id), None, true).await?;
 
     common_console_by_app(client).await?;
+
+    Ok(())
+}
+
+pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &str) -> TardisResult<()> {
+    //====== prepare area==========
+    // let mut funs = iam_constants::get_tardis_inst();
+    //
+    // let mut ctx = get_first_account_context(
+    //     iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT,
+    //     iam_constants::COMPONENT_CODE,
+    //     &TardisFuns::inst_with_db_conn("".to_string(), None),
+    // )
+    //     .await?
+    //     .unwrap();
+    // ctx.own_paths = tenant_id.to_string();
+
+
+    // let rbum_id = rbum_scope_helper::get_max_level_id_by_context(&ctx).unwrap_or("".to_string());
+    // // add ldap cert conf
+    // IamCertLdapServ::add_cert_conf(
+    //     &IamCertConfLdapAddOrModifyReq {
+    //
+    //     }
+    //     , tenant_id.to_string()
+    //     , &funs
+    //     , &ctx,
+    // ).await?;
+
+    //====== test area==========
+    // Find Accounts by LDAP
+    let name = "admin";
+    let accounts: Vec<String> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
+    assert!(!accounts.is_empty());
+    for a in accounts {
+        println!("{}", a);
+    }
+    //
+    // // Add Account by LDAP
+    //
+    // let accounts: Vec<String> = client.put(&format!("/cc/account/ldap?tenant_id={}", tenant_id.clone()), todo()).await;
+    // assert_eq!(accounts[0], format!("{},测试管理员", account_id));
 
     Ok(())
 }
