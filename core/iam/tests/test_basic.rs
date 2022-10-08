@@ -3,11 +3,11 @@ use std::env;
 use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::testcontainers::clients::Cli;
+use tardis::testcontainers::core::{ExecCommand, WaitFor};
 use tardis::testcontainers::images::generic::GenericImage;
 use tardis::testcontainers::images::redis::Redis;
 use tardis::testcontainers::Container;
 use tardis::TardisFuns;
-use tardis::testcontainers::core::{ExecCommand, WaitFor};
 
 pub struct LifeHold<'a> {
     pub mysql: Container<'a, GenericImage>,
@@ -46,7 +46,7 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     })
 }
 
-async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a,GenericImage> {
+async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
     const ORGANISATION: &str = "test";
     const ADMIN_PASSWORD: &str = "123456";
     let domain: String = format!("{}.com", ORGANISATION);
