@@ -99,6 +99,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
         .await;
 
     common_console_by_tenant(client).await?;
+    common_console_by_ldap(client, &tenant_id).await?;
 
     // Add Account
     let app_account_id: String = client
@@ -179,7 +180,7 @@ pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &
 
     //====== test area==========
     // Find Accounts by LDAP
-    let name = "admin";
+    let name = "Barbara";
     let accounts: Vec<String> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
     assert!(!accounts.is_empty());
     for a in accounts {

@@ -7,7 +7,7 @@ use tardis::testcontainers::images::generic::GenericImage;
 use tardis::testcontainers::images::redis::Redis;
 use tardis::testcontainers::Container;
 use tardis::TardisFuns;
-use tardis::testcontainers::core::WaitFor;
+use tardis::testcontainers::core::{ExecCommand, WaitFor};
 
 pub struct LifeHold<'a> {
     pub mysql: Container<'a, GenericImage>,
@@ -59,7 +59,16 @@ async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a,GenericImage> {
 
             .with_wait_for(WaitFor::message_on_stdout("Init new ldap server...")),
     );
-    // ldap_container.exec("");
+    const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: Barbara
+sn: Jensen
+displayName: Barbara Jensen
+title: the world's most famous mythical manager
+mail: bjensen@test.com
+uid: bjensen";
+    ldap_container.exec(ExecCommand { cmd: format!("eacho {} > /home/base.ldif", BASE_LDIF), ready_conditions: vec![WaitFor::message_on_stdout("adding new entry ")] });
+    ldap_container.exec(ExecCommand { cmd: "".to_string(), ready_conditions: vec![] });
     let port = ldap_container.get_host_port_ipv4(389);
     let url = format!("ldap://localhost:{}", port);
     let base_dn = format!("DC={},DC=com", ORGANISATION);
