@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -211,7 +211,7 @@ impl IamTenantServ {
 
         if !add_req.cert_conf_by_ldap.is_empty() {
             for cert_conf_by_ldap in &add_req.cert_conf_by_ldap {
-                IamCertLdapServ::add_cert_conf(&cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
+                IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
             }
         }
 
@@ -270,6 +270,7 @@ impl IamTenantServ {
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
 
+        // todo cert conf delete change disable status
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
             let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
             IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
@@ -312,8 +313,7 @@ impl IamTenantServ {
             //get intersection of modify request certificate configuration and database certificate configuration/获取修改request和数据库中配置的交集
             let modify_cert_conf_by_ldap = modify_req.cert_conf_by_ldap.iter().filter(|r| cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
             for modify in modify_cert_conf_by_ldap {
-                IamCertLdapServ::modify_cert_conf(&cert_conf_by_ldap_code_id_map.get(&modify.code.to_string()).unwrap()
-                                                  , modify, funs, ctx).await?;
+                IamCertLdapServ::modify_cert_conf(cert_conf_by_ldap_code_id_map.get(&modify.code.to_string()).unwrap(), modify, funs, ctx).await?;
             }
 
             let add_cert_conf_by_ldap = modify_req.cert_conf_by_ldap.iter().filter(|r| !cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
@@ -321,15 +321,16 @@ impl IamTenantServ {
                 IamCertLdapServ::add_cert_conf(add, id.to_string(), funs, ctx).await?;
             }
 
-            let delete_cert_conf_code_by_ldap = cert_conf_by_ldap_code_id_map.iter().map(|(k, _)| k)
-                .filter(|r| !modify_req.cert_conf_by_ldap.iter()
-                    .map(|y| y.code.clone().to_string()).collect::<Vec<String>>().contains(&r)
-                ).collect::<Vec<_>>();
+            let delete_cert_conf_code_by_ldap = cert_conf_by_ldap_code_id_map
+                .iter()
+                .map(|(k, _)| k)
+                .filter(|r| !modify_req.cert_conf_by_ldap.iter().map(|y| y.code.clone().to_string()).any(|x| x == r.to_string()))
+                .collect::<Vec<_>>();
             for delete_code in delete_cert_conf_code_by_ldap {
-                IamCertServ::delete_cert_conf(cert_conf_by_ldap_code_id_map.get(&delete_code.to_string()).unwrap(), funs, ctx).await?;
+                IamCertServ::delete_cert_conf(cert_conf_by_ldap_code_id_map.get(delete_code).unwrap(), funs, ctx).await?;
             }
         } else {
-            for delete_id in cert_conf_by_ldaps.iter().map(|r| { r.id.clone() }).collect::<Vec<String>>() {
+            for delete_id in cert_conf_by_ldaps.iter().map(|r| r.id.clone()).collect::<Vec<String>>() {
                 IamCertServ::delete_cert_conf(&delete_id, funs, ctx).await?;
             }
         }
