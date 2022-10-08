@@ -64,6 +64,9 @@ impl IamCcRoleApi {
                 .map(|item| IamRoleBoneResp {
                     id: item.id,
                     name: item.name,
+                    code: item.code,
+                    kind: item.kind,
+                    scope_level: item.scope_level,
                     icon: item.icon,
                 })
                 .collect(),
