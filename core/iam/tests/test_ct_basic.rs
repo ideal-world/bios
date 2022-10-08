@@ -106,7 +106,6 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             account_self_reg: None,
             cert_conf_by_wechat_mp: None,
             cert_conf_by_ldap: Vec::new(),
-            
         },
         &funs,
     )
