@@ -53,6 +53,9 @@ pub struct IamRoleModifyReq {
 pub struct IamRoleBoneResp {
     pub id: String,
     pub name: String,
+    pub kind: IamRoleKind,
+    pub scope_level: RbumScopeLevelKind,
+    pub code: String,
     pub icon: String,
 }
 
