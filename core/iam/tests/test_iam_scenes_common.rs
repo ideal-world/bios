@@ -6,10 +6,10 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
-use tardis::web::web_resp::TardisPage;
+use tardis::web::web_resp::{TardisPage, Void};
 
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp, IamAccountExtSysAddReq, IamAccountExtSysResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
@@ -154,43 +154,11 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
 }
 
 pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &str) -> TardisResult<()> {
-    //====== prepare area==========
-    // let mut funs = iam_constants::get_tardis_inst();
-    //
-    // let mut ctx = get_first_account_context(
-    //     iam_constants::RBUM_KIND_CODE_IAM_ACCOUNT,
-    //     iam_constants::COMPONENT_CODE,
-    //     &TardisFuns::inst_with_db_conn("".to_string(), None),
-    // )
-    //     .await?
-    //     .unwrap();
-    // ctx.own_paths = tenant_id.to_string();
-
-
-    // let rbum_id = rbum_scope_helper::get_max_level_id_by_context(&ctx).unwrap_or("".to_string());
-    // // add ldap cert conf
-    // IamCertLdapServ::add_cert_conf(
-    //     &IamCertConfLdapAddOrModifyReq {
-    //
-    //     }
-    //     , tenant_id.to_string()
-    //     , &funs
-    //     , &ctx,
-    // ).await?;
-
-    //====== test area==========
-    // Find Accounts by LDAP
     let name = "Barbara";
-    let accounts: Vec<String> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
-    assert!(!accounts.is_empty());
-    for a in accounts {
-        println!("{}", a);
-    }
-    //
-    // // Add Account by LDAP
-    //
-    // let accounts: Vec<String> = client.put(&format!("/cc/account/ldap?tenant_id={}", tenant_id.clone()), todo()).await;
-    // assert_eq!(accounts[0], format!("{},测试管理员", account_id));
+
+    // Find Accounts by LDAP
+    let accounts: Vec<IamAccountExtSysResp> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
+    assert_eq!(accounts.get(0).unwrap().user_name, name);
 
     Ok(())
 }

@@ -56,9 +56,9 @@ async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a,GenericImage> {
             .with_env_var("LDAP_ORGANISATION", ORGANISATION)
             .with_env_var("LDAP_DOMAIN", domain)
             .with_env_var("LDAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
-
-            .with_wait_for(WaitFor::message_on_stdout("Init new ldap server...")),
+            .with_wait_for(WaitFor::message_on_stdout("First start is done...")),
     );
+
     const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
 objectClass: inetOrgPerson
 cn: Barbara
@@ -67,12 +67,19 @@ displayName: Barbara Jensen
 title: the world's most famous mythical manager
 mail: bjensen@test.com
 uid: bjensen";
-    ldap_container.exec(ExecCommand { cmd: format!("eacho {} > /home/base.ldif", BASE_LDIF), ready_conditions: vec![WaitFor::message_on_stdout("adding new entry ")] });
-    ldap_container.exec(ExecCommand { cmd: "".to_string(), ready_conditions: vec![] });
     let port = ldap_container.get_host_port_ipv4(389);
     let url = format!("ldap://localhost:{}", port);
     let base_dn = format!("DC={},DC=com", ORGANISATION);
     let admin_dn = format!("CN=admin,{}", base_dn);
+
+    ldap_container.exec(ExecCommand {
+        cmd: format!("echo \"{}\" > /home/base.ldif", BASE_LDIF),
+        ready_conditions: vec![],
+    });
+    ldap_container.exec(ExecCommand {
+        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{}\" -w {} -f /home/base.ldif ", admin_dn, ADMIN_PASSWORD),
+        ready_conditions: vec![WaitFor::millis(5)],
+    });
 
     env::set_var("TARDIS_FW.LDAP.URL", url);
     env::set_var("TARDIS_FW.LDAP.BASE_DN", base_dn);
