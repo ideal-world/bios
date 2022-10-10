@@ -209,9 +209,11 @@ impl IamTenantServ {
             IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
         }
 
-        if !add_req.cert_conf_by_ldap.is_empty() {
-            for cert_conf_by_ldap in &add_req.cert_conf_by_ldap {
-                IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
+        if let Some(cert_conf_by_ldaps) = &add_req.cert_conf_by_ldap {
+            if !cert_conf_by_ldaps.is_empty() {
+                for cert_conf_by_ldap in cert_conf_by_ldaps {
+                    IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
+                }
             }
         }
 
@@ -307,31 +309,33 @@ impl IamTenantServ {
 
         //modify ldap config
         //The current ldap related configuration in the database/过滤出现在数据库中ldap相关的配置
-        let cert_conf_by_ldaps: Vec<_> = cert_confs.iter().filter(|r| r.code.contains(&IamCertExtKind::Ldap.to_string())).collect();
-        let cert_conf_by_ldap_code_id_map = cert_conf_by_ldaps.iter().map(|r| (r.code.clone(), r.id.clone())).collect::<HashMap<String, String>>();
-        if !modify_req.cert_conf_by_ldap.is_empty() {
-            //get intersection of modify request certificate configuration and database certificate configuration/获取修改request和数据库中配置的交集
-            let modify_cert_conf_by_ldap = modify_req.cert_conf_by_ldap.iter().filter(|r| cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
-            for modify in modify_cert_conf_by_ldap {
-                IamCertLdapServ::modify_cert_conf(cert_conf_by_ldap_code_id_map.get(&modify.code.to_string()).unwrap(), modify, funs, ctx).await?;
-            }
+        let old_cert_conf_by_ldaps: Vec<_> = cert_confs.iter().filter(|r| r.code.contains(&IamCertExtKind::Ldap.to_string())).collect();
+        let cert_conf_by_ldap_code_id_map = old_cert_conf_by_ldaps.iter().map(|r| (r.code.clone(), r.id.clone())).collect::<HashMap<String, String>>();
+        if let Some(cert_conf_by_ldaps) = &modify_req.cert_conf_by_ldap {
+            if !cert_conf_by_ldaps.is_empty() {
+                //get intersection of modify request certificate configuration and database certificate configuration/获取修改request和数据库中配置的交集
+                let modify_cert_conf_by_ldap = cert_conf_by_ldaps.iter().filter(|r| cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
+                for modify in modify_cert_conf_by_ldap {
+                    IamCertLdapServ::modify_cert_conf(cert_conf_by_ldap_code_id_map.get(&modify.code.to_string()).unwrap(), modify, funs, ctx).await?;
+                }
 
-            let add_cert_conf_by_ldap = modify_req.cert_conf_by_ldap.iter().filter(|r| !cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
-            for add in add_cert_conf_by_ldap {
-                IamCertLdapServ::add_cert_conf(add, id.to_string(), funs, ctx).await?;
-            }
+                let add_cert_conf_by_ldap = cert_conf_by_ldaps.iter().filter(|r| !cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
+                for add in add_cert_conf_by_ldap {
+                    IamCertLdapServ::add_cert_conf(add, id.to_string(), funs, ctx).await?;
+                }
 
-            let delete_cert_conf_code_by_ldap = cert_conf_by_ldap_code_id_map
-                .iter()
-                .map(|(k, _)| k)
-                .filter(|r| !modify_req.cert_conf_by_ldap.iter().map(|y| y.code.clone().to_string()).any(|x| x == r.to_string()))
-                .collect::<Vec<_>>();
-            for delete_code in delete_cert_conf_code_by_ldap {
-                IamCertServ::delete_cert_conf(cert_conf_by_ldap_code_id_map.get(delete_code).unwrap(), funs, ctx).await?;
-            }
-        } else {
-            for delete_id in cert_conf_by_ldaps.iter().map(|r| r.id.clone()).collect::<Vec<String>>() {
-                IamCertServ::delete_cert_conf(&delete_id, funs, ctx).await?;
+                let delete_cert_conf_code_by_ldap = cert_conf_by_ldap_code_id_map
+                    .iter()
+                    .map(|(k, _)| k)
+                    .filter(|r| !cert_conf_by_ldaps.iter().map(|y| y.code.clone().to_string()).any(|x| x == r.to_string()))
+                    .collect::<Vec<_>>();
+                for delete_code in delete_cert_conf_code_by_ldap {
+                    IamCertServ::delete_cert_conf(cert_conf_by_ldap_code_id_map.get(delete_code).unwrap(), funs, ctx).await?;
+                }
+            } else {
+                for delete_id in old_cert_conf_by_ldaps.iter().map(|r| r.id.clone()).collect::<Vec<String>>() {
+                    IamCertServ::delete_cert_conf(&delete_id, funs, ctx).await?;
+                }
             }
         }
 

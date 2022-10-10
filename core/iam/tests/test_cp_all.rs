@@ -57,7 +57,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             disabled: None,
             account_self_reg: None,
             cert_conf_by_wechat_mp: None,
-            cert_conf_by_ldap: Vec::new(),
+            cert_conf_by_ldap: None,
         },
         &funs,
     )

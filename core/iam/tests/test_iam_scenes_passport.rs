@@ -62,7 +62,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await;
@@ -504,7 +504,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await
@@ -542,7 +542,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await
@@ -580,7 +580,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await
@@ -618,7 +618,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await
@@ -656,7 +656,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await;
@@ -707,7 +707,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
                     ak: TrimString(app_id.to_string()),
                     sk: TrimString(secret.to_string()),
                 }),
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await;
