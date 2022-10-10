@@ -71,7 +71,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await;
@@ -171,7 +171,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 cert_conf_by_mail_vcode: Some(true),
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await;

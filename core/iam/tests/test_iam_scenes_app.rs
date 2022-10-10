@@ -54,7 +54,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![],
+                cert_conf_by_ldap: None,
             },
         )
         .await;

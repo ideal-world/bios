@@ -49,7 +49,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             cert_conf_by_mail_vcode: true,
             account_self_reg: None,
             cert_conf_by_wechat_mp: None,
-            cert_conf_by_ldap: Vec::new(),
+            cert_conf_by_ldap: None,
         },
         &funs,
     )
@@ -105,7 +105,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             cert_conf_by_mail_vcode: true,
             account_self_reg: None,
             cert_conf_by_wechat_mp: None,
-            cert_conf_by_ldap: Vec::new(),
+            cert_conf_by_ldap: None,
         },
         &funs,
     )
