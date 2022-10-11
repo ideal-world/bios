@@ -397,8 +397,7 @@ mod ldap {
         pub async fn get_by_dn(&mut self, dn: &str, return_attr: &Vec<&str>) -> TardisResult<Option<LdapSearchResp>> {
             let (rs, _) = self
                 .ldap
-                // TODO
-                .search(dn, Scope::Subtree, "", return_attr)
+                .search(dn, Scope::Subtree, "objectClass=*", return_attr)
                 .await
                 .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {:?}", e), ""))?
                 .success()
