@@ -3,6 +3,7 @@ use std::env;
 use tardis::basic::result::TardisResult;
 use tardis::test::test_container::TardisTestContainer;
 use tardis::testcontainers::clients::Cli;
+use tardis::testcontainers::core::{ExecCommand, WaitFor};
 use tardis::testcontainers::images::generic::GenericImage;
 use tardis::testcontainers::images::redis::Redis;
 use tardis::testcontainers::Container;
@@ -12,6 +13,7 @@ pub struct LifeHold<'a> {
     pub mysql: Container<'a, GenericImage>,
     pub redis: Container<'a, Redis>,
     pub rabbit: Container<'a, GenericImage>,
+    pub ldap: Container<'a, GenericImage>,
 }
 
 pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
@@ -30,6 +32,8 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     let url = format!("amqp://guest:guest@127.0.0.1:{}/%2f", port);
     env::set_var("TARDIS_FW.MQ.URL", url);
 
+    let ldap_container = get_ldap_container(docker).await;
+
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,bios_iam=trace,sqlx::query=off");
     TardisFuns::init("tests/config").await?;
     // TardisFuns::init("core/iam/tests/config").await?;
@@ -38,5 +42,49 @@ pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
         mysql: mysql_container,
         redis: redis_container,
         rabbit: rabbit_container,
+        ldap: ldap_container,
     })
+}
+
+async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
+    const ORGANISATION: &str = "test";
+    const ADMIN_PASSWORD: &str = "123456";
+    let domain: String = format!("{}.com", ORGANISATION);
+
+    let ldap_container = docker.run(
+        GenericImage::new("osixia/openldap", "latest")
+            .with_env_var("LDAP_ORGANISATION", ORGANISATION)
+            .with_env_var("LDAP_DOMAIN", domain)
+            .with_env_var("LDAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
+            .with_wait_for(WaitFor::message_on_stdout("First start is done...")),
+    );
+
+    const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: Barbara
+sn: Jensen
+displayName: Barbara Jensen
+title: the world's most famous mythical manager
+mail: bjensen@test.com
+uid: bjensen";
+    let port = ldap_container.get_host_port_ipv4(389);
+    let url = format!("ldap://localhost:{}", port);
+    let base_dn = format!("DC={},DC=com", ORGANISATION);
+    let admin_dn = format!("CN=admin,{}", base_dn);
+
+    ldap_container.exec(ExecCommand {
+        cmd: format!("echo \"{}\" > /home/base.ldif", BASE_LDIF),
+        ready_conditions: vec![],
+    });
+    ldap_container.exec(ExecCommand {
+        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{}\" -w {} -f /home/base.ldif ", admin_dn, ADMIN_PASSWORD),
+        ready_conditions: vec![WaitFor::millis(5)],
+    });
+
+    env::set_var("TARDIS_FW.LDAP.URL", url);
+    env::set_var("TARDIS_FW.LDAP.BASE_DN", base_dn);
+    env::set_var("TARDIS_FW.LDAP.ADMIN_DN", admin_dn);
+    env::set_var("TARDIS_FW.LDAP.ADMIN_CN", "admin");
+    env::set_var("TARDIS_FW.LDAP.ADMIN_PASSWORD", ADMIN_PASSWORD);
+    ldap_container
 }
