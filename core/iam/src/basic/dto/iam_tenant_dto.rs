@@ -70,7 +70,7 @@ pub struct IamTenantAggAddReq {
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
     pub cert_conf_by_wechat_mp: Option<IamCertConfOAuth2AddOrModifyReq>,
-    pub cert_conf_by_ldap: Vec<IamCertConfLdapAddOrModifyReq>,
+    pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapAddOrModifyReq>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -91,7 +91,7 @@ pub struct IamTenantAggModifyReq {
     pub cert_conf_by_phone_vcode: Option<bool>,
     pub cert_conf_by_mail_vcode: Option<bool>,
     pub cert_conf_by_wechat_mp: Option<IamCertConfOAuth2AddOrModifyReq>,
-    pub cert_conf_by_ldap: Vec<IamCertConfLdapAddOrModifyReq>,
+    pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapAddOrModifyReq>>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

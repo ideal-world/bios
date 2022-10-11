@@ -14,6 +14,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
+use crate::iam_enumeration::IamRoleKind;
 
 pub struct IamCcRoleApi;
 
@@ -26,6 +27,7 @@ impl IamCcRoleApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        kind: Query<Option<IamRoleKind>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
@@ -40,10 +42,11 @@ impl IamCcRoleApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     enabled: Some(true),
-                    scope_level: if IamAppServ::is_app_level_by_ctx(&ctx.0) { Some(RBUM_SCOPE_LEVEL_APP) } else { None },
+                    // scope_level: if IamAppServ::is_app_level_by_ctx(&ctx.0) { Some(RBUM_SCOPE_LEVEL_APP) } else { None },
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     ..Default::default()
                 },
+                kind: kind.0,
                 ..Default::default()
             },
             page_number.0,

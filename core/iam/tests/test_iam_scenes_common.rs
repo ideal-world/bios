@@ -57,7 +57,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_wechat_mp: None,
-                cert_conf_by_ldap: vec![IamCertConfLdapAddOrModifyReq {
+                cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
                     code: TrimString(LDAP_CODE.to_string()),
                     name: "githubLdap".to_string(),
                     conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
@@ -67,7 +67,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                     base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
                     field_display_name: "displayName".to_string(),
                     search_base_filter: "objectClass=*".to_string(),
-                }],
+                }]),
             },
         )
         .await;
