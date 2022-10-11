@@ -7,14 +7,14 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 
-use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
+use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq, IamContextFetchReq};
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdLoginReq};
+use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdLoginReq};
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
 use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
@@ -179,4 +179,23 @@ impl IamCpCertLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
+    ///
+    #[oai(path = "/checkBind", method = "post")]
+    async fn check_user_pwd_is_bind(&self, login_req: Json<IamCpUserPwdBindReq>) -> TardisApiResult<IamCpUserPwdBindResp> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let resp = IamCpCertLdapServ::check_user_pwd_is_bind(&login_req.0, &funs).await?;
+        funs.commit().await?;
+        TardisResp::ok(resp)
+    }
+    //todo
+    // /// bind username password cert by_ldap
+    // #[oai(path = "/bind-or-create-userpwd", method = "put")]
+    // async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindReq>) -> TardisApiResult<IamAccountInfoResp> {
+    //     let mut funs = iam_constants::get_tardis_inst();
+    //     funs.begin().await?;
+    //     let resp = IamCpCertLdapServ::bind_user_pwd_by_ldap(&login_req.0, &funs).await?;
+    //     funs.commit().await?;
+    //     TardisResp::ok(resp)
+    // }
 }
