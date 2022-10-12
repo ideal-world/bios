@@ -83,6 +83,16 @@ pub struct IamCpUserPwdBindWithLdapReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpUserPwdCheckReq{
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub ak: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub code:TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub tenant_id:String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCpUserPwdBindReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: Option<TrimString>,

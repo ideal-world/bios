@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamCpUserPwdBindResp};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq};
+use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq};
 use crate::iam_enumeration::IamCertTokenKind;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::ColumnSpec::Default;
@@ -32,7 +32,7 @@ impl IamCpCertLdapServ {
                 funs,
             ).await
         } else {
-            IamAccountInfoResp {
+            Ok(IamAccountInfoResp {
                 account_id: "".to_string(),
                 account_name: "".to_string(),
                 token: "".to_string(),
@@ -40,18 +40,15 @@ impl IamCpCertLdapServ {
                 roles: HashMap::new(),
                 groups: HashMap::new(),
                 apps: vec![],
-            }
+            })
         }
     }
 
-    pub async fn check_user_pwd_is_bind(check_req: &IamCpUserPwdBindReq, funs: &TardisFunsInst) -> TardisResult<IamCpUserPwdBindResp> {
-        if let Some(ak) = &check_req.ak {
-            let is_bind = IamCertLdapServ::check_user_pwd_is_bind(ak.to_string().as_ref(), check_req.code.to_string().as_ref(), check_req.tenant_id.as_ref(), funs).await?;
-            Ok(IamCpUserPwdBindResp { is_bind })
-        } else {
-            return Err(funs.err().bad_request("iam_check_user_pwd_is_bind", "check_bind", "ak is required", "400-rbum-cert-ak-require"));
-        }
+    pub async fn check_user_pwd_is_bind(check_req: &IamCpUserPwdCheckReq, funs: &TardisFunsInst) -> TardisResult<IamCpUserPwdBindResp> {
+        let is_bind = IamCertLdapServ::check_user_pwd_is_bind(check_req.ak.to_string().as_ref(), check_req.code.to_string().as_ref(), check_req.tenant_id.as_ref(), funs).await?;
+        Ok(IamCpUserPwdBindResp { is_bind })
     }
+
     pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let mut account_id: String = String::from("");
         let mut access_token: String = String::from("");

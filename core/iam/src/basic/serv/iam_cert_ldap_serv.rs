@@ -371,13 +371,12 @@ impl IamCertLdapServ {
         };
 
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(&login_req.tenant_id, login_req.ldap_login.code.to_string().as_str(), funs, &mock_ctx).await?;
-        let dn = if let Some(dn) = ldap_client.bind(cn, cn_pwd).await? {
+        let dn = if let Some(dn) = ldap_client.bind(login_req.ldap_login.name.to_string().as_str(), login_req.ldap_login.password.as_str()).await? {
             dn
         } else {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "get_or_add_account", "validation error", "401-rbum-cert-valid-error"));
         };
-
 
         let account = ldap_client.get_by_dn(&dn, &vec!["dn", "cn", &cert_conf.field_display_name]).await?;
         ldap_client.unbind().await?;
@@ -418,8 +417,7 @@ impl IamCertLdapServ {
     }
 
     pub async fn create_user_pwd_by_ldap(dn: &str, name: &str, password: &str, cert_conf_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, &mock_ctx).await?.account_self_reg {
-            ldap_client.unbind().await?;
+        if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, &ctx).await?.account_self_reg {
             return Err(funs.err().not_found(
                 "rbum_cert",
                 "get_or_add_account_with_verify",
@@ -458,7 +456,7 @@ impl IamCertLdapServ {
         Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &rbum_item_id, cert_conf_id, funs, ctx).await?;
         Ok(rbum_item_id)
     }
-    
+
     async fn do_add_account(dn: &str, name: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
