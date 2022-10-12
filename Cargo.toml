@@ -3,5 +3,6 @@
 members = [
     "basic",
     "core/iam",
+    "core/db-reldb",
     "services/bios-all",
 ]
