@@ -16,7 +16,7 @@ use crate::iam_constants;
 pub struct IamCsTenantApi;
 
 /// System Console Tenant API
-#[poem_openapi::OpenApi(prefix_path = "/cs/tenant", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/tenant", tag = "bios_basic::ApiTag::System")]
 impl IamCsTenantApi {
     /// Add Tenant
     #[oai(path = "/", method = "post")]

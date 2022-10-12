@@ -17,7 +17,7 @@ pub struct IamCsAccountAttrApi;
 /// System Console Account Attr API
 ///
 /// Note: the current account attr only supports tenant level.
-#[poem_openapi::OpenApi(prefix_path = "/cs/account/attr", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/account/attr", tag = "bios_basic::ApiTag::System")]
 impl IamCsAccountAttrApi {
     /// Add Account Attr By Tenant Id
     #[oai(path = "/", method = "post")]

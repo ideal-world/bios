@@ -19,7 +19,7 @@ use crate::iam_enumeration::IamRoleKind;
 pub struct IamCtRoleApi;
 
 /// Tenant Console Role API
-#[poem_openapi::OpenApi(prefix_path = "/ct/role", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/role", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]

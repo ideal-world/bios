@@ -18,7 +18,7 @@ pub struct IamCtOrgApi;
 /// Tenant Console Org API
 ///
 /// Note: the current org only supports tenant level.
-#[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtOrgApi {
     /// Add Org Cate
     #[oai(path = "/cate", method = "post")]

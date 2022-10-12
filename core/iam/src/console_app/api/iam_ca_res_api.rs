@@ -16,7 +16,7 @@ pub struct IamCaResApi;
 /// App Console Res API
 ///
 /// Note: the current res only supports sys level.
-#[poem_openapi::OpenApi(prefix_path = "/ca/res", tag = "crate::iam_enumeration::Tag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ca/res", tag = "bios_basic::ApiTag::App")]
 impl IamCaResApi {
     /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]

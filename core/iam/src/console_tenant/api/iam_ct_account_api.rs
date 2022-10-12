@@ -17,7 +17,7 @@ use crate::iam_enumeration::IamRelKind;
 pub struct IamCtAccountApi;
 
 /// Tenant Console Account API
-#[poem_openapi::OpenApi(prefix_path = "/ct/account", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/account", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtAccountApi {
     /// Add Account
     #[oai(path = "/", method = "post")]

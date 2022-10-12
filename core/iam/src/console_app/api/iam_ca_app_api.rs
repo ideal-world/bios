@@ -14,7 +14,7 @@ use crate::iam_constants;
 pub struct IamCaAppApi;
 
 /// App Console App API
-#[poem_openapi::OpenApi(prefix_path = "/ca/app", tag = "crate::iam_enumeration::Tag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ca/app", tag = "bios_basic::ApiTag::App")]
 impl IamCaAppApi {
     /// Modify Current App
     ///

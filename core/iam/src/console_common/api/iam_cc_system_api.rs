@@ -11,7 +11,7 @@ pub struct IamCcSystemApi;
 /// Common Console System API
 ///
 /// Use commas to separate multiple task ids
-#[poem_openapi::OpenApi(prefix_path = "/cc/system", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/system", tag = "bios_basic::ApiTag::Common")]
 impl IamCcSystemApi {
     /// Get Async Task Status
     #[oai(path = "/task/:task_ids", method = "get")]

@@ -21,7 +21,7 @@ use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 pub struct IamCaRoleApi;
 
 /// App Console Role API
-#[poem_openapi::OpenApi(prefix_path = "/ca/role", tag = "crate::iam_enumeration::Tag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ca/role", tag = "bios_basic::ApiTag::App")]
 impl IamCaRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]
