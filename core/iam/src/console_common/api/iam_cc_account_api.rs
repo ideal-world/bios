@@ -20,7 +20,7 @@ pub struct IamCcAccountApi;
 pub struct IamCcAccountLdapApi;
 
 /// Common Console Account API
-#[poem_openapi::OpenApi(prefix_path = "/cc/account", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/account", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAccountApi {
     /// Find Accounts
     #[oai(path = "/", method = "get")]
@@ -99,7 +99,7 @@ impl IamCcAccountApi {
 
 /// Common Console Account LDAP API
 #[cfg(feature = "ldap_client")]
-#[poem_openapi::OpenApi(prefix_path = "/cc/account/ldap", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/account/ldap", tag = "bios_basic::ApiTag::Common")]
 impl IamCcAccountLdapApi {
     /// Find Accounts by LDAP
     #[oai(path = "/", method = "get")]

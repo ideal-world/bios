@@ -1,0 +1,30 @@
+[package]
+name = "bios-db-rel-db"
+version = "0.1.0"
+authors = ["gudaoxuri <i@sunisle.org>"]
+homepage = "https://bios.idealworld.group"
+documentation = "https://bios.idealworld.group"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.adoc"
+publish = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
+[lib]
+name = "bios_db_reldb"
+path = "src/lib.rs"
+
+[features]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tardis = { version = "0.1.0-alpha26", features = ["reldb", "web-server"] }
+bios-basic = { path = "../../basic", features = ["default"] }
+
+[dev-dependencies]
+tardis = { version = "0.1.0-alpha26", features = ["test"] }

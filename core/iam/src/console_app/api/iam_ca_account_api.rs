@@ -17,7 +17,7 @@ use crate::iam_enumeration::IamRelKind;
 pub struct IamCaAccountApi;
 
 /// App Console Account API
-#[poem_openapi::OpenApi(prefix_path = "/ca/account", tag = "crate::iam_enumeration::Tag::App")]
+#[poem_openapi::OpenApi(prefix_path = "/ca/account", tag = "bios_basic::ApiTag::App")]
 impl IamCaAccountApi {
     /// Get Account By Account Id
     #[oai(path = "/:id", method = "get")]

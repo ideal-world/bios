@@ -17,7 +17,7 @@ pub struct IamCtAppSetApi;
 
 /// Tenant Console App Set API
 ///
-#[poem_openapi::OpenApi(prefix_path = "/ct/apps", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/apps", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtAppSetApi {
     /// Add App Set Cate
     #[oai(path = "/cate", method = "post")]

@@ -16,7 +16,7 @@ pub struct IamCtResApi;
 /// Tenant Console Res API
 ///
 /// Note: the current res only supports sys level.
-#[poem_openapi::OpenApi(prefix_path = "/ct/res", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/res", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtResApi {
     /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]

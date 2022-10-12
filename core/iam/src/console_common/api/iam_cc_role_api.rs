@@ -10,16 +10,14 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::IamRoleBoneResp;
-use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants;
-use crate::iam_constants::RBUM_SCOPE_LEVEL_APP;
 use crate::iam_enumeration::IamRoleKind;
 
 pub struct IamCcRoleApi;
 
 /// Common Console Role API
-#[poem_openapi::OpenApi(prefix_path = "/cc/role", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/role", tag = "bios_basic::ApiTag::Common")]
 impl IamCcRoleApi {
     /// Find Roles
     #[oai(path = "/", method = "get")]

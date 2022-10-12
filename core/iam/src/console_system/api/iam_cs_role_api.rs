@@ -18,7 +18,7 @@ use crate::iam_enumeration::IamRoleKind;
 pub struct IamCsRoleApi;
 
 /// System Console Role API
-#[poem_openapi::OpenApi(prefix_path = "/cs/role", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/role", tag = "bios_basic::ApiTag::System")]
 impl IamCsRoleApi {
     /// Add Role
     #[oai(path = "/", method = "post")]

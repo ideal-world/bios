@@ -15,7 +15,7 @@ pub struct IamCcOrgApi;
 /// Common Console Org API
 ///
 /// Note: the current org only supports tenant level.
-#[poem_openapi::OpenApi(prefix_path = "/cc/org", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/org", tag = "bios_basic::ApiTag::Common")]
 impl IamCcOrgApi {
     /// Find Org Tree By Current Tenant
     ///

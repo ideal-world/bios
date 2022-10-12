@@ -8,20 +8,6 @@ use tardis::db::sea_orm::{DbErr, QueryResult, TryGetError, TryGetable};
 use tardis::derive_more::Display;
 use tardis::web::poem_openapi;
 
-#[derive(poem_openapi::Tags, Display, Debug)]
-pub enum Tag {
-    #[oai(rename = "Common Console")]
-    Common,
-    #[oai(rename = "Tenant Console")]
-    Tenant,
-    #[oai(rename = "App Console")]
-    App,
-    #[oai(rename = "System Console")]
-    System,
-    #[oai(rename = "Passport Console")]
-    Passport,
-}
-
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
 pub enum IamRoleKind {
     System,

@@ -26,7 +26,7 @@ pub struct IamCpCertApi;
 pub struct IamCpCertLdapApi;
 
 /// Passport Console Cert API
-#[poem_openapi::OpenApi(prefix_path = "/cp", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpCertApi {
     /// Fetch TardisContext By Token
     ///
@@ -168,7 +168,7 @@ impl IamCpCertApi {
 
 /// Passport Console Cert LDAP API
 #[cfg(feature = "ldap_client")]
-#[poem_openapi::OpenApi(prefix_path = "/cp/ldap", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp/ldap", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpCertLdapApi {
     /// Login by LDAP
     #[oai(path = "/login", method = "put")]

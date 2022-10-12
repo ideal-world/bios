@@ -13,7 +13,7 @@ use crate::iam_constants;
 pub struct IamCpTenantApi;
 
 /// Passport Console Tenant API
-#[poem_openapi::OpenApi(prefix_path = "/cp/tenant", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp/tenant", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpTenantApi {
     /// Find Tenants
     #[oai(path = "/all", method = "get")]
