@@ -20,7 +20,7 @@ pub struct IamCtCertManageApi;
 
 /// Tenant Console Cert manage API
 #[deprecated = "name needs consideration"]
-#[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtCertManageApi {
     /// Find Conf
     #[oai(path = "/conf", method = "get")]

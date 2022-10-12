@@ -13,7 +13,7 @@ use crate::iam_constants;
 pub struct IamCpAccountApi;
 
 /// Passport Console Account API
-#[poem_openapi::OpenApi(prefix_path = "/cp/account", tag = "crate::iam_enumeration::Tag::Passport")]
+#[poem_openapi::OpenApi(prefix_path = "/cp/account", tag = "bios_basic::ApiTag::Passport")]
 impl IamCpAccountApi {
     /// Modify Current Account
     #[oai(path = "/", method = "put")]

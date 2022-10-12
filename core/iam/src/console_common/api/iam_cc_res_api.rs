@@ -12,7 +12,7 @@ pub struct IamCcResApi;
 
 /// Common Console Res API
 ///
-#[poem_openapi::OpenApi(prefix_path = "/cc/res", tag = "crate::iam_enumeration::Tag::Common")]
+#[poem_openapi::OpenApi(prefix_path = "/cc/res", tag = "bios_basic::ApiTag::Common")]
 impl IamCcResApi {
     /// Find Menu Tree
     #[oai(path = "/tree", method = "get")]

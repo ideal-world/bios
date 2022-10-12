@@ -16,7 +16,7 @@ use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 pub struct IamCsCertApi;
 
 /// System Console Cert API
-#[poem_openapi::OpenApi(prefix_path = "/cs/cert", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/cert", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertApi {
     /// Rest Password By Account Id
     #[oai(path = "/user-pwd", method = "put")]

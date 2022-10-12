@@ -12,7 +12,7 @@ use crate::iam_constants;
 pub struct IamCtTenantApi;
 
 /// Tenant Console Tenant API
-#[poem_openapi::OpenApi(prefix_path = "/ct/tenant", tag = "crate::iam_enumeration::Tag::Tenant")]
+#[poem_openapi::OpenApi(prefix_path = "/ct/tenant", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtTenantApi {
     /// Get Current Tenant
     #[oai(path = "/", method = "get")]

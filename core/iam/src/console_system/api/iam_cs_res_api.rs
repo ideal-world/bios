@@ -25,7 +25,7 @@ pub struct IamCsResApi;
 /// System Console Res API
 ///
 /// Note: the current res only supports sys level.
-#[poem_openapi::OpenApi(prefix_path = "/cs/res", tag = "crate::iam_enumeration::Tag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/res", tag = "bios_basic::ApiTag::System")]
 impl IamCsResApi {
     /// Add Res
     #[oai(path = "/", method = "post")]
