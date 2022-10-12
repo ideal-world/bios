@@ -14,7 +14,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdLoginReq};
+use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdLoginReq};
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
 use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;
@@ -179,7 +179,7 @@ impl IamCpCertLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
-    ///
+    ///check userpwd cert binding with ldap cert
     #[oai(path = "/checkBind", method = "post")]
     async fn check_user_pwd_is_bind(&self, login_req: Json<IamCpUserPwdBindReq>) -> TardisApiResult<IamCpUserPwdBindResp> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -188,14 +188,17 @@ impl IamCpCertLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
-    //todo
-    // /// bind username password cert by_ldap
-    // #[oai(path = "/bind-or-create-userpwd", method = "put")]
-    // async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindReq>) -> TardisApiResult<IamAccountInfoResp> {
-    //     let mut funs = iam_constants::get_tardis_inst();
-    //     funs.begin().await?;
-    //     let resp = IamCpCertLdapServ::bind_user_pwd_by_ldap(&login_req.0, &funs).await?;
-    //     funs.commit().await?;
-    //     TardisResp::ok(resp)
-    // }
+
+    /// <p>bind username password cert by ldap</p>
+    /// if ak param is None then create new userpwd cert
+    /// else bind with ldap cert
+    /// name-password -ldap login
+    #[oai(path = "/bind-or-create-userpwd", method = "put")]
+    async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindWithLdapReq>) -> TardisApiResult<IamAccountInfoResp> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let resp = IamCpCertLdapServ::bind_or_create_user_pwd_by_ldap(&login_req.0, &funs).await?;
+        funs.commit().await?;
+        TardisResp::ok(resp)
+    }
 }

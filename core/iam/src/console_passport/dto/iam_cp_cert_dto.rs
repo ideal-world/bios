@@ -73,14 +73,19 @@ pub struct IamCpLdapLoginReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub tenant_id: String,
 }
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct  IamCpUserPwdBindReq{
+pub struct IamCpUserPwdBindWithLdapReq {
+    pub bind_user_pwd: IamCpUserPwdBindReq,
+    pub ldap_login: IamCpLdapLoginReq,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: TrimString,
+    pub tenant_id: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCpUserPwdBindReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub sk: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tenant_id: String,
+    pub sk: TrimString,
 }
