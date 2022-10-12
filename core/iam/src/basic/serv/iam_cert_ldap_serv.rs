@@ -339,7 +339,7 @@ impl IamCertLdapServ {
 
     pub async fn check_user_pwd_is_bind(ak: &str, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         if IamTenantServ::is_disabled(tenant_id, funs).await? {
-            return Err(funs.err().conflict("iam_check_user_pwd_is_bind", "check_bind", &format!("tenant {} is disabled", tenant_id), "409-iam-tenant-is-disabled"));
+            return Err(funs.err().conflict("user_pwd", "check_bind", &format!("tenant {} is disabled", tenant_id), "409-iam-tenant-is-disabled"));
         }
         let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.to_string()), &funs).await?;
         let ldap_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code.clone()), Some(tenant_id.to_string()), &funs).await?;
@@ -359,7 +359,7 @@ impl IamCertLdapServ {
                 Ok(false)
             }
         }else {
-            Err(funs.err().not_found("iam_check_user_pwd_is_bind", "check_bind", "not found cert record", "404-rbum-*-obj-not-exist"))
+            Err(funs.err().not_found("user_pwd", "check_bind", "not found cert record", "404-rbum-*-obj-not-exist"))
         }
     }
 
@@ -386,7 +386,7 @@ impl IamCertLdapServ {
                 /// bind user_pwd with ldap cert
                 Self::bind_user_pwd_by_ldap(
                     &dn,
-                    login_req.ldap_login.name.as_ref(),
+                    ak.as_ref(),
                     login_req.ldap_login.password.as_ref(),
                     &cert_conf_id,
                     &tenant_id,
@@ -416,7 +416,7 @@ impl IamCertLdapServ {
         }
     }
 
-    pub async fn create_user_pwd_by_ldap(dn: &str, name: &str, password: &str, cert_conf_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn create_user_pwd_by_ldap(dn: &str, account_name: &str, password: &str, cert_conf_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, &ctx).await?.account_self_reg {
             return Err(funs.err().not_found(
                 "rbum_cert",
@@ -429,7 +429,7 @@ impl IamCertLdapServ {
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(ctx.owner.clone())),
-                name: TrimString(name.to_string()),
+                name: TrimString(account_name.to_string()),
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
                 cert_password: password.into(),
                 cert_phone: None,
