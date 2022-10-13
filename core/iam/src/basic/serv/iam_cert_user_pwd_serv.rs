@@ -196,7 +196,7 @@ impl IamCertUserPwdServ {
             if cert_conf_by_user_pwd.sk_rule_need_num { "(?=.*\\d)" } else { "" },
             if cert_conf_by_user_pwd.sk_rule_need_lowercase { "(?=.*[a-z])" } else { "" },
             if cert_conf_by_user_pwd.sk_rule_need_uppercase { "(?=.*[A-Z])" } else { "" },
-            if cert_conf_by_user_pwd.sk_rule_need_spec_char { "(?=.*[$@!%*#?&])" } else { "" },
+            if cert_conf_by_user_pwd.sk_rule_need_spec_char { "(?=.*[$@!%*#?&.-_^])" } else { "" },
             cert_conf_by_user_pwd.sk_rule_len_min,
             cert_conf_by_user_pwd.sk_rule_len_max
         ))

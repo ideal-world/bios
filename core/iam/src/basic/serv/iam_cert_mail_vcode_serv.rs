@@ -189,6 +189,77 @@ impl IamCertMailVCodeServ {
         Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
     }
 
+    pub async fn send_bind_mail(mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                ak: Some(mail.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![
+                    IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                ]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+            > 0
+        {
+            return Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email already exist", "401-iam-cert-valid"));
+        }
+        let vcode = Self::get_vcode();
+        let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, ctx).await?.name;
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
+        let mut subject = funs.conf::<IamConfig>().mail_template_cert_activate_title.clone();
+        let mut content = funs.conf::<IamConfig>().mail_template_cert_activate_content.clone();
+        subject = subject.replace("{account_name}", &account_name).replace("{vcode}", &vcode);
+        content = content.replace("{account_name}", &account_name).replace("{vcode}", &vcode);
+        TardisMailClient::send_quiet(
+            funs.module_code().to_string(),
+            TardisMailSendReq {
+                subject,
+                txt_body: content,
+                html_body: None,
+                to: vec![mail.to_string()],
+                reply_to: None,
+                cc: None,
+                bcc: None,
+                from: None,
+            },
+        )?;
+        Ok(())
+    }
+
+    pub async fn bind_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
+            if cached_vcode == input_vcode {
+                let rel_rbum_cert_conf_id =
+                    IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
+                let id = RbumCertServ::add_rbum(
+                    &mut RbumCertAddReq {
+                        ak: TrimString(mail.trim().to_string()),
+                        sk: None,
+                        vcode: Some(TrimString(input_vcode.to_string())),
+                        ext: None,
+                        start_time: None,
+                        end_time: None,
+                        conn_uri: None,
+                        status: RbumCertStatusKind::Enabled,
+                        rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id),
+                        rel_rbum_kind: RbumCertRelKind::Item,
+                        rel_rbum_id: ctx.owner.clone(),
+                        is_outside: false,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                return Ok(id);
+            }
+        }
+        Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
+    }
+
     pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(mail, &vcode, own_paths, funs).await?;

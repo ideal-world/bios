@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -8,7 +9,7 @@ use tardis::db::sea_orm::*;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -295,6 +296,7 @@ impl IamAccountServ {
         Ok(())
     }
 
+    // TODO To optimize
     pub async fn get_account_detail_aggs(
         account_id: &str,
         filter: &IamAccountFilterReq,
@@ -326,6 +328,14 @@ impl IamAccountServ {
                         enabled: Some(true),
                         ..Default::default()
                     },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        is_left: false,
+                        tag: Some(IamRelKind::IamAccountApp.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 },
                 None,

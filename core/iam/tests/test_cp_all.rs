@@ -334,6 +334,35 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     IamCertServ::delete_cert(&mail_vcode_cert_id, &funs, &tenant_admin_context).await?;
 
     // ------------------ Mail-VCode Cert Test End ------------------
+    info!("【test_cp_all】 : Send Bind Mail");
+    IamCertMailVCodeServ::send_bind_mail("i@sunisle.org", &funs, &tenant_admin_context).await?;
+
+    let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
+    assert!(vcode.is_some());
+
+    info!("【test_cp_all】 : Bind Mail");
+    let mail_vcode_cert_id = IamCertMailVCodeServ::bind_mail("i@sunisle.org", &vcode.unwrap(), &funs, &tenant_admin_context).await?;
+
+    info!("【test_cp_all】 : Send Login Mail");
+    IamCertMailVCodeServ::send_login_mail("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
+    let vcode = RbumCertServ::get_vcode_in_cache("i@sunisle.org", &tenant_admin_context.own_paths, &funs).await?;
+    assert!(vcode.is_some());
+
+    sleep(Duration::from_secs(1)).await;
+    info!("【test_cp_all】 : Login by Mail And Vcode");
+    IamCpCertMailVCodeServ::login_by_mail_vocde(
+        &IamCpMailVCodeLoginReq {
+            mail: "i@sunisle.org".to_string(),
+            vcode: TrimString(vcode.unwrap()),
+            tenant_id: tenant_admin_context.own_paths.clone(),
+            flag: None,
+        },
+        &funs,
+    )
+    .await?;
+    info!("【test_cp_all】 : Delete Mail-VCode Cert");
+    IamCertServ::delete_cert(&mail_vcode_cert_id, &funs, &tenant_admin_context).await?;
+    // ------------------ Mail-VCode Cert Test End ------------------
 
     info!("【test_cp_all】 : Modify Current Account");
     IamAccountServ::self_modify_account(

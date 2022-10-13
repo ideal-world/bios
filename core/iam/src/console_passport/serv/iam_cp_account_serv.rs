@@ -1,10 +1,12 @@
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use crate::basic::dto::iam_account_dto::IamAccountAttrResp;
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
+use crate::iam_enumeration::IamRelKind;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
@@ -21,6 +23,7 @@ use crate::console_passport::dto::iam_cp_account_dto::{IamCpAccountAppInfoResp, 
 pub struct IamCpAccountServ;
 
 impl IamCpAccountServ {
+    // TODO To optimize
     pub async fn get_current_account_info(use_sys_cert: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCpAccountInfoResp> {
         let account = IamAccountServ::get_item(ctx.owner.as_str(), &IamAccountFilterReq::default(), funs, ctx).await?;
         let raw_roles = IamAccountServ::find_simple_rel_roles(&account.id, true, Some(true), None, funs, ctx).await?;
@@ -40,6 +43,14 @@ impl IamCpAccountServ {
                         enabled: Some(true),
                         ..Default::default()
                     },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        is_left: false,
+                        tag: Some(IamRelKind::IamAccountApp.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 },
                 None,

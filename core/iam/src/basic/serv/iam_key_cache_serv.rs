@@ -22,6 +22,8 @@ use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 
+use super::iam_cert_serv::IamCertServ;
+
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -122,7 +124,10 @@ impl IamIdentCacheServ {
                 while count > 0 {
                     let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
                     for id in ids {
-                        Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                        // Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                        // TODO reset account cache
+                        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx_clone.clone())?;
+                        IamCertServ::package_tardis_account_context_and_resp(&id, &tenant_ctx.own_paths, "".to_string(), None, &funs, &tenant_ctx).await?;
                     }
                     page_number += 1;
                     count -= 100;
@@ -134,7 +139,10 @@ impl IamIdentCacheServ {
                         let ids =
                             IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
                         for id in ids {
-                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                            // IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                            // TODO reset account cache
+                            let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx_clone.clone())?;
+                            IamCertServ::package_tardis_account_context_and_resp(&id, &tenant_ctx.own_paths, "".to_string(), None, &funs, &tenant_ctx).await?;
                         }
                         page_number += 1;
                         count -= 100;

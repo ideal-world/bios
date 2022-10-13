@@ -1108,6 +1108,7 @@ impl RbumCertServ {
                     .from(rbum_cert::Entity)
                     .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
                     .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
+                    .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.clone()))
                     .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
             )
             .await?

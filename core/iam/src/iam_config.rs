@@ -34,6 +34,10 @@ pub struct IamConfig {
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
     pub mail_template_cert_login_content: String,
+    pub phone_template_cert_activate_title: String,
+    pub phone_template_cert_activate_content: String,
+    pub phone_template_cert_login_title: String,
+    pub phone_template_cert_login_content: String,
 
     pub ldap: IamLdapConfig,
 }
@@ -73,6 +77,10 @@ impl Default for IamConfig {
             mail_template_cert_activate_content: "Your account [{account_name}] is activating email credentials, verification code: {vcode}".to_string(),
             mail_template_cert_login_title: "IAM Service Mail login verification".to_string(),
             mail_template_cert_login_content: "Your account is trying to login, verification code: {vcode}".to_string(),
+            phone_template_cert_activate_title: "IAM Service Phone Credentials Activation".to_string(),
+            phone_template_cert_activate_content: "Your account [{account_name}] is activating phone credentials, verification code: {vcode}".to_string(),
+            phone_template_cert_login_title: "Your account is trying to login, verification code: {vcode}".to_string(),
+            phone_template_cert_login_content: "IAM Service Phone Credentials Activation".to_string(),
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
         }
