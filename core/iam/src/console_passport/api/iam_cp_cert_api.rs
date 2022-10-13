@@ -9,7 +9,8 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterRe
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
-    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamContextFetchReq,
+    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdValidateSkReq,
+    IamContextFetchReq,
 };
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -133,6 +134,14 @@ impl IamCpCertApi {
         TardisResp::ok(resp)
     }
 
+    /// Validate userpwd By Current Account
+    #[oai(path = "/validate/userpwd", method = "put")]
+    async fn validate_by_user_pwd(&self, req: Json<IamCertUserPwdValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk.to_string(), &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
     // /// Add Mail-VCode Cert
     // /// Send Activation Mail
     // #[oai(path = "/cert/mailvcode/send", method = "put")]
@@ -162,7 +171,7 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// bind Mail
+    /// Bind Mail
     #[oai(path = "/cert/mailvcode/bind", method = "put")]
     async fn bind_mail(&self, req: Json<IamCertMailVCodeActivateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -202,7 +211,7 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// bind phone
+    /// Bind phone
     #[oai(path = "/cert/phonevcode/bind", method = "put")]
     async fn bind_phone(&self, req: Json<IamCertPhoneVCodeBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -246,7 +255,7 @@ impl IamCpCertLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
-    ///check userpwd cert binding with ldap cert
+    /// Check userpwd cert binding with ldap cert
     #[oai(path = "/checkBind", method = "post")]
     async fn check_user_pwd_is_bind(&self, login_req: Json<IamCpUserPwdCheckReq>) -> TardisApiResult<IamCpUserPwdBindResp> {
         let mut funs = iam_constants::get_tardis_inst();

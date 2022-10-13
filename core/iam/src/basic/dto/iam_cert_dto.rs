@@ -45,6 +45,12 @@ pub struct IamCertUserPwdRestReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertUserPwdValidateSkReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub sk: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertMailVCodeAddReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
@@ -72,7 +78,7 @@ pub struct IamCertPhoneVCodeAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertPhoneVCodeBindReq {
-    #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub vcode: String,
