@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
@@ -5,6 +6,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
@@ -65,5 +67,23 @@ impl IamCpCertUserPwdServ {
             ""
         };
         Ok(tenant_id.to_string())
+    }
+
+    pub async fn get_cert_rel_account_by_user_name(user_name: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
+        let result = RbumCertServ::find_rbums(
+            &RbumCertFilterReq {
+                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
+                ak: Some(user_name.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?
+        .first()
+        .map(|r| r.rel_rbum_id.to_string());
+        Ok(result)
     }
 }

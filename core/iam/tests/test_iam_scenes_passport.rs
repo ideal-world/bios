@@ -1,19 +1,22 @@
 use std::collections::HashMap;
+use std::env;
 use std::time::Duration;
 
-use bios_iam::console_passport::dto::iam_cp_cert_dto::IamCpOAuth2LoginReq;
+use bios_iam::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::db::sea_orm::IntoActiveValue;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
+use tardis::url::quirks::password;
 use tardis::web::web_resp::{TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq, IamCpUserPwdBindResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
 use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
@@ -135,6 +138,8 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
     login_page(sysadmin_name, &sysadmin_password, None, None, true, client).await?;
     security_password(client).await?;
     // login_by_oauth2(client).await?;
+    login_page(sysadmin_name, &sysadmin_password, None, None, true, client).await?;
+    login_by_ldap(client).await?;
     Ok(())
 }
 
@@ -727,5 +732,230 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
     assert_eq!(account.account_name, "");
     assert!(account.access_token.is_some());
     assert!(account.roles.is_empty());
+    Ok(())
+}
+
+pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
+    const LDAP_CODE: &str = "TEST_CODE";
+    let user1 = "Barbara";
+    let user1_pwd = "123456";
+    let user2 = "testUser";
+    let user2_pwd = "123456";
+
+    info!("【login_by_ldap】");
+    //=======preparation area===========
+    let tenant_id: String = client
+        .post(
+            "/cs/tenant",
+            &IamTenantAggAddReq {
+                name: TrimString("测试公司2".to_string()),
+                icon: None,
+                contact_phone: None,
+                note: None,
+                admin_name: TrimString("测试管理员2".to_string()),
+                admin_username: TrimString("tenant_admin2".to_string()),
+                admin_password: Some("123456".to_string()),
+                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
+                    ak_rule_len_min: 2,
+                    ak_rule_len_max: 20,
+                    sk_rule_len_min: 2,
+                    sk_rule_len_max: 20,
+                    sk_rule_need_num: false,
+                    sk_rule_need_uppercase: false,
+                    sk_rule_need_lowercase: false,
+                    sk_rule_need_spec_char: false,
+                    sk_lock_cycle_sec: 60,
+                    sk_lock_err_times: 2,
+                    sk_lock_duration_sec: 60,
+                    repeatable: false,
+                    expire_sec: 6000,
+                },
+                cert_conf_by_phone_vcode: false,
+                cert_conf_by_mail_vcode: false,
+                disabled: None,
+                account_self_reg: Some(true),
+                cert_conf_by_wechat_mp: None,
+                cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
+                    code: TrimString(LDAP_CODE.to_string()),
+                    name: "githubLdap".to_string(),
+                    conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
+                    is_tls: false,
+                    principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
+                    credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
+                    base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
+                    field_display_name: "displayName".to_string(),
+                    search_base_filter: "objectClass=*".to_string(),
+                }]),
+            },
+        )
+        .await;
+    sleep(Duration::from_secs(1)).await;
+    login_page("tenant_admin2", "123456", Some(tenant_id.clone()), None, true, client).await?;
+    let account_id: String = client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: None,
+                name: TrimString("用户2".to_string()),
+                cert_user_name: TrimString("user2".to_string()),
+                cert_password: TrimString("123456".to_string()),
+                cert_phone: None,
+                cert_mail: None,
+                role_ids: None,
+                org_node_ids: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                icon: None,
+                exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
+            },
+        )
+        .await;
+    sleep(Duration::from_secs(1)).await;
+
+    //=======end preparation area===========
+
+    assert!(client
+        .put_resp::<IamCpLdapLoginReq, String>(
+            "/cp/ldap/login",
+            &IamCpLdapLoginReq {
+                code: TrimString(LDAP_CODE.to_string()),
+                name: "dftrvtr".into(),
+                password: user1_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("401"));
+
+    let account: IamAccountInfoResp = client
+        .put(
+            "/cp/ldap/login",
+            &IamCpLdapLoginReq {
+                code: TrimString(LDAP_CODE.to_string()),
+                name: user1.into(),
+                password: user1_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+
+    assert_eq!(account.account_name, "");
+    assert!(account.access_token.is_none());
+
+    assert!(client
+        .post_resp::<IamCpUserPwdCheckReq, String>(
+            "/cp/ldap/checkBind",
+            &IamCpUserPwdCheckReq {
+                ak: "tugherugfqeyvfb".into(),
+                code: LDAP_CODE.into(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("404"));
+
+    assert!(client
+        .post_resp::<IamCpUserPwdCheckReq, String>(
+            "/cp/ldap/checkBind",
+            &IamCpUserPwdCheckReq {
+                ak: "user1".into(),
+                code: LDAP_CODE.into(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("404"));
+
+    let user_pwd_bind_resp: IamCpUserPwdBindResp = client
+        .post(
+            "/cp/ldap/checkBind",
+            &IamCpUserPwdCheckReq {
+                ak: "user2".into(),
+                code: LDAP_CODE.into(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+
+    assert!(!user_pwd_bind_resp.is_bind);
+
+    let account: IamAccountInfoResp = client
+        .put(
+            "/cp/ldap/bind-or-create-userpwd",
+            &IamCpUserPwdBindWithLdapReq {
+                bind_user_pwd: IamCpUserPwdBindReq { ak: None, sk: "123456".into() },
+                ldap_login: IamCpLdapLoginReq {
+                    code: LDAP_CODE.into(),
+                    name: user1.into(),
+                    password: user1_pwd.to_string(),
+                    tenant_id: tenant_id.clone(),
+                },
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+    println!("{:?}", account);
+
+    assert!(account.access_token.is_some());
+    assert!(!account.account_name.is_empty());
+    assert!(!account.account_id.is_empty());
+
+    //relogin
+    let account: IamAccountInfoResp = client
+        .put(
+            "/cp/ldap/login",
+            &IamCpLdapLoginReq {
+                code: TrimString(LDAP_CODE.to_string()),
+                name: user1.into(),
+                password: user1_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+    println!("{:?}", account);
+    assert!(account.access_token.is_some());
+    assert!(!account.account_name.is_empty());
+    assert!(!account.account_id.is_empty());
+
+    let account: IamAccountInfoResp = client
+        .put(
+            "/cp/ldap/bind-or-create-userpwd",
+            &IamCpUserPwdBindWithLdapReq {
+                bind_user_pwd: IamCpUserPwdBindReq {
+                    ak: Some("user2".into()),
+                    sk: "123456".into(),
+                },
+                ldap_login: IamCpLdapLoginReq {
+                    code: LDAP_CODE.into(),
+                    name: user2.into(),
+                    password: user2_pwd.to_string(),
+                    tenant_id: tenant_id.clone(),
+                },
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+    println!("{:?}", account);
+
+    assert!(!account.account_id.is_empty());
+    assert!(account.access_token.is_some());
+    assert!(!account.account_name.is_empty());
+
+    let user_pwd_bind_resp: IamCpUserPwdBindResp = client
+        .post(
+            "/cp/ldap/checkBind",
+            &IamCpUserPwdCheckReq {
+                ak: "user2".into(),
+                code: LDAP_CODE.into(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+
+    assert!(user_pwd_bind_resp.is_bind);
+
     Ok(())
 }

@@ -66,7 +66,18 @@ sn: Jensen
 displayName: Barbara Jensen
 title: the world's most famous mythical manager
 mail: bjensen@test.com
-uid: bjensen";
+uid: bjensen
+userpassword: 123456
+
+dn: cn=testUser,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: testUser
+sn: user1
+displayName: testUser1
+title: the world's most famous mythical manager
+mail: testUser@test.com
+uid: tuser1
+userpassword: 123456";
     let port = ldap_container.get_host_port_ipv4(389);
     let url = format!("ldap://localhost:{}", port);
     let base_dn = format!("DC={},DC=com", ORGANISATION);
