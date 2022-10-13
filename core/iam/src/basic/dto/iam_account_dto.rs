@@ -207,3 +207,9 @@ pub struct IamAccountExtSysAddReq {
     pub account_id: String,
     pub code: TrimString,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamCpUserPwdBindResp {
+    /// true=is bind ,false=not bind
+    pub is_bind: bool,
+}
