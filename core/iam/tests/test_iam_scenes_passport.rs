@@ -811,7 +811,23 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         )
         .await;
     sleep(Duration::from_secs(1)).await;
+
     //=======end preparation area===========
+
+    assert!(client
+        .put_resp::<IamCpLdapLoginReq, String>(
+            "/cp/ldap/login",
+            &IamCpLdapLoginReq {
+                code: TrimString(LDAP_CODE.to_string()),
+                name: "dftrvtr".into(),
+                password: user1_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("401"));
+
     let account: IamAccountInfoResp = client
         .put(
             "/cp/ldap/login",
@@ -827,32 +843,32 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     assert_eq!(account.account_name, "");
     assert!(account.access_token.is_none());
 
-    // assert!(client
-    //     .post_resp::<IamCpUserPwdCheckReq, String>(
-    //         "/cp/ldap/checkBind",
-    //         &IamCpUserPwdCheckReq {
-    //             ak: "tugherugfqeyvfb".into(),
-    //             code: LDAP_CODE.into(),
-    //             tenant_id: tenant_id.clone(),
-    //         },
-    //     )
-    //     .await
-    //     .code
-    //     .starts_with("404"));
-    //
-    //
-    // assert!(client
-    //     .post_resp::<IamCpUserPwdCheckReq, String>(
-    //         "/cp/ldap/checkBind",
-    //         &IamCpUserPwdCheckReq {
-    //             ak: "user1".into(),
-    //             code: LDAP_CODE.into(),
-    //             tenant_id: tenant_id.clone(),
-    //         },
-    //     )
-    //     .await
-    //     .code
-    //     .starts_with("404"));
+    assert!(client
+        .post_resp::<IamCpUserPwdCheckReq, String>(
+            "/cp/ldap/checkBind",
+            &IamCpUserPwdCheckReq {
+                ak: "tugherugfqeyvfb".into(),
+                code: LDAP_CODE.into(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("404"));
+
+
+    assert!(client
+        .post_resp::<IamCpUserPwdCheckReq, String>(
+            "/cp/ldap/checkBind",
+            &IamCpUserPwdCheckReq {
+                ak: "user1".into(),
+                code: LDAP_CODE.into(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("404"));
 
     let user_pwd_bind_resp: IamCpUserPwdBindResp = client
         .post(
