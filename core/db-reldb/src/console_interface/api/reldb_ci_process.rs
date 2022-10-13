@@ -9,11 +9,11 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use crate::basic::dto::reldb_process_dto::{RelDbExecuteReq, RelDbQueryReq};
 use crate::reldb_constants;
 
-pub struct RelDbProcessApi;
+pub struct RelDbCiProcessApi;
 
 /// Interface Console Db Porcess API
 #[poem_openapi::OpenApi(prefix_path = "/ci/proc", tag = "bios_basic::ApiTag::Interface")]
-impl RelDbProcessApi {
+impl RelDbCiProcessApi {
     /// Query
     #[oai(path = "/:inst_id/query", method = "post")]
     async fn query(&self, inst_id: Path<String>, query_req: Json<RelDbQueryReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<HashMap<String, String>>> {

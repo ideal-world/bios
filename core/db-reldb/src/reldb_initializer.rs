@@ -9,7 +9,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(reldb_constants::COMPONENT_CODE, (reldb_ca_config::RelDbConfigApi, reldb_ci_process::RelDbProcessApi)).await;
+    web_server.add_module(reldb_constants::COMPONENT_CODE, (reldb_ca_config::RelDbCaConfigApi, reldb_ci_process::RelDbCiProcessApi)).await;
     Ok(())
 }
 
