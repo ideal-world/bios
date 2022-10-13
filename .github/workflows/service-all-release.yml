@@ -38,6 +38,18 @@ jobs:
       - name: Copy binary to workspace
         run: cp ./target/release/bios-serv-all ./services/bios-all/
 
+      - name: Update apt
+        run: apt update
+        
+      - name: Install ca-certificates
+        run: apt install --reinstall ca-certificates
+
+      - name: Update ca-certificates
+        run: update-ca-certificates -f
+
+      - name: Into wgetrc
+        run: echo 'ca_certificate=/etc/ssl/certs/ca-certificates.crt'  >> /root/.wgetrc 
+
       - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
