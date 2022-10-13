@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use self::ldap::LdapClient;
 use crate::basic::dto::iam_account_dto::IamAccountExtSysAddReq;
+use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
+use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
+use crate::iam_enumeration::IamCertKernelKind;
 use crate::{
     basic::dto::{
         iam_account_dto::{IamAccountAggAddReq, IamAccountExtSysResp},
@@ -12,6 +15,7 @@ use crate::{
     iam_config::IamBasicConfigApi,
     iam_enumeration::IamCertExtKind,
 };
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::{
     dto::{
         rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq},
@@ -26,16 +30,12 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+use tardis::serde_json::to_string;
+use tardis::url::quirks::password;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
 };
-use tardis::serde_json::to_string;
-use tardis::url::quirks::password;
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
-use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
-use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
-use crate::iam_enumeration::IamCertKernelKind;
 
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 
@@ -293,7 +293,7 @@ impl IamCertLdapServ {
         }
     }
 
-    pub async fn get_account_with_verify(user_name: &str, password: &str, tenant_id: &str, code: &str, funs: &TardisFunsInst) -> TardisResult<Option<(String, String)>>{
+    pub async fn get_account_with_verify(user_name: &str, password: &str, tenant_id: &str, code: &str, funs: &TardisFunsInst) -> TardisResult<Option<(String, String)>> {
         let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
@@ -307,9 +307,8 @@ impl IamCertLdapServ {
         };
         ldap_client.unbind().await?;
         if let Some(account_id) = Self::get_cert_rel_account_by_dn(&dn, &cert_conf_id, funs, &mock_ctx).await? {
-                return Ok(Some((account_id, dn)))
-        }
-        else {
+            Ok(Some((account_id, dn)))
+        } else {
             Ok(None)
         }
     }
@@ -353,17 +352,19 @@ impl IamCertLdapServ {
                 let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, &funs, &mock_ctx).await?;
                 if let Some(_) = cert_id {
                     Ok(true)
-                } else { Ok(false) }
+                } else {
+                    Ok(false)
+                }
             } else {
                 /// Unreachable code
                 Ok(false)
             }
-        }else {
+        } else {
             Err(funs.err().not_found("user_pwd", "check_bind", "not found cert record", "404-rbum-*-obj-not-exist"))
         }
     }
 
-    pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst)-> TardisResult<(String, String)>{
+    pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let tenant_id = login_req.tenant_id.clone();
         let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
@@ -384,15 +385,7 @@ impl IamCertLdapServ {
             mock_ctx.owner = TardisFuns::field.nanoid();
             let account_id = if let Some(ak) = login_req.bind_user_pwd.ak.clone() {
                 /// bind user_pwd with ldap cert
-                Self::bind_user_pwd_by_ldap(
-                    &dn,
-                    ak.as_ref(),
-                    login_req.ldap_login.password.as_ref(),
-                    &cert_conf_id,
-                    &tenant_id,
-                    funs,
-                    &mock_ctx,
-                ).await?
+                Self::bind_user_pwd_by_ldap(&dn, ak.as_ref(), login_req.ldap_login.password.as_ref(), &cert_conf_id, &tenant_id, funs, &mock_ctx).await?
             } else {
                 /// create user_pwd and bind user_pwd with ldap cert
                 Self::create_user_pwd_by_ldap(
@@ -403,7 +396,8 @@ impl IamCertLdapServ {
                     &tenant_id,
                     funs,
                     &mock_ctx,
-                ).await?
+                )
+                .await?
             };
             Ok((account_id, dn))
         } else {
@@ -416,7 +410,15 @@ impl IamCertLdapServ {
         }
     }
 
-    pub async fn create_user_pwd_by_ldap(dn: &str, account_name: &str, password: &str, cert_conf_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn create_user_pwd_by_ldap(
+        dn: &str,
+        account_name: &str,
+        password: &str,
+        cert_conf_id: &str,
+        tenant_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
         if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, &ctx).await?.account_self_reg {
             return Err(funs.err().not_found(
                 "rbum_cert",
@@ -444,12 +446,20 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-            .await?;
+        .await?;
         Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &account_id, cert_conf_id, funs, ctx).await?;
         Ok(account_id)
     }
 
-    pub async fn bind_user_pwd_by_ldap(dn: &str, user_name: &str, password: &str, cert_conf_id: &str, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn bind_user_pwd_by_ldap(
+        dn: &str,
+        user_name: &str,
+        password: &str,
+        cert_conf_id: &str,
+        tenant_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
         //验证用户名密码登录
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(&user_name, &password, &RbumCertRelKind::Item, false, &tenant_id, funs).await?;
         //查出用户名密码的account_id
@@ -502,9 +512,9 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-            .await?
-            .first()
-            .map(|r| r.id.to_string());
+        .await?
+        .first()
+        .map(|r| r.id.to_string());
         Ok(result)
     }
 }

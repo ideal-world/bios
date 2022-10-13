@@ -14,7 +14,10 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq};
+use crate::console_passport::dto::iam_cp_cert_dto::{
+    IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq,
+    IamCpUserPwdLoginReq,
+};
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
 use crate::console_passport::serv::iam_cp_cert_mail_vcode_serv::IamCpCertMailVCodeServ;

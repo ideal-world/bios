@@ -856,7 +856,6 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .code
         .starts_with("404"));
 
-
     assert!(client
         .post_resp::<IamCpUserPwdCheckReq, String>(
             "/cp/ldap/checkBind",
@@ -925,7 +924,10 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .put(
             "/cp/ldap/bind-or-create-userpwd",
             &IamCpUserPwdBindWithLdapReq {
-                bind_user_pwd: IamCpUserPwdBindReq { ak: Some("user2".into()), sk: "123456".into() },
+                bind_user_pwd: IamCpUserPwdBindReq {
+                    ak: Some("user2".into()),
+                    sk: "123456".into(),
+                },
                 ldap_login: IamCpLdapLoginReq {
                     code: LDAP_CODE.into(),
                     name: user2.into(),

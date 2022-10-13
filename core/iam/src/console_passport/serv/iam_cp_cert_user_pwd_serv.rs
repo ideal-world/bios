@@ -1,8 +1,8 @@
+use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
@@ -81,9 +81,9 @@ impl IamCpCertUserPwdServ {
             funs,
             ctx,
         )
-            .await?
-            .first()
-            .map(|r| r.rel_rbum_id.to_string());
+        .await?
+        .first()
+        .map(|r| r.rel_rbum_id.to_string());
         Ok(result)
     }
 }
