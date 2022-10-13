@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
@@ -25,6 +27,10 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
+
+use super::iam_account_serv::IamAccountServ;
+use super::iam_cert_serv::IamCertServ;
+use super::iam_role_serv::IamRoleServ;
 
 pub struct IamResServ;
 
@@ -399,5 +405,46 @@ impl IamResServ {
         )
         .await?;
         Ok(res_id)
+    }
+
+    pub async fn get_res_by_app(app_ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, Vec<IamResSummaryResp>>> {
+        let raw_roles = IamAccountServ::find_simple_rel_roles(&ctx.owner, true, Some(true), None, funs, ctx).await?;
+        let mut roles: Vec<RbumRelBoneResp> = vec![];
+        let mut result = HashMap::new();
+        for role in raw_roles {
+            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                roles.push(role)
+            }
+        }
+        let global_ctx = IamCertServ::use_sys_ctx_unsafe(ctx.clone())?;
+        for app_id in app_ids {
+            let mut res_ids = HashSet::new();
+            let app_ctx = IamCertServ::try_use_app_ctx(ctx.clone(), Some(app_id.clone()))?;
+            let app_role_ids =
+                roles.iter().filter(|r| r.rel_own_paths == app_ctx.own_paths || r.rel_own_paths == ctx.own_paths).map(|r| r.rel_id.to_string()).collect::<Vec<String>>();
+            // todo default empty res
+            res_ids.insert("".to_string());
+            for role_id in app_role_ids {
+                let rel_res_ids = IamRelServ::find_to_id_rels(&IamRelKind::IamResRole, &role_id, None, None, funs, &global_ctx).await?;
+                res_ids.extend(rel_res_ids.into_iter());
+            }
+            let res = Self::find_items(
+                &IamResFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ids: Some(res_ids.into_iter().collect()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            result.insert(app_id, res);
+        }
+        Ok(result)
     }
 }
