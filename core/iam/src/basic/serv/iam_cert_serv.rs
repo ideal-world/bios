@@ -202,7 +202,7 @@ impl IamCertServ {
 
     pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_code(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
-        let ext_cert = RbumCertServ::find_one_rbum(
+        let kernel_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
@@ -212,24 +212,25 @@ impl IamCertServ {
             ctx,
         )
         .await?;
-        if let Some(ext_cert) = ext_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+        if let Some(kernel_cert) = kernel_cert {
+            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
             Ok(RbumCertSummaryWithSkResp {
-                id: ext_cert.id,
-                ak: ext_cert.ak,
+                id: kernel_cert.id,
+                ak: kernel_cert.ak,
                 sk: now_sk,
-                start_time: ext_cert.start_time,
-                end_time: ext_cert.end_time,
-                status: ext_cert.status,
-                rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
-                rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
-                rel_rbum_cert_conf_code: ext_cert.rel_rbum_cert_conf_code,
-                rel_rbum_kind: ext_cert.rel_rbum_kind,
-                rel_rbum_id: ext_cert.rel_rbum_id,
-                own_paths: ext_cert.own_paths,
-                owner: ext_cert.owner,
-                create_time: ext_cert.create_time,
-                update_time: ext_cert.update_time,
+                ext: "".to_string(),
+                start_time: kernel_cert.start_time,
+                end_time: kernel_cert.end_time,
+                status: kernel_cert.status,
+                rel_rbum_cert_conf_id: kernel_cert.rel_rbum_cert_conf_id,
+                rel_rbum_cert_conf_name: kernel_cert.rel_rbum_cert_conf_name,
+                rel_rbum_cert_conf_code: kernel_cert.rel_rbum_cert_conf_code,
+                rel_rbum_kind: kernel_cert.rel_rbum_kind,
+                rel_rbum_id: kernel_cert.rel_rbum_id,
+                own_paths: kernel_cert.own_paths,
+                owner: kernel_cert.owner,
+                create_time: kernel_cert.create_time,
+                update_time: kernel_cert.update_time,
             })
         } else {
             Err(funs.err().not_found(
@@ -433,6 +434,7 @@ impl IamCertServ {
             id: manage_cert.id,
             ak: manage_cert.ak,
             sk: now_sk,
+            ext: manage_cert.ext,
             start_time: manage_cert.start_time,
             end_time: manage_cert.end_time,
             status: manage_cert.status,
@@ -529,6 +531,7 @@ impl IamCertServ {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
                 sk: now_sk,
+                ext: "".to_string(),
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
                 status: ext_cert.status,
