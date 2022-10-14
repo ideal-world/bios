@@ -622,14 +622,15 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
-    assert!(TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.is_none());
+    // todo 重新刷新token/不登出
+    assert!(TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.is_some());
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
-        0
+        2
     );
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        0
+        2
     );
 
     info!("【test_key_cache】 Login again with disabled app, expected one token record");

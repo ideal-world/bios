@@ -71,6 +71,7 @@ impl IamCtAppApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     with_sub_own_paths: true,
+                    enabled: Some(true),
                     ..Default::default()
                 },
                 ..Default::default()
