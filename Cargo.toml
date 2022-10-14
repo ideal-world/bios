@@ -4,5 +4,6 @@ members = [
     "basic",
     "core/iam",
     "core/db-reldb",
+    "ext/chat/*",
     "services/bios-all",
 ]

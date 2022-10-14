@@ -7,11 +7,11 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use crate::basic::dto::reldb_config_dto::{RelDbConfigAggAddOrModifyReq, RelDbConfigAggResp, RelDbConfigSummaryResp};
 use crate::reldb_constants;
 
-pub struct RelDbConfigApi;
+pub struct RelDbCaConfigApi;
 
 /// App Console RelDb Config API
 #[poem_openapi::OpenApi(prefix_path = "/ca/config", tag = "bios_basic::ApiTag::App")]
-impl RelDbConfigApi {
+impl RelDbCaConfigApi {
     /// Add RelDb Config
     #[oai(path = "/", method = "post")]
     async fn add_config(&self, add_req: Json<RelDbConfigAggAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
@@ -34,7 +34,7 @@ impl RelDbConfigApi {
 
     /// Find RelDb Config
     #[oai(path = "/", method = "get")]
-    async fn paginate(
+    async fn paginate_config(
         &self,
         inst_id: Query<Option<String>>,
         name: Query<Option<String>>,
@@ -78,7 +78,7 @@ impl RelDbConfigApi {
 
     /// Delete RelDb Config By Instance Id
     #[oai(path = "/:inst_id", method = "delete")]
-    async fn delete(&self, inst_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_config(&self, inst_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = reldb_constants::get_tardis_inst();
         funs.begin().await?;
         // TODO
