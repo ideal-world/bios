@@ -490,6 +490,12 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         Ok(())
     }
 
+    //todo()
+    // async fn before_modify_rbum(id: &str, _: &mut ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    //     Self::check_ownership(id, funs, ctx).await?;
+    //     RbumCertServ::check_cert_conf_constraint_by_add(add_req, &rbum_cert_conf, funs, ctx).await
+    // }
+
     async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         let mut rbum_cert = rbum_cert::ActiveModel {
             id: Set(id.to_string()),
@@ -1102,21 +1108,23 @@ impl RbumCertServ {
                 ));
             }
         }
-        if funs
-            .db()
-            .count(
-                Query::select()
-                    .column(rbum_cert::Column::Id)
-                    .from(rbum_cert::Entity)
-                    .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
-                    .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
-                    .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.clone()))
-                    .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
-            )
-            .await?
-            > 0
-        {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
+        if !rbum_cert_conf.is_ak_repeatable {
+            if funs
+                .db()
+                .count(
+                    Query::select()
+                        .column(rbum_cert::Column::Id)
+                        .from(rbum_cert::Entity)
+                        .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(add_req.rel_rbum_kind.to_int()))
+                        .and_where(Expr::col(rbum_cert::Column::Ak).eq(add_req.ak.0.as_str()))
+                        .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(add_req.rel_rbum_cert_conf_id.clone()))
+                        .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str())),
+                )
+                .await?
+                > 0
+            {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
+            }
         }
         Ok(())
     }
