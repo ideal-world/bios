@@ -36,7 +36,7 @@ pub struct Model {
     pub is_basic: bool,
     ///Whether ak can be repeated \
     /// If true, ak can be same in different record
-    pub is_ak_repeatable:bool,
+    pub is_ak_repeatable: bool,
     /// Support reset the cert configuration type(corresponding to the 'code' value) of the basic sk \
     /// Multiple values are separated by commas
     pub rest_by_kinds: String,

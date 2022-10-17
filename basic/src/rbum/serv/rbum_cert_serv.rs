@@ -275,6 +275,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkEncrypted),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Repeatable),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::IsAkRepeatable),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::RestByKinds),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::ExpireSec),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::SkLockCycleSec),
