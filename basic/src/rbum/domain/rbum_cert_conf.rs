@@ -34,6 +34,9 @@ pub struct Model {
     /// If true, the sk of this record will be the public sk of the same `rel_rbum_item_id` ,
     /// support a login method like ak of different cert configuration in the same `rel_rbum_item_id` + sk of this record
     pub is_basic: bool,
+    ///Whether ak can be repeated \
+    /// If true, ak can be same in different record
+    pub is_ak_repeatable:bool,
     /// Support reset the cert configuration type(corresponding to the 'code' value) of the basic sk \
     /// Multiple values are separated by commas
     pub rest_by_kinds: String,
@@ -92,6 +95,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::SkEncrypted).not_null().boolean())
             .col(ColumnDef::new(Column::Repeatable).not_null().boolean())
             .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
+            .col(ColumnDef::new(Column::IsAkRepeatable).not_null().boolean())
             .col(ColumnDef::new(Column::RestByKinds).not_null().string())
             .col(ColumnDef::new(Column::ExpireSec).not_null().unsigned())
             .col(ColumnDef::new(Column::SkLockCycleSec).not_null().unsigned())

@@ -42,6 +42,7 @@ impl IamCertPhoneVCodeServ {
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
+                is_ak_repeatable: None,
                 rest_by_kinds: None,
                 expire_sec: None,
                 sk_lock_cycle_sec: None,

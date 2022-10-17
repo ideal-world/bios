@@ -29,6 +29,7 @@ pub struct RbumCertConfAddReq {
     pub sk_encrypted: Option<bool>,
     pub repeatable: Option<bool>,
     pub is_basic: Option<bool>,
+    pub is_ak_repeatable: Option<bool>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]

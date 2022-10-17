@@ -50,6 +50,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             sk_encrypted: Set(add_req.sk_encrypted.unwrap_or(false)),
             repeatable: Set(add_req.repeatable.unwrap_or(true)),
             is_basic: Set(add_req.is_basic.unwrap_or(true)),
+            is_ak_repeatable: Set(add_req.is_ak_repeatable.unwrap_or(false)),
             rest_by_kinds: Set(add_req.rest_by_kinds.as_ref().unwrap_or(&"".to_string()).to_string()),
             expire_sec: Set(add_req.expire_sec.unwrap_or(u32::MAX)),
             sk_lock_cycle_sec: Set(add_req.sk_lock_cycle_sec.unwrap_or(0)),
