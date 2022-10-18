@@ -652,7 +652,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &funs,
     )
     .await
-    .is_err());
+    .is_ok());
     let app_admin_context = IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
@@ -667,7 +667,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     );
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
-        1
+        2
     );
     assert!(funs
         .cache()

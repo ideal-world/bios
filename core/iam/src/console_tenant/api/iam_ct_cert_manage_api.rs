@@ -11,7 +11,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertDetailResp, RbumCertSummaryWi
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::IamCertManageAddReq;
+use crate::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamCertManageModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamCertManageKind;
@@ -62,6 +62,16 @@ impl IamCtCertManageApi {
         let id = IamCertServ::add_manage_cert(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(id)
+    }
+
+    /// modify manage cert ext
+    #[oai(path = "/:id", method = "put")]
+    async fn modify_manage_cert(&self, id: Path<String>, modify_req: Json<IamCertManageModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertServ::modify_manage_cert(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 
     /// modify manage cert ext
