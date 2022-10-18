@@ -490,12 +490,6 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         Ok(())
     }
 
-    //todo()
-    // async fn before_modify_rbum(id: &str, _: &mut ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    //     Self::check_ownership(id, funs, ctx).await?;
-    //     RbumCertServ::check_cert_conf_constraint_by_add(add_req, &rbum_cert_conf, funs, ctx).await
-    // }
-
     async fn package_modify(id: &str, modify_req: &RbumCertModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert::ActiveModel> {
         let mut rbum_cert = rbum_cert::ActiveModel {
             id: Set(id.to_string()),
@@ -523,6 +517,52 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             rbum_cert.conn_uri = Set(conn_uri.to_string());
         }
         Ok(rbum_cert)
+    }
+
+    async fn before_modify_rbum(id: &str, modify_req: &mut RbumCertModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::check_ownership(id, funs, ctx).await?;
+        let rbum_cert = Self::peek_rbum(
+            id,
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
+            let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+                rel_rbum_cert_conf_id,
+                &RbumCertConfFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            Self::check_cert_conf_constraint_by_modify(id, modify_req, &rbum_cert_conf, funs, ctx).await?;
+            // Encrypt Sk
+            if modify_req.sk.is_some() || modify_req.ak.is_some() {
+                if rbum_cert_conf.sk_encrypted {
+                    if modify_req.ak.is_some() && modify_req.sk.is_none() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
+                    }
+                    if let Some(sk) = &modify_req.sk {
+                        let sk = Self::encrypt_sk(&sk.0, &modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).to_string(), rel_rbum_cert_conf_id)?;
+                        modify_req.sk = Some(TrimString(sk));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn package_query(is_detail: bool, filter: &RbumCertFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
@@ -1124,6 +1164,65 @@ impl RbumCertServ {
                 > 0
             {
                 return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
+            }
+        }
+        Ok(())
+    }
+
+    async fn check_cert_conf_constraint_by_modify(
+        id: &str,
+        modify_req: &RbumCertModifyReq,
+        rbum_cert_conf: &RbumCertConfSummaryResp,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        if let Some(ak) = &modify_req.ak {
+            if !rbum_cert_conf.ak_rule.is_empty()
+                && !Regex::new(&rbum_cert_conf.ak_rule)
+                    .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("ak rule is invalid:{}", e), "400-rbum-cert-conf-ak-rule-invalid"))?
+                    .is_match(ak.as_ref())
+                    .unwrap_or(false)
+            {
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "modify",
+                    &format!("ak {} is not match ak rule", ak),
+                    "400-rbum-cert-conf-ak-rule-not-match",
+                ));
+            }
+        }
+        if let Some(sk) = &modify_req.sk {
+            if rbum_cert_conf.sk_need && !rbum_cert_conf.sk_rule.is_empty() {
+                if !Regex::new(&rbum_cert_conf.sk_rule)
+                    .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("sk rule is invalid:{}", e), "400-rbum-cert-conf-sk-rule-invalid"))?
+                    .is_match(sk.as_ref())
+                    .unwrap_or(false)
+                {
+                    return Err(funs.err().bad_request(
+                        &Self::get_obj_name(),
+                        "modify",
+                        &format!("sk {} is not match sk rule", sk),
+                        "400-rbum-cert-conf-sk-rule-not-match",
+                    ));
+                }
+            }
+        }
+        if !rbum_cert_conf.is_ak_repeatable && modify_req.ak.is_some() {
+            if funs
+                .db()
+                .count(
+                    Query::select()
+                        .column(rbum_cert::Column::Id)
+                        .from(rbum_cert::Entity)
+                        .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().unwrap().0.as_str()))
+                        .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.clone()))
+                        .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
+                        .and_where(Expr::col(rbum_cert::Column::Id).ne(format!("{}%", id).as_str())),
+                )
+                .await?
+                > 0
+            {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "ak is used", "409-rbum-cert-ak-duplicate"));
             }
         }
         Ok(())
