@@ -187,6 +187,12 @@ pub struct IamAccountInfoResp {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamAccountInfoWithUserPwdAkResp {
+    pub iam_account_info_resp: IamAccountInfoResp,
+    pub ak: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,

@@ -7,7 +7,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
 
-use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamCpUserPwdBindResp};
+use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
     IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdValidateSkReq,
     IamContextFetchReq,
@@ -270,7 +270,7 @@ impl IamCpCertLdapApi {
     /// else bind with ldap cert
     /// name-password -ldap login
     #[oai(path = "/bind-or-create-userpwd", method = "put")]
-    async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindWithLdapReq>) -> TardisApiResult<IamAccountInfoResp> {
+    async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindWithLdapReq>) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let resp = IamCpCertLdapServ::bind_or_create_user_pwd_by_ldap(&login_req.0, &funs).await?;

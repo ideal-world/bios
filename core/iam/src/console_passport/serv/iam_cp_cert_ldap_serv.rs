@@ -1,9 +1,10 @@
-use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamCpUserPwdBindResp};
+use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq};
-use crate::iam_enumeration::IamCertTokenKind;
+use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind};
 use std::collections::HashMap;
+use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
@@ -46,16 +47,23 @@ impl IamCpCertLdapServ {
         Ok(IamCpUserPwdBindResp { is_bind })
     }
 
-    pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
+    pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoWithUserPwdAkResp> {
         let (account_id, access_token) = IamCertLdapServ::bind_or_create_user_pwd_by_ldap(login_req, funs).await?;
 
-        IamCertServ::package_tardis_context_and_resp(
+        let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
             Some(login_req.tenant_id.clone()),
             &account_id,
             Some(IamCertTokenKind::TokenDefault.to_string()),
             Some(access_token.clone()),
             funs,
         )
-        .await
+        .await?;
+        let ak = Self::get_pwd_cert_name(account_id, funs, ctx).await?;
+        let resp = IamAccountInfoWithUserPwdAkResp { iam_account_info_resp, ak };
+        Ok(resp)
+    }
+    async fn get_pwd_cert_name(account_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let resp = IamCertServ::get_kernel_cert(&account_id, &IamCertKernelKind::UserPwd, funs, ctx).await?;
+        Ok(resp.ak)
     }
 }
