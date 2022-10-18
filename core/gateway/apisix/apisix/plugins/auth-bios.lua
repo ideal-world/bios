@@ -93,12 +93,12 @@ function _M.rewrite(conf, ctx)
     local ident_code, ident_message = m_ident.ident(conf, ctx)
     if ident_code ~= 200 then
         cors(conf)
-        return ident_code, { message = ident_message }
+        return ident_code, { code = ident_code .. '-gateway-cert-error', message = ident_message }
     end
     local auth_code, auth_message = m_auth.auth(ctx.ident_info)
     if auth_code ~= 200 then
         cors(conf)
-        return auth_code, { message = auth_message }
+        return auth_code, { code = auth_code .. '-gateway-auth-error',  message = auth_message }
     end
     local context = json.encode({
         own_paths = ctx.ident_info.own_paths,
