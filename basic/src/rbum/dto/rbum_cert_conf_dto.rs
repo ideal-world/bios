@@ -132,6 +132,7 @@ pub struct RbumCertConfDetailResp {
     pub sk_encrypted: bool,
     pub repeatable: bool,
     pub is_basic: bool,
+    pub is_ak_repeatable: bool,
     pub rest_by_kinds: String,
     pub expire_sec: u32,
     pub sk_lock_cycle_sec: u32,

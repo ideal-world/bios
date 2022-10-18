@@ -94,14 +94,15 @@ impl TardisActiveModel for ActiveModel {
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
         vec![
-            Index::create()
-                .name(&format!("idx-{}-ak", Entity.table_name()))
-                .table(Entity)
-                .col(Column::OwnPaths)
-                .col(Column::RelRbumKind)
-                .col(Column::RelRbumCertConfId)
-                .col(Column::Ak)
-                .to_owned(),
+            // todo delete index
+            // Index::create()
+            //     .name(&format!("idx-{}-ak", Entity.table_name()))
+            //     .table(Entity)
+            //     .col(Column::OwnPaths)
+            //     .col(Column::RelRbumKind)
+            //     .col(Column::RelRbumCertConfId)
+            //     .col(Column::Ak)
+            //     .to_owned(),
             Index::create()
                 .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKind.to_string()))
                 .table(Entity)

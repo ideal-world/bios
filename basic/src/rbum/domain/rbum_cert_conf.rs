@@ -34,7 +34,7 @@ pub struct Model {
     /// If true, the sk of this record will be the public sk of the same `rel_rbum_item_id` ,
     /// support a login method like ak of different cert configuration in the same `rel_rbum_item_id` + sk of this record
     pub is_basic: bool,
-    ///Whether ak can be repeated \
+    /// Whether ak can be repeated \
     /// If true, ak can be same in different record
     pub is_ak_repeatable: bool,
     /// Support reset the cert configuration type(corresponding to the 'code' value) of the basic sk \
