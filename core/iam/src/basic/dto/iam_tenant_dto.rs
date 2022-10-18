@@ -117,6 +117,7 @@ pub struct IamTenantAggDetailResp {
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
     pub cert_conf_by_wechat_mp: Option<IamCertConfOAuth2Resp>,
+    pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapAddOrModifyReq>>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]

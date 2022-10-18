@@ -146,6 +146,7 @@ pub struct RbumItemRelFilterReq {
     pub rel_item_id: Option<String>,
     pub ext_eq: Option<String>,
     pub ext_like: Option<String>,
+    pub own_paths: Option<String>,
 }
 
 pub trait RbumItemFilterFetcher {
