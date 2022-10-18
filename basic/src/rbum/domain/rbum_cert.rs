@@ -101,7 +101,6 @@ impl TardisActiveModel for ActiveModel {
                 .col(Column::RelRbumKind)
                 .col(Column::RelRbumCertConfId)
                 .col(Column::Ak)
-                .unique()
                 .to_owned(),
             Index::create()
                 .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKind.to_string()))
