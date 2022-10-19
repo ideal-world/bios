@@ -13,7 +13,7 @@ use tardis::web::web_resp::{TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountSelfModifyReq, IamCpUserPwdBindResp};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamAccountSelfModifyReq, IamCpUserPwdBindResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
@@ -807,6 +807,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
+                status: None
             },
         )
         .await;
@@ -828,7 +829,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .code
         .starts_with("401"));
 
-    let account: IamAccountInfoResp = client
+    let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/login",
             &IamCpLdapLoginReq {
@@ -840,8 +841,8 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         )
         .await;
 
-    assert_eq!(account.account_name, "");
-    assert!(account.access_token.is_none());
+    assert_eq!(account.iam_account_info_resp.account_name, "");
+    assert!(account.iam_account_info_resp.access_token.is_none());
 
     assert!(client
         .post_resp::<IamCpUserPwdCheckReq, String>(
@@ -882,7 +883,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     assert!(!user_pwd_bind_resp.is_bind);
 
-    let account: IamAccountInfoResp = client
+    let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/bind-or-create-userpwd",
             &IamCpUserPwdBindWithLdapReq {
@@ -899,12 +900,12 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .await;
     println!("{:?}", account);
 
-    assert!(account.access_token.is_some());
-    assert!(!account.account_name.is_empty());
-    assert!(!account.account_id.is_empty());
+    assert!(account.iam_account_info_resp.access_token.is_some());
+    assert!(!account.iam_account_info_resp.account_name.is_empty());
+    assert!(!account.iam_account_info_resp.account_id.is_empty());
 
     //relogin
-    let account: IamAccountInfoResp = client
+    let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/login",
             &IamCpLdapLoginReq {
@@ -916,11 +917,11 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         )
         .await;
     println!("{:?}", account);
-    assert!(account.access_token.is_some());
-    assert!(!account.account_name.is_empty());
-    assert!(!account.account_id.is_empty());
+    assert!(account.iam_account_info_resp.access_token.is_some());
+    assert!(!account.iam_account_info_resp.account_name.is_empty());
+    assert!(!account.iam_account_info_resp.account_id.is_empty());
 
-    let account: IamAccountInfoResp = client
+    let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/bind-or-create-userpwd",
             &IamCpUserPwdBindWithLdapReq {
@@ -940,9 +941,9 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .await;
     println!("{:?}", account);
 
-    assert!(!account.account_id.is_empty());
-    assert!(account.access_token.is_some());
-    assert!(!account.account_name.is_empty());
+    assert!(!account.iam_account_info_resp.account_id.is_empty());
+    assert!(account.iam_account_info_resp.access_token.is_some());
+    assert!(!account.iam_account_info_resp.account_name.is_empty());
 
     let user_pwd_bind_resp: IamCpUserPwdBindResp = client
         .post(

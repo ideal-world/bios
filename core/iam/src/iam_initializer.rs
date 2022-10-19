@@ -277,6 +277,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             role_ids: None,
             org_node_ids: None,
             exts: Default::default(),
+            status: None
         },
         funs,
         &ctx,

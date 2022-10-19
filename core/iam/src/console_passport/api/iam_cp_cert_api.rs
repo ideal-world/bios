@@ -1,21 +1,24 @@
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
+use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::{param::Path, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 use tardis::TardisFuns;
 
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
-    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdValidateSkReq,
-    IamContextFetchReq,
+    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq,
+    IamCertUserPwdValidateSkReq, IamContextFetchReq,
 };
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{
@@ -29,6 +32,7 @@ use crate::console_passport::serv::iam_cp_cert_oauth2_serv::IamCpCertOAuth2Serv;
 use crate::console_passport::serv::iam_cp_cert_phone_vcode_serv::IamCpCertPhoneVCodeServ;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCpCertApi;
 pub struct IamCpCertLdapApi;
@@ -101,6 +105,25 @@ impl IamCpCertApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCpCertUserPwdServ::new_pwd_without_login(&pwd_new_req.0, &funs).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// rest userpwd-cert password by account_id\
+    /// only used by userpwd-cert status is Pending
+    #[oai(path = "/cert/userpwd/rest", method = "put")]
+    async fn rest_password(
+        &self,
+        account_id: Query<String>,
+        modify_req: Json<IamCertUserPwdRestReq>,
+        tenant_id: Option<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
+        IamCertUserPwdServ::reset_sk_for_pending_status(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -248,7 +271,7 @@ impl IamCpCertApi {
 impl IamCpCertLdapApi {
     /// Login by LDAP
     #[oai(path = "/login", method = "put")]
-    async fn login_or_register_by_ldap(&self, login_req: Json<IamCpLdapLoginReq>) -> TardisApiResult<IamAccountInfoResp> {
+    async fn login_or_register_by_ldap(&self, login_req: Json<IamCpLdapLoginReq>) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let resp = IamCpCertLdapServ::login_or_register(&login_req.0, &funs).await?;

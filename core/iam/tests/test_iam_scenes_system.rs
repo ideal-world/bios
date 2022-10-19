@@ -406,6 +406,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+                status: None
             },
         )
         .await;

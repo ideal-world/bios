@@ -6,7 +6,7 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamAccountAggAddReq {
@@ -32,6 +32,7 @@ pub struct IamAccountAggAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub exts: HashMap<String, String>,
+    pub status:Option<RbumCertStatusKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -190,6 +191,7 @@ pub struct IamAccountInfoResp {
 pub struct IamAccountInfoWithUserPwdAkResp {
     pub iam_account_info_resp: IamAccountInfoResp,
     pub ak: String,
+    pub status: String,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

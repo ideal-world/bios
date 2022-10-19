@@ -11,7 +11,7 @@ use tardis::TardisFunsInst;
 pub struct IamCpCertLdapServ;
 
 impl IamCpCertLdapServ {
-    pub async fn login_or_register(login_req: &IamCpLdapLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_or_register(login_req: &IamCpLdapLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoWithUserPwdAkResp> {
         let ldap_info = IamCertLdapServ::get_account_with_verify(
             login_req.name.as_ref(),
             login_req.password.as_ref(),
@@ -20,17 +20,27 @@ impl IamCpCertLdapServ {
             funs,
         )
         .await?;
-        if let Some((account_id, access_token)) = ldap_info {
-            IamCertServ::package_tardis_context_and_resp(
+        let mock_ctx = TardisContext {
+            own_paths: login_req.tenant_id.to_string(),
+            ..Default::default()
+        };
+        let resp = if let Some((account_id, access_token)) = ldap_info {
+            let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
+            let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
                 Some(login_req.tenant_id.clone()),
                 &account_id,
                 Some(IamCertTokenKind::TokenDefault.to_string()),
                 Some(access_token),
                 funs,
             )
-            .await
+            .await?;
+            IamAccountInfoWithUserPwdAkResp {
+                iam_account_info_resp,
+                ak,
+                status,
+            }
         } else {
-            Ok(IamAccountInfoResp {
+            let iam_account_info_resp = IamAccountInfoResp {
                 account_id: "".to_string(),
                 account_name: "".to_string(),
                 token: "".to_string(),
@@ -38,8 +48,15 @@ impl IamCpCertLdapServ {
                 roles: HashMap::new(),
                 groups: HashMap::new(),
                 apps: vec![],
-            })
-        }
+            };
+            IamAccountInfoWithUserPwdAkResp {
+                iam_account_info_resp,
+                ak: "".into(),
+                status: "".into(),
+            }
+        };
+
+        Ok(resp)
     }
 
     pub async fn check_user_pwd_is_bind(check_req: &IamCpUserPwdCheckReq, funs: &TardisFunsInst) -> TardisResult<IamCpUserPwdBindResp> {
@@ -58,12 +75,26 @@ impl IamCpCertLdapServ {
             funs,
         )
         .await?;
-        let ak = Self::get_pwd_cert_name(account_id, funs, ctx).await?;
-        let resp = IamAccountInfoWithUserPwdAkResp { iam_account_info_resp, ak };
+        let mock_ctx = TardisContext {
+            own_paths: login_req.tenant_id.to_string(),
+            ..Default::default()
+        };
+        let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
+        let resp = IamAccountInfoWithUserPwdAkResp {
+            iam_account_info_resp,
+            ak,
+            status,
+        };
         Ok(resp)
     }
-    async fn get_pwd_cert_name(account_id: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let resp = IamCertServ::get_kernel_cert(&account_id, &IamCertKernelKind::UserPwd, funs, ctx).await?;
-        Ok(resp.ak)
+    /// return String or "" empty String
+    async fn get_pwd_cert_name(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
+        let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::UserPwd, funs, ctx).await;
+        if resp.is_ok() {
+            let with_sk_resp = resp.unwrap();
+            Ok((with_sk_resp.ak, with_sk_resp.status.to_string()))
+        } else {
+            Ok(("".into(), "".into()))
+        }
     }
 }

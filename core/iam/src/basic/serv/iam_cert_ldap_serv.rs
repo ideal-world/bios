@@ -208,6 +208,7 @@ impl IamCertLdapServ {
         Ok(result)
     }
 
+    #[deprecated = "not use"]
     pub async fn get_or_add_account_with_verify(user_name: &str, password: &str, tenant_id: &str, code: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
@@ -439,6 +440,7 @@ impl IamCertLdapServ {
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
+                status: Some(RbumCertStatusKind::Pending)
             },
             funs,
             ctx,
@@ -480,6 +482,7 @@ impl IamCertLdapServ {
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
+                status: Some(RbumCertStatusKind::Pending)
             },
             funs,
             ctx,

@@ -87,6 +87,7 @@ pub async fn app_console_project_mgr_page(tenant_id: &str, client: &mut BIOSWebT
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "00002".to_string())]),
+                status: None
             },
         )
         .await;

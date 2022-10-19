@@ -263,6 +263,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             role_ids: None,
             org_node_ids: None,
             exts: Default::default(),
+            status: None
         },
         &funs,
         &tenant_admin_context,

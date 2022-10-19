@@ -393,6 +393,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+                status: None
             },
         )
         .await;
@@ -593,6 +594,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
+                status: None
             },
         )
         .await;

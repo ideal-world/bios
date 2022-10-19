@@ -238,6 +238,7 @@ impl IamTenantServ {
                 role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
+                status: None
             },
             funs,
             &tenant_ctx,
