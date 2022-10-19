@@ -228,7 +228,7 @@ impl RbumSetServ {
         if !filter.fetch_cate_item {
             return Ok(RbumSetTreeResp { main: tree_main, ext: None });
         }
-        let rbum_set_items = RbumSetItemServ::find_detail_rbums(
+        let mut rbum_set_items = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     // set cate item is only used for connection,
@@ -257,6 +257,9 @@ impl RbumSetServ {
             ctx,
         )
         .await?;
+        if filter.hide_item_with_disabled {
+            rbum_set_items = rbum_set_items.into_iter().filter(|i| !i.rel_rbum_item_disabled).collect();
+        }
         if filter.hide_cate_with_empty_item {
             let exist_cate_ids =
                 tree_main.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree_main, &cate.id, &rbum_set_items)).collect::<Vec<String>>();
