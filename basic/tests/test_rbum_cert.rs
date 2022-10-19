@@ -4,7 +4,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
-use tardis::TardisFuns;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
@@ -19,6 +19,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_cert_conf(context).await?;
     test_rbum_cert_basic(context).await?;
     test_rbum_cert_sk_dynamic(context).await?;
+    test_rbum_cert_conf_is_ak_repeatable(context).await?;
     Ok(())
 }
 
@@ -40,7 +41,6 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await?;
-
     // -----------------------------------
 
     info!("【test_rbum_cert_conf】 : Test Add : RbumCertConfServ::add_rbum");
@@ -59,6 +59,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_encrypted: None,
             repeatable: None,
             is_basic: None,
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
@@ -90,6 +91,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_encrypted: None,
             repeatable: None,
             is_basic: None,
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
@@ -121,6 +123,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_encrypted: Some(true),
             repeatable: None,
             is_basic: None,
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
@@ -151,6 +154,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_encrypted: Some(true),
             repeatable: None,
             is_basic: None,
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
@@ -231,6 +235,205 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     Ok(())
 }
 
+async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> TardisResult<()> {
+    let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    funs.begin().await?;
+
+    info!("【test_rbum_cert_conf_is_ak_repeatable】 : Prepare Domain : RbumDomainServ::add_rbum");
+    let domain_iam_id = RbumDomainServ::add_rbum(
+        &mut RbumDomainAddReq {
+            code: TrimString("iam2".to_string()),
+            name: TrimString("IAM".to_string()),
+            note: None,
+            icon: None,
+            sort: None,
+            scope_level: Some(RbumScopeLevelKind::L2),
+        },
+        &funs,
+        context,
+    )
+    .await?;
+    info!("【test_rbum_cert_conf_is_ak_repeatable】 : add cert conf true as repeateable : RbumCertConfServ::add_rbum");
+    let ak_repeatable_true_test_id = RbumCertConfServ::add_rbum(
+        &mut RbumCertConfAddReq {
+            code: TrimString("Test1".to_string()),
+            name: TrimString("akRepeatableTest1".to_string()),
+            note: None,
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            ext: None,
+            sk_need: Some(true),
+            sk_dynamic: None,
+            sk_encrypted: Some(false),
+            repeatable: None,
+            is_basic: None,
+            is_ak_repeatable: Some(true),
+            rest_by_kinds: None,
+            expire_sec: None,
+            coexist_num: None,
+            conn_uri: None,
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let cert_test_id1 = RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(ak_repeatable_true_test_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test".into(),
+            sk: Some("test1".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(ak_repeatable_true_test_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    RbumCertServ::modify_rbum(
+        &cert_test_id1,
+        &mut RbumCertModifyReq {
+            ak: Some("test".into()),
+            sk: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    info!("【test_rbum_cert_conf_is_ak_repeatable】 : add cert conf false as repeateable : RbumCertConfServ::add_rbum");
+    let ak_repeatable_false_test_id = RbumCertConfServ::add_rbum(
+        &mut RbumCertConfAddReq {
+            code: TrimString("Test2".to_string()),
+            name: TrimString("akRepeatableTest2".to_string()),
+            note: None,
+            ak_note: None,
+            ak_rule: None,
+            sk_note: None,
+            sk_rule: None,
+            ext: None,
+            sk_need: Some(true),
+            sk_dynamic: None,
+            sk_encrypted: Some(false),
+            repeatable: None,
+            is_basic: None,
+            is_ak_repeatable: Some(false),
+            rest_by_kinds: None,
+            expire_sec: None,
+            coexist_num: None,
+            conn_uri: None,
+            rel_rbum_domain_id: domain_iam_id.to_string(),
+            rel_rbum_item_id: None,
+            sk_lock_cycle_sec: None,
+            sk_lock_err_times: None,
+            sk_lock_duration_sec: None,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    let cert_test_id2 = RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(ak_repeatable_false_test_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+        },
+        &funs,
+        context,
+    )
+    .await?;
+
+    assert!(RbumCertServ::add_rbum(
+        &mut RbumCertAddReq {
+            ak: "test".into(),
+            sk: Some("test".into()),
+            vcode: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: RbumCertStatusKind::Enabled,
+            rel_rbum_cert_conf_id: Some(ak_repeatable_false_test_id.clone()),
+            rel_rbum_kind: RbumCertRelKind::Item,
+            rel_rbum_id: context.owner.to_string(),
+            is_outside: false,
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
+
+    assert!(RbumCertServ::modify_rbum(
+        &cert_test_id2,
+        &mut RbumCertModifyReq {
+            ak: Some("test".into()),
+            sk: None,
+            ext: None,
+            start_time: None,
+            end_time: None,
+            conn_uri: None,
+            status: None,
+        },
+        &funs,
+        context,
+    )
+    .await
+    .is_err());
+    funs.rollback().await?;
+    Ok(())
+}
+
 async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
@@ -280,6 +483,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             sk_encrypted: Some(true),
             repeatable: None,
             is_basic: Some(true),
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: Some(2),
             coexist_num: None,
@@ -310,6 +514,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             sk_encrypted: Some(false),
             repeatable: None,
             is_basic: Some(false),
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: None,
             coexist_num: None,
@@ -635,6 +840,7 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
             sk_encrypted: Some(false),
             repeatable: None,
             is_basic: Some(false),
+            is_ak_repeatable: None,
             rest_by_kinds: None,
             expire_sec: Some(2),
             coexist_num: None,
@@ -690,7 +896,8 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
 
     info!("【test_rbum_cert】 : Test Validate : RbumCertServ::validate with sk_dynamic & expire");
     RbumCertServ::add_vcode_to_cache("i@sunisle.org", "xxxx", &context.own_paths, &funs).await?;
-    tardis::tokio::time::sleep(Duration::from_secs(3)).await;
+    // tardis::tokio::time::sleep(Duration::from_secs(120)).await;
+    RbumCertServ::get_and_delete_vcode_in_cache("i@sunisle.org", &context.own_paths, &funs).await?;
     assert!(RbumCertServ::validate_by_spec_cert_conf("i@sunisle.org", "xxxx", &cert_conf_mail_vcode_id, false, &context.own_paths, &funs).await.is_err());
 
     funs.rollback().await?;

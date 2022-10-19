@@ -5,15 +5,17 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::serde_json::to_string;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
+use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
@@ -353,6 +355,22 @@ impl IamTenantServ {
         } else {
             None
         };
+        let mut vec1: Vec<IamCertConfLdapAddOrModifyReq> = vec![];
+        for ldap_conf in cert_confs.iter().filter(|r| r.code.contains(&IamCertExtKind::Ldap.to_string())) {
+            let conf = IamCertLdapServ::get_cert_conf(&ldap_conf.id, funs, ctx).await?;
+            vec1.push(IamCertConfLdapAddOrModifyReq {
+                code: TrimString(ldap_conf.code.clone()),
+                name: ldap_conf.name.clone(),
+                conn_uri: ldap_conf.conn_uri.clone(),
+                is_tls: conf.is_tls,
+                principal: TrimString(conf.principal.clone()),
+                credentials: TrimString("".to_string()),
+                base_dn: conf.base_dn,
+                field_display_name: conf.field_display_name,
+                search_base_filter: conf.search_base_filter,
+            })
+        }
+        let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };
 
         let tenant = IamTenantAggDetailResp {
             id: tenant.id.clone(),
@@ -372,6 +390,7 @@ impl IamTenantServ {
             cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()),
             cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::MailVCode.to_string()),
             cert_conf_by_wechat_mp,
+            cert_conf_by_ldap,
         };
 
         Ok(tenant)

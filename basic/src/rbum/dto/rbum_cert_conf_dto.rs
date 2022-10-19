@@ -29,6 +29,7 @@ pub struct RbumCertConfAddReq {
     pub sk_encrypted: Option<bool>,
     pub repeatable: Option<bool>,
     pub is_basic: Option<bool>,
+    pub is_ak_repeatable: Option<bool>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
@@ -96,6 +97,7 @@ pub struct RbumCertConfSummaryResp {
     pub sk_encrypted: bool,
     pub repeatable: bool,
     pub is_basic: bool,
+    pub is_ak_repeatable: bool,
     pub rest_by_kinds: String,
     pub expire_sec: u32,
     pub sk_lock_cycle_sec: u32,
@@ -130,6 +132,7 @@ pub struct RbumCertConfDetailResp {
     pub sk_encrypted: bool,
     pub repeatable: bool,
     pub is_basic: bool,
+    pub is_ak_repeatable: bool,
     pub rest_by_kinds: String,
     pub expire_sec: u32,
     pub sk_lock_cycle_sec: u32,

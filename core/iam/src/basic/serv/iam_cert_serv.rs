@@ -17,7 +17,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq};
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq, IamCertManageModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -342,6 +342,7 @@ impl IamCertServ {
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
+                is_ak_repeatable: Some(true),
                 rest_by_kinds: None,
                 expire_sec: None,
                 sk_lock_cycle_sec: None,
@@ -380,6 +381,25 @@ impl IamCertServ {
         )
         .await?;
         Ok(id)
+    }
+
+    pub async fn modify_manage_cert(id: &str, modify_req: &IamCertManageModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumCertServ::modify_rbum(
+            id,
+            &mut RbumCertModifyReq {
+                ext: modify_req.ext.clone(),
+                ak: Some(TrimString(modify_req.ak.trim().to_string())),
+                sk: Some(TrimString(modify_req.sk.as_ref().unwrap().to_string())),
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
     }
 
     pub async fn modify_manage_cert_ext(id: &str, ext: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -466,6 +486,7 @@ impl IamCertServ {
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
+                is_ak_repeatable: None,
                 rest_by_kinds: None,
                 expire_sec: None,
                 sk_lock_cycle_sec: None,

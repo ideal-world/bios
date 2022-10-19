@@ -36,6 +36,7 @@ impl IamCertUserPwdServ {
                 sk_encrypted: Some(true),
                 repeatable: Some(add_req.repeatable),
                 is_basic: Some(true),
+                is_ak_repeatable: None,
                 rest_by_kinds: Some(format!("{},{}", IamCertKernelKind::MailVCode, IamCertKernelKind::PhoneVCode)),
                 expire_sec: Some(add_req.expire_sec),
                 sk_lock_cycle_sec: Some(add_req.sk_lock_cycle_sec),
