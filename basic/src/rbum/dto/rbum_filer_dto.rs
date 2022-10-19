@@ -99,6 +99,7 @@ pub struct RbumSetFilterReq {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeFilterReq {
     pub fetch_cate_item: bool,
+    pub hide_item_with_disabled: bool,
     pub hide_cate_with_empty_item: bool,
     pub sys_codes: Option<Vec<String>>,
     pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,

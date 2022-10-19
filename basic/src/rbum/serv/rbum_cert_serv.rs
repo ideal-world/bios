@@ -550,15 +550,13 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             .await?;
             Self::check_cert_conf_constraint_by_modify(id, modify_req, &rbum_cert_conf, funs, ctx).await?;
             // Encrypt Sk
-            if modify_req.sk.is_some() || modify_req.ak.is_some() {
-                if rbum_cert_conf.sk_encrypted {
-                    if modify_req.ak.is_some() && modify_req.sk.is_none() {
-                        return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
-                    }
-                    if let Some(sk) = &modify_req.sk {
-                        let sk = Self::encrypt_sk(&sk.0, &modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).to_string(), rel_rbum_cert_conf_id)?;
-                        modify_req.sk = Some(TrimString(sk));
-                    }
+            if (modify_req.sk.is_some() || modify_req.ak.is_some()) && rbum_cert_conf.sk_encrypted {
+                if modify_req.ak.is_some() && modify_req.sk.is_none() {
+                    return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
+                }
+                if let Some(sk) = &modify_req.sk {
+                    let sk = Self::encrypt_sk(&sk.0, &modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id)?;
+                    modify_req.sk = Some(TrimString(sk));
                 }
             }
         }
@@ -1148,8 +1146,8 @@ impl RbumCertServ {
                 ));
             }
         }
-        if !rbum_cert_conf.is_ak_repeatable {
-            if funs
+        if !rbum_cert_conf.is_ak_repeatable
+            && funs
                 .db()
                 .count(
                     Query::select()
@@ -1162,9 +1160,8 @@ impl RbumCertServ {
                 )
                 .await?
                 > 0
-            {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
-            }
+        {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", "ak is used", "409-rbum-cert-ak-duplicate"));
         }
         Ok(())
     }
@@ -1192,23 +1189,24 @@ impl RbumCertServ {
             }
         }
         if let Some(sk) = &modify_req.sk {
-            if rbum_cert_conf.sk_need && !rbum_cert_conf.sk_rule.is_empty() {
-                if !Regex::new(&rbum_cert_conf.sk_rule)
+            if rbum_cert_conf.sk_need
+                && !rbum_cert_conf.sk_rule.is_empty()
+                && !Regex::new(&rbum_cert_conf.sk_rule)
                     .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("sk rule is invalid:{}", e), "400-rbum-cert-conf-sk-rule-invalid"))?
                     .is_match(sk.as_ref())
                     .unwrap_or(false)
-                {
-                    return Err(funs.err().bad_request(
-                        &Self::get_obj_name(),
-                        "modify",
-                        &format!("sk {} is not match sk rule", sk),
-                        "400-rbum-cert-conf-sk-rule-not-match",
-                    ));
-                }
+            {
+                return Err(funs.err().bad_request(
+                    &Self::get_obj_name(),
+                    "modify",
+                    &format!("sk {} is not match sk rule", sk),
+                    "400-rbum-cert-conf-sk-rule-not-match",
+                ));
             }
         }
-        if !rbum_cert_conf.is_ak_repeatable && modify_req.ak.is_some() {
-            if funs
+        if !rbum_cert_conf.is_ak_repeatable
+            && modify_req.ak.is_some()
+            && funs
                 .db()
                 .count(
                     Query::select()
@@ -1221,9 +1219,8 @@ impl RbumCertServ {
                 )
                 .await?
                 > 0
-            {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "ak is used", "409-rbum-cert-ak-duplicate"));
-            }
+        {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "ak is used", "409-rbum-cert-ak-duplicate"));
         }
         Ok(())
     }

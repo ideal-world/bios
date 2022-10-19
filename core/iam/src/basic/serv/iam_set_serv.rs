@@ -166,6 +166,7 @@ impl IamSetServ {
             set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: true,
+                hide_item_with_disabled: true,
                 rel_rbum_item_ids: Some(vec![account_id.to_string()]),
                 rel_rbum_item_kind_ids: Some(vec![funs.iam_basic_kind_account_id()]),
                 ..Default::default()
