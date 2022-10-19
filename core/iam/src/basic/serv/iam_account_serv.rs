@@ -145,6 +145,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 }
 
 impl IamAccountServ {
+    /// if add_req.status is None.default is RbumCertStatusKind::Enabled
     pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
@@ -167,6 +168,7 @@ impl IamAccountServ {
                 &IamCertUserPwdAddReq {
                     ak: add_req.cert_user_name.clone(),
                     sk: add_req.cert_password.clone(),
+                    status: add_req.status.clone(),
                 },
                 &account_id,
                 Some(cert_conf.id),

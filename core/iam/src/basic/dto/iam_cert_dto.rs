@@ -1,3 +1,4 @@
+use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -28,6 +29,7 @@ pub struct IamCertUserPwdAddReq {
     pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
+    pub status: Option<RbumCertStatusKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
