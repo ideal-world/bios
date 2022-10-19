@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
@@ -90,6 +90,11 @@ impl IamCertUserPwdServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let status = if let Some(add_req_status) = &add_req.status {
+            add_req_status.clone()
+        } else {
+            RbumCertStatusKind::Enabled
+        };
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
@@ -99,7 +104,7 @@ impl IamCertUserPwdServ {
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
-                status: RbumCertStatusKind::Enabled,
+                status,
                 rel_rbum_cert_conf_id,
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: rel_iam_item_id.to_string(),
@@ -166,6 +171,61 @@ impl IamCertUserPwdServ {
                 "404-iam-cert-kind-not-exist",
             ))
         }
+    }
+
+    pub async fn reset_sk_for_pending_status(
+        modify_req: &IamCertUserPwdRestReq,
+        rel_iam_item_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let cert = RbumCertServ::find_one_rbum(
+            &RbumCertFilterReq {
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_id: Some(rel_iam_item_id.to_string()),
+                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(cert) = cert {
+            if cert.status.eq(&RbumCertStatusKind::Pending) {
+                RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+                RbumCertServ::modify_rbum(
+                    &cert.id,
+                    &mut RbumCertModifyReq {
+                        ak: None,
+                        sk: None,
+                        ext: None,
+                        start_time: None,
+                        end_time: None,
+                        conn_uri: None,
+                        status: RbumCertStatusKind::Enabled.into(),
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            } else {
+                return Err(funs.err().bad_request(
+                    "iam_cert_user_pwd",
+                    "reset_sk_for_pending_status",
+                    "user can not reset password",
+                    "403-operation_not_allowed",
+                ));
+            }
+        } else {
+            return Err(funs.err().not_found(
+                "iam_cert_user_pwd",
+                "reset_sk",
+                &format!("not found credential of kind {:?}", IamCertKernelKind::UserPwd),
+                "404-iam-cert-kind-not-exist",
+            ));
+        }
+        Ok(())
     }
 
     fn parse_ak_rule(cert_conf_by_user_pwd: &IamCertConfUserPwdAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<String> {

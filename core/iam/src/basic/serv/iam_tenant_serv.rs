@@ -5,12 +5,11 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::serde_json::to_string;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
@@ -240,6 +239,7 @@ impl IamTenantServ {
                 role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
+                status: None,
             },
             funs,
             &tenant_ctx,
