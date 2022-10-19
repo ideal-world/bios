@@ -1,7 +1,8 @@
+use ldap3::log::{info, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
-use crate::basic::dto::iam_account_dto::IamAccountExtSysAddReq;
+use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_enumeration::IamCertKernelKind;
@@ -255,6 +256,39 @@ impl IamCertLdapServ {
                 &format!("not found ldap cert(openid): {}", &dn),
                 "401-rbum-cert-valid-error",
             ));
+        }
+    }
+
+    pub async fn batch_get_or_add_account_without_verify(
+        add_req: IamAccountExtSysBatchAddReq,
+        tenant_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<IamAccountAddByLdapResp> {
+        if add_req.account_id.is_empty() {
+            Ok(IamAccountAddByLdapResp { result: vec![], fail: vec![] })
+        } else {
+            let mut result: Vec<String> = Vec::new();
+            let mut fail: Vec<String> = Vec::new();
+            for account_id in add_req.account_id {
+                let verify = Self::get_or_add_account_without_verify(
+                    IamAccountExtSysAddReq {
+                        account_id: account_id.clone(),
+                        code: add_req.code.clone(),
+                    },
+                    tenant_id,
+                    funs,
+                    ctx,
+                )
+                .await;
+                if verify.is_ok() {
+                    result.push(verify.unwrap().0);
+                } else {
+                    warn!("get_or_add_account_without_verify resp is err");
+                    fail.push(account_id.clone());
+                }
+            }
+            Ok(IamAccountAddByLdapResp { result, fail })
         }
     }
 
