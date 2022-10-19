@@ -217,6 +217,19 @@ pub struct IamAccountExtSysAddReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountExtSysBatchAddReq {
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub account_id: Vec<String>,
+    pub code: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct IamAccountAddByLdapResp {
+    pub result: Vec<String>,
+    pub fail: Vec<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCpUserPwdBindResp {
     /// true=is bind ,false=not bind
     pub is_bind: bool,

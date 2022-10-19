@@ -8,7 +8,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountBoneResp, IamAccountExtSysAddReq, IamAccountExtSysResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountBoneResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 #[cfg(feature = "ldap_client")]
@@ -111,9 +111,14 @@ impl IamCcAccountLdapApi {
 
     /// Add Account by LDAP
     #[oai(path = "/", method = "put")]
-    async fn add_account_from_ldap(&self, add_req: Json<IamAccountExtSysAddReq>, tenant_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn add_account_from_ldap(
+        &self,
+        add_req: Json<IamAccountExtSysBatchAddReq>,
+        tenant_id: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<IamAccountAddByLdapResp> {
         let funs = iam_constants::get_tardis_inst();
-        IamCertLdapServ::get_or_add_account_without_verify(add_req.0, &tenant_id.0, &funs, &ctx.0).await?;
-        TardisResp::ok(Void {})
+        let result = IamCertLdapServ::batch_get_or_add_account_without_verify(add_req.0, &tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
     }
 }
