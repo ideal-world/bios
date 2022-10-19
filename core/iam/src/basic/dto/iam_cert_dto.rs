@@ -90,6 +90,7 @@ pub struct IamCertExtAddReq {
     pub ak: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: Option<String>,
+    pub ext: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
