@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumRelFromKind};
+use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;

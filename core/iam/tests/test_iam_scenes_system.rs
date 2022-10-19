@@ -14,7 +14,7 @@ use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::IamCertUserPwdRestReq;
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
@@ -109,6 +109,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
+                status: None,
             },
         )
         .await;
@@ -406,7 +407,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
-                status: None
+                status: None,
             },
         )
         .await;

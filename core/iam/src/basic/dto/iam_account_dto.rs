@@ -32,7 +32,7 @@ pub struct IamAccountAggAddReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub exts: HashMap<String, String>,
-    pub status:Option<RbumCertStatusKind>,
+    pub status: Option<RbumCertStatusKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

@@ -221,7 +221,7 @@ impl IamCertOAuth2Serv {
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
-                status: None
+                status: None,
             },
             funs,
             &mock_ctx,

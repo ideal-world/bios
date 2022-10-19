@@ -1,11 +1,10 @@
-use std::clone;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
@@ -91,10 +90,9 @@ impl IamCertUserPwdServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        let status=if let Some(add_req_status)=&add_req.status{
+        let status = if let Some(add_req_status) = &add_req.status {
             add_req_status.clone()
-        }
-        else {
+        } else {
             RbumCertStatusKind::Enabled
         };
         RbumCertServ::add_rbum(
@@ -196,21 +194,36 @@ impl IamCertUserPwdServ {
         if let Some(cert) = cert {
             if cert.status.eq(&RbumCertStatusKind::Pending) {
                 RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+                RbumCertServ::modify_rbum(
+                    &cert.id,
+                    &mut RbumCertModifyReq {
+                        ak: None,
+                        sk: None,
+                        ext: None,
+                        start_time: None,
+                        end_time: None,
+                        conn_uri: None,
+                        status: RbumCertStatusKind::Enabled.into(),
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
             } else {
-                return  Err(funs.err().bad_request(
+                return Err(funs.err().bad_request(
                     "iam_cert_user_pwd",
                     "reset_sk_for_pending_status",
                     "user can not reset password",
                     "403-operation_not_allowed",
-                ))
+                ));
             }
         } else {
-            return  Err(funs.err().not_found(
+            return Err(funs.err().not_found(
                 "iam_cert_user_pwd",
                 "reset_sk",
                 &format!("not found credential of kind {:?}", IamCertKernelKind::UserPwd),
                 "404-iam-cert-kind-not-exist",
-            ))
+            ));
         }
         Ok(())
     }

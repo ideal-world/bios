@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 
-use bios_iam::console_passport::dto::iam_cp_cert_dto::{IamCpLdapLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq};
+use bios_iam::console_passport::dto::iam_cp_cert_dto::{
+    IamCpLdapLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
+};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::IntoActiveValue;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::url::quirks::password;
@@ -16,8 +17,8 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamAccountSelfModifyReq, IamCpUserPwdBindResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq, IamCertConfUserPwdResp};
-use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
@@ -105,6 +106,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
+                status: None,
             },
         )
         .await;
@@ -807,7 +809,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 disabled: None,
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
-                status: None
+                status: None,
             },
         )
         .await;
@@ -883,7 +885,8 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     assert!(!user_pwd_bind_resp.is_bind);
 
-    let account: IamAccountInfoWithUserPwdAkResp = client
+    //binding user1
+    let user1_account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/bind-or-create-userpwd",
             &IamCpUserPwdBindWithLdapReq {
@@ -898,13 +901,41 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             },
         )
         .await;
-    println!("{:?}", account);
+    println!("{:?}", user1_account);
 
-    assert!(account.iam_account_info_resp.access_token.is_some());
-    assert!(!account.iam_account_info_resp.account_name.is_empty());
-    assert!(!account.iam_account_info_resp.account_id.is_empty());
+    assert!(user1_account.iam_account_info_resp.access_token.is_some());
+    assert!(!user1_account.iam_account_info_resp.account_name.is_empty());
+    assert!(!user1_account.iam_account_info_resp.account_id.is_empty());
+    assert_eq!(user1_account.status, "Pending");
 
-    //relogin
+    //set user1 auth
+    client.set_auth(&user1_account.iam_account_info_resp.token, None).await?;
+    //rest user1 pwd
+    let rest_user1_pwd = "34dfe31";
+    let rest_user1_pwd_resp: TardisResp<Void> = client
+        .put_resp(
+            &format!("/cp/cert/userpwd/rest?account_id={}", user1_account.iam_account_info_resp.account_id),
+            &IamCertUserPwdRestReq { new_sk: rest_user1_pwd.into() },
+        )
+        .await;
+    assert_eq!(rest_user1_pwd_resp.code, "200");
+
+    sleep(Duration::from_secs(1)).await;
+    //relogin user1 by userpwd
+    let account: IamAccountInfoResp = client
+        .put(
+            "/cp/login/userpwd",
+            &IamCpUserPwdLoginReq {
+                ak: TrimString(user1_account.ak.to_string()),
+                sk: TrimString(rest_user1_pwd.to_string()),
+                tenant_id: tenant_id.clone().into(),
+                flag: None,
+            },
+        )
+        .await;
+    info!("relogin user1 by userpwd resp:{:?}", account);
+
+    //relogin user1 by ldap
     let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/login",
@@ -916,10 +947,11 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             },
         )
         .await;
-    println!("{:?}", account);
+    info!("relogin user1 by ldap resp:{:?}", account);
     assert!(account.iam_account_info_resp.access_token.is_some());
     assert!(!account.iam_account_info_resp.account_name.is_empty());
     assert!(!account.iam_account_info_resp.account_id.is_empty());
+    assert_eq!(account.status, "Enabled");
 
     let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
@@ -944,6 +976,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     assert!(!account.iam_account_info_resp.account_id.is_empty());
     assert!(account.iam_account_info_resp.access_token.is_some());
     assert!(!account.iam_account_info_resp.account_name.is_empty());
+    assert_eq!(account.status, "Enabled");
 
     let user_pwd_bind_resp: IamCpUserPwdBindResp = client
         .post(

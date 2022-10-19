@@ -29,7 +29,7 @@ pub struct IamCertUserPwdAddReq {
     pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
-    pub status:Option<RbumCertStatusKind>,
+    pub status: Option<RbumCertStatusKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

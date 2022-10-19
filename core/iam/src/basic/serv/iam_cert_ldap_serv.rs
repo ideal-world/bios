@@ -441,7 +441,7 @@ impl IamCertLdapServ {
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
-                status: Some(RbumCertStatusKind::Pending)
+                status: Some(RbumCertStatusKind::Pending),
             },
             funs,
             ctx,
@@ -483,7 +483,7 @@ impl IamCertLdapServ {
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
-                status: Some(RbumCertStatusKind::Pending)
+                status: Some(RbumCertStatusKind::Pending),
             },
             funs,
             ctx,
