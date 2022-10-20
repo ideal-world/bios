@@ -518,7 +518,7 @@ impl IamCertLdapServ {
                 name: TrimString(name.to_string()),
                 // TODO Auto match rule
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
-                cert_password: TrimString(format!("{}Pw$", TardisFuns::field.nanoid_len(6))),
+                cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
