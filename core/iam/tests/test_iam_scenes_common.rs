@@ -9,7 +9,7 @@ use tardis::tokio::time::sleep;
 use tardis::web::web_resp::TardisPage;
 
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountBoneResp, IamAccountExtSysResp};
+use bios_iam::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggAddReq, IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
@@ -160,6 +160,23 @@ pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &
     // Find Accounts by LDAP
     let accounts: Vec<IamAccountExtSysResp> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
     assert_eq!(accounts.get(0).unwrap().user_name, name);
+
+    let account_ids:Vec<String> = accounts.iter().map(|x| x.account_id.clone()).collect();
+
+    info!("Find Accounts by LDAP,account_ids:{:?}",account_ids);
+
+    // Find Accounts by LDAP
+    let account_add_by_ldap_resp: IamAccountAddByLdapResp = client
+        .put(
+            &format!("/cc/account/ldap?tenant_id={}", tenant_id),
+            &IamAccountExtSysBatchAddReq {
+                account_id: account_ids,
+                code: LDAP_CODE.into(),
+            },
+        )
+        .await;
+
+    assert!(account_add_by_ldap_resp.result.len()>0);
 
     Ok(())
 }

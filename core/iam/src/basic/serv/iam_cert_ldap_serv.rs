@@ -307,12 +307,17 @@ impl IamCertLdapServ {
         let account = ldap_client.get_by_dn(dn, &vec!["dn", "cn", &cert_conf.field_display_name]).await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
+            let mut mock_ctx = TardisContext {
+                own_paths: ctx.own_paths.clone(),
+                owner:TardisFuns::field.nanoid(),
+                ..Default::default()
+            };
             let account_id = Self::do_add_account(
                 &account.dn,
                 &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_else(|| "".to_string()),
                 &cert_conf_id,
                 funs,
-                ctx,
+                &mock_ctx,
             )
             .await?;
             Ok((account_id, dn.to_string()))
