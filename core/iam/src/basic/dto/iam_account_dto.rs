@@ -226,7 +226,7 @@ pub struct IamAccountExtSysBatchAddReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamAccountAddByLdapResp {
     pub result: Vec<String>,
-    pub fail: Vec<String>,
+    pub fail: HashMap<String, String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
