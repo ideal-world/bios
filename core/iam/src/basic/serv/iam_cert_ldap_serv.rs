@@ -436,7 +436,7 @@ impl IamCertLdapServ {
         } else {
             return Err(funs.err().not_found(
                 "rbum_cert",
-                "get_or_add_account_without_verify",
+                "bind_or_create_user_pwd_by_ldap",
                 &format!("not found ldap cert(openid): {}", &dn),
                 "401-rbum-cert-valid-error",
             ));
@@ -455,7 +455,7 @@ impl IamCertLdapServ {
         if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, ctx).await?.account_self_reg {
             return Err(funs.err().not_found(
                 "rbum_cert",
-                "get_or_add_account_with_verify",
+                "create_user_pwd_by_ldap",
                 &format!("not found ldap cert(openid): {} and self-registration disabled", &dn),
                 "401-rbum-cert-valid-error",
             ));

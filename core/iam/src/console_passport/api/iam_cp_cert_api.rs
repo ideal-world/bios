@@ -109,10 +109,10 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// rest userpwd-cert password by account_id\
+    /// reset userpwd-cert password by account_id\
     /// only used by userpwd-cert status is Pending
-    #[oai(path = "/cert/userpwd/rest", method = "put")]
-    async fn rest_password(
+    #[oai(path = "/cert/userpwd/reset", method = "put")]
+    async fn reset_password(
         &self,
         account_id: Query<String>,
         modify_req: Json<IamCertUserPwdRestReq>,
