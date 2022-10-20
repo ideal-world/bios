@@ -30,6 +30,7 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+use tardis::basic::error::TardisError;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
@@ -266,10 +267,13 @@ impl IamCertLdapServ {
         ctx: &TardisContext,
     ) -> TardisResult<IamAccountAddByLdapResp> {
         if add_req.account_id.is_empty() {
-            Ok(IamAccountAddByLdapResp { result: vec![], fail: vec![] })
+            Ok(IamAccountAddByLdapResp {
+                result: vec![],
+                fail: HashMap::new(),
+            })
         } else {
             let mut result: Vec<String> = Vec::new();
-            let mut fail: Vec<String> = Vec::new();
+            let mut fail: HashMap<String, String> = HashMap::new();
             for account_id in add_req.account_id {
                 let verify = Self::get_or_add_account_without_verify(
                     IamAccountExtSysAddReq {
@@ -284,8 +288,9 @@ impl IamCertLdapServ {
                 if verify.is_ok() {
                     result.push(verify.unwrap().0);
                 } else {
-                    warn!("get_or_add_account_without_verify resp is err");
-                    fail.push(account_id.clone());
+                    let err_msg = if let Err(tardis_error) = verify { tardis_error.message } else { "".to_string() };
+                    warn!("get_or_add_account_without_verify resp is err:{}", err_msg);
+                    fail.insert(account_id, err_msg);
                 }
             }
             Ok(IamAccountAddByLdapResp { result, fail })
@@ -309,7 +314,7 @@ impl IamCertLdapServ {
         if let Some(account) = account {
             let mut mock_ctx = TardisContext {
                 own_paths: ctx.own_paths.clone(),
-                owner:TardisFuns::field.nanoid(),
+                owner: TardisFuns::field.nanoid(),
                 ..Default::default()
             };
             let account_id = Self::do_add_account(

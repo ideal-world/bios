@@ -161,9 +161,9 @@ pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &
     let accounts: Vec<IamAccountExtSysResp> = client.get(&format!("/cc/account/ldap?name={}&tenant_id={}&code={}", name, tenant_id, LDAP_CODE)).await;
     assert_eq!(accounts.get(0).unwrap().user_name, name);
 
-    let account_ids:Vec<String> = accounts.iter().map(|x| x.account_id.clone()).collect();
+    let account_ids: Vec<String> = accounts.iter().map(|x| x.account_id.clone()).collect();
 
-    info!("Find Accounts by LDAP,account_ids:{:?}",account_ids);
+    info!("Find Accounts by LDAP,account_ids:{:?}", account_ids);
 
     // Find Accounts by LDAP
     let account_add_by_ldap_resp: IamAccountAddByLdapResp = client
@@ -176,7 +176,7 @@ pub async fn common_console_by_ldap(client: &mut BIOSWebTestClient, tenant_id: &
         )
         .await;
 
-    assert!(account_add_by_ldap_resp.result.len()>0);
+    assert!(account_add_by_ldap_resp.result.len() > 0);
 
     Ok(())
 }
