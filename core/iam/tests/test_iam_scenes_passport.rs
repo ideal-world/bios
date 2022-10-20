@@ -914,7 +914,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     let rest_user1_pwd = "34dfe31";
     let rest_user1_pwd_resp: TardisResp<Void> = client
         .put_resp(
-            &format!("/cp/cert/userpwd/rest?account_id={}", user1_account.iam_account_info_resp.account_id),
+            &format!("/cp/cert/userpwd/reset?account_id={}", user1_account.iam_account_info_resp.account_id),
             &IamCertUserPwdRestReq { new_sk: rest_user1_pwd.into() },
         )
         .await;
