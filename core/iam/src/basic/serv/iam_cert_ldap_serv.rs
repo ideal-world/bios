@@ -1,7 +1,8 @@
+use ldap3::log::{info, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
-use crate::basic::dto::iam_account_dto::IamAccountExtSysAddReq;
+use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_enumeration::IamCertKernelKind;
@@ -29,6 +30,7 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+use tardis::basic::error::TardisError;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
@@ -258,6 +260,43 @@ impl IamCertLdapServ {
         }
     }
 
+    pub async fn batch_get_or_add_account_without_verify(
+        add_req: IamAccountExtSysBatchAddReq,
+        tenant_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<IamAccountAddByLdapResp> {
+        if add_req.account_id.is_empty() {
+            Ok(IamAccountAddByLdapResp {
+                result: vec![],
+                fail: HashMap::new(),
+            })
+        } else {
+            let mut result: Vec<String> = Vec::new();
+            let mut fail: HashMap<String, String> = HashMap::new();
+            for account_id in add_req.account_id {
+                let verify = Self::get_or_add_account_without_verify(
+                    IamAccountExtSysAddReq {
+                        account_id: account_id.clone(),
+                        code: add_req.code.clone(),
+                    },
+                    tenant_id,
+                    funs,
+                    ctx,
+                )
+                .await;
+                if verify.is_ok() {
+                    result.push(verify.unwrap().0);
+                } else {
+                    let err_msg = if let Err(tardis_error) = verify { tardis_error.message } else { "".to_string() };
+                    warn!("get_or_add_account_without_verify resp is err:{}", err_msg);
+                    fail.insert(account_id, err_msg);
+                }
+            }
+            Ok(IamAccountAddByLdapResp { result, fail })
+        }
+    }
+
     pub async fn get_or_add_account_without_verify(add_req: IamAccountExtSysAddReq, tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
         let dn = &add_req.account_id;
         let cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, add_req.code.clone()), Some(tenant_id.to_string()), funs).await?;
@@ -273,12 +312,17 @@ impl IamCertLdapServ {
         let account = ldap_client.get_by_dn(dn, &vec!["dn", "cn", &cert_conf.field_display_name]).await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
+            let mut mock_ctx = TardisContext {
+                own_paths: ctx.own_paths.clone(),
+                owner: TardisFuns::field.nanoid(),
+                ..Default::default()
+            };
             let account_id = Self::do_add_account(
                 &account.dn,
                 &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_else(|| "".to_string()),
                 &cert_conf_id,
                 funs,
-                ctx,
+                &mock_ctx,
             )
             .await?;
             Ok((account_id, dn.to_string()))
@@ -384,7 +428,7 @@ impl IamCertLdapServ {
             mock_ctx.owner = TardisFuns::field.nanoid();
             let account_id = if let Some(ak) = login_req.bind_user_pwd.ak.clone() {
                 // bind user_pwd with ldap cert
-                Self::bind_user_pwd_by_ldap(&dn, ak.as_ref(), login_req.ldap_login.password.as_ref(), &cert_conf_id, &tenant_id, funs, &mock_ctx).await?
+                Self::bind_user_pwd_by_ldap(&dn, ak.as_ref(), login_req.bind_user_pwd.sk.as_ref(), &cert_conf_id, &tenant_id, funs, &mock_ctx).await?
             } else {
                 // create user_pwd and bind user_pwd with ldap cert
                 Self::create_user_pwd_by_ldap(
@@ -402,7 +446,7 @@ impl IamCertLdapServ {
         } else {
             return Err(funs.err().not_found(
                 "rbum_cert",
-                "get_or_add_account_without_verify",
+                "bind_or_create_user_pwd_by_ldap",
                 &format!("not found ldap cert(openid): {}", &dn),
                 "401-rbum-cert-valid-error",
             ));
@@ -421,7 +465,7 @@ impl IamCertLdapServ {
         if !IamTenantServ::get_item(tenant_id, &IamTenantFilterReq::default(), funs, ctx).await?.account_self_reg {
             return Err(funs.err().not_found(
                 "rbum_cert",
-                "get_or_add_account_with_verify",
+                "create_user_pwd_by_ldap",
                 &format!("not found ldap cert(openid): {} and self-registration disabled", &dn),
                 "401-rbum-cert-valid-error",
             ));
