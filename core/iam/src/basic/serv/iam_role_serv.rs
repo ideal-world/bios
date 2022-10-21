@@ -286,7 +286,7 @@ impl IamRoleServ {
         if funs.iam_basic_role_sys_admin_id() == role_id || funs.iam_basic_role_tenant_admin_id() == role_id || funs.iam_basic_role_app_admin_id() == role_id {
             let count = IamRelServ::count_to_rels(&IamRelKind::IamAccountRole, role_id, funs, ctx).await?;
             if count == 1 {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "associated role is invalid", "409-iam-role-rel-conflict"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "delete_rel_account", "the current role has only one user and cannot be deleted", "409-iam-role-del-only-one-user"));
             }
         }
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
