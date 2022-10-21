@@ -279,7 +279,7 @@ impl IamCpCertLdapApi {
         TardisResp::ok(resp)
     }
     /// Check userpwd cert binding with ldap cert
-    #[oai(path = "/checkBind", method = "post")]
+    #[oai(path = "/check-bind", method = "post")]
     async fn check_user_pwd_is_bind(&self, login_req: Json<IamCpUserPwdCheckReq>) -> TardisApiResult<IamCpUserPwdBindResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;

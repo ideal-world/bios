@@ -381,7 +381,8 @@ impl IamCertLdapServ {
 
     pub async fn check_user_pwd_is_bind(ak: &str, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
         if IamTenantServ::is_disabled(tenant_id, funs).await? {
-            return Err(funs.err().conflict("user_pwd", "check_bind", &format!("tenant {} is disabled", tenant_id), "409-iam-tenant-is-disabled"));
+            warn!("tenant {} is disabled.check {} bind false", tenant_id,ak);
+            return Ok(false);
         }
         let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.to_string()), funs).await?;
         let ldap_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), Some(tenant_id.to_string()), funs).await?;
@@ -403,7 +404,8 @@ impl IamCertLdapServ {
                 Ok(false)
             }
         } else {
-            Err(funs.err().not_found("user_pwd", "check_bind", "not found cert record", "404-rbum-*-obj-not-exist"))
+            warn!("not found cert record .check {} bind false",ak);
+            Ok(false)
         }
     }
 
