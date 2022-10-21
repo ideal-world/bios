@@ -1104,6 +1104,15 @@ impl RbumCertServ {
             }
             (input_sk.to_string(), rbum_cert.start_time + (rbum_cert.end_time - rbum_cert.start_time))
         };
+        // todo new_sk is duplicate, Later to conf repeatable to judge
+        if original_sk == input_sk {
+            return Err(funs.err().bad_request(
+                &Self::get_obj_name(),
+                "reset_sk",
+                &format!("sk {} is duplicate", new_sk),
+                "400-rbum-cert-reset-sk-duplicate",
+            ));
+        }
         funs.db()
             .update_one(
                 rbum_cert::ActiveModel {
