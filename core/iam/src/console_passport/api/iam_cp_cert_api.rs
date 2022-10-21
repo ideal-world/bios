@@ -288,9 +288,9 @@ impl IamCpCertLdapApi {
         TardisResp::ok(resp)
     }
 
-    /// <p>bind username password cert by ldap</p>
-    /// if ak param is None then create new userpwd cert
-    /// else bind with ldap cert
+    /// bind username password cert by ldap \
+    /// if ak param is None then create new userpwd cert \
+    /// else bind with ldap cert 
     /// name-password -ldap login
     #[oai(path = "/bind-or-create-userpwd", method = "put")]
     async fn bind_or_create_user_pwd_cert_by_ldap(&self, login_req: Json<IamCpUserPwdBindWithLdapReq>) -> TardisApiResult<IamAccountInfoWithUserPwdAkResp> {
