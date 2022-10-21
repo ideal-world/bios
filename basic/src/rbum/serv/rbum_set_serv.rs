@@ -228,7 +228,8 @@ impl RbumSetServ {
         if !filter.fetch_cate_item {
             return Ok(RbumSetTreeResp { main: tree_main, ext: None });
         }
-        let mut rbum_set_items = RbumSetItemServ::find_detail_rbums(
+        let rel_rbum_item_disabled = if filter.hide_item_with_disabled { Some(false) } else { None };
+        let rbum_set_items = RbumSetItemServ::find_detail_rbums(
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     // set cate item is only used for connection,
@@ -250,6 +251,7 @@ impl RbumSetServ {
                 rel_rbum_item_ids: filter.rel_rbum_item_ids.clone(),
                 rel_rbum_item_kind_ids: filter.rel_rbum_item_kind_ids.clone(),
                 rel_rbum_item_domain_ids: filter.rel_rbum_item_domain_ids.clone(),
+                rel_rbum_item_disabled,
             },
             None,
             None,
@@ -257,9 +259,6 @@ impl RbumSetServ {
             ctx,
         )
         .await?;
-        if filter.hide_item_with_disabled {
-            rbum_set_items = rbum_set_items.into_iter().filter(|i| !i.rel_rbum_item_disabled).collect();
-        }
         if filter.hide_cate_with_empty_item {
             let exist_cate_ids =
                 tree_main.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree_main, &cate.id, &rbum_set_items)).collect::<Vec<String>>();
@@ -842,6 +841,9 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         }
         if let Some(rel_rbum_item_ids) = &filter.rel_rbum_item_ids {
             query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId).is_in(rel_rbum_item_ids.clone()));
+        }
+        if let Some(rel_rbum_item_disabled) = &filter.rel_rbum_item_disabled {
+            query.and_where(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Disabled).eq(rel_rbum_item_disabled.clone()));
         }
         if let Some(rel_rbum_item_domain_ids) = &filter.rel_rbum_item_domain_ids {
             query.and_where(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumDomainId).is_in(rel_rbum_item_domain_ids.clone()));
