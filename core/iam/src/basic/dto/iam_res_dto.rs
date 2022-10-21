@@ -22,7 +22,6 @@ pub struct IamResAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub kind: IamResKind,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -54,7 +53,6 @@ impl IamResAddReq {
 pub struct IamResModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<u32>,
     pub hide: Option<bool>,

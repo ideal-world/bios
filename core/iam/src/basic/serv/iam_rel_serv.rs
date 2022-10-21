@@ -366,10 +366,10 @@ impl IamRelServ {
                 .await?;
             }
             IamRelKind::IamAccountRole => {
-                // IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
+                IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
                 // TODO reset account cache
-                let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-                IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
+                // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
+                // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
             }
             IamRelKind::IamAccountApp => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;

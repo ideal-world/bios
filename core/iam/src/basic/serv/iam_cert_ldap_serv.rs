@@ -505,7 +505,6 @@ impl IamCertLdapServ {
             &RbumCertFilterReq {
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 rel_rbum_id: Some(account_id.to_string()),
-
                 ..Default::default()
             },
             None,
