@@ -16,6 +16,7 @@ use crate::{
     iam_config::IamBasicConfigApi,
     iam_enumeration::IamCertExtKind,
 };
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::{
     dto::{
         rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq},
@@ -481,7 +482,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: None,
+                scope_level: Some(RbumScopeLevelKind::L1),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
@@ -504,6 +505,9 @@ impl IamCertLdapServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
+        if let false = Self::check_user_pwd_is_bind(user_name, password, tenant_id, funs).await? {
+            return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "not found cert record", "404-rbum-*-obj-not-exist"));
+        }
         //验证用户名密码登录
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, tenant_id, funs).await?;
         //查出用户名密码的account_id
@@ -523,7 +527,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: None,
+                scope_level: Some(RbumScopeLevelKind::L1),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
