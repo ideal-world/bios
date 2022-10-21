@@ -385,7 +385,11 @@ impl IamCertLdapServ {
             return Err(funs.err().conflict("user_pwd", "check_bind", &format!("tenant {} is disabled", tenant_id), "409-iam-tenant-is-disabled"));
         }
         let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.to_string()), funs).await?;
-        let ldap_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), Some(tenant_id.to_string()), funs).await?;
+        let ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), Some(tenant_id.to_string()), funs).await;
+        if ldap_cert_conf_id_result.is_err() {
+            return Ok(false);
+        }
+        let ldap_cert_conf_id = ldap_cert_conf_id_result?;
         let exist = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, tenant_id, funs).await?;
         if exist {
             let mock_ctx = TardisContext {
@@ -505,7 +509,7 @@ impl IamCertLdapServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        if let false = Self::check_user_pwd_is_bind(user_name, password, tenant_id, funs).await? {
+        if let true = Self::check_user_pwd_is_bind(user_name, password, tenant_id, funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "not found cert record", "404-rbum-*-obj-not-exist"));
         }
         //验证用户名密码登录
