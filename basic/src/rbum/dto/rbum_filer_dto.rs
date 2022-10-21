@@ -131,6 +131,7 @@ pub struct RbumSetItemFilterReq {
     pub sys_code_query_depth: Option<i16>,
     pub rel_rbum_set_cate_sys_codes: Option<Vec<String>>,
     pub rel_rbum_set_cate_ids: Option<Vec<String>>,
+    pub rel_rbum_item_disabled: Option<bool>,
     pub rel_rbum_item_ids: Option<Vec<String>>,
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,

@@ -1027,6 +1027,16 @@ impl RbumCertServ {
         } else {
             new_sk.to_string()
         };
+        let old_sk = Self::show_sk(id, filter, funs, ctx).await?;
+        // todo new_sk is duplicate, Later to conf repeatable to judge
+        if new_sk == old_sk {
+            return Err(funs.err().bad_request(
+                &Self::get_obj_name(),
+                "reset_sk",
+                &format!("sk {} is duplicate", new_sk),
+                "400-rbum-cert-reset-sk-duplicate",
+            ));
+        }
         funs.db()
             .update_one(
                 rbum_cert::ActiveModel {
