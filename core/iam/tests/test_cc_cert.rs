@@ -145,6 +145,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
         &mut IamCertExtAddReq {
             ak: "GitlabUserId".to_string(),
             sk: Some("ssssssssss".to_string()),
+            ext: None,
         },
         &account_info.account_id,
         &IamCertExtKind::Gitlab,

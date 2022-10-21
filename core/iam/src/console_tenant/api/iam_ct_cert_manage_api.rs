@@ -64,7 +64,7 @@ impl IamCtCertManageApi {
         TardisResp::ok(id)
     }
 
-    /// modify manage cert ext
+    /// modify manage cert
     #[oai(path = "/:id", method = "put")]
     async fn modify_manage_cert(&self, id: Path<String>, modify_req: Json<IamCertManageModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

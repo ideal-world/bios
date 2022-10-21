@@ -67,7 +67,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             sort: Set(add_req.sort.unwrap_or(0)),
             contact_phone: Set(add_req.contact_phone.as_ref().unwrap_or(&"".to_string()).to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
-            account_self_reg: Set(add_req.account_self_reg.unwrap_or(false)),
+            account_self_reg: Set(add_req.account_self_reg.unwrap_or(true)),
             ..Default::default()
         })
     }

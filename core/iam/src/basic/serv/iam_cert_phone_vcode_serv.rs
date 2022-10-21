@@ -270,19 +270,7 @@ impl IamCertPhoneVCodeServ {
         let mut content = funs.conf::<IamConfig>().phone_template_cert_login_content.clone();
         subject = subject.replace("{vcode}", &vcode);
         content = content.replace("{vcode}", &vcode);
-        TardisMailClient::send_quiet(
-            funs.module_code().to_string(),
-            TardisMailSendReq {
-                subject,
-                txt_body: content,
-                html_body: None,
-                to: vec![phone.to_string()],
-                reply_to: None,
-                cc: None,
-                bcc: None,
-                from: None,
-            },
-        )?;
+        // todo send sms web
         Ok(())
     }
 
