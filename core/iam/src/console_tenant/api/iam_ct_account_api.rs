@@ -93,6 +93,7 @@ impl IamCtAccountApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
+                    enabled: Some(true),
                     ..Default::default()
                 },
                 rel,

@@ -35,7 +35,7 @@
 
 409-iam-cate-menu-conflict	当前目录只能挂一个菜单
 
-409-iam-role-rel-conflict	当前账号不能关联此角色
+409-iam-role-rel-conflict	当前角色不能关联此账号
 409-iam-role-del-only-one-user	当前角色只有一个用户，不能删除
 401-iam-role-illegal	角色不合法
 

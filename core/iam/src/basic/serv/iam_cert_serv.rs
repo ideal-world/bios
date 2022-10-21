@@ -706,9 +706,11 @@ impl IamCertServ {
             ..Default::default()
         };
         let rbum_cert_conf_id = Self::get_cert_conf_id_by_code(token_kind.to_string().as_str(), Some(tenant_id.clone()), funs).await?;
-        IamCertTokenServ::add_cert(&token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
 
         let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
+
+        IamCertTokenServ::add_cert(&account_info.token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
+
         Ok(account_info)
     }
 
@@ -725,6 +727,7 @@ impl IamCertServ {
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    enabled: Some(true),
                     ..Default::default()
                 },
                 ..Default::default()
