@@ -520,7 +520,8 @@ impl IamCertLdapServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        if let true = Self::check_user_pwd_is_bind(user_name, code, tenant_id, funs).await? { return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "not found cert record", "404-rbum-*-obj-not-exist"));
+        if let true = Self::check_user_pwd_is_bind(user_name, code, tenant_id, funs).await? {
+            return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "not found cert record", "404-rbum-*-obj-not-exist"));
         }
         //验证用户名密码登录
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, tenant_id, funs).await?;
