@@ -54,6 +54,7 @@ impl IamCaAccountApi {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
+                    enabled: Some(true),
                     ..Default::default()
                 },
                 rel: IamAppServ::with_app_rel_filter(&ctx.0, &funs)?,
