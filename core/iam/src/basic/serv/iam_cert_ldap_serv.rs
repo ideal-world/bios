@@ -433,7 +433,17 @@ impl IamCertLdapServ {
             mock_ctx.owner = TardisFuns::field.nanoid();
             let account_id = if let Some(ak) = login_req.bind_user_pwd.ak.clone() {
                 // bind user_pwd with ldap cert
-                Self::bind_user_pwd_by_ldap(&dn, ak.as_ref(), login_req.bind_user_pwd.sk.as_ref(), &cert_conf_id, &tenant_id, funs, &mock_ctx).await?
+                Self::bind_user_pwd_by_ldap(
+                    &dn,
+                    ak.as_ref(),
+                    login_req.bind_user_pwd.sk.as_ref(),
+                    &cert_conf_id,
+                    &tenant_id,
+                    &login_req.ldap_login.code.to_string(),
+                    funs,
+                    &mock_ctx,
+                )
+                .await?
             } else {
                 // create user_pwd and bind user_pwd with ldap cert
                 Self::create_user_pwd_by_ldap(
@@ -506,10 +516,11 @@ impl IamCertLdapServ {
         password: &str,
         cert_conf_id: &str,
         tenant_id: &str,
+        code: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
-        if let true = Self::check_user_pwd_is_bind(user_name, password, tenant_id, funs).await? {
+        if let true = Self::check_user_pwd_is_bind(user_name, code, tenant_id, funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "not found cert record", "404-rbum-*-obj-not-exist"));
         }
         //验证用户名密码登录
