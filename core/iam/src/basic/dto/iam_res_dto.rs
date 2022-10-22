@@ -24,7 +24,7 @@ pub struct IamResAddReq {
     pub kind: IamResKind,
     pub icon: Option<String>,
     pub sort: Option<u32>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "1", max_length = "255"))]
     pub method: Option<TrimString>,
     pub hide: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]

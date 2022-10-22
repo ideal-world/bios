@@ -1,7 +1,7 @@
 406-iam-ldap-addr-error	LDAP服务地址格式错误
 400-iam-account-field-missing	缺少必填字段信息
 
-409-iam-current-can-not-account-delete	登陆人无法删除自己的账号
+409-iam-current-can-not-account-delete	登录人无法删除自己的账号
 
 409-iam-tenant-can-not-delete	租户只能禁用不能删除
 401-iam-tenant-context-not-exist	请求中找不到租户信息
