@@ -12,6 +12,8 @@
 406-tardis-json-str-to-json-error	Json字符串转Json错误
 406-tardis-json-obj-to-str-error	对象转Json字符串错误
 406-tardis-json-json-to-str-error	Json转Json字符串错误
+406-tardis-json-copy-serialize-error	对象复制序列化错误
+406-tardis-json-copy-deserialize-error	对象复制反序列化错误
 
 406-tardis-crypto-aes-key-invalid	AES Key格式错误
 406-tardis-crypto-aes-error	AES处理错误
@@ -67,6 +69,7 @@
 
 -1-tardis-reldb-error	SQL执行错误
 406-tardis-reldb-url-error	SQL Url解析错误
+406-tardis-reldb-conn-init-error	数据连接初始化错误
 406-tardis-reldb-sql-error	SQL解析错误
 500-tardis-reldb-id-not-char	主键不是字符串
 500-tardis-reldb-id-not-num	主键不是数值
