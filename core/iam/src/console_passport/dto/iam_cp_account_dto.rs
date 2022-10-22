@@ -9,6 +9,7 @@ pub struct IamCpAccountInfoResp {
     pub account_id: String,
     pub account_name: String,
     pub account_icon: String,
+    pub tenant_id: Option<String>,
     pub tenant_name: Option<String>,
     pub roles: HashMap<String, String>,
     pub org: Vec<String>,
