@@ -520,11 +520,11 @@ impl IamCertLdapServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
+        //验证用户名密码登录
+        let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, tenant_id, funs).await?;
         if let true = Self::check_user_pwd_is_bind(user_name, code, tenant_id, funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "user is bound by ldap", "409-iam-user-is-bound"));
         }
-        //验证用户名密码登录
-        let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, tenant_id, funs).await?;
         //查出用户名密码的account_id
         Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &rbum_item_id, cert_conf_id, funs, ctx).await?;
         Ok(rbum_item_id)
