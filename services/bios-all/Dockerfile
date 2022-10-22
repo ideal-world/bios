@@ -1,12 +1,11 @@
 FROM ubuntu
 
+ENV TZ=Asia/Shanghai
+
 RUN apt-get update && \
     apt-get install -yq tzdata && \
-    ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && \
+    ln -fs /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
-
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt install -y --reinstall ca-certificates
 RUN update-ca-certificates -f
