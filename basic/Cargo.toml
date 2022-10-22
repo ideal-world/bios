@@ -20,7 +20,15 @@ name = "bios_basic"
 path = "src/lib.rs"
 
 [features]
-default = ["tardis", "tardis/crypto", "tardis/web-server", "tardis/web-client", "tardis/reldb", "tardis/cache", "tardis/reldb"]
+default = [
+    "tardis",
+    "tardis/crypto",
+    "tardis/web-server",
+    "tardis/web-client",
+    "tardis/reldb",
+    "tardis/cache",
+    "tardis/reldb",
+]
 with-mq = ["tardis/mq"]
 sdk = ["tardis", "tardis/web-client"]
 
