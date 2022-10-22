@@ -727,7 +727,6 @@ impl IamCertServ {
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
-                    enabled: Some(true),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -738,6 +737,9 @@ impl IamCertServ {
             ctx,
         )
         .await?;
+        if account_agg.disabled {
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-cert-lock"));
+        }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
             account_name: account_agg.name.to_string(),
