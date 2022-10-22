@@ -94,6 +94,7 @@ impl IamCpAccountServ {
             account_id: account.id.clone(),
             account_name: account.name.clone(),
             account_icon: account.icon.clone(),
+            tenant_id: Some(IamTenantServ::get_id_by_ctx(ctx, funs)?),
             tenant_name,
             roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             org,
