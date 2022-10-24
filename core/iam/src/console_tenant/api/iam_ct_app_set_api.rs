@@ -88,7 +88,8 @@ impl IamCtAppSetApi {
     async fn add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::add_set_item(
             &IamSetItemAddReq {
                 set_id,
@@ -97,7 +98,7 @@ impl IamCtAppSetApi {
                 rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
             },
             &funs,
-            &ctx.0,
+            &ctx,
         )
         .await?;
         funs.commit().await?;
@@ -119,7 +120,8 @@ impl IamCtAppSetApi {
     async fn delete_item(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::delete_set_item(&id.0, &funs, &ctx.0).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -128,8 +130,9 @@ impl IamCtAppSetApi {
     #[oai(path = "/scope", method = "get")]
     async fn check_scope(&self, app_id: Query<String>, account_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
-        let result = IamSetServ::check_scope(&app_id.0, &account_id.0.unwrap_or_else(|| ctx.0.owner.clone()), &set_id, &funs, &ctx.0).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let result = IamSetServ::check_scope(&app_id.0, &account_id.0.unwrap_or_else(|| ctx.owner.clone()), &set_id, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 }
