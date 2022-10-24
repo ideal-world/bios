@@ -368,8 +368,8 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
-            start_time: Set(add_req.start_time.unwrap_or_else(Utc::now).naive_utc()),
-            end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::days(365 * 100)).naive_utc()),
+            start_time: Set(add_req.start_time.unwrap_or_else(Utc::now)),
+            end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::days(365 * 100))),
             conn_uri: Set(add_req.conn_uri.as_ref().unwrap_or(&"".to_string()).to_string()),
             status: Set(add_req.status.to_int()),
             rel_rbum_cert_conf_id: Set(add_req.rel_rbum_cert_conf_id.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -505,10 +505,10 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             rbum_cert.ext = Set(ext.to_string());
         }
         if let Some(start_time) = modify_req.start_time {
-            rbum_cert.start_time = Set(start_time.naive_utc());
+            rbum_cert.start_time = Set(start_time);
         }
         if let Some(end_time) = modify_req.end_time {
-            rbum_cert.end_time = Set(end_time.naive_utc());
+            rbum_cert.end_time = Set(end_time);
         }
         if let Some(status) = &modify_req.status {
             rbum_cert.status = Set(status.to_int());
@@ -1118,7 +1118,7 @@ impl RbumCertServ {
                 rbum_cert::ActiveModel {
                     id: Set(id.to_string()),
                     sk: Set(new_sk),
-                    end_time: Set(end_time.naive_utc()),
+                    end_time: Set(end_time),
                     ..Default::default()
                 },
                 ctx,
