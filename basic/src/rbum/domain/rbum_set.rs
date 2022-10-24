@@ -1,4 +1,5 @@
 use tardis::basic::dto::TardisContext;
+use tardis::chrono::{self, Utc};
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::*;
@@ -25,8 +26,8 @@ pub struct Model {
 
     pub own_paths: String,
     pub owner: String,
-    pub create_time: DateTime,
-    pub update_time: DateTime,
+    pub create_time: chrono::DateTime<Utc>,
+    pub update_time: chrono::DateTime<Utc>,
 
     pub scope_level: i8,
 
@@ -60,8 +61,8 @@ impl TardisActiveModel for ActiveModel {
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).date_time())
-            .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).date_time())
+            .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
+            .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp())
             // With Scope
             .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_integer())
             // With Status

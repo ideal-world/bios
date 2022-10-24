@@ -14,6 +14,7 @@ use crate::rbum::rbum_config::{RbumConfig, RbumConfigManager};
 
 pub async fn init(code: &str, config: RbumConfig) -> TardisResult<()> {
     RbumConfigManager::add(code, config)?;
+    TardisFuns::reldb().init_basic_tables().await?;
     let db_kind = TardisFuns::reldb().backend();
     let mut tx = TardisFuns::reldb().conn();
     if TardisFuns::dict.get("__RBUM_INIT__", &tx).await?.is_some() {
