@@ -9,6 +9,7 @@ use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
@@ -48,10 +49,11 @@ impl IamCtAppSetApi {
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let only_related = only_related.0.unwrap_or(false);
         let result = if only_related {
-            IamSetServ::get_tree_with_auth_by_account(&set_id, &ctx.0.owner, &funs, &ctx.0).await?
+            IamSetServ::get_tree_with_auth_by_account(&set_id, &ctx.owner, &funs, &ctx).await?
         } else {
             IamSetServ::get_tree(
                 &set_id,
@@ -64,7 +66,7 @@ impl IamCtAppSetApi {
                     ..Default::default()
                 },
                 &funs,
-                &ctx.0,
+                &ctx,
             )
             .await?
         };
@@ -106,8 +108,9 @@ impl IamCtAppSetApi {
     #[oai(path = "/item", method = "get")]
     async fn find_items(&self, cate_id: Query<Option<String>>, item_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx.0).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 
