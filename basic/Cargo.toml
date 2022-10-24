@@ -20,7 +20,15 @@ name = "bios_basic"
 path = "src/lib.rs"
 
 [features]
-default = ["tardis", "tardis/crypto", "tardis/web-server", "tardis/web-client", "tardis/reldb", "tardis/cache", "tardis/reldb"]
+default = [
+    "tardis",
+    "tardis/crypto",
+    "tardis/web-server",
+    "tardis/web-client",
+    "tardis/reldb",
+    "tardis/cache",
+    "tardis/reldb",
+]
 with-mq = ["tardis/mq"]
 sdk = ["tardis", "tardis/web-client"]
 
@@ -30,10 +38,10 @@ async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { version = "0.1.0-alpha26", optional = true }
+tardis = { version = "0.1.0-alpha28", optional = true }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha26", features = ["test", "reldb", "sea-orm"] }
+tardis = { version = "0.1.0-alpha28", features = ["test", "reldb", "sea-orm"] }
 
 [[test]]
 name = "test_rbum"
