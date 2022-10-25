@@ -137,7 +137,7 @@ pub struct IamAccountSummaryAggResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
-
+    pub is_locked: bool,
     pub icon: String,
 
     pub roles: HashMap<String, String>,
