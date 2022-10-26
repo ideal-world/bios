@@ -1,3 +1,5 @@
+use std::f32::consts::E;
+
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
@@ -59,7 +61,12 @@ impl IamCpCertUserPwdServ {
 
     pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
-        let (_, _, rbum_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, &tenant_id, funs).await?;
+        let validate_resp = RbumCertServ::validate_by_ak_and_basic_sk(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, &tenant_id, funs).await;
+        let (_, _, rbum_item_id) = if validate_resp.is_ok() {
+            validate_resp.unwrap()
+        } else {
+            RbumCertServ::validate_by_ak_and_basic_sk(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, "", funs).await?
+        };
         let resp = IamCertServ::package_tardis_context_and_resp(login_req.tenant_id.clone(), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
         Ok(resp)
     }
