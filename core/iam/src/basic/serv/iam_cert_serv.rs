@@ -16,10 +16,13 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{
+    IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
+};
 use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq, IamCertManageModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_token_serv::IamCertTokenServ;
@@ -42,6 +45,7 @@ impl IamCertServ {
         user_pwd_cert_conf_add_req: &IamCertConfUserPwdAddOrModifyReq,
         phone_vcode_cert_conf_add_req: Option<IamCertConfPhoneVCodeAddOrModifyReq>,
         mail_vcode_cert_conf_add_req: Option<IamCertConfMailVCodeAddOrModifyReq>,
+        ldap_cert_conf_add_req: Option<Vec<IamCertConfLdapAddOrModifyReq>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
@@ -53,6 +57,14 @@ impl IamCertServ {
 
         if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
             IamCertMailVCodeServ::add_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        }
+
+        if let Some(ldap_cert_conf_add_req) = ldap_cert_conf_add_req {
+            if !ldap_cert_conf_add_req.is_empty() {
+                for add_req in ldap_cert_conf_add_req {
+                    let _ = IamCertLdapServ::add_cert_conf(&add_req, None, funs, ctx).await?;
+                }
+            }
         }
 
         IamCertTokenServ::add_cert_conf(

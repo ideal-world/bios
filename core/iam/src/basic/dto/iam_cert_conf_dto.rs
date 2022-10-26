@@ -1,3 +1,4 @@
+use crate::iam_config::{IamLdapConfig, LdapClientConfig};
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -120,6 +121,22 @@ pub struct IamCertConfLdapAddOrModifyReq {
     // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
     // this field can be &(objectCategory=group)
     pub search_base_filter: String,
+}
+
+impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
+    fn from(iam_ldap_conf: LdapClientConfig) -> Self {
+        IamCertConfLdapAddOrModifyReq {
+            code: iam_ldap_conf.code,
+            name: iam_ldap_conf.name,
+            conn_uri: iam_ldap_conf.conn_uri,
+            is_tls: iam_ldap_conf.is_tls,
+            principal: iam_ldap_conf.principal,
+            credentials: iam_ldap_conf.credentials,
+            base_dn: iam_ldap_conf.base_dn,
+            field_display_name: iam_ldap_conf.field_display_name,
+            search_base_filter: iam_ldap_conf.search_base_filter,
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

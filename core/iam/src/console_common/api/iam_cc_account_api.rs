@@ -8,7 +8,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountBoneResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountBoneResp, IamAccountExtSysBatchAddReq, IamAccountExtSysResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 #[cfg(feature = "ldap_client")]
@@ -103,9 +103,15 @@ impl IamCcAccountApi {
 impl IamCcAccountLdapApi {
     /// Find Accounts by LDAP
     #[oai(path = "/", method = "get")]
-    async fn find_from_ldap(&self, name: Query<String>, tenant_id: Query<String>, code: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
+    async fn find_from_ldap(
+        &self,
+        name: Query<String>,
+        tenant_id: Query<Option<String>>,
+        code: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<IamAccountExtSysResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertLdapServ::search_accounts(&name.0, &tenant_id.0, &code.0, &funs, &ctx.0).await?;
+        let result = IamCertLdapServ::search_accounts(&name.0, tenant_id.0, &code.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
@@ -114,11 +120,11 @@ impl IamCcAccountLdapApi {
     async fn add_account_from_ldap(
         &self,
         add_req: Json<IamAccountExtSysBatchAddReq>,
-        tenant_id: Query<String>,
+        tenant_id: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<IamAccountAddByLdapResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result = IamCertLdapServ::batch_get_or_add_account_without_verify(add_req.0, &tenant_id.0, &funs, &ctx.0).await?;
+        let result = IamCertLdapServ::batch_get_or_add_account_without_verify(add_req.0, tenant_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 }
