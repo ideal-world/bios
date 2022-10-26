@@ -1,4 +1,4 @@
-use ldap3::log::{info, warn};
+use ldap3::log::warn;
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
@@ -31,7 +31,6 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
-use tardis::basic::error::TardisError;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
@@ -269,7 +268,7 @@ impl IamCertLdapServ {
         let account = ldap_client.get_by_dn(dn, &vec!["dn", "cn", &cert_conf.field_display_name]).await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
-            let mut mock_ctx = TardisContext {
+            let mock_ctx = TardisContext {
                 own_paths: ctx.own_paths.clone(),
                 owner: TardisFuns::field.nanoid(),
                 ..Default::default()

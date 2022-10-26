@@ -2,7 +2,7 @@ use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
-use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
+use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
