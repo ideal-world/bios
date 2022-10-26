@@ -235,8 +235,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
 
     // Init kernel certs
     let mut iam_cert_conf_ldap_add_or_modify_req: Vec<IamCertConfLdapAddOrModifyReq> = vec![];
-    for config in funs.conf::<IamConfig>().ldap.client {
-        iam_cert_conf_ldap_add_or_modify_req.push(config.into());
+    for config in &funs.conf::<IamConfig>().ldap.client {
+        iam_cert_conf_ldap_add_or_modify_req.push((*config).clone().into());
     };
     IamCertServ::init_default_ident_conf(
         &IamCertConfUserPwdAddOrModifyReq {

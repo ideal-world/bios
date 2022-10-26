@@ -54,6 +54,7 @@ pub struct IamLdapConfig {
     pub client: Vec<LdapClientConfig>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LdapClientConfig {
     pub code: TrimString,
     pub name: String,
