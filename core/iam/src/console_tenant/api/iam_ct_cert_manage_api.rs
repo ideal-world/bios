@@ -164,7 +164,7 @@ impl IamCtCertManageApi {
     #[oai(path = "/rel/:item_id", method = "get")]
     async fn find_certs(&self, item_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let rbum_certs = IamCertServ::find_simple_rel_cert(&item_id.0, None, None, &funs, &ctx.0).await?;
+        let rbum_certs = IamCertServ::find_to_simple_rel_cert(&item_id.0, None, None, &funs, &ctx.0).await?;
         TardisResp::ok(rbum_certs)
     }
 }

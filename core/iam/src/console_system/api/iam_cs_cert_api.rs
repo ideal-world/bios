@@ -86,9 +86,9 @@ impl IamCsCertApi {
     /// Get UserPwd Certs By Account Id
     #[oai(path = "/userpwd", method = "get")]
     async fn get_user_pwd_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        // let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let rbum_cert = IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx).await?;
+        let rbum_cert = IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx.0).await?;
         TardisResp::ok(rbum_cert)
     }
 }

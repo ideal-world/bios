@@ -635,7 +635,7 @@ impl IamCertServ {
         Ok(())
     }
 
-    pub async fn find_simple_rel_cert(
+    pub async fn find_to_simple_rel_cert(
         item_id: &str,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
