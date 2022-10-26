@@ -19,7 +19,7 @@ use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
 };
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertLdapAddOrModifyReq, IamCertManageAddReq, IamCertManageModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq, IamCertManageModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;

@@ -4,6 +4,7 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tardis::basic::error::TardisError;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
@@ -49,6 +50,20 @@ pub struct IamLdapConfig {
     pub dc: String,
     pub bind_dn: String,
     pub bind_password: String,
+
+    pub client: Vec<LdapClientConfig>,
+}
+
+pub struct LdapClientConfig {
+    pub code: TrimString,
+    pub name: String,
+    pub conn_uri: String,
+    pub is_tls: bool,
+    pub principal: TrimString,
+    pub credentials: TrimString,
+    pub base_dn: String,
+    pub field_display_name: String,
+    pub search_base_filter: String,
 }
 
 impl Default for IamLdapConfig {
@@ -58,6 +73,7 @@ impl Default for IamLdapConfig {
             dc: "bios".to_string(),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
+            client: vec![],
         }
     }
 }
