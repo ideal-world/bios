@@ -15,19 +15,16 @@ impl IamCpCertLdapServ {
         let ldap_info = IamCertLdapServ::get_account_with_verify(
             login_req.name.as_ref(),
             login_req.password.as_ref(),
-            login_req.tenant_id.as_ref(),
+            login_req.tenant_id.clone(),
             login_req.code.as_ref(),
             funs,
         )
         .await?;
-        let mock_ctx = TardisContext {
-            own_paths: login_req.tenant_id.to_string(),
-            ..Default::default()
-        };
+        let mock_ctx = IamCertLdapServ::generate_mock_ctx_by_tenant_id(login_req.tenant_id.clone()).await;
         let resp = if let Some((account_id, access_token)) = ldap_info {
             let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
             let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
-                Some(login_req.tenant_id.clone()),
+                login_req.tenant_id.clone(),
                 &account_id,
                 Some(IamCertTokenKind::TokenDefault.to_string()),
                 Some(access_token),
@@ -60,7 +57,7 @@ impl IamCpCertLdapServ {
     }
 
     pub async fn check_user_pwd_is_bind(check_req: &IamCpUserPwdCheckReq, funs: &TardisFunsInst) -> TardisResult<IamCpUserPwdBindResp> {
-        let is_bind = IamCertLdapServ::check_user_pwd_is_bind(check_req.ak.to_string().as_ref(), check_req.code.to_string().as_ref(), check_req.tenant_id.as_ref(), funs).await?;
+        let is_bind = IamCertLdapServ::check_user_pwd_is_bind(check_req.ak.to_string().as_ref(), check_req.code.to_string().as_ref(), check_req.tenant_id.clone(), funs).await?;
         Ok(IamCpUserPwdBindResp { is_bind })
     }
 
@@ -68,17 +65,14 @@ impl IamCpCertLdapServ {
         let (account_id, access_token) = IamCertLdapServ::bind_or_create_user_pwd_by_ldap(login_req, funs).await?;
 
         let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
-            Some(login_req.tenant_id.clone()),
+            login_req.tenant_id.clone(),
             &account_id,
             Some(IamCertTokenKind::TokenDefault.to_string()),
             Some(access_token.clone()),
             funs,
         )
         .await?;
-        let mock_ctx = TardisContext {
-            own_paths: login_req.tenant_id.to_string(),
-            ..Default::default()
-        };
+        let mock_ctx = IamCertLdapServ::generate_mock_ctx_by_tenant_id(login_req.tenant_id.clone()).await;
         let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
         let resp = IamAccountInfoWithUserPwdAkResp {
             iam_account_info_resp,

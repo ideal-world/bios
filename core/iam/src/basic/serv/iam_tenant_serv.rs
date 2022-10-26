@@ -202,7 +202,7 @@ impl IamTenantServ {
         } else {
             None
         };
-        IamCertServ::init_default_ident_conf(&add_req.cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, funs, &tenant_ctx).await?;
+        IamCertServ::init_default_ident_conf(&add_req.cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, None, funs, &tenant_ctx).await?;
         IamCertServ::init_default_ext_conf(funs, &tenant_ctx).await?;
         IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
 
@@ -213,7 +213,7 @@ impl IamTenantServ {
         if let Some(cert_conf_by_ldaps) = &add_req.cert_conf_by_ldap {
             if !cert_conf_by_ldaps.is_empty() {
                 for cert_conf_by_ldap in cert_conf_by_ldaps {
-                    IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.to_string(), funs, &tenant_ctx).await?;
+                    IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, Some(tenant_id.to_string()), funs, &tenant_ctx).await?;
                 }
             }
         }
@@ -323,7 +323,7 @@ impl IamTenantServ {
 
                 let add_cert_conf_by_ldap = cert_conf_by_ldaps.iter().filter(|r| !cert_conf_by_ldap_code_id_map.contains_key(&r.code.to_string())).collect::<Vec<_>>();
                 for add in add_cert_conf_by_ldap {
-                    IamCertLdapServ::add_cert_conf(add, id.to_string(), funs, ctx).await?;
+                    IamCertLdapServ::add_cert_conf(add, Some(id.to_string()), funs, ctx).await?;
                 }
 
                 let delete_cert_conf_code_by_ldap = cert_conf_by_ldap_code_id_map
