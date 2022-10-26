@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
@@ -6,7 +7,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::web::web_resp::TardisPage;
+use tardis::web::web_resp::{TardisPage, Void};
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
@@ -463,6 +464,7 @@ impl IamAccountServ {
                 .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
                 .collect(),
                 orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
+                is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id)).await?,
             });
         }
         Ok(TardisPage {
@@ -507,5 +509,11 @@ impl IamAccountServ {
     pub async fn delete_tokens(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await
+    }
+
+    pub async fn unlock_account(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Void> {
+        RbumItemServ::check_ownership(id, funs, ctx).await?;
+        funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), id)).await?;
+        Ok(Void {})
     }
 }
