@@ -112,7 +112,7 @@ impl IamCertPhoneVCodeServ {
         )
         .await?;
         // TODO send vcode
-        Self::send_activation_phone(account_id, &add_req.phone.to_string(), &vcode, funs, ctx).await?;
+        Self::send_activation_phone(account_id, &add_req.phone, &vcode, funs, ctx).await?;
         Ok(id)
     }
 

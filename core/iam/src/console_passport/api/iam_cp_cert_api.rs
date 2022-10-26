@@ -161,7 +161,7 @@ impl IamCpCertApi {
     #[oai(path = "/validate/userpwd", method = "put")]
     async fn validate_by_user_pwd(&self, req: Json<IamCertUserPwdValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk.to_string(), &funs, &ctx.0).await?;
+        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -229,7 +229,7 @@ impl IamCpCertApi {
     async fn send_bind_phone(&self, req: Json<IamCertPhoneVCodeAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::send_bind_phone(&req.0.phone.to_string(), &funs, &ctx.0).await?;
+        IamCertPhoneVCodeServ::send_bind_phone(&req.0.phone, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -249,7 +249,7 @@ impl IamCpCertApi {
     async fn send_login_phone(&self, login_req: Json<IamCpPhoneVCodeLoginGenVCodeReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertPhoneVCodeServ::send_login_phone(&login_req.0.phone.to_string(), &login_req.0.tenant_id, &funs).await?;
+        IamCertPhoneVCodeServ::send_login_phone(&login_req.0.phone, &login_req.0.tenant_id, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

@@ -10,7 +10,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(chat_constants::COMPONENT_CODE, (chat_cc_message::ChatCcMessageApi)).await;
+    web_server.add_module(chat_constants::COMPONENT_CODE, chat_cc_message::ChatCcMessageApi).await;
     Ok(())
 }
 
