@@ -339,8 +339,13 @@ impl IamCertLdapServ {
     }
 
     pub async fn check_user_pwd_is_bind(ak: &str, code: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<bool> {
-        if tenant_id.is_some()&&IamTenantServ::is_disabled(&tenant_id.clone().unwrap(), funs).await? {
-            return Err(funs.err().conflict("user_pwd", "check_bind", &format!("tenant {} is disabled", tenant_id.unwrap()), "409-iam-tenant-is-disabled"));
+        if tenant_id.is_some() && IamTenantServ::is_disabled(&tenant_id.clone().unwrap(), funs).await? {
+            return Err(funs.err().conflict(
+                "user_pwd",
+                "check_bind",
+                &format!("tenant {} is disabled", tenant_id.unwrap()),
+                "409-iam-tenant-is-disabled",
+            ));
         }
         let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
         let ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), tenant_id.clone(), funs).await;
@@ -348,7 +353,9 @@ impl IamCertLdapServ {
             return Ok(false);
         }
         let ldap_cert_conf_id = ldap_cert_conf_id_result?;
-        let exist = if let Some(tenant_id)=tenant_id.clone(){RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await?}else {
+        let exist = if let Some(tenant_id) = tenant_id.clone() {
+            RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await?
+        } else {
             RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?
         };
         if exist {
@@ -394,7 +401,7 @@ impl IamCertLdapServ {
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
                     tenant_id.clone(),
-                    &login_req.ldap_login.code.to_string(),
+                    &login_req.ldap_login.code,
                     funs,
                     &mock_ctx,
                 )
@@ -489,10 +496,10 @@ impl IamCertLdapServ {
         Ok(rbum_item_id)
     }
 
-    pub async fn generate_mock_ctx_by_tenant_id(tenant_id:Option<String>) -> TardisContext {
+    pub async fn generate_mock_ctx_by_tenant_id(tenant_id: Option<String>) -> TardisContext {
         if let Some(tenant_id) = tenant_id {
             TardisContext {
-                own_paths: tenant_id.to_string(),
+                own_paths: tenant_id,
                 ..Default::default()
             }
         } else {

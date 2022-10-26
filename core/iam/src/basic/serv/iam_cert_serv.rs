@@ -3,7 +3,6 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::serde_json::to_string;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -63,7 +62,7 @@ impl IamCertServ {
         if let Some(ldap_cert_conf_add_req) = ldap_cert_conf_add_req {
             if !ldap_cert_conf_add_req.is_empty() {
                 for add_req in ldap_cert_conf_add_req {
-                    IamCertLdapServ::add_cert_conf(&add_req, None, funs, ctx);
+                    let _ = IamCertLdapServ::add_cert_conf(&add_req, None, funs, ctx).await?;
                 }
             }
         }
