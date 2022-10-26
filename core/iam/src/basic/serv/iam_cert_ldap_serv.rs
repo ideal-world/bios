@@ -295,7 +295,7 @@ impl IamCertLdapServ {
 
     pub async fn get_account_with_verify(user_name: &str, password: &str, tenant_id: Option<String>, code: &str, funs: &TardisFunsInst) -> TardisResult<Option<(String, String)>> {
         let mock_ctx = Self::generate_mock_ctx_by_tenant_id(tenant_id.clone()).await;
-        let (mut ldap_client, _, cert_conf_id) = Self::get_ldap_client(tenant_id.clone(), code, funs, &mock_ctx).await?;
+        let (mut ldap_client, _, cert_conf_id) = Self::get_ldap_client(None, code, funs, &mock_ctx).await?;
         let dn = if let Some(dn) = ldap_client.bind(user_name, password).await? {
             dn
         } else {
@@ -485,7 +485,17 @@ impl IamCertLdapServ {
     ) -> TardisResult<String> {
         //验证用户名密码登录
         let (_, _, rbum_item_id) = if let Some(tenant_id) = tenant_id.clone() {
-            RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, &tenant_id, funs).await?
+            let global_check = RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, "", funs).await;
+            if global_check.is_err() {
+                let tenant_check = RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, &tenant_id, funs).await;
+                if tenant_check.is_ok() {
+                    return Err(funs.err().conflict("rbum_cert", "bind_user_pwd_by_ldap", "user is private", "409-user-is-private"));
+                } else {
+                    return Err(funs.err().unauthorized("rbum_cert", "valid", "validation error", "401-rbum-cert-valid-error"));
+                }
+            } else {
+                global_check?
+            }
         } else {
             RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, "", funs).await?
         };
@@ -561,7 +571,6 @@ impl IamCertLdapServ {
 }
 
 mod ldap {
-
     use std::collections::HashMap;
 
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry};
