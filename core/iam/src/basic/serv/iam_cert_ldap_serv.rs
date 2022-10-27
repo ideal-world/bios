@@ -352,14 +352,14 @@ impl IamCertLdapServ {
                 "409-iam-tenant-is-disabled",
             ));
         }
-        let global_userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
+        let global_userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), None, funs).await?;
         let ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), None, funs).await;
         if ldap_cert_conf_id_result.is_err() {
             return Ok(false);
         }
         let ldap_cert_conf_id = ldap_cert_conf_id_result?;
-        let global_exist = RbumCertServ::check_exist(ak, &global_userpwd_cert_conf_id, "", funs).await?;
-        let exist = if let (Some(tenant_id), false) = (tenant_id, global_exist) {
+        let global_userpwd_exist = RbumCertServ::check_exist(ak, &global_userpwd_cert_conf_id, "", funs).await?;
+        let exist = if let (Some(tenant_id), false) = (tenant_id, global_userpwd_exist) {
             let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id), funs).await?;
             if let true = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await? {
                 return Err(funs.err().conflict("user_pwd", "check_bind", "user is private", "409-user-is-private"));
@@ -367,7 +367,7 @@ impl IamCertLdapServ {
                 false
             }
         } else {
-            global_exist
+            global_userpwd_exist
         };
         if exist {
             let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
