@@ -5,7 +5,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq};
-use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelEnvAggAddReq};
+use bios_basic::rbum::dto::rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAggResp, RbumRelEnvAggAddReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp, RbumRelFindReq};
 use bios_basic::rbum::rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -515,6 +515,16 @@ impl IamRelServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
         RbumRelServ::find_simple_rels(filter, desc_sort_by_create, desc_sort_by_update, is_from, funs, ctx).await
+    }
+
+    pub async fn find_rels(
+        filter: &RbumRelFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumRelAggResp>> {
+        RbumRelServ::find_rels(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     pub async fn paginate_to_id_rels(
