@@ -439,28 +439,51 @@ impl IamCertServ {
     }
 
     pub async fn get_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let manage_user_pwd_conf_id = &Self::get_cert_conf_id_by_code(
-            IamCertManageKind::ManageUserPwd.to_string().as_str(),
-            rbum_scope_helper::get_max_level_id_by_context(ctx),
+        if IamRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamCertRel.to_string()),
+                from_rbum_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
             funs,
+            ctx,
         )
-        .await?;
-        let manage_user_visa_conf_id = &Self::get_cert_conf_id_by_code(
-            IamCertManageKind::ManageUserVisa.to_string().as_str(),
-            rbum_scope_helper::get_max_level_id_by_context(ctx),
-            funs,
-        )
-        .await?;
+        .await?
+        .into_iter()
+        .filter(|x| x.rel.own_paths.contains(&ctx.own_paths.clone()) || x.rel.to_own_paths.contains(&ctx.own_paths.clone()))
+        .next()
+        .is_none()
+        {
+            return Err(funs.err().conflict("iam_cert", "get_manage_cert", "associated already exists", "409-rbum-rel-exist"));
+        }
         let manage_cert = RbumCertServ::get_rbum(
             id,
             &RbumCertFilterReq {
-                rel_rbum_cert_conf_ids: Some(vec![manage_user_pwd_conf_id.to_string(), manage_user_visa_conf_id.to_string()]),
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             funs,
             ctx,
         )
         .await?;
+        let manage_user_pwd_conf_id = &Self::get_cert_conf_id_by_code(IamCertManageKind::ManageUserPwd.to_string().as_str(), Some(manage_cert.own_paths.clone()), funs).await?;
+        let manage_user_visa_conf_id = &Self::get_cert_conf_id_by_code(IamCertManageKind::ManageUserVisa.to_string().as_str(), Some(manage_cert.own_paths.clone()), funs).await?;
+        if !(manage_cert.rel_rbum_cert_conf_id == Some(manage_user_pwd_conf_id.to_string()) || manage_cert.rel_rbum_cert_conf_id == Some(manage_user_visa_conf_id.to_string())) {
+            return Err(funs.err().conflict("iam_cert", "get_manage_cert", "associated already exists", "409-rbum-rel-exist"));
+        }
         let now_sk = RbumCertServ::show_sk(manage_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
         Ok(RbumCertSummaryWithSkResp {
             id: manage_cert.id,
@@ -600,7 +623,15 @@ impl IamCertServ {
         RbumCertServ::paginate_detail_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
-    pub async fn add_rel_cert(cert_id: &str, item_id: &str, note: Option<String>, ext: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_rel_cert(
+        cert_id: &str,
+        item_id: &str,
+        note: Option<String>,
+        ext: Option<String>,
+        own_paths: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
                 tag: IamRelKind::IamCertRel.to_string(),
@@ -608,7 +639,7 @@ impl IamCertServ {
                 from_rbum_kind: RbumRelFromKind::Cert,
                 from_rbum_id: cert_id.to_string(),
                 to_rbum_item_id: item_id.to_string(),
-                to_own_paths: ctx.own_paths.to_string(),
+                to_own_paths: own_paths.unwrap_or_else(|| ctx.own_paths.clone()),
                 to_is_outside: true,
                 ext,
             },
@@ -654,7 +685,29 @@ impl IamCertServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        IamRelServ::find_to_simple_rels(&IamRelKind::IamCertRel, item_id, desc_by_create, desc_by_update, funs, ctx).await
+        let rel = IamRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamCertRel.to_string()),
+                to_rbum_item_id: Some(item_id.to_string()),
+                ..Default::default()
+            },
+            desc_by_create,
+            desc_by_update,
+            funs,
+            ctx,
+        )
+        .await?
+        .into_iter()
+        .filter(|x| x.rel.own_paths.contains(&ctx.own_paths.clone()) || x.rel.to_own_paths.contains(&ctx.own_paths.clone()))
+        .map(|r| RbumRelBoneResp::new(r.rel, false))
+        .collect::<Vec<_>>();
+        Ok(rel)
     }
 
     pub async fn find_certs(
