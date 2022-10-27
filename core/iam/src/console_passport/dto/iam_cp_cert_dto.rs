@@ -88,7 +88,7 @@ pub struct IamCpUserPwdCheckReq {
     pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "0", max_length = "255"))]
     pub tenant_id: Option<String>,
 }
 
