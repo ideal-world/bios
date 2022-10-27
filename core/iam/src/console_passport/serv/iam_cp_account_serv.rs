@@ -33,45 +33,39 @@ impl IamCpAccountServ {
                 roles.push(role)
             }
         }
-        let apps = if !account.own_paths.is_empty() {
-            let enabled_apps = IamAppServ::find_items(
-                &IamAppFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ignore_scope: false,
-                        rel_ctx_owner: false,
-                        with_sub_own_paths: true,
-                        enabled: Some(true),
-                        ..Default::default()
-                    },
-                    rel: Some(RbumItemRelFilterReq {
-                        rel_by_from: false,
-                        is_left: false,
-                        tag: Some(IamRelKind::IamAccountApp.to_string()),
-                        from_rbum_kind: Some(RbumRelFromKind::Item),
-                        rel_item_id: Some(account.id.clone()),
-                        ..Default::default()
-                    }),
+        let enabled_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: false,
+                    rel_ctx_owner: false,
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
                     ..Default::default()
                 },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-
-            let mut apps: Vec<IamCpAccountAppInfoResp> = vec![];
-            for app in enabled_apps {
-                apps.push(IamCpAccountAppInfoResp {
-                    app_id: app.id,
-                    app_name: app.name,
-                    roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-                });
-            }
-            apps
-        } else {
-            vec![]
-        };
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    is_left: false,
+                    tag: Some(IamRelKind::IamAccountApp.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(account.id.clone()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut apps: Vec<IamCpAccountAppInfoResp> = vec![];
+        for app in enabled_apps {
+            apps.push(IamCpAccountAppInfoResp {
+                app_id: app.id,
+                app_name: app.name,
+                roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
+            });
+        }
 
         let tenant_name = if account.own_paths.is_empty() {
             None
@@ -107,6 +101,7 @@ impl IamCpAccountServ {
                         } else {
                             Some(IamTenantServ::get_id_by_ctx(ctx, funs)?)
                         },
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
                     rel_rbum_id: Some(account.id.clone()),
