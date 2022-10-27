@@ -1,3 +1,4 @@
+use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
@@ -109,18 +110,13 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// reset userpwd-cert password by account_id\
-    /// only used by userpwd-cert status is Pending
+    /// new userpwd-cert password by account_id\
+    /// only used for userpwd-cert status is Pending \
+    /// and user is global account
     #[oai(path = "/cert/userpwd/reset", method = "put")]
-    async fn reset_password(
-        &self,
-        account_id: Query<String>,
-        modify_req: Json<IamCertUserPwdRestReq>,
-        tenant_id: Option<String>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<Void> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id)?;
+    async fn new_password_for_pending_status(&self, account_id: Query<String>, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_global_account_ctx(ctx.0, &account_id.0, &funs).await?;
         funs.begin().await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
         IamCertUserPwdServ::reset_sk_for_pending_status(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
