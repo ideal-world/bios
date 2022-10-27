@@ -342,7 +342,7 @@ impl IamCertLdapServ {
     pub async fn check_user_pwd_is_bind(ak: &str, code: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<bool> {
         let mut tenant_id = tenant_id.clone();
         if tenant_id.is_some() && tenant_id.clone().unwrap().is_empty() {
-            tenant_id == None;
+            tenant_id = None;
         }
         if tenant_id.is_some() && IamTenantServ::is_disabled(&tenant_id.clone().unwrap(), funs).await? {
             return Err(funs.err().conflict(
@@ -458,7 +458,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: Some(RbumScopeLevelKind::L1),
+                scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
@@ -522,7 +522,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: Some(RbumScopeLevelKind::L1),
+                scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
