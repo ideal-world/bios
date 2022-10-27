@@ -294,7 +294,7 @@ impl IamCertLdapServ {
     }
 
     pub async fn get_account_with_verify(user_name: &str, password: &str, tenant_id: Option<String>, code: &str, funs: &TardisFunsInst) -> TardisResult<Option<(String, String)>> {
-        let mock_ctx = Self::generate_mock_ctx_by_tenant_id(tenant_id.clone()).await;
+        let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
         let (mut ldap_client, _, cert_conf_id) = Self::get_ldap_client(None, code, funs, &mock_ctx).await?;
         let dn = if let Some(dn) = ldap_client.bind(user_name, password).await? {
             dn
@@ -360,7 +360,7 @@ impl IamCertLdapServ {
             RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?
         };
         if exist {
-            let mock_ctx = Self::generate_mock_ctx_by_tenant_id(tenant_id.clone()).await;
+            let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
             if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &userpwd_cert_conf_id, funs, &mock_ctx).await? {
                 let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?;
                 if cert_id.is_some() {
@@ -379,10 +379,9 @@ impl IamCertLdapServ {
 
     pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let tenant_id = login_req.tenant_id.clone();
-        let mut mock_ctx = Self::generate_mock_ctx_by_tenant_id(tenant_id.clone()).await;
+        let mut mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
 
-        let (mut ldap_client, cert_conf, cert_conf_id) =
-            Self::get_ldap_client(login_req.tenant_id.clone(), login_req.ldap_login.code.to_string().as_str(), funs, &mock_ctx).await?;
+        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(None, login_req.ldap_login.code.to_string().as_str(), funs, &mock_ctx).await?;
         let dn = if let Some(dn) = ldap_client.bind(login_req.ldap_login.name.to_string().as_str(), login_req.ldap_login.password.as_str()).await? {
             dn
         } else {
@@ -507,15 +506,8 @@ impl IamCertLdapServ {
         Ok(rbum_item_id)
     }
 
-    pub async fn generate_mock_ctx_by_tenant_id(tenant_id: Option<String>) -> TardisContext {
-        if let Some(tenant_id) = tenant_id {
-            TardisContext {
-                own_paths: tenant_id,
-                ..Default::default()
-            }
-        } else {
-            TardisContext { ..Default::default() }
-        }
+    pub async fn generate_default_mock_ctx(_tenant_id: Option<String>) -> TardisContext {
+        TardisContext { ..Default::default() }
     }
 
     async fn do_add_account(dn: &str, name: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
