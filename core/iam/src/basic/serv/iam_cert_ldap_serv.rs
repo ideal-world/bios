@@ -354,16 +354,7 @@ impl IamCertLdapServ {
             return Ok(false);
         }
         let ldap_cert_conf_id = ldap_cert_conf_id_result?;
-        let exist = if let Some(tenant_id) = tenant_id.clone() {
-            //check global account exist first
-            if let true = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await? {
-                true
-            } else {
-                RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await?
-            }
-        } else {
-            RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?
-        };
+        let exist = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?;
         if exist {
             let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
             if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &userpwd_cert_conf_id, funs, &mock_ctx).await? {
