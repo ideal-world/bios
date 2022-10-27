@@ -20,7 +20,7 @@ impl IamCpCertLdapServ {
             funs,
         )
         .await?;
-        let mock_ctx = IamCertLdapServ::generate_mock_ctx_by_tenant_id(login_req.tenant_id.clone()).await;
+        let mock_ctx = IamCertLdapServ::generate_default_mock_ctx(login_req.tenant_id.clone()).await;
         let resp = if let Some((account_id, access_token)) = ldap_info {
             let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
             let iam_account_info_resp = IamCertServ::package_tardis_context_and_resp(
@@ -72,7 +72,7 @@ impl IamCpCertLdapServ {
             funs,
         )
         .await?;
-        let mock_ctx = IamCertLdapServ::generate_mock_ctx_by_tenant_id(login_req.tenant_id.clone()).await;
+        let mock_ctx = IamCertLdapServ::generate_default_mock_ctx(login_req.tenant_id.clone()).await;
         let (ak, status) = Self::get_pwd_cert_name(&account_id, funs, &mock_ctx).await?;
         let resp = IamAccountInfoWithUserPwdAkResp {
             iam_account_info_resp,
