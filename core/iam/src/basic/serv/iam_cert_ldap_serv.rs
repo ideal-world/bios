@@ -1,4 +1,4 @@
-use ldap3::log::warn;
+use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
@@ -352,16 +352,26 @@ impl IamCertLdapServ {
                 "409-iam-tenant-is-disabled",
             ));
         }
-        let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
-        let ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), tenant_id.clone(), funs).await;
+        let global_userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
+        let ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_code(&format!("{}{}", IamCertExtKind::Ldap, code), None, funs).await;
         if ldap_cert_conf_id_result.is_err() {
             return Ok(false);
         }
         let ldap_cert_conf_id = ldap_cert_conf_id_result?;
-        let exist = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?;
+        let global_exist = RbumCertServ::check_exist(ak, &global_userpwd_cert_conf_id, "", funs).await?;
+        let exist = if let (Some(tenant_id), false) = (tenant_id, global_exist) {
+            let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id), funs).await?;
+            if let true = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await? {
+                return Err(funs.err().conflict("user_pwd", "check_bind", "user is private", "409-user-is-private"));
+            } else {
+                false
+            }
+        } else {
+            global_exist
+        };
         if exist {
             let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
-            if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &userpwd_cert_conf_id, funs, &mock_ctx).await? {
+            if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &global_userpwd_cert_conf_id, funs, &mock_ctx).await? {
                 let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?;
                 if cert_id.is_some() {
                     Ok(true)
@@ -370,6 +380,7 @@ impl IamCertLdapServ {
                 }
             } else {
                 // Unreachable code
+                error!("function:check_bind,code should not be executed");
                 Ok(false)
             }
         } else {
