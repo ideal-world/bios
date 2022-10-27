@@ -340,6 +340,10 @@ impl IamCertLdapServ {
     }
 
     pub async fn check_user_pwd_is_bind(ak: &str, code: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<bool> {
+        let mut tenant_id = tenant_id.clone();
+        if tenant_id.is_some() && tenant_id.clone().unwrap().is_empty() {
+            tenant_id = None;
+        }
         if tenant_id.is_some() && IamTenantServ::is_disabled(&tenant_id.clone().unwrap(), funs).await? {
             return Err(funs.err().conflict(
                 "user_pwd",
@@ -354,11 +358,7 @@ impl IamCertLdapServ {
             return Ok(false);
         }
         let ldap_cert_conf_id = ldap_cert_conf_id_result?;
-        let exist = if let Some(tenant_id) = tenant_id.clone() {
-            RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await?
-        } else {
-            RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?
-        };
+        let exist = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?;
         if exist {
             let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
             if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &userpwd_cert_conf_id, funs, &mock_ctx).await? {
@@ -458,7 +458,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: Some(RbumScopeLevelKind::L1),
+                scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
@@ -522,7 +522,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: Some(RbumScopeLevelKind::L1),
+                scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
