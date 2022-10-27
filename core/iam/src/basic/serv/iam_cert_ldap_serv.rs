@@ -458,7 +458,7 @@ impl IamCertLdapServ {
                 cert_mail: None,
                 role_ids: None,
                 org_node_ids: None,
-                scope_level: Some(RbumScopeLevelKind::L1),
+                scope_level: Some(RbumScopeLevelKind::Root),
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
