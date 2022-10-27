@@ -321,48 +321,43 @@ impl IamAccountServ {
                 roles.push(role)
             }
         }
-        let apps = if !account.own_paths.is_empty() {
-            let enabled_apps = IamAppServ::find_items(
-                &IamAppFilterReq {
-                    basic: RbumBasicFilterReq {
-                        ignore_scope: false,
-                        rel_ctx_owner: false,
-                        with_sub_own_paths: true,
-                        enabled: Some(true),
-                        ..Default::default()
-                    },
-                    rel: Some(RbumItemRelFilterReq {
-                        rel_by_from: false,
-                        is_left: false,
-                        tag: Some(IamRelKind::IamAccountApp.to_string()),
-                        from_rbum_kind: Some(RbumRelFromKind::Item),
-                        rel_item_id: Some(account.id.clone()),
-                        ..Default::default()
-                    }),
+
+        let enabled_apps = IamAppServ::find_items(
+            &IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: false,
+                    rel_ctx_owner: false,
+                    with_sub_own_paths: true,
+                    enabled: Some(true),
                     ..Default::default()
                 },
-                None,
-                None,
-                funs,
-                ctx,
-            )
-            .await?;
-
-            let mut apps: Vec<IamAccountAppInfoResp> = vec![];
-            for app in enabled_apps {
-                let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, ctx).await?;
-                let groups = IamSetServ::find_flat_set_items(&set_id, account_id, true, funs, ctx).await?;
-                apps.push(IamAccountAppInfoResp {
-                    app_id: app.id,
-                    app_name: app.name,
-                    roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
-                    groups,
-                });
-            }
-            apps
-        } else {
-            vec![]
-        };
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: false,
+                    is_left: false,
+                    tag: Some(IamRelKind::IamAccountApp.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(account.id.clone()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut apps: Vec<IamAccountAppInfoResp> = vec![];
+        for app in enabled_apps {
+            let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, ctx).await?;
+            let groups = IamSetServ::find_flat_set_items(&set_id, account_id, true, funs, ctx).await?;
+            apps.push(IamAccountAppInfoResp {
+                app_id: app.id,
+                app_name: app.name,
+                roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
+                groups,
+            });
+        }
         let account_attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         let account_attr_values = IamAttrServ::find_account_attr_values(&account.id, funs, ctx).await?;
 
@@ -386,6 +381,7 @@ impl IamAccountServ {
                 &RbumCertFilterReq {
                     basic: RbumBasicFilterReq {
                         own_paths: Some(if use_sys_cert { "".to_string() } else { IamTenantServ::get_id_by_ctx(ctx, funs)? }),
+                        with_sub_own_paths: true,
                         ..Default::default()
                     },
                     rel_rbum_id: Some(account.id.clone()),
