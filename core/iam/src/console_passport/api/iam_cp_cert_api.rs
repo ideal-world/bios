@@ -109,7 +109,7 @@ impl IamCpCertApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    
+
     /// new userpwd-cert password by account_id\
     /// only used for userpwd-cert status is Pending \
     /// and user is global account
