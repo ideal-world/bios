@@ -555,7 +555,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                     return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
                 }
                 if let Some(sk) = &modify_req.sk {
-                    let sk = Self::encrypt_sk(&sk.0, &modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id)?;
+                    let sk = Self::encrypt_sk(&sk.0, modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id)?;
                     modify_req.sk = Some(TrimString(sk));
                 }
             }
