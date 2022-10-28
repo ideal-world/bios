@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use self::ldap::LdapClient;
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
-use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_enumeration::IamCertKernelKind;
@@ -359,8 +358,8 @@ impl IamCertLdapServ {
         }
         let ldap_cert_conf_id = ldap_cert_conf_id_result?;
         let global_userpwd_exist = RbumCertServ::check_exist(ak, &global_userpwd_cert_conf_id, "", funs).await?;
-        let exist = if let (Some(tenant_id), false) = (tenant_id, global_userpwd_exist) {
-            let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id), funs).await?;
+        let exist = if let (Some(tenant_id), false) = (tenant_id.clone(), global_userpwd_exist) {
+            let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
             if let true = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await? {
                 return Err(funs.err().conflict("user_pwd", "check_bind", "user is private", "409-user-is-private"));
             } else {
