@@ -43,3 +43,4 @@
 
 403-operation-not-allowed	操作不允许
 409-iam-user-is-bound	账号已经绑定
+409-user-is-private 用户私有，无法绑定
