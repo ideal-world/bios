@@ -1,4 +1,4 @@
-use crate::iam_config::{IamLdapConfig, LdapClientConfig};
+use crate::iam_config::LdapClientConfig;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
