@@ -276,6 +276,7 @@ impl IamCertLdapServ {
             let account_id = Self::do_add_account(
                 &account.dn,
                 &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_else(|| "".to_string()),
+                &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                 &cert_conf_id,
                 funs,
                 &mock_ctx,
@@ -458,27 +459,7 @@ impl IamCertLdapServ {
             ));
         }
 
-        let account_id = IamAccountServ::add_account_agg(
-            &IamAccountAggAddReq {
-                id: Some(TrimString(ctx.owner.clone())),
-                name: TrimString(account_name.to_string()),
-                cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
-                cert_password: password.into(),
-                cert_phone: None,
-                cert_mail: None,
-                role_ids: None,
-                org_node_ids: None,
-                scope_level: Some(RbumScopeLevelKind::Root),
-                disabled: None,
-                icon: None,
-                exts: HashMap::new(),
-                status: Some(RbumCertStatusKind::Pending),
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &account_id, cert_conf_id, funs, ctx).await?;
+        let account_id = Self::do_add_account(dn, account_name, password, cert_conf_id, funs, ctx).await?;
         Ok(account_id)
     }
 
@@ -520,14 +501,16 @@ impl IamCertLdapServ {
         TardisContext { ..Default::default() }
     }
 
-    async fn do_add_account(dn: &str, name: &str, cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    /// do add account and ldap/userPwd cert \
+    /// and return account_id
+    async fn do_add_account(dn: &str, account_name: &str, userpwd_password: &str, ldap_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(ctx.owner.clone())),
-                name: TrimString(name.to_string()),
+                name: TrimString(account_name.to_string()),
                 // TODO Auto match rule
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
-                cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
+                cert_password: userpwd_password.into(),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
@@ -542,7 +525,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &account_id, cert_conf_id, funs, ctx).await?;
+        Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &account_id, ldap_cert_conf_id, funs, ctx).await?;
         Ok(account_id)
     }
 

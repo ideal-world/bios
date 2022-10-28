@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::basic::dto::iam_account_dto::IamAccountAttrResp;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 
@@ -16,6 +17,7 @@ pub struct IamCpAccountInfoResp {
     pub apps: Vec<IamCpAccountAppInfoResp>,
     pub certs: HashMap<String, String>,
     pub exts: Vec<IamAccountAttrResp>,
+    pub scope_level: RbumScopeLevelKind,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
