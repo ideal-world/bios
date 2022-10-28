@@ -14,6 +14,7 @@ use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
@@ -835,6 +836,24 @@ impl IamCertServ {
 
     pub fn use_sys_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
         ctx.own_paths = "".to_string();
+        Ok(ctx)
+    }
+
+    pub async fn use_global_account_ctx(mut ctx: TardisContext, account_id: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
+        let mock_ctx = TardisContext { ..Default::default() };
+        let account = IamAccountServ::get_item(
+            account_id,
+            &IamAccountFilterReq {
+                basic: Default::default(),
+                rel: None,
+                rel2: None,
+                icon: None,
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?;
+        ctx.own_paths = account.own_paths;
         Ok(ctx)
     }
 
