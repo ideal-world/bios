@@ -485,7 +485,9 @@ impl IamCertServ {
         if !(manage_cert.rel_rbum_cert_conf_id == Some(manage_user_pwd_conf_id.to_string()) || manage_cert.rel_rbum_cert_conf_id == Some(manage_user_visa_conf_id.to_string())) {
             return Err(funs.err().conflict("iam_cert", "get_manage_cert", "associated already exists", "409-rbum-rel-exist"));
         }
-        let now_sk = RbumCertServ::show_sk(manage_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+        let mut mock_ctx = ctx.clone();
+        mock_ctx.own_paths = manage_cert.own_paths.clone();
+        let now_sk = RbumCertServ::show_sk(manage_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
         Ok(RbumCertSummaryWithSkResp {
             id: manage_cert.id,
             ak: manage_cert.ak,
