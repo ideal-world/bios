@@ -1,5 +1,3 @@
-use std::f32::consts::E;
-
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Query, payload::Json};
