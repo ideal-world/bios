@@ -124,6 +124,7 @@ impl IamCpAccountServ {
                     value: account_attr_values.get(&r.name).unwrap_or(&("".to_string())).to_string(),
                 })
                 .collect(),
+            scope_level: account.scope_level,
         };
         Ok(account_info)
     }
