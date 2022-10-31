@@ -48,3 +48,4 @@ util/gh-pages/lints.json
 *.iml
 .vscode
 .idea
+/.history/

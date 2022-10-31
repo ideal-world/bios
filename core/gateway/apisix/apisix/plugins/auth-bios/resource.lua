@@ -78,7 +78,7 @@ function _M.remove_res(res_action, res_uri)
 end
 
 local function do_match_res(res_action, res, items, multi_wildcard, matched_uris)
-    if res["$"] ~= nil and (m_utils.table_length(items) == 0 or multi_wildcard) then
+    if res["$"] ~= nil and (m_utils.table_length(items) == 0 or multi_wildcard or items[1] == "?") then
         -- matched
         local match_info = res["$"][res_action]
         if match_info ~= nil then
