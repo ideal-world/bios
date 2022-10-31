@@ -85,6 +85,7 @@ impl IamCtAccountApi {
             tag: Some(IamRelKind::IamAccountRole.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(role_id),
+            own_paths: Some(ctx.own_paths.clone()),
             ..Default::default()
         });
         let result = IamAccountServ::paginate_account_summary_aggs(
