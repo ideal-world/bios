@@ -431,6 +431,8 @@ impl IamAccountServ {
             account_aggs.push(IamAccountSummaryAggResp {
                 id: account.id.clone(),
                 name: account.name,
+                own_paths: account.own_paths,
+                owner: account.owner,
                 create_time: account.create_time,
                 update_time: account.update_time,
                 scope_level: account.scope_level,
