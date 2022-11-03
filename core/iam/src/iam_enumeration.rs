@@ -77,7 +77,7 @@ pub enum IamCertOAuth2Supplier {
 
 impl IamCertOAuth2Supplier {
     pub fn parse(kind: &str) -> TardisResult<IamCertOAuth2Supplier> {
-        IamCertOAuth2Supplier::from_str(kind).map_err(|e|TardisError::format_error(&format!("not support OAuth2Kind: {}", kind), "406-not-support-oauth2-error"))
+        IamCertOAuth2Supplier::from_str(kind).map_err(|e| TardisError::format_error(&format!("not support OAuth2Kind: {}", kind), "406-not-support-oauth2-error"))
     }
 }
 

@@ -531,7 +531,7 @@ impl IamCertLdapServ {
     }
 
     async fn get_ldap_client(tenant_id: Option<String>, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier( &IamCertExtKind::Ldap.to_string(), code, tenant_id, funs).await?;
+        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), code, tenant_id, funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
         let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.is_tls, &cert_conf.base_dn).await?;
         Ok((client, cert_conf, cert_conf_id))

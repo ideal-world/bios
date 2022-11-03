@@ -300,7 +300,8 @@ impl IamTenantServ {
         if let Some(cert_conf_by_oauth2) = &modify_req.cert_conf_by_oauth2 {
             if !cert_conf_by_oauth2.is_empty() {
                 //get intersection of modify request certificate configuration and database certificate configuration/获取修改request和数据库中配置的交集
-                let modify_cert_conf_by_oauth2 = cert_conf_by_oauth2.iter().filter(|r| cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
+                let modify_cert_conf_by_oauth2 =
+                    cert_conf_by_oauth2.iter().filter(|r| cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
                 for modify in modify_cert_conf_by_oauth2 {
                     IamCertOAuth2Serv::modify_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(&modify.supplier.to_string()).unwrap(), modify, funs, ctx).await?;
                 }

@@ -124,8 +124,8 @@ impl IamCertServ {
 
     #[deprecated]
     pub async fn init_default_ext_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::add_ext_cert_conf(&IamCertExtKind::ThirdParty, "Gitlab",rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Self::add_ext_cert_conf(&IamCertExtKind::ThirdParty,"Github", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_ext_cert_conf(&IamCertExtKind::ThirdParty, "Gitlab", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_ext_cert_conf(&IamCertExtKind::ThirdParty, "Github", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Ok(())
     }
 
@@ -339,7 +339,7 @@ impl IamCertServ {
         Ok(())
     }
 
-    #[deprecated="use add_ext_cert_conf function"]
+    #[deprecated = "use add_ext_cert_conf function"]
     pub async fn add_manage_cert_conf(rel_iam_cert_kind: &IamCertManageKind, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {

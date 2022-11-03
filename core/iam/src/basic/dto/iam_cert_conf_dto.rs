@@ -85,7 +85,7 @@ pub struct IamCertConfTokenModifyReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfOAuth2AddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub supplier:TrimString,
+    pub supplier: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]

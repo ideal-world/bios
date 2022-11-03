@@ -32,7 +32,7 @@ use crate::console_passport::serv::iam_cp_cert_oauth2_serv::IamCpCertOAuth2Serv;
 use crate::console_passport::serv::iam_cp_cert_phone_vcode_serv::IamCpCertPhoneVCodeServ;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
-use crate::iam_enumeration::{ IamCertKernelKind, IamCertOAuth2Supplier};
+use crate::iam_enumeration::{IamCertKernelKind, IamCertOAuth2Supplier};
 
 pub struct IamCpCertApi;
 pub struct IamCpCertLdapApi;

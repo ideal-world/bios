@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::env;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use tardis::basic::dto::TardisContext;
 
 use bios_iam::console_passport::dto::iam_cp_cert_dto::{
     IamCpLdapLoginReq, IamCpOAuth2LoginReq, IamCpUserPwdBindReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
@@ -10,6 +12,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::tokio::time::sleep;
 use tardis::url::quirks::password;
+use tardis::web::poem::listener::CombinedStream::A;
 use tardis::web::poem::post;
 use tardis::web::web_resp::{TardisResp, Void};
 
@@ -22,9 +25,11 @@ use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, Iam
 use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
+use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
+use bios_iam::iam_constants;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
-use bios_iam::iam_enumeration::IamCertTokenKind;
+use bios_iam::iam_enumeration::{IamCertOAuth2Supplier, IamCertTokenKind};
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
 pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIOSWebTestClient) -> TardisResult<()> {
@@ -711,10 +716,11 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: Some(true),
-                cert_conf_by_oauth2: Some(IamCertConfOAuth2AddOrModifyReq {
+                cert_conf_by_oauth2: Some(vec![IamCertConfOAuth2AddOrModifyReq {
+                    supplier: TrimString(IamCertOAuth2Supplier::WechatMp.to_string()),
                     ak: TrimString(app_id.to_string()),
                     sk: TrimString(secret.to_string()),
-                }),
+                }]),
                 cert_conf_by_ldap: None,
             },
         )
@@ -739,7 +745,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
 }
 
 pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
-    const LDAP_CODE: &str = "TEST_CODE";
+    const LDAP_SUPPLIER: &str = "TEST_LDAP";
     let user1 = "Barbara";
     let user1_pwd = "123456";
     let user2 = "testUser";
@@ -747,7 +753,56 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     info!("【login_by_ldap】");
     //=======preparation area===========
-    let tenant_id: String = client
+    let mut funs = iam_constants::get_tardis_inst();
+    let ctx = TardisContext {
+        own_paths: "".to_string(),
+        ak: "".to_string(),
+        owner: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+        ..Default::default()
+    };
+    ///add global account ldap login config
+    IamCertLdapServ::add_cert_conf(
+        &&IamCertConfLdapAddOrModifyReq {
+            supplier: TrimString(LDAP_SUPPLIER.into()),
+            name: LDAP_SUPPLIER.into(),
+            conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
+            is_tls: false,
+            principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
+            credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
+            base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
+            field_display_name: "displayName".to_string(),
+            search_base_filter: "objectClass=*".to_string(),
+        },
+        None,
+        &funs,
+        &ctx,
+    )
+    .await?;
+
+    let global_account_id: String = client
+        .post(
+            "/ct/account",
+            &IamAccountAggAddReq {
+                id: None,
+                name: TrimString("用户2".to_string()),
+                cert_user_name: TrimString("user2".to_string()),
+                cert_password: TrimString("1234567".to_string()),
+                cert_phone: None,
+                cert_mail: None,
+                role_ids: None,
+                org_node_ids: None,
+                scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                icon: None,
+                exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
+                status: None,
+            },
+        )
+        .await;
+
+    let tenant1_id: String = client
         .post(
             "/cs/tenant",
             &IamTenantAggAddReq {
@@ -778,29 +833,19 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 disabled: None,
                 account_self_reg: Some(true),
                 cert_conf_by_oauth2: None,
-                cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
-                    supplier: TrimString(LDAP_CODE.to_string()),
-                    name: "githubLdap".to_string(),
-                    conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
-                    is_tls: false,
-                    principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
-                    credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
-                    base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-                    field_display_name: "displayName".to_string(),
-                    search_base_filter: "objectClass=*".to_string(),
-                }]),
+                cert_conf_by_ldap: None,
             },
         )
         .await;
     sleep(Duration::from_secs(1)).await;
-    login_page("tenant_admin2", "123456", Some(tenant_id.clone()), None, true, client).await?;
-    let account_id: String = client
+    login_page("tenant_admin2", "123456", Some(tenant1_id.clone()), None, true, client).await?;
+    let tenant1_account_id: String = client
         .post(
             "/ct/account",
             &IamAccountAggAddReq {
                 id: None,
-                name: TrimString("用户2".to_string()),
-                cert_user_name: TrimString("user2".to_string()),
+                name: TrimString("用户3".to_string()),
+                cert_user_name: TrimString("user3".to_string()),
                 cert_password: TrimString("123456".to_string()),
                 cert_phone: None,
                 cert_mail: None,
@@ -822,10 +867,10 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .put_resp::<IamCpLdapLoginReq, String>(
             "/cp/ldap/login",
             &IamCpLdapLoginReq {
-                code: TrimString(LDAP_CODE.to_string()),
+                code: TrimString(LDAP_SUPPLIER.to_string()),
                 name: "dftrvtr".into(),
                 password: user1_pwd.to_string(),
-                tenant_id: tenant_id.clone(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await
@@ -836,10 +881,10 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .put(
             "/cp/ldap/login",
             &IamCpLdapLoginReq {
-                code: TrimString(LDAP_CODE.to_string()),
+                code: TrimString(LDAP_SUPPLIER.to_string()),
                 name: user1.into(),
                 password: user1_pwd.to_string(),
-                tenant_id: tenant_id.clone(),
+                tenant_id: None,
             },
         )
         .await;
@@ -849,11 +894,11 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     assert!(client
         .post_resp::<IamCpUserPwdCheckReq, String>(
-            "/cp/ldap/checkBind",
+            "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
                 ak: "tugherugfqeyvfb".into(),
-                code: LDAP_CODE.into(),
-                tenant_id: tenant_id.clone(),
+                code: LDAP_SUPPLIER.into(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await
@@ -862,11 +907,11 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     assert!(client
         .post_resp::<IamCpUserPwdCheckReq, String>(
-            "/cp/ldap/checkBind",
+            "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
                 ak: "user1".into(),
-                code: LDAP_CODE.into(),
-                tenant_id: tenant_id.clone(),
+                code: LDAP_SUPPLIER.into(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await
@@ -875,11 +920,11 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     let user_pwd_bind_resp: IamCpUserPwdBindResp = client
         .post(
-            "/cp/ldap/checkBind",
+            "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
                 ak: "user2".into(),
-                code: LDAP_CODE.into(),
-                tenant_id: tenant_id.clone(),
+                code: LDAP_SUPPLIER.into(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await;
@@ -893,12 +938,12 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             &IamCpUserPwdBindWithLdapReq {
                 bind_user_pwd: IamCpUserPwdBindReq { ak: None, sk: "123456".into() },
                 ldap_login: IamCpLdapLoginReq {
-                    code: LDAP_CODE.into(),
+                    code: LDAP_SUPPLIER.into(),
                     name: user1.into(),
                     password: user1_pwd.to_string(),
-                    tenant_id: tenant_id.clone(),
+                    tenant_id: Some(tenant1_id.clone()),
                 },
-                tenant_id: tenant_id.clone(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await;
@@ -929,7 +974,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             &IamCpUserPwdLoginReq {
                 ak: TrimString(user1_account.ak.to_string()),
                 sk: TrimString(rest_user1_pwd.to_string()),
-                tenant_id: tenant_id.clone().into(),
+                tenant_id: tenant1_id.clone().into(),
                 flag: None,
             },
         )
@@ -941,10 +986,10 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .put(
             "/cp/ldap/login",
             &IamCpLdapLoginReq {
-                code: TrimString(LDAP_CODE.to_string()),
+                code: TrimString(LDAP_SUPPLIER.to_string()),
                 name: user1.into(),
                 password: user1_pwd.to_string(),
-                tenant_id: tenant_id.clone(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await;
@@ -960,15 +1005,15 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             &IamCpUserPwdBindWithLdapReq {
                 bind_user_pwd: IamCpUserPwdBindReq {
                     ak: Some("user2".into()),
-                    sk: "123456".into(),
+                    sk: "1234567".into(),
                 },
                 ldap_login: IamCpLdapLoginReq {
-                    code: LDAP_CODE.into(),
+                    code: LDAP_SUPPLIER.into(),
                     name: user2.into(),
                     password: user2_pwd.to_string(),
-                    tenant_id: tenant_id.clone(),
+                    tenant_id: Some(tenant1_id.clone()),
                 },
-                tenant_id: tenant_id.clone(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await;
@@ -981,11 +1026,11 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     let user_pwd_bind_resp: IamCpUserPwdBindResp = client
         .post(
-            "/cp/ldap/checkBind",
+            "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
                 ak: "user2".into(),
-                code: LDAP_CODE.into(),
-                tenant_id: tenant_id.clone(),
+                code: LDAP_SUPPLIER.into(),
+                tenant_id: Some(tenant1_id.clone()),
             },
         )
         .await;
