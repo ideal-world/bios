@@ -32,7 +32,7 @@ use crate::console_passport::serv::iam_cp_cert_oauth2_serv::IamCpCertOAuth2Serv;
 use crate::console_passport::serv::iam_cp_cert_phone_vcode_serv::IamCpCertPhoneVCodeServ;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertKernelKind;
+use crate::iam_enumeration::{ IamCertKernelKind, IamCertOAuth2Supplier};
 
 pub struct IamCpCertApi;
 pub struct IamCpCertLdapApi;
@@ -117,7 +117,7 @@ impl IamCpCertApi {
         let mut funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_global_account_ctx(ctx.0, &account_id.0, &funs).await?;
         funs.begin().await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
         IamCertUserPwdServ::reset_sk_for_pending_status(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
@@ -138,7 +138,7 @@ impl IamCpCertApi {
     #[oai(path = "/ak/wechat-mp/:tenant_id", method = "get")]
     async fn get_ak_by_wechat_mp(&self, tenant_id: Path<String>) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
-        let resp = IamCpCertOAuth2Serv::get_ak(crate::iam_enumeration::IamCertExtKind::WechatMp, tenant_id.0, &funs).await?;
+        let resp = IamCpCertOAuth2Serv::get_ak(IamCertOAuth2Supplier::WechatMp, tenant_id.0, &funs).await?;
         TardisResp::ok(resp)
     }
 
@@ -147,7 +147,7 @@ impl IamCpCertApi {
     async fn login_or_register_by_wechat_mp(&self, login_req: Json<IamCpOAuth2LoginReq>) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let resp = IamCpCertOAuth2Serv::login_or_register(crate::iam_enumeration::IamCertExtKind::WechatMp, &login_req.0, &funs).await?;
+        let resp = IamCpCertOAuth2Serv::login_or_register(IamCertOAuth2Supplier::WechatMp, &login_req.0, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(resp)
     }

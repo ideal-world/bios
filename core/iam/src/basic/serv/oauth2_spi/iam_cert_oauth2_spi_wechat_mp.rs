@@ -8,7 +8,7 @@ pub struct IamCertOAuth2SpiWeChatMp;
 #[async_trait]
 impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
     // https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html
-    async fn get_access_token(code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
+    async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
         let result = funs
             .web_client()
             .post_to_obj::<Value>(

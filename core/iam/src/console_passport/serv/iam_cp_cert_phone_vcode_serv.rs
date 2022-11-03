@@ -17,12 +17,12 @@ pub struct IamCpCertPhoneVCodeServ;
 
 impl IamCpCertPhoneVCodeServ {
     pub async fn add_cert_phone_vocde(add_req: &IamCertPhoneVCodeAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::PhoneVCode.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         IamCertPhoneVCodeServ::add_cert(add_req, &ctx.owner, &rbum_cert_conf_id, funs, ctx).await
     }
 
     pub async fn login_by_phone_vocde(login_req: &IamCpPhoneVCodeLoginSendVCodeReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::PhoneVCode.to_string(), Some(login_req.tenant_id.clone()), funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(login_req.tenant_id.clone()), funs).await?;
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_spec_cert_conf(&login_req.phone, &login_req.vcode.0, &rbum_cert_conf_id, false, &login_req.tenant_id, funs).await?;
         let resp = IamCertServ::package_tardis_context_and_resp(Some(login_req.tenant_id.clone()), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
         Ok(resp)

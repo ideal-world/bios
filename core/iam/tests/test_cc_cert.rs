@@ -33,7 +33,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     funs.begin().await?;
 
     info!("【test_cc_cert】 : test_single_level : Rest Password");
-    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(
+    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(
         IamCertKernelKind::UserPwd.to_string().as_str(),
         rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &context.own_paths),
         &funs,
@@ -159,13 +159,13 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     );
 
     info!("【test_cc_cert】 : test_single_level : Manage Cert");
-    let manage_user_pwd_conf_id = IamCertServ::get_cert_conf_id_by_code(
+    let manage_user_pwd_conf_id = IamCertServ::get_cert_conf_id_by_kind(
         IamCertManageKind::ManageUserPwd.to_string().as_str(),
         rbum_scope_helper::get_max_level_id_by_context(&another_context),
         &funs,
     )
     .await?;
-    let manage_user_visa_conf_id = IamCertServ::get_cert_conf_id_by_code(
+    let manage_user_visa_conf_id = IamCertServ::get_cert_conf_id_by_kind(
         IamCertManageKind::ManageUserVisa.to_string().as_str(),
         rbum_scope_helper::get_max_level_id_by_context(&another_context),
         &funs,

@@ -12,7 +12,7 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamC
 use crate::basic::dto::iam_cert_dto::IamCertOAuth2AddOrModifyReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_enumeration::IamCertExtKind;
+use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
@@ -29,7 +29,7 @@ pub struct IamCertOAuth2Serv;
 
 impl IamCertOAuth2Serv {
     pub async fn add_cert_conf(
-        cert_kind: IamCertExtKind,
+        cert_supplier: IamCertOAuth2Supplier,
         add_req: &IamCertConfOAuth2AddOrModifyReq,
         rel_iam_item_id: String,
         funs: &TardisFunsInst,
@@ -37,8 +37,9 @@ impl IamCertOAuth2Serv {
     ) -> TardisResult<String> {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(cert_kind.to_string()),
-                name: TrimString(cert_kind.to_string()),
+                kind: TrimString(IamCertExtKind::OAuth2.to_string()),
+                supplier: TrimString(cert_supplier.to_string()),
+                name: TrimString(format!("{}{}", IamCertExtKind::OAuth2, cert_supplier.to_string())),
                 note: None,
                 ak_note: None,
                 ak_rule: None,
@@ -177,22 +178,23 @@ impl IamCertOAuth2Serv {
         Ok(result)
     }
 
-    pub async fn get_or_add_account(cert_kind: IamCertExtKind, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&cert_kind.to_string(), Some(tenant_id.to_string()), funs).await?;
+    pub async fn get_or_add_account(cert_supplier: IamCertOAuth2Supplier, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
+        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
         let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()
         };
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, &mock_ctx).await?;
-        let oauth_token_info = match cert_kind {
-            IamCertExtKind::WechatMp => IamCertOAuth2SpiWeChatMp::get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await,
-            _ => Err(funs.err().not_found(
-                "rbum_cert",
-                "get_or_add_account",
-                &format!("not found oauth2 kind: {}", cert_kind),
-                "404-iam-cert-oauth-kind-not-exist",
-            )),
-        }?;
+        let oauth_token_info = Self::get_access_token_func(cert_supplier).get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await?;
+        // let oauth_token_info = match cert_kind {
+        //     IamCertOAuth2Kind::WechatMp => IamCertOAuth2SpiWeChatMp::get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await,
+        //     _ => Err(funs.err().not_found(
+        //         "rbum_cert",
+        //         "get_or_add_account",
+        //         &format!("not found oauth2 kind: {}", cert_kind),
+        //         "404-iam-cert-oauth-kind-not-exist",
+        //     )),
+        // }?;
         if let Some(account_id) = Self::get_cert_rel_account_by_open_id(&oauth_token_info.open_id, &cert_conf_id, funs, &mock_ctx).await? {
             return Ok((account_id, oauth_token_info.access_token));
         }
@@ -212,7 +214,7 @@ impl IamCertOAuth2Serv {
                 name: TrimString("".to_string()),
                 // TODO Auto match rule
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
-                cert_password: TrimString(format!("{}Pw$", TardisFuns::field.nanoid_len(6))),
+                cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
@@ -239,11 +241,19 @@ impl IamCertOAuth2Serv {
         .await?;
         Ok((account_id, oauth_token_info.access_token))
     }
+
+    fn get_access_token_func(supplier: IamCertOAuth2Supplier) -> impl IamCertOAuth2Spi {
+        match supplier {
+            // IamCertOAuth2Kind::Weibo => {}
+            // IamCertOAuth2Kind::Github => {}
+            IamCertOAuth2Supplier::WechatMp => IamCertOAuth2SpiWeChatMp,
+        }
+    }
 }
 
 #[async_trait]
 pub trait IamCertOAuth2Spi {
-    async fn get_access_token(code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
+    async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
 }
 
 pub struct IamCertOAuth2TokenInfo {

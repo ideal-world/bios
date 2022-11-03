@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -29,7 +30,7 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamSetKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamSetKind};
 
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 
@@ -205,8 +206,10 @@ impl IamTenantServ {
         IamCertServ::init_default_ext_conf(funs, &tenant_ctx).await?;
         IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
 
-        if let Some(cert_conf_by_wechat_mp) = &add_req.cert_conf_by_wechat_mp {
-            IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, tenant_id.to_string(), funs, &tenant_ctx).await?;
+        if let Some(cert_conf_by_oauth2) = &add_req.cert_conf_by_oauth2 {
+            for add_req in cert_conf_by_oauth2 {
+                IamCertOAuth2Serv::add_cert_conf(IamCertOAuth2Supplier::WechatMp, add_req, tenant_id.to_string(), funs, &tenant_ctx).await?;
+            }
         }
 
         // Init pwd
@@ -267,11 +270,11 @@ impl IamTenantServ {
 
         // todo cert conf delete change disable status
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
-            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
+            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
             IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
         }
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
-            if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
+            if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
                 if !cert_conf_by_phone_vcode {
                     IamCertServ::delete_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
                 }
@@ -281,7 +284,7 @@ impl IamTenantServ {
         }
 
         if let Some(cert_conf_by_mail_vcode) = modify_req.cert_conf_by_mail_vcode {
-            if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.code == IamCertKernelKind::MailVCode.to_string()).map(|r| r.id.clone()) {
+            if let Some(cert_conf_by_mail_vcode_id) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::MailVCode.to_string()).map(|r| r.id.clone()) {
                 if !cert_conf_by_mail_vcode {
                     IamCertServ::delete_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
                 }
@@ -290,14 +293,36 @@ impl IamTenantServ {
             }
         }
 
-        if let Some(cert_conf_by_wechat_mp) = &modify_req.cert_conf_by_wechat_mp {
-            if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
-                IamCertOAuth2Serv::modify_cert_conf(&cert_conf_by_wechat_mp_id, cert_conf_by_wechat_mp, funs, ctx).await?;
+        //modify oauth2 config
+        //The current oauth2 related configuration in the database/过滤出现在数据库中oauth2相关的配置
+        let old_cert_conf_by_oauth2: Vec<_> = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect();
+        let cert_conf_by_oauth2_supplier_id_map = old_cert_conf_by_oauth2.iter().map(|r| (r.supplier.clone(), r.id.clone())).collect::<HashMap<String, String>>();
+        if let Some(cert_conf_by_oauth2) = &modify_req.cert_conf_by_oauth2 {
+            if !cert_conf_by_oauth2.is_empty() {
+                //get intersection of modify request certificate configuration and database certificate configuration/获取修改request和数据库中配置的交集
+                let modify_cert_conf_by_oauth2 = cert_conf_by_oauth2.iter().filter(|r| cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
+                for modify in modify_cert_conf_by_oauth2 {
+                    IamCertOAuth2Serv::modify_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(&modify.supplier.to_string()).unwrap(), modify, funs, ctx).await?;
+                }
+
+                let add_cert_conf_by_oauth2 = cert_conf_by_oauth2.iter().filter(|r| !cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
+                for add in add_cert_conf_by_oauth2 {
+                    IamCertOAuth2Serv::add_cert_conf(IamCertOAuth2Supplier::parse(&add.supplier)?, add, id.to_string(), funs, ctx).await?;
+                }
+
+                let delete_cert_conf_code_by_oauth2 = cert_conf_by_oauth2_supplier_id_map
+                    .iter()
+                    .map(|(k, _)| k)
+                    .filter(|r| !cert_conf_by_oauth2.iter().map(|y| y.supplier.clone().to_string()).any(|x| x == r.to_string()))
+                    .collect::<Vec<_>>();
+                for delete in delete_cert_conf_code_by_oauth2 {
+                    IamCertServ::delete_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(delete).unwrap(), funs, ctx).await?;
+                }
             } else {
-                IamCertOAuth2Serv::add_cert_conf(IamCertExtKind::WechatMp, cert_conf_by_wechat_mp, id.to_string(), funs, ctx).await?;
+                for delete_id in old_cert_conf_by_oauth2.iter().map(|r| r.id.clone()).collect::<Vec<String>>() {
+                    IamCertServ::delete_cert_conf(&delete_id, funs, ctx).await?;
+                }
             }
-        } else if let Some(cert_conf_by_wechat_mp_id) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()).map(|r| r.id.clone()) {
-            IamCertServ::delete_cert_conf(&cert_conf_by_wechat_mp_id, funs, ctx).await?;
         }
 
         Ok(())
@@ -306,18 +331,19 @@ impl IamTenantServ {
     pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
         let tenant = Self::get_item(id, filter, funs, ctx).await?;
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.code == IamCertKernelKind::UserPwd.to_string()).unwrap();
+        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
-        let cert_conf_by_wechat_mp = if let Some(cert_conf_by_wechat_mp) = cert_confs.iter().find(|r| r.code == IamCertExtKind::WechatMp.to_string()) {
-            Some(IamCertOAuth2Serv::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
-        } else {
-            None
-        };
+        let cert_conf_by_wechat_mp =
+            if let Some(cert_conf_by_wechat_mp) = cert_confs.iter().find(|r| r.kind == format!("{}{}", IamCertExtKind::OAuth2, IamCertOAuth2Supplier::WechatMp)) {
+                Some(IamCertOAuth2Serv::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
+            } else {
+                None
+            };
         let mut vec1: Vec<IamCertConfLdapAddOrModifyReq> = vec![];
-        for ldap_conf in cert_confs.iter().filter(|r| r.code.contains(&IamCertExtKind::Ldap.to_string())) {
+        for ldap_conf in cert_confs.iter().filter(|r| r.kind.contains(&IamCertExtKind::Ldap.to_string())) {
             let conf = IamCertLdapServ::get_cert_conf(&ldap_conf.id, funs, ctx).await?;
             vec1.push(IamCertConfLdapAddOrModifyReq {
-                code: TrimString(ldap_conf.code.clone()),
+                supplier: TrimString(ldap_conf.kind.clone()),
                 name: ldap_conf.name.clone(),
                 conn_uri: ldap_conf.conn_uri.clone(),
                 is_tls: conf.is_tls,
@@ -345,8 +371,8 @@ impl IamTenantServ {
             note: tenant.note.clone(),
             account_self_reg: tenant.account_self_reg,
             cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
-            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::PhoneVCode.to_string()),
-            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.code == IamCertKernelKind::MailVCode.to_string()),
+            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
+            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
             cert_conf_by_wechat_mp,
             cert_conf_by_ldap,
         };

@@ -22,7 +22,7 @@ pub struct IamCpCertUserPwdServ;
 impl IamCpCertUserPwdServ {
     pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let (_, _, rbum_item_id) = RbumCertServ::validate_by_spec_cert_conf(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await?;
         let ctx = TardisContext {
             own_paths: tenant_id.clone(),
@@ -46,12 +46,12 @@ impl IamCpCertUserPwdServ {
     }
 
     pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamCertUserPwdModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, ctx).await
     }
 
     pub async fn validate_by_user_pwd(sk: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
         let (_, _, _) = RbumCertServ::validate_by_spec_cert_conf(&user_pwd_cert.ak, sk, &rbum_cert_conf_id, false, &ctx.own_paths, funs).await?;
         Ok(())

@@ -1,4 +1,5 @@
 use crate::iam_config::LdapClientConfig;
+use crate::iam_enumeration::IamCertOAuth2Supplier;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -81,8 +82,10 @@ pub struct IamCertConfTokenModifyReq {
     pub expire_sec: Option<u32>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfOAuth2AddOrModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub supplier:TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -101,7 +104,7 @@ pub struct IamCertConfOAuth2Resp {
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: TrimString,
+    pub supplier: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -126,7 +129,7 @@ pub struct IamCertConfLdapAddOrModifyReq {
 impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
     fn from(iam_ldap_conf: LdapClientConfig) -> Self {
         IamCertConfLdapAddOrModifyReq {
-            code: iam_ldap_conf.code,
+            supplier: iam_ldap_conf.code,
             name: iam_ldap_conf.name,
             conn_uri: iam_ldap_conf.conn_uri,
             is_tls: iam_ldap_conf.is_tls,

@@ -26,7 +26,8 @@ impl IamCertTokenServ {
     ) -> TardisResult<()> {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(token_kind.to_string()),
+                kind: TrimString(token_kind.to_string()),
+                supplier: TrimString("".to_string()),
                 name: TrimString(add_req.name.to_string()),
                 note: None,
                 ak_note: None,

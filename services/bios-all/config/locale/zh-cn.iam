@@ -43,3 +43,4 @@
 
 403-operation-not-allowed	操作不允许
 409-iam-user-is-bound	账号已经绑定
+406-not-support-oauth2-error	不支持的oauth2登录方式

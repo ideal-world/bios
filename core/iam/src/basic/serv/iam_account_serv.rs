@@ -164,7 +164,7 @@ impl IamAccountServ {
             ctx,
         )
         .await?;
-        if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+        if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(ctx.own_paths.clone()), funs).await? {
             IamCertUserPwdServ::add_cert(
                 &IamCertUserPwdAddReq {
                     ak: add_req.cert_user_name.clone(),
@@ -179,7 +179,7 @@ impl IamAccountServ {
             .await?;
         }
         if let Some(cert_phone) = &add_req.cert_phone {
-            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertPhoneVCodeServ::add_cert(
                     &IamCertPhoneVCodeAddReq {
                         phone: TrimString(cert_phone.to_string()),
@@ -193,7 +193,7 @@ impl IamAccountServ {
             }
         }
         if let Some(cert_mail) = &add_req.cert_mail {
-            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_code(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
         }

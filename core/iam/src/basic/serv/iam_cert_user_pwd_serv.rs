@@ -22,7 +22,8 @@ impl IamCertUserPwdServ {
     pub async fn add_cert_conf(add_req: &IamCertConfUserPwdAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(IamCertKernelKind::UserPwd.to_string()),
+                kind: TrimString(IamCertKernelKind::UserPwd.to_string()),
+                supplier: TrimString("".to_string()),
                 name: TrimString(IamCertKernelKind::UserPwd.to_string()),
                 note: None,
                 ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(add_req, funs)?),

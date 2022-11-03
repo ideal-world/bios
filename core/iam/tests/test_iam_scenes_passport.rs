@@ -66,7 +66,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: None,
             },
         )
@@ -511,7 +511,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: None,
             },
         )
@@ -549,7 +549,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: None,
             },
         )
@@ -587,7 +587,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: None,
             },
         )
@@ -625,7 +625,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: None,
             },
         )
@@ -663,7 +663,7 @@ pub async fn security_password(client: &mut BIOSWebTestClient) -> TardisResult<(
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: None,
             },
         )
@@ -711,7 +711,7 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: Some(true),
-                cert_conf_by_wechat_mp: Some(IamCertConfOAuth2AddOrModifyReq {
+                cert_conf_by_oauth2: Some(IamCertConfOAuth2AddOrModifyReq {
                     ak: TrimString(app_id.to_string()),
                     sk: TrimString(secret.to_string()),
                 }),
@@ -777,9 +777,9 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: Some(true),
-                cert_conf_by_wechat_mp: None,
+                cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
-                    code: TrimString(LDAP_CODE.to_string()),
+                    supplier: TrimString(LDAP_CODE.to_string()),
                     name: "githubLdap".to_string(),
                     conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
                     is_tls: false,

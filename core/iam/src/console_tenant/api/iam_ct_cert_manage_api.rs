@@ -28,10 +28,10 @@ impl IamCtCertManageApi {
         let funs = iam_constants::get_tardis_inst();
         let mut conf_map: HashMap<String, String> = HashMap::new();
         let manage_user_pwd_conf_id =
-            IamCertServ::get_cert_conf_id_by_code(IamCertManageKind::ManageUserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
+            IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
         conf_map.insert(IamCertManageKind::ManageUserPwd.to_string(), manage_user_pwd_conf_id);
         let manage_user_visa_conf_id =
-            IamCertServ::get_cert_conf_id_by_code(IamCertManageKind::ManageUserVisa.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
+            IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserVisa.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
         conf_map.insert(IamCertManageKind::ManageUserVisa.to_string(), manage_user_visa_conf_id);
         TardisResp::ok(conf_map)
     }
@@ -117,9 +117,9 @@ impl IamCtCertManageApi {
             vec![conf_id.0.unwrap()]
         } else {
             let manage_user_pwd_conf_id =
-                IamCertServ::get_cert_conf_id_by_code(IamCertManageKind::ManageUserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
+                IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
             let manage_user_visa_conf_id =
-                IamCertServ::get_cert_conf_id_by_code(IamCertManageKind::ManageUserVisa.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
+                IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserVisa.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
             vec![manage_user_pwd_conf_id, manage_user_visa_conf_id]
         };
         let result = IamCertServ::paginate_certs(

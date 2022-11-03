@@ -10,7 +10,9 @@ use tardis::web::poem_openapi;
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertConfAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
-    pub code: TrimString,
+    pub kind: TrimString,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "0", max_length = "255")))]
+    pub supplier: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub name: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
@@ -87,7 +89,8 @@ pub struct RbumCertConfModifyReq {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertConfSummaryResp {
     pub id: String,
-    pub code: String,
+    pub kind: String,
+    pub supplier: String,
     pub name: String,
     pub ak_rule: String,
     pub sk_rule: String,
@@ -119,7 +122,7 @@ pub struct RbumCertConfSummaryResp {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumCertConfDetailResp {
     pub id: String,
-    pub code: String,
+    pub kind: String,
     pub name: String,
     pub note: String,
     pub ak_note: String,

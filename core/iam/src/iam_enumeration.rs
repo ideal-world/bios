@@ -46,8 +46,10 @@ pub enum IamCertKernelKind {
     UserPwd,
     MailVCode,
     PhoneVCode,
+    AkSk,
 }
 
+///todo delete now
 #[deprecated = "name needs consideration"]
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertManageKind {
@@ -57,10 +59,26 @@ pub enum IamCertManageKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertExtKind {
+    #[deprecated = "move to IamCertOAuth2Supplier"]
     Gitlab,
-    Github,
+    #[deprecated = "move to IamCertOAuth2Supplier"]
     WechatMp,
-    Ldap, // TODO
+    Ldap,
+    OAuth2,
+    ThirdParty,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamCertOAuth2Supplier {
+    // Weibo,
+    // Github,
+    WechatMp,
+}
+
+impl IamCertOAuth2Supplier {
+    pub fn parse(kind: &str) -> TardisResult<IamCertOAuth2Supplier> {
+        IamCertOAuth2Supplier::from_str(kind).map_err(|e|TardisError::format_error(&format!("not support OAuth2Kind: {}", kind), "406-not-support-oauth2-error"))
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]

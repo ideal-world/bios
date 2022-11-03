@@ -28,7 +28,8 @@ impl IamCertMailVCodeServ {
     pub async fn add_cert_conf(add_req: &IamCertConfMailVCodeAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(IamCertKernelKind::MailVCode.to_string()),
+                kind: TrimString(IamCertKernelKind::MailVCode.to_string()),
+                supplier: TrimString("".to_string()),
                 name: TrimString(IamCertKernelKind::MailVCode.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
@@ -152,7 +153,7 @@ impl IamCertMailVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_ids: Some(vec![
-                            IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
                         ]),
                         ..Default::default()
                     },
@@ -196,7 +197,7 @@ impl IamCertMailVCodeServ {
                 ak: Some(mail.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_cert_conf_ids: Some(vec![
-                    IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
                 ]),
                 ..Default::default()
             },
@@ -235,7 +236,7 @@ impl IamCertMailVCodeServ {
         if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
-                    IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
+                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
                 let id = RbumCertServ::add_rbum(
                     &mut RbumCertAddReq {
                         ak: TrimString(mail.trim().to_string()),

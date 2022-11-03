@@ -37,7 +37,8 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
     async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         Ok(rbum_cert_conf::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
-            code: Set(add_req.code.to_string()),
+            kind: Set(add_req.kind.to_string()),
+            supplier: Set(add_req.supplier.to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             ak_note: Set(add_req.ak_note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -101,14 +102,15 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 Query::select()
                     .column(rbum_cert_conf::Column::Id)
                     .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(add_req.code.0.as_str()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(add_req.kind.0.as_str()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(add_req.supplier.0.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(add_req.rel_rbum_domain_id.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).as_str())),
             )
             .await?
             > 0
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.kind), "409-rbum-*-code-exist"));
         }
         Ok(())
     }
@@ -202,7 +204,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             funs.rbum_conf_cache_key_cert_code_(),
             TardisFuns::crypto.base64.encode(&format!(
                 "{}{}{}",
-                &rbum_cert_conf.code, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
+                &rbum_cert_conf.kind, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
             ))
         );
         funs.cache()
@@ -251,7 +253,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!("{}{}{}", &result.code, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
+            TardisFuns::crypto.base64.encode(&format!("{}{}{}", &result.kind, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
         );
         funs.cache().del(key).await?;
         Ok(None)
@@ -262,7 +264,8 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         query
             .columns(vec![
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Id),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Code),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Kind),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Supplier),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Name),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Note),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::AkNote),
@@ -316,8 +319,9 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
 }
 
 impl RbumCertConfServ {
-    pub async fn get_rbum_cert_conf_id_and_ext_by_code(
-        code: &str,
+    pub async fn get_rbum_cert_conf_id_and_ext_by_kind_supplier(
+        kind: &str,
+        supplier: &str,
         rbum_domain_id: &str,
         rbum_item_id: &str,
         funs: &TardisFunsInst,
@@ -325,7 +329,7 @@ impl RbumCertConfServ {
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!("{}{}{}", code, rbum_domain_id, rbum_item_id))
+            TardisFuns::crypto.base64.encode(&format!("{}{}{}{}", kind, supplier, rbum_domain_id, rbum_item_id))
         );
         if let Some(cached_info) = funs.cache().get(key).await? {
             Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))
@@ -336,7 +340,8 @@ impl RbumCertConfServ {
                     .column(rbum_cert_conf::Column::Id)
                     .column(rbum_cert_conf::Column::Ext)
                     .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(code))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
             )
