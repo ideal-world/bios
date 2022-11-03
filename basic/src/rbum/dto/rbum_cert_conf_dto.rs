@@ -9,6 +9,7 @@ use tardis::web::poem_openapi;
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertConfAddReq {
+    ///see [IamCertKernelKind] and [IamCertExtKind]
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub kind: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "0", max_length = "255")))]

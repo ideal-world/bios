@@ -372,6 +372,8 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             id: Set(TardisFuns::field.nanoid()),
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
+            kind: Set(add_req.kind.as_ref().unwrap_or(&"".to_string()).to_string()),
+            supplier: Set(add_req.supplier.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now)),
             end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::days(365 * 100))),
@@ -573,6 +575,8 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         query
             .columns(vec![
                 (rbum_cert::Entity, rbum_cert::Column::Id),
+                (rbum_cert::Entity, rbum_cert::Column::Kind),
+                (rbum_cert::Entity, rbum_cert::Column::Supplier),
                 (rbum_cert::Entity, rbum_cert::Column::Ak),
                 (rbum_cert::Entity, rbum_cert::Column::Ext),
                 (rbum_cert::Entity, rbum_cert::Column::StartTime),

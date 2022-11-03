@@ -97,6 +97,8 @@ impl IamCertPhoneVCodeServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.phone.to_string()),
                 sk: None,
+                kind: None,
+                supplier: None,
                 vcode: Some(TrimString(vcode.clone())),
                 ext: None,
                 start_time: None,
@@ -243,6 +245,8 @@ impl IamCertPhoneVCodeServ {
                     &mut RbumCertAddReq {
                         ak: TrimString(phone.trim().to_string()),
                         sk: None,
+                        kind: None,
+                        supplier: None,
                         vcode: Some(TrimString(input_vcode.to_string())),
                         ext: None,
                         start_time: None,

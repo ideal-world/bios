@@ -68,7 +68,7 @@ impl IamCsCertApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertServ::add_ext_cert(&mut add_req.0, &account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
+        IamCertServ::add_ext_cert(&mut add_req.0, &account_id.0, &IamCertExtKind::ThirdParty, "gitlab",&funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -79,7 +79,7 @@ impl IamCsCertApi {
     async fn get_gitlab_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let rbum_cert = IamCertServ::get_ext_cert(&account_id.0, &IamCertExtKind::Gitlab, &funs, &ctx).await?;
+        let rbum_cert = IamCertServ::get_ext_cert(&account_id.0, &IamCertExtKind::ThirdParty,"gitlab", &funs, &ctx).await?;
         TardisResp::ok(rbum_cert)
     }
 

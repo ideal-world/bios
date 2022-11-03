@@ -380,6 +380,8 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
+                kind: None,
+                supplier: None,
                 vcode: None,
                 ext: Some(add_req.ext.as_ref().unwrap().to_string()),
                 start_time: None,
@@ -555,6 +557,7 @@ impl IamCertServ {
         add_req: &mut IamCertExtAddReq,
         account_id: &str,
         rel_iam_cert_kind: &IamCertExtKind,
+        cert_supplier: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
@@ -563,6 +566,8 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
+                kind: Some(rel_iam_cert_kind.to_string()),
+                supplier: Some(cert_supplier.to_string()),
                 vcode: None,
                 ext: add_req.ext.clone(),
                 start_time: None,
@@ -581,10 +586,18 @@ impl IamCertServ {
         Ok(id)
     }
 
-    pub async fn get_ext_cert(account_id: &str, rel_iam_cert_kind: &IamCertExtKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_ext_cert(
+        account_id: &str,
+        rel_iam_cert_kind: &IamCertExtKind,
+        cert_supplier: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumCertSummaryWithSkResp> {
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
+                kind: rel_iam_cert_kind.to_string(),
+                supplier: cert_supplier.to_string(),
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()

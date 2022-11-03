@@ -175,6 +175,8 @@ impl IamCertLdapServ {
                 &mut RbumCertAddReq {
                     ak: add_or_modify_req.dn.clone(),
                     sk: None,
+                    kind: None,
+                    supplier: None,
                     vcode: None,
                     ext: None,
                     start_time: None,

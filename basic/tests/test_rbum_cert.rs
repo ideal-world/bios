@@ -257,6 +257,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
     let ak_repeatable_true_test_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
             kind: TrimString("Test1".to_string()),
+            supplier: TrimString(),
             name: TrimString("akRepeatableTest1".to_string()),
             note: None,
             ak_note: None,
@@ -289,6 +290,8 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         &mut RbumCertAddReq {
             ak: "test".into(),
             sk: Some("test".into()),
+            kind: None,
+            supplier: None,
             vcode: None,
             ext: None,
             start_time: None,

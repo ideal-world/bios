@@ -59,10 +59,6 @@ pub enum IamCertManageKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertExtKind {
-    #[deprecated = "move to IamCertOAuth2Supplier"]
-    Gitlab,
-    #[deprecated = "move to IamCertOAuth2Supplier"]
-    WechatMp,
     Ldap,
     OAuth2,
     ThirdParty,

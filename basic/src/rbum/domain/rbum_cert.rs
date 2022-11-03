@@ -77,8 +77,8 @@ impl TardisActiveModel for ActiveModel {
             .collate("utf8mb4_0900_as_cs")
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Kind).not_null().string().default(""))
-            .col(ColumnDef::new(Column::Supplier).not_null().string().default(""))
+            .col(ColumnDef::new(Column::Kind).not_null().string())
+            .col(ColumnDef::new(Column::Supplier).not_null().string())
             .col(ColumnDef::new(Column::Ak).not_null().string())
             .col(ColumnDef::new(Column::Sk).not_null().string())
             .col(ColumnDef::new(Column::Ext).not_null().string())

@@ -100,6 +100,8 @@ impl IamCertUserPwdServ {
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
                 sk: Some(add_req.sk.clone()),
+                kind: None,
+                supplier: None,
                 vcode: None,
                 ext: None,
                 start_time: None,

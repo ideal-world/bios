@@ -53,4 +53,9 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
             union_id,
         })
     }
+
+    async fn get_account_name(&self) -> TardisResult<String> {
+        //todo
+        Ok("".into())
+    }
 }
