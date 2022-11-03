@@ -152,6 +152,16 @@ impl IamCpCertApi {
         TardisResp::ok(resp)
     }
 
+    /// Login by general oauth2
+    #[oai(path = "/login/:supplier", method = "put")]
+    async fn login_or_register_by_oauth2(&self, supplier:Path<String>,login_req: Json<IamCpOAuth2LoginReq>) -> TardisApiResult<IamAccountInfoResp> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let resp = IamCpCertOAuth2Serv::login_or_register(IamCertOAuth2Supplier::parse(&supplier.0)?, &login_req.0, &funs).await?;
+        funs.commit().await?;
+        TardisResp::ok(resp)
+    }
+
     /// Validate userpwd By Current Account
     #[oai(path = "/validate/userpwd", method = "put")]
     async fn validate_by_user_pwd(&self, req: Json<IamCertUserPwdValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {

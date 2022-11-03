@@ -189,15 +189,6 @@ impl IamCertOAuth2Serv {
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, &mock_ctx).await?;
         let client = Self::get_access_token_func(cert_supplier);
         let oauth_token_info=client.get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await?;
-        // let oauth_token_info = match cert_kind {
-        //     IamCertOAuth2Kind::WechatMp => IamCertOAuth2SpiWeChatMp::get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await,
-        //     _ => Err(funs.err().not_found(
-        //         "rbum_cert",
-        //         "get_or_add_account",
-        //         &format!("not found oauth2 kind: {}", cert_kind),
-        //         "404-iam-cert-oauth-kind-not-exist",
-        //     )),
-        // }?;
         if let Some(account_id) = Self::get_cert_rel_account_by_open_id(&oauth_token_info.open_id, &cert_conf_id, funs, &mock_ctx).await? {
             return Ok((account_id, oauth_token_info.access_token));
         }
@@ -214,7 +205,7 @@ impl IamCertOAuth2Serv {
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
-                name: TrimString(client.get_account_name().await?),
+                name: TrimString(client.get_account_name(oauth_token_info.clone(),funs).await?),
                 // TODO Auto match rule
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
                 cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
@@ -257,9 +248,10 @@ impl IamCertOAuth2Serv {
 #[async_trait]
 pub trait IamCertOAuth2Spi {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
-    async fn get_account_name(&self) -> TardisResult<String>;
+    async fn get_account_name(&self,oauth2_info:IamCertOAuth2TokenInfo,funs: &TardisFunsInst) -> TardisResult<String>;
 }
 
+#[derive(Clone)]
 pub struct IamCertOAuth2TokenInfo {
     pub open_id: String,
     pub access_token: String,
