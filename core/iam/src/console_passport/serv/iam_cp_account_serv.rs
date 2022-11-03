@@ -67,7 +67,7 @@ impl IamCpAccountServ {
             });
         }
 
-        let tenant_name = if account.own_paths.is_empty() {
+        let tenant_name = if ctx.own_paths.is_empty() {
             None
         } else {
             Some(IamTenantServ::peek_item(&IamTenantServ::get_id_by_ctx(ctx, funs)?, &IamTenantFilterReq::default(), funs, ctx).await?.name)
