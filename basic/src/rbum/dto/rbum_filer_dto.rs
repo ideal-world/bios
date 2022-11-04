@@ -39,10 +39,10 @@ pub struct RbumCertConfFilterReq {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 #[serde(default)]
 pub struct RbumCertFilterReq {
-    pub kind: String,
-    pub supplier: String,
     pub basic: RbumBasicFilterReq,
     pub ak: Option<String>,
+    pub kind: Option<String>,
+    pub supplier: Option<String>,
     pub status: Option<RbumCertStatusKind>,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel_rbum_kind: Option<RbumCertRelKind>,

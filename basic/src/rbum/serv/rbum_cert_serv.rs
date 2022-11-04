@@ -606,6 +606,12 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         if let Some(ak) = &filter.ak {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).eq(ak.to_string()));
         }
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Kind).eq(kind.to_string()));
+        }
+        if let Some(supplier) = &filter.supplier {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Supplier).eq(supplier.to_string()));
+        }
         if let Some(status) = &filter.status {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Status).eq(status.to_int()));
         }

@@ -596,8 +596,8 @@ impl IamCertServ {
         let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
-                kind: rel_iam_cert_kind.to_string(),
-                supplier: cert_supplier.to_string(),
+                kind: Some(rel_iam_cert_kind.to_string()),
+                supplier: Some(cert_supplier.to_string()),
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
