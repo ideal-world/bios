@@ -15,7 +15,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
+use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCpCertUserPwdServ;
 

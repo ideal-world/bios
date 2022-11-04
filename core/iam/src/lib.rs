@@ -3,6 +3,7 @@ extern crate lazy_static;
 pub mod basic;
 pub mod console_app;
 pub mod console_common;
+pub mod console_interface;
 pub mod console_passport;
 pub mod console_system;
 pub mod console_tenant;

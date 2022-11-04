@@ -16,6 +16,7 @@ use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Pending;
 use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -188,7 +189,7 @@ impl IamCertOAuth2Serv {
         };
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, &mock_ctx).await?;
         let client = Self::get_access_token_func(cert_supplier);
-        let oauth_token_info=client.get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await?;
+        let oauth_token_info = client.get_access_token(code, &cert_conf.ak, &cert_conf.sk, funs).await?;
         if let Some(account_id) = Self::get_cert_rel_account_by_open_id(&oauth_token_info.open_id, &cert_conf_id, funs, &mock_ctx).await? {
             return Ok((account_id, oauth_token_info.access_token));
         }
@@ -248,7 +249,7 @@ impl IamCertOAuth2Serv {
 #[async_trait]
 pub trait IamCertOAuth2Spi {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
-    async fn get_account_name(&self,oauth2_info:IamCertOAuth2TokenInfo,funs: &TardisFunsInst) -> TardisResult<String>;
+    async fn get_account_name(&self, oauth2_info: IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<String>;
 }
 
 #[derive(Clone)]
