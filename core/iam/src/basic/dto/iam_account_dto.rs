@@ -81,7 +81,7 @@ pub struct IamAccountSelfModifyReq {
     pub name: Option<TrimString>,
     pub disabled: Option<bool>,
 
-    #[oai(validator(min_length = "2", max_length = "1000"))]
+    // #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 
     pub exts: HashMap<String, String>,
