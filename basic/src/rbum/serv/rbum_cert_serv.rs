@@ -21,7 +21,6 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetServ;
-
 pub struct RbumCertConfServ;
 
 pub struct RbumCertServ;
@@ -783,6 +782,7 @@ impl RbumCertServ {
         rel_rbum_kind: &RbumCertRelKind,
         ignore_end_time: bool,
         own_paths: &str,
+        allowed_kinds: Vec<&str>,
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, sea_orm::FromQueryResult)]
@@ -796,6 +796,7 @@ impl RbumCertServ {
 
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct CertConfPeekResp {
+            pub kind: String,
             pub is_basic: bool,
             pub sk_encrypted: bool,
             pub rel_rbum_domain_id: String,
@@ -830,13 +831,15 @@ impl RbumCertServ {
                     .get_dto::<CertConfPeekResp>(
                         Query::select()
                             .column(rbum_cert_conf::Column::IsBasic)
+                            .column(rbum_cert_conf::Column::Kind)
                             .column(rbum_cert_conf::Column::RelRbumDomainId)
                             .column(rbum_cert_conf::Column::SkEncrypted)
                             .column(rbum_cert_conf::Column::SkLockCycleSec)
                             .column(rbum_cert_conf::Column::SkLockErrTimes)
                             .column(rbum_cert_conf::Column::SkLockDurationSec)
                             .from(rbum_cert_conf::Entity)
-                            .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id.as_str())),
+                            .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id.as_str()))
+                            .and_where(Expr::col(rbum_cert_conf::Column::Kind).is_in(allowed_kinds)),
                     )
                     .await?
                     .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf", "404-rbum-cert-conf-not-exist"))?;

@@ -15,7 +15,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
-use crate::iam_enumeration::IamCertKernelKind;
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 
 pub struct IamCpCertUserPwdServ;
 
@@ -59,11 +59,37 @@ impl IamCpCertUserPwdServ {
 
     pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
-        let validate_resp = RbumCertServ::validate_by_ak_and_basic_sk(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, &tenant_id, funs).await;
+        let validate_resp = RbumCertServ::validate_by_ak_and_basic_sk(
+            &login_req.ak.0,
+            &login_req.sk.0,
+            &RbumCertRelKind::Item,
+            false,
+            &tenant_id,
+            vec![
+                &IamCertKernelKind::UserPwd.to_string(),
+                &IamCertKernelKind::MailVCode.to_string(),
+                &IamCertKernelKind::PhoneVCode.to_string(),
+            ],
+            funs,
+        )
+        .await;
         let (_, _, rbum_item_id) = if validate_resp.is_ok() {
             validate_resp.unwrap()
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(&login_req.ak.0, &login_req.sk.0, &RbumCertRelKind::Item, false, "", funs).await?
+            RbumCertServ::validate_by_ak_and_basic_sk(
+                &login_req.ak.0,
+                &login_req.sk.0,
+                &RbumCertRelKind::Item,
+                false,
+                "",
+                vec![
+                    &IamCertKernelKind::UserPwd.to_string(),
+                    &IamCertKernelKind::MailVCode.to_string(),
+                    &IamCertKernelKind::PhoneVCode.to_string(),
+                ],
+                funs,
+            )
+            .await?
         };
         let resp = IamCertServ::package_tardis_context_and_resp(login_req.tenant_id.clone(), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
         Ok(resp)

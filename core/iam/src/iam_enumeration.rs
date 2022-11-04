@@ -61,6 +61,8 @@ pub enum IamCertManageKind {
 pub enum IamCertExtKind {
     Ldap,
     OAuth2,
+    /// No configuration exists,can't login in ,\
+    /// supplier can be "gitlab/cmbd-pwd/cmbd-ssh"
     ThirdParty,
 }
 
