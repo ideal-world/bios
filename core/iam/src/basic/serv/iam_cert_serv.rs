@@ -380,15 +380,15 @@ impl IamCertServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
-                kind: None,
-                supplier: None,
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                supplier: Some(add_req.supplier.clone()),
                 vcode: None,
                 ext: Some(add_req.ext.as_ref().unwrap().to_string()),
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: Some(add_req.rel_rbum_cert_conf_id.as_ref().unwrap().to_string()),
+                rel_rbum_cert_conf_id: None,
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: ctx.own_paths.to_string(),
                 is_outside: true,
@@ -484,11 +484,6 @@ impl IamCertServ {
             ctx,
         )
         .await?;
-        let manage_user_pwd_conf_id = &Self::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserPwd.to_string().as_str(), Some(manage_cert.own_paths.clone()), funs).await?;
-        let manage_user_visa_conf_id = &Self::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserVisa.to_string().as_str(), Some(manage_cert.own_paths.clone()), funs).await?;
-        if !(manage_cert.rel_rbum_cert_conf_id == Some(manage_user_pwd_conf_id.to_string()) || manage_cert.rel_rbum_cert_conf_id == Some(manage_user_visa_conf_id.to_string())) {
-            return Err(funs.err().conflict("iam_cert", "get_manage_cert", "associated already exists", "409-rbum-rel-exist"));
-        }
         let mut mock_ctx = ctx.clone();
         mock_ctx.own_paths = manage_cert.own_paths.clone();
         let now_sk = RbumCertServ::show_sk(manage_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
@@ -553,20 +548,12 @@ impl IamCertServ {
         Ok(id)
     }
 
-    pub async fn add_ext_cert(
-        add_req: &mut IamCertExtAddReq,
-        account_id: &str,
-        rel_iam_cert_kind: &IamCertExtKind,
-        cert_supplier: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
-        let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
+    pub async fn add_3th_kind_cert(add_req: &mut IamCertExtAddReq, account_id: &str, cert_supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
-                kind: Some(rel_iam_cert_kind.to_string()),
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(cert_supplier.to_string()),
                 vcode: None,
                 ext: add_req.ext.clone(),
@@ -574,7 +561,7 @@ impl IamCertServ {
                 end_time: None,
                 conn_uri: None,
                 status: RbumCertStatusKind::Enabled,
-                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_cert_conf_id: None,
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: account_id.to_string(),
                 is_outside: true,
@@ -586,20 +573,12 @@ impl IamCertServ {
         Ok(id)
     }
 
-    pub async fn get_ext_cert(
-        account_id: &str,
-        rel_iam_cert_kind: &IamCertExtKind,
-        cert_supplier: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let rel_rbum_cert_conf_id = &Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
+    pub async fn get_3th_kind_cert(account_id: &str, cert_supplier: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
-                kind: Some(rel_iam_cert_kind.to_string()),
-                supplier: Some(cert_supplier.to_string()),
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                supplier: Some(cert_supplier.clone()),
                 rel_rbum_id: Some(account_id.to_string()),
-                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
             },
             funs,
@@ -630,7 +609,7 @@ impl IamCertServ {
             Err(funs.err().not_found(
                 "iam_cert",
                 "get_ext_cert",
-                &format!("not found credential of kind {:?}", rel_iam_cert_kind),
+                &format!("not found credential of supplier {:?}", cert_supplier),
                 "404-iam-cert-kind-not-exist",
             ))
         }
