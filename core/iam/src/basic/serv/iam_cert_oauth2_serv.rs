@@ -206,7 +206,7 @@ impl IamCertOAuth2Serv {
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
-                name: TrimString(client.get_account_name(oauth_token_info.clone(),funs).await?),
+                name: TrimString(client.get_account_name(oauth_token_info.clone(), funs).await?),
                 // TODO Auto match rule
                 cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
                 cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),

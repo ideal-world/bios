@@ -140,43 +140,32 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await?;
 
     info!("【test_cc_cert】 : test_single_level : Add Ext Cert - Gitlab");
-    assert!(IamCertServ::get_ext_cert(&account_info.account_id, &IamCertExtKind::Gitlab, &funs, context).await.is_err());
-    IamCertServ::add_ext_cert(
+    assert!(IamCertServ::get_3th_kind_cert(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await.is_err());
+    IamCertServ::add_3th_kind_cert(
         &mut IamCertExtAddReq {
             ak: "GitlabUserId".to_string(),
             sk: Some("ssssssssss".to_string()),
             ext: None,
         },
         &account_info.account_id,
-        &IamCertExtKind::Gitlab,
+        "gitlab",
         &funs,
         context,
     )
     .await?;
     assert_eq!(
-        IamCertServ::get_ext_cert(&account_info.account_id, &IamCertExtKind::Gitlab, &funs, context).await?.ak,
+        IamCertServ::get_3th_kind_cert(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await?.ak,
         "GitlabUserId"
     );
 
-    info!("【test_cc_cert】 : test_single_level : Manage Cert");
-    let manage_user_pwd_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        IamCertManageKind::ManageUserPwd.to_string().as_str(),
-        rbum_scope_helper::get_max_level_id_by_context(&another_context),
-        &funs,
-    )
-    .await?;
-    let manage_user_visa_conf_id = IamCertServ::get_cert_conf_id_by_kind(
-        IamCertManageKind::ManageUserVisa.to_string().as_str(),
-        rbum_scope_helper::get_max_level_id_by_context(&another_context),
-        &funs,
-    )
-    .await?;
-
+    let pwd_supplier = "cmdb-pwd";
+    let visa_supplier = "cmbd-ssh";
     let manage_cert_pwd_id = IamCertServ::add_manage_cert(
         &IamCertManageAddReq {
             ak: "manage_pwd_ak".to_string(),
             sk: Some("123456".to_string()),
-            rel_rbum_cert_conf_id: Some(manage_user_pwd_conf_id.clone()),
+            supplier: pwd_supplier.to_string(),
+            rel_rbum_cert_conf_id: None,
             ext: Some("测试用户名/密码".to_string()),
         },
         &funs,
@@ -188,7 +177,8 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
         &IamCertManageAddReq {
             ak: "manage_visa_ak".to_string(),
             sk: Some("123456".to_string()),
-            rel_rbum_cert_conf_id: Some(manage_user_visa_conf_id.clone()),
+            supplier: visa_supplier.to_string(),
+            rel_rbum_cert_conf_id: None,
             ext: Some("测试用户名/证书".to_string()),
         },
         &funs,

@@ -49,7 +49,6 @@ pub enum IamCertKernelKind {
     AkSk,
 }
 
-///todo delete now
 #[deprecated = "name needs consideration"]
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertManageKind {
