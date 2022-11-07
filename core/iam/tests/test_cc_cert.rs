@@ -198,7 +198,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     IamCertServ::modify_manage_cert_ext(&manage_cert_visa_id, "测试用户名/密码2", &funs, &another_context).await?;
     let manage_cert_result = IamCertServ::paginate_certs(
         &RbumCertFilterReq {
-            rel_rbum_cert_conf_ids: Some(vec![manage_user_pwd_conf_id.clone(), manage_user_visa_conf_id.clone()]),
+            supplier: Some(vec![pwd_supplier.to_string(), visa_supplier.to_string()]),
             ..Default::default()
         },
         1,

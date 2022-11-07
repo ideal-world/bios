@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
@@ -9,12 +7,13 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertDetailResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamCertManageModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertManageKind;
+use crate::iam_enumeration::{IamCertExtKind, IamCertManageKind};
 
 pub struct IamCtCertManageApi;
 
@@ -24,6 +23,7 @@ pub struct IamCtCertManageApi;
 impl IamCtCertManageApi {
     /// Find Conf
     #[oai(path = "/conf", method = "get")]
+    #[deprecated]
     async fn find_conf(&self, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
         let mut conf_map: HashMap<String, String> = HashMap::new();
@@ -103,9 +103,37 @@ impl IamCtCertManageApi {
         TardisResp::ok(Void {})
     }
 
+    /// Paginate Manage Certs for tenant
+    #[oai(path = "/v2", method = "get")]
+    async fn paginate_certs(
+        &self,
+        page_number: Query<u64>,
+        page_size: Query<u64>,
+        supplier: Query<Vec<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<TardisPage<RbumCertDetailResp>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamCertServ::paginate_certs(
+            &RbumCertFilterReq {
+                kind: Some(IamCertExtKind::ThirdParty.to_string()),
+                supplier: Some(supplier.0),
+                ..Default::default()
+            },
+            page_number.0,
+            page_size.0,
+            None,
+            None,
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(result)
+    }
+
     /// Paginate Manage Certs
     #[oai(path = "/", method = "get")]
-    async fn paginate_certs(
+    #[deprecated = "remove"]
+    async fn paginate_certs_deprecated(
         &self,
         conf_id: Query<Option<String>>,
         page_number: Query<u64>,
