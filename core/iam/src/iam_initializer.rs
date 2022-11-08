@@ -263,8 +263,6 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
-    // Init ext certs
-    IamCertServ::init_default_ext_conf(funs, &ctx).await?;
 
     // Init manage certs
     IamCertServ::init_default_manage_conf(funs, &ctx).await?;
