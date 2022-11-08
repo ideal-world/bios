@@ -15,6 +15,8 @@ pub struct RbumCertAddReq {
     pub ak: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub sk: Option<TrimString>,
+    pub kind: Option<String>,
+    pub supplier: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub vcode: Option<TrimString>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]

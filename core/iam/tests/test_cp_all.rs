@@ -56,7 +56,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             cert_conf_by_mail_vcode: true,
             disabled: None,
             account_self_reg: None,
-            cert_conf_by_wechat_mp: None,
+            cert_conf_by_oauth2: None,
             cert_conf_by_ldap: None,
         },
         &funs,

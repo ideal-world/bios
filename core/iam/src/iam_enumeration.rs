@@ -46,6 +46,7 @@ pub enum IamCertKernelKind {
     UserPwd,
     MailVCode,
     PhoneVCode,
+    AkSk,
 }
 
 #[deprecated = "name needs consideration"]
@@ -57,10 +58,24 @@ pub enum IamCertManageKind {
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertExtKind {
-    Gitlab,
-    Github,
+    Ldap,
+    OAuth2,
+    /// No configuration exists,can't login in ,\
+    /// supplier can be "gitlab/cmbd-pwd/cmbd-ssh"
+    ThirdParty,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamCertOAuth2Supplier {
+    // Weibo,
+    // Github,
     WechatMp,
-    Ldap, // TODO
+}
+
+impl IamCertOAuth2Supplier {
+    pub fn parse(kind: &str) -> TardisResult<IamCertOAuth2Supplier> {
+        IamCertOAuth2Supplier::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {}", kind), "404-iam-cert-oauth-kind-not-exist"))
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]

@@ -12,7 +12,7 @@ pub async fn check_exist(account_name_with_tenant: &str) -> TardisResult<bool> {
     //Ok(true)
     let funs = iam_constants::get_tardis_inst();
     let (tenant_id, ak) = get_basic_info(account_name_with_tenant, &funs).await?;
-    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), &funs).await?;
+    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), &funs).await?;
     RbumCertServ::check_exist(&ak, &rbum_cert_conf_id, &tenant_id, &funs).await
 }
 
@@ -20,7 +20,7 @@ pub async fn check_cert(account_name_with_tenant: &str, pwd: &str) -> TardisResu
     //Ok(true)
     let funs = iam_constants::get_tardis_inst();
     let (tenant_id, ak) = get_basic_info(account_name_with_tenant, &funs).await?;
-    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_code(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), &funs).await?;
+    let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), &funs).await?;
     match RbumCertServ::validate_by_spec_cert_conf(&ak, pwd, &rbum_cert_conf_id, false, &tenant_id, &funs).await {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),

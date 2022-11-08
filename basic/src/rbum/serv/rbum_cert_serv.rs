@@ -7,6 +7,8 @@ use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::serde_json::to_string;
+use tardis::web::poem_openapi::types::Type;
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
 
@@ -21,7 +23,6 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetServ;
-
 pub struct RbumCertConfServ;
 
 pub struct RbumCertServ;
@@ -37,7 +38,8 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
     async fn package_add(add_req: &RbumCertConfAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_cert_conf::ActiveModel> {
         Ok(rbum_cert_conf::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
-            code: Set(add_req.code.to_string()),
+            kind: Set(add_req.kind.to_string()),
+            supplier: Set(add_req.supplier.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             ak_note: Set(add_req.ak_note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -101,14 +103,15 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 Query::select()
                     .column(rbum_cert_conf::Column::Id)
                     .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(add_req.code.0.as_str()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(add_req.kind.0.as_str()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(add_req.supplier.as_ref().unwrap_or(&TrimString("".to_string())).0.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(add_req.rel_rbum_domain_id.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).as_str())),
             )
             .await?
             > 0
         {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.code), "409-rbum-*-code-exist"));
+            return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", add_req.kind), "409-rbum-*-code-exist"));
         }
         Ok(())
     }
@@ -202,7 +205,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             funs.rbum_conf_cache_key_cert_code_(),
             TardisFuns::crypto.base64.encode(&format!(
                 "{}{}{}",
-                &rbum_cert_conf.code, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
+                &rbum_cert_conf.kind, &rbum_cert_conf.rel_rbum_domain_id, &rbum_cert_conf.rel_rbum_item_id
             ))
         );
         funs.cache()
@@ -251,7 +254,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!("{}{}{}", &result.code, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
+            TardisFuns::crypto.base64.encode(&format!("{}{}{}", &result.kind, &result.rel_rbum_domain_id, &result.rel_rbum_item_id))
         );
         funs.cache().del(key).await?;
         Ok(None)
@@ -262,7 +265,8 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         query
             .columns(vec![
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Id),
-                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Code),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Kind),
+                (rbum_cert_conf::Entity, rbum_cert_conf::Column::Supplier),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Name),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::Note),
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::AkNote),
@@ -316,8 +320,9 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
 }
 
 impl RbumCertConfServ {
-    pub async fn get_rbum_cert_conf_id_and_ext_by_code(
-        code: &str,
+    pub async fn get_rbum_cert_conf_id_and_ext_by_kind_supplier(
+        kind: &str,
+        supplier: &str,
         rbum_domain_id: &str,
         rbum_item_id: &str,
         funs: &TardisFunsInst,
@@ -325,7 +330,7 @@ impl RbumCertConfServ {
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
-            TardisFuns::crypto.base64.encode(&format!("{}{}{}", code, rbum_domain_id, rbum_item_id))
+            TardisFuns::crypto.base64.encode(&format!("{}{}{}{}", kind, supplier, rbum_domain_id, rbum_item_id))
         );
         if let Some(cached_info) = funs.cache().get(key).await? {
             Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))
@@ -336,7 +341,8 @@ impl RbumCertConfServ {
                     .column(rbum_cert_conf::Column::Id)
                     .column(rbum_cert_conf::Column::Ext)
                     .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Code).eq(code))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
             )
@@ -367,6 +373,8 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             id: Set(TardisFuns::field.nanoid()),
             ak: Set(add_req.ak.to_string()),
             sk: Set(add_req.sk.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
+            kind: Set(add_req.kind.as_ref().unwrap_or(&"".to_string()).to_string()),
+            supplier: Set(add_req.supplier.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
             start_time: Set(add_req.start_time.unwrap_or_else(Utc::now)),
             end_time: Set(add_req.end_time.unwrap_or(Utc::now() + Duration::days(365 * 100))),
@@ -448,39 +456,41 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         )
         .await?;
         if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
-            let rbum_cert_conf = RbumCertConfServ::peek_rbum(
-                rel_rbum_cert_conf_id,
-                &RbumCertConfFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
+            if !rel_rbum_cert_conf_id.is_empty() {
+                let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+                    rel_rbum_cert_conf_id,
+                    &RbumCertConfFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            // Delete Old Certs
-            if rbum_cert_conf.coexist_num != 0 {
-                let need_delete_rbum_cert_ids = Self::paginate_id_rbums(
-                    &RbumCertFilterReq {
-                        rel_rbum_kind: Some(add_req.rel_rbum_kind.clone()),
-                        rel_rbum_id: Some(add_req.rel_rbum_id.clone()),
-                        rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.clone()]),
-                        ..Default::default()
-                    },
-                    // Skip normal records
-                    2,
-                    rbum_cert_conf.coexist_num as u64 - 1,
-                    Some(true),
-                    None,
                     funs,
                     ctx,
                 )
                 .await?;
-                for need_delete_rbum_cert_id in need_delete_rbum_cert_ids.records {
-                    Self::delete_rbum(&need_delete_rbum_cert_id, funs, ctx).await?;
+                // Delete Old Certs
+                if rbum_cert_conf.coexist_num != 0 {
+                    let need_delete_rbum_cert_ids = Self::paginate_id_rbums(
+                        &RbumCertFilterReq {
+                            rel_rbum_kind: Some(add_req.rel_rbum_kind.clone()),
+                            rel_rbum_id: Some(add_req.rel_rbum_id.clone()),
+                            rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.clone()]),
+                            ..Default::default()
+                        },
+                        // Skip normal records
+                        2,
+                        rbum_cert_conf.coexist_num as u64 - 1,
+                        Some(true),
+                        None,
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                    for need_delete_rbum_cert_id in need_delete_rbum_cert_ids.records {
+                        Self::delete_rbum(&need_delete_rbum_cert_id, funs, ctx).await?;
+                    }
                 }
             }
         }
@@ -535,28 +545,30 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         )
         .await?;
         if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
-            let rbum_cert_conf = RbumCertConfServ::peek_rbum(
-                rel_rbum_cert_conf_id,
-                &RbumCertConfFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
+            if !rel_rbum_cert_conf_id.is_empty() {
+                let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+                    rel_rbum_cert_conf_id,
+                    &RbumCertConfFilterReq {
+                        basic: RbumBasicFilterReq {
+                            with_sub_own_paths: true,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            Self::check_cert_conf_constraint_by_modify(id, modify_req, &rbum_cert_conf, funs, ctx).await?;
-            // Encrypt Sk
-            if (modify_req.sk.is_some() || modify_req.ak.is_some()) && rbum_cert_conf.sk_encrypted {
-                if modify_req.ak.is_some() && modify_req.sk.is_none() {
-                    return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
-                }
-                if let Some(sk) = &modify_req.sk {
-                    let sk = Self::encrypt_sk(&sk.0, modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id)?;
-                    modify_req.sk = Some(TrimString(sk));
+                    funs,
+                    ctx,
+                )
+                .await?;
+                Self::check_cert_conf_constraint_by_modify(id, modify_req, &rbum_cert_conf, funs, ctx).await?;
+                // Encrypt Sk
+                if (modify_req.sk.is_some() || modify_req.ak.is_some()) && rbum_cert_conf.sk_encrypted {
+                    if modify_req.ak.is_some() && modify_req.sk.is_none() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "modify", "sk cannot be empty", "409-rbum-cert-ak-duplicate"));
+                    }
+                    if let Some(sk) = &modify_req.sk {
+                        let sk = Self::encrypt_sk(&sk.0, modify_req.ak.as_ref().unwrap_or(&TrimString(rbum_cert.ak)).as_ref(), rel_rbum_cert_conf_id)?;
+                        modify_req.sk = Some(TrimString(sk));
+                    }
                 }
             }
         }
@@ -568,6 +580,8 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         query
             .columns(vec![
                 (rbum_cert::Entity, rbum_cert::Column::Id),
+                (rbum_cert::Entity, rbum_cert::Column::Kind),
+                (rbum_cert::Entity, rbum_cert::Column::Supplier),
                 (rbum_cert::Entity, rbum_cert::Column::Ak),
                 (rbum_cert::Entity, rbum_cert::Column::Ext),
                 (rbum_cert::Entity, rbum_cert::Column::StartTime),
@@ -597,6 +611,12 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
             );
         if let Some(ak) = &filter.ak {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).eq(ak.to_string()));
+        }
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Kind).eq(kind.to_string()));
+        }
+        if let Some(supplier) = &filter.supplier {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Supplier).is_in::<&str, Vec<&str>>(supplier.iter().map(|s| &s[..]).collect()));
         }
         if let Some(status) = &filter.status {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Status).eq(status.to_int()));
@@ -774,6 +794,7 @@ impl RbumCertServ {
         rel_rbum_kind: &RbumCertRelKind,
         ignore_end_time: bool,
         own_paths: &str,
+        allowed_kinds: Vec<&str>,
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         #[derive(Debug, sea_orm::FromQueryResult)]
@@ -787,6 +808,7 @@ impl RbumCertServ {
 
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct CertConfPeekResp {
+            pub kind: String,
             pub is_basic: bool,
             pub sk_encrypted: bool,
             pub rel_rbum_domain_id: String,
@@ -821,13 +843,15 @@ impl RbumCertServ {
                     .get_dto::<CertConfPeekResp>(
                         Query::select()
                             .column(rbum_cert_conf::Column::IsBasic)
+                            .column(rbum_cert_conf::Column::Kind)
                             .column(rbum_cert_conf::Column::RelRbumDomainId)
                             .column(rbum_cert_conf::Column::SkEncrypted)
                             .column(rbum_cert_conf::Column::SkLockCycleSec)
                             .column(rbum_cert_conf::Column::SkLockErrTimes)
                             .column(rbum_cert_conf::Column::SkLockDurationSec)
                             .from(rbum_cert_conf::Entity)
-                            .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id.as_str())),
+                            .and_where(Expr::col(rbum_cert_conf::Column::Id).eq(rbum_cert_conf_id.as_str()))
+                            .and_where(Expr::col(rbum_cert_conf::Column::Kind).is_in(allowed_kinds)),
                     )
                     .await?
                     .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found cert conf", "404-rbum-cert-conf-not-exist"))?;

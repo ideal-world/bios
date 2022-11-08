@@ -102,6 +102,9 @@ pub struct IamCertManageAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: Option<String>,
     #[oai(validator(min_length = "2", max_length = "255"))]
+    pub supplier: String,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[deprecated]
     pub rel_rbum_cert_conf_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub ext: Option<String>,
