@@ -46,7 +46,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_cert_conf】 : Test Add : RbumCertConfServ::add_rbum");
     assert!(RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("UserPwd".to_string()),
+            kind: TrimString("UserPwd".to_string()),
+            supplier: None,
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -78,7 +79,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 
     assert!(RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("UserPwd".to_string()),
+            kind: TrimString("UserPwd".to_string()),
+            supplier: None,
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -110,7 +112,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 
     let id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("UserPwd".to_string()),
+            kind: TrimString("UserPwd".to_string()),
+            supplier: None,
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -141,7 +144,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
 
     assert!(RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("UserPwd".to_string()),
+            kind: TrimString("UserPwd".to_string()),
+            supplier: None,
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -256,7 +260,8 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
     info!("【test_rbum_cert_conf_is_ak_repeatable】 : add cert conf true as repeateable : RbumCertConfServ::add_rbum");
     let ak_repeatable_true_test_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("Test1".to_string()),
+            kind: TrimString("Test1".to_string()),
+            supplier: TrimString(),
             name: TrimString("akRepeatableTest1".to_string()),
             note: None,
             ak_note: None,
@@ -289,6 +294,8 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
         &mut RbumCertAddReq {
             ak: "test".into(),
             sk: Some("test".into()),
+            kind: None,
+            supplier: None,
             vcode: None,
             ext: None,
             start_time: None,
@@ -344,7 +351,8 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
     info!("【test_rbum_cert_conf_is_ak_repeatable】 : add cert conf false as repeateable : RbumCertConfServ::add_rbum");
     let ak_repeatable_false_test_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("Test2".to_string()),
+            kind: TrimString("Test2".to_string()),
+            supplier: None,
             name: TrimString("akRepeatableTest2".to_string()),
             note: None,
             ak_note: None,
@@ -470,7 +478,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_cert】 : Prepare Cert Conf : RbumCertConfServ::add_rbum");
     let cert_conf_user_pwd_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("UserPwd".to_string()),
+            kind: TrimString("UserPwd".to_string()),
+            supplier: None,
             name: TrimString("用户名+密码".to_string()),
             note: None,
             ak_note: None,
@@ -501,7 +510,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
 
     let cert_conf_ssh_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("MysqlConn".to_string()),
+            kind: TrimString("MysqlConn".to_string()),
+            supplier: None,
             name: TrimString("mysql ident".to_string()),
             note: None,
             ak_note: None,
@@ -827,7 +837,8 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
     info!("【test_rbum_cert】 : Prepare Cert Conf : RbumCertConfServ::add_rbum");
     let cert_conf_mail_vcode_id = RbumCertConfServ::add_rbum(
         &mut RbumCertConfAddReq {
-            code: TrimString("MailVCode".to_string()),
+            kind: TrimString("MailVCode".to_string()),
+            supplier: None,
             name: TrimString("邮箱+验证码".to_string()),
             note: None,
             ak_note: None,

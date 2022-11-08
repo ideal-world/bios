@@ -29,7 +29,8 @@ impl IamCertPhoneVCodeServ {
     pub async fn add_cert_conf(add_req: &IamCertConfPhoneVCodeAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                code: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
+                kind: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
+                supplier: None,
                 name: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
@@ -96,6 +97,8 @@ impl IamCertPhoneVCodeServ {
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.phone.to_string()),
                 sk: None,
+                kind: None,
+                supplier: None,
                 vcode: Some(TrimString(vcode.clone())),
                 ext: None,
                 start_time: None,
@@ -154,7 +157,7 @@ impl IamCertPhoneVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_ids: Some(vec![
-                            IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
                         ]),
                         ..Default::default()
                     },
@@ -198,7 +201,7 @@ impl IamCertPhoneVCodeServ {
                 ak: Some(phone.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_cert_conf_ids: Some(vec![
-                    IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
                 ]),
                 ..Default::default()
             },
@@ -237,11 +240,13 @@ impl IamCertPhoneVCodeServ {
         if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(phone, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
-                    IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
+                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
                 let id = RbumCertServ::add_rbum(
                     &mut RbumCertAddReq {
                         ak: TrimString(phone.trim().to_string()),
                         sk: None,
+                        kind: None,
+                        supplier: None,
                         vcode: Some(TrimString(input_vcode.to_string())),
                         ext: None,
                         start_time: None,

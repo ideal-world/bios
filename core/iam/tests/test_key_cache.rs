@@ -62,14 +62,14 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             cert_conf_by_mail_vcode: true,
             disabled: None,
             account_self_reg: None,
-            cert_conf_by_wechat_mp: None,
+            cert_conf_by_oauth2: None,
             cert_conf_by_ldap: None,
         },
         &funs,
     )
     .await?;
     IamCertTokenServ::modify_cert_conf(
-        &IamCertServ::get_cert_conf_id_by_code(IamCertTokenKind::TokenDefault.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
+        &IamCertServ::get_cert_conf_id_by_kind(IamCertTokenKind::TokenDefault.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
         &IamCertConfTokenModifyReq {
             name: None,
             coexist_num: Some(2),
@@ -192,7 +192,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             new_sk: TrimString("45678".to_string()),
         },
         &account_resp.account_id,
-        &IamCertServ::get_cert_conf_id_by_code(IamCertKernelKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
+        &IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
         &funs,
         &tenant_admin_context,
     )

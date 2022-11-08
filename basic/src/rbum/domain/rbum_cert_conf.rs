@@ -14,7 +14,8 @@ use tardis::db::sea_orm::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    pub code: String,
+    pub kind: String,
+    pub supplier: String,
     pub name: String,
     pub note: String,
     pub ak_note: String,
@@ -83,7 +84,8 @@ impl TardisActiveModel for ActiveModel {
             .collate("utf8mb4_0900_as_cs")
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Code).not_null().string())
+            .col(ColumnDef::new(Column::Kind).not_null().string_len(127))
+            .col(ColumnDef::new(Column::Supplier).not_null().string_len(127))
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::AkNote).not_null().string())
@@ -118,9 +120,10 @@ impl TardisActiveModel for ActiveModel {
         vec![
             Index::create().name(&format!("idx-{}-{}", Entity.table_name(), Column::OwnPaths.to_string())).table(Entity).col(Column::OwnPaths).to_owned(),
             Index::create()
-                .name(&format!("idx-{}-{}", Entity.table_name(), Column::Code.to_string()))
+                .name(&format!("idx-{}-{}", Entity.table_name(), Column::Kind.to_string()))
                 .table(Entity)
-                .col(Column::Code)
+                .col(Column::Kind)
+                .col(Column::Supplier)
                 .col(Column::RelRbumDomainId)
                 .col(Column::RelRbumItemId)
                 .unique()
