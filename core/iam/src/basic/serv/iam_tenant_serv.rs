@@ -203,8 +203,6 @@ impl IamTenantServ {
             None
         };
         IamCertServ::init_default_ident_conf(&add_req.cert_conf_by_user_pwd, cert_conf_by_phone_vcode, cert_conf_by_mail_vcode, None, funs, &tenant_ctx).await?;
-        IamCertServ::init_default_ext_conf(funs, &tenant_ctx).await?;
-        IamCertServ::init_default_manage_conf(funs, &tenant_ctx).await?;
 
         if let Some(cert_conf_by_oauth2) = &add_req.cert_conf_by_oauth2 {
             for add_req in cert_conf_by_oauth2 {

@@ -31,7 +31,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertManageKind, IamCertTokenKind, IamRelKind};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
 
 use super::iam_rel_serv::IamRelServ;
 
@@ -120,20 +120,6 @@ impl IamCertServ {
         )
         .await?;
         Ok(rbum_cert_conf_user_pwd_id)
-    }
-
-    #[deprecated]
-    pub async fn init_default_ext_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::add_3th_cert_conf("Gitlab", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Self::add_3th_cert_conf("Github", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Ok(())
-    }
-
-    #[deprecated = "name needs consideration"]
-    pub async fn init_default_manage_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::add_manage_cert_conf(&IamCertManageKind::ManageUserPwd, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Self::add_manage_cert_conf(&IamCertManageKind::ManageUserVisa, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Ok(())
     }
 
     pub async fn get_cert_conf(id: &str, iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertConfDetailResp> {
@@ -339,42 +325,6 @@ impl IamCertServ {
         Ok(())
     }
 
-    #[deprecated = "use add_ext_cert_conf function"]
-    pub async fn add_manage_cert_conf(rel_iam_cert_kind: &IamCertManageKind, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let id = RbumCertConfServ::add_rbum(
-            &mut RbumCertConfAddReq {
-                kind: TrimString(rel_iam_cert_kind.to_string()),
-                supplier: None,
-                name: TrimString(rel_iam_cert_kind.to_string()),
-                note: None,
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                ext: None,
-                sk_need: Some(false),
-                sk_dynamic: None,
-                sk_encrypted: Some(false),
-                repeatable: None,
-                is_basic: Some(false),
-                is_ak_repeatable: Some(true),
-                rest_by_kinds: None,
-                expire_sec: None,
-                sk_lock_cycle_sec: None,
-                sk_lock_err_times: None,
-                sk_lock_duration_sec: None,
-                coexist_num: Some(1),
-                conn_uri: None,
-                rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
-                rel_rbum_item_id: rel_iam_item_id,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(id)
-    }
-
     pub async fn add_manage_cert(add_req: &IamCertManageAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -505,41 +455,6 @@ impl IamCertServ {
             create_time: manage_cert.create_time,
             update_time: manage_cert.update_time,
         })
-    }
-
-    pub async fn add_3th_cert_conf(supplier: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let id = RbumCertConfServ::add_rbum(
-            &mut RbumCertConfAddReq {
-                kind: TrimString(IamCertExtKind::ThirdParty.to_string()),
-                supplier: Some(TrimString(supplier.to_string())),
-                name: TrimString(format!("{}{}", IamCertExtKind::ThirdParty, supplier.to_string())),
-                note: None,
-                ak_note: None,
-                ak_rule: None,
-                sk_note: None,
-                sk_rule: None,
-                ext: None,
-                sk_need: Some(false),
-                sk_dynamic: None,
-                sk_encrypted: Some(false),
-                repeatable: None,
-                is_basic: Some(false),
-                is_ak_repeatable: None,
-                rest_by_kinds: None,
-                expire_sec: None,
-                sk_lock_cycle_sec: None,
-                sk_lock_err_times: None,
-                sk_lock_duration_sec: None,
-                coexist_num: Some(1),
-                conn_uri: None,
-                rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
-                rel_rbum_item_id: rel_iam_item_id,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(id)
     }
 
     pub async fn add_3th_kind_cert(add_req: &mut IamCertExtAddReq, account_id: &str, cert_supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
