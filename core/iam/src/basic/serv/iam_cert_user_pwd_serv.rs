@@ -23,7 +23,7 @@ impl IamCertUserPwdServ {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertKernelKind::UserPwd.to_string()),
-                supplier: TrimString("".to_string()),
+                supplier: None,
                 name: TrimString(IamCertKernelKind::UserPwd.to_string()),
                 note: None,
                 ak_rule: Some(IamCertUserPwdServ::parse_ak_rule(add_req, funs)?),

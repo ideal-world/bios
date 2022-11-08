@@ -45,7 +45,7 @@ impl IamCertLdapServ {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
-                supplier: add_req.supplier.clone(),
+                supplier: Some(add_req.supplier.clone()),
                 name: TrimString(add_req.name.clone()),
                 note: None,
                 ak_note: None,

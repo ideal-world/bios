@@ -344,7 +344,7 @@ impl IamCertServ {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(rel_iam_cert_kind.to_string()),
-                supplier: TrimString("".to_string()),
+                supplier: None,
                 name: TrimString(rel_iam_cert_kind.to_string()),
                 note: None,
                 ak_note: None,
@@ -507,17 +507,12 @@ impl IamCertServ {
         })
     }
 
-    pub async fn add_3th_cert_conf(
-        supplier: &str,
-        rel_iam_item_id: Option<String>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
+    pub async fn add_3th_cert_conf(supplier: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::ThirdParty.to_string()),
-                supplier: TrimString(supplier.to_string()),
-                name: TrimString(rel_iam_cert_kind.to_string()),
+                supplier: Some(TrimString(supplier.to_string())),
+                name: TrimString(format!("{}{}", IamCertExtKind::ThirdParty, supplier.to_string())),
                 note: None,
                 ak_note: None,
                 ak_rule: None,

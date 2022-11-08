@@ -263,7 +263,6 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
-
     let pwd = IamCertServ::get_new_pwd();
     IamAccountServ::add_account_agg(
         &IamAccountAggAddReq {

@@ -29,7 +29,7 @@ impl IamCertMailVCodeServ {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertKernelKind::MailVCode.to_string()),
-                supplier: TrimString("".to_string()),
+                supplier: None,
                 name: TrimString(IamCertKernelKind::MailVCode.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
