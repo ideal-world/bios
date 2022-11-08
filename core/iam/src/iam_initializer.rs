@@ -263,9 +263,6 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     )
     .await?;
 
-    // Init manage certs
-    IamCertServ::init_default_manage_conf(funs, &ctx).await?;
-
     let pwd = IamCertServ::get_new_pwd();
     IamAccountServ::add_account_agg(
         &IamAccountAggAddReq {

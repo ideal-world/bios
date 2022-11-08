@@ -40,7 +40,7 @@ impl IamCertOAuth2Serv {
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::OAuth2.to_string()),
                 supplier: Some(TrimString(cert_supplier.to_string())),
-                name: TrimString(format!("{}{}", IamCertExtKind::OAuth2, cert_supplier.to_string())),
+                name: TrimString(format!("{}{}", IamCertExtKind::OAuth2, cert_supplier)),
                 note: None,
                 ak_note: None,
                 ak_rule: None,
