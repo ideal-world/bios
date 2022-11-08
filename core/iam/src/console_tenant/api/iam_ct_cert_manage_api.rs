@@ -104,19 +104,19 @@ impl IamCtCertManageApi {
     }
 
     /// Paginate Manage Certs for tenant
-    #[oai(path = "/v1.1", method = "get")]
+    #[oai(path = "/", method = "get")]
     async fn paginate_certs(
         &self,
         page_number: Query<u64>,
         page_size: Query<u64>,
-        supplier: Query<Vec<String>>,
+        supplier: Query<String>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumCertDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::paginate_certs(
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                supplier: Some(supplier.0),
+                supplier: Some(supplier.0.split(",").map(|str|str.to_string()).collect()),
                 ..Default::default()
             },
             page_number.0,
@@ -131,7 +131,7 @@ impl IamCtCertManageApi {
     }
 
     /// Paginate Manage Certs
-    #[oai(path = "/", method = "get")]
+    #[oai(path = "/v1.0", method = "get")]
     #[deprecated = "remove"]
     async fn paginate_certs_deprecated(
         &self,
