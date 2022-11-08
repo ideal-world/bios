@@ -283,6 +283,24 @@ impl IamAccountServ {
 
     pub async fn self_modify_account(modify_req: &mut IamAccountSelfModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let id = &ctx.owner;
+        let account = IamAccountServ::peek_item(
+            id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let mock_ctx = TardisContext {
+            owner: account.id.clone(),
+            own_paths: account.own_paths.clone(),
+            ..ctx.clone()
+        };
         IamAccountServ::modify_item(
             id,
             &mut IamAccountModifyReq {
@@ -292,10 +310,10 @@ impl IamAccountServ {
                 scope_level: None,
             },
             funs,
-            ctx,
+            &mock_ctx,
         )
         .await?;
-        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, ctx).await?;
+        IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, &mock_ctx).await?;
         Ok(())
     }
 
