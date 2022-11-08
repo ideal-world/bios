@@ -27,7 +27,7 @@ impl IamCertTokenServ {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(token_kind.to_string()),
-                supplier: TrimString("".to_string()),
+                supplier: None,
                 name: TrimString(add_req.name.to_string()),
                 note: None,
                 ak_note: None,

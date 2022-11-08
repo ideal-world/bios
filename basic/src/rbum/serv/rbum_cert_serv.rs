@@ -7,6 +7,7 @@ use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::serde_json::to_string;
 use tardis::web::poem_openapi::types::Type;
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
@@ -38,7 +39,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         Ok(rbum_cert_conf::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             kind: Set(add_req.kind.to_string()),
-            supplier: Set(add_req.supplier.to_string()),
+            supplier: Set(add_req.supplier.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             name: Set(add_req.name.to_string()),
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             ak_note: Set(add_req.ak_note.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -103,7 +104,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                     .column(rbum_cert_conf::Column::Id)
                     .from(rbum_cert_conf::Entity)
                     .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(add_req.kind.0.as_str()))
-                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(add_req.supplier.0.as_str()))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(add_req.supplier.as_ref().unwrap_or(&TrimString("".to_string())).0.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(add_req.rel_rbum_domain_id.as_str()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).as_str())),
             )

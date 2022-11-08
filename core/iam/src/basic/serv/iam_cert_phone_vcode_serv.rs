@@ -30,7 +30,7 @@ impl IamCertPhoneVCodeServ {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
-                supplier: TrimString("".to_string()),
+                supplier: None,
                 name: TrimString(IamCertKernelKind::PhoneVCode.to_string()),
                 note: None,
                 ak_note: add_req.ak_note.clone(),
