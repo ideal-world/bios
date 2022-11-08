@@ -104,7 +104,7 @@ impl IamCtCertManageApi {
     }
 
     /// Paginate Manage Certs for tenant
-    #[oai(path = "/v2", method = "get")]
+    #[oai(path = "/v1.1", method = "get")]
     async fn paginate_certs(
         &self,
         page_number: Query<u64>,
