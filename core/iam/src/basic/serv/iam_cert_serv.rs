@@ -124,8 +124,8 @@ impl IamCertServ {
 
     #[deprecated]
     pub async fn init_default_ext_conf(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::add_ext_cert_conf(&IamCertExtKind::ThirdParty, "Gitlab", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
-        Self::add_ext_cert_conf(&IamCertExtKind::ThirdParty, "Github", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_3th_cert_conf("Gitlab", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+        Self::add_3th_cert_conf("Github", rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         Ok(())
     }
 
@@ -507,8 +507,7 @@ impl IamCertServ {
         })
     }
 
-    pub async fn add_ext_cert_conf(
-        rel_iam_cert_kind: &IamCertExtKind,
+    pub async fn add_3th_cert_conf(
         supplier: &str,
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
@@ -516,7 +515,7 @@ impl IamCertServ {
     ) -> TardisResult<String> {
         let id = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
-                kind: TrimString(rel_iam_cert_kind.to_string()),
+                kind: TrimString(IamCertExtKind::ThirdParty.to_string()),
                 supplier: TrimString(supplier.to_string()),
                 name: TrimString(rel_iam_cert_kind.to_string()),
                 note: None,
