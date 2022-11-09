@@ -176,7 +176,8 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_ids = IamAppServ::find_rel_account(id, funs, ctx).await?.iter().map(|item| item.rel_id.clone()).collect::<HashSet<String>>();
+        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&funs.iam_basic_role_app_admin_id(), None,None,funs, ctx).await?;
+        let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         Self::modify_item(
             id,
             &mut IamAppModifyReq {
@@ -192,18 +193,18 @@ impl IamAppServ {
         )
         .await?;
         if let Some(admin_ids) = &modify_req.admin_ids {
-            if !account_ids.is_empty() {
+            if !original_app_admin_account_ids.is_empty() {
                 // add new admins
                 for admin_id in admin_ids {
-                    if !account_ids.contains(admin_id) {
-                        IamAppServ::add_rel_account(id, admin_id, false, funs, ctx).await?;
+                    if !original_app_admin_account_ids.contains(admin_id) {
+                        IamAppServ::add_rel_account(id, admin_id, true, funs, ctx).await?;
                         IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), admin_id, None, funs, ctx).await?;
                     }
                 }
                 // delete old admins
-                for account_id in account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
+                for account_id in original_app_admin_account_ids.difference(&admin_ids.iter().cloned().collect::<HashSet<String>>()) {
                     IamRoleServ::delete_rel_account(&funs.iam_basic_role_app_admin_id(), account_id, None, funs, ctx).await?;
-                    IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
+                    // IamAppServ::delete_rel_account(id, account_id, funs, ctx).await?;
                 }
             }
         }
