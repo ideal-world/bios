@@ -176,7 +176,7 @@ impl IamAppServ {
     }
 
     pub async fn modify_app_agg(id: &str, modify_req: &IamAppAggModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&funs.iam_basic_role_app_admin_id(), None,None,funs, ctx).await?;
+        let original_app_admin_account_ids = IamRoleServ::find_id_rel_accounts(&funs.iam_basic_role_app_admin_id(), None, None, funs, ctx).await?;
         let original_app_admin_account_ids = HashSet::from_iter(original_app_admin_account_ids.iter().cloned());
         Self::modify_item(
             id,

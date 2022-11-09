@@ -11,6 +11,7 @@ use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamCertConfOAuth2Resp};
 use crate::basic::dto::iam_cert_dto::IamCertOAuth2AddOrModifyReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
@@ -207,8 +208,7 @@ impl IamCertOAuth2Serv {
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
                 name: TrimString(client.get_account_name(oauth_token_info.clone(), funs).await?),
-                // TODO Auto match rule
-                cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
+                cert_user_name: IamCertUserPwdServ::rename_name_if_duplicate(&TardisFuns::field.nanoid_len(8).to_lowercase(), funs, &mock_ctx).await?,
                 cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
                 cert_phone: None,
                 cert_mail: None,
@@ -218,7 +218,7 @@ impl IamCertOAuth2Serv {
                 disabled: None,
                 icon: None,
                 exts: HashMap::new(),
-                status: None,
+                status: Some(Pending),
             },
             funs,
             &mock_ctx,

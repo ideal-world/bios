@@ -611,6 +611,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         if let Some(ak) = &filter.ak {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).eq(ak.to_string()));
         }
+        if let Some(ak) = &filter.ak_like {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).like(format!("{}%", ak)));
+        }
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Kind).eq(kind.to_string()));
         }

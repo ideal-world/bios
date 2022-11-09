@@ -231,6 +231,43 @@ impl IamCertUserPwdServ {
         Ok(())
     }
 
+    pub async fn rename_name_if_duplicate(name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TrimString> {
+        let count_duplicate_name = RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                ak_like: Some(TrimString(name.to_string()).to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if count_duplicate_name > 0 {
+            let vec_str: Vec<&str> = RbumCertServ::find_rbums(
+                &RbumCertFilterReq {
+                    ak_like: Some(TrimString(name.to_string()).to_string()),
+                    ..Default::default()
+                },
+                None,
+                Some(true),
+                funs,
+                ctx,
+            )
+            .await?
+            .first()
+            .map(|r| r.ak)
+            .unwrap_or("".to_string())
+            .split("+")
+            .collect();
+            if vec_str.len() != 2 {
+                Ok(format!("{}+{}", name, count_duplicate_name).into())
+            } else {
+                Ok(format!("{}+{}", name, vec_str[1].parse::<u32>() + 1).into())
+            }
+        } else {
+            Ok(name.into())
+        }
+    }
+
     fn parse_ak_rule(cert_conf_by_user_pwd: &IamCertConfUserPwdAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<String> {
         if cert_conf_by_user_pwd.ak_rule_len_max < cert_conf_by_user_pwd.ak_rule_len_min {
             return Err(funs.err().bad_request(
