@@ -242,7 +242,7 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if count_duplicate_name > 0 {
-            let vec_str: Vec<&str> = RbumCertServ::find_rbums(
+            let string = RbumCertServ::find_rbums(
                 &RbumCertFilterReq {
                     ak_like: Some(TrimString(name.to_string()).to_string()),
                     ..Default::default()
@@ -254,14 +254,18 @@ impl IamCertUserPwdServ {
             )
             .await?
             .first()
-            .map(|r| r.ak)
-            .unwrap_or("".to_string())
-            .split("+")
-            .collect();
+            .map(|r| r.ak.clone())
+            .unwrap_or_else(||"".to_string());
+            let vec_str: Vec<&str> = string.split(':').collect();
             if vec_str.len() != 2 {
-                Ok(format!("{}+{}", name, count_duplicate_name).into())
+                Ok(format!("{}:{}", name, count_duplicate_name).into())
             } else {
-                Ok(format!("{}+{}", name, vec_str[1].parse::<u32>() + 1).into())
+                let parse_u32 = vec_str[vec_str.len() - 1].parse::<u32>();
+                if let Ok(count) = parse_u32 {
+                    Ok(format!("{}:{}", name, count + 1).into())
+                } else {
+                    Ok(format!("{}:{}", name, count_duplicate_name + 1).into())
+                }
             }
         } else {
             Ok(name.into())

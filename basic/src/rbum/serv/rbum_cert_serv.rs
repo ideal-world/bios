@@ -810,7 +810,6 @@ impl RbumCertServ {
 
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct CertConfPeekResp {
-            pub kind: String,
             pub is_basic: bool,
             pub sk_encrypted: bool,
             pub rel_rbum_domain_id: String,
@@ -845,7 +844,6 @@ impl RbumCertServ {
                     .get_dto::<CertConfPeekResp>(
                         Query::select()
                             .column(rbum_cert_conf::Column::IsBasic)
-                            .column(rbum_cert_conf::Column::Kind)
                             .column(rbum_cert_conf::Column::RelRbumDomainId)
                             .column(rbum_cert_conf::Column::SkEncrypted)
                             .column(rbum_cert_conf::Column::SkLockCycleSec)

@@ -76,13 +76,12 @@ impl IamCpCertUserPwdServ {
         let (_, _, rbum_item_id) = if validate_resp.is_ok() {
             validate_resp.unwrap()
         } else {
-            if let Some(e)=validate_resp.err(){
+            if let Some(e) = validate_resp.clone().err() {
                 // throw out Err when sk is expired
                 if e.message == "sk is expired" {
-                    validate_resp?
+                    validate_resp?;
                 }
-            }
-            validate_resp.map_err(|e| if e.message == "sk is expired" { e } )?;
+            };
             RbumCertServ::validate_by_ak_and_basic_sk(
                 &login_req.ak.0,
                 &login_req.sk.0,
