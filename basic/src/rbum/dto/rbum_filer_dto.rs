@@ -41,6 +41,8 @@ pub struct RbumCertConfFilterReq {
 pub struct RbumCertFilterReq {
     pub basic: RbumBasicFilterReq,
     pub ak: Option<String>,
+    /// ak like "ak%"
+    pub ak_like: Option<String>,
     pub kind: Option<String>,
     pub supplier: Option<Vec<String>>,
     pub status: Option<RbumCertStatusKind>,

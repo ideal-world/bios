@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use self::ldap::LdapClient;
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
 use crate::iam_enumeration::IamCertKernelKind;
@@ -521,8 +522,7 @@ impl IamCertLdapServ {
             &IamAccountAggAddReq {
                 id: Some(TrimString(ctx.owner.clone())),
                 name: TrimString(account_name.to_string()),
-                // TODO Auto match rule
-                cert_user_name: TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()),
+                cert_user_name: IamCertUserPwdServ::rename_name_if_duplicate(&TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()), funs, ctx).await?,
                 cert_password: userpwd_password.into(),
                 cert_phone: None,
                 cert_mail: None,
