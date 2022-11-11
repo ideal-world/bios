@@ -255,7 +255,7 @@ impl IamCertUserPwdServ {
             .await?
             .first()
             .map(|r| r.ak.clone())
-            .unwrap_or_else(||"".to_string());
+            .unwrap_or_else(|| "".to_string());
             let vec_str: Vec<&str> = string.split(':').collect();
             if vec_str.len() != 2 {
                 Ok(format!("{}:{}", name, count_duplicate_name).into())
