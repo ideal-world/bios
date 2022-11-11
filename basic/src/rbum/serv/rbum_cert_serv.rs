@@ -611,6 +611,9 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
         if let Some(ak) = &filter.ak {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).eq(ak.to_string()));
         }
+        if let Some(ak) = &filter.ak_like {
+            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).like(format!("{}%", ak)));
+        }
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Kind).eq(kind.to_string()));
         }
@@ -807,7 +810,6 @@ impl RbumCertServ {
 
         #[derive(Debug, sea_orm::FromQueryResult)]
         struct CertConfPeekResp {
-            pub kind: String,
             pub is_basic: bool,
             pub sk_encrypted: bool,
             pub rel_rbum_domain_id: String,
@@ -842,7 +844,6 @@ impl RbumCertServ {
                     .get_dto::<CertConfPeekResp>(
                         Query::select()
                             .column(rbum_cert_conf::Column::IsBasic)
-                            .column(rbum_cert_conf::Column::Kind)
                             .column(rbum_cert_conf::Column::RelRbumDomainId)
                             .column(rbum_cert_conf::Column::SkEncrypted)
                             .column(rbum_cert_conf::Column::SkLockCycleSec)

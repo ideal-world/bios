@@ -6,7 +6,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
+use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp};
