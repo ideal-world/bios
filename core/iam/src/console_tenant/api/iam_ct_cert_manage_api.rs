@@ -116,7 +116,7 @@ impl IamCtCertManageApi {
         let result = IamCertServ::paginate_certs(
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                supplier: Some(supplier.0.split(",").map(|str| str.to_string()).collect()),
+                supplier: Some(supplier.0.split(',').map(|str| str.to_string()).collect()),
                 ..Default::default()
             },
             page_number.0,
