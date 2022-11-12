@@ -12,6 +12,7 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfOAuth2AddOrModifyReq, IamC
 use crate::basic::dto::iam_cert_dto::IamCertOAuth2AddOrModifyReq;
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
+use crate::basic::serv::oauth2_spi::iam_cert_oauth2_spi_github::IamCertOAuth2SpiGithub;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::{IamCertExtKind, IamCertOAuth2Supplier};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
@@ -237,17 +238,17 @@ impl IamCertOAuth2Serv {
         Ok((account_id, oauth_token_info.access_token))
     }
 
-    fn get_access_token_func(supplier: IamCertOAuth2Supplier) -> impl IamCertOAuth2Spi {
+    fn get_access_token_func(supplier: IamCertOAuth2Supplier) -> Box<dyn IamCertOAuth2Spi> {
         match supplier {
-            // IamCertOAuth2Kind::Weibo => {}
-            // IamCertOAuth2Kind::Github => {}
-            IamCertOAuth2Supplier::WechatMp => IamCertOAuth2SpiWeChatMp,
+            // IamCertOAuth2Supplier::Weibo => {}
+            IamCertOAuth2Supplier::Github => Box::new(IamCertOAuth2SpiGithub),
+            IamCertOAuth2Supplier::WechatMp => Box::new(IamCertOAuth2SpiWeChatMp),
         }
     }
 }
 
 #[async_trait]
-pub trait IamCertOAuth2Spi {
+pub trait IamCertOAuth2Spi: Send + Sync {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo>;
     async fn get_account_name(&self, oauth2_info: IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<String>;
 }
