@@ -268,10 +268,6 @@ impl IamRoleServ {
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
         IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
-
-        // TODO reset account cache
-        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-        IamCertServ::package_tardis_account_context_and_resp(account_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
         Ok(())
     }
 
