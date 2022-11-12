@@ -22,8 +22,6 @@ use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 
-use super::iam_cert_serv::IamCertServ;
-
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -124,10 +122,12 @@ impl IamIdentCacheServ {
                 while count > 0 {
                     let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
                     for id in ids {
-                        // Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
-                        // TODO reset account cache
-                        let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx_clone.clone())?;
-                        IamCertServ::package_tardis_account_context_and_resp(&id, &tenant_ctx.own_paths, "".to_string(), None, &funs, &tenant_ctx).await?;
+                        let account_context = Self::get_account_context(&id, "", &funs).await;
+                        if let Ok(account_context) = account_context {
+                            if account_context.own_paths == ctx_clone.own_paths {
+                                Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                            }
+                        }
                     }
                     page_number += 1;
                     count -= 100;
@@ -139,10 +139,12 @@ impl IamIdentCacheServ {
                         let ids =
                             IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
                         for id in ids {
-                            // IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
-                            // TODO reset account cache
-                            let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx_clone.clone())?;
-                            IamCertServ::package_tardis_account_context_and_resp(&id, &tenant_ctx.own_paths, "".to_string(), None, &funs, &tenant_ctx).await?;
+                            let account_context = Self::get_account_context(&id, "", &funs).await;
+                            if let Ok(account_context) = account_context {
+                                if account_context.own_paths == ctx_clone.own_paths {
+                                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                                }
+                            }
                         }
                         page_number += 1;
                         count -= 100;
@@ -199,6 +201,13 @@ impl IamIdentCacheServ {
                 .await?;
         }
         Ok(())
+    }
+
+    pub async fn get_account_context(account_id: &str, field: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
+        if let Some(context) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), field).await? {
+            return TardisFuns::json.str_to_obj(&context);
+        }
+        Err(funs.err().not_found("get_account_context", "get", "not found context", "404-iam-cache-context-not-exist"))
     }
 
     pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
