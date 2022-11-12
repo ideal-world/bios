@@ -611,8 +611,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind: RbumCertRelKind::Item,
             rel_rbum_id: "".to_string(),
             is_outside: false,
-            kind: todo!(),
-            supplier: todo!()
+            kind: None,
+            supplier: None,
         },
         &funs,
         context,

@@ -85,11 +85,21 @@ impl IamCtCertManageApi {
     }
 
     /// get manage cert
+    #[oai(path = "/v1.0/:id", method = "get")]
+    #[deprecated = "remove"]
+    async fn get_manage_cert_deprecated(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+        let funs = iam_constants::get_tardis_inst();
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let cert = IamCertServ::get_manage_cert(&id.0, &funs, &ctx).await?;
+        TardisResp::ok(cert)
+    }
+
+    /// get manage cert
     #[oai(path = "/:id", method = "get")]
     async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        let cert = IamCertServ::get_manage_cert(&id.0, &funs, &ctx).await?;
+        let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx).await?;
         TardisResp::ok(cert)
     }
 
