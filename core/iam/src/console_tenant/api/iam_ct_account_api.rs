@@ -142,4 +142,13 @@ impl IamCtAccountApi {
         .await?;
         TardisResp::ok(result)
     }
+
+    ///unlock account
+    #[oai(path = "/:id/unlock", method = "post")]
+    async fn unlock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let funs = iam_constants::get_tardis_inst();
+        IamAccountServ::unlock_account(&id.0, &funs, &ctx).await?;
+        TardisResp::ok(Void {})
+    }
 }
