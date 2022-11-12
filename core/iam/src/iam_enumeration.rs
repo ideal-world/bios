@@ -68,7 +68,7 @@ pub enum IamCertExtKind {
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamCertOAuth2Supplier {
     // Weibo,
-    // Github,
+    Github,
     WechatMp,
 }
 
