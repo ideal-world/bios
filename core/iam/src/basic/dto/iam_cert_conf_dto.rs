@@ -98,7 +98,8 @@ pub struct IamCertConfOAuth2Resp {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub sk: String,
 }
-
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertConfAkSkAddOrModifyReq {}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources

@@ -140,7 +140,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     .await?;
 
     info!("【test_cc_cert】 : test_single_level : Add Ext Cert - Gitlab");
-    assert!(IamCertServ::get_3th_kind_cert(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await.is_err());
+    assert!(IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await.is_err());
     IamCertServ::add_3th_kind_cert(
         &mut IamCertExtAddReq {
             ak: "GitlabUserId".to_string(),
@@ -154,7 +154,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     )
     .await?;
     assert_eq!(
-        IamCertServ::get_3th_kind_cert(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await?.ak,
+        IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await?.ak,
         "GitlabUserId"
     );
 
