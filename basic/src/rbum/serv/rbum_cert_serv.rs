@@ -194,6 +194,9 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         if let Some(conn_uri) = &modify_req.conn_uri {
             rbum_cert_conf.conn_uri = Set(conn_uri.to_string());
         }
+        if let Some(status) = &modify_req.status {
+            rbum_cert_conf.status = Set(status.to_int());
+        }
         Ok(rbum_cert_conf)
     }
 

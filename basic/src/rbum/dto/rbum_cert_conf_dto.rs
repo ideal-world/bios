@@ -6,6 +6,8 @@ use tardis::db::sea_orm;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
+use crate::rbum::rbum_enumeration::RbumCertConfStatusKind;
+
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumCertConfAddReq {
@@ -84,6 +86,7 @@ pub struct RbumCertConfModifyReq {
     pub coexist_num: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
+    pub status: Option<RbumCertConfStatusKind>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
