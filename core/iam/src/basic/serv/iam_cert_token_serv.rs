@@ -80,6 +80,7 @@ impl IamCertTokenServ {
                 sk_lock_duration_sec: None,
                 coexist_num: modify_req.coexist_num,
                 conn_uri: None,
+                status: None,
             },
             funs,
             ctx,

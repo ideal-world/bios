@@ -1,4 +1,4 @@
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -83,6 +83,7 @@ impl IamCertPhoneVCodeServ {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: None,
+                status: None,
             },
             funs,
             ctx,
@@ -283,6 +284,26 @@ impl IamCertPhoneVCodeServ {
         let mut rand = tardis::rand::thread_rng();
         let vcode: i32 = rand.gen_range(1000..9999);
         format!("{}", vcode)
+    }
+
+    pub async fn add_or_enable_cert_conf(add_req: &IamCertConfPhoneVCodeAddOrModifyReq, rel_iam_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let cert_result = RbumCertConfServ::do_find_one_rbum(
+            &RbumCertConfFilterReq {
+                kind: Some(TrimString(IamCertKernelKind::PhoneVCode.to_string())),
+                rel_rbum_item_id: Some(rel_iam_item_id.into()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let result = if let Some(cert_result) = cert_result {
+            IamCertServ::enabled_cert_conf(&cert_result.id, funs, ctx).await?;
+            cert_result.id.into()
+        } else {
+            Self::add_cert_conf(add_req, Some(rel_iam_item_id.into()), funs, ctx).await?
+        };
+        Ok(result)
     }
 
     // TODO

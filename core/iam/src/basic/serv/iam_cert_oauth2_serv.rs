@@ -93,6 +93,7 @@ impl IamCertOAuth2Serv {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: None,
+                status: None,
             },
             funs,
             ctx,

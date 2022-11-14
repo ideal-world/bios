@@ -283,7 +283,7 @@ impl IamTenantServ {
                     IamCertServ::disable_cert_conf(&cert_conf_by_phone_vcode_id, funs, ctx).await?;
                 }
             } else if cert_conf_by_phone_vcode {
-                IamCertPhoneVCodeServ::add_or_enable_cert_conf(&IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+                IamCertPhoneVCodeServ::add_or_enable_cert_conf(&IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, id, funs, ctx).await?;
             }
         }
 

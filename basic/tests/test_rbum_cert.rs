@@ -203,6 +203,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: None,
         },
         &funs,
         context,

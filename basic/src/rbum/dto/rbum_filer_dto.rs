@@ -1,6 +1,7 @@
 use std::default::Default;
 
 use serde::{Deserialize, Serialize};
+use tardis::basic::field::TrimString;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
@@ -31,6 +32,7 @@ pub struct RbumBasicFilterReq {
 #[serde(default)]
 pub struct RbumCertConfFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub kind: Option<TrimString>,
     pub rel_rbum_domain_id: Option<String>,
     pub rel_rbum_item_id: Option<String>,
 }

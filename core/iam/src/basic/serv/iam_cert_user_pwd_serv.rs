@@ -76,6 +76,7 @@ impl IamCertUserPwdServ {
                 sk_lock_duration_sec: Some(modify_req.sk_lock_duration_sec),
                 coexist_num: None,
                 conn_uri: None,
+                status: None,
             },
             funs,
             ctx,

@@ -297,6 +297,9 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdateTime),
             ])
             .from(rbum_cert_conf::Entity);
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Kind).eq(kind.to_string()));
+        }
         if let Some(rel_rbum_domain_id) = &filter.rel_rbum_domain_id {
             query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId).eq(rel_rbum_domain_id.to_string()));
         }

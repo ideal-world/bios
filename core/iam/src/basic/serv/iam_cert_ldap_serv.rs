@@ -112,6 +112,7 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: Some(modify_req.conn_uri.clone()),
+                status: None,
             },
             funs,
             ctx,
