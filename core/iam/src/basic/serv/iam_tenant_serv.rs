@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -382,5 +383,25 @@ impl IamTenantServ {
         };
 
         Ok(tenant)
+    }
+
+    pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        Self::find_items(
+            &IamTenantFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(ids),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await
+        .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
 }
