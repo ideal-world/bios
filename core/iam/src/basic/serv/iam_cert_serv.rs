@@ -53,11 +53,23 @@ impl IamCertServ {
         let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
 
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
-            IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+            IamCertPhoneVCodeServ::add_or_enable_cert_conf(
+                &phone_vcode_cert_conf_add_req,
+                &rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_else(|| "".to_string()),
+                funs,
+                ctx,
+            )
+            .await?;
         }
 
         if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
-            IamCertMailVCodeServ::add_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+            IamCertMailVCodeServ::add_or_enable_cert_conf(
+                &mail_vcode_cert_conf_add_req,
+                &rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_else(|| "".to_string()),
+                funs,
+                ctx,
+            )
+            .await?;
         }
 
         if let Some(ldap_cert_conf_add_req) = ldap_cert_conf_add_req {

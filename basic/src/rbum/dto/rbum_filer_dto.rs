@@ -33,6 +33,7 @@ pub struct RbumBasicFilterReq {
 pub struct RbumCertConfFilterReq {
     pub basic: RbumBasicFilterReq,
     pub kind: Option<TrimString>,
+    pub supplier: Option<String>,
     pub rel_rbum_domain_id: Option<String>,
     pub rel_rbum_item_id: Option<String>,
 }

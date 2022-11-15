@@ -34,7 +34,7 @@ impl IamCertOAuth2Serv {
     pub async fn add_cert_conf(
         cert_supplier: IamCertOAuth2Supplier,
         add_req: &IamCertConfOAuth2AddOrModifyReq,
-        rel_iam_item_id: String,
+        rel_iam_item_id: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<String> {
@@ -63,7 +63,7 @@ impl IamCertOAuth2Serv {
                 coexist_num: Some(1),
                 conn_uri: None,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
-                rel_rbum_item_id: Some(rel_iam_item_id.clone()),
+                rel_rbum_item_id: Some(rel_iam_item_id.to_string()),
             },
             funs,
             ctx,
@@ -245,6 +245,33 @@ impl IamCertOAuth2Serv {
             IamCertOAuth2Supplier::Github => Box::new(IamCertOAuth2SpiGithub),
             IamCertOAuth2Supplier::WechatMp => Box::new(IamCertOAuth2SpiWeChatMp),
         }
+    }
+
+    pub async fn add_or_enable_cert_conf(
+        supplier: IamCertOAuth2Supplier,
+        add_req: &IamCertConfOAuth2AddOrModifyReq,
+        rel_iam_item_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let cert_result = RbumCertConfServ::do_find_one_rbum(
+            &RbumCertConfFilterReq {
+                kind: Some(TrimString(IamCertExtKind::OAuth2.to_string())),
+                supplier: Some(supplier.clone().to_string()),
+                rel_rbum_item_id: Some(rel_iam_item_id.into()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let result = if let Some(cert_result) = cert_result {
+            IamCertServ::enabled_cert_conf(&cert_result.id, funs, ctx).await?;
+            cert_result.id.into()
+        } else {
+            Self::add_cert_conf(supplier, add_req, rel_iam_item_id, funs, ctx).await?
+        };
+        Ok(result)
     }
 }
 

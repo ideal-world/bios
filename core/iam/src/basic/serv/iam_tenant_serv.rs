@@ -207,7 +207,7 @@ impl IamTenantServ {
 
         if let Some(cert_conf_by_oauth2) = &add_req.cert_conf_by_oauth2 {
             for add_req in cert_conf_by_oauth2 {
-                IamCertOAuth2Serv::add_cert_conf(IamCertOAuth2Supplier::WechatMp, add_req, tenant_id.to_string(), funs, &tenant_ctx).await?;
+                IamCertOAuth2Serv::add_or_enable_cert_conf(IamCertOAuth2Supplier::WechatMp, add_req, &tenant_id, funs, &tenant_ctx).await?;
             }
         }
 
@@ -293,7 +293,7 @@ impl IamTenantServ {
                     IamCertServ::disable_cert_conf(&cert_conf_by_mail_vcode_id, funs, ctx).await?;
                 }
             } else if cert_conf_by_mail_vcode {
-                IamCertMailVCodeServ::add_or_enable_cert_conf(&IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, Some(id.to_string()), funs, ctx).await?;
+                IamCertMailVCodeServ::add_or_enable_cert_conf(&IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }, id, funs, ctx).await?;
             }
         }
 
@@ -312,7 +312,7 @@ impl IamTenantServ {
 
                 let add_cert_conf_by_oauth2 = cert_conf_by_oauth2.iter().filter(|r| !cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
                 for add in add_cert_conf_by_oauth2 {
-                    IamCertOAuth2Serv::add_cert_conf(IamCertOAuth2Supplier::parse(&add.supplier)?, add, id.to_string(), funs, ctx).await?;
+                    IamCertOAuth2Serv::add_or_enable_cert_conf(IamCertOAuth2Supplier::parse(&add.supplier)?, add, id, funs, ctx).await?;
                 }
 
                 let delete_cert_conf_code_by_oauth2 = cert_conf_by_oauth2_supplier_id_map
@@ -321,11 +321,11 @@ impl IamTenantServ {
                     .filter(|r| !cert_conf_by_oauth2.iter().map(|y| y.supplier.clone().to_string()).any(|x| x == r.to_string()))
                     .collect::<Vec<_>>();
                 for delete in delete_cert_conf_code_by_oauth2 {
-                    IamCertServ::delete_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(delete).unwrap(), funs, ctx).await?;
+                    IamCertServ::disable_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(delete).unwrap(), funs, ctx).await?;
                 }
             } else {
                 for delete_id in old_cert_conf_by_oauth2.iter().map(|r| r.id.clone()).collect::<Vec<String>>() {
-                    IamCertServ::delete_cert_conf(&delete_id, funs, ctx).await?;
+                    IamCertServ::disable_cert_conf(&delete_id, funs, ctx).await?;
                 }
             }
         }
