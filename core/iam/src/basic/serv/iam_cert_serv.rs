@@ -140,6 +140,7 @@ impl IamCertServ {
             &RbumCertConfFilterReq {
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
                 ..Default::default()
             },
             funs,
@@ -164,6 +165,7 @@ impl IamCertServ {
                 },
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
                 ..Default::default()
             },
             desc_sort_by_create,
@@ -196,6 +198,7 @@ impl IamCertServ {
                 },
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
                 ..Default::default()
             },
             desc_sort_by_create,
@@ -279,6 +282,7 @@ impl IamCertServ {
                 },
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
                 ..Default::default()
             },
             page_number,
