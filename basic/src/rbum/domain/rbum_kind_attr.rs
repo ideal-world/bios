@@ -7,6 +7,21 @@ use tardis::db::sea_orm::sea_query::{ColumnDef, Index, IndexCreateStatement, Tab
 use tardis::db::sea_orm::*;
 
 /// Resource kind extended attribute definition model
+///
+/// General logic for dynamic request processing:
+///
+/// 1. dynamic values take precedence over static values
+/// 2. support calling http to get data with GET request
+/// 3. request url supports attribute variable substitution, format is: `{attribute name}` .
+/// 4. if no attribute variable substitution exists and secret = false, the url is called directly and the corresponding value is returned,
+/// 5. if attribute variable substitution exists, then：
+///  1） extract all attribute variables to be replaced
+///  2） monitor changes of these attributes
+///  3） substitute attribute variables with values into the url
+///  4） if no longer an attribute variable substitution in the url and secret = false, call the url and return the corresponding value
+/// 6. before the resource object is saved, if secret = true and an attribute variable substitution in the url, call the url and return the corresponding value
+///
+/// For security reasons, step 6 must be done by the server side.
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind_attr")]
 pub struct Model {
@@ -23,14 +38,28 @@ pub struct Model {
     pub capacity: bool,
     pub overload: bool,
     pub hide: bool,
+    /// When secret = true, the attribute information is not returned to the frontend(except in configuration)
+    pub secret: bool,
+    /// Display condition, json format: `{<attribute name>:<attribute value>}`, currently only support `and` operations
+    pub show_by_conds: String,
+    /// Whether indexing is needed
     pub idx: bool,
     pub data_type: String,
     pub widget_type: String,
     pub default_value: String,
+    /// Dynamic default value
+    /// the return format is the same as `default_value`
+    pub dyn_default_value: String,
+    /// Fixed option, json array formatted as `[{name:<display name>:value:<corresponding value>}]`
     pub options: String,
+    /// Dynamic options
+    /// the return format is the same as `options`
+    pub dyn_options: String,
     pub required: bool,
     pub min_length: u32,
     pub max_length: u32,
+    /// Used to implement multi-level attributes, default is empty
+    pub parent_attr_name: String,
     /// Custom behavior attributes \
     /// E.g. user selection function, role selection function, etc.
     /// Custom behavior needs to be bound to the corresponding function code.
@@ -101,16 +130,6 @@ impl TardisActiveModel for ActiveModel {
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {
-        // TODO Specified key was too long; max key length is 3072 bytes
-        // vec![Index::create()
-        //     .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string()))
-        //     .table(Entity)
-        //     .col(Column::RelRbumKindId)
-        //     .col(Column::Module)
-        //     .col(Column::Name)
-        //     .col(Column::OwnPaths)
-        //     .unique()
-        //     .to_owned()]
         vec![Index::create()
             .name(&format!("idx-{}-{}", Entity.table_name(), Column::RelRbumKindId.to_string()))
             .table(Entity)
