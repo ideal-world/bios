@@ -20,7 +20,7 @@ use tardis::db::sea_orm::*;
 ///  3） substitute attribute variables with values into the url
 ///  4） if no longer an attribute variable substitution in the url and secret = false, call the url and return the corresponding value
 /// 6. before the resource object is saved, if secret = true and an attribute variable substitution in the url, call the url and return the corresponding value
-/// 
+///
 /// For security reasons, step 6 must be done by the server side.
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "rbum_kind_attr")]
@@ -48,12 +48,12 @@ pub struct Model {
     pub widget_type: String,
     pub default_value: String,
     /// Dynamic default value
-    /// the return format is the same as `default_value` 
+    /// the return format is the same as `default_value`
     pub dyn_default_value: String,
     /// Fixed option, json array formatted as `[{name:<display name>:value:<corresponding value>}]`
     pub options: String,
     /// Dynamic options
-    /// the return format is the same as `options` 
+    /// the return format is the same as `options`
     pub dyn_options: String,
     pub required: bool,
     pub min_length: u32,
