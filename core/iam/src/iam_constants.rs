@@ -20,6 +20,17 @@ pub const RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT: &str = "bios";
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";
 pub const RBUM_ITEM_NAME_TENANT_ADMIN_ROLE: &str = "tenant_admin";
 pub const RBUM_ITEM_NAME_APP_ADMIN_ROLE: &str = "app_admin";
+pub const RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE: &str = "app_admin_om";
+pub const RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE: &str = "app_admin_develop";
+pub const RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE: &str = "app_admin_product";
+pub const RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE: &str = "app_admin_iterate";
+pub const RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE: &str = "app_admin_test";
+pub const RBUM_ITEM_NAME_APP_NORMAL_ROLE: &str = "app_normal";
+pub const RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE: &str = "app_normal_om";
+pub const RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE: &str = "app_normal_develop";
+pub const RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE: &str = "app_normal_product";
+pub const RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE: &str = "app_normal_iterate";
+pub const RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE: &str = "app_normal_test";
 
 pub const RBUM_ITEM_ID_TENANT_LEN: u8 = 6;
 pub const RBUM_ITEM_ID_APP_LEN: u8 = 6;
