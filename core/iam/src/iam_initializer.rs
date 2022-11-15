@@ -1,4 +1,5 @@
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
+use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -350,8 +351,119 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 disabled: None,
                 kind: Some(IamRoleKind::App),
             },
-            res_ids: Some(vec![set_menu_ca_id, set_api_ca_id]),
+            res_ids: Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         },
+        funs,
+        &ctx,
+    )
+    .await?;
+
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_PRODUCT_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ITERATE_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_ADMIN_TEST_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_OM_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_DEVELOP_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_PRODUCT_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_ITERATE_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
+        funs,
+        &ctx,
+    )
+    .await?;
+    let _ = add_role(
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
+        iam_constants::RBUM_ITEM_NAME_APP_NORMAL_TEST_ROLE,
+        &iam_constants::RBUM_SCOPE_LEVEL_APP,
+        &IamRoleKind::App,
+        Some(vec![set_menu_ca_id.clone(), set_api_ca_id.clone()]),
         funs,
         &ctx,
     )
@@ -411,6 +523,35 @@ async fn add_domain<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRes
         ctx,
     )
     .await
+}
+
+async fn add_role<'a>(
+    code: &str,
+    name: &str,
+    scope_level: &RbumScopeLevelKind,
+    kind: &IamRoleKind,
+    res_ids: Option<Vec<String>>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<String> {
+    let role_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: TrimString(code.to_string()),
+                name: TrimString(name.to_string()),
+                kind: Some(IamRoleKind::App),
+                scope_level: Some(scope_level.clone()),
+                disabled: None,
+                icon: None,
+                sort: None,
+            },
+            res_ids,
+        },
+        funs,
+        &ctx,
+    )
+    .await?;
+    Ok(role_id)
 }
 
 #[deprecated]
