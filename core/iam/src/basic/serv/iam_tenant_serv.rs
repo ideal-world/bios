@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
@@ -15,7 +16,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
@@ -272,7 +273,6 @@ impl IamTenantServ {
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
 
-        // todo cert conf delete change disable status
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
             let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
             IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
@@ -338,22 +338,24 @@ impl IamTenantServ {
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
         let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
-        let cert_conf_by_wechat_mp =
-            if let Some(cert_conf_by_wechat_mp) = cert_confs.iter().find(|r| r.kind == format!("{}{}", IamCertExtKind::OAuth2, IamCertOAuth2Supplier::WechatMp)) {
-                Some(IamCertOAuth2Serv::get_cert_conf(&cert_conf_by_wechat_mp.id, funs, ctx).await?)
-            } else {
-                None
-            };
-        let mut vec1: Vec<IamCertConfLdapAddOrModifyReq> = vec![];
-        for ldap_conf in cert_confs.iter().filter(|r| r.kind.contains(&IamCertExtKind::Ldap.to_string())) {
+        let cert_conf_by_oauth2 = if let cert_conf_by_oauth2s = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect::<Vec<_>>() {
+            let mut result = Vec::new();
+            for cert_conf in cert_conf_by_oauth2s {
+                result.push(IamCertOAuth2Serv::get_cert_conf(&cert_conf.id, funs, ctx).await?);
+            }
+            Some(result)
+        } else {
+            None
+        };
+        let mut vec1: Vec<IamCertConfLdapResp> = Vec::new();
+        for ldap_conf in cert_confs.iter().filter(|r| r.kind == IamCertExtKind::Ldap.to_string()) {
             let conf = IamCertLdapServ::get_cert_conf(&ldap_conf.id, funs, ctx).await?;
-            vec1.push(IamCertConfLdapAddOrModifyReq {
-                supplier: TrimString(ldap_conf.kind.clone()),
-                name: ldap_conf.name.clone(),
+            vec1.push(IamCertConfLdapResp {
+                supplier: ldap_conf.kind.clone(),
                 conn_uri: ldap_conf.conn_uri.clone(),
                 is_tls: conf.is_tls,
-                principal: TrimString(conf.principal.clone()),
-                credentials: TrimString("".to_string()),
+                principal: conf.principal.clone(),
+                credentials: "".to_string(),
                 base_dn: conf.base_dn,
                 field_display_name: conf.field_display_name,
                 search_base_filter: conf.search_base_filter,
@@ -378,7 +380,7 @@ impl IamTenantServ {
             cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
             cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
             cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
-            cert_conf_by_wechat_mp,
+            cert_conf_by_oauth2,
             cert_conf_by_ldap,
         };
 

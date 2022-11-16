@@ -126,6 +126,7 @@ impl IamCertLdapServ {
             TardisFuns::json
                 .str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext)
                 .map(|info| IamCertConfLdapResp {
+                    supplier: resp.supplier,
                     conn_uri: resp.conn_uri,
                     is_tls: info.is_tls,
                     principal: info.principal,

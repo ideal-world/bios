@@ -127,6 +127,7 @@ pub struct RbumCertConfSummaryResp {
 pub struct RbumCertConfDetailResp {
     pub id: String,
     pub kind: String,
+    pub supplier: String,
     pub name: String,
     pub note: String,
     pub ak_note: String,
