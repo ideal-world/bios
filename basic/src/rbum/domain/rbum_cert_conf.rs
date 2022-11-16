@@ -56,6 +56,8 @@ pub struct Model {
     /// Specifies the connection address, mostly for two-party or third-party configurations \
     /// E.g. http://localhost:8080/api/v1/
     pub conn_uri: String,
+    /// see [status][crate::rbum::rbum_enumeration::RbumCertConfStatusKind]
+    pub status: u8,
     /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
     pub rel_rbum_domain_id: String,
     /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
@@ -106,6 +108,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::SkLockDurationSec).not_null().unsigned())
             .col(ColumnDef::new(Column::CoexistNum).not_null().unsigned())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
+            .col(ColumnDef::new(Column::Status).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
             // Basic

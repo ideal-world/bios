@@ -144,6 +144,7 @@ impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfLdapResp {
+    pub supplier: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
     pub is_tls: bool,

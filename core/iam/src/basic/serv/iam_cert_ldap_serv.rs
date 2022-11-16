@@ -17,7 +17,7 @@ use crate::{
     iam_config::IamBasicConfigApi,
     iam_enumeration::IamCertExtKind,
 };
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumScopeLevelKind};
 use bios_basic::rbum::{
     dto::{
         rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq},
@@ -74,6 +74,7 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
                 conn_uri: Some(add_req.conn_uri.clone()),
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id.clone(),
             },
@@ -112,6 +113,7 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: Some(modify_req.conn_uri.clone()),
+                status: None,
             },
             funs,
             ctx,
@@ -124,6 +126,7 @@ impl IamCertLdapServ {
             TardisFuns::json
                 .str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext)
                 .map(|info| IamCertConfLdapResp {
+                    supplier: resp.supplier,
                     conn_uri: resp.conn_uri,
                     is_tls: info.is_tls,
                     principal: info.principal,

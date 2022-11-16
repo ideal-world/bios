@@ -6,12 +6,12 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfSummaryResp};
+use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -53,11 +53,11 @@ impl IamCertServ {
         let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
 
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
-            IamCertPhoneVCodeServ::add_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+            IamCertPhoneVCodeServ::add_or_enable_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         }
 
         if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
-            IamCertMailVCodeServ::add_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
+            IamCertMailVCodeServ::add_or_enable_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         }
 
         if let Some(ldap_cert_conf_add_req) = ldap_cert_conf_add_req {
@@ -128,6 +128,7 @@ impl IamCertServ {
             &RbumCertConfFilterReq {
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
                 ..Default::default()
             },
             funs,
@@ -152,6 +153,8 @@ impl IamCertServ {
                 },
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
+                ..Default::default()
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -183,6 +186,8 @@ impl IamCertServ {
                 },
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
+                ..Default::default()
             },
             desc_sort_by_create,
             desc_sort_by_update,
@@ -243,7 +248,7 @@ impl IamCertServ {
 
     pub async fn paginate_cert_conf(
         id: Option<String>,
-        code: Option<String>,
+        kind: Option<TrimString>,
         name: Option<String>,
         with_sub: bool,
         iam_item_id: Option<String>,
@@ -258,13 +263,15 @@ impl IamCertServ {
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.map(|id| vec![id]),
-                    code,
                     name,
                     with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
+                kind,
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
+                status: Some(RbumCertConfStatusKind::Enabled),
+                ..Default::default()
             },
             page_number,
             page_size,
@@ -874,5 +881,65 @@ impl IamCertServ {
             groups: vec![],
             ..Default::default()
         }
+    }
+
+    pub async fn enabled_cert_conf(cert_conf_by_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumCertConfServ::modify_rbum(
+            cert_conf_by_id,
+            &mut RbumCertConfModifyReq {
+                name: None,
+                note: None,
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                ext: None,
+                sk_need: None,
+                sk_encrypted: None,
+                repeatable: None,
+                is_basic: None,
+                rest_by_kinds: None,
+                expire_sec: None,
+                sk_lock_cycle_sec: None,
+                sk_lock_err_times: None,
+                sk_lock_duration_sec: None,
+                coexist_num: None,
+                conn_uri: None,
+                status: Some(RbumCertConfStatusKind::Enabled),
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    pub async fn disable_cert_conf(cert_conf_by_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumCertConfServ::modify_rbum(
+            cert_conf_by_id,
+            &mut RbumCertConfModifyReq {
+                name: None,
+                note: None,
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                ext: None,
+                sk_need: None,
+                sk_encrypted: None,
+                repeatable: None,
+                is_basic: None,
+                rest_by_kinds: None,
+                expire_sec: None,
+                sk_lock_cycle_sec: None,
+                sk_lock_err_times: None,
+                sk_lock_duration_sec: None,
+                coexist_num: None,
+                conn_uri: None,
+                status: Some(RbumCertConfStatusKind::Disabled),
+            },
+            funs,
+            ctx,
+        )
+        .await
     }
 }
