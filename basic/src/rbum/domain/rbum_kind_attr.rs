@@ -44,11 +44,16 @@ pub struct Model {
     pub show_by_conds: String,
     /// Whether indexing is needed
     pub idx: bool,
+    /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumDataTypeKind)
     pub data_type: String,
+    /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumWidgetTypeKind)
     pub widget_type: String,
+    pub widget_columns: u8,
     pub default_value: String,
     /// Dynamic default value
     /// the return format is the same as `default_value`
+    /// or `json` when `data_type` = `Json` and `widget_type` = `Json`
+    /// or `array` when `data_type` = `Array` and `widget_type` = `Array`
     pub dyn_default_value: String,
     /// Fixed option, json array formatted as `[{name:<display name>:value:<corresponding value>}]`
     pub options: String,
@@ -108,6 +113,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Idx).not_null().boolean().default(false))
             .col(ColumnDef::new(Column::DataType).not_null().string())
             .col(ColumnDef::new(Column::WidgetType).not_null().string())
+            .col(ColumnDef::new(Column::WidgetColumns).not_null().small_unsigned().default(1))
             .col(ColumnDef::new(Column::DefaultValue).not_null().string().default(""))
             .col(ColumnDef::new(Column::DynDefaultValue).not_null().string().default(""))
             .col(ColumnDef::new(Column::Options).not_null().text())
