@@ -53,23 +53,11 @@ impl IamCertServ {
         let rbum_cert_conf_user_pwd_id = IamCertUserPwdServ::add_cert_conf(user_pwd_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
 
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
-            IamCertPhoneVCodeServ::add_or_enable_cert_conf(
-                &phone_vcode_cert_conf_add_req,
-                rbum_scope_helper::get_max_level_id_by_context(ctx),
-                funs,
-                ctx,
-            )
-            .await?;
+            IamCertPhoneVCodeServ::add_or_enable_cert_conf(&phone_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         }
 
         if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
-            IamCertMailVCodeServ::add_or_enable_cert_conf(
-                &mail_vcode_cert_conf_add_req,
-                rbum_scope_helper::get_max_level_id_by_context(ctx),
-                funs,
-                ctx,
-            )
-            .await?;
+            IamCertMailVCodeServ::add_or_enable_cert_conf(&mail_vcode_cert_conf_add_req, rbum_scope_helper::get_max_level_id_by_context(ctx), funs, ctx).await?;
         }
 
         if let Some(ldap_cert_conf_add_req) = ldap_cert_conf_add_req {
@@ -260,7 +248,7 @@ impl IamCertServ {
 
     pub async fn paginate_cert_conf(
         id: Option<String>,
-        code: Option<String>,
+        kind: Option<TrimString>,
         name: Option<String>,
         with_sub: bool,
         iam_item_id: Option<String>,
@@ -275,11 +263,11 @@ impl IamCertServ {
             &RbumCertConfFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.map(|id| vec![id]),
-                    code,
                     name,
                     with_sub_own_paths: with_sub,
                     ..Default::default()
                 },
+                kind,
                 rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
                 rel_rbum_item_id: iam_item_id,
                 status: Some(RbumCertConfStatusKind::Enabled),

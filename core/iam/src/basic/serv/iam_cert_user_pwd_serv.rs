@@ -6,7 +6,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
-use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -44,6 +44,7 @@ impl IamCertUserPwdServ {
                 sk_lock_duration_sec: Some(add_req.sk_lock_duration_sec),
                 coexist_num: Some(1),
                 conn_uri: None,
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id,
             },

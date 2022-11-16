@@ -9,7 +9,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
-use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -51,6 +51,7 @@ impl IamCertPhoneVCodeServ {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
                 conn_uri: None,
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id,
             },
@@ -286,7 +287,12 @@ impl IamCertPhoneVCodeServ {
         format!("{}", vcode)
     }
 
-    pub async fn add_or_enable_cert_conf(add_req: &IamCertConfPhoneVCodeAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_or_enable_cert_conf(
+        add_req: &IamCertConfPhoneVCodeAddOrModifyReq,
+        rel_iam_item_id: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
         let cert_result = RbumCertConfServ::do_find_one_rbum(
             &RbumCertConfFilterReq {
                 kind: Some(TrimString(IamCertKernelKind::PhoneVCode.to_string())),

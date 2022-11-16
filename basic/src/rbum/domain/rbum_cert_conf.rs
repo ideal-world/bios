@@ -108,7 +108,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::SkLockDurationSec).not_null().unsigned())
             .col(ColumnDef::new(Column::CoexistNum).not_null().unsigned())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
-            .col(ColumnDef::new(Column::status).not_null().tiny_unsigned())
+            .col(ColumnDef::new(Column::Status).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
             // Basic

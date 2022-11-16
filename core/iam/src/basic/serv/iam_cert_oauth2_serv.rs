@@ -19,7 +19,7 @@ use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConf
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Pending;
-use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -62,6 +62,7 @@ impl IamCertOAuth2Serv {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
                 conn_uri: None,
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: Some(rel_iam_item_id.to_string()),
             },

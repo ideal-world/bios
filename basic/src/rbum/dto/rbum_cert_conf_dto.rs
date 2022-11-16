@@ -47,7 +47,7 @@ pub struct RbumCertConfAddReq {
     pub coexist_num: Option<u32>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
-
+    pub status: RbumCertConfStatusKind,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_domain_id: String,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
