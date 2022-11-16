@@ -5,6 +5,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq};
+use bios_basic::rbum::rbum_enumeration::RbumCertConfStatusKind;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertConfServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
@@ -48,6 +49,7 @@ impl IamCertTokenServ {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(add_req.coexist_num),
                 conn_uri: None,
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id,
             },
@@ -80,6 +82,7 @@ impl IamCertTokenServ {
                 sk_lock_duration_sec: None,
                 coexist_num: modify_req.coexist_num,
                 conn_uri: None,
+                status: None,
             },
             funs,
             ctx,

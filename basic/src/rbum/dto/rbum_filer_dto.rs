@@ -1,10 +1,11 @@
 use std::default::Default;
 
 use serde::{Deserialize, Serialize};
+use tardis::basic::field::TrimString;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
 
-use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
+use crate::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
@@ -31,6 +32,9 @@ pub struct RbumBasicFilterReq {
 #[serde(default)]
 pub struct RbumCertConfFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub kind: Option<TrimString>,
+    pub supplier: Option<String>,
+    pub status: Option<RbumCertConfStatusKind>,
     pub rel_rbum_domain_id: Option<String>,
     pub rel_rbum_item_id: Option<String>,
 }
