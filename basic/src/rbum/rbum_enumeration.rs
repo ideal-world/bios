@@ -124,7 +124,29 @@ impl TryGetable for RbumRelFromKind {
         RbumRelFromKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+pub enum RbumCertConfStatusKind {
+    Disabled,
+    Enabled,
+}
 
+impl RbumCertConfStatusKind {
+    pub fn from_int(s: u8) -> TardisResult<RbumCertConfStatusKind> {
+        match s {
+            0 => Ok(RbumCertConfStatusKind::Disabled),
+            1 => Ok(RbumCertConfStatusKind::Enabled),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertConfStatusKind: {}", s), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> u8 {
+        match self {
+            RbumCertConfStatusKind::Disabled => 0,
+            RbumCertConfStatusKind::Enabled => 1,
+        }
+    }
+}
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
 pub enum RbumCertStatusKind {
