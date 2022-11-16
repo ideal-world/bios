@@ -9,7 +9,6 @@ use bios_iam::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPw
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::{RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, RBUM_SCOPE_LEVEL_TENANT};
 use bios_iam::iam_enumeration::IamCertKernelKind;
-use bios_iam::iam_enumeration::{IamCertExtKind, IamCertManageKind};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;

@@ -16,7 +16,7 @@ use crate::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfDetai
 use crate::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp};
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use crate::rbum::rbum_config::RbumConfigApi;
-use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
+use crate::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use crate::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
 use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
@@ -59,6 +59,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             sk_lock_duration_sec: Set(add_req.sk_lock_duration_sec.unwrap_or(0)),
             coexist_num: Set(add_req.coexist_num.unwrap_or(1)),
             conn_uri: Set(add_req.conn_uri.as_ref().unwrap_or(&"".to_string()).to_string()),
+            status: Set(add_req.status.to_int()),
             rel_rbum_domain_id: Set(add_req.rel_rbum_domain_id.to_string()),
             rel_rbum_item_id: Set(add_req.rel_rbum_item_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
@@ -194,6 +195,9 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
         if let Some(conn_uri) = &modify_req.conn_uri {
             rbum_cert_conf.conn_uri = Set(conn_uri.to_string());
         }
+        if let Some(status) = &modify_req.status {
+            rbum_cert_conf.status = Set(status.to_int());
+        }
         Ok(rbum_cert_conf)
     }
 
@@ -294,6 +298,15 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
                 (rbum_cert_conf::Entity, rbum_cert_conf::Column::UpdateTime),
             ])
             .from(rbum_cert_conf::Entity);
+        if let Some(kind) = &filter.kind {
+            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Kind).eq(kind.to_string()));
+        }
+        if let Some(supplier) = &filter.supplier {
+            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert::Column::Supplier).eq(supplier.to_string()));
+        }
+        if let Some(status) = &filter.status {
+            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert::Column::Status).eq(status.to_int()));
+        }
         if let Some(rel_rbum_domain_id) = &filter.rel_rbum_domain_id {
             query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId).eq(rel_rbum_domain_id.to_string()));
         }
@@ -342,6 +355,7 @@ impl RbumCertConfServ {
                     .from(rbum_cert_conf::Entity)
                     .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
                     .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier))
+                    .and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
                     .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
             )
