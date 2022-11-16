@@ -7,8 +7,8 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
-use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -50,6 +50,7 @@ impl IamCertMailVCodeServ {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
                 conn_uri: None,
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id,
             },
@@ -82,6 +83,7 @@ impl IamCertMailVCodeServ {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: None,
+                status: None,
             },
             funs,
             ctx,
@@ -293,5 +295,30 @@ impl IamCertMailVCodeServ {
         let mut rand = tardis::rand::thread_rng();
         let vcode: i32 = rand.gen_range(1000..9999);
         format!("{}", vcode)
+    }
+
+    pub async fn add_or_enable_cert_conf(
+        add_req: &IamCertConfMailVCodeAddOrModifyReq,
+        rel_iam_item_id: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let cert_result = RbumCertConfServ::do_find_one_rbum(
+            &RbumCertConfFilterReq {
+                kind: Some(TrimString(IamCertKernelKind::MailVCode.to_string())),
+                rel_rbum_item_id: rel_iam_item_id.clone(),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let result = if let Some(cert_result) = cert_result {
+            IamCertServ::enabled_cert_conf(&cert_result.id, funs, ctx).await?;
+            cert_result.id.into()
+        } else {
+            Self::add_cert_conf(add_req, rel_iam_item_id, funs, ctx).await?
+        };
+        Ok(result)
     }
 }
