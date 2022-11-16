@@ -60,6 +60,8 @@ pub struct RbumCertSummaryResp {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub status: RbumCertStatusKind,
+    pub kind: String,
+    pub supplier: String,
 
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
@@ -83,6 +85,8 @@ pub struct RbumCertSummaryWithSkResp {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub status: RbumCertStatusKind,
+    pub kind: String,
+    pub supplier: String,
 
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
@@ -106,6 +110,8 @@ pub struct RbumCertDetailResp {
     pub end_time: DateTime<Utc>,
     pub conn_uri: String,
     pub status: RbumCertStatusKind,
+    pub kind: String,
+    pub supplier: String,
     pub rel_rbum_cert_conf_id: Option<String>,
     pub rel_rbum_cert_conf_name: Option<String>,
     pub rel_rbum_cert_conf_code: Option<String>,
