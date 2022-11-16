@@ -296,11 +296,11 @@ impl IamCertMailVCodeServ {
         format!("{}", vcode)
     }
 
-    pub async fn add_or_enable_cert_conf(add_req: &IamCertConfMailVCodeAddOrModifyReq, rel_iam_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_or_enable_cert_conf(add_req: &IamCertConfMailVCodeAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let cert_result = RbumCertConfServ::do_find_one_rbum(
             &RbumCertConfFilterReq {
                 kind: Some(TrimString(IamCertKernelKind::MailVCode.to_string())),
-                rel_rbum_item_id: Some(rel_iam_item_id.into()),
+                rel_rbum_item_id: rel_iam_item_id.clone(),
                 ..Default::default()
             },
             funs,
@@ -311,7 +311,7 @@ impl IamCertMailVCodeServ {
             IamCertServ::enabled_cert_conf(&cert_result.id, funs, ctx).await?;
             cert_result.id.into()
         } else {
-            Self::add_cert_conf(add_req, Some(rel_iam_item_id.into()), funs, ctx).await?
+            Self::add_cert_conf(add_req, rel_iam_item_id, funs, ctx).await?
         };
         Ok(result)
     }

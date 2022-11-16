@@ -55,7 +55,7 @@ impl IamCertServ {
         if let Some(phone_vcode_cert_conf_add_req) = phone_vcode_cert_conf_add_req {
             IamCertPhoneVCodeServ::add_or_enable_cert_conf(
                 &phone_vcode_cert_conf_add_req,
-                &rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_else(|| "".to_string()),
+                rbum_scope_helper::get_max_level_id_by_context(ctx),
                 funs,
                 ctx,
             )
@@ -65,7 +65,7 @@ impl IamCertServ {
         if let Some(mail_vcode_cert_conf_add_req) = mail_vcode_cert_conf_add_req {
             IamCertMailVCodeServ::add_or_enable_cert_conf(
                 &mail_vcode_cert_conf_add_req,
-                &rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_else(|| "".to_string()),
+                rbum_scope_helper::get_max_level_id_by_context(ctx),
                 funs,
                 ctx,
             )
