@@ -226,6 +226,8 @@ impl IamCertServ {
                 start_time: kernel_cert.start_time,
                 end_time: kernel_cert.end_time,
                 status: kernel_cert.status,
+                kind: "".to_string(),
+                supplier: "".to_string(),
                 rel_rbum_cert_conf_id: kernel_cert.rel_rbum_cert_conf_id,
                 rel_rbum_cert_conf_name: kernel_cert.rel_rbum_cert_conf_name,
                 rel_rbum_cert_conf_code: kernel_cert.rel_rbum_cert_conf_code,
@@ -400,6 +402,7 @@ impl IamCertServ {
         Ok(())
     }
 
+    #[deprecated = "remove"]
     pub async fn get_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         if IamRelServ::find_rels(
             &RbumRelFilterReq {
@@ -452,6 +455,8 @@ impl IamCertServ {
             start_time: manage_cert.start_time,
             end_time: manage_cert.end_time,
             status: manage_cert.status,
+            kind: "".to_string(),
+            supplier: "".to_string(),
             rel_rbum_cert_conf_id: manage_cert.rel_rbum_cert_conf_id,
             rel_rbum_cert_conf_name: manage_cert.rel_rbum_cert_conf_name,
             rel_rbum_cert_conf_code: manage_cert.rel_rbum_cert_conf_code,
@@ -516,6 +521,8 @@ impl IamCertServ {
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
                 status: ext_cert.status,
+                kind: ext_cert.kind,
+                supplier: ext_cert.supplier,
                 rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
                 rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
                 rel_rbum_cert_conf_code: ext_cert.rel_rbum_cert_conf_code,
@@ -560,6 +567,8 @@ impl IamCertServ {
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
                 status: ext_cert.status,
+                kind: ext_cert.kind,
+                supplier: ext_cert.supplier,
                 rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
                 rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
                 rel_rbum_cert_conf_code: ext_cert.rel_rbum_cert_conf_code,
