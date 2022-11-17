@@ -5,6 +5,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::serde_json::to_string;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
@@ -186,7 +187,8 @@ impl IamCertOAuth2Serv {
     }
 
     pub async fn get_or_add_account(cert_supplier: IamCertOAuth2Supplier, code: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
+        let cert_conf_id =
+            IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::OAuth2.to_string(), &cert_supplier.to_string(), Some(tenant_id.to_string()), funs).await?;
         let mut mock_ctx = TardisContext {
             own_paths: tenant_id.to_string(),
             ..Default::default()

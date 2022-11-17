@@ -1,17 +1,20 @@
 use crate::basic::serv::iam_cert_oauth2_serv::{IamCertOAuth2Spi, IamCertOAuth2TokenInfo};
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
+use ldap3::log::trace;
+use ldap3::log::Level::Debug;
 use tardis::basic::result::TardisResult;
+use tardis::log::warn;
 use tardis::serde_json::Value;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{serde_json, TardisFuns, TardisFunsInst};
 
 pub struct IamCertOAuth2SpiGithub;
-
+const OAUTH2_GITHUB_USER_INFO_CACHE_KEY: &str = "OAUTH2_GITHUB_USER_INFO_CACHE_KEY:";
 #[async_trait]
 impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
     async fn get_access_token(&self, code: &str, ak: &str, sk: &str, funs: &TardisFunsInst) -> TardisResult<IamCertOAuth2TokenInfo> {
         //https://docs.github.com/cn/developers/apps/building-oauth-apps/authorizing-oauth-apps
-        let headers = vec![("Accept".to_string(), "application/xml".to_string())];
+        let headers = vec![("Accept".to_string(), "application/json".to_string())];
         let result = funs
             .web_client()
             .post_to_obj::<Value>(
@@ -29,11 +32,17 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
             ));
         }
         let result = result.body.unwrap();
+        trace!("iam oauth2 spi [Github] get access token response: {}", result);
         if let Some(access_token) = result.get("access_token") {
-            let session_token = access_token.as_str().unwrap();
-            let headers = vec![("Authorization".to_string(), format!("Bearer {}", access_token))];
+            let access_token = access_token.as_str().unwrap();
+            let headers = vec![
+                ("Authorization".to_string(), format!("Bearer {}", access_token)),
+                ("Accept".to_string(), "application/json".to_string()),
+                ("User-Agent".to_string(), "BIOS".to_string()),
+            ];
             //get user info
-            let result = funs.web_client().post_to_obj::<Value>("https://api.github.com/user", "", Some(headers)).await?;
+            let result = funs.web_client().get_to_str("https://api.github.com/user", Some(headers)).await?;
+            trace!("iam oauth2 spi [Github] get user info response: {:?}", result);
             if result.code != 200 {
                 return Err(funs.err().not_found(
                     "oauth_spi_github",
@@ -43,12 +52,12 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
                 ));
             }
             let user_info = result.body.unwrap();
-            //todo add to cache
-            funs.cache().set_ex(&format!("{}", access_token), &user_info.to_string(), funs.rbum_conf_cache_key_cert_code_expire_sec()).await?;
+            let user_info = TardisFuns::json.str_to_obj::<Value>(&user_info)?;
+            funs.cache().set_ex(&format!("{}{}", OAUTH2_GITHUB_USER_INFO_CACHE_KEY, access_token), &user_info.to_string(), 5).await?;
             if let Some(id) = user_info.get("id") {
                 Ok(IamCertOAuth2TokenInfo {
                     open_id: id.to_string(),
-                    access_token: session_token.to_string(),
+                    access_token: access_token.to_string(),
                     refresh_token: None,
                     token_expires_ms: None,
                     union_id: None,
@@ -62,21 +71,24 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
                 ))
             }
         } else {
+            let mut v_error = "";
+            if let Some(error) = result.get("error") {
+                v_error = error.as_str().unwrap();
+            }
             Err(funs.err().not_found(
                 "oauth_spi_github",
                 "get_access_token",
-                "oauth get access token error",
+                &format!("oauth get access token error:{}", v_error),
                 "500-iam-cert-oauth-get-access-token-error",
             ))
         }
     }
 
     async fn get_account_name(&self, oauth2_info: IamCertOAuth2TokenInfo, funs: &TardisFunsInst) -> TardisResult<String> {
-        //todo get cache
-        let user_info = funs.cache().get(&format!("{}", oauth2_info.access_token.clone())).await?;
+        let user_info = funs.cache().get(&format!("{}{}", OAUTH2_GITHUB_USER_INFO_CACHE_KEY, oauth2_info.access_token.clone())).await?;
         if let Some(user_info) = user_info {
             let result = TardisFuns::json.str_to_obj::<Value>(&user_info)?;
-            Ok(result.get("name").unwrap().as_str().unwrap_or_else(|| "").to_string())
+            Ok(result.get("name").unwrap_or_else(|| &Value::Null).as_str().unwrap_or_else(|| "").to_string())
         } else {
             Err(funs.err().not_found(
                 "oauth_spi_github",
