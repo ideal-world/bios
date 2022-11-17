@@ -128,3 +128,9 @@ pub struct IamCertLdapAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub dn: TrimString,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertAkSkAddReq{
+    pub ak:String,
+    pub sk:String,
+}
