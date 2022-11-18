@@ -4,6 +4,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_enumeration::IamCertKernelKind;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
+use std::process::id;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -18,5 +19,9 @@ impl IamCiCertAkSkServ {
 
         let cert_id = IamCertAkSkServ::add_cert(&IamCertAkSkAddReq { ak: ak.clone(), sk: sk.clone() }, app_id, &cert_conf_id, funs, ctx).await?;
         Ok(IamCertAkSkResp { id: cert_id, ak, sk })
+    }
+
+    pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamCertAkSkServ::delete_cert(id, funs, ctx).await
     }
 }

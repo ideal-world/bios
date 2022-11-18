@@ -22,7 +22,7 @@ pub struct IamCtCertManageApi;
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtCertManageApi {
     /// Find Conf
-    #[oai(path = "/conf", method = "get")]
+    #[oai(path = "/conf", method = "get", deprecated = "true")]
     #[deprecated]
     async fn find_conf(&self, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
@@ -85,7 +85,7 @@ impl IamCtCertManageApi {
     }
 
     /// get manage cert
-    #[oai(path = "/v1.0/:id", method = "get")]
+    #[oai(path = "/v1.0/:id", method = "get", deprecated = "true")]
     #[deprecated = "remove"]
     async fn get_manage_cert_deprecated(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -141,7 +141,7 @@ impl IamCtCertManageApi {
     }
 
     /// Paginate Manage Certs
-    #[oai(path = "/v1.0", method = "get")]
+    #[oai(path = "/v1.0", method = "get", deprecated = "true")]
     #[deprecated = "remove"]
     async fn paginate_certs_deprecated(
         &self,
