@@ -226,6 +226,27 @@ impl IamIdentCacheServ {
         }
         Err(funs.err().not_found("iam_cache_context", "get", "not found context", "404-iam-cache-context-not-exist"))
     }
+
+    pub async fn add_aksk(ak: &str, sk: &str, rel_iam_item_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("add aksk: ak={},sk={}", ak, sk);
+
+        funs.cache()
+            .set(
+                format!("{}{}", funs.conf::<IamConfig>().cache_key_aksk_info_, ak).as_str(),
+                format!("{},{}", sk, rel_iam_item_id,).as_str(),
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn delete_aksk(ak: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("delete aksk: ak={}", ak);
+
+        funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_aksk_info_, ak).as_str()).await?;
+
+        Ok(())
+    }
 }
 
 pub struct IamResCacheServ;

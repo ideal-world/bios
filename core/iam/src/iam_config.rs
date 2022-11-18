@@ -16,6 +16,8 @@ pub struct IamConfig {
     pub rbum: RbumConfig,
     // token -> (token_kind, account_id)
     pub cache_key_token_info_: String,
+    // ak -> (sk,tenant_id,[appid])
+    pub cache_key_aksk_info_: String,
     // account_id -> [token, (token_kind, add_time)]
     pub cache_key_account_rel_: String,
     // account_id -> {
@@ -84,6 +86,7 @@ impl Default for IamConfig {
         IamConfig {
             rbum: Default::default(),
             cache_key_token_info_: "iam:cache:token:info:".to_string(),
+            cache_key_aksk_info_: "iam:cache:aksk:info:".to_string(),
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
             cache_key_role_info_: "iam:cache:role:info:".to_string(),

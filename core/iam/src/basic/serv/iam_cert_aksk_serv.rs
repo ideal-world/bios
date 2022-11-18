@@ -1,13 +1,19 @@
-use tardis::{basic::{dto::TardisContext, result::TardisResult}, TardisFuns, TardisFunsInst};
-use tardis::basic::field::TrimString;
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
+use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use tardis::basic::field::TrimString;
+use tardis::db::sea_orm::sea_query::ColumnSpec::Default;
+use tardis::{
+    basic::{dto::TardisContext, result::TardisResult},
+    TardisFuns, TardisFunsInst,
+};
 
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfAkSkAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq};
 use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertMailVCodeAddReq};
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
@@ -47,36 +53,42 @@ impl IamCertAkSkServ {
             funs,
             ctx,
         )
-            .await?;
+        .await?;
         Ok(id)
     }
 
+    ///never use
     pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfAkSkAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        RbumCertConfServ::modify_rbum(id, &mut RbumCertConfModifyReq {
-            name: None,
-            note: None,
-            ak_note: None,
-            ak_rule: None,
-            sk_note: None,
-            sk_rule: None,
-            ext: None,
-            sk_need: None,
-            sk_encrypted: None,
-            repeatable: None,
-            is_basic: None,
-            rest_by_kinds: None,
-            expire_sec: None,
-            sk_lock_cycle_sec: None,
-            sk_lock_err_times: None,
-            sk_lock_duration_sec: None,
-            coexist_num: None,
-            conn_uri: None,
-            status: None,
-        }, funs, ctx);
+        RbumCertConfServ::modify_rbum(
+            id,
+            &mut RbumCertConfModifyReq {
+                name: None,
+                note: None,
+                ak_note: None,
+                ak_rule: None,
+                sk_note: None,
+                sk_rule: None,
+                ext: None,
+                sk_need: None,
+                sk_encrypted: None,
+                repeatable: None,
+                is_basic: None,
+                rest_by_kinds: None,
+                expire_sec: None,
+                sk_lock_cycle_sec: None,
+                sk_lock_err_times: None,
+                sk_lock_duration_sec: None,
+                coexist_num: None,
+                conn_uri: None,
+                status: None,
+            },
+            funs,
+            ctx,
+        );
         Ok(())
     }
 
-    pub async fn add_cert(add_req: &IamCertAkSkAddReq, app_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamCertAkSkAddReq, rel_rbum_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: add_req.ak.into(),
@@ -91,13 +103,20 @@ impl IamCertAkSkServ {
                 status: RbumCertStatusKind::Enabled,
                 rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 rel_rbum_kind: RbumCertRelKind::Item,
-                rel_rbum_id: app_id.to_string(),
+                rel_rbum_id: rel_rbum_id.to_string(),
                 is_outside: false,
             },
             funs,
             ctx,
         )
-            .await?;
+        .await?;
+        IamIdentCacheServ::add_aksk(&add_req.ak, &add_req.sk, rel_rbum_id, funs);
         Ok(id)
+    }
+    pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let resp = RbumCertServ::peek_rbum(id, &RbumCertFilterReq { ..Default::default() }, funs, ctx).await?;
+        RbumCertServ::delete_rbum(id, funs, ctx).await?;
+        IamIdentCacheServ::delete_aksk(&resp.ak, funs);
+        Ok(())
     }
 }
