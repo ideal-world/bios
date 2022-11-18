@@ -5,7 +5,6 @@ use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::field::TrimString;
-use tardis::db::sea_orm::sea_query::ColumnSpec::Default;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     TardisFuns, TardisFunsInst,
@@ -15,6 +14,7 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfAkSkAddOrModifyReq, IamCer
 use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertMailVCodeAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants::RBUM_SYSTEM_OWNER;
 use crate::iam_enumeration::IamCertKernelKind;
 
 pub struct IamCertAkSkServ;
@@ -89,10 +89,14 @@ impl IamCertAkSkServ {
     }
 
     pub async fn add_cert(add_req: &IamCertAkSkAddReq, rel_rbum_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let new_ctx = TardisContext {
+            owner: RBUM_SYSTEM_OWNER.to_string(),
+            ..ctx.clone()
+        };
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
-                ak: add_req.ak.into(),
-                sk: Some(add_req.sk.into()),
+                ak: TrimString(add_req.ak.clone()),
+                sk: Some(TrimString(add_req.sk.clone())),
                 kind: None,
                 supplier: None,
                 vcode: None,
@@ -107,7 +111,7 @@ impl IamCertAkSkServ {
                 is_outside: false,
             },
             funs,
-            ctx,
+            &new_ctx,
         )
         .await?;
         IamIdentCacheServ::add_aksk(&add_req.ak, &add_req.sk, rel_rbum_id, funs);
