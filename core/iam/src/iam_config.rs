@@ -21,6 +21,7 @@ pub struct IamConfig {
     // account_id -> {
     //     _: system or tenant context,
     //     <app_id>: app context,
+    //     is_global<bool>:is global account
     // }
     pub cache_key_account_info_: String,
     // role_id -> iam_role

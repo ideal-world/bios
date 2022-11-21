@@ -11,6 +11,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
@@ -51,8 +52,14 @@ impl IamCpCertUserPwdServ {
     }
 
     pub async fn validate_by_user_pwd(sk: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
+        let rbum_cert_conf_id;
+        if IamAccountServ::is_global_account(&ctx.owner, funs, ctx).await? {
+            rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), None, funs).await?;
+        } else {
+            rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
+        }
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
+
         let (_, _, _) = RbumCertServ::validate_by_spec_cert_conf(&user_pwd_cert.ak, sk, &rbum_cert_conf_id, false, &ctx.own_paths, funs).await?;
         Ok(())
     }
