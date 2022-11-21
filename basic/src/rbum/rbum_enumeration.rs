@@ -260,7 +260,7 @@ pub enum RbumWidgetTypeKind {
     Switch,
     Select,
     Group, // Display group subtitles, datatype = String, value is empty
-    Json, // Json fields : all parent_attr_name = current attribute, datatype = Json
+    Json,  // Json fields : all parent_attr_name = current attribute, datatype = Json
     Array, // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
 }
 
