@@ -465,6 +465,7 @@ impl IamAccountServ {
                             } else {
                                 Some(IamTenantServ::get_id_by_ctx(ctx, funs)?)
                             },
+                            with_sub_own_paths: if use_sys_cert { true } else { false },
                             ..Default::default()
                         },
                         rel_rbum_id: Some(account.id.clone()),
