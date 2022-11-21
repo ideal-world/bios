@@ -2,13 +2,14 @@ use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
+use std::process::id;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -34,7 +35,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::iam_config::IamBasicInfoManager;
+use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::iam_app_serv::IamAppServ;
@@ -531,5 +532,24 @@ impl IamAccountServ {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
         funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), id)).await?;
         Ok(Void {})
+    }
+
+    /// return true means account is global account
+    pub async fn is_global_account(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        if let Some(bool_) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), "is_global").await? {
+            let bool_ = bool_.parse::<bool>();
+            return Ok(bool_.unwrap_or_else(|_| false));
+        } else {
+            let account = IamAccountServ::get_item(account_id, &IamAccountFilterReq { ..Default::default() }, funs, ctx).await?;
+            let is_global = account.own_paths.is_empty();
+            funs.cache()
+                .hset(
+                    format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),
+                    "is_global",
+                    &is_global.to_string(),
+                )
+                .await?;
+            Ok(is_global)
+        }
     }
 }
