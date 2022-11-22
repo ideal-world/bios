@@ -586,7 +586,7 @@ impl IamCertServ {
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
-            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+            let now_sk = RbumCertServ::show_sk(ext_cert.id.as_str(), &RbumCertFilterReq::default(), funs, mock_ctx).await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: ext_cert.ak,
