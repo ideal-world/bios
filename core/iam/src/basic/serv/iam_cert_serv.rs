@@ -5,6 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
+use tardis::serde_json::to_string;
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -549,6 +550,28 @@ impl IamCertServ {
     }
 
     pub async fn get_3th_kind_cert_by_id(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+        // query rel ,get owner
+        let rels = IamRelServ::find_rels(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamCertRel.to_string()),
+                from_rbum_id: Some(id.to_string()),
+                to_own_paths:Some(ctx.own_paths.clone()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+            .await?;
+        let mut mock_ctx=TardisContext{..ctx.clone() };
+        if let Some(rel)=rels.first(){mock_ctx.own_paths=rel.rel.own_paths.clone()}
         let ext_cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
@@ -559,7 +582,7 @@ impl IamCertServ {
                 ..Default::default()
             },
             funs,
-            ctx,
+            &mock_ctx,
         )
         .await?;
         if let Some(ext_cert) = ext_cert {
