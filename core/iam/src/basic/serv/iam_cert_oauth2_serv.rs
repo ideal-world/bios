@@ -5,7 +5,6 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::serde_json::to_string;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
@@ -270,7 +269,7 @@ impl IamCertOAuth2Serv {
         .await?;
         let result = if let Some(cert_result) = cert_result {
             IamCertServ::enabled_cert_conf(&cert_result.id, funs, ctx).await?;
-            cert_result.id.into()
+            cert_result.id
         } else {
             Self::add_cert_conf(supplier, add_req, rel_iam_item_id, funs, ctx).await?
         };

@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfSummaryResp;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
@@ -16,7 +15,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapResp, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
@@ -338,7 +337,8 @@ impl IamTenantServ {
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
         let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
-        let cert_conf_by_oauth2 = if let cert_conf_by_oauth2s = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect::<Vec<_>>() {
+        let cert_conf_by_oauth2s = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect::<Vec<_>>();
+        let cert_conf_by_oauth2 = if !cert_conf_by_oauth2s.is_empty() {
             let mut result = Vec::new();
             for cert_conf in cert_conf_by_oauth2s {
                 result.push(IamCertOAuth2Serv::get_cert_conf(&cert_conf.id, funs, ctx).await?);

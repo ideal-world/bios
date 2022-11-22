@@ -2,14 +2,13 @@ use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
-use std::process::id;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
@@ -466,7 +465,7 @@ impl IamAccountServ {
                             } else {
                                 Some(IamTenantServ::get_id_by_ctx(ctx, funs)?)
                             },
-                            with_sub_own_paths: if use_sys_cert { true } else { false },
+                            with_sub_own_paths: use_sys_cert,
                             ..Default::default()
                         },
                         rel_rbum_id: Some(account.id.clone()),
@@ -539,7 +538,7 @@ impl IamAccountServ {
     pub async fn is_global_account(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         if let Some(bool_) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), "is_global").await? {
             let bool_ = bool_.parse::<bool>();
-            return Ok(bool_.unwrap_or_else(|_| false));
+            Ok(bool_.unwrap_or(false))
         } else {
             let account = IamAccountServ::get_item(account_id, &IamAccountFilterReq { ..Default::default() }, funs, ctx).await?;
             let is_global = account.own_paths.is_empty();
@@ -551,6 +550,16 @@ impl IamAccountServ {
                 )
                 .await?;
             Ok(is_global)
+        }
+    }
+
+    pub async fn new_context_if_account_is_global(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
+        if Self::is_global_account(&ctx.owner, funs, ctx).await? {
+            let mut result = ctx.clone();
+            result.own_paths = "".to_string();
+            Ok(result)
+        } else {
+            Ok(ctx.clone())
         }
     }
 }
