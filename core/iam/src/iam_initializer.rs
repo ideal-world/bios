@@ -548,7 +548,7 @@ async fn add_role<'a>(
             res_ids,
         },
         funs,
-        &ctx,
+        ctx,
     )
     .await?;
     Ok(role_id)
