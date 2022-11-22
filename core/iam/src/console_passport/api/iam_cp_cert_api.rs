@@ -14,6 +14,7 @@ use crate::basic::dto::iam_cert_dto::{
     IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq,
     IamCertUserPwdValidateSkReq, IamContextFetchReq,
 };
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -166,7 +167,7 @@ impl IamCpCertApi {
     #[oai(path = "/validate/userpwd", method = "put")]
     async fn validate_by_user_pwd(&self, req: Json<IamCertUserPwdValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk, &funs, &ctx.0).await?;
+        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk, &funs, &IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?).await?;
         TardisResp::ok(Void {})
     }
 

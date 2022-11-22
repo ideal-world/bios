@@ -1,12 +1,9 @@
 use crate::basic::serv::iam_cert_oauth2_serv::{IamCertOAuth2Spi, IamCertOAuth2TokenInfo};
 use async_trait::async_trait;
-use bios_basic::rbum::rbum_config::RbumConfigApi;
 use ldap3::log::trace;
-use ldap3::log::Level::Debug;
 use tardis::basic::result::TardisResult;
-use tardis::log::warn;
 use tardis::serde_json::Value;
-use tardis::{serde_json, TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub struct IamCertOAuth2SpiGithub;
 const OAUTH2_GITHUB_USER_INFO_CACHE_KEY: &str = "OAUTH2_GITHUB_USER_INFO_CACHE_KEY:";
@@ -88,7 +85,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
         let user_info = funs.cache().get(&format!("{}{}", OAUTH2_GITHUB_USER_INFO_CACHE_KEY, oauth2_info.access_token.clone())).await?;
         if let Some(user_info) = user_info {
             let result = TardisFuns::json.str_to_obj::<Value>(&user_info)?;
-            Ok(result.get("name").unwrap_or_else(|| &Value::Null).as_str().unwrap_or_else(|| "").to_string())
+            Ok(result.get("name").unwrap_or(&Value::Null).as_str().unwrap_or("").to_string())
         } else {
             Err(funs.err().not_found(
                 "oauth_spi_github",
