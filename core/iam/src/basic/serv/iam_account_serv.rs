@@ -552,4 +552,14 @@ impl IamAccountServ {
             Ok(is_global)
         }
     }
+
+    pub async fn new_context_if_account_is_global(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
+        if Self::is_global_account(&ctx.owner, funs, ctx).await? {
+            let mut result = ctx.clone();
+            result.own_paths = "".to_string();
+            Ok(result)
+        } else {
+            Ok(ctx.clone())
+        }
+    }
 }
