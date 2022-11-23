@@ -7,11 +7,11 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::field::TrimString;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    TardisFuns, TardisFunsInst,
+    TardisFunsInst,
 };
 
-use crate::basic::dto::iam_cert_conf_dto::{IamCertConfAkSkAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq};
-use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertMailVCodeAddReq};
+use crate::basic::dto::iam_cert_conf_dto::IamCertConfAkSkAddOrModifyReq;
+use crate::basic::dto::iam_cert_dto::IamCertAkSkAddReq;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::RBUM_SYSTEM_OWNER;
@@ -84,19 +84,28 @@ impl IamCertAkSkServ {
             },
             funs,
             ctx,
-        );
-        Ok(())
+        ).await
     }
 
-    pub async fn add_cert(add_req: &IamCertAkSkAddReq, rel_rbum_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_cert(add_req: &IamCertAkSkAddReq, ak: &str, sk: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let new_ctx = TardisContext {
             owner: RBUM_SYSTEM_OWNER.to_string(),
+            own_paths: if add_req.app_id.is_some() {
+                format!("{}/{}", add_req.tenant_id, add_req.app_id.clone().unwrap())
+            } else {
+                add_req.tenant_id.clone()
+            },
             ..ctx.clone()
+        };
+        let rel_rbum_id = if add_req.app_id.is_some() {
+            add_req.app_id.as_ref().unwrap()
+        } else {
+            &add_req.tenant_id
         };
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
-                ak: TrimString(add_req.ak.clone()),
-                sk: Some(TrimString(add_req.sk.clone())),
+                ak: ak.into(),
+                sk: Some(sk.into()),
                 kind: None,
                 supplier: None,
                 vcode: None,
@@ -107,14 +116,14 @@ impl IamCertAkSkServ {
                 status: RbumCertStatusKind::Enabled,
                 rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
                 rel_rbum_kind: RbumCertRelKind::Item,
-                rel_rbum_id: rel_rbum_id.to_string(),
+                rel_rbum_id: rel_rbum_id.clone(),
                 is_outside: false,
             },
             funs,
             &new_ctx,
         )
         .await?;
-        IamIdentCacheServ::add_aksk(&add_req.ak, &add_req.sk, rel_rbum_id, funs).await?;
+        IamIdentCacheServ::add_aksk(ak, sk, rel_rbum_id, funs).await?;
         Ok(id)
     }
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

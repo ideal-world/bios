@@ -12,12 +12,12 @@ use tardis::{TardisFuns, TardisFunsInst};
 pub struct IamCiCertAkSkServ;
 
 impl IamCiCertAkSkServ {
-    pub async fn general_cert(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertAkSkResp> {
+    pub async fn general_cert(add_req: IamCertAkSkAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertAkSkResp> {
         let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::AkSk.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
         let ak = TardisFuns::crypto.key.generate_ak()?;
         let sk = TardisFuns::crypto.key.generate_sk(&ak)?;
 
-        let cert_id = IamCertAkSkServ::add_cert(&IamCertAkSkAddReq { ak: ak.clone(), sk: sk.clone() }, app_id, &cert_conf_id, funs, ctx).await?;
+        let cert_id = IamCertAkSkServ::add_cert(&add_req, &ak, &sk,  &cert_conf_id, funs, ctx).await?;
         Ok(IamCertAkSkResp { id: cert_id, ak, sk })
     }
 

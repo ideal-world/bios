@@ -131,8 +131,8 @@ pub struct IamCertLdapAddOrModifyReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertAkSkAddReq {
-    pub ak: String,
-    pub sk: String,
+    pub tenant_id: String,
+    pub app_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
