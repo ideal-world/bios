@@ -843,7 +843,9 @@ impl RbumCertServ {
             .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(rel_rbum_kind.to_int()))
             .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
-            .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
+            .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
+            //basic sk must have cert conf
+            .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).ne(""));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
             if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
