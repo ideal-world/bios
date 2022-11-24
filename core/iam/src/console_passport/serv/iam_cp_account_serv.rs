@@ -33,31 +33,36 @@ impl IamCpAccountServ {
                 roles.push(role)
             }
         }
-        let enabled_apps = IamAppServ::find_items(
-            &IamAppFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: false,
-                    rel_ctx_owner: false,
-                    with_sub_own_paths: true,
-                    enabled: Some(true),
+        let enabled_apps = if ctx.own_paths.is_empty() {
+            //is_global account
+            Vec::new()
+        } else {
+            IamAppServ::find_items(
+                &IamAppFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: false,
+                        rel_ctx_owner: false,
+                        with_sub_own_paths: true,
+                        enabled: Some(true),
+                        ..Default::default()
+                    },
+                    rel: Some(RbumItemRelFilterReq {
+                        rel_by_from: false,
+                        is_left: false,
+                        tag: Some(IamRelKind::IamAccountApp.to_string()),
+                        from_rbum_kind: Some(RbumRelFromKind::Item),
+                        rel_item_id: Some(account.id.clone()),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 },
-                rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: false,
-                    is_left: false,
-                    tag: Some(IamRelKind::IamAccountApp.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(account.id.clone()),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?;
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+        };
         let mut apps: Vec<IamCpAccountAppInfoResp> = vec![];
         for app in enabled_apps {
             apps.push(IamCpAccountAppInfoResp {
