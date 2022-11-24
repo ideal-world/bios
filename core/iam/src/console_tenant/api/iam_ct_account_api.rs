@@ -1,3 +1,5 @@
+use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::helper::rbum_event_helper;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -26,6 +28,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAccountServ::add_account_agg(&add_req.0, &funs, &ctx).await?;
+        // TaskProcessor::get_notify_event_with_ctx(&funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -38,6 +41,9 @@ impl IamCtAccountApi {
         funs.begin().await?;
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
+        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
+            rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
+        }
         TardisResp::ok(Void {})
     }
 
