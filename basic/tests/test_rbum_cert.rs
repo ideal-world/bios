@@ -10,7 +10,7 @@ use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConf
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
-use bios_basic::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumScopeLevelKind};
+use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumScopeLevelKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
@@ -69,7 +69,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -102,7 +103,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -136,6 +138,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -167,7 +170,8 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_item_id: None,
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
-            sk_lock_duration_sec: None
+            sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -285,6 +289,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -378,6 +383,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -509,6 +515,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -541,6 +548,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
@@ -884,6 +892,7 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
             sk_lock_cycle_sec: None,
             sk_lock_err_times: None,
             sk_lock_duration_sec: None,
+            status: RbumCertConfStatusKind::Enabled,
         },
         &funs,
         context,
