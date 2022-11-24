@@ -7,14 +7,22 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::TardisFunsInst;
 
+use crate::process::task_processor::NotifyEventMessage;
 use crate::rbum::rbum_config::RbumConfigApi;
+
+pub async fn try_notifies(event_messages: Vec<NotifyEventMessage>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    for event_message in event_messages {
+        self::try_notify(&event_message.table_name, &event_message.operate, &event_message.record_id, funs, ctx).await?;
+    }
+    Ok(())
+}
 
 pub async fn try_notify<'a>(table_name: &str, operate: &str, record_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
     #[cfg(feature = "with-mq")]
     {
         if funs.rbum_conf_match_event(table_name, operate) {
             funs.mq()
-                .request(
+                .publish(
                     &funs.rbum_conf_mq_topic_event(),
                     tardis::TardisFuns::json.obj_to_string(&RbumEventMessage {
                         table_name: table_name.to_string(),
@@ -42,7 +50,7 @@ where
 {
     #[cfg(feature = "with-mq")]
     {
-        funs.mq().response(&funs.rbum_conf_mq_topic_event(), fun).await?;
+        funs.mq().subscribe(&funs.rbum_conf_mq_topic_event(), fun).await?;
         Ok(true)
     }
     #[cfg(not(feature = "with-mq"))]

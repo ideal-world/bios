@@ -1,3 +1,5 @@
+use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::helper::rbum_event_helper;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
@@ -23,6 +25,9 @@ impl IamCpAccountApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
+        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
+            rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
+        }
         TardisResp::ok(Void {})
     }
 

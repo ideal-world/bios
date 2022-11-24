@@ -12,6 +12,7 @@ use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
+use crate::process::task_processor::TaskProcessor;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{
     RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumKindAttrFilterReq, RbumSetItemFilterReq,
@@ -236,7 +237,8 @@ where
         let ext_domain = Self::package_ext_add(&id, add_req, funs, ctx).await?;
         funs.db().insert_one(ext_domain, ctx).await?;
         Self::after_add_item(&id, funs, ctx).await?;
-        rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, ctx).await?;
+        TaskProcessor::add_notify_event(Self::get_ext_table_name(), "c", id.as_str(), ctx)?;
+        // rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, ctx).await?;
         Ok(id)
     }
 
@@ -307,7 +309,8 @@ where
             funs.db().update_one(ext_domain, ctx).await?;
         }
         Self::after_modify_item(id, modify_req, funs, ctx).await?;
-        rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", id, funs, ctx).await?;
+        TaskProcessor::add_notify_event(Self::get_ext_table_name(), "u", id, ctx)?;
+        // rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", id, funs, ctx).await?;
         Ok(())
     }
 
@@ -335,10 +338,11 @@ where
             let mq_topic_entity_deleted = &funs.rbum_conf_mq_topic_entity_deleted();
             let mq_header = std::collections::HashMap::from([(funs.rbum_conf_mq_header_name_operator(), ctx.owner.clone())]);
             for delete_record in &delete_records {
-                funs.mq().request(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
+                funs.mq().publish(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
-            rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", id, funs, ctx).await?;
+            TaskProcessor::add_notify_event(Self::get_ext_table_name(), "d", id, ctx)?;
+            // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", id, funs, ctx).await?;
             Ok(delete_records.len() as u64)
         }
         #[cfg(not(feature = "with-mq"))]
@@ -346,7 +350,8 @@ where
             let delete_records = funs.db().soft_delete(select, &ctx.owner).await?;
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
-            rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, ctx).await?;
+            TaskProcessor::add_notify_event(Self::get_ext_table_name(), "d", id, ctx)?;
+            // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, ctx).await?;
             Ok(delete_records)
         }
     }
