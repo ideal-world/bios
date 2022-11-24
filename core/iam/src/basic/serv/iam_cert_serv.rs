@@ -3,7 +3,6 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::serde_json::to_string;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -401,73 +400,6 @@ impl IamCertServ {
     pub async fn delete_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         RbumCertServ::delete_rbum(id, funs, ctx).await?;
         Ok(())
-    }
-
-    #[deprecated = "remove"]
-    pub async fn get_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
-        if IamRelServ::find_rels(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                tag: Some(IamRelKind::IamCertRel.to_string()),
-                from_rbum_id: Some(id.to_string()),
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await?
-        .into_iter()
-        .filter(|x| x.rel.own_paths.contains(&ctx.own_paths.clone()) || x.rel.to_own_paths.contains(&ctx.own_paths.clone()))
-        .next()
-        .is_none()
-        {
-            return Err(funs.err().conflict("iam_cert", "get_manage_cert", "associated already exists", "409-rbum-rel-exist"));
-        }
-        let manage_cert = RbumCertServ::get_rbum(
-            id,
-            &RbumCertFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let mut mock_ctx = ctx.clone();
-        mock_ctx.own_paths = manage_cert.own_paths.clone();
-        let now_sk = RbumCertServ::show_sk(manage_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &mock_ctx).await?;
-        Ok(RbumCertSummaryWithSkResp {
-            id: manage_cert.id,
-            ak: manage_cert.ak,
-            sk: now_sk,
-            ext: manage_cert.ext,
-            start_time: manage_cert.start_time,
-            end_time: manage_cert.end_time,
-            status: manage_cert.status,
-            kind: "".to_string(),
-            supplier: "".to_string(),
-            rel_rbum_cert_conf_id: manage_cert.rel_rbum_cert_conf_id,
-            rel_rbum_cert_conf_name: manage_cert.rel_rbum_cert_conf_name,
-            rel_rbum_cert_conf_code: manage_cert.rel_rbum_cert_conf_code,
-            rel_rbum_kind: manage_cert.rel_rbum_kind,
-            rel_rbum_id: manage_cert.rel_rbum_id,
-            own_paths: manage_cert.own_paths,
-            owner: manage_cert.owner,
-            create_time: manage_cert.create_time,
-            update_time: manage_cert.update_time,
-        })
     }
 
     pub async fn add_3th_kind_cert(add_req: &mut IamCertExtAddReq, account_id: &str, cert_supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
