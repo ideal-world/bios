@@ -173,8 +173,8 @@ impl IamAppServ {
             }
         }
         //refresh ctx
-        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
-        IamCertServ::package_tardis_account_context_and_resp(account_id, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
+        IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
 
         Ok(app_id)
     }
