@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
@@ -8,34 +7,17 @@ use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertDetailResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamCertManageModifyReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertExtKind, IamCertManageKind};
+use crate::iam_enumeration::IamCertExtKind;
 
 pub struct IamCtCertManageApi;
 
 /// Tenant Console Cert manage API
-#[deprecated = "name needs consideration"]
 #[poem_openapi::OpenApi(prefix_path = "/ct/cert/manage", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtCertManageApi {
-    /// Find Conf
-    #[oai(path = "/conf", method = "get", deprecated = "true")]
-    #[deprecated]
-    async fn find_conf(&self, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
-        let funs = iam_constants::get_tardis_inst();
-        let mut conf_map: HashMap<String, String> = HashMap::new();
-        let manage_user_pwd_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
-        conf_map.insert(IamCertManageKind::ManageUserPwd.to_string(), manage_user_pwd_conf_id);
-        let manage_user_visa_conf_id =
-            IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserVisa.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
-        conf_map.insert(IamCertManageKind::ManageUserVisa.to_string(), manage_user_visa_conf_id);
-        TardisResp::ok(conf_map)
-    }
-
     // /// Rest Password
     // #[oai(path = "/rest-sk/", method = "put")]
     // async fn rest_password(
@@ -85,16 +67,6 @@ impl IamCtCertManageApi {
     }
 
     /// get manage cert
-    #[oai(path = "/v1.0/:id", method = "get", deprecated = "true")]
-    #[deprecated = "remove"]
-    async fn get_manage_cert_deprecated(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        let funs = iam_constants::get_tardis_inst();
-        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
-        let cert = IamCertServ::get_manage_cert(&id.0, &funs, &ctx).await?;
-        TardisResp::ok(cert)
-    }
-
-    /// get manage cert
     #[oai(path = "/:id", method = "get")]
     async fn get_manage_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -127,42 +99,6 @@ impl IamCtCertManageApi {
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(supplier.0.split(',').map(|str| str.to_string()).collect()),
-                ..Default::default()
-            },
-            page_number.0,
-            page_size.0,
-            None,
-            None,
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        TardisResp::ok(result)
-    }
-
-    /// Paginate Manage Certs
-    #[oai(path = "/v1.0", method = "get", deprecated = "true")]
-    #[deprecated = "remove"]
-    async fn paginate_certs_deprecated(
-        &self,
-        conf_id: Query<Option<String>>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<TardisPage<RbumCertDetailResp>> {
-        let funs = iam_constants::get_tardis_inst();
-        let conf_ids = if conf_id.0.is_some() {
-            vec![conf_id.0.unwrap()]
-        } else {
-            let manage_user_pwd_conf_id =
-                IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
-            let manage_user_visa_conf_id =
-                IamCertServ::get_cert_conf_id_by_kind(IamCertManageKind::ManageUserVisa.to_string().as_str(), get_max_level_id_by_context(&ctx.0), &funs).await?;
-            vec![manage_user_pwd_conf_id, manage_user_visa_conf_id]
-        };
-        let result = IamCertServ::paginate_certs(
-            &RbumCertFilterReq {
-                rel_rbum_cert_conf_ids: Some(conf_ids),
                 ..Default::default()
             },
             page_number.0,

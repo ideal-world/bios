@@ -17,7 +17,7 @@ impl IamCiCertAkSkServ {
         let ak = TardisFuns::crypto.key.generate_ak()?;
         let sk = TardisFuns::crypto.key.generate_sk(&ak)?;
 
-        let cert_id = IamCertAkSkServ::add_cert(&add_req, &ak, &sk,  &cert_conf_id, funs, ctx).await?;
+        let cert_id = IamCertAkSkServ::add_cert(&add_req, &ak, &sk, &cert_conf_id, funs, ctx).await?;
         Ok(IamCertAkSkResp { id: cert_id, ak, sk })
     }
 

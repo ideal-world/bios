@@ -19,6 +19,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::domain::iam_app;
 use crate::basic::dto::iam_app_dto::{IamAppAddReq, IamAppAggAddReq, IamAppAggModifyReq, IamAppDetailResp, IamAppModifyReq, IamAppSummaryResp};
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
@@ -171,6 +172,9 @@ impl IamAppServ {
                 IamRoleServ::add_rel_account(&funs.iam_basic_role_app_admin_id(), admin_id, None, funs, &app_ctx).await?;
             }
         }
+        //refresh ctx
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
+        IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
 
         Ok(app_id)
     }

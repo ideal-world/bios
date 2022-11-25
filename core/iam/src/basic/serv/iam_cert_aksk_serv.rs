@@ -84,7 +84,8 @@ impl IamCertAkSkServ {
             },
             funs,
             ctx,
-        ).await
+        )
+        .await
     }
 
     pub async fn add_cert(add_req: &IamCertAkSkAddReq, ak: &str, sk: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {

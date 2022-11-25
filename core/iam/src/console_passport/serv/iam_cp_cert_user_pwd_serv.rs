@@ -2,7 +2,6 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::serde_json::to_string;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;

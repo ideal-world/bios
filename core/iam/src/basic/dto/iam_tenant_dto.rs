@@ -70,7 +70,6 @@ pub struct IamTenantAggAddReq {
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
     pub cert_conf_by_oauth2: Option<Vec<IamCertConfOAuth2AddOrModifyReq>>,
-    #[deprecated = "remove tenant ldap login in conf"]
     pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapAddOrModifyReq>>,
 }
 
