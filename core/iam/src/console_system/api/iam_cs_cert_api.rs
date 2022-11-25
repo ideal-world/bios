@@ -56,7 +56,6 @@ impl IamCsCertApi {
     }
 
     /// Add Gitlab Cert
-    #[deprecated]
     #[oai(path = "/gitlab", method = "put")]
     async fn add_gitlab_cert(
         &self,
@@ -74,7 +73,6 @@ impl IamCsCertApi {
     }
 
     /// Get Gitlab Certs By Account Id
-    #[deprecated]
     #[oai(path = "/gitlab", method = "get")]
     async fn get_gitlab_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
