@@ -3,6 +3,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::futures::future::err;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -398,6 +399,31 @@ impl IamCertServ {
     }
 
     pub async fn delete_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_ids = RbumRelServ::find_id_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamCertRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Cert),
+                from_rbum_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if !rel_ids.is_empty() {
+            return Err(funs.err().conflict(
+                "cert",
+                "delete",
+                &format!("can not delete cert.{} when there are associated by rel.{:?}", id, rel_ids),
+                "409-rbum-*-delete-conflict",
+            ));
+        }
         RbumCertServ::delete_rbum(id, funs, ctx).await?;
         Ok(())
     }
