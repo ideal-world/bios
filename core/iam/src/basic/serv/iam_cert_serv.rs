@@ -421,7 +421,7 @@ impl IamCertServ {
                 "cert",
                 "delete",
                 &format!("can not delete cert.{} when there are associated by rel.{:?}", id, rel_ids),
-                "409-rbum-*-delete-conflict",
+                "409-iam-delete-conflict",
             ));
         }
         RbumCertServ::delete_rbum(id, funs, ctx).await?;
