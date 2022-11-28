@@ -79,8 +79,8 @@ impl IamCpCertUserPwdServ {
             validate_resp.unwrap()
         } else {
             if let Some(e) = validate_resp.clone().err() {
-                // throw out Err when sk is expired
-                if e.code == "409-iam-cert-valid" {
+                // throw out Err when sk is expired and cert is locked
+                if e.code == "409-iam-cert-valid" || e.code == "401-iam-cert-valid_lock" {
                     validate_resp?;
                 }
             };
