@@ -12,6 +12,14 @@ pub struct IamContextFetchReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertUserNameNewReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub original_ak: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub new_ak: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertPwdNewReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub ak: TrimString,

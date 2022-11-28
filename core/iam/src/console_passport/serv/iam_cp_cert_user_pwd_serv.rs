@@ -2,6 +2,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
@@ -10,7 +11,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
-use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -44,6 +45,21 @@ impl IamCpCertUserPwdServ {
             &ctx,
         )
         .await
+    }
+
+    pub async fn new_user_name(req: &IamCertUserNameNewReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>{
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(
+            &IamCertKernelKind::UserPwd.to_string(),
+            if IamAccountServ::is_global_account(ctx.owner.as_ref(), funs, ctx).await? {
+                None
+            } else {
+                Some(ctx.owner.clone())
+            },
+            funs,
+        )
+        .await?;
+        IamCertUserPwdServ::modify_ak_cert().await?
+        Ok(())
     }
 
     pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamCertUserPwdModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
