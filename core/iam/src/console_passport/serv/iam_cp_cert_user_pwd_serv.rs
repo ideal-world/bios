@@ -47,8 +47,16 @@ impl IamCpCertUserPwdServ {
     }
 
     pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamCertUserPwdModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
-        IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, ctx).await
+        let actual_ctx = if IamAccountServ::is_global_account(id, funs, ctx).await? {
+            TardisContext {
+                own_paths: "".to_string(),
+                ..ctx.clone()
+            }
+        } else {
+            ctx.clone()
+        };
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&actual_ctx), funs).await?;
+        IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, &actual_ctx).await
     }
 
     pub async fn validate_by_user_pwd(sk: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

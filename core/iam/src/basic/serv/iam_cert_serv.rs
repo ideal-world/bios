@@ -3,7 +3,6 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::futures::future::err;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -724,7 +723,7 @@ impl IamCertServ {
             code,
             "",
             &funs.iam_basic_domain_iam_id(),
-            rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(),
+            rel_iam_item_id.unwrap_or_default().as_str(),
             funs,
         )
         .await
@@ -740,7 +739,7 @@ impl IamCertServ {
             kind,
             supplier,
             &funs.iam_basic_domain_iam_id(),
-            rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(),
+            rel_iam_item_id.unwrap_or_default().as_str(),
             funs,
         )
         .await
@@ -820,7 +819,7 @@ impl IamCertServ {
     }
 
     pub fn use_sys_or_tenant_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
-        ctx.own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths).unwrap_or_else(|| "".to_string());
+        ctx.own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths).unwrap_or_default();
         Ok(ctx)
     }
 
