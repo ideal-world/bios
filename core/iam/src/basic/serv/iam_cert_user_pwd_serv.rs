@@ -183,7 +183,7 @@ impl IamCertUserPwdServ {
             RbumCertServ::modify_rbum(
                 &cert.id,
                 &mut RbumCertModifyReq {
-                    ak: Some(modify_req.new_ak.into()),
+                    ak: Some(modify_req.new_ak.clone()),
                     sk: None,
                     ext: None,
                     start_time: None,

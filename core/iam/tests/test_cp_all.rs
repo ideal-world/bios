@@ -272,6 +272,8 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(account_resp.roles.iter().any(|i| i.1 == "sys_admin"));
     assert!(!account_resp.token.is_empty());
 
+    //todo RWDai
+    IamCpCertUserPwdServ::modify_cert_user_pwd().await?
     // ------------------ Mail-VCode Cert Test Start ------------------
 
     info!("【test_cp_all】 : Add Mail-VCode Cert");
