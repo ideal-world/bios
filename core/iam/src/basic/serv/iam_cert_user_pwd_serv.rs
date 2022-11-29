@@ -156,7 +156,7 @@ impl IamCertUserPwdServ {
     pub async fn modify_ak_cert(modify_req: &IamCertUserNameNewReq, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
-                ak: Some(modify_req.original_ak.into()),
+                ak: Some(modify_req.original_ak.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 ..Default::default()
@@ -166,17 +166,36 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::modify_rbum(
-                &cert.id,
-                &mut RbumCertModifyReq {
-                    ak: Some(modify_req.new_ak.into()),
+            let cert_resp = RbumCertServ::find_one_rbum(
+                &RbumCertFilterReq {
+                    ak: Some(modify_req.new_ak.to_string()),
+                    rel_rbum_kind: Some(RbumCertRelKind::Item),
+                    rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                     ..Default::default()
                 },
                 funs,
                 ctx,
             )
             .await?;
-            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&ctx.owner, funs).await
+            if cert_resp.is_some() {
+                return Err(funs.err().conflict("ak_cert", "modify", "ak is used", "409-rbum-cert-ak-duplicate"));
+            }
+            RbumCertServ::modify_rbum(
+                &cert.id,
+                &mut RbumCertModifyReq {
+                    ak: Some(modify_req.new_ak.into()),
+                    sk: None,
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            Ok(())
         } else {
             Err(funs.err().not_found(
                 "ak_cert",
