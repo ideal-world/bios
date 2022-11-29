@@ -241,6 +241,14 @@ impl IamCertMailVCodeServ {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
                     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
+                let actual_ctx = if IamAccountServ::is_global_account(&ctx.owner, funs, ctx).await? {
+                    TardisContext {
+                        own_paths: "".to_string(),
+                        ..ctx.clone()
+                    }
+                } else {
+                    ctx.clone()
+                };
                 let id = RbumCertServ::add_rbum(
                     &mut RbumCertAddReq {
                         ak: TrimString(mail.trim().to_string()),
@@ -259,7 +267,7 @@ impl IamCertMailVCodeServ {
                         is_outside: false,
                     },
                     funs,
-                    ctx,
+                    &actual_ctx,
                 )
                 .await?;
                 return Ok(id);
