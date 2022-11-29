@@ -398,6 +398,31 @@ impl IamCertServ {
     }
 
     pub async fn delete_manage_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let rel_ids = RbumRelServ::find_id_rbums(
+            &RbumRelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                tag: Some(IamRelKind::IamCertRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Cert),
+                from_rbum_id: Some(id.to_string()),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        if !rel_ids.is_empty() {
+            return Err(funs.err().conflict(
+                "cert",
+                "delete",
+                &format!("can not delete cert.{} when there are associated by rel.{:?}", id, rel_ids),
+                "409-iam-delete-conflict",
+            ));
+        }
         RbumCertServ::delete_rbum(id, funs, ctx).await?;
         Ok(())
     }
@@ -698,7 +723,7 @@ impl IamCertServ {
             code,
             "",
             &funs.iam_basic_domain_iam_id(),
-            rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(),
+            rel_iam_item_id.unwrap_or_default().as_str(),
             funs,
         )
         .await
@@ -714,7 +739,7 @@ impl IamCertServ {
             kind,
             supplier,
             &funs.iam_basic_domain_iam_id(),
-            rel_iam_item_id.unwrap_or_else(|| "".to_string()).as_str(),
+            rel_iam_item_id.unwrap_or_default().as_str(),
             funs,
         )
         .await
@@ -794,7 +819,7 @@ impl IamCertServ {
     }
 
     pub fn use_sys_or_tenant_ctx_unsafe(mut ctx: TardisContext) -> TardisResult<TardisContext> {
-        ctx.own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths).unwrap_or_else(|| "".to_string());
+        ctx.own_paths = rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths).unwrap_or_default();
         Ok(ctx)
     }
 

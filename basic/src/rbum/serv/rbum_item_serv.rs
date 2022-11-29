@@ -571,7 +571,7 @@ where
                 &Self::get_obj_name(),
                 "peek",
                 &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner),
-                "找不到指定的数据",
+                "404-rbum-*-obj-not-exist",
             )),
         }
     }
@@ -595,7 +595,7 @@ where
                 &Self::get_obj_name(),
                 "get",
                 &format!("not found {}.{} by {}", Self::get_obj_name(), id, ctx.owner),
-                "找不到指定的数据",
+                "404-rbum-*-obj-not-exist",
             )),
         }
     }

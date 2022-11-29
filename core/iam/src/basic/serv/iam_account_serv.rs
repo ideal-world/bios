@@ -367,8 +367,10 @@ impl IamAccountServ {
         .await?;
         let mut apps: Vec<IamAccountAppInfoResp> = vec![];
         for app in enabled_apps {
-            let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, ctx).await?;
-            let groups = IamSetServ::find_flat_set_items(&set_id, account_id, true, funs, ctx).await?;
+            let mut mock_app_ctx = ctx.clone();
+            mock_app_ctx.own_paths = app.own_paths.clone();
+            let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &app.own_paths), true, funs, &mock_app_ctx).await?;
+            let groups = IamSetServ::find_flat_set_items(&set_id, account_id, true, funs, &mock_app_ctx).await?;
             apps.push(IamAccountAppInfoResp {
                 app_id: app.id,
                 app_name: app.name,
