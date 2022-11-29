@@ -8,8 +8,6 @@ use tardis::{
     log, TardisFuns, TardisFunsInst,
 };
 
-use crate::rbum::helper::rbum_event_helper;
-
 const TASK_IN_CTX_FLAG: &str = "task_id";
 const NOTIFY_EVENT_IN_CTX_FLAG: &str = "notify";
 

@@ -749,7 +749,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     info!("【login_by_ldap】");
     //=======preparation area===========
-    let mut funs = iam_constants::get_tardis_inst();
+    let funs = iam_constants::get_tardis_inst();
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),
@@ -758,7 +758,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         groups: vec![],
         ..Default::default()
     };
-    ///add global account ldap login config
+    //add global account ldap login config
     IamCertLdapServ::add_cert_conf(
         &&IamCertConfLdapAddOrModifyReq {
             supplier: TrimString(LDAP_SUPPLIER.into()),
