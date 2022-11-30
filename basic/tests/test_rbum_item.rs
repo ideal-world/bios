@@ -343,10 +343,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
 
-    TardisFuns::inst_with_db_conn("".to_string(), None)
-        .db()
-        .create_table_and_index(&test_iam_account::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend()))
-        .await?;
+    TardisFuns::inst_with_db_conn("".to_string(), None).db().init(test_iam_account::ActiveModel::init(TardisFuns::reldb().backend(), None)).await?;
 
     info!("【test_rbum_item_attr】 : Prepare : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(
