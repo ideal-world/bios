@@ -184,7 +184,7 @@ impl IamCertUserPwdServ {
                 &cert.id,
                 &mut RbumCertModifyReq {
                     ak: Some(modify_req.new_ak.clone()),
-                    sk: None,
+                    sk: Some(modify_req.sk.clone()),
                     ext: None,
                     start_time: None,
                     end_time: None,

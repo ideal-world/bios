@@ -17,6 +17,8 @@ pub struct IamCertUserNameNewReq {
     pub original_ak: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub new_ak: TrimString,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub sk: TrimString,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
