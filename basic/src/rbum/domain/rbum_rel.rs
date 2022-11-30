@@ -40,13 +40,11 @@ impl TardisActiveModel for ActiveModel {
         }
     }
 
-    fn create_table_statement(_: DbBackend) -> TableCreateStatement {
-        Table::create()
+    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
+        let mut builder = Table::create();
+        builder
             .table(Entity.table_ref())
             .if_not_exists()
-            .engine("InnoDB")
-            .character_set("utf8mb4")
-            .collate("utf8mb4_0900_as_cs")
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
             .col(ColumnDef::new(Column::Tag).not_null().string())
@@ -58,10 +56,20 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Ext).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string())
-            .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
-            .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp())
-            .to_owned()
+            .col(ColumnDef::new(Column::Owner).not_null().string());
+        if db == DatabaseBackend::Postgres {
+            builder
+                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
+                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
+        } else {
+            builder
+                .engine("InnoDB")
+                .character_set("utf8mb4")
+                .collate("utf8mb4_0900_as_cs")
+                .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
+                .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp());
+        }
+        builder.to_owned()
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {

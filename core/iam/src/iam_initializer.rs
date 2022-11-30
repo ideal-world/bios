@@ -114,11 +114,12 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
         init_basic_info(&funs, &ctx).await?;
         None
     } else {
-        funs.db().create_table_and_index(&iam_tenant::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
-        funs.db().create_table_and_index(&iam_app::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
-        funs.db().create_table_and_index(&iam_role::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
-        funs.db().create_table_and_index(&iam_account::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
-        funs.db().create_table_and_index(&iam_res::ActiveModel::create_table_and_index_statement(TardisFuns::reldb().backend())).await?;
+        let db_kind = TardisFuns::reldb().backend();
+        funs.db().init(iam_tenant::ActiveModel::init(db_kind, None)).await?;
+        funs.db().init(iam_app::ActiveModel::init(db_kind, None)).await?;
+        funs.db().init(iam_role::ActiveModel::init(db_kind, None)).await?;
+        funs.db().init(iam_account::ActiveModel::init(db_kind, None)).await?;
+        funs.db().init(iam_res::ActiveModel::init(db_kind, None)).await?;
         let (name, password) = init_rbum_data(&funs).await?;
         Some((name, password))
     };

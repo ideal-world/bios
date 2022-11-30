@@ -17,7 +17,6 @@ use tardis::TardisFunsInst;
 use crate::process::task_processor::TaskProcessor;
 use crate::rbum::domain::rbum_item;
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use crate::rbum::helper::rbum_event_helper::RbumEventMessage;
 use crate::rbum::helper::rbum_scope_helper;
 use crate::rbum::rbum_config::RbumConfigApi;
 

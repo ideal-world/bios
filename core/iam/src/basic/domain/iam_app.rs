@@ -23,19 +23,20 @@ impl TardisActiveModel for ActiveModel {
         }
     }
 
-    fn create_table_statement(_: DbBackend) -> TableCreateStatement {
-        Table::create()
+    fn create_table_statement(db: DbBackend) -> TableCreateStatement {
+        let mut builder = Table::create();
+        builder
             .table(Entity.table_ref())
             .if_not_exists()
-            .engine("InnoDB")
-            .character_set("utf8mb4")
-            .collate("utf8mb4_0900_as_cs")
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().unsigned())
             .col(ColumnDef::new(Column::ContactPhone).not_null().string())
-            .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .to_owned()
+            .col(ColumnDef::new(Column::OwnPaths).not_null().string());
+        if db == DatabaseBackend::MySql {
+            builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");
+        }
+        builder.to_owned()
     }
 
     fn create_index_statement() -> Vec<IndexCreateStatement> {

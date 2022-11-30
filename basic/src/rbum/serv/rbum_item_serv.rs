@@ -1010,7 +1010,7 @@ impl RbumItemAttrServ {
             for in_main_table_attr in in_main_table_attrs {
                 let column_name = Alias::new(&in_main_table_attr.name);
                 let column_val = add_req.values.get(&in_main_table_attr.name).unwrap().clone();
-                update_statement.value(column_name, column_val.into());
+                update_statement.value(column_name, Value::from(column_val));
             }
             update_statement.and_where(Expr::col(ID_FIELD.clone()).eq(add_req.rel_rbum_item_id.as_str()));
             funs.db().execute(&update_statement).await?;
