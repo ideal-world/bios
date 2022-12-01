@@ -278,7 +278,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         &IamCertUserNameNewReq {
             original_ak: "bios".into(),
             new_ak: "bios2".into(),
-            sk: "123456".into(),
+            sk: tenant_admin_pwd.clone().into(),
         },
         &funs,
         &tenant_admin_context,
@@ -288,23 +288,23 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
         &IamCpUserPwdLoginReq {
             ak: TrimString("bios2".to_string()),
-            sk: TrimString("123456".to_string()),
-            tenant_id: None,
+            sk: TrimString(tenant_admin_pwd.clone()),
+            tenant_id: Some(tenant_admin_context.own_paths.clone()),
             flag: None,
         },
         &funs,
     )
     .await?;
-    assert_eq!(account_resp.account_name, "bios");
+    assert_eq!(account_resp.account_name, "测试管理员");
 
     IamCpCertUserPwdServ::new_user_name(
         &IamCertUserNameNewReq {
-            original_ak: "bios2".into(),
+            original_ak: "bios".into(),
             new_ak: "bios-admin".into(),
             sk: "123456".into(),
         },
         &funs,
-        &tenant_admin_context,
+        &system_admin_context,
     )
     .await?;
 
