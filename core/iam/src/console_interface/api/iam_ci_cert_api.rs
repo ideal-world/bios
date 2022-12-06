@@ -1,6 +1,8 @@
 use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp};
 use crate::console_interface::serv::iam_ci_cert_aksk_serv::IamCiCertAkSkServ;
+use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkServ;
 use crate::iam_constants;
+use crate::iam_enumeration::Oauth2GrantType;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
@@ -24,6 +26,13 @@ impl IamCiCertApi {
     async fn delete_aksk(&self, id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamCiCertAkSkServ::delete_cert(&id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    #[oai(path = "/token", method = "get")]
+    async fn get_token(&self, grant_type: Query<String>, client_id: Query<String>, client_secret: Query<String>, scope: Query<String>) -> TardisApiResult<Void> {
+        let grant_type = Oauth2GrantType::parse(&grant_type.0)?;
+        IamCiOauth2AkSkServ::generate_token(grant_type, client_id.0, client_secret.0).await?;
         TardisResp::ok(Void {})
     }
 }
