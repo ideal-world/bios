@@ -1,11 +1,14 @@
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
+use serde::Deserialize;
+use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
+use tardis::futures::executor;
 use tardis::log::info;
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -553,6 +556,56 @@ async fn add_role<'a>(
     )
     .await?;
     Ok(role_id)
+}
+
+async fn init_menu_by_file(set_id: &str, parent_cate_id: &str, file_path: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let json_menu = TardisFuns::json.file_to_obj::<JsonMenu, &str>(file_path)?;
+    parse_menu(set_id, parent_cate_id, json_menu, funs, ctx).await?;
+    Ok(())
+}
+#[derive(Serialize, Deserialize)]
+struct JsonMenu {
+    name: String,
+    bus_code: String,
+    ext: String,
+    items: Option<Vec<Item>>,
+    children: Option<Vec<JsonMenu>>,
+}
+#[derive(Serialize, Deserialize)]
+struct Item {
+    code: String,
+    name: String,
+    kind: String,
+}
+
+async fn parse_menu(set_id: &str, parent_cate_id: &str, json_menu: JsonMenu, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    let new_cate_id = add_cate_menu(
+        set_id,
+        parent_cate_id,
+        &json_menu.name,
+        &json_menu.bus_code,
+        &IamSetCateKind::parse(&json_menu.ext)?,
+        funs,
+        ctx,
+    )
+    .await?;
+
+    if let Some(items) = json_menu.items {
+        for item in items {
+            parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+        }
+    };
+    if let Some(children_menus) = json_menu.children {
+        for children_menu in children_menus {
+            executor::block_on(parse_menu(set_id, &new_cate_id, children_menu, funs, ctx))?;
+        }
+    };
+    Ok(new_cate_id)
+}
+
+async fn parse_item(set_id: &str, cate_menu_id: &str, item: Item, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    let id = add_menu_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?;
+    Ok(id)
 }
 
 #[deprecated]
