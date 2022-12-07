@@ -10,7 +10,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
-use bios_iam::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertUserPwdModifyReq, IamContextFetchReq};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq, IamContextFetchReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
@@ -272,6 +272,53 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(account_resp.roles.iter().any(|i| i.1 == "sys_admin"));
     assert!(!account_resp.token.is_empty());
 
+    info!("【test_cp_all】 : modify cert ak");
+
+    IamCpCertUserPwdServ::new_user_name(
+        &IamCertUserNameNewReq {
+            original_ak: "bios".into(),
+            new_ak: "bios2".into(),
+            sk: tenant_admin_pwd.clone().into(),
+        },
+        &funs,
+        &tenant_admin_context,
+    )
+    .await?;
+
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios2".to_string()),
+            sk: TrimString(tenant_admin_pwd.clone()),
+            tenant_id: Some(tenant_admin_context.own_paths.clone()),
+            flag: None,
+        },
+        &funs,
+    )
+    .await?;
+    assert_eq!(account_resp.account_name, "测试管理员");
+
+    IamCpCertUserPwdServ::new_user_name(
+        &IamCertUserNameNewReq {
+            original_ak: "bios".into(),
+            new_ak: "bios-admin".into(),
+            sk: "123456".into(),
+        },
+        &funs,
+        &system_admin_context,
+    )
+    .await?;
+
+    let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
+        &IamCpUserPwdLoginReq {
+            ak: TrimString("bios-admin".to_string()),
+            sk: TrimString("123456".to_string()),
+            tenant_id: None,
+            flag: None,
+        },
+        &funs,
+    )
+    .await?;
+    assert_eq!(account_resp.account_name, "bios");
     // ------------------ Mail-VCode Cert Test Start ------------------
 
     info!("【test_cp_all】 : Add Mail-VCode Cert");
