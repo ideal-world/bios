@@ -11,8 +11,8 @@ use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
-    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq,
-    IamCertUserPwdValidateSkReq, IamContextFetchReq,
+    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq,
+    IamCertUserPwdRestReq, IamCertUserPwdValidateSkReq, IamContextFetchReq,
 };
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -98,6 +98,16 @@ impl IamCpCertApi {
         )
         .await?;
         TardisResp::ok(rbum_certs)
+    }
+
+    /// Set New Password
+    #[oai(path = "/cert/username/new", method = "put")]
+    async fn new_user_name(&self, pwd_new_req: Json<IamCertUserNameNewReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCpCertUserPwdServ::new_user_name(&pwd_new_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
     }
 
     /// Set New Password

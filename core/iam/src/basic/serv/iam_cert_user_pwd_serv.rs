@@ -11,7 +11,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
-use crate::basic::dto::iam_cert_dto::{IamCertUserPwdAddReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
+use crate::basic::dto::iam_cert_dto::{IamCertUserNameNewReq, IamCertUserPwdAddReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
@@ -146,6 +146,59 @@ impl IamCertUserPwdServ {
         } else {
             Err(funs.err().not_found(
                 "iam_cert_user_pwd",
+                "modify",
+                &format!("not found credential of kind {:?}", IamCertKernelKind::UserPwd),
+                "404-iam-cert-kind-not-exist",
+            ))
+        }
+    }
+
+    pub async fn modify_ak_cert(modify_req: &IamCertUserNameNewReq, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let cert = RbumCertServ::find_one_rbum(
+            &RbumCertFilterReq {
+                ak: Some(modify_req.original_ak.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(cert) = cert {
+            let cert_resp = RbumCertServ::find_one_rbum(
+                &RbumCertFilterReq {
+                    ak: Some(modify_req.new_ak.to_string()),
+                    rel_rbum_kind: Some(RbumCertRelKind::Item),
+                    rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            if cert_resp.is_some() {
+                return Err(funs.err().conflict("ak_cert", "modify", "ak is used", "409-rbum-cert-ak-duplicate"));
+            }
+            RbumCertServ::modify_rbum(
+                &cert.id,
+                &mut RbumCertModifyReq {
+                    ak: Some(modify_req.new_ak.clone()),
+                    sk: Some(modify_req.sk.clone()),
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            Ok(())
+        } else {
+            Err(funs.err().not_found(
+                "ak_cert",
                 "modify",
                 &format!("not found credential of kind {:?}", IamCertKernelKind::UserPwd),
                 "404-iam-cert-kind-not-exist",

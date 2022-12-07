@@ -10,7 +10,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
-use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq};
+use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -44,6 +44,31 @@ impl IamCpCertUserPwdServ {
             &ctx,
         )
         .await
+    }
+
+    pub async fn new_user_name(req: &IamCertUserNameNewReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let tenant_id = if IamAccountServ::is_global_account(ctx.owner.as_ref(), funs, ctx).await? {
+            None
+        } else {
+            Some(ctx.own_paths.clone())
+        };
+        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
+        let _ = RbumCertServ::validate_by_ak_and_basic_sk(
+            &req.original_ak.0,
+            &req.sk.0,
+            &RbumCertRelKind::Item,
+            false,
+            &tenant_id.unwrap_or_default(),
+            vec![
+                &IamCertKernelKind::UserPwd.to_string(),
+                &IamCertKernelKind::MailVCode.to_string(),
+                &IamCertKernelKind::PhoneVCode.to_string(),
+            ],
+            funs,
+        )
+        .await?;
+        IamCertUserPwdServ::modify_ak_cert(req, &rbum_cert_conf_id, funs, ctx).await?;
+        Ok(())
     }
 
     pub async fn modify_cert_user_pwd(id: &str, modify_req: &IamCertUserPwdModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
