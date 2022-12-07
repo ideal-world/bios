@@ -719,14 +719,7 @@ impl IamCertServ {
     }
 
     pub async fn get_cert_conf_id_and_ext_opt_by_kind(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(
-            code,
-            "",
-            &funs.iam_basic_domain_iam_id(),
-            rel_iam_item_id.unwrap_or_default().as_str(),
-            funs,
-        )
-        .await
+        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(code, "", &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs).await
     }
 
     pub async fn get_cert_conf_id_and_ext_opt_by_kind_supplier(
@@ -735,14 +728,7 @@ impl IamCertServ {
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(
-            kind,
-            supplier,
-            &funs.iam_basic_domain_iam_id(),
-            rel_iam_item_id.unwrap_or_default().as_str(),
-            funs,
-        )
-        .await
+        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(kind, supplier, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs).await
     }
 
     pub async fn package_tardis_context_and_resp(
