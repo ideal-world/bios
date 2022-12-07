@@ -9,7 +9,7 @@ use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
 use tardis::futures::executor;
-use tardis::log::info;
+use tardis::log::{info, warn};
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -604,7 +604,11 @@ async fn parse_menu(set_id: &str, parent_cate_id: &str, json_menu: JsonMenu, fun
 }
 
 async fn parse_item(set_id: &str, cate_menu_id: &str, item: Item, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    let id = add_menu_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?;
+    let id = match &item.kind as &str {
+        "Menu" => add_menu_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?,
+        "Ele" => add_ele_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?,
+        _ => warn!(format!("item({},{}) have unsupported kind {} !", &item.name, &item.code, &item.kind)),
+    };
     Ok(id)
 }
 
