@@ -61,6 +61,8 @@ pub struct RbumCertFilterReq {
 #[serde(default)]
 pub struct RbumKindAttrFilterReq {
     pub basic: RbumBasicFilterReq,
+    pub secret: Option<bool>,
+    pub parent_attr_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
