@@ -966,7 +966,12 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
 }
 
 impl RbumItemAttrServ {
-    pub async fn find_item_attr_defs_by_item_id(rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
+    pub async fn find_item_attr_defs_by_item_id(
+        rbum_item_id: &str,
+        secret: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumKindAttrSummaryResp>> {
         let rel_rbum_kind_id = RbumItemServ::peek_rbum(
             rbum_item_id,
             &RbumBasicFilterReq {
@@ -984,6 +989,8 @@ impl RbumItemAttrServ {
                     rbum_kind_id: Some(rel_rbum_kind_id),
                     ..Default::default()
                 },
+                secret,
+                ..Default::default()
             },
             None,
             None,
@@ -995,10 +1002,10 @@ impl RbumItemAttrServ {
 
     pub async fn add_or_modify_item_attrs(add_req: &RbumItemAttrsAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         // Implicit rel_rbum_kind_attr scope check
-        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(&add_req.rel_rbum_item_id, funs, ctx).await?;
-        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
-        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
-
+        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(&add_req.rel_rbum_item_id, None, funs, ctx).await?;
+        let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && i.main_column && !i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let in_ext_table_attrs = rbum_kind_attrs.iter().filter(|i| add_req.values.contains_key(&i.name) && !i.main_column && !i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
+        let in_secret_table_attrs = rbum_kind_attrs.iter().filter(|i| i.secret).collect::<Vec<&RbumKindAttrSummaryResp>>();
         if !in_main_table_attrs.is_empty() {
             // Implicit rel_rbum_item scope check
             let rel_rbum_kind_id = RbumItemServ::peek_rbum(&add_req.rel_rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
@@ -1048,11 +1055,60 @@ impl RbumItemAttrServ {
             }
         }
 
+        if !in_secret_table_attrs.is_empty() {
+            for in_secret_table_attr in in_secret_table_attrs {
+                let secret_item_attr_ids = Self::find_id_rbums(
+                    &RbumItemAttrFilterReq {
+                        basic: Default::default(),
+                        rel_rbum_item_id: Some(add_req.rel_rbum_item_id.to_string()),
+                        rel_rbum_kind_attr_id: Some(in_secret_table_attr.id.to_string()),
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
+                let result = if in_secret_table_attr.dyn_default_value.is_empty() {
+                    if RbumKindAttrServ::url_match(&in_secret_table_attr.dyn_default_value).unwrap() {
+                        let url = RbumKindAttrServ::url_replace(&in_secret_table_attr.dyn_default_value, add_req.values.clone()).unwrap();
+                        if RbumKindAttrServ::url_match(&url).unwrap() {
+                            return Err(funs.err().bad_request(
+                                &Self::get_obj_name(),
+                                "add_or_modify_item_attrs",
+                                "url processing failure",
+                                "400-rbum-kind-attr-dyn-url-illegal",
+                            ));
+                        }
+                        funs.web_client().get_to_str(&url, None).await.unwrap().body.unwrap()
+                    } else {
+                        funs.web_client().get_to_str(&in_secret_table_attr.dyn_default_value, None).await.unwrap().body.unwrap()
+                    }
+                } else {
+                    in_secret_table_attr.default_value.clone()
+                };
+                if secret_item_attr_ids.is_empty() {
+                    Self::add_rbum(
+                        &mut RbumItemAttrAddReq {
+                            value: result.clone(),
+                            rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
+                            rel_rbum_kind_attr_id: in_secret_table_attr.id.to_string(),
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await?;
+                } else {
+                    Self::modify_rbum(secret_item_attr_ids.get(0).unwrap(), &mut RbumItemAttrModifyReq { value: result }, funs, ctx).await?;
+                }
+            }
+        }
+
         Ok(())
     }
 
-    pub async fn find_item_attr_values(rbum_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(rbum_item_id, funs, ctx).await?;
+    pub async fn find_item_attr_values(rbum_item_id: &str, secret: Option<bool>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
+        let rbum_kind_attrs = Self::find_item_attr_defs_by_item_id(rbum_item_id, secret, funs, ctx).await?;
         let in_main_table_attrs = rbum_kind_attrs.iter().filter(|i| i.main_column).collect::<Vec<&RbumKindAttrSummaryResp>>();
         let has_in_ext_table_attrs = rbum_kind_attrs.iter().any(|i| !i.main_column);
 

@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -14,8 +15,16 @@ use bios_basic::rbum::serv::rbum_set_serv::RbumSetServ;
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-pub async fn test(context: &TardisContext) -> TardisResult<()> {
+pub async fn test() -> TardisResult<()> {
     let funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+    let ctx = TardisContext {
+        own_paths: "".to_string(),
+        owner: "".to_string(),
+        ak: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+        ..Default::default()
+    };
     info!("【test_rbum_event】 : receive events");
     rbum_event_helper::receive(
         |(_, msg)| async move {
@@ -42,9 +51,13 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
             disabled: None,
         },
         &funs,
-        context,
+        &ctx,
     )
     .await?;
+
+    if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
+        rbum_event_helper::try_notifies(notify_events, &funs, &ctx).await?;
+    }
 
     loop {
         if COUNTER.load(Ordering::SeqCst) > 0 {

@@ -1,3 +1,8 @@
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::vec;
+use tardis::regex::Regex;
+
 use async_trait::async_trait;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -19,6 +24,10 @@ use crate::rbum::serv::rbum_rel_serv::RbumRelAttrServ;
 
 pub struct RbumKindServ;
 pub struct RbumKindAttrServ;
+
+lazy_static! {
+    pub static ref EXTRACT_R: Regex = Regex::new(r"\{(.+?)\}").expect("extract {} error");
+}
 
 #[async_trait]
 impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp, RbumBasicFilterReq> for RbumKindServ {
@@ -138,16 +147,22 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
             capacity: Set(add_req.capacity.unwrap_or(false)),
             overload: Set(add_req.overload.unwrap_or(false)),
             hide: Set(add_req.hide.unwrap_or(false)),
+            secret: Set(add_req.secret.unwrap_or(false)),
+            show_by_conds: Set(add_req.show_by_conds.as_ref().unwrap_or(&"".to_string()).to_string()),
             idx: Set(add_req.idx.unwrap_or(false)),
             data_type: Set(add_req.data_type.to_string()),
             widget_type: Set(add_req.widget_type.to_string()),
+            widget_columns: Set(add_req.widget_columns.unwrap_or(0)),
             default_value: Set(add_req.default_value.as_ref().unwrap_or(&"".to_string()).to_string()),
+            dyn_default_value: Set(add_req.dyn_default_value.as_ref().unwrap_or(&"".to_string()).to_string()),
             options: Set(add_req.options.as_ref().unwrap_or(&"".to_string()).to_string()),
+            dyn_options: Set(add_req.dyn_options.as_ref().unwrap_or(&"".to_string()).to_string()),
             required: Set(add_req.required.unwrap_or(false)),
             min_length: Set(add_req.min_length.unwrap_or(0)),
             max_length: Set(add_req.max_length.unwrap_or(0)),
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext: Set(add_req.ext.as_ref().unwrap_or(&"".to_string()).to_string()),
+            parent_attr_name: Set(add_req.parent_attr_name.as_ref().unwrap_or(&TrimString("".to_string())).to_string()),
             rel_rbum_kind_id: Set(add_req.rel_rbum_kind_id.to_string()),
             scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
@@ -205,6 +220,12 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
         if let Some(hide) = modify_req.hide {
             rbum_kind_attr.hide = Set(hide);
         }
+        if let Some(secret) = modify_req.secret {
+            rbum_kind_attr.secret = Set(secret);
+        }
+        if let Some(show_by_conds) = &modify_req.show_by_conds {
+            rbum_kind_attr.show_by_conds = Set(show_by_conds.to_string());
+        }
         if let Some(idx) = modify_req.idx {
             rbum_kind_attr.idx = Set(idx);
         }
@@ -214,11 +235,20 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
         if let Some(widget_type) = &modify_req.widget_type {
             rbum_kind_attr.widget_type = Set(widget_type.to_string());
         }
+        if let Some(widget_columns) = modify_req.widget_columns {
+            rbum_kind_attr.widget_columns = Set(widget_columns);
+        }
         if let Some(default_value) = &modify_req.default_value {
             rbum_kind_attr.default_value = Set(default_value.to_string());
         }
+        if let Some(dyn_default_value) = &modify_req.dyn_default_value {
+            rbum_kind_attr.dyn_default_value = Set(dyn_default_value.to_string());
+        }
         if let Some(options) = &modify_req.options {
             rbum_kind_attr.options = Set(options.to_string());
+        }
+        if let Some(dyn_options) = &modify_req.dyn_options {
+            rbum_kind_attr.dyn_options = Set(dyn_options.to_string());
         }
         if let Some(required) = modify_req.required {
             rbum_kind_attr.required = Set(required);
@@ -234,6 +264,9 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
         }
         if let Some(ext) = &modify_req.ext {
             rbum_kind_attr.ext = Set(ext.to_string());
+        }
+        if let Some(parent_attr_name) = &modify_req.parent_attr_name {
+            rbum_kind_attr.parent_attr_name = Set(parent_attr_name.to_string());
         }
         if let Some(scope_level) = &modify_req.scope_level {
             rbum_kind_attr.scope_level = Set(scope_level.to_int());
@@ -263,16 +296,22 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Capacity),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Overload),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Hide),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::Secret),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ShowByConds),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Idx),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::DataType),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::WidgetType),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::WidgetColumns),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::DefaultValue),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::DynDefaultValue),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Options),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::DynOptions),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Required),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::MinLength),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::MaxLength),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Action),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Ext),
+                (rbum_kind_attr::Entity, rbum_kind_attr::Column::ParentAttrName),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::OwnPaths),
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::Owner),
@@ -281,7 +320,12 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
                 (rbum_kind_attr::Entity, rbum_kind_attr::Column::ScopeLevel),
             ])
             .from(rbum_kind_attr::Entity);
-
+        if let Some(secret) = filter.secret {
+            query.and_where(Expr::col(rbum_kind_attr::Column::Secret).eq(secret));
+        }
+        if let Some(parent_attr_name) = &filter.parent_attr_name {
+            query.and_where(Expr::col(rbum_kind_attr::Column::ParentAttrName).eq(parent_attr_name.to_string()));
+        }
         if is_detail {
             query.expr_as(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Name), Alias::new("rel_rbum_kind_name")).inner_join(
                 rbum_kind::Entity,
@@ -290,5 +334,23 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
         Ok(query)
+    }
+}
+
+impl RbumKindAttrServ {
+    pub fn url_replace(uri: &str, values: HashMap<String, String>) -> TardisResult<String> {
+        let mut new_uri = uri.to_string();
+        for mat in EXTRACT_R.captures_iter(uri) {
+            let old_key = mat.get(0).unwrap().as_str();
+            let key = &old_key[1..old_key.len() - 1];
+            if let Some(value) = values.get(key) {
+                new_uri = new_uri.replace(old_key, value);
+            }
+        }
+        Ok(new_uri)
+    }
+
+    pub fn url_match(uri: &str) -> TardisResult<bool> {
+        Ok(!EXTRACT_R.is_match(uri))
     }
 }
