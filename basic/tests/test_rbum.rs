@@ -23,6 +23,6 @@ async fn test_rbum() -> TardisResult<()> {
     test_rbum_cert::test(&ctx).await?;
     test_rbum_rel::test(&ctx).await?;
     test_rbum_set::test(&ctx).await?;
-    test_rbum_event::test(&ctx).await?;
+    test_rbum_event::test().await?;
     Ok(())
 }

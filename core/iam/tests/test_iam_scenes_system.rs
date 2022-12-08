@@ -347,6 +347,12 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 action: None,
                 ext: None,
                 scope_level: None,
+                secret: None,
+                show_by_conds: None,
+                widget_columns: None,
+                dyn_default_value: None,
+                dyn_options: None,
+                parent_attr_name: None,
             },
         )
         .await;
