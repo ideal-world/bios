@@ -52,6 +52,7 @@ impl IamCpCertUserPwdServ {
         } else {
             Some(ctx.own_paths.clone())
         };
+        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
         let _ = RbumCertServ::validate_by_ak_and_basic_sk(
             &req.original_ak.0,
@@ -67,7 +68,7 @@ impl IamCpCertUserPwdServ {
             funs,
         )
         .await?;
-        IamCertUserPwdServ::modify_ak_cert(req, &rbum_cert_conf_id, funs, ctx).await?;
+        IamCertUserPwdServ::modify_ak_cert(req, &rbum_cert_conf_id, funs, &ctx).await?;
         Ok(())
     }
 
