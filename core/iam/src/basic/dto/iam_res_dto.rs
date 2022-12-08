@@ -129,11 +129,11 @@ pub struct JsonMenu {
     pub name: String,
     pub bus_code: String,
     pub ext: String,
-    pub items: Option<Vec<Item>>,
+    pub items: Option<Vec<MenuItem>>,
     pub children: Option<Vec<JsonMenu>>,
 }
 #[derive(Serialize, Deserialize)]
-pub struct Item {
+pub struct MenuItem {
     pub code: String,
     pub name: String,
     pub kind: String,

@@ -1,15 +1,12 @@
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
-use serde::Deserialize;
-use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
-use tardis::futures::executor;
-use tardis::log::{info, warn};
+use tardis::log::{info};
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
 

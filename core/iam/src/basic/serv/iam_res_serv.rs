@@ -9,7 +9,6 @@ use ldap3::log::warn;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::format::Item;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::futures::executor;
@@ -24,8 +23,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_menu_dto::JsonMenu;
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, JsonMenu};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, MenuItem, JsonMenu};
 use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -458,7 +456,7 @@ impl IamResServ {
 }
 
 impl IamMenuServ {
-    pub(crate) async fn parse_menu(set_id: &str, parent_cate_id: &str, json_menu: JsonMenu, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn parse_menu(set_id: &str, parent_cate_id: &str, json_menu: JsonMenu, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let new_cate_id = Self::add_cate_menu(
             set_id,
             parent_cate_id,
@@ -472,12 +470,12 @@ impl IamMenuServ {
 
         if let Some(items) = json_menu.items {
             for item in items {
-                parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+                Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
             }
         };
         if let Some(children_menus) = json_menu.children {
             for children_menu in children_menus {
-                executor::block_on(parse_menu(set_id, &new_cate_id, children_menu, funs, ctx))?;
+                executor::block_on(Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx))?;
             }
         };
         Ok(new_cate_id)
@@ -509,12 +507,12 @@ impl IamMenuServ {
         .await
     }
 
-    async fn parse_item(set_id: &str, cate_menu_id: &str, item: Item, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    async fn parse_item(set_id: &str, cate_menu_id: &str, item: MenuItem, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = match &item.kind as &str {
             "Menu" => Self::add_menu_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?,
             "Ele" => Self::add_ele_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?,
             _ => {
-                warn!(format!("item({},{}) have unsupported kind {} !", &item.name, &item.code, &item.kind));
+                warn!("item({},{}) have unsupported kind {} !", &item.name, &item.code, &item.kind);
                 "".to_string()
             }
         };
