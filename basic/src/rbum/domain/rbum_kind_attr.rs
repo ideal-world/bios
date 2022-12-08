@@ -52,8 +52,8 @@ pub struct Model {
     pub default_value: String,
     /// Dynamic default value
     /// the return format is the same as `default_value`
-    /// or `json` when `data_type` = `Json` and `widget_type` = `Json`
-    /// or `array` when `data_type` = `Array` and `widget_type` = `Array`
+    /// or `json` when `data_type` = `Json` and `widget_type` = `Control`
+    /// or `array` when `data_type` = `Array` and `widget_type` = `Group`
     pub dyn_default_value: String,
     /// Fixed option, json array formatted as `[{name:<display name>:value:<corresponding value>}]`
     pub options: String,
