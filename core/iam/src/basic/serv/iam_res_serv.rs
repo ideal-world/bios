@@ -4,35 +4,43 @@ use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use bios_basic::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ};
+use ldap3::log::warn;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::chrono::format::Item;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::futures::executor;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::domain::iam_res;
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
-use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
+use crate::basic::dto::iam_menu_dto::JsonMenu;
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp, JsonMenu};
+use crate::basic::dto::iam_set_dto::{IamSetItemAddReq, IamSetItemAggAddReq};
 use crate::basic::serv::iam_key_cache_serv::IamResCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::IamBasicInfoManager;
-use crate::iam_enumeration::{IamRelKind, IamResKind};
+use crate::iam_constants;
+use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind};
 
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_role_serv::IamRoleServ;
 
 pub struct IamResServ;
+
+pub struct IamMenuServ;
 
 #[async_trait]
 impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, IamResSummaryResp, IamResDetailResp, IamResFilterReq> for IamResServ {
@@ -446,5 +454,121 @@ impl IamResServ {
             result.insert(app_id, res);
         }
         Ok(result)
+    }
+}
+
+impl IamMenuServ {
+    pub(crate) async fn parse_menu(set_id: &str, parent_cate_id: &str, json_menu: JsonMenu, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let new_cate_id = Self::add_cate_menu(
+            set_id,
+            parent_cate_id,
+            &json_menu.name,
+            &json_menu.bus_code,
+            &IamSetCateKind::parse(&json_menu.ext)?,
+            funs,
+            ctx,
+        )
+        .await?;
+
+        if let Some(items) = json_menu.items {
+            for item in items {
+                parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+            }
+        };
+        if let Some(children_menus) = json_menu.children {
+            for children_menu in children_menus {
+                executor::block_on(parse_menu(set_id, &new_cate_id, children_menu, funs, ctx))?;
+            }
+        };
+        Ok(new_cate_id)
+    }
+
+    async fn add_cate_menu<'a>(
+        set_id: &str,
+        parent_cate_menu_id: &str,
+        name: &str,
+        bus_code: &str,
+        ext: &IamSetCateKind,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        RbumSetCateServ::add_rbum(
+            &mut RbumSetCateAddReq {
+                name: TrimString(name.to_string()),
+                bus_code: TrimString(bus_code.to_string()),
+                icon: None,
+                sort: None,
+                ext: Some(ext.to_string()),
+                rbum_parent_cate_id: Some(parent_cate_menu_id.to_string()),
+                rel_rbum_set_id: set_id.to_string(),
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+            },
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    async fn parse_item(set_id: &str, cate_menu_id: &str, item: Item, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let id = match &item.kind as &str {
+            "Menu" => Self::add_menu_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?,
+            "Ele" => Self::add_ele_res(set_id, cate_menu_id, &item.name, &item.code, funs, ctx).await?,
+            _ => {
+                warn!(format!("item({},{}) have unsupported kind {} !", &item.name, &item.code, &item.kind));
+                "".to_string()
+            }
+        };
+        Ok(id)
+    }
+    async fn add_menu_res<'a>(set_id: &str, cate_menu_id: &str, name: &str, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        IamResServ::add_res_agg(
+            &mut IamResAggAddReq {
+                res: IamResAddReq {
+                    code: TrimString(code.to_string()),
+                    name: TrimString(name.to_string()),
+                    kind: IamResKind::Menu,
+                    icon: None,
+                    sort: None,
+                    method: None,
+                    hide: None,
+                    action: None,
+                    scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+                    disabled: None,
+                },
+                set: IamSetItemAggAddReq {
+                    set_cate_id: cate_menu_id.to_string(),
+                },
+            },
+            set_id,
+            funs,
+            ctx,
+        )
+        .await
+    }
+
+    async fn add_ele_res<'a>(set_id: &str, cate_menu_id: &str, name: &str, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        IamResServ::add_res_agg(
+            &mut IamResAggAddReq {
+                res: IamResAddReq {
+                    code: TrimString(code.to_string()),
+                    name: TrimString(name.to_string()),
+                    kind: IamResKind::Ele,
+                    icon: None,
+                    sort: None,
+                    method: None,
+                    hide: None,
+                    action: None,
+                    scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
+                    disabled: None,
+                },
+                set: IamSetItemAggAddReq {
+                    set_cate_id: cate_menu_id.to_string(),
+                },
+            },
+            set_id,
+            funs,
+            ctx,
+        )
+        .await
     }
 }
