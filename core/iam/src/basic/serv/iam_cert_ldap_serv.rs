@@ -282,7 +282,7 @@ impl IamCertLdapServ {
             };
             let account_id = Self::do_add_account(
                 &account.dn,
-                &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_else(|| "".to_string()),
+                &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_default(),
                 &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                 &cert_conf_id,
                 funs,
@@ -337,8 +337,8 @@ impl IamCertLdapServ {
             .await?
             .into_iter()
             .map(|r| IamAccountExtSysResp {
-                user_name: r.get_simple_attr("cn").unwrap_or_else(|| "".to_string()),
-                display_name: r.get_simple_attr(&cert_conf.field_display_name).unwrap_or_else(|| "".to_string()),
+                user_name: r.get_simple_attr("cn").unwrap_or_default(),
+                display_name: r.get_simple_attr(&cert_conf.field_display_name).unwrap_or_default(),
                 account_id: r.dn,
             })
             .collect();
@@ -428,7 +428,7 @@ impl IamCertLdapServ {
                 // create user_pwd and bind user_pwd with ldap cert
                 Self::create_user_pwd_by_ldap(
                     &dn,
-                    &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_else(|| "".to_string()),
+                    &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_default(),
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
                     None,
