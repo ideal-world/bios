@@ -12,7 +12,7 @@ pub struct IamKindAttrAddReq {
     pub label: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub note: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     pub main_column: Option<bool>,
     pub position: Option<bool>,
     pub capacity: Option<bool>,
@@ -25,8 +25,8 @@ pub struct IamKindAttrAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub options: Option<String>,
     pub required: Option<bool>,
-    pub min_length: Option<u32>,
-    pub max_length: Option<u32>,
+    pub min_length: Option<i32>,
+    pub max_length: Option<i32>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub action: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]

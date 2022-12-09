@@ -35,7 +35,7 @@ use tardis::basic::result::TardisResult;
 
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 
-pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> Option<String> {
+pub fn get_pre_paths(scope_level: i16, own_paths: &str) -> Option<String> {
     let own_paths = own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
     if scope_level == 0 {
@@ -51,7 +51,7 @@ pub fn get_pre_paths(scope_level: i8, own_paths: &str) -> Option<String> {
     }
 }
 
-pub fn get_path_item(scope_level: i8, own_paths: &str) -> Option<String> {
+pub fn get_path_item(scope_level: i16, own_paths: &str) -> Option<String> {
     let own_paths = own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
     if scope_level == 0 || own_paths.is_empty() {
@@ -67,7 +67,7 @@ pub fn get_path_item(scope_level: i8, own_paths: &str) -> Option<String> {
 pub fn get_scope_level_by_context(ctx: &TardisContext) -> TardisResult<RbumScopeLevelKind> {
     let own_paths = ctx.own_paths.trim();
     let own_paths = own_paths.strip_suffix('/').unwrap_or(own_paths).to_string();
-    RbumScopeLevelKind::from_int(own_paths.matches('/').count() as i8)
+    RbumScopeLevelKind::from_int(own_paths.matches('/').count() as i16)
 }
 
 pub fn get_max_level_id_by_context(ctx: &TardisContext) -> Option<String> {
@@ -87,7 +87,7 @@ pub fn degrade_own_paths(mut ctx: TardisContext, new_own_paths: &str) -> TardisR
     Ok(ctx)
 }
 
-pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i8>, filter: &RbumBasicFilterReq, ctx: &TardisContext) -> bool {
+pub fn check_scope(record_own_paths: &str, record_scope_level: Option<i16>, filter: &RbumBasicFilterReq, ctx: &TardisContext) -> bool {
     let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &ctx.own_paths };
     if record_own_paths == filter_own_paths || filter.with_sub_own_paths && record_own_paths.contains(filter_own_paths) {
         return true;

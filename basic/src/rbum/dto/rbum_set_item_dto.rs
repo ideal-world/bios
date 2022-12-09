@@ -10,7 +10,7 @@ use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetItemAddReq {
-    pub sort: u32,
+    pub sort: i64,
 
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub rel_rbum_set_id: String,
@@ -23,14 +23,14 @@ pub struct RbumSetItemAddReq {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetItemModifyReq {
-    pub sort: u32,
+    pub sort: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSetItemSummaryResp {
     pub id: String,
-    pub sort: u32,
+    pub sort: i64,
     pub rel_rbum_set_id: String,
     pub rel_rbum_set_cate_id: String,
     pub rel_rbum_set_cate_sys_code: String,
@@ -48,7 +48,7 @@ pub struct RbumSetItemSummaryResp {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSetItemDetailResp {
     pub id: String,
-    pub sort: u32,
+    pub sort: i64,
     pub rel_rbum_set_id: String,
     pub rel_rbum_set_cate_id: String,
     pub rel_rbum_set_cate_sys_code: String,
@@ -75,7 +75,7 @@ pub struct RbumSetItemDetailResp {
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSetItemInfoResp {
     pub id: String,
-    pub sort: u32,
+    pub sort: i64,
     pub rel_rbum_item_id: String,
     pub rel_rbum_item_code: String,
     pub rel_rbum_item_name: String,
