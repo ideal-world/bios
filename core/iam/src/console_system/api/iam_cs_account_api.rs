@@ -119,13 +119,17 @@ impl IamCsAccountApi {
 
     /// Delete Account By Account Id
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx)? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     /// Delete Token By Account Id
