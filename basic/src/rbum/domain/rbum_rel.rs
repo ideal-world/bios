@@ -16,7 +16,7 @@ pub struct Model {
     pub tag: String,
     pub note: String,
     /// The [source kind](crate::rbum::rbum_enumeration::RbumRelFromKind) of the relationship
-    pub from_rbum_kind: u8,
+    pub from_rbum_kind: i16,
     /// The source id of the relationship
     pub from_rbum_id: String,
     /// The target resource id of the relationship
@@ -49,7 +49,7 @@ impl TardisActiveModel for ActiveModel {
             // Specific
             .col(ColumnDef::new(Column::Tag).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
-            .col(ColumnDef::new(Column::FromRbumKind).not_null().tiny_unsigned())
+            .col(ColumnDef::new(Column::FromRbumKind).not_null().small_integer())
             .col(ColumnDef::new(Column::FromRbumId).not_null().string())
             .col(ColumnDef::new(Column::ToRbumItemId).not_null().string())
             .col(ColumnDef::new(Column::ToOwnPaths).not_null().string())

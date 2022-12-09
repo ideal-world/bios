@@ -15,7 +15,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
 
-    pub sort: u32,
+    pub sort: i64,
     /// Associated [resource set](crate::rbum::domain::rbum_set::Model) id
     pub rel_rbum_set_id: String,
     /// Associated [resource set category](crate::rbum::domain::rbum_set_cate::Model) sys_code
@@ -44,7 +44,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .col(ColumnDef::new(Column::Sort).not_null().big_integer())
             .col(ColumnDef::new(Column::RelRbumSetId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumSetCateCode).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())

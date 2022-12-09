@@ -22,7 +22,7 @@ pub enum RbumScopeLevelKind {
 }
 
 impl RbumScopeLevelKind {
-    pub fn from_int(s: i8) -> TardisResult<RbumScopeLevelKind> {
+    pub fn from_int(s: i16) -> TardisResult<RbumScopeLevelKind> {
         match s {
             -1 => Ok(RbumScopeLevelKind::Private),
             0 => Ok(RbumScopeLevelKind::Root),
@@ -33,7 +33,7 @@ impl RbumScopeLevelKind {
         }
     }
 
-    pub fn to_int(&self) -> i8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             RbumScopeLevelKind::Private => -1,
             RbumScopeLevelKind::Root => 0,
@@ -47,7 +47,7 @@ impl RbumScopeLevelKind {
 #[cfg(feature = "default")]
 impl TryGetable for RbumScopeLevelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = i8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
@@ -61,7 +61,7 @@ pub enum RbumCertRelKind {
 }
 
 impl RbumCertRelKind {
-    pub fn from_int(s: u8) -> TardisResult<RbumCertRelKind> {
+    pub fn from_int(s: i16) -> TardisResult<RbumCertRelKind> {
         match s {
             0 => Ok(RbumCertRelKind::Item),
             1 => Ok(RbumCertRelKind::Set),
@@ -70,7 +70,7 @@ impl RbumCertRelKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             RbumCertRelKind::Item => 0,
             RbumCertRelKind::Set => 1,
@@ -82,7 +82,7 @@ impl RbumCertRelKind {
 #[cfg(feature = "default")]
 impl TryGetable for RbumCertRelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         RbumCertRelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
@@ -97,7 +97,7 @@ pub enum RbumRelFromKind {
 }
 
 impl RbumRelFromKind {
-    pub fn from_int(s: u8) -> TardisResult<RbumRelFromKind> {
+    pub fn from_int(s: i16) -> TardisResult<RbumRelFromKind> {
         match s {
             0 => Ok(RbumRelFromKind::Item),
             1 => Ok(RbumRelFromKind::Set),
@@ -107,7 +107,7 @@ impl RbumRelFromKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             RbumRelFromKind::Item => 0,
             RbumRelFromKind::Set => 1,
@@ -120,7 +120,7 @@ impl RbumRelFromKind {
 #[cfg(feature = "default")]
 impl TryGetable for RbumRelFromKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         RbumRelFromKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
@@ -132,7 +132,7 @@ pub enum RbumCertConfStatusKind {
 }
 
 impl RbumCertConfStatusKind {
-    pub fn from_int(s: u8) -> TardisResult<RbumCertConfStatusKind> {
+    pub fn from_int(s: i16) -> TardisResult<RbumCertConfStatusKind> {
         match s {
             0 => Ok(RbumCertConfStatusKind::Disabled),
             1 => Ok(RbumCertConfStatusKind::Enabled),
@@ -140,7 +140,7 @@ impl RbumCertConfStatusKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             RbumCertConfStatusKind::Disabled => 0,
             RbumCertConfStatusKind::Enabled => 1,
@@ -156,7 +156,7 @@ pub enum RbumCertStatusKind {
 }
 
 impl RbumCertStatusKind {
-    pub fn from_int(s: u8) -> TardisResult<RbumCertStatusKind> {
+    pub fn from_int(s: i16) -> TardisResult<RbumCertStatusKind> {
         match s {
             0 => Ok(RbumCertStatusKind::Disabled),
             1 => Ok(RbumCertStatusKind::Enabled),
@@ -165,7 +165,7 @@ impl RbumCertStatusKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             RbumCertStatusKind::Disabled => 0,
             RbumCertStatusKind::Enabled => 1,
@@ -177,7 +177,7 @@ impl RbumCertStatusKind {
 #[cfg(feature = "default")]
 impl TryGetable for RbumCertStatusKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
@@ -191,7 +191,7 @@ pub enum RbumRelEnvKind {
 }
 
 impl RbumRelEnvKind {
-    pub fn from_int(s: u8) -> TardisResult<RbumRelEnvKind> {
+    pub fn from_int(s: i16) -> TardisResult<RbumRelEnvKind> {
         match s {
             0 => Ok(RbumRelEnvKind::DatetimeRange),
             1 => Ok(RbumRelEnvKind::TimeRange),
@@ -200,7 +200,7 @@ impl RbumRelEnvKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             RbumRelEnvKind::DatetimeRange => 0,
             RbumRelEnvKind::TimeRange => 1,
@@ -212,7 +212,7 @@ impl RbumRelEnvKind {
 #[cfg(feature = "default")]
 impl TryGetable for RbumRelEnvKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         RbumRelEnvKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
