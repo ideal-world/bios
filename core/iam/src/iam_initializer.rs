@@ -6,7 +6,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm::sea_query::Table;
-use tardis::log::info;
+use tardis::log::{info};
 use tardis::web::web_server::TardisWebServer;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -25,12 +25,12 @@ use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModif
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq,
 };
-use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq};
+use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-use crate::basic::serv::iam_res_serv::IamResServ;
+use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
@@ -234,7 +234,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let (set_menu_ct_id, set_api_ct_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ct", "Tenant Console", funs, &ctx).await?;
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
-    init_menu(&set_res_id, &cate_menu_id, funs, &ctx).await?;
+    init_menu_by_file(&set_res_id, &cate_menu_id, &funs.conf::<IamConfig>().init_menu_json_path,funs, &ctx).await?;
+    // init_menu(&set_res_id, &cate_menu_id, funs, &ctx).await?;
 
     // Init kernel certs
     let mut iam_cert_conf_ldap_add_or_modify_req: Vec<IamCertConfLdapAddOrModifyReq> = vec![];
@@ -553,6 +554,12 @@ async fn add_role<'a>(
     )
     .await?;
     Ok(role_id)
+}
+
+async fn init_menu_by_file(set_id: &str, parent_cate_id: &str, file_path: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let json_menu = TardisFuns::json.file_to_obj::<JsonMenu, &str>(file_path)?;
+    IamMenuServ::parse_menu(set_id, parent_cate_id, json_menu, funs, ctx).await?;
+    Ok(())
 }
 
 #[deprecated]

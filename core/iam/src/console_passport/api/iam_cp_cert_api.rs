@@ -100,7 +100,7 @@ impl IamCpCertApi {
         TardisResp::ok(rbum_certs)
     }
 
-    /// Set New Password
+    /// Set New Username(cert_conf kind usrpwd)
     #[oai(path = "/cert/username/new", method = "put")]
     async fn new_user_name(&self, pwd_new_req: Json<IamCertUserNameNewReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

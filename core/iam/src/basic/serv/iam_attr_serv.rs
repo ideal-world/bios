@@ -57,6 +57,12 @@ impl IamAttrServ {
                 ext: add_req.ext.clone(),
                 rel_rbum_kind_id: funs.iam_basic_kind_account_id(),
                 scope_level: add_req.scope_level.clone(),
+                secret: None,
+                show_by_conds: None,
+                widget_columns: None,
+                dyn_default_value: None,
+                dyn_options: None,
+                parent_attr_name: None,
             },
             funs,
             ctx,
@@ -77,6 +83,7 @@ impl IamAttrServ {
                     rbum_kind_id: Some(funs.iam_basic_kind_account_id()),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             funs,
             ctx,
@@ -92,6 +99,7 @@ impl IamAttrServ {
                     desc_by_sort: Some(true),
                     ..Default::default()
                 },
+                ..Default::default()
             },
             None,
             None,
@@ -106,7 +114,7 @@ impl IamAttrServ {
     }
 
     pub async fn find_account_attr_values(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        RbumItemAttrServ::find_item_attr_values(account_id, funs, ctx).await
+        RbumItemAttrServ::find_item_attr_values(account_id, Some(false), funs, ctx).await
     }
 
     pub async fn add_or_modify_account_attr_values(rel_account_id: &str, values: HashMap<String, String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

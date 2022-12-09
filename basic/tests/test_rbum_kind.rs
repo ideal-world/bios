@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -14,6 +16,33 @@ use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 pub async fn test(context: &TardisContext) -> TardisResult<()> {
     test_rbum_kind(context).await?;
     test_rbum_kind_attr(context).await?;
+    test_rbum_kind_url().await?;
+    Ok(())
+}
+
+async fn test_rbum_kind_url() -> TardisResult<()> {
+    assert_eq!(false, RbumKindAttrServ::url_match("http://iam/{key}?{key}=1&{key2}=2").unwrap());
+    assert_eq!(
+        "http://iam/t1?t1=1&t2=2",
+        RbumKindAttrServ::url_replace(
+            "http://iam/{key}?{key}=1&{key2}=2",
+            HashMap::from([("key".to_string(), "t1".to_string()), ("key2".to_string(), "t2".to_string())]),
+        )
+        .unwrap()
+        .as_str()
+    );
+    assert_eq!(
+        true,
+        RbumKindAttrServ::url_match(
+            RbumKindAttrServ::url_replace(
+                "http://iam/{key}?{key}=1&{key2}=2",
+                HashMap::from([("key".to_string(), "t1".to_string()), ("key2".to_string(), "t2".to_string())]),
+            )
+            .unwrap()
+            .as_str(),
+        )
+        .unwrap()
+    );
     Ok(())
 }
 
@@ -178,7 +207,13 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind_id: "".to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
-            hide: None
+            hide: None,
+            secret: None,
+            show_by_conds: None,
+            widget_columns: None,
+            dyn_default_value: None,
+            dyn_options: None,
+            parent_attr_name: None,
         },
         &funs,
         context,
@@ -209,7 +244,13 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             rel_rbum_kind_id: "11".to_string(),
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
-            hide: None
+            hide: None,
+            secret: None,
+            show_by_conds: None,
+            widget_columns: None,
+            dyn_default_value: None,
+            dyn_options: None,
+            parent_attr_name: None,
         },
         &funs,
         context,
@@ -241,6 +282,12 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             scope_level: Some(RbumScopeLevelKind::L2),
             idx: None,
             hide: None,
+            secret: None,
+            show_by_conds: None,
+            widget_columns: None,
+            dyn_default_value: None,
+            dyn_options: None,
+            parent_attr_name: None,
         },
         &funs,
         context,
@@ -278,7 +325,13 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             ext: None,
             scope_level: None,
             idx: None,
-            hide: None
+            hide: None,
+            secret: None,
+            show_by_conds: None,
+            widget_columns: None,
+            dyn_default_value: None,
+            dyn_options: None,
+            parent_attr_name: None,
         },
         &funs,
         context
@@ -308,6 +361,12 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
             scope_level: None,
             idx: None,
             hide: None,
+            secret: None,
+            show_by_conds: None,
+            widget_columns: None,
+            dyn_default_value: None,
+            dyn_options: None,
+            parent_attr_name: None,
         },
         &funs,
         context,

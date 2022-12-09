@@ -519,5 +519,11 @@ fn package_test_attr_modify_req(label: &str) -> RbumKindAttrModifyReq {
         action: None,
         ext: None,
         scope_level: None,
+        secret: None,
+        show_by_conds: None,
+        widget_columns: None,
+        dyn_default_value: None,
+        dyn_options: None,
+        parent_attr_name: None,
     }
 }

@@ -452,6 +452,63 @@ impl IamCertServ {
         Ok(id)
     }
 
+    /// Get general cert method \
+    /// if cert_conf_id is Some then use cert_conf_id as query param \
+    /// otherwise use kind、cert_supplier as query param
+    pub async fn get_cert_by_relrubmid_kind_supplier(
+        rel_rubm_id: &str,
+        kind: &str,
+        cert_supplier: Vec<String>,
+        cert_conf_id: Option<String>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let rbum_cert_filter_req = if let Some(cert_conf_id) = cert_conf_id {
+            RbumCertFilterReq {
+                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                rel_rbum_cert_conf_ids: Some(vec![cert_conf_id]),
+                ..Default::default()
+            }
+        } else {
+            RbumCertFilterReq {
+                kind: Some(kind.to_string()),
+                supplier: Some(cert_supplier.clone()),
+                rel_rbum_id: Some(rel_rubm_id.to_string()),
+                ..Default::default()
+            }
+        };
+        let ext_cert = RbumCertServ::find_one_rbum(&rbum_cert_filter_req, funs, ctx).await?;
+        if let Some(ext_cert) = ext_cert {
+            Ok(RbumCertSummaryWithSkResp {
+                id: ext_cert.id,
+                ak: ext_cert.ak,
+                sk: "".to_string(),
+                ext: ext_cert.ext,
+                start_time: ext_cert.start_time,
+                end_time: ext_cert.end_time,
+                status: ext_cert.status,
+                kind: ext_cert.kind,
+                supplier: ext_cert.supplier,
+                rel_rbum_cert_conf_id: ext_cert.rel_rbum_cert_conf_id,
+                rel_rbum_cert_conf_name: ext_cert.rel_rbum_cert_conf_name,
+                rel_rbum_cert_conf_code: ext_cert.rel_rbum_cert_conf_code,
+                rel_rbum_kind: ext_cert.rel_rbum_kind,
+                rel_rbum_id: ext_cert.rel_rbum_id,
+                own_paths: ext_cert.own_paths,
+                owner: ext_cert.owner,
+                create_time: ext_cert.create_time,
+                update_time: ext_cert.update_time,
+            })
+        } else {
+            Err(funs.err().not_found(
+                "iam_cert",
+                "get_cert_by_relrubmid_kind_supplier",
+                &format!("not found credential of kind:{} supplier {:?}", kind, cert_supplier),
+                "404-iam-cert-kind-not-exist",
+            ))
+        }
+    }
+
     pub async fn get_3th_kind_cert_by_rel_rubm_id(
         rel_rubm_id: &str,
         cert_supplier: Vec<String>,
