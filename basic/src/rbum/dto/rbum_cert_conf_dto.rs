@@ -38,13 +38,13 @@ pub struct RbumCertConfAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
-    pub expire_sec: Option<u32>,
+    pub expire_sec: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
-    pub sk_lock_cycle_sec: Option<u32>,
-    pub sk_lock_err_times: Option<u8>,
+    pub sk_lock_cycle_sec: Option<i32>,
+    pub sk_lock_err_times: Option<i16>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
-    pub sk_lock_duration_sec: Option<u32>,
-    pub coexist_num: Option<u32>,
+    pub sk_lock_duration_sec: Option<i32>,
+    pub coexist_num: Option<i16>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
     pub status: RbumCertConfStatusKind,
@@ -77,13 +77,13 @@ pub struct RbumCertConfModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub rest_by_kinds: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
-    pub expire_sec: Option<u32>,
+    pub expire_sec: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
-    pub sk_lock_cycle_sec: Option<u32>,
-    pub sk_lock_err_times: Option<u8>,
+    pub sk_lock_cycle_sec: Option<i32>,
+    pub sk_lock_err_times: Option<i16>,
     #[cfg_attr(feature = "default", oai(validator(minimum(value = "1", exclusive = "false"))))]
-    pub sk_lock_duration_sec: Option<u32>,
-    pub coexist_num: Option<u32>,
+    pub sk_lock_duration_sec: Option<i32>,
+    pub coexist_num: Option<i16>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub conn_uri: Option<String>,
     pub status: Option<RbumCertConfStatusKind>,
@@ -106,11 +106,11 @@ pub struct RbumCertConfSummaryResp {
     pub is_basic: bool,
     pub is_ak_repeatable: bool,
     pub rest_by_kinds: String,
-    pub expire_sec: u32,
-    pub sk_lock_cycle_sec: u32,
-    pub sk_lock_err_times: u8,
-    pub sk_lock_duration_sec: u32,
-    pub coexist_num: u32,
+    pub expire_sec: i64,
+    pub sk_lock_cycle_sec: i32,
+    pub sk_lock_err_times: i16,
+    pub sk_lock_duration_sec: i32,
+    pub coexist_num: i16,
     pub conn_uri: String,
 
     pub rel_rbum_domain_id: String,
@@ -142,11 +142,11 @@ pub struct RbumCertConfDetailResp {
     pub is_basic: bool,
     pub is_ak_repeatable: bool,
     pub rest_by_kinds: String,
-    pub expire_sec: u32,
-    pub sk_lock_cycle_sec: u32,
-    pub sk_lock_err_times: u8,
-    pub sk_lock_duration_sec: u32,
-    pub coexist_num: u32,
+    pub expire_sec: i64,
+    pub sk_lock_cycle_sec: i32,
+    pub sk_lock_err_times: i16,
+    pub sk_lock_duration_sec: i32,
+    pub coexist_num: i16,
     pub conn_uri: String,
     pub rel_rbum_domain_id: String,
     pub rel_rbum_domain_name: String,

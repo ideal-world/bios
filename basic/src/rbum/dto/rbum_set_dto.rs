@@ -25,7 +25,7 @@ pub struct RbumSetAddReq {
     pub note: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
@@ -42,7 +42,7 @@ pub struct RbumSetModifyReq {
     pub note: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
@@ -58,7 +58,7 @@ pub struct RbumSetSummaryResp {
     pub kind: String,
     pub name: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub ext: String,
 
     pub own_paths: String,
@@ -79,7 +79,7 @@ pub struct RbumSetDetailResp {
     pub name: String,
     pub note: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub ext: String,
 
     pub own_paths: String,
@@ -116,7 +116,7 @@ pub struct RbumSetTreeMainResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub ext: String,
 
     pub own_paths: String,

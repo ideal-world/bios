@@ -16,7 +16,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     /// [Environment Kind](crate::rbum::rbum_enumeration::RbumRelEnvKind)
-    pub kind: u8,
+    pub kind: i16,
     pub value1: String,
     pub value2: String,
     /// Associated [relationship](crate::rbum::domain::rbum_rel::Model) id
@@ -43,7 +43,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             // Specific
-            .col(ColumnDef::new(Column::Kind).not_null().tiny_unsigned())
+            .col(ColumnDef::new(Column::Kind).not_null().small_integer())
             .col(ColumnDef::new(Column::Value1).not_null().string())
             .col(ColumnDef::new(Column::Value2).not_null().string())
             .col(ColumnDef::new(Column::RelRbumRelId).not_null().string())

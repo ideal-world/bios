@@ -19,7 +19,7 @@ pub struct RbumDomainAddReq {
     pub note: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
 }
@@ -33,7 +33,7 @@ pub struct RbumDomainModifyReq {
     pub note: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
 }
@@ -45,7 +45,7 @@ pub struct RbumDomainSummaryResp {
     pub code: String,
     pub name: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
 
     pub own_paths: String,
     pub owner: String,
@@ -63,7 +63,7 @@ pub struct RbumDomainDetailResp {
     pub name: String,
     pub note: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
 
     pub own_paths: String,
     pub owner: String,

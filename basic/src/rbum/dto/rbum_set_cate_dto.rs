@@ -17,7 +17,7 @@ pub struct RbumSetCateAddReq {
     pub name: TrimString,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
@@ -37,7 +37,7 @@ pub struct RbumSetCateModifyReq {
     pub name: Option<TrimString>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "1000")))]
     pub ext: Option<String>,
 
@@ -52,7 +52,7 @@ pub struct RbumSetCateSummaryResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub ext: String,
 
     pub rel_rbum_set_id: String,
@@ -73,7 +73,7 @@ pub struct RbumSetCateDetailResp {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub ext: String,
 
     pub rel_rbum_set_id: String,
