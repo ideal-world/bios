@@ -179,7 +179,7 @@ impl RbumSetServ {
         // check filter.filter_cate_sys_codes scope
         if let Some(sys_codes) = &filter.sys_codes {
             let rbum_set_ids = &vec![rbum_set_id.to_string()];
-            let mut values = HashMap::from([("rbum_set_id".to_string(), rbum_set_ids)]);
+            let mut values = HashMap::from([("rel_rbum_set_id".to_string(), rbum_set_ids)]);
             let mut sys_code_vec = vec![];
             for sys_code in sys_codes {
                 if sys_code != "" {
