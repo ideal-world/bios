@@ -13,7 +13,7 @@ pub enum ChatMessageKind {
 }
 
 impl ChatMessageKind {
-    pub fn from_int(s: i8) -> TardisResult<ChatMessageKind> {
+    pub fn from_int(s: i6) -> TardisResult<ChatMessageKind> {
         match s {
             -1 => Ok(ChatMessageKind::ToAccount),
             2 => Ok(ChatMessageKind::ToSet),
@@ -23,7 +23,7 @@ impl ChatMessageKind {
         }
     }
 
-    pub fn to_int(&self) -> i8 {
+    pub fn to_int(&self) -> i6 {
         match self {
             ChatMessageKind::ToAccount => -1,
             ChatMessageKind::ToSet => 2,

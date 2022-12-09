@@ -23,7 +23,7 @@ pub struct IamResAddReq {
     pub name: TrimString,
     pub kind: IamResKind,
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "1", max_length = "255"))]
     pub method: Option<TrimString>,
     pub hide: Option<bool>,
@@ -54,7 +54,7 @@ pub struct IamResModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     pub hide: Option<bool>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub action: Option<String>,
@@ -79,7 +79,7 @@ pub struct IamResSummaryResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub method: String,
     pub hide: bool,
     pub action: String,
@@ -110,7 +110,7 @@ pub struct IamResDetailResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub method: String,
     pub hide: bool,
     pub action: String,
