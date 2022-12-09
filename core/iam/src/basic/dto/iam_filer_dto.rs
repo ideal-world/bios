@@ -35,7 +35,7 @@ pub struct IamAppFilterReq {
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     pub contact_phone: Option<String>,
 }
 
@@ -58,7 +58,7 @@ pub struct IamTenantFilterReq {
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     pub contact_phone: Option<String>,
 }
 
@@ -82,7 +82,7 @@ pub struct IamResFilterReq {
     pub rel2: Option<RbumItemRelFilterReq>,
     pub kind: Option<IamResKind>,
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     pub method: Option<String>,
 }
 
@@ -106,7 +106,7 @@ pub struct IamRoleFilterReq {
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
 }
 
 impl RbumItemFilterFetcher for IamRoleFilterReq {
