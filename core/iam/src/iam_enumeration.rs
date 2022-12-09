@@ -139,10 +139,16 @@ pub enum IamSetKind {
     Apps,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamSetCateKind {
     Root,
     System,
     Tenant,
     App,
+}
+
+impl IamSetCateKind {
+    pub fn parse(kind: &str) -> TardisResult<IamSetCateKind> {
+        IamSetCateKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support SetCate kind: {}", kind), "404-iam-cert-set-cate-kind-not-exist"))
+    }
 }
