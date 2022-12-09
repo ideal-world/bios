@@ -178,14 +178,18 @@ impl RbumSetServ {
         Self::check_scope(rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         // check filter.filter_cate_sys_codes scope
         if let Some(sys_codes) = &filter.sys_codes {
-            Self::check_scopes(
-                HashMap::from([("sys_code".to_string(), sys_codes), ("rel_rbum_set_id".to_string(), &vec![rbum_set_id.to_string()])]),
-                sys_codes.len() as u64,
-                RbumSetCateServ::get_table_name(),
-                funs,
-                ctx,
-            )
-            .await?;
+            let rbum_set_ids = &vec![rbum_set_id.to_string()];
+            let mut values = HashMap::from([("rbum_set_id".to_string(), rbum_set_ids)]);
+            let mut sys_code_vec = vec![];
+            for sys_code in sys_codes {
+                if sys_code != "" {
+                    sys_code_vec.push(sys_code.to_string());
+                }
+            }
+            if sys_code_vec.len() > 0 {
+                values.insert("sys_codes".to_string(), &sys_code_vec);
+            }
+            Self::check_scopes(values, sys_codes.len() as u64, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         }
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let mut resp = RbumSetCateServ::find_rbums(

@@ -263,8 +263,8 @@ pub enum RbumWidgetTypeKind {
     Link,
     CodeEditor,
     Container, // Display group subtitles, datatype = String, value is empty
-    Control,  // Json fields : all parent_attr_name = current attribute, datatype = Json
-    Group, // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
+    Control,   // Json fields : all parent_attr_name = current attribute, datatype = Json
+    Group,     // Sub fields : all parent_attr_name = current attribute, datatype = Array, The value of the json array is stored to the current field.
 }
 
 #[cfg(feature = "default")]
