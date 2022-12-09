@@ -378,7 +378,7 @@ impl IamRoleServ {
         role_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        scope_levels: Option<Vec<u8>>,
+        scope_levels: Option<Vec<i16>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {

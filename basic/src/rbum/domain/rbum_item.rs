@@ -31,7 +31,7 @@ pub struct Model {
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
 
-    pub scope_level: i8,
+    pub scope_level: i16,
 
     pub disabled: bool,
 }
@@ -59,7 +59,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_integer())
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer())
             // With Status
             .col(ColumnDef::new(Column::Disabled).not_null().boolean());
         if db == DatabaseBackend::Postgres {

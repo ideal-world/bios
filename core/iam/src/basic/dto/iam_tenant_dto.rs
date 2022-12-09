@@ -20,7 +20,7 @@ pub struct IamTenantAddReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -38,7 +38,7 @@ pub struct IamTenantModifyReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -79,7 +79,7 @@ pub struct IamTenantAggModifyReq {
     pub name: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -108,7 +108,7 @@ pub struct IamTenantAggDetailResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub contact_phone: String,
     pub note: String,
     pub account_self_reg: bool,
@@ -141,7 +141,7 @@ pub struct IamTenantSummaryResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub contact_phone: String,
     pub note: String,
     pub account_self_reg: bool,
@@ -162,7 +162,7 @@ pub struct IamTenantDetailResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub contact_phone: String,
     pub note: String,
     pub account_self_reg: bool,

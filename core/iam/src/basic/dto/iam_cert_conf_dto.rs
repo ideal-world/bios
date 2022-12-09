@@ -16,13 +16,13 @@ pub struct IamCertConfUserPwdAddOrModifyReq {
     pub sk_rule_need_lowercase: bool,
     pub sk_rule_need_spec_char: bool,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub sk_lock_cycle_sec: u32,
-    pub sk_lock_err_times: u8,
+    pub sk_lock_cycle_sec: i32,
+    pub sk_lock_err_times: i16,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub sk_lock_duration_sec: u32,
+    pub sk_lock_duration_sec: i32,
     pub repeatable: bool,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub expire_sec: u32,
+    pub expire_sec: i64,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -38,13 +38,13 @@ pub struct IamCertConfUserPwdResp {
     pub sk_rule_need_lowercase: bool,
     pub sk_rule_need_spec_char: bool,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub sk_lock_cycle_sec: u32,
-    pub sk_lock_err_times: u8,
+    pub sk_lock_cycle_sec: i32,
+    pub sk_lock_err_times: i16,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub sk_lock_duration_sec: u32,
+    pub sk_lock_duration_sec: i32,
     pub repeatable: bool,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub expire_sec: u32,
+    pub expire_sec: i64,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -67,18 +67,18 @@ pub struct IamCertConfPhoneVCodeAddOrModifyReq {
 pub struct IamCertConfTokenAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
-    pub coexist_num: u32,
+    pub coexist_num: i16,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub expire_sec: Option<u32>,
+    pub expire_sec: Option<i64>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertConfTokenModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
-    pub coexist_num: Option<u32>,
+    pub coexist_num: Option<i16>,
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub expire_sec: Option<u32>,
+    pub expire_sec: Option<i64>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

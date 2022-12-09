@@ -12,7 +12,7 @@ pub struct IamAppAggAddReq {
     pub app_name: TrimString,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub app_icon: Option<String>,
-    pub app_sort: Option<u32>,
+    pub app_sort: Option<i64>,
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub app_contact_phone: Option<String>,
@@ -34,7 +34,7 @@ pub struct IamAppAddReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
 }
@@ -49,7 +49,7 @@ pub struct IamAppAggModifyReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
 
@@ -66,7 +66,7 @@ pub struct IamAppModifyReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub contact_phone: Option<String>,
 }
@@ -85,7 +85,7 @@ pub struct IamAppSummaryResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub contact_phone: String,
 }
 
@@ -104,6 +104,6 @@ pub struct IamAppDetailResp {
     pub disabled: bool,
 
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub contact_phone: String,
 }

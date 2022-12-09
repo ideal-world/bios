@@ -43,21 +43,21 @@ pub struct Model {
     /// Multiple values are separated by commas
     pub rest_by_kinds: String,
     /// The expiration time of the Sk
-    pub expire_sec: u32,
-    pub sk_lock_cycle_sec: u32,
-    pub sk_lock_err_times: u8,
-    pub sk_lock_duration_sec: u32,
+    pub expire_sec: i64,
+    pub sk_lock_cycle_sec: i32,
+    pub sk_lock_err_times: i16,
+    pub sk_lock_duration_sec: i32,
     /// The number of simultaneously valid \
     /// Used to control the number of certs in effect, E.g.
     /// * Single terminal sign-on: configure a record：`code` = 'token' & `coexist_num` = 1
     /// * Can log in to one android, ios, two web terminals at the same time: configure 3 records：
     ///  `code` = 'token_android' & `coexist_num` = 1 , `code` = 'token_ios' & `coexist_num` = 1 , `code` = 'token_web' & `coexist_num` = 2
-    pub coexist_num: u32,
+    pub coexist_num: i16,
     /// Specifies the connection address, mostly for two-party or third-party configurations \
     /// E.g. http://localhost:8080/api/v1/
     pub conn_uri: String,
     /// see [status][crate::rbum::rbum_enumeration::RbumCertConfStatusKind]
-    pub status: u8,
+    pub status: i16,
     /// Associated [resource domain](crate::rbum::domain::rbum_domain::Model) id
     pub rel_rbum_domain_id: String,
     /// Associated [resource](crate::rbum::domain::rbum_item::Model) id
@@ -100,15 +100,15 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::IsBasic).not_null().boolean())
             .col(ColumnDef::new(Column::IsAkRepeatable).not_null().boolean())
             .col(ColumnDef::new(Column::RestByKinds).not_null().string())
-            .col(ColumnDef::new(Column::ExpireSec).not_null().unsigned())
-            .col(ColumnDef::new(Column::SkLockCycleSec).not_null().unsigned())
-            .col(ColumnDef::new(Column::SkLockErrTimes).not_null().unsigned())
-            .col(ColumnDef::new(Column::SkLockDurationSec).not_null().unsigned())
-            .col(ColumnDef::new(Column::CoexistNum).not_null().unsigned())
+            .col(ColumnDef::new(Column::ExpireSec).not_null().big_integer())
+            .col(ColumnDef::new(Column::SkLockCycleSec).not_null().integer())
+            .col(ColumnDef::new(Column::SkLockErrTimes).not_null().small_integer())
+            .col(ColumnDef::new(Column::SkLockDurationSec).not_null().integer())
+            .col(ColumnDef::new(Column::CoexistNum).not_null().small_integer())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
-            .col(ColumnDef::new(Column::Status).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::RelRbumDomainId).not_null().string())
             .col(ColumnDef::new(Column::RelRbumItemId).not_null().string())
+            .col(ColumnDef::new(Column::Status).not_null().small_integer())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string());
