@@ -187,7 +187,7 @@ impl RbumSetServ {
                 }
             }
             if sys_code_vec.len() > 0 {
-                values.insert("sys_codes".to_string(), &sys_code_vec);
+                values.insert("sys_code".to_string(), &sys_code_vec);
             }
             Self::check_scopes(values, sys_codes.len() as u64, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         }
