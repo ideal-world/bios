@@ -1,0 +1,24 @@
+{
+  "name": "default_page",
+  "bus_code": "__default__",
+  "ext": "Root",
+  "items": [
+    {
+      "code": "first_menu",
+      "name": "menu",
+      "kind": "Menu"
+    },
+    {
+      "code": "default_button",
+      "name": "button",
+      "kind": "Ele"
+    }
+  ],
+  "children": [
+    {
+      "name": "sub_page",
+      "bus_code": "__default_sub_page__",
+      "ext": "Root"
+    }
+  ]
+}

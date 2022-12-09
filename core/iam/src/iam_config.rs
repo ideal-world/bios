@@ -41,6 +41,7 @@ pub struct IamConfig {
     pub phone_template_cert_login_title: String,
     pub phone_template_cert_login_content: String,
 
+    pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
 }
 
@@ -99,6 +100,7 @@ impl Default for IamConfig {
             phone_template_cert_activate_content: "Your account [{account_name}] is activating phone credentials, verification code: {vcode}".to_string(),
             phone_template_cert_login_title: "Your account is trying to login, verification code: {vcode}".to_string(),
             phone_template_cert_login_content: "IAM Service Phone Credentials Activation".to_string(),
+            init_menu_json_path: "config/init-menu-default.json".to_string(),
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
         }
