@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::f32::consts::E;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -188,8 +189,8 @@ impl RbumSetServ {
             }
             if sys_code_vec.len() > 0 {
                 values.insert("sys_code".to_string(), &sys_code_vec);
+                Self::check_scopes(values, sys_code_vec.len() as u64, RbumSetCateServ::get_table_name(), funs, ctx).await?;
             }
-            Self::check_scopes(values, sys_codes.len() as u64, RbumSetCateServ::get_table_name(), funs, ctx).await?;
         }
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let mut resp = RbumSetCateServ::find_rbums(
