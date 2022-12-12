@@ -15,6 +15,7 @@ use bios_basic::rbum::rbum_config::RbumConfig;
 pub struct IamConfig {
     pub rbum: RbumConfig,
     // token -> (token_kind, account_id)
+    // accessToken(token_kind = TokenOauth2) -> (token_kind, rel_iam_item_id, ak, SetCateIds)
     pub cache_key_token_info_: String,
     // ak -> (sk,tenant_id,[appid])
     pub cache_key_aksk_info_: String,

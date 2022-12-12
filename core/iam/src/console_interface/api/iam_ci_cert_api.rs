@@ -1,4 +1,4 @@
-use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp};
+use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamOauth2AkSkResp};
 use crate::console_interface::serv::iam_ci_cert_aksk_serv::IamCiCertAkSkServ;
 use crate::console_interface::serv::iam_ci_oauth2_token_serv::IamCiOauth2AkSkServ;
 use crate::iam_constants;
@@ -30,9 +30,16 @@ impl IamCiCertApi {
     }
 
     #[oai(path = "/token", method = "get")]
-    async fn get_token(&self, grant_type: Query<String>, client_id: Query<String>, client_secret: Query<String>, scope: Query<String>) -> TardisApiResult<Void> {
+    async fn get_token(
+        &self,
+        grant_type: Query<String>,
+        client_id: Query<String>,
+        client_secret: Query<String>,
+        scope: Query<Option<String>>,
+    ) -> TardisApiResult<IamOauth2AkSkResp> {
         let grant_type = Oauth2GrantType::parse(&grant_type.0)?;
-        IamCiOauth2AkSkServ::generate_token(grant_type, client_id.0, client_secret.0).await?;
-        TardisResp::ok(Void {})
+        let funs = iam_constants::get_tardis_inst();
+        let resp = IamCiOauth2AkSkServ::generate_token(grant_type, &client_id.0, &client_secret.0, scope.0, funs).await?;
+        TardisResp::ok(resp)
     }
 }

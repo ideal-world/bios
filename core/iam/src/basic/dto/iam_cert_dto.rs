@@ -151,3 +151,12 @@ pub struct IamCertAkSkResp {
     pub ak: String,
     pub sk: String,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamOauth2AkSkResp {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: String,
+    pub refresh_token: String,
+    pub scope: String,
+}
