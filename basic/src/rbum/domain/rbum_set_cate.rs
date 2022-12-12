@@ -19,7 +19,7 @@ pub struct Model {
     pub bus_code: String,
     pub name: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub ext: String,
     /// Associated [resource set](crate::rbum::domain::rbum_set::Model) id
     pub rel_rbum_set_id: String,
@@ -29,7 +29,7 @@ pub struct Model {
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
 
-    pub scope_level: i8,
+    pub scope_level: i16,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -51,14 +51,14 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::BusCode).not_null().string())
             .col(ColumnDef::new(Column::Name).not_null().string())
             .col(ColumnDef::new(Column::Icon).not_null().string())
-            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .col(ColumnDef::new(Column::Sort).not_null().big_integer())
             .col(ColumnDef::new(Column::Ext).not_null().string())
             .col(ColumnDef::new(Column::RelRbumSetId).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_integer());
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())

@@ -32,7 +32,7 @@ pub struct Model {
     pub module: String,
     pub label: String,
     pub note: String,
-    pub sort: u32,
+    pub sort: i64,
     pub main_column: bool,
     pub position: bool,
     pub capacity: bool,
@@ -48,7 +48,7 @@ pub struct Model {
     pub data_type: String,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumWidgetTypeKind)
     pub widget_type: String,
-    pub widget_columns: u8,
+    pub widget_columns: i16,
     pub default_value: String,
     /// Dynamic default value
     /// the return format is the same as `default_value`
@@ -61,8 +61,8 @@ pub struct Model {
     /// the return format is the same as `options`
     pub dyn_options: String,
     pub required: bool,
-    pub min_length: u32,
-    pub max_length: u32,
+    pub min_length: i32,
+    pub max_length: i32,
     /// Used to implement multi-level attributes, default is empty
     pub parent_attr_name: String,
     /// Custom behavior attributes \
@@ -78,7 +78,7 @@ pub struct Model {
     pub create_time: chrono::DateTime<Utc>,
     pub update_time: chrono::DateTime<Utc>,
 
-    pub scope_level: i8,
+    pub scope_level: i16,
 }
 
 impl TardisActiveModel for ActiveModel {
@@ -100,7 +100,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Module).not_null().string())
             .col(ColumnDef::new(Column::Label).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string().default(""))
-            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .col(ColumnDef::new(Column::Sort).not_null().big_integer())
             .col(ColumnDef::new(Column::MainColumn).not_null().boolean().default(false))
             .col(ColumnDef::new(Column::Position).not_null().boolean().default(false))
             .col(ColumnDef::new(Column::Capacity).not_null().boolean().default(false))
@@ -111,14 +111,14 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Idx).not_null().boolean().default(false))
             .col(ColumnDef::new(Column::DataType).not_null().string())
             .col(ColumnDef::new(Column::WidgetType).not_null().string())
-            .col(ColumnDef::new(Column::WidgetColumns).not_null().small_unsigned().default(1))
+            .col(ColumnDef::new(Column::WidgetColumns).not_null().small_integer().default(1))
             .col(ColumnDef::new(Column::DefaultValue).not_null().string().default(""))
             .col(ColumnDef::new(Column::DynDefaultValue).not_null().string().default(""))
             .col(ColumnDef::new(Column::Options).not_null().text())
             .col(ColumnDef::new(Column::DynOptions).not_null().string().default(""))
             .col(ColumnDef::new(Column::Required).not_null().boolean().default(false))
-            .col(ColumnDef::new(Column::MinLength).not_null().unsigned())
-            .col(ColumnDef::new(Column::MaxLength).not_null().unsigned())
+            .col(ColumnDef::new(Column::MinLength).not_null().integer())
+            .col(ColumnDef::new(Column::MaxLength).not_null().integer())
             .col(ColumnDef::new(Column::ParentAttrName).not_null().string().default(""))
             .col(ColumnDef::new(Column::Action).not_null().string().default(""))
             .col(ColumnDef::new(Column::Ext).not_null().string().default(""))
@@ -127,7 +127,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
             .col(ColumnDef::new(Column::Owner).not_null().string())
             // With Scope
-            .col(ColumnDef::new(Column::ScopeLevel).not_null().tiny_integer());
+            .col(ColumnDef::new(Column::ScopeLevel).not_null().small_integer());
         if db == DatabaseBackend::Postgres {
             builder
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())

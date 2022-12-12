@@ -7,7 +7,6 @@ use tardis::chrono::{DateTime, Duration, Utc};
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
-
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
 
@@ -22,6 +21,7 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_item_serv::RbumItemServ;
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetServ;
+
 pub struct RbumCertConfServ;
 
 pub struct RbumCertServ;
@@ -53,7 +53,7 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             is_basic: Set(add_req.is_basic.unwrap_or(true)),
             is_ak_repeatable: Set(add_req.is_ak_repeatable.unwrap_or(false)),
             rest_by_kinds: Set(add_req.rest_by_kinds.as_ref().unwrap_or(&"".to_string()).to_string()),
-            expire_sec: Set(add_req.expire_sec.unwrap_or(u32::MAX)),
+            expire_sec: Set(add_req.expire_sec.unwrap_or(3600 * 24 * 365)),
             sk_lock_cycle_sec: Set(add_req.sk_lock_cycle_sec.unwrap_or(0)),
             sk_lock_err_times: Set(add_req.sk_lock_err_times.unwrap_or(0)),
             sk_lock_duration_sec: Set(add_req.sk_lock_duration_sec.unwrap_or(0)),
@@ -710,9 +710,9 @@ impl RbumCertServ {
         struct CertConfPeekResp {
             pub sk_encrypted: bool,
             pub sk_dynamic: bool,
-            pub sk_lock_cycle_sec: u32,
-            pub sk_lock_err_times: u8,
-            pub sk_lock_duration_sec: u32,
+            pub sk_lock_cycle_sec: i32,
+            pub sk_lock_err_times: i16,
+            pub sk_lock_duration_sec: i32,
         }
         let mut query = Query::select();
         query
@@ -827,9 +827,9 @@ impl RbumCertServ {
             pub is_basic: bool,
             pub sk_encrypted: bool,
             pub rel_rbum_domain_id: String,
-            pub sk_lock_cycle_sec: u32,
-            pub sk_lock_err_times: u8,
-            pub sk_lock_duration_sec: u32,
+            pub sk_lock_cycle_sec: i32,
+            pub sk_lock_err_times: i16,
+            pub sk_lock_duration_sec: i32,
         }
         let mut query = Query::select();
         query
@@ -931,9 +931,9 @@ impl RbumCertServ {
             pub end_time: DateTime<Utc>,
             pub sk_encrypted: bool,
             pub rel_rbum_cert_conf_id: String,
-            pub sk_lock_cycle_sec: u32,
-            pub sk_lock_err_times: u8,
-            pub sk_lock_duration_sec: u32,
+            pub sk_lock_cycle_sec: i32,
+            pub sk_lock_err_times: i16,
+            pub sk_lock_duration_sec: i32,
         }
         let rbum_basic_cert_info_resp = funs
             .db()
@@ -991,12 +991,12 @@ impl RbumCertServ {
         }
     }
 
-    async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: u32, sk_lock_err_times: u8, sk_lock_duration_sec: u32, funs: &TardisFunsInst) -> TardisResult<()> {
+    async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: i32, sk_lock_err_times: i16, sk_lock_duration_sec: i32, funs: &TardisFunsInst) -> TardisResult<()> {
         if sk_lock_cycle_sec == 0 || sk_lock_err_times == 0 || sk_lock_duration_sec == 0 {
             return Ok(());
         }
         let err_times = funs.cache().incr(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id), 1).await?;
-        if sk_lock_err_times <= err_times as u8 {
+        if sk_lock_err_times <= err_times as i16 {
             funs.cache().set_ex(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_item_id), "", sk_lock_duration_sec as usize).await?;
             funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rbum_item_id)).await?;
         } else if err_times == 1 {

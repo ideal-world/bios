@@ -28,15 +28,18 @@ const RBUM_ITEM_NAME_DEFAULT_APP: &str = "iam";
 const RBUM_ITEM_NAME_DEFAULT_ACCOUNT: &str = "sys_admin";
 
 pub struct LifeHold<'a> {
-    pub mysql: Container<'a, GenericImage>,
+    pub reldb: Container<'a, GenericImage>,
     pub redis: Container<'a, Redis>,
     pub rabbit: Container<'a, GenericImage>,
 }
 
 pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
-    let mysql_container = TardisTestContainer::mysql_custom(None, docker);
-    let port = mysql_container.get_host_port_ipv4(3306);
+    let reldb_container = TardisTestContainer::mysql_custom(None, docker);
+    let port = reldb_container.get_host_port_ipv4(3306);
     let url = format!("mysql://root:123456@localhost:{}/test", port);
+    // let reldb_container = TardisTestContainer::postgres_custom(None, docker);
+    // let port = reldb_container.get_host_port_ipv4(5432);
+    // let url = format!("postgres://postgres:123456@localhost:{}/test", port);
     env::set_var("TARDIS_FW.DB.URL", url);
 
     let redis_container = TardisTestContainer::redis_custom(docker);
@@ -55,7 +58,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     bios_basic::rbum::rbum_initializer::init("", RbumConfig::default()).await?;
 
     Ok(LifeHold {
-        mysql: mysql_container,
+        reldb: reldb_container,
         redis: redis_container,
         rabbit: rabbit_container,
     })
@@ -63,6 +66,9 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
 
 pub async fn init_test_data() -> TardisResult<TardisContext> {
     let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
+
+    funs.mq().subscribe("rbum::entity_deleted", |(_, _)| async { Ok(()) }).await?;
+
     funs.begin().await?;
 
     let ctx = TardisContext {

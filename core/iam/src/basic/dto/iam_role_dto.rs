@@ -26,7 +26,7 @@ pub struct IamRoleAddReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -46,7 +46,7 @@ pub struct IamRoleModifyReq {
 
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -75,7 +75,7 @@ pub struct IamRoleSummaryResp {
 
     pub icon: String,
     pub code: String,
-    pub sort: u32,
+    pub sort: i64,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -95,5 +95,5 @@ pub struct IamRoleDetailResp {
 
     pub icon: String,
     pub code: String,
-    pub sort: u32,
+    pub sort: i64,
 }

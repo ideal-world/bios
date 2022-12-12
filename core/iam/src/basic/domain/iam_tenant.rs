@@ -10,7 +10,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub icon: String,
-    pub sort: u32,
+    pub sort: i64,
     pub contact_phone: String,
     pub note: String,
     pub account_self_reg: bool,
@@ -32,7 +32,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::Icon).not_null().string())
-            .col(ColumnDef::new(Column::Sort).not_null().unsigned())
+            .col(ColumnDef::new(Column::Sort).not_null().big_integer())
             .col(ColumnDef::new(Column::ContactPhone).not_null().string())
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::AccountSelfReg).not_null().boolean())

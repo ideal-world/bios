@@ -34,11 +34,11 @@ pub struct Model {
     /// E.g. http://localhost:8080/api/v1/
     pub conn_uri: String,
     /// @see [status](crate::rbum::rbum_enumeration::RbumCertStatusKind)
-    pub status: u8,
+    pub status: i16,
     /// Associated [cert configuration](crate::rbum::domain::rbum_cert_conf::Model) id
     pub rel_rbum_cert_conf_id: String,
     /// Associated [resource kind](crate::rbum::rbum_enumeration::RbumCertRelKind) id
-    pub rel_rbum_kind: u8,
+    pub rel_rbum_kind: i16,
     /// Associated resource id
     ///
     /// Usage examples:
@@ -80,18 +80,18 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Ak).not_null().string())
             .col(ColumnDef::new(Column::Sk).not_null().string())
             .col(ColumnDef::new(Column::Ext).not_null().string())
-            .col(ColumnDef::new(Column::StartTime).not_null().date_time())
-            .col(ColumnDef::new(Column::EndTime).not_null().date_time())
             .col(ColumnDef::new(Column::ConnUri).not_null().string())
-            .col(ColumnDef::new(Column::Status).not_null().tiny_unsigned())
             .col(ColumnDef::new(Column::RelRbumCertConfId).not_null().string())
-            .col(ColumnDef::new(Column::RelRbumKind).not_null().tiny_unsigned())
+            .col(ColumnDef::new(Column::RelRbumKind).not_null().small_integer())
             .col(ColumnDef::new(Column::RelRbumId).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())
-            .col(ColumnDef::new(Column::Owner).not_null().string());
+            .col(ColumnDef::new(Column::Owner).not_null().string())
+            .col(ColumnDef::new(Column::Status).not_null().small_integer());
         if db == DatabaseBackend::Postgres {
             builder
+                .col(ColumnDef::new(Column::StartTime).not_null().timestamp_with_time_zone())
+                .col(ColumnDef::new(Column::EndTime).not_null().timestamp_with_time_zone())
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone())
                 .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp_with_time_zone());
         } else {
@@ -99,6 +99,8 @@ impl TardisActiveModel for ActiveModel {
                 .engine("InnoDB")
                 .character_set("utf8mb4")
                 .collate("utf8mb4_0900_as_cs")
+                .col(ColumnDef::new(Column::StartTime).not_null().date_time())
+                .col(ColumnDef::new(Column::EndTime).not_null().date_time())
                 .col(ColumnDef::new(Column::CreateTime).extra("DEFAULT CURRENT_TIMESTAMP".to_string()).timestamp())
                 .col(ColumnDef::new(Column::UpdateTime).extra("DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP".to_string()).timestamp());
         }

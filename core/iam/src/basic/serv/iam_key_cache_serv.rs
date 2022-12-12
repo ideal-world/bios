@@ -25,7 +25,7 @@ use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
-    pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: u32, coexist_num: u32, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: i64, coexist_num: i16, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add token: token={}", token);
         if expire_sec > 0 {
             funs.cache()

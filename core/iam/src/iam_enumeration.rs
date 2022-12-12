@@ -16,7 +16,7 @@ pub enum IamRoleKind {
 }
 
 impl IamRoleKind {
-    pub fn from_int(s: u8) -> TardisResult<IamRoleKind> {
+    pub fn from_int(s: i16) -> TardisResult<IamRoleKind> {
         match s {
             0 => Ok(IamRoleKind::System),
             1 => Ok(IamRoleKind::Tenant),
@@ -25,7 +25,7 @@ impl IamRoleKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             IamRoleKind::System => 0,
             IamRoleKind::Tenant => 1,
@@ -36,7 +36,7 @@ impl IamRoleKind {
 
 impl TryGetable for IamRoleKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         IamRoleKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }
@@ -108,7 +108,7 @@ pub enum IamResKind {
 }
 
 impl IamResKind {
-    pub fn from_int(s: u8) -> TardisResult<IamResKind> {
+    pub fn from_int(s: i16) -> TardisResult<IamResKind> {
         match s {
             0 => Ok(IamResKind::Menu),
             1 => Ok(IamResKind::Api),
@@ -117,7 +117,7 @@ impl IamResKind {
         }
     }
 
-    pub fn to_int(&self) -> u8 {
+    pub fn to_int(&self) -> i16 {
         match self {
             IamResKind::Menu => 0,
             IamResKind::Api => 1,
@@ -128,7 +128,7 @@ impl IamResKind {
 
 impl TryGetable for IamResKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = u8::try_get(res, pre, col)?;
+        let s = i16::try_get(res, pre, col)?;
         IamResKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
     }
 }

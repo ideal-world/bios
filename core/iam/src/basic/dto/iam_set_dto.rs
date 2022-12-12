@@ -13,7 +13,7 @@ pub struct IamSetCateAddReq {
     pub bus_code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
@@ -29,7 +29,7 @@ pub struct IamSetCateModifyReq {
     pub bus_code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
-    pub sort: Option<u32>,
+    pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub ext: Option<String>,
 }
@@ -44,7 +44,7 @@ pub struct IamSetItemAggAddReq {
 pub struct IamSetItemWithDefaultSetAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_cate_id: String,
-    pub sort: u32,
+    pub sort: i64,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rel_rbum_item_id: String,
@@ -56,7 +56,7 @@ pub struct IamSetItemAddReq {
     pub set_id: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub set_cate_id: String,
-    pub sort: u32,
+    pub sort: i64,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rel_rbum_item_id: String,

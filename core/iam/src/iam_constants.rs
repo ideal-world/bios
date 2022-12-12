@@ -42,8 +42,8 @@ pub const RBUM_SCOPE_LEVEL_GLOBAL: RbumScopeLevelKind = RbumScopeLevelKind::Root
 pub const RBUM_SCOPE_LEVEL_TENANT: RbumScopeLevelKind = RbumScopeLevelKind::L1;
 pub const RBUM_SCOPE_LEVEL_APP: RbumScopeLevelKind = RbumScopeLevelKind::L2;
 
-pub const RBUM_CERT_CONF_TOKEN_EXPIRE_SEC: u32 = 60 * 60 * 24 * 7;
-pub const RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM: u32 = 5;
+pub const RBUM_CERT_CONF_TOKEN_EXPIRE_SEC: i64 = 60 * 60 * 24 * 7;
+pub const RBUM_CERT_CONF_TOKEN_DEFAULT_COEXIST_NUM: i16 = 5;
 
 pub fn get_tardis_inst() -> TardisFunsInst {
     TardisFuns::inst_with_db_conn(COMPONENT_CODE.to_string(), None)

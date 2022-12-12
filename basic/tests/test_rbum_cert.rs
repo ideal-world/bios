@@ -183,7 +183,7 @@ async fn test_rbum_cert_conf(context: &TardisContext) -> TardisResult<()> {
     let rbum = RbumCertConfServ::get_rbum(&id, &RbumCertConfFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.name, "用户名+密码");
-    assert_eq!(rbum.expire_sec, u32::MAX);
+    assert_eq!(rbum.expire_sec, 3600 * 24 * 365);
 
     info!("【test_rbum_cert_conf】 : Test Modify : RbumCertConfServ::modify_rbum");
     RbumCertConfServ::modify_rbum(
@@ -753,7 +753,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     let rbum = RbumCertServ::get_rbum(&cert_root_id, &RbumCertFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, cert_root_id);
     assert_eq!(rbum.ak, "root");
-    assert_eq!(rbum.start_time.timestamp() + u32::MAX as i64, rbum.end_time.timestamp());
+    assert_eq!(rbum.start_time.timestamp() + 3600 * 24 * 365, rbum.end_time.timestamp());
 
     info!("【test_rbum_cert】 : Test Modify : RbumCertServ::modify_rbum");
     assert!(RbumCertServ::modify_rbum(
