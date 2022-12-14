@@ -809,7 +809,7 @@ impl RbumCertServ {
         input_sk: &str,
         rel_rbum_kind: &RbumCertRelKind,
         ignore_end_time: bool,
-        own_paths: &str,
+        own_paths: Option<String>,
         allowed_kinds: Vec<&str>,
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
@@ -841,11 +841,13 @@ impl RbumCertServ {
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(rel_rbum_kind.to_int()))
-            .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
             .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             //basic sk must have cert conf
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).ne(""));
+        if let Some(own_paths) = own_paths.clone() {
+            query.and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths));
+        }
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
             if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
@@ -890,7 +892,7 @@ impl RbumCertServ {
                     .await?)
                 } else {
                     log::warn!(
-                        "validation error [sk is not match] by ak {},rel_rbum_cert_conf_id {}, own_paths {}",
+                        "validation error [sk is not match] by ak {},rel_rbum_cert_conf_id {}, own_paths {:?}",
                         ak,
                         rbum_cert_conf_id,
                         own_paths
@@ -906,11 +908,11 @@ impl RbumCertServ {
                     Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
                 }
             } else {
-                log::warn!("validation error by ak {},rbum_cert_conf_id is None, own_paths {}", ak, own_paths);
+                log::warn!("validation error by ak {},rbum_cert_conf_id is None, own_paths {:?}", ak, own_paths);
                 Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
             }
         } else {
-            log::warn!("validation error by ak {},rel_rbum_kind {}, own_paths {}", ak, rel_rbum_kind, own_paths);
+            log::warn!("validation error by ak {},rel_rbum_kind {}, own_paths {:?}", ak, rel_rbum_kind, own_paths);
             Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
         }
     }
