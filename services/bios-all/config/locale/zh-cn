@@ -37,7 +37,7 @@
 404-rbum-cert-conf-not-exist	找不到对应的凭证配置
 404-rbum-cert-not-exist	找不到对应的凭证
 401-rbum-cert-valid-error	凭证不合法
-401-rbum-usrpwd-cert-valid-error	y用户名h
+401-rbum-usrpwd-cert-valid-error	用户名或密码不正确
 401-rbum-cert-ori-sk-not-match	当前凭证密钥输入错误
 400-rbum-cert-ak-duplicate	新的凭证名不能等于现有凭证名
 400-rbum-cert-sk-require	凭证密钥不能为空
