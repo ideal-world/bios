@@ -7,10 +7,10 @@ use tardis::{
 
 use crate::{
     rbum::{
-        domain::{rbum_cert, rbum_item, rbum_kind},
+        domain::{rbum_cert, rbum_domain, rbum_item, rbum_kind},
         dto::{
             rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq},
-            rbum_filer_dto::{RbumCertFilterReq, RbumRelFilterReq},
+            rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
             rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
             rbum_rel_dto::RbumRelFindReq,
         },
@@ -19,7 +19,7 @@ use crate::{
     },
     spi::{
         domain::spi_bs,
-        dto::spi_bs_dto::{SpiBsAddReq, SpiBsDetailResp, SpiBsFilterReq, SpiBsModifyReq, SpiBsSummaryResp},
+        dto::spi_bs_dto::{SpiBsAddReq, SpiBsCertResp, SpiBsDetailResp, SpiBsFilterReq, SpiBsModifyReq, SpiBsSummaryResp},
         spi_constants::{SPI_CERT_KIND, SPI_IDENT_REL_TAG},
     },
 };
@@ -168,6 +168,13 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
         if let Some(private) = filter.private {
             query.and_where(Expr::tbl(spi_bs::Entity, spi_bs::Column::Private).eq(private));
         }
+        if let Some(domain_code) = &filter.domain_code {
+            query.left_join(
+                rbum_domain::Entity,
+                Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+            );
+            query.and_where(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Code).eq(domain_code.to_string()));
+        }
         Ok(())
     }
 }
@@ -247,5 +254,36 @@ impl SpiBsServ {
             RbumRelServ::delete_rbum(&id, funs, ctx).await?;
         }
         Ok(())
+    }
+
+    pub async fn get_bs_by_rel(app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsCertResp> {
+        let bs = Self::find_one_item(
+            &SpiBsFilterReq {
+                basic: RbumBasicFilterReq {
+                    enabled: Some(true),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    tag: Some(SPI_IDENT_REL_TAG.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(app_tenant_id.to_string()),
+                    ..Default::default()
+                }),
+                domain_code: Some(funs.module_code().to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "get_bs_by_rel", "not found backend service", "404-spi-bs-not-exist"))?;
+        Ok(SpiBsCertResp {
+            conn_uri: bs.conn_uri,
+            ak: bs.ak,
+            sk: bs.sk,
+            ext: bs.ext,
+            private: bs.private,
+        })
     }
 }
