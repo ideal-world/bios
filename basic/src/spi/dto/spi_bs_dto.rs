@@ -81,6 +81,15 @@ pub struct SpiBsDetailResp {
     pub rel_app_tenant_ids: Vec<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SpiBsCertResp {
+    pub conn_uri: String,
+    pub ak: String,
+    pub sk: String,
+    pub ext: String,
+    pub private: bool,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 #[serde(default)]
@@ -89,6 +98,7 @@ pub struct SpiBsFilterReq {
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub private: Option<bool>,
+    pub domain_code: Option<String>,
 }
 
 impl RbumItemFilterFetcher for SpiBsFilterReq {

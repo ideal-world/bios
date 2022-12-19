@@ -10,6 +10,7 @@ use crate::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::spi::dto::spi_bs_dto::{SpiBsAddReq, SpiBsDetailResp, SpiBsFilterReq, SpiBsModifyReq, SpiBsSummaryResp};
 use crate::spi::serv::spi_bs_serv::SpiBsServ;
 use crate::spi::spi_constants;
+use crate::spi::spi_funs::SpiTardisFunInstExtractor;
 
 pub struct SpiCiBsApi;
 
@@ -18,8 +19,8 @@ pub struct SpiCiBsApi;
 impl SpiCiBsApi {
     /// Add Backend Service
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_req: Json<SpiBsAddReq>, ctx: TardisContextExtractor, web: &Request) -> TardisApiResult<String> {
-        let mut funs = spi_constants::get_tardis_inst_from_req(web);
+    async fn add(&self, mut add_req: Json<SpiBsAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         let result = SpiBsServ::add_item(&mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -28,8 +29,8 @@ impl SpiCiBsApi {
 
     /// Modify Backend Service
     #[oai(path = "/:id", method = "patch")]
-    async fn modify(&self, id: Path<String>, mut modify_req: Json<SpiBsModifyReq>, ctx: TardisContextExtractor, web: &Request) -> TardisApiResult<Void> {
-        let mut funs = spi_constants::get_tardis_inst_from_req(web);
+    async fn modify(&self, id: Path<String>, mut modify_req: Json<SpiBsModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         SpiBsServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -38,8 +39,8 @@ impl SpiCiBsApi {
 
     /// Get Backend Service
     #[oai(path = "/:id", method = "get")]
-    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, web: &Request) -> TardisApiResult<SpiBsDetailResp> {
-        let funs = spi_constants::get_tardis_inst_from_req(web);
+    async fn get(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<SpiBsDetailResp> {
+        let funs = request.tardis_fun_inst();
         let result = SpiBsServ::get_bs(&id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
@@ -55,9 +56,9 @@ impl SpiCiBsApi {
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
-        web: &Request,
+        request: &Request,
     ) -> TardisApiResult<TardisPage<SpiBsSummaryResp>> {
-        let funs = spi_constants::get_tardis_inst_from_req(web);
+        let funs = request.tardis_fun_inst();
         let result = SpiBsServ::paginate_items(
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq {
@@ -80,8 +81,8 @@ impl SpiCiBsApi {
 
     /// Delete Backend Service
     #[oai(path = "/:id", method = "delete")]
-    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, web: &Request) -> TardisApiResult<Void> {
-        let mut funs = spi_constants::get_tardis_inst_from_req(web);
+    async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         SpiBsServ::delete_item(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -90,8 +91,8 @@ impl SpiCiBsApi {
 
     /// Add Backend Service Rel App/Tenant
     #[oai(path = "/:id/rel/:app_tenant_id", method = "put")]
-    async fn add_rel_account(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, web: &Request) -> TardisApiResult<Void> {
-        let mut funs = spi_constants::get_tardis_inst_from_req(web);
+    async fn add_rel_account(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         SpiBsServ::add_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
@@ -100,8 +101,8 @@ impl SpiCiBsApi {
 
     /// Delete Backend Service Rel App/Tenant
     #[oai(path = "/:id/rel/:app_tenant_id", method = "delete")]
-    async fn delete_rel_account(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, web: &Request) -> TardisApiResult<Void> {
-        let mut funs = spi_constants::get_tardis_inst_from_req(web);
+    async fn delete_rel_account(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         SpiBsServ::delete_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
