@@ -18,7 +18,7 @@ use crate::rbum::dto::rbum_filer_dto::{
     RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumKindAttrFilterReq, RbumSetItemFilterReq,
 };
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
-use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemModifyReq, RbumItemSummaryResp};
+use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp};
 use crate::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use crate::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq};
 use crate::rbum::rbum_config::RbumConfigApi;
@@ -35,7 +35,7 @@ pub struct RbumItemServ;
 pub struct RbumItemAttrServ;
 
 #[async_trait]
-impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemModifyReq, RbumItemSummaryResp, RbumItemDetailResp, RbumBasicFilterReq> for RbumItemServ {
+impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp, RbumItemDetailResp, RbumBasicFilterReq> for RbumItemServ {
     fn get_table_name() -> &'static str {
         rbum_item::Entity.table_name()
     }
@@ -86,7 +86,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemModifyReq
         Ok(())
     }
 
-    async fn package_modify(id: &str, modify_req: &RbumItemModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
+    async fn package_modify(id: &str, modify_req: &RbumItemKernelModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<rbum_item::ActiveModel> {
         let mut rbum_item = rbum_item::ActiveModel {
             id: Set(id.to_string()),
             ..Default::default()
@@ -202,8 +202,10 @@ where
         Self::get_ext_table_name().to_string()
     }
 
+    /// Get default kind
     fn get_rbum_kind_id() -> String;
 
+    /// Get default domain
     fn get_rbum_domain_id() -> String;
 
     // ----------------------------- Add -------------------------------
@@ -216,7 +218,7 @@ where
         Ok(())
     }
 
-    async fn after_add_item(_: &str, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(_: &str, _: &mut AddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
 
@@ -227,15 +229,23 @@ where
             id: item_add_req.id.clone(),
             code: item_add_req.code.clone(),
             name: item_add_req.name.clone(),
-            rel_rbum_kind_id: Self::get_rbum_kind_id(),
-            rel_rbum_domain_id: Self::get_rbum_domain_id(),
+            rel_rbum_kind_id: if let Some(rel_rbum_kind_id) = &item_add_req.rel_rbum_kind_id {
+                rel_rbum_kind_id.to_string()
+            } else {
+                Self::get_rbum_kind_id()
+            },
+            rel_rbum_domain_id: if let Some(rel_rbum_domain_id) = &item_add_req.rel_rbum_domain_id {
+                rel_rbum_domain_id.to_string()
+            } else {
+                Self::get_rbum_domain_id()
+            },
             scope_level: item_add_req.scope_level.clone(),
             disabled: item_add_req.disabled,
         };
         let id = RbumItemServ::add_rbum(&mut item_add_req, funs, ctx).await?;
         let ext_domain = Self::package_ext_add(&id, add_req, funs, ctx).await?;
         funs.db().insert_one(ext_domain, ctx).await?;
-        Self::after_add_item(&id, funs, ctx).await?;
+        Self::after_add_item(&id, add_req, funs, ctx).await?;
         TaskProcessor::add_notify_event(Self::get_ext_table_name(), "c", id.as_str(), ctx)?;
         // rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, ctx).await?;
         Ok(id)
@@ -283,7 +293,7 @@ where
 
     // ----------------------------- Modify -------------------------------
 
-    async fn package_item_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>>;
+    async fn package_item_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>>;
 
     async fn package_ext_modify(id: &str, modify_req: &ModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<EXT>>;
 
