@@ -8,7 +8,7 @@ use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -54,10 +54,10 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn package_item_add(add_req: &IamTenantAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
             id: add_req.id.clone(),
-            code: None,
             name: add_req.name.clone(),
             scope_level: add_req.scope_level.clone(),
             disabled: add_req.disabled,
+            ..Default::default()
         })
     }
 
@@ -73,11 +73,11 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         })
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamTenantModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
-        Ok(Some(RbumItemModifyReq {
+        Ok(Some(RbumItemKernelModifyReq {
             code: None,
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),

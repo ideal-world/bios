@@ -13,7 +13,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemAttrFilterReq, RbumKindAttrFilterReq};
 use bios_basic::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrModifyReq, RbumItemAttrsAddOrModifyReq};
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
@@ -139,7 +139,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
     info!("【test_rbum_item】 : Test Modify : RbumItemServ::modify_rbum");
     RbumItemServ::modify_rbum(
         &id,
-        &mut RbumItemModifyReq {
+        &mut RbumItemKernelModifyReq {
             code: None,
             name: Some(TrimString("数据库实例1".to_string())),
             disabled: None,

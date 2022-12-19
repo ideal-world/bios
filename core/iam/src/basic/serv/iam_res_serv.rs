@@ -16,7 +16,7 @@ use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq};
-use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemModifyReq};
+use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
@@ -56,11 +56,11 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
 
     async fn package_item_add(add_req: &IamResAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
-            id: None,
             code: Some(add_req.code.clone()),
             name: add_req.name.clone(),
             disabled: add_req.disabled,
             scope_level: add_req.scope_level.clone(),
+            ..Default::default()
         })
     }
 
@@ -82,7 +82,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         Ok(())
     }
 
-    async fn after_add_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, _: &mut IamResAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let res = Self::peek_item(
             id,
             &IamResFilterReq {
@@ -102,11 +102,11 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         Ok(())
     }
 
-    async fn package_item_modify(_: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemModifyReq>> {
+    async fn package_item_modify(_: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
-        Ok(Some(RbumItemModifyReq {
+        Ok(Some(RbumItemKernelModifyReq {
             code: None,
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),
