@@ -29,7 +29,7 @@ serde = { version = "1", features = ["derive"] }
 async-trait = { version = "0" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
-tardis = { version = "0.1.0-alpha30", features = [
+tardis = { version = "0.1.0-alpha31", features = [
     "reldb",
     "cache",
     "mq",
@@ -45,4 +45,4 @@ tokio-util = { version = "0.7", optional = true }
 ldap3 = { version = "0.10.5", optional = true }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha30", features = ["test"] }
+tardis = { version = "0.1.0-alpha31", features = ["test"] }
