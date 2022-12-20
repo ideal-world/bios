@@ -3,7 +3,6 @@
 members = [
     "basic",
     "core/iam",
-    # "core/db-reldb",
-    # "ext/chat/*",
+    "spi/*",
     "services/bios-all",
 ]

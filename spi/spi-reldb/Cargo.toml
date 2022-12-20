@@ -1,5 +1,5 @@
 [package]
-name = "bios-db-rel-db"
+name = "bios-spi-reldb"
 version = "0.1.0"
 authors = ["gudaoxuri <i@sunisle.org>"]
 homepage = "https://bios.idealworld.group"
@@ -16,7 +16,7 @@ codegen-units = 1
 opt-level = "z"
 
 [lib]
-name = "bios_db_reldb"
+name = "bios_spi_reldb"
 path = "src/lib.rs"
 
 [features]

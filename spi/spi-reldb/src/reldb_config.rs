@@ -4,12 +4,12 @@ use std::fmt::Debug;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
-pub struct RelDbConfig {
+pub struct ReldbConfig {
     pub rbum: RbumConfig,
 }
 
-impl Default for RelDbConfig {
+impl Default for ReldbConfig {
     fn default() -> Self {
-        RelDbConfig { rbum: Default::default() }
+        ReldbConfig { rbum: Default::default() }
     }
 }

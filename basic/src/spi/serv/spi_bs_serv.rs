@@ -15,7 +15,9 @@ use crate::{
             rbum_rel_dto::RbumRelFindReq,
         },
         rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind},
-        serv::{rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ},
+        serv::{
+            rbum_cert_serv::RbumCertServ, rbum_crud_serv::RbumCrudOperation, rbum_domain_serv::RbumDomainServ, rbum_item_serv::RbumItemCrudOperation, rbum_rel_serv::RbumRelServ,
+        },
     },
     spi::{
         domain::spi_bs,
@@ -41,10 +43,13 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
     }
 
     async fn package_item_add(add_req: &SpiBsAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
+        let domain_id = RbumDomainServ::get_rbum_domain_id_by_code(funs.module_code(), funs)
+            .await?
+            .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "add_bs", "not found domain", "404-rbum-*-obj-not-exist"))?;
         Ok(RbumItemKernelAddReq {
             name: add_req.name.clone(),
             rel_rbum_kind_id: Some(add_req.kind_id.to_string()),
-            rel_rbum_domain_id: Some(funs.module_code().to_string()),
+            rel_rbum_domain_id: Some(domain_id),
             disabled: add_req.disabled,
             scope_level: Some(RbumScopeLevelKind::Root),
             ..Default::default()

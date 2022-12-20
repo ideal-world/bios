@@ -9,7 +9,6 @@ use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::spi::dto::spi_bs_dto::{SpiBsAddReq, SpiBsDetailResp, SpiBsFilterReq, SpiBsModifyReq, SpiBsSummaryResp};
 use crate::spi::serv::spi_bs_serv::SpiBsServ;
-use crate::spi::spi_constants;
 use crate::spi::spi_funs::SpiTardisFunInstExtractor;
 
 pub struct SpiCiBsApi;
