@@ -28,3 +28,4 @@ bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]
 tardis = { version = "0.1.0-alpha31", features = ["test"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }
