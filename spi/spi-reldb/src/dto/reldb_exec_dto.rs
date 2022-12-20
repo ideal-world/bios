@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi;
+use tardis::{serde_json::Value, web::poem_openapi};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ReldbTxResp {
@@ -13,14 +11,14 @@ pub struct ReldbTxResp {
 pub struct ReldbDdlReq {
     #[oai(validator(min_length = "2"))]
     pub sql: String,
-    pub params: HashMap<String, String>,
+    pub params: Value,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ReldbDmlReq {
     #[oai(validator(min_length = "2"))]
     pub sql: String,
-    pub params: HashMap<String, String>,
+    pub params: Value,
     pub tx_id: Option<String>,
 }
 
@@ -34,7 +32,7 @@ pub struct ReldbDmlResp {
 pub struct ReldbDqlReq {
     #[oai(validator(min_length = "2"))]
     pub sql: String,
-    pub params: HashMap<String, String>,
+    pub params: Value,
     pub tx_id: Option<String>,
 }
 
