@@ -15,9 +15,9 @@ pub struct ReldbCiExecApi;
 impl ReldbCiExecApi {
     /// DML
     #[oai(path = "/dml", method = "post")]
-    async fn dml(&self, dml_req: Json<ReldbDmlReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ReldbDmlResp> {
+    async fn dml(&self, mut dml_req: Json<ReldbDmlReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ReldbDmlResp> {
         let mut funs = request.tardis_fun_inst();
-        let resp = ReldbExecServ::dml(dml_req.0, &mut funs, &ctx.0).await?;
+        let resp = ReldbExecServ::dml(&mut dml_req.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }
