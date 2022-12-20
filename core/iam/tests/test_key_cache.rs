@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use bios_basic::rbum::rbum_config::RbumConfigApi;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -910,6 +911,13 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.unwrap().contains(r#""roles":"""#));
 
     info!("【test_key_cache】 Delete res, expected one res record");
+    //need sub topic first
+    funs.mq()
+        .subscribe(&funs.rbum_conf_mq_topic_entity_deleted(), |a| async move {
+            info!("{:?}", a);
+            Ok(())
+        })
+        .await?;
     IamResServ::delete_item(&res_cs_id, &funs, system_admin_context).await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
     assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.is_none());
