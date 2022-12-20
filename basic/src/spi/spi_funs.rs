@@ -1,5 +1,7 @@
 use async_trait::async_trait;
+use std::any::Any;
 use std::collections::HashMap;
+use std::future::Future;
 use std::ptr::replace;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
@@ -22,18 +24,23 @@ impl SpiTardisFunInstExtractor for tardis::web::poem::Request {
     }
 }
 
-static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsCertResp>> = None;
-
-pub trait SpiBsInst {}
+static mut SPI_BS_CACHES: Option<HashMap<String, Box<dyn Any + Send>>> = None;
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn bs(&self, ctx: &TardisContext) -> TardisResult<Option<&'static SpiBsCertResp>>;
+    async fn bs<F, T>(&self, ctx: &TardisContext, init_funs: F) -> TardisResult<&Box<dyn Any + Send>>
+    where
+        F: Fn(SpiBsCertResp) -> T + Send + Sync,
+        T: Future<Output = TardisResult<Box<dyn Any + Send>>> + Send;
 }
 
 #[async_trait]
 impl SpiBsInstExtractor for TardisFunsInst {
-    async fn bs(&self, ctx: &TardisContext) -> TardisResult<Option<&'static SpiBsCertResp>> {
+    async fn bs<F, T>(&self, ctx: &TardisContext, init_funs: F) -> TardisResult<&Box<dyn Any + Send>>
+    where
+        F: Fn(SpiBsCertResp) -> T + Send + Sync,
+        T: Future<Output = TardisResult<Box<dyn Any + Send>>> + Send,
+    {
         let cache_key = format!("{}-{}", self.module_code(), ctx.own_paths);
         unsafe {
             if SPI_BS_CACHES.is_none() {
@@ -44,9 +51,10 @@ impl SpiBsInstExtractor for TardisFunsInst {
                 Some(caches) => {
                     if !caches.contains_key(&cache_key) {
                         let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, self, ctx).await?;
-                        caches.insert(cache_key.clone(), spi_bs);
+                        let spi_bs_inst = init_funs(spi_bs).await?;
+                        caches.insert(cache_key.clone(), spi_bs_inst);
                     }
-                    Ok(caches.get(&cache_key))
+                    Ok(caches.get(&cache_key).unwrap())
                 }
             }
         }
