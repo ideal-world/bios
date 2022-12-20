@@ -12,7 +12,7 @@ pub struct IamCcCertApi;
 /// Common Console Cert API
 #[poem_openapi::OpenApi(prefix_path = "/cc/cert", tag = "bios_basic::ApiTag::Common")]
 impl IamCcCertApi {
-    /// Find Accounts
+    /// find cert by kind and supplier
     #[oai(path = "/:account_id", method = "get")]
     async fn get_cert_by_kind_supplier(
         &self,
