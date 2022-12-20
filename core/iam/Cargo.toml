@@ -46,3 +46,5 @@ ldap3 = { version = "0.10.5", optional = true }
 
 [dev-dependencies]
 tardis = { version = "0.1.0-alpha31", features = ["test"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }
+

@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use bios_basic::test::init_rbum_test_container;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
@@ -17,7 +18,8 @@ mod test_iam_scenes_tenant;
 #[tokio::test]
 async fn test_iam_api() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
-    let _x = test_basic::init(&docker).await?;
+    let _x = init_rbum_test_container::init(&docker).await?;
+    let _y = test_basic::init(&docker).await?;
 
     let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst()).await?.unwrap();
 

@@ -31,6 +31,7 @@ default = [
 # TODO remvoe
 with-mq = ["tardis/mq"]
 sdk = ["tardis", "tardis/web-client"]
+test = ["tardis/test"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
