@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use bios_basic::rbum::rbum_config::RbumConfigApi;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -302,11 +303,6 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
         0
     );
-    //todo test failure result:0
-    // assert_eq!(
-    //     funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-    //     2
-    // );
 
     info!("【test_key_cache】 Login by tenant again, expected one token record");
     let account_resp1 = IamCpCertUserPwdServ::login_by_user_pwd(
@@ -624,7 +620,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
-    // todo 重新刷新token/不登出
+
     assert!(TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.is_some());
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
@@ -677,11 +673,10 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .await?
         .unwrap()
         .contains("TokenDefault"));
-    // todo test failure result:2
-    // assert_eq!(
-    //     funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-    //     1
-    // );
+    assert_eq!(
+        funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
+        2
+    );
 
     info!("【test_key_cache】 Enable app and login, expected two token records");
     IamAppServ::modify_item(
@@ -738,6 +733,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     //---------------------------------- Test Tenant ----------------------------------
 
     info!("【test_key_cache】 Disable tenant, expected no token record");
+    let tenant_ctx = IamCertServ::try_use_tenant_ctx(system_admin_context.clone(), Some(tenant_id.clone()))?;
     IamTenantServ::modify_item(
         &tenant_id,
         &mut IamTenantModifyReq {
@@ -751,22 +747,20 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             account_self_reg: None,
         },
         &funs,
-        system_admin_context,
+        &tenant_ctx,
     )
     .await?;
     sleep(Duration::from_secs(1)).await;
-    // todo test failure
-    // assert!(TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.is_none());
-    // test failure result: 2
-    // assert_eq!(
-    //     funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
-    //     0
-    // );
-    // test failure result:2
-    // assert_eq!(
-    //     funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-    //     0
-    // );
+
+    assert!(TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.is_none());
+    assert_eq!(
+        funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
+        0
+    );
+    assert_eq!(
+        funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
+        0
+    );
 
     info!("【test_key_cache】 Login again with disabled tenant");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
@@ -795,7 +789,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             account_self_reg: None,
         },
         &funs,
-        system_admin_context,
+        &tenant_ctx,
     )
     .await?;
     let account_resp = IamCpCertUserPwdServ::login_by_user_pwd(
@@ -820,11 +814,11 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         TardisFuns::cache().get(&format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, account_resp.token)).await?.unwrap(),
         format!("TokenDefault,{}", account_id)
     );
-    // todo test failure result: 2
-    // assert_eq!(
-    //     funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
-    //     1
-    // );
+
+    assert_eq!(
+        funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(),).await?,
+        1
+    );
     assert!(funs
         .cache()
         .hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str(), &account_resp.token,)
@@ -917,6 +911,13 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.unwrap().contains(r#""roles":"""#));
 
     info!("【test_key_cache】 Delete res, expected one res record");
+    //need sub topic first
+    funs.mq()
+        .subscribe(&funs.rbum_conf_mq_topic_entity_deleted(), |a| async move {
+            info!("{:?}", a);
+            Ok(())
+        })
+        .await?;
     IamResServ::delete_item(&res_cs_id, &funs, system_admin_context).await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 1);
     assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.is_none());

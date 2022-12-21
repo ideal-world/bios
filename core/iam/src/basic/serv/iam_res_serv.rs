@@ -11,7 +11,8 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::futures::executor;
+use tardis::futures::future::BoxFuture;
+use tardis::futures::FutureExt;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
@@ -456,29 +457,31 @@ impl IamResServ {
 }
 
 impl IamMenuServ {
-    pub async fn parse_menu(set_id: &str, parent_cate_id: &str, json_menu: JsonMenu, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let new_cate_id = Self::add_cate_menu(
-            set_id,
-            parent_cate_id,
-            &json_menu.name,
-            &json_menu.bus_code,
-            &IamSetCateKind::parse(&json_menu.ext)?,
-            funs,
-            ctx,
-        )
-        .await?;
-
-        if let Some(items) = json_menu.items {
-            for item in items {
-                Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
-            }
-        };
-        if let Some(children_menus) = json_menu.children {
-            for children_menu in children_menus {
-                executor::block_on(Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx))?;
-            }
-        };
-        Ok(new_cate_id)
+    pub fn parse_menu<'a>(set_id: &'a str, parent_cate_id: &'a str, json_menu: JsonMenu, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
+        async move {
+            let new_cate_id = Self::add_cate_menu(
+                set_id,
+                parent_cate_id,
+                &json_menu.name,
+                &json_menu.bus_code,
+                &IamSetCateKind::parse(&json_menu.ext)?,
+                funs,
+                ctx,
+            )
+            .await?;
+            if let Some(items) = json_menu.items {
+                for item in items {
+                    Self::parse_item(set_id, &new_cate_id, item, funs, ctx).await?;
+                }
+            };
+            if let Some(children_menus) = json_menu.children {
+                for children_menu in children_menus {
+                    Self::parse_menu(set_id, &new_cate_id, children_menu, funs, ctx).await?;
+                }
+            };
+            Ok(new_cate_id)
+        }
+        .boxed()
     }
 
     async fn add_cate_menu<'a>(
