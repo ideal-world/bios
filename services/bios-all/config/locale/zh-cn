@@ -12,9 +12,12 @@
 
 500-rbum-crud-id-type	数据类型无效，目前仅支持字符串
 
+400-rbum-domain-require	资源域不能空
+
 400-rbum-kind-attr-main-illegal	主表扩展字段添加不能使用此方法
 400-rbum-kind-attr-idx-illegal	索引扩展字段添加不能使用此方法
 400-rbum-kind-attr-dyn-url-illegal	动态默认值处理失败
+400-rbum-kind-require	资源类型不能空
 
 404-rbum-rel-not-exist-kind-attr	找不到指定的资源属性
 400-rbum-rel-not-empty-item	资源项不能为空

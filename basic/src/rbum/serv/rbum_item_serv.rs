@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm;
@@ -203,10 +204,10 @@ where
     }
 
     /// Get default kind
-    fn get_rbum_kind_id() -> String;
+    fn get_rbum_kind_id() -> Option<String>;
 
     /// Get default domain
-    fn get_rbum_domain_id() -> String;
+    fn get_rbum_domain_id() -> Option<String>;
 
     // ----------------------------- Add -------------------------------
 
@@ -232,12 +233,12 @@ where
             rel_rbum_kind_id: if let Some(rel_rbum_kind_id) = &item_add_req.rel_rbum_kind_id {
                 rel_rbum_kind_id.to_string()
             } else {
-                Self::get_rbum_kind_id()
+                Self::get_rbum_kind_id().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add_item", "kind is required", "400-rbum-kind-require"))?
             },
             rel_rbum_domain_id: if let Some(rel_rbum_domain_id) = &item_add_req.rel_rbum_domain_id {
                 rel_rbum_domain_id.to_string()
             } else {
-                Self::get_rbum_domain_id()
+                Self::get_rbum_domain_id().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add_item", "domain is required", "400-rbum-domain-require"))?
             },
             scope_level: item_add_req.scope_level.clone(),
             disabled: item_add_req.disabled,
@@ -480,12 +481,12 @@ where
                 rbum_kind_id: if filter.basic().rbum_kind_id.is_some() {
                     filter.basic().rbum_kind_id.clone()
                 } else {
-                    Some(Self::get_rbum_kind_id())
+                    Self::get_rbum_kind_id()
                 },
                 rbum_domain_id: if filter.basic().rbum_domain_id.is_some() {
                     filter.basic().rbum_domain_id.clone()
                 } else {
-                    Some(Self::get_rbum_domain_id())
+                    Self::get_rbum_domain_id()
                 },
                 desc_by_sort: filter.basic().desc_by_sort,
             },
