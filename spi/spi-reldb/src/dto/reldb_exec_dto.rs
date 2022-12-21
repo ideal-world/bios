@@ -25,7 +25,6 @@ pub struct ReldbDmlReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ReldbDmlResp {
     pub affected_rows: u64,
-    pub new_row_ids: Vec<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
