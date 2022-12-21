@@ -12,7 +12,7 @@ use crate::{
             rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq},
             rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
             rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
-            rbum_rel_dto::RbumRelFindReq,
+            rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq},
         },
         rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind},
         serv::{
@@ -34,12 +34,12 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
         spi_bs::Entity.table_name()
     }
 
-    fn get_rbum_kind_id() -> String {
-        "".to_string()
+    fn get_rbum_kind_id() -> Option<String> {
+        None
     }
 
-    fn get_rbum_domain_id() -> String {
-        "".to_string()
+    fn get_rbum_domain_id() -> Option<String> {
+        None
     }
 
     async fn package_item_add(add_req: &SpiBsAddReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
@@ -235,7 +235,21 @@ impl SpiBsServ {
         )
         .await?
         {
-            RbumRelServ::add_simple_rel(SPI_IDENT_REL_TAG, bs_id, app_tenant_id, funs, ctx).await?;
+            RbumRelServ::add_rbum(
+                &mut RbumRelAddReq {
+                    tag: SPI_IDENT_REL_TAG.to_string(),
+                    note: None,
+                    from_rbum_kind: RbumRelFromKind::Item,
+                    from_rbum_id: bs_id.to_string(),
+                    to_rbum_item_id: app_tenant_id.to_string(),
+                    to_own_paths: ctx.own_paths.to_string(),
+                    to_is_outside: true,
+                    ext: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
         }
         Ok(())
     }
