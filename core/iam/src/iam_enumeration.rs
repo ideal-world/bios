@@ -77,6 +77,7 @@ pub enum IamCertTokenKind {
     TokenPc,
     TokenPhone,
     TokenPad,
+    TokenOauth2,
 }
 
 impl IamCertTokenKind {
@@ -150,5 +151,18 @@ pub enum IamSetCateKind {
 impl IamSetCateKind {
     pub fn parse(kind: &str) -> TardisResult<IamSetCateKind> {
         IamSetCateKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support SetCate kind: {}", kind), "404-iam-cert-set-cate-kind-not-exist"))
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum Oauth2GrantType {
+    AuthorizationCode,
+    Password,
+    ClientCredentials,
+}
+
+impl Oauth2GrantType {
+    pub fn parse(kind: &str) -> TardisResult<Oauth2GrantType> {
+        Oauth2GrantType::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {}", kind), "404-iam-cert-oauth-kind-not-exist"))
     }
 }
