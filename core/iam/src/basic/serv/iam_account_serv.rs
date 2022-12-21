@@ -47,12 +47,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         iam_account::Entity.table_name()
     }
 
-    fn get_rbum_kind_id() -> String {
-        IamBasicInfoManager::get_config(|conf| conf.kind_account_id.clone())
+    fn get_rbum_kind_id() -> Option<String> {
+        Some(IamBasicInfoManager::get_config(|conf| conf.kind_account_id.clone()))
     }
 
-    fn get_rbum_domain_id() -> String {
-        IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone())
+    fn get_rbum_domain_id() -> Option<String> {
+        Some(IamBasicInfoManager::get_config(|conf| conf.domain_iam_id.clone()))
     }
 
     async fn package_item_add(add_req: &IamAccountAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
