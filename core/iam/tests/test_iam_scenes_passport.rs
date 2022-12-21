@@ -1013,7 +1013,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             },
         )
         .await;
-    println!("{:?}", account);
+    info!("relogin user2 by ldap resp:{:?}", account);
 
     assert!(!account.iam_account_info_resp.account_id.is_empty());
     assert!(account.iam_account_info_resp.access_token.is_some());
@@ -1032,6 +1032,6 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .await;
 
     assert!(user_pwd_bind_resp.is_bind);
-
+    info!("ldap login test succeed");
     Ok(())
 }
