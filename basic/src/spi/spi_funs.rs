@@ -19,7 +19,7 @@ pub trait SpiTardisFunInstExtractor {
 #[cfg(feature = "default")]
 impl SpiTardisFunInstExtractor for tardis::web::poem::Request {
     fn tardis_fun_inst(&self) -> TardisFunsInst {
-        let serv_domain = self.uri().path().split('/').collect::<Vec<&str>>()[0];
+        let serv_domain = self.original_uri().path().split('/').collect::<Vec<&str>>()[1];
         TardisFuns::inst_with_db_conn(serv_domain.to_string(), None)
     }
 }
