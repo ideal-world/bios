@@ -48,7 +48,7 @@ impl IamCpCertUserPwdServ {
 
     pub async fn new_user_name(req: &IamCertUserNameNewReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let tenant_id = if IamAccountServ::is_global_account(ctx.owner.as_ref(), funs, ctx).await? {
-            None
+            Some("".to_string())
         } else {
             Some(ctx.own_paths.clone())
         };
@@ -59,7 +59,7 @@ impl IamCpCertUserPwdServ {
             &req.sk.0,
             &RbumCertRelKind::Item,
             false,
-            &tenant_id.unwrap_or_default(),
+            tenant_id,
             vec![
                 &IamCertKernelKind::UserPwd.to_string(),
                 &IamCertKernelKind::MailVCode.to_string(),
@@ -100,7 +100,7 @@ impl IamCpCertUserPwdServ {
             &login_req.sk.0,
             &RbumCertRelKind::Item,
             false,
-            &tenant_id,
+            Some(tenant_id),
             vec![
                 &IamCertKernelKind::UserPwd.to_string(),
                 &IamCertKernelKind::MailVCode.to_string(),
@@ -123,7 +123,7 @@ impl IamCpCertUserPwdServ {
                 &login_req.sk.0,
                 &RbumCertRelKind::Item,
                 false,
-                "",
+                Some("".to_string()),
                 vec![
                     &IamCertKernelKind::UserPwd.to_string(),
                     &IamCertKernelKind::MailVCode.to_string(),

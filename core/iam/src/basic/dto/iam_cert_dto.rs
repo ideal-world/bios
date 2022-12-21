@@ -138,3 +138,25 @@ pub struct IamCertLdapAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub dn: TrimString,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertAkSkAddReq {
+    pub tenant_id: String,
+    pub app_id: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertAkSkResp {
+    pub id: String,
+    pub ak: String,
+    pub sk: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamOauth2AkSkResp {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: String,
+    pub refresh_token: String,
+    pub scope: String,
+}
