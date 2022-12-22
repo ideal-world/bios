@@ -20,10 +20,13 @@ name = "bios_spi_reldb"
 path = "src/lib.rs"
 
 [features]
+spi-pg = ["tardis/reldb-postgres"]
+spi-mysql = ["tardis/reldb-mysql"]
+
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha31", features = ["reldb", "web-server"] }
+tardis = { version = "0.1.0-alpha31", features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]

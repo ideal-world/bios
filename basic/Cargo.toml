@@ -25,7 +25,7 @@ default = [
     "tardis/crypto",
     "tardis/web-server",
     "tardis/web-client",
-    "tardis/reldb",
+    "tardis/reldb-postgres",
     "tardis/cache",
 ]
 # TODO remvoe
