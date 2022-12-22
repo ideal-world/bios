@@ -1,7 +1,8 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::TardisActiveModel;
+use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBClient};
+use tardis::db::sea_orm::Value;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
@@ -57,4 +58,20 @@ pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) 
         ctx,
     )
     .await
+}
+
+pub async fn init_pg_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
+    // Fix case insensitivity
+    let schema_name = format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner));
+    let schema = client
+        .conn()
+        .query_one(
+            "SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1",
+            vec![Value::from(schema_name.as_str())],
+        )
+        .await?;
+    if schema.is_none() {
+        client.conn().execute_one(&format!("CREATE SCHEMA {}", schema_name), vec![]).await?;
+    }
+    Ok(schema_name)
 }

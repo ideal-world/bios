@@ -298,6 +298,7 @@ impl SpiBsServ {
         .await?
         .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "get_bs_by_rel", "not found backend service", "404-spi-bs-not-exist"))?;
         Ok(SpiBsCertResp {
+            kind_code: bs.kind_code,
             conn_uri: bs.conn_uri,
             ak: bs.ak,
             sk: bs.sk,
