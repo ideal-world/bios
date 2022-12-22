@@ -83,6 +83,7 @@ pub struct SpiBsDetailResp {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SpiBsCertResp {
+    pub kind_code: String,
     pub conn_uri: String,
     pub ak: String,
     pub sk: String,

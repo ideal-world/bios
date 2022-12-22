@@ -1,13 +1,14 @@
 use std::any::Any;
 
-use bios_basic::spi::{api::spi_ci_bs_api, spi_initializer, dto::spi_bs_dto::SpiBsCertResp};
+use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    db::reldb_client::TardisRelDBClient,
     web::web_server::TardisWebServer,
-    TardisFuns, TardisFunsInst, db::reldb_client::TardisRelDBClient,
+    TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::api::reldb_exec_api, reldb_constants::DOMAIN_CODE};
+use crate::{api::ci::api::reldb_exec_api, reldb_constants::DOMAIN_CODE, serv};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
@@ -29,15 +30,25 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init_fun(cert: SpiBsCertResp) -> TardisResult<Box<dyn Any + Send>> {
-    let ext = TardisFuns::json.str_to_json(&cert.ext)?;
+pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext) -> TardisResult<SpiBsInst> {
+    let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
     let client = TardisRelDBClient::init(
-        &cert.conn_uri,
+        &bs_cert.conn_uri,
         ext.get("max_connections").unwrap().as_u64().unwrap() as u32,
         ext.get("min_connections").unwrap().as_u64().unwrap() as u32,
         None,
         None,
     )
     .await?;
-    Ok(Box::new(client))
+    let ext = match bs_cert.kind_code.as_str() {
+        #[cfg(feature = "spi-pg")]
+        "spi-pg" => serv::pg::reldb_pg_initializer::init(&bs_cert, &client, ctx).await?,
+        #[cfg(feature = "spi-mysql")]
+        "spi-mysql" => serv::mysql::reldb_mysql_initializer::init(&bs_cert, &client, ctx).await?,
+        _ => Err(TardisError::not_implemented(
+            &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_cert.kind_code),
+            "406-rbum-*-enum-init-error",
+        ))?,
+    };
+    Ok(SpiBsInst { client: Box::new(client), ext })
 }

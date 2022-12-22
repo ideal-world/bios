@@ -24,22 +24,34 @@ impl SpiTardisFunInstExtractor for tardis::web::poem::Request {
     }
 }
 
-static mut SPI_BS_CACHES: Option<HashMap<String, Box<dyn Any + Send>>> = None;
+pub struct SpiBsInst {
+    pub client: Box<dyn Any + Send>,
+    pub ext: HashMap<String, String>,
+}
+
+impl SpiBsInst {
+    pub fn inst<T>(&'static self) -> (&'static T, &'static HashMap<String, String>) {
+        let c = self.client.as_ref().downcast_ref::<T>().unwrap();
+        (c, &self.ext)
+    }
+}
+
+static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsInst>> = None;
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn bs<F, T>(&self, ctx: &TardisContext, init_funs: F) -> TardisResult<&Box<dyn Any + Send>>
+    async fn bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
     where
-        F: Fn(SpiBsCertResp) -> T + Send + Sync,
-        T: Future<Output = TardisResult<Box<dyn Any + Send>>> + Send;
+        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        T: Future<Output = TardisResult<SpiBsInst>> + Send;
 }
 
 #[async_trait]
 impl SpiBsInstExtractor for TardisFunsInst {
-    async fn bs<F, T>(&self, ctx: &TardisContext, init_funs: F) -> TardisResult<&Box<dyn Any + Send>>
+    async fn bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
     where
-        F: Fn(SpiBsCertResp) -> T + Send + Sync,
-        T: Future<Output = TardisResult<Box<dyn Any + Send>>> + Send,
+        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
         let cache_key = format!("{}-{}", self.module_code(), ctx.own_paths);
         unsafe {
@@ -51,7 +63,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
                 Some(caches) => {
                     if !caches.contains_key(&cache_key) {
                         let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, self, ctx).await?;
-                        let spi_bs_inst = init_funs(spi_bs).await?;
+                        let spi_bs_inst = init_funs(spi_bs, ctx).await?;
                         caches.insert(cache_key.clone(), spi_bs_inst);
                     }
                     Ok(caches.get(&cache_key).unwrap())
