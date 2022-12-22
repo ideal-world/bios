@@ -749,6 +749,8 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     let ldap_user2_pwd = "123456";
     let ldap_user3 = "testUser1";
     let ldap_user3_pwd = "123456";
+    let ldap_user4 = "testUser2";
+    let ldap_user4_pwd = "123456";
 
     let global_user1 = "global_user1";
 
@@ -852,7 +854,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     login_page("tenant_admin2", "123456", Some(tenant1_id.clone()), None, true, client).await?;
 
     let tenant1_user1 = "user3";
-    let tenant1_user1_pwd = "123456";
+    let tenant1_user1_pwd = "1234567";
     let tenant1_account_id: String = client
         .post(
             "/ct/account",
@@ -881,13 +883,13 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("test global_user1 login and bind test");
     do_test_ldap(
         client,
-        LDAP_SUPPLIER,
+        LDAP_SUPPLIER2,
         Some(tenant1_id),
-        ldap_user1,
-        ldap_user1_pwd,
-        ldap_user2,
-        ldap_user2_pwd,
-        global_user1,
+        ldap_user3,
+        ldap_user3_pwd,
+        ldap_user4,
+        ldap_user4_pwd,
+        tenant1_user1,
     )
     .await?;
 

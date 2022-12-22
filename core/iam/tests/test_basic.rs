@@ -7,33 +7,7 @@ use tardis::testcontainers::images::generic::GenericImage;
 use tardis::testcontainers::Container;
 use tardis::TardisFuns;
 
-pub struct LifeHold<'a> {
-    pub ldap: Container<'a, GenericImage>,
-}
-
-pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
-    let ldap_container = get_ldap_container(docker).await;
-
-    TardisFuns::init("tests/config").await?;
-    // TardisFuns::init("core/iam/tests/config").await?;
-
-    Ok(LifeHold { ldap: ldap_container })
-}
-
-async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
-    const ORGANISATION: &str = "test";
-    const ADMIN_PASSWORD: &str = "123456";
-    let domain: String = format!("{}.com", ORGANISATION);
-
-    let ldap_container = docker.run(
-        GenericImage::new("osixia/openldap", "latest")
-            .with_env_var("LDAP_ORGANISATION", ORGANISATION)
-            .with_env_var("LDAP_DOMAIN", domain)
-            .with_env_var("LDAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
-            .with_wait_for(WaitFor::message_on_stdout("First start is done...")),
-    );
-
-    const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
+const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
 objectClass: inetOrgPerson
 cn: Barbara
 sn: Jensen
@@ -61,7 +35,44 @@ displayName: testUser1
 title: the world's most famous mythical manager
 mail: testUser1@test.com
 uid: tuser1
+userpassword: 123456
+
+dn: cn=testUser2,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: testUser2
+sn: user2
+displayName: testUser2
+title: the world's most famous mythical manager
+mail: testUser2@test.com
+uid: tuser2
 userpassword: 123456";
+
+pub struct LifeHold<'a> {
+    pub ldap: Container<'a, GenericImage>,
+}
+
+pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
+    let ldap_container = get_ldap_container(docker).await;
+
+    TardisFuns::init("tests/config").await?;
+    // TardisFuns::init("core/iam/tests/config").await?;
+
+    Ok(LifeHold { ldap: ldap_container })
+}
+
+async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> {
+    const ORGANISATION: &str = "test";
+    const ADMIN_PASSWORD: &str = "123456";
+    let domain: String = format!("{}.com", ORGANISATION);
+
+    let ldap_container = docker.run(
+        GenericImage::new("osixia/openldap", "latest")
+            .with_env_var("LDAP_ORGANISATION", ORGANISATION)
+            .with_env_var("LDAP_DOMAIN", domain)
+            .with_env_var("LDAP_ADMIN_PASSWORD", ADMIN_PASSWORD)
+            .with_wait_for(WaitFor::message_on_stdout("First start is done...")),
+    );
+
     let port = ldap_container.get_host_port_ipv4(389);
     let url = format!("ldap://localhost:{}", port);
     let base_dn = format!("DC={},DC=com", ORGANISATION);

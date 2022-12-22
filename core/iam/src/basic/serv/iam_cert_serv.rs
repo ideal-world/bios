@@ -770,11 +770,11 @@ impl IamCertServ {
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<RbumCertConfIdAndExtResp> {
-        Self::get_cert_conf_id_and_ext_opt_by_kind_supplier(kind, supplier, rel_iam_item_id, funs).await?.ok_or_else(|| {
+        Self::get_cert_conf_id_and_ext_opt_by_kind_supplier(kind, supplier, rel_iam_item_id.clone(), funs).await?.ok_or_else(|| {
             funs.err().not_found(
                 "iam_cert_conf",
                 "get",
-                &format!("not found cert conf kind:{} supplier:{}", kind, supplier),
+                &format!("not found cert conf kind:{} supplier:{} rel_iam_item_id:{:?}", kind, supplier, rel_iam_item_id),
                 "401-iam-cert-code-not-exist",
             )
         })
