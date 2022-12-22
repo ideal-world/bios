@@ -30,7 +30,7 @@ async-trait = { version = "0" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 tardis = { version = "0.1.0-alpha31", features = [
-    "reldb",
+    "reldb-postgres",
     "cache",
     "mq",
     "web-server",
@@ -47,4 +47,3 @@ ldap3 = { version = "0.10.5", optional = true }
 [dev-dependencies]
 tardis = { version = "0.1.0-alpha31", features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
-
