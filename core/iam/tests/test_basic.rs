@@ -46,10 +46,20 @@ userpassword: 123456
 dn: cn=testUser,dc=test,dc=com
 objectClass: inetOrgPerson
 cn: testUser
+sn: user
+displayName: testUser
+title: the world's most famous mythical manager
+mail: testUser@test.com
+uid: tuser
+userpassword: 123456
+
+dn: cn=testUser1,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: testUser1
 sn: user1
 displayName: testUser1
 title: the world's most famous mythical manager
-mail: testUser@test.com
+mail: testUser1@test.com
 uid: tuser1
 userpassword: 123456";
     let port = ldap_container.get_host_port_ipv4(389);
