@@ -1,9 +1,9 @@
-use std::any::Any;
+use std::collections::HashMap;
 
 use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    db::reldb_client::TardisRelDBClient,
+    db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
 };
@@ -51,4 +51,18 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext) -> TardisResu
         ))?,
     };
     Ok(SpiBsInst { client: Box::new(client), ext })
+}
+
+pub async fn inst_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String)) -> TardisResult<TardisRelDBlConnection> {
+    let conn = bs_inst.0.conn();
+    match bs_inst.2.as_str() {
+        #[cfg(feature = "spi-pg")]
+        "spi-pg" => serv::pg::reldb_pg_initializer::init_conn(conn, &bs_inst.1).await,
+        #[cfg(feature = "spi-mysql")]
+        "spi-mysql" => serv::mysql::reldb_mysql_initializer::init_conn(conn, &bs_inst.1).await,
+        _ => Err(TardisError::not_implemented(
+            &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_inst.2),
+            "406-rbum-*-enum-init-error",
+        )),
+    }
 }

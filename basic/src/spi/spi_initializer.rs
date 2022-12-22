@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBClient};
+use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBClient, TardisRelDBlConnection};
 use tardis::db::sea_orm::Value;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -13,6 +15,7 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindServ;
 
 use super::domain::spi_bs;
+use super::spi_constants;
 
 pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
     let ctx = TardisContext {
@@ -74,4 +77,17 @@ pub async fn init_pg_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> 
         client.conn().execute_one(&format!("CREATE SCHEMA {}", schema_name), vec![]).await?;
     }
     Ok(schema_name)
+}
+
+pub fn set_pg_schema_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
+    ext.insert(spi_constants::SPI_PG_SCHEMA_NAME_FLAG.to_string(), schema_name.to_string());
+}
+
+pub fn get_pg_schema_from_ext(ext: &HashMap<String, String>) -> Option<String> {
+    ext.get(spi_constants::SPI_PG_SCHEMA_NAME_FLAG).map(|s| s.to_string())
+}
+
+pub async fn set_pg_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {
+    conn.execute_one(&format!("SET SCHEMA '{}'", schema_name), vec![]).await?;
+    Ok(())
 }

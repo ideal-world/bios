@@ -11,6 +11,7 @@ use tardis::TardisFunsInst;
 use crate::spi::dto::spi_bs_dto::SpiBsCertResp;
 
 use super::serv::spi_bs_serv::SpiBsServ;
+use super::spi_constants;
 
 pub trait SpiTardisFunInstExtractor {
     fn tardis_fun_inst(&self) -> TardisFunsInst;
@@ -30,9 +31,13 @@ pub struct SpiBsInst {
 }
 
 impl SpiBsInst {
-    pub fn inst<T>(&'static self) -> (&'static T, &'static HashMap<String, String>) {
+    pub fn inst<T>(&'static self) -> (&'static T, &'static HashMap<String, String>, String) {
         let c = self.client.as_ref().downcast_ref::<T>().unwrap();
-        (c, &self.ext)
+        (c, &self.ext, self.kind_code())
+    }
+
+    pub fn kind_code(&self) -> String {
+        self.ext.get(spi_constants::SPI_KIND_CODE_FLAG).unwrap().to_string()
     }
 }
 
@@ -63,7 +68,9 @@ impl SpiBsInstExtractor for TardisFunsInst {
                 Some(caches) => {
                     if !caches.contains_key(&cache_key) {
                         let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, self, ctx).await?;
-                        let spi_bs_inst = init_funs(spi_bs, ctx).await?;
+                        let kind_code = spi_bs.kind_code.clone();
+                        let mut spi_bs_inst = init_funs(spi_bs, ctx).await?;
+                        spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
                         caches.insert(cache_key.clone(), spi_bs_inst);
                     }
                     Ok(caches.get(&cache_key).unwrap())

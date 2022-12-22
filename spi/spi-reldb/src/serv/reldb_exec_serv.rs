@@ -35,25 +35,28 @@ impl ReldbExecServ {
     }
 
     pub async fn ddl(ddl_req: &mut ReldbDdlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let (client, ext) = funs.bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let bs_inst = funs.bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let conn = reldb_initializer::inst_conn(bs_inst).await?;
         let params = Self::parse_params(&ddl_req.params);
-        client.conn().execute_one(&ddl_req.sql, params).await?;
+        conn.execute_one(&ddl_req.sql, params).await?;
         Ok(())
     }
 
     pub async fn dml(dml_req: &mut ReldbDmlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ReldbDmlResp> {
-        let (client, ext) = funs.bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let bs_inst = funs.bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let conn = reldb_initializer::inst_conn(bs_inst).await?;
         let params = Self::parse_params(&dml_req.params);
-        let resp = client.conn().execute_one(&dml_req.sql, params).await?;
+        let resp = conn.execute_one(&dml_req.sql, params).await?;
         Ok(ReldbDmlResp {
             affected_rows: resp.rows_affected(),
         })
     }
 
     pub async fn dql(dql_req: &mut ReldbDqlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<serde_json::Value>> {
-        let (client, ext) = funs.bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let bs_inst = funs.bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let conn = reldb_initializer::inst_conn(bs_inst).await?;
         let params = Self::parse_params(&dql_req.params);
-        let resp = client.conn().query_all(&dql_req.sql, params).await?;
+        let resp = conn.query_all(&dql_req.sql, params).await?;
         let mut result: Vec<serde_json::Value> = Vec::new();
         for row in resp {
             let json = serde_json::Value::from_query_result_optional(&row, "")?.unwrap();
