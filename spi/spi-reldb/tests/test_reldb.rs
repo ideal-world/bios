@@ -4,6 +4,7 @@ use std::time::Duration;
 use bios_basic::rbum::rbum_config::RbumConfig;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
+use bios_basic::spi::spi_constants;
 use bios_basic::test::init_rbum_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_reldb::reldb_constants::DOMAIN_CODE;
@@ -41,7 +42,7 @@ async fn init_data() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    let kind_id = RbumKindServ::get_rbum_kind_id_by_code("spi-pg", &funs).await?.unwrap();
+    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
     let ctx = TardisContext {
         own_paths: "".to_string(),
         ak: "".to_string(),

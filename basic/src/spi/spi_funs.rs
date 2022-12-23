@@ -45,7 +45,14 @@ static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsInst>> = None;
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<String>
+    where
+        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        T: Future<Output = TardisResult<SpiBsInst>> + Send;
+
+    async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<&'static SpiBsInst>;
+
+    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
@@ -53,7 +60,7 @@ pub trait SpiBsInstExtractor {
 
 #[async_trait]
 impl SpiBsInstExtractor for TardisFunsInst {
-    async fn bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<String>
     where
         F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
@@ -73,9 +80,28 @@ impl SpiBsInstExtractor for TardisFunsInst {
                         spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
                         caches.insert(cache_key.clone(), spi_bs_inst);
                     }
-                    Ok(caches.get(&cache_key).unwrap())
+                    Ok(caches.get(&cache_key).unwrap().kind_code())
                 }
             }
         }
+    }
+
+    async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<&'static SpiBsInst> {
+        let cache_key = format!("{}-{}", self.module_code(), ctx.own_paths);
+        unsafe {
+            match &mut SPI_BS_CACHES {
+                None => panic!("[SPI] CACHE instance doesn't exist"),
+                Some(caches) => Ok(caches.get(&cache_key).unwrap()),
+            }
+        }
+    }
+
+    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
+    where
+        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        T: Future<Output = TardisResult<SpiBsInst>> + Send,
+    {
+        self.init(ctx, init_funs).await?;
+        self.bs(ctx).await
     }
 }
