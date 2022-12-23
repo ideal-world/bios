@@ -401,6 +401,7 @@ impl IamCertLdapServ {
 
     pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let tenant_id = login_req.tenant_id.clone();
+        // mock_ctx decide whether the login mode is global or tenant level
         let mut mock_ctx = Self::generate_default_mock_ctx(login_req.ldap_login.code.as_ref(), tenant_id.clone(), funs).await;
 
         let (mut ldap_client, cert_conf, cert_conf_id) =
@@ -508,11 +509,12 @@ impl IamCertLdapServ {
                     funs,
                 )
                 .await;
-                //todo tenant check support
-                if tenant_check.is_ok() {
+                if tenant_check.is_ok() && ctx.own_paths.is_empty() {
                     return Err(funs.err().conflict("rbum_cert", "bind_user_pwd_by_ldap", "user is private", "409-user-is-private"));
-                } else {
+                } else if tenant_check.is_err() {
                     return Err(funs.err().unauthorized("rbum_cert", "valid", "validation error", "401-rbum-cert-valid-error"));
+                } else {
+                    tenant_check?
                 }
             } else {
                 global_check?

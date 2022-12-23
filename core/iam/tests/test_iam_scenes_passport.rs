@@ -883,6 +883,19 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     info!("test global_user1 login and bind test");
     do_test_ldap(
         client,
+        LDAP_SUPPLIER,
+        Some(tenant1_id.clone()),
+        ldap_user1,
+        ldap_user1_pwd,
+        ldap_user2,
+        ldap_user2_pwd,
+        global_user1,
+    )
+    .await?;
+
+    info!("test tenant level ldap user login and bind test");
+    do_test_ldap(
+        client,
         LDAP_SUPPLIER2,
         Some(tenant1_id),
         ldap_user3,
