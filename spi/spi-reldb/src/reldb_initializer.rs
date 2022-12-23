@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer};
+use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer, spi_constants};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
@@ -20,7 +20,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    spi_initializer::add_kind("spi-pg", funs, ctx).await?;
+    spi_initializer::add_kind(spi_constants::SPI_PG_KIND_CODE, funs, ctx).await?;
     spi_initializer::add_kind("spi-mysql", funs, ctx).await?;
     Ok(())
 }
@@ -42,7 +42,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext) -> TardisResu
     .await?;
     let ext = match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
-        "spi-pg" => serv::pg::reldb_pg_initializer::init(&bs_cert, &client, ctx).await?,
+        spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init(&bs_cert, &client, ctx).await?,
         #[cfg(feature = "spi-mysql")]
         "spi-mysql" => serv::mysql::reldb_mysql_initializer::init(&bs_cert, &client, ctx).await?,
         _ => Err(TardisError::not_implemented(
@@ -57,7 +57,7 @@ pub async fn inst_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, S
     let conn = bs_inst.0.conn();
     match bs_inst.2.as_str() {
         #[cfg(feature = "spi-pg")]
-        "spi-pg" => serv::pg::reldb_pg_initializer::init_conn(conn, &bs_inst.1).await,
+        spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init_conn(conn, &bs_inst.1).await,
         #[cfg(feature = "spi-mysql")]
         "spi-mysql" => serv::mysql::reldb_mysql_initializer::init_conn(conn, &bs_inst.1).await,
         _ => Err(TardisError::not_implemented(
