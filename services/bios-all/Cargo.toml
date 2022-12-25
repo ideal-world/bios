@@ -17,5 +17,9 @@ opt-level = "z"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha31", features = ["web-server", "conf-remote"] }
+tardis = { version = "0.1.0-alpha31", features = [
+    "web-server",
+    "conf-remote",
+    "reldb-mysql",
+] }
 bios-iam = { path = "../../core/iam" }

@@ -49,3 +49,4 @@
 409-rbum-cert-ak-duplicate	平台已存在相同用户名
 
 404-spi-bs-not-exist	找不到对应的后端服务
+501-spi-bs-not-exist	后端服务类型不存在或SPI特性未启用

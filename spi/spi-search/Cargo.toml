@@ -1,5 +1,5 @@
 [package]
-name = "bios-spi-reldb"
+name = "bios-spi-search"
 version = "0.1.0"
 authors = ["gudaoxuri <i@sunisle.org>"]
 homepage = "https://bios.idealworld.group"
@@ -16,13 +16,11 @@ codegen-units = 1
 opt-level = "z"
 
 [lib]
-name = "bios_spi_reldb"
+name = "bios_spi_search"
 path = "src/lib.rs"
 
 [features]
 spi-pg = ["tardis/reldb-postgres"]
-spi-mysql = ["tardis/reldb-mysql"]
-
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

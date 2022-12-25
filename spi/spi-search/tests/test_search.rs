@@ -7,15 +7,15 @@ use bios_basic::spi::dto::spi_bs_dto::SpiBsAddReq;
 use bios_basic::spi::spi_constants;
 use bios_basic::test::init_rbum_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_reldb::reldb_constants::DOMAIN_CODE;
-use bios_spi_reldb::reldb_initializer;
+use bios_spi_search::search_constants::DOMAIN_CODE;
+use bios_spi_search::search_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
 use tardis::{testcontainers, tokio, TardisFuns};
-mod test_reldb_exec;
+mod test_search_item;
 
 #[tokio::test]
 async fn test_reldb() -> TardisResult<()> {
@@ -32,8 +32,8 @@ async fn init_data() -> TardisResult<()> {
     bios_basic::rbum::rbum_initializer::init(DOMAIN_CODE, RbumConfig::default()).await?;
 
     let web_server = TardisFuns::web_server();
-    // Initialize SPI reldb
-    reldb_initializer::init(web_server).await.unwrap();
+    // Initialize SPI search
+    search_initializer::init(web_server).await.unwrap();
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();
@@ -74,7 +74,7 @@ async fn init_data() -> TardisResult<()> {
 
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
 
-    test_reldb_exec::test(&mut client).await?;
+    test_search_item::test(&mut client).await?;
 
     Ok(())
 }
