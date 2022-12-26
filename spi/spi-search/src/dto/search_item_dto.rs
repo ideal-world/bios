@@ -8,7 +8,7 @@ use tardis::{
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemAddOrModifyReq {
-    #[oai(validator(min_length = "2"))]
+    #[oai(validator(pattern = r"^[a-z]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
     pub key: String,
@@ -16,22 +16,65 @@ pub struct SearchItemAddOrModifyReq {
     pub title: String,
     #[oai(validator(min_length = "2"))]
     pub content: String,
-    pub ext: Option<Value>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub own_paths: Option<String>,
     pub create_time: Option<DateTime<Utc>>,
     pub update_time: Option<DateTime<Utc>>,
-    pub visit_keys: Option<Vec<String>>,
+    pub ext: Option<Value>,
+    pub visit_keys: Option<SearchItemVisitKeysReq>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchItemVisitKeysReq {
+    pub accounts: Option<Vec<String>>,
+    pub apps: Option<Vec<String>>,
+    pub tenants: Option<Vec<String>>,
+    pub roles: Option<Vec<String>>,
+    pub groups: Option<Vec<String>>,
+}
+
+impl SearchItemVisitKeysReq {
+    pub fn to_sql(&self) -> Vec<String> {
+        let mut sqls = Vec::new();
+        if let Some(accounts) = &self.accounts {
+            for account in accounts {
+                sqls.push(format!("ac:{}", account));
+            }
+        }
+        if let Some(apps) = &self.apps {
+            for app in apps {
+                sqls.push(format!("ap:{}", app));
+            }
+        }
+        if let Some(tenants) = &self.tenants {
+            for tenant in tenants {
+                sqls.push(format!("te:{}", tenant));
+            }
+        }
+        if let Some(roles) = &self.roles {
+            for role in roles {
+                sqls.push(format!("ro:{}", role));
+            }
+        }
+        if let Some(groups) = &self.groups {
+            for group in groups {
+                sqls.push(format!("gr:{}", group));
+            }
+        }
+        sqls
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchReq {
+    #[oai(validator(pattern = r"^[a-z]+$"))]
+    pub tag: String,
     pub ctx: SearchItemSearchCtxReq,
     pub query: SearchItemQueryReq,
-    pub sort: Option<Vec<SearchItemQuerySortReq>>,
-    pub page: Option<SearchItemQueryPageReq>,
+    pub sort: Option<Vec<SearchItemSearchSortReq>>,
+    pub page: SearchItemSearchPageReq,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -46,16 +89,38 @@ pub struct SearchItemSearchCtxReq {
     pub groups: Option<Vec<String>>,
 }
 
+impl SearchItemSearchCtxReq {
+    pub fn to_sql(&self) -> Vec<String> {
+        let mut sqls = Vec::new();
+        if let Some(account) = &self.account {
+            sqls.push(format!("ac:{}", account));
+        }
+        if let Some(app) = &self.app {
+            sqls.push(format!("ap:{}", app));
+        }
+        if let Some(tenant) = &self.tenant {
+            sqls.push(format!("te:{}", tenant));
+        }
+        if let Some(roles) = &self.roles {
+            for role in roles {
+                sqls.push(format!("ro:{}", role));
+            }
+        }
+        if let Some(groups) = &self.groups {
+            for group in groups {
+                sqls.push(format!("gr:{}", group));
+            }
+        }
+        sqls
+    }
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemQueryReq {
     #[oai(validator(min_length = "2"))]
-    pub tag: String,
+    pub q: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub key: Option<String>,
-    #[oai(validator(min_length = "2"))]
-    pub title: Option<String>,
-    #[oai(validator(min_length = "2"))]
-    pub content: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     #[oai(validator(min_length = "2"))]
@@ -68,39 +133,48 @@ pub struct SearchItemQueryReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchItemQuerySortReq {
+pub struct SearchItemSearchSortReq {
     #[oai(validator(min_length = "2"))]
     pub field: String,
-    pub order: SearchItemQuerySortKind,
+    pub order: SearchItemSearchSortKind,
 }
 
 #[derive(poem_openapi::Enum, Serialize, Deserialize, Debug)]
-pub enum SearchItemQuerySortKind {
+pub enum SearchItemSearchSortKind {
+    #[oai(rename = "asc")]
     Asc,
+    #[oai(rename = "desc")]
     Desc,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchItemQueryPageReq {
-    pub page_number: u32,
-    pub page_size: u16,
+impl SearchItemSearchSortKind {
+    pub fn to_sql(&self) -> String {
+        match self {
+            SearchItemSearchSortKind::Asc => "ASC".to_string(),
+            SearchItemSearchSortKind::Desc => "DESC".to_string(),
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchItemQueryResp {
-    #[oai(validator(min_length = "2"))]
-    pub tag: String,
+pub struct SearchItemSearchPageReq {
+    pub number: u32,
+    pub size: u16,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchItemSearchResp {
     #[oai(validator(min_length = "2"))]
     pub key: String,
     #[oai(validator(min_length = "2"))]
     pub title: String,
     #[oai(validator(min_length = "2"))]
-    pub content: String,
-    pub ext: Option<Value>,
+    pub owner: String,
     #[oai(validator(min_length = "2"))]
-    pub owner: Option<String>,
-    #[oai(validator(min_length = "2"))]
-    pub own_paths: Option<String>,
-    pub create_time: Option<DateTime<Utc>>,
-    pub update_time: Option<DateTime<Utc>>,
+    pub own_paths: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+    pub ext: Value,
+    pub rank_title: i64,
+    pub rank_content: i64,
 }
