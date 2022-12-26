@@ -772,7 +772,7 @@ impl RbumCertServ {
                         funs,
                     )
                     .await?;
-                    return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-usrpwd-cert-valid-error"));
+                    return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"));
                 }
             } else {
                 rbum_cert.sk
@@ -795,11 +795,11 @@ impl RbumCertServ {
                     funs,
                 )
                 .await?;
-                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-usrpwd-cert-valid-error"))
+                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
             }
         } else {
             log::warn!("validation error by ak {},rbum_cert_conf_id {}, own_paths {}", ak, rbum_cert_conf_id, own_paths);
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-usrpwd-cert-valid-error"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
         }
     }
 
@@ -905,15 +905,15 @@ impl RbumCertServ {
                         funs,
                     )
                     .await?;
-                    Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
+                    Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-usrpwd-cert-valid-error"))
                 }
             } else {
                 log::warn!("validation error by ak {},rbum_cert_conf_id is None, own_paths {:?}", ak, own_paths);
-                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
+                Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-usrpwd-cert-valid-error"))
             }
         } else {
             log::warn!("validation error by ak {},rel_rbum_kind {}, own_paths {:?}", ak, rel_rbum_kind, own_paths);
-            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-cert-valid-error"))
+            Err(funs.err().unauthorized(&Self::get_obj_name(), "valid", "validation error", "401-rbum-usrpwd-cert-valid-error"))
         }
     }
 
