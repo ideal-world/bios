@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::reldb_client::{TardisActiveModel, TardisRelDBClient, TardisRelDBlConnection};
-use tardis::db::sea_orm::Value;
+use tardis::db::reldb_client::TardisActiveModel;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
@@ -15,7 +12,6 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::RbumKindServ;
 
 use super::domain::spi_bs;
-use super::spi_constants;
 
 pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
     let ctx = TardisContext {
@@ -63,31 +59,52 @@ pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) 
     .await
 }
 
-pub async fn init_pg_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
-    // Fix case insensitivity
-    let schema_name = format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner));
-    let schema = client
-        .conn()
-        .query_one(
-            "SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1",
-            vec![Value::from(schema_name.as_str())],
-        )
-        .await?;
-    if schema.is_none() {
-        client.conn().execute_one(&format!("CREATE SCHEMA {}", schema_name), vec![]).await?;
+pub mod common_pg {
+    use std::collections::HashMap;
+
+    use tardis::{
+        basic::{dto::TardisContext, result::TardisResult},
+        db::{
+            reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+            sea_orm::Value,
+        },
+        TardisFuns,
+    };
+
+    use crate::spi::spi_constants;
+
+    pub async fn init_pg_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
+        // Fix case insensitivity
+        let schema_name = format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner));
+        let schema = client.conn().query_one("SELECT 1 FROM information_schema.schemata WHERE schema_name = $1", vec![Value::from(schema_name.as_str())]).await?;
+        if schema.is_none() {
+            client.conn().execute_one(&format!("CREATE SCHEMA {}", schema_name), vec![]).await?;
+        }
+        Ok(schema_name)
     }
-    Ok(schema_name)
-}
 
-pub fn set_pg_schema_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
-    ext.insert(spi_constants::SPI_PG_SCHEMA_NAME_FLAG.to_string(), schema_name.to_string());
-}
+    pub async fn check_table_exit(table_name: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
+        // Fix case insensitivity
+        let schema_name = format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner));
+        let table = conn
+            .query_one(
+                "SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2",
+                vec![Value::from(schema_name.as_str()), Value::from(table_name)],
+            )
+            .await?;
+        Ok(table.is_some())
+    }
 
-pub fn get_pg_schema_from_ext(ext: &HashMap<String, String>) -> Option<String> {
-    ext.get(spi_constants::SPI_PG_SCHEMA_NAME_FLAG).map(|s| s.to_string())
-}
+    pub fn set_pg_schema_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
+        ext.insert(spi_constants::SPI_PG_SCHEMA_NAME_FLAG.to_string(), schema_name.to_string());
+    }
 
-pub async fn set_pg_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {
-    conn.execute_one(&format!("SET SCHEMA '{}'", schema_name), vec![]).await?;
-    Ok(())
+    pub fn get_pg_schema_from_ext(ext: &HashMap<String, String>) -> Option<String> {
+        ext.get(spi_constants::SPI_PG_SCHEMA_NAME_FLAG).map(|s| s.to_string())
+    }
+
+    pub async fn set_pg_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {
+        conn.execute_one(&format!("SET SCHEMA '{}'", schema_name), vec![]).await?;
+        Ok(())
+    }
 }
