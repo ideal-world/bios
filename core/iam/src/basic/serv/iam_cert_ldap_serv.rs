@@ -32,6 +32,7 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+use tardis::regex::Regex;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
@@ -482,8 +483,16 @@ impl IamCertLdapServ {
     ) -> TardisResult<String> {
         //验证用户名密码登录
         let (_, _, rbum_item_id) = if let Some(tenant_id) = tenant_id.clone() {
-            let global_check =
-                RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, Some("".to_string()), vec![&IamCertKernelKind::UserPwd.to_string()], funs).await;
+            let global_check = RbumCertServ::validate_by_ak_and_basic_sk(
+                user_name,
+                password,
+                &RbumCertRelKind::Item,
+                false,
+                Some("".to_string()),
+                vec![&IamCertKernelKind::UserPwd.to_string()],
+                funs,
+            )
+            .await;
             if global_check.is_err() {
                 let tenant_check = RbumCertServ::validate_by_ak_and_basic_sk(
                     user_name,
@@ -504,7 +513,16 @@ impl IamCertLdapServ {
                 global_check?
             }
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(user_name, password, &RbumCertRelKind::Item, false, Some("".to_string()), vec![&IamCertKernelKind::UserPwd.to_string()], funs).await?
+            RbumCertServ::validate_by_ak_and_basic_sk(
+                user_name,
+                password,
+                &RbumCertRelKind::Item,
+                false,
+                Some("".to_string()),
+                vec![&IamCertKernelKind::UserPwd.to_string()],
+                funs,
+            )
+            .await?
         };
         if let true = Self::check_user_pwd_is_bind(user_name, code, tenant_id.clone(), funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "user is bound by ldap", "409-iam-user-is-bound"));
@@ -568,6 +586,28 @@ impl IamCertLdapServ {
         .first()
         .map(|r| r.id.to_string());
         Ok(result)
+    }
+    ///# Examples
+    ///
+    ///```
+    ///  use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("cn=admin,ou=x,dc=x,dc=x"), "admin".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("ou=x,dc=x,dc=x"), "ou=x,dc=x,dc=x".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("cn=,ou=x,dc=x,dc=x"), "".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("sdfafasdf"), "sdfafasdf".to_string());
+    /// ```
+    pub fn dn_to_cn(dn: &str) -> String {
+        let dn_regex = Regex::new(r"(,|^)[cC][nN]=(.+?)(,|$)").expect("Regular parsing error");
+        let cn = if dn_regex.is_match(dn) {
+            let int = dn.find("cn=").unwrap_or_default();
+            let a = &dn[int + 3..];
+            let int = a.find(',').unwrap_or_default();
+            &a[..int]
+        } else {
+            warn!("dn:{} is not match regex!", dn);
+            dn
+        };
+        cn.to_string()
     }
 }
 
