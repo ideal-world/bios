@@ -58,5 +58,5 @@ FZygs8miAhWPzqnpmgTj1cPiU1M=
 -----END CERTIFICATE-----
 """
 [fw.web_server.modules.spi-search]
-title = "关系型数据处理服务"
+title = "搜索服务"
 doc_urls = [["test env", "http://localhost:8080/"]]

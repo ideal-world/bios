@@ -542,7 +542,21 @@ impl IamAccountServ {
             let bool_ = bool_.parse::<bool>();
             Ok(bool_.unwrap_or(false))
         } else {
-            let account = IamAccountServ::get_item(account_id, &IamAccountFilterReq { ..Default::default() }, funs, ctx).await?;
+            let account = IamAccountServ::get_item(
+                account_id,
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: "".to_string().into(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             let is_global = account.own_paths.is_empty();
             funs.cache()
                 .hset(

@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::search_item_dto::{SearchItemAddOrModifyReq, SearchItemQueryReq, SearchItemQueryResp};
+use crate::dto::search_item_dto::{SearchItemAddOrModifyReq, SearchItemSearchReq, SearchItemSearchResp};
 use crate::serv::search_item_serv::SearchItemServ;
 
 pub struct SearchCiItemApi;
@@ -22,7 +22,7 @@ impl SearchCiItemApi {
         TardisResp::ok(Void {})
     }
 
-    /// Deletey Item
+    /// Delete Item
     #[oai(path = "/", method = "delete")]
     async fn delete(&self, tag: Query<String>, key: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
@@ -30,11 +30,11 @@ impl SearchCiItemApi {
         TardisResp::ok(Void {})
     }
 
-    /// Query Items
-    #[oai(path = "/query", method = "put")]
-    async fn query(&self, mut query_req: Json<SearchItemQueryReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<TardisPage<SearchItemQueryResp>> {
+    /// Search Items
+    #[oai(path = "/search", method = "put")]
+    async fn search(&self, mut search_req: Json<SearchItemSearchReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<TardisPage<SearchItemSearchResp>> {
         let mut funs = request.tardis_fun_inst();
-        let resp = SearchItemServ::query(&mut query_req.0, &mut funs, &ctx.0).await?;
+        let resp = SearchItemServ::search(&mut search_req.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }
