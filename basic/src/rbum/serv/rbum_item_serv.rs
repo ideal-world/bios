@@ -386,7 +386,7 @@ where
         let rel_ids = RbumRelServ::find_rel_ids(
             &RbumRelFindReq {
                 tag: None,
-                from_rbum_kind: Some(RbumRelFromKind::Item),
+                from_rbum_kind: None,
                 from_rbum_id: None,
                 to_rbum_item_id: Some(id.to_string()),
                 ..Default::default()
