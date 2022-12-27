@@ -15,7 +15,7 @@ pub struct SearchItemServ;
 
 impl SearchItemServ {
     pub async fn add_or_modify(add_or_modify_req: &mut SearchItemAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let kind_code = funs.init(ctx, search_initializer::init_fun).await?;
+        let kind_code = funs.init(ctx, true, search_initializer::init_fun).await?;
         match kind_code.as_str() {
             #[cfg(feature = "spi-pg")]
             spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::add_or_modify(add_or_modify_req, funs, ctx).await,
@@ -27,7 +27,7 @@ impl SearchItemServ {
     }
 
     pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let kind_code = funs.init(ctx, search_initializer::init_fun).await?;
+        let kind_code = funs.init(ctx, false, search_initializer::init_fun).await?;
         match kind_code.as_str() {
             #[cfg(feature = "spi-pg")]
             spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::delete(tag, key, funs, ctx).await,
@@ -39,7 +39,7 @@ impl SearchItemServ {
     }
 
     pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
-        let kind_code = funs.init(ctx, search_initializer::init_fun).await?;
+        let kind_code = funs.init(ctx, false, search_initializer::init_fun).await?;
         match kind_code.as_str() {
             #[cfg(feature = "spi-pg")]
             spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::search(search_req, funs, ctx).await,

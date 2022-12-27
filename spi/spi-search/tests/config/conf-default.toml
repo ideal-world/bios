@@ -1,7 +1,7 @@
 [cs]
 
 [fw.web_server]
-port = 8080
+port = 8081
 tls_key = """
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAqVYYdfxTT9qr1np22UoIWq4v1E4cHncp35xxu4HNyZsoJBHR
