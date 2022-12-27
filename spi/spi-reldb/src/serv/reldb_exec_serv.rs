@@ -35,7 +35,7 @@ impl ReldbExecServ {
     }
 
     pub async fn ddl(ddl_req: &mut ReldbDdlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let bs_inst = funs.init_bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
         let conn = reldb_initializer::inst_conn(bs_inst).await?;
         let params = Self::parse_params(&ddl_req.params);
         conn.execute_one(&ddl_req.sql, params).await?;
@@ -43,7 +43,7 @@ impl ReldbExecServ {
     }
 
     pub async fn dml(dml_req: &mut ReldbDmlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ReldbDmlResp> {
-        let bs_inst = funs.init_bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
         let conn = reldb_initializer::inst_conn(bs_inst).await?;
         let params = Self::parse_params(&dml_req.params);
         let resp = conn.execute_one(&dml_req.sql, params).await?;
@@ -53,7 +53,7 @@ impl ReldbExecServ {
     }
 
     pub async fn dql(dql_req: &mut ReldbDqlReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<serde_json::Value>> {
-        let bs_inst = funs.init_bs(ctx, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
+        let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
         let conn = reldb_initializer::inst_conn(bs_inst).await?;
         let params = Self::parse_params(&dql_req.params);
         let resp = conn.query_all(&dql_req.sql, params).await?;
