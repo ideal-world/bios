@@ -26,10 +26,10 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext) -> TardisResult<SpiBsInst> {
+pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
     match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
-        "spi-pg" => serv::pg::search_pg_initializer::init(&bs_cert, ctx).await,
+        "spi-pg" => serv::pg::search_pg_initializer::init(&bs_cert, ctx, mgr).await,
         _ => Err(TardisError::not_implemented(
             &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_cert.kind_code),
             "406-rbum-*-enum-init-error",

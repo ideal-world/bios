@@ -51,7 +51,7 @@ async fn init_data() -> TardisResult<()> {
         ..Default::default()
     };
 
-    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
+    let mut client = TestHttpClient::new(format!("https://localhost:8081/{}", DOMAIN_CODE));
 
     client.set_auth(&ctx)?;
 

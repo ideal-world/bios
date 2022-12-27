@@ -8,7 +8,7 @@ use tardis::{
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemAddOrModifyReq {
-    #[oai(validator(pattern = r"^[a-z]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
     pub key: String,
@@ -69,7 +69,7 @@ impl SearchItemVisitKeysReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchReq {
-    #[oai(validator(pattern = r"^[a-z]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
     pub ctx: SearchItemSearchCtxReq,
     pub query: SearchItemQueryReq,
@@ -175,6 +175,6 @@ pub struct SearchItemSearchResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     pub ext: Value,
-    pub rank_title: i64,
-    pub rank_content: i64,
+    pub rank_title: f32,
+    pub rank_content: f32,
 }
