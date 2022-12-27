@@ -73,19 +73,27 @@ pub mod common_pg {
 
     use crate::spi::spi_constants;
 
-    pub async fn init_pg_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
+    pub fn get_schema_name_from_context(ctx: &TardisContext) -> String {
         // Fix case insensitivity
-        let schema_name = format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner));
+        format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner))
+    }
+
+    pub async fn check_schema_exit(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<bool> {
+        let schema_name = get_schema_name_from_context(ctx);
         let schema = client.conn().query_one("SELECT 1 FROM information_schema.schemata WHERE schema_name = $1", vec![Value::from(schema_name.as_str())]).await?;
-        if schema.is_none() {
+        Ok(schema.is_some())
+    }
+
+    pub async fn create_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
+        let schema_name = get_schema_name_from_context(ctx);
+        if !check_schema_exit(client, ctx).await? {
             client.conn().execute_one(&format!("CREATE SCHEMA {}", schema_name), vec![]).await?;
         }
         Ok(schema_name)
     }
 
     pub async fn check_table_exit(table_name: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
-        // Fix case insensitivity
-        let schema_name = format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner));
+        let schema_name = get_schema_name_from_context(ctx);
         let table = conn
             .query_one(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2",
@@ -95,15 +103,15 @@ pub mod common_pg {
         Ok(table.is_some())
     }
 
-    pub fn set_pg_schema_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
+    pub fn set_schema_name_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
         ext.insert(spi_constants::SPI_PG_SCHEMA_NAME_FLAG.to_string(), schema_name.to_string());
     }
 
-    pub fn get_pg_schema_from_ext(ext: &HashMap<String, String>) -> Option<String> {
+    pub fn get_schema_name_from_ext(ext: &HashMap<String, String>) -> Option<String> {
         ext.get(spi_constants::SPI_PG_SCHEMA_NAME_FLAG).map(|s| s.to_string())
     }
 
-    pub async fn set_pg_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {
+    pub async fn set_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {
         conn.execute_one(&format!("SET SCHEMA '{}'", schema_name), vec![]).await?;
         Ok(())
     }

@@ -45,24 +45,24 @@ static mut SPI_BS_CACHES: Option<HashMap<String, SpiBsInst>> = None;
 
 #[async_trait]
 pub trait SpiBsInstExtractor {
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<String>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<String>
     where
-        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
 
     async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<&'static SpiBsInst>;
 
-    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
+    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<&'static SpiBsInst>
     where
-        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
 }
 
 #[async_trait]
 impl SpiBsInstExtractor for TardisFunsInst {
-    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<String>
+    async fn init<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<String>
     where
-        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
         let cache_key = format!("{}-{}", self.module_code(), ctx.own_paths);
@@ -76,7 +76,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
                     if !caches.contains_key(&cache_key) {
                         let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, self, ctx).await?;
                         let kind_code = spi_bs.kind_code.clone();
-                        let mut spi_bs_inst = init_funs(spi_bs, ctx).await?;
+                        let mut spi_bs_inst = init_funs(spi_bs, ctx, mgr).await?;
                         spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
                         caches.insert(cache_key.clone(), spi_bs_inst);
                     }
@@ -96,12 +96,12 @@ impl SpiBsInstExtractor for TardisFunsInst {
         }
     }
 
-    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, init_funs: F) -> TardisResult<&'static SpiBsInst>
+    async fn init_bs<'a, F, T>(&self, ctx: &'a TardisContext, mgr: bool, init_funs: F) -> TardisResult<&'static SpiBsInst>
     where
-        F: Fn(SpiBsCertResp, &'a TardisContext) -> T + Send + Sync,
+        F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
-        self.init(ctx, init_funs).await?;
+        self.init(ctx, mgr, init_funs).await?;
         self.bs(ctx).await
     }
 }

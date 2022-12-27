@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst, spi_initializer, spi_constants};
+use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
@@ -30,7 +30,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     Ok(())
 }
 
-pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext) -> TardisResult<SpiBsInst> {
+pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> TardisResult<SpiBsInst> {
     let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
     let client = TardisRelDBClient::init(
         &bs_cert.conn_uri,
