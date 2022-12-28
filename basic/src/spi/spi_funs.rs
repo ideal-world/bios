@@ -5,6 +5,7 @@ use std::future::Future;
 use std::ptr::replace;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
@@ -75,6 +76,11 @@ impl SpiBsInstExtractor for TardisFunsInst {
                 Some(caches) => {
                     if !caches.contains_key(&cache_key) {
                         let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, self, ctx).await?;
+                        info!(
+                            "[SPI] Init and cache backend service instance [{}]:{}",
+                            cache_key.clone(),
+                            TardisFuns::json.obj_to_string(&spi_bs)?
+                        );
                         let kind_code = spi_bs.kind_code.clone();
                         let mut spi_bs_inst = init_funs(spi_bs, ctx, mgr).await?;
                         spi_bs_inst.ext.insert(spi_constants::SPI_KIND_CODE_FLAG.to_string(), kind_code);
