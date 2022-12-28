@@ -511,7 +511,7 @@ impl IamAccountServ {
             ctx,
         )
         .await
-        .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
+        .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
     pub async fn find_simple_rel_roles(
