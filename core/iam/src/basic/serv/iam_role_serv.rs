@@ -168,6 +168,8 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         funs.cache().del(&format!("{}{}", funs.conf::<IamConfig>().cache_key_role_info_, id)).await?;
         let role_id = id.to_string();
         let ctx_clone = ctx.clone();
+        // todo 待优化 增加-缓存-角色与用户的关联关系 | 以便解决删除角色后，用户的token和context不会被删除的问题
+        // 现代码问题: 删除角色后，角色与用户的关联关系逻辑有冲突，导致用户的token和context不会被删除
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             || async move {
