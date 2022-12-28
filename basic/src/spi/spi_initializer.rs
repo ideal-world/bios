@@ -59,6 +59,27 @@ pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) 
     .await
 }
 
+pub mod common {
+    use std::collections::HashMap;
+
+    use tardis::{basic::dto::TardisContext, TardisFuns};
+
+    use crate::spi::spi_constants;
+
+    pub fn get_isolation_flag_from_context(ctx: &TardisContext) -> String {
+        // Fix case insensitivity
+        format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner))
+    }
+
+    pub fn set_isolation_flag_to_ext(isolation_flag: &str, ext: &mut HashMap<String, String>) {
+        ext.insert(spi_constants::SPI_ISOLATION_FLAG.to_string(), isolation_flag.to_string());
+    }
+
+    pub fn get_isolation_flag_from_ext(ext: &HashMap<String, String>) -> Option<String> {
+        ext.get(spi_constants::SPI_ISOLATION_FLAG).map(|s| s.to_string())
+    }
+}
+
 pub mod common_pg {
     use std::collections::HashMap;
 
@@ -68,14 +89,20 @@ pub mod common_pg {
             reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
             sea_orm::Value,
         },
-        TardisFuns,
     };
 
-    use crate::spi::spi_constants;
+    use super::common;
 
     pub fn get_schema_name_from_context(ctx: &TardisContext) -> String {
-        // Fix case insensitivity
-        format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner))
+        common::get_isolation_flag_from_context(ctx)
+    }
+
+    pub fn set_schema_name_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
+        common::set_isolation_flag_to_ext(schema_name, ext);
+    }
+
+    pub fn get_schema_name_from_ext(ext: &HashMap<String, String>) -> Option<String> {
+        common::get_isolation_flag_from_ext(ext)
     }
 
     pub async fn check_schema_exit(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<bool> {
@@ -101,14 +128,6 @@ pub mod common_pg {
             )
             .await?;
         Ok(table.is_some())
-    }
-
-    pub fn set_schema_name_to_ext(schema_name: &str, ext: &mut HashMap<String, String>) {
-        ext.insert(spi_constants::SPI_PG_SCHEMA_NAME_FLAG.to_string(), schema_name.to_string());
-    }
-
-    pub fn get_schema_name_from_ext(ext: &HashMap<String, String>) -> Option<String> {
-        ext.get(spi_constants::SPI_PG_SCHEMA_NAME_FLAG).map(|s| s.to_string())
     }
 
     pub async fn set_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {

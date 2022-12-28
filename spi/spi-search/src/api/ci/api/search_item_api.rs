@@ -11,7 +11,7 @@ use crate::serv::search_item_serv::SearchItemServ;
 
 pub struct SearchCiItemApi;
 
-/// Interface Console Searche API
+/// Interface Console Search API
 #[poem_openapi::OpenApi(prefix_path = "/ci/item", tag = "bios_basic::ApiTag::Interface")]
 impl SearchCiItemApi {
     /// Add Or Modify Item
