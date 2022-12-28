@@ -20,6 +20,7 @@ name = "bios_spi_reldb"
 path = "src/lib.rs"
 
 [features]
+default = ["spi-pg"]
 spi-pg = ["tardis/reldb-postgres"]
 spi-mysql = ["tardis/reldb-mysql"]
 

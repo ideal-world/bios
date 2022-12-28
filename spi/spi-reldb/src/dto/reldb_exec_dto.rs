@@ -41,7 +41,6 @@ pub struct ReldbDqlReq {
 //     pub pk_name: String,
 //     #[oai(validator(min_length = "2"))]
 //     pub records: JsonArray,
-//     pub tx_id: Option<String>,
 // }
 
 // #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -49,5 +48,4 @@ pub struct ReldbDqlReq {
 //     #[oai(validator(min_length = "2"))]
 //     pub table_name: String,
 //     pub pk_ids: Vec<String>,
-//     pub tx_id: Option<String>,
 // }
