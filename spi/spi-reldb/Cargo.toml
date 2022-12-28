@@ -26,6 +26,7 @@ spi-mysql = ["tardis/reldb-mysql"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+lazy_static = { version = "1" }
 tardis = { version = "0.1.0-alpha31", features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 

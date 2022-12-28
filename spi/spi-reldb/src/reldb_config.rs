@@ -6,10 +6,14 @@ use std::fmt::Debug;
 #[serde(default)]
 pub struct ReldbConfig {
     pub rbum: RbumConfig,
+    pub tx_clean_interval_sec: u8,
 }
 
 impl Default for ReldbConfig {
     fn default() -> Self {
-        ReldbConfig { rbum: Default::default() }
+        ReldbConfig {
+            rbum: Default::default(),
+            tx_clean_interval_sec: 5,
+        }
     }
 }
