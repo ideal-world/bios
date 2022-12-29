@@ -68,7 +68,7 @@ pub mod common {
 
     pub fn get_isolation_flag_from_context(ctx: &TardisContext) -> String {
         // Fix case insensitivity
-        format!("spi_{}", TardisFuns::crypto.hex.encode(&ctx.owner))
+        format!("spi{}", TardisFuns::crypto.hex.encode(&ctx.owner))
     }
 
     pub fn set_isolation_flag_to_ext(isolation_flag: &str, ext: &mut HashMap<String, String>) {
