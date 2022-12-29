@@ -46,7 +46,7 @@ impl IamCcAppApi {
                     is_left: false,
                     tag: Some(IamRelKind::IamAccountApp.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(account.id.clone()),
+                    rel_item_id: Some(ctx.0.owner.clone()),
                     ..Default::default()
                 }),
                 ..Default::default()
