@@ -26,19 +26,21 @@ impl IamCcCertApi {
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let supplier = supplier.0.unwrap_or_default();
+        let kind = kind.0.unwrap_or_else(|| "UserPwd".to_string());
+        let kind = if kind.is_empty() { "UserPwd".to_string() } else { kind };
+
         let true_tenant_id = if IamAccountServ::is_global_account(&account_id.0, &funs, &ctx.0).await? {
             None
         } else {
             tenant_id.0
         };
-        let kind = &kind.0.unwrap_or_else(|| "UserPwd".to_string());
-        let conf_id = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(kind, &supplier.clone(), true_tenant_id, &funs).await {
+        let conf_id = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), true_tenant_id, &funs).await {
             Some(conf_id)
         } else {
             None
         };
 
-        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, kind, vec![supplier], conf_id, &funs, &ctx.0).await?;
+        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &funs, &ctx.0).await?;
         TardisResp::ok(cert)
     }
 }
