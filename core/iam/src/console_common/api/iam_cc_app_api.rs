@@ -51,4 +51,20 @@ impl IamCcAppApi {
         .await?;
         TardisResp::ok(result)
     }
+
+    /// Find App Name and icon By Ids
+    ///
+    /// Return format: ["<id>,<name>,<icon>"]
+    #[oai(path = "/name", method = "get")]
+    async fn find_name_by_ids(
+        &self,
+        // App Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
+        let result = IamAppServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
 }
