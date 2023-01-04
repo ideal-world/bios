@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
 use crate::dto::object_dto::ObjectObjPresignKind;
-use crate::serv::object_obj_serv::ObjectObjServ;
+use crate::serv::object_obj_serv;
 
 pub struct ObjectCiObjApi;
 
@@ -24,7 +24,7 @@ impl ObjectCiObjApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
-        let url = ObjectObjServ::presign_obj_url(ObjectObjPresignKind::Upload, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Upload, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -39,7 +39,7 @@ impl ObjectCiObjApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
-        let url = ObjectObjServ::presign_obj_url(ObjectObjPresignKind::Delete, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Delete, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -54,7 +54,7 @@ impl ObjectCiObjApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
-        let url = ObjectObjServ::presign_obj_url(ObjectObjPresignKind::View, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::View, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -71,7 +71,7 @@ impl ObjectCiObjApi {
     //     request: &Request,
     // ) -> TardisApiResult<String> {
     //     let mut funs = request.tardis_fun_inst();
-    //     let url = ObjectObjServ::presign_obj_url(
+    //     let url = object_obj_serv::presign_obj_url(
     //         ObjectObjPresignKind::View,
     //         object_path.0,
     //         max_width.0,

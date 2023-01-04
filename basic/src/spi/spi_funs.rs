@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::ptr::replace;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::TardisFuns;
@@ -57,6 +58,8 @@ pub trait SpiBsInstExtractor {
     where
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send;
+
+    fn bs_not_implemented(&self, bs_code: &str) -> TardisError;
 }
 
 #[async_trait]
@@ -110,4 +113,15 @@ impl SpiBsInstExtractor for TardisFunsInst {
         self.init(ctx, mgr, init_funs).await?;
         self.bs(ctx).await
     }
+
+    fn bs_not_implemented(&self, bs_code: &str) -> TardisError {
+        bs_not_implemented(bs_code)
+    }
+}
+
+pub fn bs_not_implemented(bs_code: &str) -> TardisError {
+    TardisError::not_implemented(
+        &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_code),
+        "406-rbum-*-enum-init-error",
+    )
 }

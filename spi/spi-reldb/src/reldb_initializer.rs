@@ -1,8 +1,14 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::{api::spi_ci_bs_api, dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
+use bios_basic::spi::{
+    api::spi_ci_bs_api,
+    dto::spi_bs_dto::SpiBsCertResp,
+    spi_constants,
+    spi_funs::{self, SpiBsInst},
+    spi_initializer,
+};
 use tardis::{
-    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
+    basic::{dto::TardisContext, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
     web::web_server::TardisWebServer,
     TardisFuns, TardisFunsInst,
@@ -12,7 +18,7 @@ use crate::{
     api::ci::api::reldb_exec_api,
     reldb_config::ReldbConfig,
     reldb_constants::DOMAIN_CODE,
-    serv::{self, reldb_exec_serv::ReldbExecServ},
+    serv::{self, reldb_exec_serv},
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -24,7 +30,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_db(&funs, &ctx).await?;
     funs.commit().await?;
     init_api(web_server).await?;
-    ReldbExecServ::clean(clean_interval_sec).await;
+    reldb_exec_serv::clean(clean_interval_sec).await;
     Ok(())
 }
 
@@ -54,10 +60,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> T
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init(&bs_cert, &client, ctx).await?,
         #[cfg(feature = "spi-mysql")]
         "spi-mysql" => serv::mysql::reldb_mysql_initializer::init(&bs_cert, &client, ctx).await?,
-        _ => Err(TardisError::not_implemented(
-            &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_cert.kind_code),
-            "406-rbum-*-enum-init-error",
-        ))?,
+        _ => Err(bs_cert.bs_not_implemented())?,
     };
     Ok(SpiBsInst { client: Box::new(client), ext })
 }
@@ -69,9 +72,6 @@ pub async fn inst_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, S
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init_conn(conn, &bs_inst.1).await,
         #[cfg(feature = "spi-mysql")]
         "spi-mysql" => serv::mysql::reldb_mysql_initializer::init_conn(conn, &bs_inst.1).await,
-        _ => Err(TardisError::not_implemented(
-            &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_inst.2),
-            "406-rbum-*-enum-init-error",
-        )),
+        kind_code => Err(spi_funs::bs_not_implemented(kind_code))?,
     }
 }
