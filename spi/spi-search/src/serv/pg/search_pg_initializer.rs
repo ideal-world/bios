@@ -37,11 +37,11 @@ pub async fn init_table_and_conn(
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<TardisRelDBlConnection> {
-    let conn = bs_inst.0.conn();
+    let mut conn = bs_inst.0.conn();
     let mut schema_name = "".to_string();
     if let Some(_schema_name) = spi_initializer::common_pg::get_schema_name_from_ext(bs_inst.1) {
         schema_name = _schema_name;
-        spi_initializer::common_pg::set_schema_to_session(&schema_name, &conn).await?;
+        spi_initializer::common_pg::set_schema_to_session(&schema_name, &mut conn).await?;
     }
     if spi_initializer::common_pg::check_table_exit(&format!("starsys_search_{}", tag), &conn, ctx).await? {
         return Ok(conn);
@@ -69,61 +69,67 @@ pub async fn init_table_and_conn(
     )
     .await?;
     conn.execute_one(
-        &format!("CREATE INDEX idx_{}_key ON {}.starsys_search_{} USING btree(key)", schema_name, schema_name, tag),
-        vec![],
-    )
-    .await?;
-    conn.execute_one(
-        &format!("CREATE INDEX idx_{}_title_tsv ON {}.starsys_search_{} USING gin(title_tsv)", schema_name, schema_name, tag),
+        &format!("CREATE INDEX idx_{}_{}_key ON {}.starsys_search_{} USING btree(key)", schema_name, tag, schema_name, tag),
         vec![],
     )
     .await?;
     conn.execute_one(
         &format!(
-            "CREATE INDEX idx_{}_content_tsv ON {}.starsys_search_{} USING gin(content_tsv)",
-            schema_name, schema_name, tag
-        ),
-        vec![],
-    )
-    .await?;
-    conn.execute_one(
-        &format!("CREATE INDEX idx_{}_owner ON {}.starsys_search_{} USING btree(owner)", schema_name, schema_name, tag),
-        vec![],
-    )
-    .await?;
-    conn.execute_one(
-        &format!(
-            "CREATE INDEX idx_{}_own_paths ON {}.starsys_search_{} USING btree(own_paths)",
-            schema_name, schema_name, tag
+            "CREATE INDEX idx_{}_{}_title_tsv ON {}.starsys_search_{} USING gin(title_tsv)",
+            schema_name, tag, schema_name, tag
         ),
         vec![],
     )
     .await?;
     conn.execute_one(
         &format!(
-            "CREATE INDEX idx_{}_create_time ON {}.starsys_search_{} USING btree(create_time)",
-            schema_name, schema_name, tag
+            "CREATE INDEX idx_{}_{}_content_tsv ON {}.starsys_search_{} USING gin(content_tsv)",
+            schema_name, tag, schema_name, tag
         ),
         vec![],
     )
     .await?;
     conn.execute_one(
         &format!(
-            "CREATE INDEX idx_{}_update_time ON {}.starsys_search_{} USING btree(update_time)",
-            schema_name, schema_name, tag
+            "CREATE INDEX idx_{}_{}_owner ON {}.starsys_search_{} USING btree(owner)",
+            schema_name, tag, schema_name, tag
         ),
         vec![],
     )
     .await?;
     conn.execute_one(
-        &format!("CREATE INDEX idx_{}_ext ON {}.starsys_search_{} USING gin(ext)", schema_name, schema_name, tag),
+        &format!(
+            "CREATE INDEX idx_{}_{}_own_paths ON {}.starsys_search_{} USING btree(own_paths)",
+            schema_name, tag, schema_name, tag
+        ),
         vec![],
     )
     .await?;
     conn.execute_one(
         &format!(
-            "CREATE INDEX idx_{}_visit_keys ON {}.starsys_search_{} USING btree(visit_keys)",
-            schema_name, schema_name, tag
+            "CREATE INDEX idx_{}_{}_create_time ON {}.starsys_search_{} USING btree(create_time)",
+            schema_name, tag, schema_name, tag
+        ),
+        vec![],
+    )
+    .await?;
+    conn.execute_one(
+        &format!(
+            "CREATE INDEX idx_{}_{}_update_time ON {}.starsys_search_{} USING btree(update_time)",
+            schema_name, tag, schema_name, tag
+        ),
+        vec![],
+    )
+    .await?;
+    conn.execute_one(
+        &format!("CREATE INDEX idx_{}_{}_ext ON {}.starsys_search_{} USING gin(ext)", schema_name, tag, schema_name, tag),
+        vec![],
+    )
+    .await?;
+    conn.execute_one(
+        &format!(
+            "CREATE INDEX idx_{}_{}_visit_keys ON {}.starsys_search_{} USING btree(visit_keys)",
+            schema_name, tag, schema_name, tag
         ),
         vec![],
     )

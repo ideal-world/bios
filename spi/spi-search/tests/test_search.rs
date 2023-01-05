@@ -64,7 +64,7 @@ async fn init_data() -> TardisResult<()> {
                 conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
                 ak: TrimString("".to_string()),
                 sk: TrimString("".to_string()),
-                ext: "{\"max_connections\":20,\"min_connections\":1}".to_string(),
+                ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
                 private: false,
                 disabled: None,
             },

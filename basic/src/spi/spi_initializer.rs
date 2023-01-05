@@ -130,7 +130,8 @@ pub mod common_pg {
         Ok(table.is_some())
     }
 
-    pub async fn set_schema_to_session(schema_name: &str, conn: &TardisRelDBlConnection) -> TardisResult<()> {
+    pub async fn set_schema_to_session(schema_name: &str, conn: &mut TardisRelDBlConnection) -> TardisResult<()> {
+        conn.begin().await?;
         conn.execute_one(&format!("SET SCHEMA '{}'", schema_name), vec![]).await?;
         Ok(())
     }
