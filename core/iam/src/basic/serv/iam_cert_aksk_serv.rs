@@ -1,6 +1,6 @@
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertAddReq;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -26,7 +26,7 @@ impl IamCertAkSkServ {
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertKernelKind::AkSk.to_string()),
                 supplier: None,
-                name: TrimString(IamCertKernelKind::AkSk.to_string()),
+                name: add_req.name.clone(),
                 note: None,
                 ak_note: None,
                 ak_rule: None,
@@ -40,7 +40,7 @@ impl IamCertAkSkServ {
                 is_basic: Some(false),
                 is_ak_repeatable: None,
                 rest_by_kinds: None,
-                expire_sec: None,
+                expire_sec: add_req.expire_sec.clone(),
                 sk_lock_cycle_sec: None,
                 sk_lock_err_times: None,
                 sk_lock_duration_sec: None,
@@ -62,7 +62,7 @@ impl IamCertAkSkServ {
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
-                name: None,
+                name: Some(modify_req.name.clone()),
                 note: None,
                 ak_note: None,
                 ak_rule: None,
@@ -74,7 +74,7 @@ impl IamCertAkSkServ {
                 repeatable: None,
                 is_basic: None,
                 rest_by_kinds: None,
-                expire_sec: None,
+                expire_sec: modify_req.expire_sec.clone(),
                 sk_lock_cycle_sec: None,
                 sk_lock_err_times: None,
                 sk_lock_duration_sec: None,
@@ -89,6 +89,19 @@ impl IamCertAkSkServ {
     }
 
     pub async fn add_cert(add_req: &IamCertAkSkAddReq, ak: &str, sk: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let cert_conf = RbumCertConfServ::peek_rbum(
+            rel_rbum_cert_conf_id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let new_ctx = TardisContext {
             owner: RBUM_SYSTEM_OWNER.to_string(),
             own_paths: if add_req.app_id.is_some() {
@@ -124,7 +137,7 @@ impl IamCertAkSkServ {
             &new_ctx,
         )
         .await?;
-        IamIdentCacheServ::add_aksk(ak, sk, rel_rbum_id, funs).await?;
+        IamIdentCacheServ::add_aksk(ak, sk, rel_rbum_id, cert_conf.expire_sec, funs).await?;
         Ok(id)
     }
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

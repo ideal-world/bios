@@ -19,13 +19,17 @@ local schema = {
         redis_database = { type = "integer", default = 0 },
 
         head_key_token = { type = "string", default = "Bios-Token" },
+        head_key_ak={ type="string", default="Bios-Ak" },
+        head_key_sk={ type="string", default="Bios-Sk" },
         head_key_app = { type = "string", default = "Bios-App" },
         head_key_protocol = { type = "string", default = "Bios-Proto" },
         head_key_context = { type = "string", default = "Tardis-Context" },
 
         cache_key_token_info = { type = "string", default = "iam:cache:token:info:" },
+        cache_key_aksk_info = { type = "string", default="iam:cache:aksk:info:"},
         cache_key_account_info = { type = "string", default = "iam:cache:account:info:" },
         cache_key_token_local_expire_sec = { type = "integer", default = 0 },
+        cache_key_aksk_local_expire_sec = { type = "integer", default = 0 },
 
         cache_key_res_info = { type = "string", default = "iam:res:info" },
         cache_key_res_changed_info = { type = "string", default = "iam:res:changed:info:" },
