@@ -36,7 +36,6 @@ impl IamCcAppApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
                     enabled: Some(true),
                     ..Default::default()
                 },
@@ -65,7 +64,21 @@ impl IamCcAppApi {
     ) -> TardisApiResult<Vec<String>> {
         let funs = iam_constants::get_tardis_inst();
         let ids = ids.0.split(',').map(|s| s.to_string()).collect();
-        let result = IamAppServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
+        let result = IamAppServ::find_name_by_ids(
+            IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(ids),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         TardisResp::ok(result)
     }
 }
