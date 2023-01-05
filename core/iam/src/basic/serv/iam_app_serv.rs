@@ -252,23 +252,7 @@ impl IamAppServ {
         }))
     }
 
-    pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
-        IamAppServ::find_items(
-            &IamAppFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(ids),
-                    with_sub_own_paths: true,
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await
-        .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
+    pub async fn find_name_by_ids(filter: IamAppFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        IamAppServ::find_items(&filter, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 }
