@@ -36,6 +36,7 @@ impl IamCcAppApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     enabled: Some(true),
                     ..Default::default()
                 },
