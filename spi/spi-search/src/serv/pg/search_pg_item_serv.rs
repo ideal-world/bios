@@ -68,11 +68,11 @@ pub async fn add_or_modify(add_or_modify_req: &mut SearchItemAddOrModifyReq, fun
             r#"INSERT INTO starsys_search_{} 
     (key, title, title_tsv, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-	($1, $2, to_tsvector('public.chinese_zh', $3), to_tsvector('public.chinese_zh', $4), $5, $6, $7, $8, $9, {})
+    ($1, $2, to_tsvector('public.chinese_zh', $3), to_tsvector('public.chinese_zh', $4), $5, $6, $7, $8, $9, {})
 ON CONFLICT (key)
 DO UPDATE SET
-	{}
-	"#,
+    {}
+"#,
             add_or_modify_req.tag,
             if add_or_modify_req.visit_keys.is_some() { "$10" } else { "null" },
             update_opt_fragments.join(", ")
@@ -80,6 +80,7 @@ DO UPDATE SET
         params,
     )
     .await?;
+    conn.commit().await?;
     Ok(())
 }
 
@@ -87,6 +88,7 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conn = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
     conn.execute_one(&format!("DELETE FROM starsys_search_{} WHERE key = $1", tag), vec![Value::from(key)]).await?;
+    conn.commit().await?;
     Ok(())
 }
 
@@ -203,6 +205,7 @@ WHERE
             sql_vals,
         )
         .await?;
+    conn.commit().await?;
 
     let mut total_size: i64 = 0;
 

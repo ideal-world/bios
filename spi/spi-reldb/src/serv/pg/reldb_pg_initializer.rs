@@ -17,9 +17,9 @@ pub async fn init(bs_cert: &SpiBsCertResp, client: &TardisRelDBClient, ctx: &Tar
     Ok(ext)
 }
 
-pub async fn init_conn(conn: TardisRelDBlConnection, ext: &HashMap<String, String>) -> TardisResult<TardisRelDBlConnection> {
+pub async fn init_conn(mut conn: TardisRelDBlConnection, ext: &HashMap<String, String>) -> TardisResult<TardisRelDBlConnection> {
     if let Some(schema_name) = spi_initializer::common_pg::get_schema_name_from_ext(ext) {
-        spi_initializer::common_pg::set_schema_to_session(&schema_name, &conn).await?;
+        spi_initializer::common_pg::set_schema_to_session(&schema_name, &mut conn).await?;
     }
     Ok(conn)
 }

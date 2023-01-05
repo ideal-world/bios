@@ -47,7 +47,9 @@ pub async fn tx_begin(auto_commit: bool, exp_sec: Option<u8>, funs: &TardisFunsI
     let exp_ts_at = Utc::now().timestamp_millis() + (exp_sec.unwrap_or(5)) as i64 * 1000;
     let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
     let mut conn = reldb_initializer::inst_conn(bs_inst).await?;
-    conn.begin().await?;
+    if !conn.has_tx() {
+        conn.begin().await?;
+    }
     let mut tx_container = TX_CONTAINER.write().await;
     tx_container.insert(tx_id.clone(), (conn, exp_ts_at, auto_commit));
     Ok(ReldbTxResp { tx_id, exp_ts_at })
@@ -76,6 +78,7 @@ pub async fn ddl(ddl_req: &mut ReldbDdlReq, funs: &TardisFunsInst, ctx: &TardisC
     let conn = reldb_initializer::inst_conn(bs_inst).await?;
     let params = parse_params(&ddl_req.params);
     conn.execute_one(&ddl_req.sql, params).await?;
+    conn.commit().await?;
     Ok(())
 }
 
@@ -90,7 +93,9 @@ pub async fn dml(dml_req: &mut ReldbDmlReq, tx_id: Option<String>, funs: &Tardis
         }
     } else {
         let conn = reldb_initializer::inst_conn(bs_inst).await?;
-        conn.execute_one(&dml_req.sql, params).await
+        let resp = conn.execute_one(&dml_req.sql, params).await;
+        conn.commit().await?;
+        resp
     };
     match resp {
         Ok(resp) => Ok(ReldbDmlResp {
@@ -117,7 +122,9 @@ pub async fn dql(dql_req: &mut ReldbDqlReq, tx_id: Option<String>, funs: &Tardis
         }
     } else {
         let conn = reldb_initializer::inst_conn(bs_inst).await?;
-        conn.query_all(&dql_req.sql, params).await
+        let resp = conn.query_all(&dql_req.sql, params).await;
+        conn.commit().await?;
+        resp
     }?;
     let mut result: Vec<serde_json::Value> = Vec::new();
     for row in resp {
