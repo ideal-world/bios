@@ -5,14 +5,14 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::log_proc_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
 use crate::serv::log_item_serv;
 
-pub struct LogCiProcApi;
+pub struct LogCiItemApi;
 
 /// Interface Console Log API
 #[poem_openapi::OpenApi(prefix_path = "/ci/item", tag = "bios_basic::ApiTag::Interface")]
-impl LogCiProcApi {
+impl LogCiItemApi {
     /// Add Item
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<LogItemAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {

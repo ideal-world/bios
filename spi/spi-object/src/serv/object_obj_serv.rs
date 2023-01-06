@@ -10,7 +10,7 @@ use super::s3;
 
 pub async fn presign_obj_url(
     presign_kind: ObjectObjPresignKind,
-    object_path: String,
+    object_path: &str,
     max_width: Option<String>,
     max_height: Option<String>,
     exp_secs: u32,

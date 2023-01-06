@@ -1,1 +1,1 @@
-pub mod log_proc_dto;
+pub mod log_item_dto;

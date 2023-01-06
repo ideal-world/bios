@@ -6,16 +6,16 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::log_proc_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
 
 use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let mut params = Vec::new();
-    params.push(Value::from(add_req.key.as_ref().unwrap_or(&"".to_string()).as_str()));
+    params.push(Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()));
     params.push(Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()));
     params.push(Value::from(add_req.content.as_str()));
-    params.push(Value::from(add_req.rel_key.as_ref().unwrap_or(&"".to_string()).as_str()));
+    params.push(Value::from(add_req.rel_key.as_ref().unwrap_or(&"".into()).to_string()));
     if let Some(ts) = add_req.ts {
         params.push(Value::from(ts));
     }
@@ -48,7 +48,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         let place_holder = keys
             .iter()
             .map(|key| {
-                sql_vals.push(Value::from(key.as_str()));
+                sql_vals.push(Value::from(key.to_string()));
                 format!("${}", sql_vals.len())
             })
             .collect::<Vec<String>>()
@@ -70,7 +70,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         let place_holder = rel_keys
             .iter()
             .map(|rel_key| {
-                sql_vals.push(Value::from(rel_key.as_str()));
+                sql_vals.push(Value::from(rel_key.to_string()));
                 format!("${}", sql_vals.len())
             })
             .collect::<Vec<String>>()

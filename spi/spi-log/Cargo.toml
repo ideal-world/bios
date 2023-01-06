@@ -16,7 +16,7 @@ codegen-units = 1
 opt-level = "z"
 
 [lib]
-name = "bios_spi_logh"
+name = "bios_spi_log"
 path = "src/lib.rs"
 
 [features]
