@@ -14,9 +14,9 @@ pub async fn init_table_and_conn(
 ) -> TardisResult<TardisRelDBlConnection> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
-        tag,
         ctx,
         mgr,
+        Some(tag),
         "log",
         r#"ts timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     key character varying NOT NULL,
@@ -24,6 +24,7 @@ pub async fn init_table_and_conn(
     content text NOT NULL,
     rel_key character varying NOT NULL"#,
         vec![("ts", "btree"), ("key", "btree"), ("op", "btree"), ("rel_key", "btree")],
+        None,
     )
     .await
 }
