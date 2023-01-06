@@ -5,7 +5,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::api::log_item_api, log_constants::DOMAIN_CODE, serv};
+use crate::{api::ci::api::log_item_api, log_constants::DOMAIN_CODE};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
@@ -29,7 +29,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
 pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
     match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
-        "spi-pg" => serv::pg::log_pg_initializer::init(&bs_cert, ctx, mgr).await,
+        "spi-pg" => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }
 }
