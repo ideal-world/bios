@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
-    web::poem_openapi,
+    web::poem_openapi, basic::field::TrimString,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -11,11 +11,11 @@ pub struct LogItemAddReq {
     #[oai(validator(min_length = "2"))]
     pub content: String,
     #[oai(validator(min_length = "2"))]
-    pub key: Option<String>,
+    pub key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
     pub op: Option<String>,
     #[oai(validator(min_length = "2"))]
-    pub rel_key: Option<String>,
+    pub rel_key: Option<TrimString>,
     pub ts: Option<DateTime<Utc>>,
 }
 
@@ -23,9 +23,9 @@ pub struct LogItemAddReq {
 pub struct LogItemFindReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
-    pub keys: Option<Vec<String>>,
+    pub keys: Option<Vec<TrimString>>,
     pub ops: Option<Vec<String>>,
-    pub rel_keys: Option<Vec<String>>,
+    pub rel_keys: Option<Vec<TrimString>>,
     pub ts_start: Option<DateTime<Utc>>,
     pub ts_end: Option<DateTime<Utc>>,
     pub page_number: u32,

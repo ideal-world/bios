@@ -13,7 +13,7 @@ use super::search_pg_initializer;
 
 pub async fn add_or_modify(add_or_modify_req: &mut SearchItemAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let mut params = Vec::new();
-    params.push(Value::from(add_or_modify_req.key.as_str()));
+    params.push(Value::from(add_or_modify_req.key.to_string()));
     params.push(Value::from(add_or_modify_req.title.as_str()));
     params.push(Value::from(add_or_modify_req.title.as_str()));
     params.push(Value::from(add_or_modify_req.content.as_str()));

@@ -5,7 +5,7 @@ use tardis::basic::result::TardisResult;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
-use crate::dto::log_proc_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
+use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
 use crate::log_initializer;
 
 use super::pg;

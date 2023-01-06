@@ -24,7 +24,7 @@ impl ObjectCiObjApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
-        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Upload, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Upload, object_path.0.trim(), None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -39,7 +39,7 @@ impl ObjectCiObjApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
-        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Delete, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Delete, object_path.0.trim(), None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -54,7 +54,7 @@ impl ObjectCiObjApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
-        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::View, object_path.0, None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::View, object_path.0.trim(), None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -73,7 +73,7 @@ impl ObjectCiObjApi {
     //     let mut funs = request.tardis_fun_inst();
     //     let url = object_obj_serv::presign_obj_url(
     //         ObjectObjPresignKind::View,
-    //         object_path.0,
+    //         object_path.0.trim(),
     //         max_width.0,
     //         max_height.0,
     //         exp_secs.0,
