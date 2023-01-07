@@ -32,7 +32,7 @@ mod test_scope;
 #[tokio::test]
 async fn test_rbum() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker).await?;
+    let _x = init_rbum_test_container::init(&docker, None).await?;
     let ctx = init_test_data().await?;
     test_scope::test().await?;
     test_rbum_domain::test(&ctx).await?;
