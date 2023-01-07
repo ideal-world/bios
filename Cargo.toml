@@ -4,5 +4,5 @@ members = [
     "basic",
     "core/iam",
     "spi/*",
-    "services/bios-all",
+    "services/*",
 ]
