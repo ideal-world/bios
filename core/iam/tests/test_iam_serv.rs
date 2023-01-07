@@ -1,12 +1,11 @@
 use std::time::Duration;
 
+use bios_basic::rbum::rbum_initializer::get_first_account_context;
 use bios_basic::test::init_rbum_test_container;
+use bios_iam::iam_constants;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
-
-use bios_basic::rbum::rbum_initializer::get_first_account_context;
-use bios_iam::iam_constants;
 
 mod test_basic;
 mod test_ca_app;
@@ -33,6 +32,7 @@ async fn test_iam_serv() -> TardisResult<()> {
     let _y = test_basic::init(&docker).await?;
 
     let funs = iam_constants::get_tardis_inst();
+    funs.mq().subscribe("rbum::entity_deleted", |(_, _)| async { Ok(()) }).await?;
     let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
 
     sleep(Duration::from_secs(1)).await;

@@ -1,4 +1,5 @@
 [cs]
+
 [csm]
 [csm.iam]
 init_menu_json_path="tests/config/init-menu-default.json"
