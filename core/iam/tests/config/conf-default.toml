@@ -1,6 +1,8 @@
 [cs]
-[cs.iam]
-[cs.iam.rbum]
+[csm]
+[csm.iam]
+init_menu_json_path="tests/config/init-menu-default.json"
+[csm.iam.rbum]
 set_cate_sys_code_node_len = 4
 
 [fw.web_server]
