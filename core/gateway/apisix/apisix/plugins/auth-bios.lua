@@ -2,6 +2,7 @@ local core = require("apisix.core")
 local m_redis = require("apisix.plugins.auth-bios.redis")
 local m_init = require("apisix.plugins.auth-bios.init")
 local m_ident = require("apisix.plugins.auth-bios.ident")
+local m_aksk = require("apisix.plugins.auth-bios.aksk")
 local m_auth = require("apisix.plugins.auth-bios.auth")
 local json = require("cjson")
 local ngx = ngx
@@ -98,6 +99,11 @@ function _M.rewrite(conf, ctx)
     if ident_code ~= 200 then
         cors(conf)
         return ident_code, { code = ident_code .. '-gateway-cert-error', message = ident_message }
+    end
+    local aksk_code,aksk_message = m_aksk.aksk(conf,ctx)
+    if aksk_code ~= 200 then
+        cors(conf)
+        return aksk_code, { code = ident_code .. '-gateway-cert-error', message = aksk_message }
     end
     local auth_code, auth_message = m_auth.auth(ctx.ident_info)
     if auth_code ~= 200 then
