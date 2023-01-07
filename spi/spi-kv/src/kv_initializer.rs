@@ -5,7 +5,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::api::kv_item_api, kv_constants::DOMAIN_CODE};
+use crate::{api::ci::api::kv_ci_item_api, kv_constants::DOMAIN_CODE};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
@@ -22,7 +22,7 @@ async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, kv_item_api::KvCiItemApi)).await;
+    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, kv_ci_item_api::KvCiItemApi)).await;
     Ok(())
 }
 
