@@ -29,7 +29,7 @@ mod test_key_cache;
 #[tokio::test]
 async fn test_iam_serv() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker).await?;
+    let _x = init_rbum_test_container::init(&docker, None).await?;
     let _y = test_basic::init(&docker).await?;
 
     let funs = iam_constants::get_tardis_inst();

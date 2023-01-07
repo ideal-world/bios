@@ -19,7 +19,7 @@ mod test_cache_proc;
 #[tokio::test]
 async fn test_cache() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker).await?;
+    let _x = init_rbum_test_container::init(&docker, None).await?;
 
     init_data().await?;
 
