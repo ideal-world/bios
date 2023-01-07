@@ -1,5 +1,5 @@
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_logh::dto::log_proc_dto::LogItemFindResp;
+use bios_spi_log::dto::log_item_dto::LogItemFindResp;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;

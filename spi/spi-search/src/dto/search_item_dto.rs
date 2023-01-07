@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
     serde_json::Value,
-    web::poem_openapi,
+    web::poem_openapi, basic::field::TrimString,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -11,7 +11,7 @@ pub struct SearchItemAddOrModifyReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
-    pub key: String,
+    pub key: TrimString,
     #[oai(validator(min_length = "2"))]
     pub title: String,
     #[oai(validator(min_length = "2"))]
@@ -120,7 +120,7 @@ pub struct SearchItemQueryReq {
     #[oai(validator(min_length = "2"))]
     pub q: Option<String>,
     #[oai(validator(min_length = "2"))]
-    pub key: Option<String>,
+    pub key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     #[oai(validator(min_length = "2"))]

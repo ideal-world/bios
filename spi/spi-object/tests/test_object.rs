@@ -22,7 +22,7 @@ async fn test_object() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let minio = TardisTestContainer::minio_custom(&docker);
     let minio_url = format!("http://127.0.0.1:{}", minio.get_host_port_ipv4(9000));
-    let _x = init_rbum_test_container::init(&docker).await?;
+    let _x = init_rbum_test_container::init(&docker, None).await?;
 
     init_data(&minio_url).await?;
 
