@@ -3,6 +3,7 @@
 members = [
     "basic",
     "core/iam",
+    "core/auth",
     "spi/*",
     "services/*",
 ]
