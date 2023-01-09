@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use tardis::{basic::error::TardisError, serde_json::json, web::poem_openapi, TardisFuns};
+use tardis::{
+    basic::{dto::TardisContext, error::TardisError},
+    web::poem_openapi,
+    TardisFuns,
+};
 
 use crate::auth_config::AuthConfig;
 
@@ -42,14 +46,15 @@ impl AuthResp {
         headers.insert(
             config.head_key_context.to_string(),
             if let Some(ctx) = ctx {
-                let json_ctx = json!({
-                    "own_paths":ctx.own_paths,
-                "owner" :ctx.iam_account_id,
-                "ak":ctx.ak,
-                "roles" : ctx.iam_roles.as_deref().unwrap_or_default(),
-                "groups" :ctx.iam_groups.as_deref().unwrap_or_default(),
-                });
-                TardisFuns::crypto.base64.encode(&json_ctx.to_string())
+                let ctx = TardisContext {
+                    own_paths: ctx.own_paths.as_deref().unwrap_or_default().to_string(),
+                    ak: ctx.ak.as_deref().unwrap_or_default().to_string(),
+                    owner: ctx.iam_account_id.as_deref().unwrap_or_default().to_string(),
+                    roles: if let Some(roles) = &ctx.iam_roles { roles.clone() } else { vec![] },
+                    groups: if let Some(groups) = &ctx.iam_groups { groups.clone() } else { vec![] },
+                    ext: Default::default(),
+                };
+                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap())
             } else {
                 "".to_string()
             },

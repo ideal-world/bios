@@ -115,7 +115,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     }
 }
 
-fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
+pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
     let mathced_res = auth_res_serv::match_res(&ctx.rbum_action, &ctx.rbum_uri)?;
     if mathced_res.is_empty() {
         // No authentication required
