@@ -16,7 +16,7 @@ lazy_static! {
     static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
 }
 
-pub(crate) fn get_res_json() -> TardisResult<Value> {
+pub fn get_res_json() -> TardisResult<Value> {
     if let Some(res) = RES_CONTAINER.read().unwrap().as_ref() {
         Ok(TardisFuns::json.obj_to_json(res)?)
     } else {
@@ -44,8 +44,11 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     } else {
         uri_items.push("".to_string());
     }
-    let paths = res_uri.path().strip_prefix('/').unwrap().split('/').map(|i| i.to_lowercase()).collect::<Vec<String>>();
-    uri_items.extend(paths);
+    let path = res_uri.path();
+    if !path.is_empty() && path != "/" {
+        let paths = if let Some(path) = res_uri.path().strip_prefix('/') { path } else { res_uri.path() }.split('/').map(|i| i.to_lowercase()).collect::<Vec<String>>();
+        uri_items.extend(paths);
+    }
     if let Some(query) = res_uri.query() {
         uri_items.push("?".to_string());
         uri_items.push(sort_query(query));
@@ -54,7 +57,7 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     Ok(uri_items)
 }
 
-pub(crate) fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) -> TardisResult<()> {
+pub fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
     info!("[Auth]Add resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
@@ -86,7 +89,7 @@ fn remove_empty_node(res_container_node: &mut ResContainerNode, mut res_items: V
     }
 }
 
-pub(crate) fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
+pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
     info!("[Auth]Remove resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
@@ -104,6 +107,7 @@ pub(crate) fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
 }
 
 fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &Vec<String>, multi_wildcard: bool, matched_uris: &mut Vec<ResContainerLeafInfo>) {
+    // TODO "res_items[0] == "?"" approach will ignore the query, there needs to be a better way
     if res_container.has_child("$") && (res_items.len() == 0 || multi_wildcard || res_items[0] == "?") {
         // matched
         if let Some(leaf_node) = res_container.get_child("$").get_child_opt(res_action) {
@@ -134,10 +138,11 @@ fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &
     }
 }
 
-pub(crate) fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
+pub fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
     let res_action = res_action.to_lowercase();
-    let res_items = parse_uri(res_uri)?;
+    let mut res_items = parse_uri(res_uri)?;
     // remove $ node;
+    res_items.remove(res_items.len() - 1);
     let mut matched_uris = vec![];
     let res_container = RES_CONTAINER.read()?;
     do_match_res(&res_action, &res_container.as_ref().unwrap(), &res_items, false, &mut matched_uris);

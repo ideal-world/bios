@@ -6,30 +6,30 @@ use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod init_cache_container;
+mod test_auth_init;
+mod test_auth_match;
+mod test_auth_req;
+mod test_auth_res;
 
 #[tokio::test]
 async fn test_auth() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_auth=trace,sqlx::query=off");
+
+    test_auth_res::test_res()?;
+    test_auth_match::test_match()?;
+
     let docker = testcontainers::clients::Cli::default();
     let _x = init_cache_container::init(&docker).await?;
 
-    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
+    test_auth_init::test_init().await?;
 
-    init_data().await?;
-    Ok(())
-}
+    // let web_server = TardisFuns::web_server();
+    // auth_initializer::init_api(web_server).await?;
+    // tokio::spawn(async move {
+    //     web_server.start().await.unwrap();
+    // });
+    // sleep(Duration::from_millis(500)).await;
 
-async fn init_data() -> TardisResult<()> {
-    let web_server = TardisFuns::web_server();
-    // Initialize Auth
-    auth_initializer::init(web_server).await.unwrap();
-
-    tokio::spawn(async move {
-        web_server.start().await.unwrap();
-    });
-
-    sleep(Duration::from_millis(500)).await;
-
-    // TODO
-
+    // test_auth_req::test_req().await?;
     Ok(())
 }

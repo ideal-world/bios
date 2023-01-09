@@ -29,10 +29,7 @@ tardis = { version = "0.1.0-alpha32", features = [
     "web-server",
 ] }
 # TODO remove
-redis = { version = "0.22", features = [
-    "tokio-comp",
-    "tokio-native-tls-comp",
-]}
+redis = { version = "0.22", features = ["tokio-comp", "tokio-native-tls-comp"] }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha32", features = ["test"] }
+tardis = { version = "0.1.0-alpha32", features = ["test", "web-client"] }

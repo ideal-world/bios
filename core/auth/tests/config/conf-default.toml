@@ -1,4 +1,5 @@
 [cs]
+cache_key_res_changed_timer_sec = 1
 
 [fw.web_server]
 port = 8080
