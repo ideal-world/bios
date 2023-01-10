@@ -334,8 +334,8 @@ impl IamResCacheServ {
     async fn add_change_trigger(uri: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         funs.cache()
             .set_ex(
-                &format!("{}{}", funs.conf::<IamConfig>().cache_key_res_changed_info_, Utc::now().timestamp_nanos()),
-                uri,
+                &format!("{}{}", funs.conf::<IamConfig>().cache_key_res_changed_info_, uri),
+                "",
                 funs.conf::<IamConfig>().cache_key_res_changed_expire_sec,
             )
             .await?;
