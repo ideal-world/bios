@@ -23,7 +23,7 @@ path = "src/lib.rs"
 serde = { version = "1", features = ["derive"] }
 itertools = { version = "0" }
 lazy_static = { version = "1" }
-tardis = { version = "0.1.0-alpha32", features = [
+tardis = { version = "0.1.0-alpha33", features = [
     "cache",
     "crypto",
     "web-server",
@@ -32,4 +32,4 @@ tardis = { version = "0.1.0-alpha32", features = [
 redis = { version = "0.22", features = ["tokio-comp", "tokio-native-tls-comp"] }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha32", features = ["test", "web-client"] }
+tardis = { version = "0.1.0-alpha33", features = ["test", "web-client"] }

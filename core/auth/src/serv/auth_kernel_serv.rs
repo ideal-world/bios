@@ -1,6 +1,7 @@
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
+    log::trace,
     regex::Regex,
     TardisFuns,
 };
@@ -13,7 +14,8 @@ use crate::{
 
 use super::auth_res_serv;
 
-pub(crate) async fn auth(req: &AuthReq) -> TardisResult<AuthResp> {
+pub(crate) async fn auth(req: &mut AuthReq) -> TardisResult<AuthResp> {
+    trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
         Ok(true) => return Ok(AuthResp::ok(None, config)),
@@ -30,13 +32,18 @@ pub(crate) async fn auth(req: &AuthReq) -> TardisResult<AuthResp> {
     }
 }
 
-fn check(req: &AuthReq) -> TardisResult<bool> {
+fn check(req: &mut AuthReq) -> TardisResult<bool> {
     if req.method.to_lowercase() == "options" {
         return Ok(true);
     }
-    if req.path.is_empty() || !req.path.starts_with('/') {
-        return Err(TardisError::bad_request("[Auth]Request is not legal, missing [path]", "400-auth-req-path-not-empty"));
+    req.path = req.path.trim().to_string();
+    if req.path.starts_with('/') {
+        req.path = req.path.strip_prefix('/').unwrap().to_string();
     }
+    if req.path.is_empty() {
+        return Err(TardisError::bad_request("[Auth] Request is not legal, missing [path]", "400-auth-req-path-not-empty"));
+    }
+
     return Ok(false);
 }
 
@@ -51,14 +58,12 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     } else {
         "".to_string()
     };
-    let domain_idx = req.path.strip_prefix('/').unwrap().find('/');
-    let (rbum_domain, rbum_item) = if let Some(index) = domain_idx {
-        (req.path[1..index].to_string(), req.path[index + 1..].to_string())
-    } else {
-        (req.path[1..].to_string(), "".to_string())
-    };
     // package rbum info
-    let rbum_uri = format!("{}://{}{}", rbum_kind, rbum_domain, rbum_item);
+    let rbum_uri = if let Some(index) = req.path.find('/') {
+        format!("{}://{}{}", rbum_kind, &req.path[..index], &req.path[index + 1..])
+    } else {
+        format!("{}://{}", rbum_kind, req.path)
+    };
     let rbum_action = req.method.to_lowercase();
 
     if let Some(token) = req.headers.get(&config.head_key_token) {
@@ -66,13 +71,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             let account_info = account_info.split(",").collect::<Vec<_>>();
             account_info[1].to_string()
         } else {
-            return Err(TardisError::unauthorized(&format!("Token [{}] is not legal", token), "401-auth-req-token-not-exist"));
+            return Err(TardisError::unauthorized(&format!("[Auth] Token [{}] is not legal", token), "401-auth-req-token-not-exist"));
         };
         let mut context = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), &app_id).await? {
             TardisFuns::json.str_to_obj::<TardisContext>(&context)?
         } else {
             return Err(TardisError::unauthorized(
-                &format!("Token [{}] with App [{}] is not legal", token, app_id),
+                &format!("[Auth] Token [{}] with App [{}] is not legal", token, app_id),
                 "401-auth-req-token-or-app-not-exist",
             ));
         };
@@ -162,5 +167,5 @@ pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
             }
         }
     }
-    return Err(TardisError::unauthorized("Permission denied", "401-auth-req-permission-denied"));
+    return Err(TardisError::unauthorized("[Auth] Permission denied", "401-auth-req-permission-denied"));
 }

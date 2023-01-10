@@ -17,7 +17,6 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     let url = format!("redis://127.0.0.1:{}/0", port);
     env::set_var("TARDIS_FW.CACHE.URL", url);
 
-    env::set_var("RUST_LOG", "debug,test_rbum=trace");
     TardisFuns::init("tests/config").await?;
 
     Ok(LifeHold { redis: redis_container })

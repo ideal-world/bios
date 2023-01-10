@@ -13,8 +13,8 @@ pub struct AuthApi;
 impl AuthApi {
     /// Auth
     #[oai(path = "/apisix", method = "put")]
-    async fn apisix(&self, req: Json<ApisixAuthReq>) -> TardisApiResult<AuthResp> {
-        let result = auth_kernel_serv::auth(&req.0.request).await?;
+    async fn apisix(&self, mut req: Json<ApisixAuthReq>) -> TardisApiResult<AuthResp> {
+        let result = auth_kernel_serv::auth(&mut req.0.request).await?;
         TardisResp::ok(result)
     }
 }
