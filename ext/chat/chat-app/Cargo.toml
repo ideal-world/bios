@@ -20,4 +20,4 @@ serde = { version = "1", features = ["derive"] }
 bios-chat-basic = { path = "../chat-basic" }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha32", features = ["test"] }
+tardis = { version = "0.1.0-alpha33", features = ["test"] }
