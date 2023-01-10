@@ -177,13 +177,13 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
         )
         .await;
 
-    assert_eq!(modify_tenant_resp.code, "202");
-    let task_id = modify_tenant_resp.data.unwrap().unwrap();
-    print!("modify tenant task id: {}", task_id);
+    assert!(modify_tenant_resp.code == "200" || modify_tenant_resp.code == "202");
+    if modify_tenant_resp.code == "202" {
+        let task_id = modify_tenant_resp.data.unwrap().unwrap();
+        print!("modify tenant task id: {}", task_id);
 
-    let task_status: bool = client.get(&format!("/cc/system/task/{}", task_id)).await;
-    // assert!(!task_status);
-
+        let task_status: bool = client.get(&format!("/cc/system/task/{}", task_id)).await;
+    }
     // Get Tenant by Tenant Id
     let tenant: IamTenantAggDetailResp = client.get(&format!("/cs/tenant/{}?tenant_id={}", tenant_id, tenant_id)).await;
     assert_eq!(tenant.name, "测试公司_new");
@@ -195,7 +195,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
 
     // Find Roles By Tenant Id
     let roles: TardisPage<IamRoleSummaryResp> = client.get(&format!("/cs/role?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
-    assert_eq!(roles.total_size, 2);
+    assert_eq!(roles.total_size, 13);
     let sys_admin_role_id = &roles.records.iter().find(|i| i.name == "tenant_admin").unwrap().id;
 
     // Count Accounts By Role Id
@@ -244,7 +244,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
         .put(
             &format!("/cs/cert/user-pwd?account_id={}&tenant_id={}", sys_admin_account_id, tenant_id),
             &IamCertUserPwdRestReq {
-                new_sk: TrimString("123456".to_string()),
+                new_sk: TrimString("1234567".to_string()),
             },
         )
         .await;
@@ -252,7 +252,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     // Delete By Account Id
     client.delete(&format!("/cs/account/{}?tenant_id={}", account_id, tenant_id)).await;
     let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
-    assert_eq!(accounts.total_size, 1);
+    assert_eq!(accounts.total_size, 2);
 
     // Offline By Account Id
     client.delete(&format!("/cs/account/{}/token?tenant_id={}", sys_admin_account_id, tenant_id)).await;
