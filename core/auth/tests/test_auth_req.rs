@@ -8,7 +8,8 @@ use bios_auth::{
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    web::web_client::TardisWebClient,
+    log::info,
+    web::{web_client::TardisWebClient, web_resp::TardisResp},
     TardisFuns,
 };
 
@@ -18,9 +19,10 @@ async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &st
         pub request: AuthReq,
     }
     let web_client = TardisWebClient::init(1).unwrap();
-    web_client
+    info!(">>>>[Request]| path:{}, query:{}, headers:{:#?}", path, query, headers);
+    let result: TardisResp<AuthResp> = web_client
         .put(
-            &format!("{}/auth/apisix", DOMAIN_CODE),
+            &format!("https://localhost:8080/{}/auth/apisix", DOMAIN_CODE),
             &ApisixAuthReq {
                 request: AuthReq {
                     scheme: "http".to_string(),
@@ -29,7 +31,7 @@ async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &st
                     method: method.to_string(),
                     host: "".to_string(),
                     port: 80,
-                    headers: HashMap::from(headers.into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<String, String>>()),
+                    headers: HashMap::from(headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<String, String>>()),
                 },
             },
             None,
@@ -37,7 +39,9 @@ async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &st
         .await
         .unwrap()
         .body
-        .unwrap()
+        .unwrap();
+    info!("<<<<[Request]|path:{}, query:{}, headers:{:#?}, result:{:#?}", path, query, headers, result);
+    result.data.unwrap()
 }
 
 fn decode_context(headers: &HashMap<String, String>) -> TardisContext {
@@ -55,7 +59,7 @@ pub async fn test_req() -> TardisResult<()> {
     let resp = mock_req("GET", "/", "", vec![]).await;
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 400);
-    assert_eq!(resp.reason.unwrap(), "request is not legal, missing [domain] in path");
+    assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing [path]");
     let resp = mock_req("GET", "/iam", "", vec![]).await;
     assert!(resp.allow);
 
@@ -63,7 +67,7 @@ pub async fn test_req() -> TardisResult<()> {
     let resp = mock_req("GET", "/iam/cp/account", "", vec![("Bios-Token", "aaaa")]).await;
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 401);
-    assert_eq!(resp.reason.unwrap(), "[aaaa] is not legal");
+    assert_eq!(resp.reason.unwrap(), "[Auth] Token [aaaa] is not legal");
 
     // request public
     let resp = mock_req("POST", "/iam/cp/login", "p=xx", vec![]).await;
@@ -76,10 +80,10 @@ pub async fn test_req() -> TardisResult<()> {
     assert!(ctx.groups.is_empty());
 
     // request token by system account
-    cache_client.set(&format!("{}:tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
+    cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
     cache_client
         .hset(
-            &format!("{}:accountxxx", config.cache_key_account_info),
+            &format!("{}accountxxx", config.cache_key_account_info),
             "",
             "{\"own_paths\":\"\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
         )
@@ -94,10 +98,10 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(ctx.groups, vec!["g001"]);
 
     // request token by tenant account
-    cache_client.set(&format!("{}:tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
+    cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
     cache_client
         .hset(
-            &format!("{}:accountxxx", config.cache_key_account_info),
+            &format!("{}accountxxx", config.cache_key_account_info),
             "",
             "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
         )
@@ -111,39 +115,39 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(ctx.roles, vec!["r001"]);
     assert_eq!(ctx.groups, vec!["g001"]);
 
-    // request token by app account with error
-    cache_client.set(&format!("{}:tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
+    // request token by app account
+    cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
     cache_client
         .hset(
-            &format!("{}:accountxxx", config.cache_key_account_info),
+            &format!("{}accountxxx", config.cache_key_account_info),
             "",
             "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
         )
         .await?;
     cache_client
         .hset(
-            &format!("{}:accountxxx", config.cache_key_account_info),
-            "",
-            "{\"own_paths\":\"tenant1/app1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+            &format!("{}accountxxx", config.cache_key_account_info),
+            "app1",
+            "{\"own_paths\":\"tenant1/app1\",\"owner\":\"account1\",\"roles\":[\"r002\"],\"groups\":[\"g002\"]}",
         )
         .await?;
     let resp = mock_req("GET", "/iam/api/p1", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx"), ("Bios-App", "app2")]).await;
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 401);
-    // request token by app account
-    cache_client.set(&format!("{}:tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
+    assert_eq!(resp.reason.unwrap(), "[Auth] Token [tokenxxx] with App [app2] is not legal");
+    cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
     cache_client
         .hset(
-            &format!("{}:accountxxx", config.cache_key_account_info),
+            &format!("{}accountxxx", config.cache_key_account_info),
             "",
             "{\"own_paths\":\"tenant1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
         )
         .await?;
     cache_client
         .hset(
-            &format!("{}:accountxxx", config.cache_key_account_info),
-            "",
-            "{\"own_paths\":\"tenant1/app1\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+            &format!("{}accountxxx", config.cache_key_account_info),
+            "app1",
+            "{\"own_paths\":\"tenant1/app1\",\"owner\":\"account1\",\"roles\":[\"r002\"],\"groups\":[\"g002\"]}",
         )
         .await?;
     let resp = mock_req("GET", "/iam/api/p1", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx"), ("Bios-App", "app1")]).await;
@@ -152,8 +156,8 @@ pub async fn test_req() -> TardisResult<()> {
     let ctx = decode_context(&resp.headers);
     assert_eq!(ctx.own_paths, "tenant1/app1");
     assert_eq!(ctx.owner, "account1");
-    assert_eq!(ctx.roles, vec!["r001"]);
-    assert_eq!(ctx.groups, vec!["g001"]);
+    assert_eq!(ctx.roles, vec!["r002", "r001"]);
+    assert_eq!(ctx.groups, vec!["g002", "g001"]);
 
     Ok(())
 }

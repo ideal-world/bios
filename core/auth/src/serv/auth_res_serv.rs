@@ -59,7 +59,7 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
 
 pub fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
-    info!("[Auth]Add resource [{}][{}]", res_action, res_uri);
+    info!("[Auth] Add resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;
     if res_container.is_none() {
@@ -91,7 +91,7 @@ fn remove_empty_node(res_container_node: &mut ResContainerNode, mut res_items: V
 
 pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
-    info!("[Auth]Remove resource [{}][{}]", res_action, res_uri);
+    info!("[Auth] Remove resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;
     let mut res_container_node = res_container.as_mut().unwrap();

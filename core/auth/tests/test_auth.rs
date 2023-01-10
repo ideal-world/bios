@@ -13,7 +13,7 @@ mod test_auth_res;
 
 #[tokio::test]
 async fn test_auth() -> TardisResult<()> {
-    env::set_var("RUST_LOG", "debug,test_auth=trace,sqlx::query=off");
+    env::set_var("RUST_LOG", "debug,bios_auth=trace");
 
     test_auth_res::test_res()?;
     test_auth_match::test_match()?;
@@ -23,13 +23,13 @@ async fn test_auth() -> TardisResult<()> {
 
     test_auth_init::test_init().await?;
 
-    // let web_server = TardisFuns::web_server();
-    // auth_initializer::init_api(web_server).await?;
-    // tokio::spawn(async move {
-    //     web_server.start().await.unwrap();
-    // });
-    // sleep(Duration::from_millis(500)).await;
+    let web_server = TardisFuns::web_server();
+    auth_initializer::init_api(web_server).await?;
+    tokio::spawn(async move {
+        web_server.start().await.unwrap();
+    });
+    sleep(Duration::from_millis(500)).await;
 
-    // test_auth_req::test_req().await?;
+    test_auth_req::test_req().await?;
     Ok(())
 }

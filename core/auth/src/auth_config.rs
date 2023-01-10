@@ -25,7 +25,7 @@ impl Default for AuthConfig {
     fn default() -> Self {
         AuthConfig {
             head_key_token: "Bios-Token".to_string(),
-            head_key_app: "Bios-app".to_string(),
+            head_key_app: "Bios-App".to_string(),
             head_key_protocol: "Bios-Proto".to_string(),
             head_key_context: "Tardis-Context".to_string(),
             cache_key_token_info: "iam:cache:token:info:".to_string(),

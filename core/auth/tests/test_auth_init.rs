@@ -32,13 +32,11 @@ pub async fn test_init() -> TardisResult<()> {
     cache_client.hdel(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=1##get").await?;
     cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=6##get", "{\"accounts\":\"#acc6#\"}").await?;
     cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=7##get", "{\"accounts\":\"#acc7#\"}").await?;
-    cache_client.set(&format!("{}:xx", config.cache_key_res_changed_info), "iam-res://iam-serv/p1?a=1##get").await?;
-    cache_client.set(&format!("{}:yy", config.cache_key_res_changed_info), "iam-res://iam-serv/p1?a=6##get").await?;
-    cache_client.set(&format!("{}:zz", config.cache_key_res_changed_info), "iam-res://iam-serv/p1?a=7##get").await?;
+    cache_client.set(&format!("{}iam-res://iam-serv/p1?a=1##get", config.cache_key_res_changed_info), "").await?;
+    cache_client.set(&format!("{}iam-res://iam-serv/p1?a=6##get", config.cache_key_res_changed_info), "").await?;
+    cache_client.set(&format!("{}iam-res://iam-serv/p1?a=7##get", config.cache_key_res_changed_info), "").await?;
 
     sleep(Duration::from_secs(2)).await;
-
-    println!("==========={}", auth_res_serv::get_res_json()?.to_string());
 
     assert!(auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"].get("a=1").is_none());
     assert_eq!(
