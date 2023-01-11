@@ -257,7 +257,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             sk_rule_need_lowercase: false,
             sk_rule_need_spec_char: false,
             sk_lock_cycle_sec: 60,
-            sk_lock_err_times: 3,
+            sk_lock_err_times: 6,
             sk_lock_duration_sec: 300,
             repeatable: true,
             expire_sec: 2592000,

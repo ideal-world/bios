@@ -47,7 +47,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
                 sk_rule_need_lowercase: false,
                 sk_rule_need_spec_char: false,
                 sk_lock_cycle_sec: 5,
-                sk_lock_err_times: 3,
+                sk_lock_err_times: 2,
                 sk_lock_duration_sec: 5,
                 repeatable: true,
                 expire_sec: 111,
@@ -128,18 +128,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     assert!(account_resp.roles.iter().any(|i| i.1 == "tenant_admin"));
     assert!(!account_resp.token.is_empty());
 
-    info!("【test_cp_all】 : Login by Username and Password, error 3");
-    assert!(IamCpCertUserPwdServ::login_by_user_pwd(
-        &IamCpUserPwdLoginReq {
-            ak: TrimString("bios".to_string()),
-            sk: TrimString("123456".to_string()),
-            tenant_id: Some(tenant_id.clone()),
-            flag: None
-        },
-        &funs,
-    )
-    .await
-    .is_err());
+    info!("【test_cp_all】 : Login by Username and Password, error 2");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
         &IamCpUserPwdLoginReq {
             ak: TrimString("bios".to_string()),

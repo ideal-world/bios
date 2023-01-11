@@ -6,9 +6,7 @@ use bios_iam::iam_constants;
 use bios_iam::iam_enumeration::IamCertOAuth2Supplier;
 use ldap3::log::info;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::IntoActiveValue;
 
 pub async fn test(tenant1_admin_context: &TardisContext) -> TardisResult<()> {
     const GITHUB_OAUTH2_AK: &str = "";

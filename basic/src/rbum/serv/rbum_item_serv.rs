@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::Serialize;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm;
