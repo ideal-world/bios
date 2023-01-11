@@ -1,0 +1,32 @@
+[package]
+name = "bios-spi-serv-all"
+version = "0.1.0"
+authors = ["gudaoxuri <i@sunisle.org>"]
+homepage = "https://bios.idealworld.group"
+documentation = "https://bios.idealworld.group"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.adoc"
+publish = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tardis = { version = "0.1.0-alpha33", features = [
+    "web-server",
+    "conf-remote",
+    "reldb-postgres",
+] }
+bios-basic = { path = "../../basic" }
+bios-spi-cache = { path = "../../spi/spi-cache" }
+bios-spi-graph = { path = "../../spi/spi-graph" }
+bios-spi-kv = { path = "../../spi/spi-kv" }
+bios-spi-log = { path = "../../spi/spi-log" }
+bios-spi-object = { path = "../../spi/spi-object" }
+bios-spi-reldb = { path = "../../spi/spi-reldb" }
+bios-spi-search = { path = "../../spi/spi-search" }

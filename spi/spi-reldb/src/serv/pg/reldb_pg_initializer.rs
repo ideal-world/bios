@@ -11,15 +11,15 @@ pub async fn init(bs_cert: &SpiBsCertResp, client: &TardisRelDBClient, ctx: &Tar
     let schema_name = if bs_cert.private {
         "".to_string()
     } else {
-        spi_initializer::common_pg::init_pg_schema(client, ctx).await?
+        spi_initializer::common_pg::create_schema(client, ctx).await?
     };
-    spi_initializer::common_pg::set_pg_schema_to_ext(&schema_name, &mut ext);
+    spi_initializer::common_pg::set_schema_name_to_ext(&schema_name, &mut ext);
     Ok(ext)
 }
 
-pub async fn init_conn(conn: TardisRelDBlConnection, ext: &HashMap<String, String>) -> TardisResult<TardisRelDBlConnection> {
-    if let Some(schema_name) = spi_initializer::common_pg::get_pg_schema_from_ext(ext) {
-        spi_initializer::common_pg::set_pg_schema_to_session(&schema_name, &conn).await?;
+pub async fn init_conn(mut conn: TardisRelDBlConnection, ext: &HashMap<String, String>) -> TardisResult<TardisRelDBlConnection> {
+    if let Some(schema_name) = spi_initializer::common_pg::get_schema_name_from_ext(ext) {
+        spi_initializer::common_pg::set_schema_to_session(&schema_name, &mut conn).await?;
     }
     Ok(conn)
 }

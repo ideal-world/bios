@@ -1,0 +1,24 @@
+[cs]
+
+[fw]
+[fw.app]
+id = "bios-spi-serv-all"
+name = "BIOS All SPI Services"
+desc = "BIOS All SPI Services"
+version = "0.1.0"
+default_lang = "zh-cn"
+
+[fw.web_server]
+port = 8080
+[fw.web_server.modules.iam]
+title = "IAM Component"
+doc_urls = [["test env", "http://localhost:8080/"]]
+
+[fw.db]
+url = "postgres://postgres:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@localhost:5432/test"
+
+[fw.cache]
+url = "redis://:ENC(5892ae51dbeedacdf10ba4c0d7af42a7)@127.0.0.1:6379"
+
+[fw.adv]
+salt = "qa2df6gr452lfr3e"

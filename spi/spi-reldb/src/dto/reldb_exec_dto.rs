@@ -4,7 +4,7 @@ use tardis::{serde_json::Value, web::poem_openapi};
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ReldbTxResp {
     pub tx_id: String,
-    pub exp_sec: u32,
+    pub exp_ts_at: i64,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -19,7 +19,6 @@ pub struct ReldbDmlReq {
     #[oai(validator(min_length = "2"))]
     pub sql: String,
     pub params: Value,
-    pub tx_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -32,7 +31,6 @@ pub struct ReldbDqlReq {
     #[oai(validator(min_length = "2"))]
     pub sql: String,
     pub params: Value,
-    pub tx_id: Option<String>,
 }
 
 // #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -43,7 +41,6 @@ pub struct ReldbDqlReq {
 //     pub pk_name: String,
 //     #[oai(validator(min_length = "2"))]
 //     pub records: JsonArray,
-//     pub tx_id: Option<String>,
 // }
 
 // #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -51,5 +48,4 @@ pub struct ReldbDqlReq {
 //     #[oai(validator(min_length = "2"))]
 //     pub table_name: String,
 //     pub pk_ids: Vec<String>,
-//     pub tx_id: Option<String>,
 // }

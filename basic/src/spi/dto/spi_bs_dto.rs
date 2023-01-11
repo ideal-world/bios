@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
+use tardis::basic::error::TardisError;
 use tardis::basic::field::TrimString;
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq};
+use crate::spi::spi_funs;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
@@ -89,6 +91,12 @@ pub struct SpiBsCertResp {
     pub sk: String,
     pub ext: String,
     pub private: bool,
+}
+
+impl SpiBsCertResp {
+    pub fn bs_not_implemented(&self) -> TardisError {
+        spi_funs::bs_not_implemented(&self.kind_code)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

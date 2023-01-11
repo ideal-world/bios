@@ -29,6 +29,7 @@ impl IamCcAccountApi {
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         role_id: Query<Option<String>>,
+        app_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u64>,
         page_size: Query<u64>,
@@ -42,6 +43,15 @@ impl IamCcAccountApi {
             tag: Some(IamRelKind::IamAccountRole.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::Item),
             rel_item_id: Some(role_id),
+            own_paths: Some(ctx.0.clone().own_paths),
+            ..Default::default()
+        });
+        let rel2 = app_id.0.map(|app_id| RbumItemRelFilterReq {
+            rel_by_from: true,
+            tag: Some(IamRelKind::IamAccountApp.to_string()),
+            from_rbum_kind: Some(RbumRelFromKind::Item),
+            rel_item_id: Some(app_id),
+            own_paths: Some(ctx.0.clone().own_paths),
             ..Default::default()
         });
         let result = IamAccountServ::paginate_items(
@@ -54,6 +64,7 @@ impl IamCcAccountApi {
                     ..Default::default()
                 },
                 rel,
+                rel2,
                 ..Default::default()
             },
             page_number.0,

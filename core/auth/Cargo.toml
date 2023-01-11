@@ -1,0 +1,35 @@
+[package]
+name = "bios-auth"
+version = "0.1.0"
+authors = ["gudaoxuri <i@sunisle.org>"]
+homepage = "https://bios.idealworld.group"
+documentation = "https://bios.idealworld.group"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.adoc"
+publish = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
+[lib]
+name = "bios_auth"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+itertools = { version = "0" }
+lazy_static = { version = "1" }
+tardis = { version = "0.1.0-alpha33", features = [
+    "cache",
+    "crypto",
+    "web-server",
+] }
+# TODO remove
+redis = { version = "0.22", features = ["tokio-comp", "tokio-native-tls-comp"] }
+
+[dev-dependencies]
+tardis = { version = "0.1.0-alpha33", features = ["test", "web-client"] }

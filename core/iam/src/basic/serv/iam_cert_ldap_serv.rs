@@ -32,6 +32,7 @@ use bios_basic::rbum::{
     },
 };
 use serde::{Deserialize, Serialize};
+use tardis::regex::Regex;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
@@ -603,6 +604,28 @@ impl IamCertLdapServ {
         .first()
         .map(|r| r.id.to_string());
         Ok(result)
+    }
+    ///# Examples
+    ///
+    ///```
+    ///  use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("cn=admin,ou=x,dc=x,dc=x"), "admin".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("ou=x,dc=x,dc=x"), "ou=x,dc=x,dc=x".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("cn=,ou=x,dc=x,dc=x"), "".to_string());
+    ///  assert_eq!(IamCertLdapServ::dn_to_cn("sdfafasdf"), "sdfafasdf".to_string());
+    /// ```
+    pub fn dn_to_cn(dn: &str) -> String {
+        let dn_regex = Regex::new(r"(,|^)[cC][nN]=(.+?)(,|$)").expect("Regular parsing error");
+        let cn = if dn_regex.is_match(dn) {
+            let int = dn.find("cn=").unwrap_or_default();
+            let a = &dn[int + 3..];
+            let int = a.find(',').unwrap_or_default();
+            &a[..int]
+        } else {
+            warn!("dn:{} is not match regex!", dn);
+            dn
+        };
+        cn.to_string()
     }
 }
 

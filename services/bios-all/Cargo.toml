@@ -17,7 +17,7 @@ opt-level = "z"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha31", features = [
+tardis = { version = "0.1.0-alpha33", features = [
     "web-server",
     "conf-remote",
     "reldb-mysql",

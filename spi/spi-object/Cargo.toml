@@ -1,0 +1,36 @@
+[package]
+name = "bios-spi-object"
+version = "0.1.0"
+authors = ["gudaoxuri <i@sunisle.org>"]
+homepage = "https://bios.idealworld.group"
+documentation = "https://bios.idealworld.group"
+repository = "https://github.com/ideal-world/bios"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.adoc"
+publish = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
+[lib]
+name = "bios_spi_object"
+path = "src/lib.rs"
+
+[features]
+default = ["spi-s3"]
+spi-s3 = ["tardis/os"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tardis = { version = "0.1.0-alpha33", features = [
+    "reldb-postgres",
+    "web-server",
+] }
+bios-basic = { path = "../../basic", features = ["default"] }
+
+[dev-dependencies]
+tardis = { version = "0.1.0-alpha33", features = ["test"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }

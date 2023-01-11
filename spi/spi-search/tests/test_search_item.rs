@@ -3,7 +3,7 @@ use bios_spi_search::dto::search_item_dto::SearchItemSearchResp;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&TardisContext {
@@ -82,8 +82,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
 
     // Search without conditions
-    let search_result: TardisPage<SearchItemSearchResp> = client
-        .put(
+    let search_result: TardisResp<TardisPage<SearchItemSearchResp>> = client
+        .put_resp(
             "/ci/item/search",
             &json!({
                 "tag":"feed2",
@@ -93,7 +93,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(search_result.total_size, 0);
+    assert!(search_result.code.starts_with("400"));
 
     let search_result: TardisPage<SearchItemSearchResp> = client
         .put(
@@ -106,7 +106,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(search_result.total_size, 3);
+    assert_eq!(search_result.total_size, 1);
+    assert_eq!(search_result.records[0].key, "001");
 
     // Basic search
     let search_result: TardisPage<SearchItemSearchResp> = client
@@ -114,7 +115,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "q": "新增"
                 },
@@ -130,7 +133,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "q": "类型 & 上传"
                 },
@@ -144,7 +149,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "q": "类型 | 上传"
                 },
@@ -153,8 +160,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     assert_eq!(search_result.total_size, 2);
-    assert_eq!(search_result.records[0].key, "001");
-    assert_eq!(search_result.records[1].key, "002");
+    assert_eq!(search_result.records[0].key, "002");
+    assert_eq!(search_result.records[1].key, "003");
 
     //  Search with ext
     let search_result: TardisPage<SearchItemSearchResp> = client
@@ -162,7 +169,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "ext": [{
                         "field":"version",
@@ -182,12 +191,14 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "ext": [{
                         "field":"rel_accounts",
                         "op":"like",
-                        "value":"%acc01"
+                        "value":"acc01"
                     }]
                 },
                 "page":{"number":1,"size":10}
@@ -202,7 +213,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "ext": [{
                         "field":"end_time",
@@ -233,9 +246,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(search_result.total_size, 2);
-    assert_eq!(search_result.records[0].key, "001");
-    assert_eq!(search_result.records[1].key, "003");
+    assert_eq!(search_result.total_size, 3);
 
     //  Search with sort
     let search_result: TardisPage<SearchItemSearchResp> = client
@@ -243,7 +254,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "ext": [{
                         "field":"end_time",
@@ -267,7 +280,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item/search",
             &json!({
                 "tag":"feed",
-                "ctx":{},
+                "ctx":{
+                    "app":"003"
+                },
                 "query":{
                     "ext": [{
                         "field":"end_time",
@@ -323,5 +338,37 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     assert_eq!(search_result.total_size, 2);
     assert_eq!(search_result.records[0].key, "002");
+
+    // Delete
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{},
+                "query":{
+                    "key": "001"
+                },
+                "page":{"number":1,"size":10}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 1);
+    client.delete(&format!("/ci/item?tag={}&key={}", "feed", "001")).await;
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{},
+                "query":{
+                    "key": "001"
+                },
+                "page":{"number":1,"size":10}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 0);
+
     Ok(())
 }

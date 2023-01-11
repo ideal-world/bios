@@ -3,15 +3,15 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
     serde_json::Value,
-    web::poem_openapi,
+    web::poem_openapi, basic::field::TrimString,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemAddOrModifyReq {
-    #[oai(validator(pattern = r"^[a-z]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
-    pub key: String,
+    pub key: TrimString,
     #[oai(validator(min_length = "2"))]
     pub title: String,
     #[oai(validator(min_length = "2"))]
@@ -69,7 +69,7 @@ impl SearchItemVisitKeysReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchReq {
-    #[oai(validator(pattern = r"^[a-z]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
     pub ctx: SearchItemSearchCtxReq,
     pub query: SearchItemQueryReq,
@@ -120,7 +120,7 @@ pub struct SearchItemQueryReq {
     #[oai(validator(min_length = "2"))]
     pub q: Option<String>,
     #[oai(validator(min_length = "2"))]
-    pub key: Option<String>,
+    pub key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
     pub owner: Option<String>,
     #[oai(validator(min_length = "2"))]
@@ -175,6 +175,6 @@ pub struct SearchItemSearchResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
     pub ext: Value,
-    pub rank_title: i64,
-    pub rank_content: i64,
+    pub rank_title: f32,
+    pub rank_content: f32,
 }

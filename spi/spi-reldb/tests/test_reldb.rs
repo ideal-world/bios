@@ -20,7 +20,9 @@ mod test_reldb_exec;
 #[tokio::test]
 async fn test_reldb() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
-    let _x = init_rbum_test_container::init(&docker).await?;
+    let _x = init_rbum_test_container::init(&docker, None).await?;
+
+    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
 
     init_data().await?;
 
@@ -65,7 +67,7 @@ async fn init_data() -> TardisResult<()> {
                 conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
                 ak: TrimString("".to_string()),
                 sk: TrimString("".to_string()),
-                ext: "{\"max_connections\":20,\"min_connections\":1}".to_string(),
+                ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
                 private: false,
                 disabled: None,
             },

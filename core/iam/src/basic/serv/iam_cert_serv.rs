@@ -463,7 +463,30 @@ impl IamCertServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let mut is_ldap = false;
         let rbum_cert_filter_req = if let Some(cert_conf_id) = cert_conf_id {
+            let cert_conf = RbumCertConfServ::get_rbum(
+                &cert_conf_id,
+                &RbumCertConfFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    status: Some(RbumCertConfStatusKind::Enabled),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await;
+            is_ldap = if cert_conf.is_ok() {
+                let resp = cert_conf.unwrap();
+                resp.kind == "Ldap"
+            } else {
+                false
+            };
             RbumCertFilterReq {
                 rel_rbum_id: Some(rel_rubm_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![cert_conf_id]),
@@ -481,7 +504,7 @@ impl IamCertServ {
         if let Some(ext_cert) = ext_cert {
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
-                ak: ext_cert.ak,
+                ak: if is_ldap { IamCertLdapServ::dn_to_cn(&ext_cert.ak) } else { ext_cert.ak },
                 sk: "".to_string(),
                 ext: ext_cert.ext,
                 start_time: ext_cert.start_time,

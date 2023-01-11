@@ -20,13 +20,17 @@ name = "bios_spi_search"
 path = "src/lib.rs"
 
 [features]
+default = ["spi-pg"]
 spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha31", features = ["reldb-postgres", "web-server"] }
+tardis = { version = "0.1.0-alpha33", features = [
+    "reldb-postgres",
+    "web-server",
+] }
 bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha31", features = ["test"] }
+tardis = { version = "0.1.0-alpha33", features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

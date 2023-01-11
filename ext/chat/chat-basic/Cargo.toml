@@ -21,8 +21,8 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha31" }
+tardis = { version = "0.1.0-alpha33" }
 bios-basic = { path = "../../../basic", features = ["sdk"] }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha31", features = ["test"] }
+tardis = { version = "0.1.0-alpha33", features = ["test"] }
