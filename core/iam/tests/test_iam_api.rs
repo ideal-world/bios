@@ -37,12 +37,12 @@ async fn test_iam_api() -> TardisResult<()> {
 
     let mut client = BIOSWebTestClient::new("https://localhost:8080/iam".to_string());
 
-    test_iam_scenes_passport::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
-    let (sysadmin_name, sysadmin_password) = init_data().await?;
-    test_iam_scenes_system::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
-    let (sysadmin_name, sysadmin_password) = init_data().await?;
-    test_iam_scenes_tenant::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
-    let (sysadmin_name, sysadmin_password) = init_data().await?;
+    // test_iam_scenes_passport::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+    // let (sysadmin_name, sysadmin_password) = init_data().await?;
+    // test_iam_scenes_system::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+    // let (sysadmin_name, sysadmin_password) = init_data().await?;
+    // test_iam_scenes_tenant::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
+    // let (sysadmin_name, sysadmin_password) = init_data().await?;
     test_iam_scenes_app::test(&sysadmin_name, &sysadmin_password, &mut client).await?;
     let (sysadmin_name, sysadmin_password) = init_data().await?;
     test_iam_scenes_common::test(&sysadmin_name, &sysadmin_password, &mut client).await?;

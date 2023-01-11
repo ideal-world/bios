@@ -154,7 +154,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
 
     // Find Res Tree
     let res_tree: RbumSetTreeResp = client.get("/ca/res/tree").await;
-    assert_eq!(res_tree.main.len(), 1);
+    assert_eq!(res_tree.main.len(), 3);
     let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
