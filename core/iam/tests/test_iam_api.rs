@@ -21,7 +21,10 @@ async fn test_iam_api() -> TardisResult<()> {
     let _x = init_rbum_test_container::init(&docker, None).await?;
     let _y = test_basic::init(&docker).await?;
 
-    let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(iam_constants::get_tardis_inst()).await?.unwrap();
+    let funs = iam_constants::get_tardis_inst();
+    funs.mq().subscribe("rbum::event", |(_, _)| async { Ok(()) }).await?;
+    funs.mq().subscribe("rbum::entity_deleted", |(_, _)| async { Ok(()) }).await?;
+    let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
 
     let web_server = TardisFuns::web_server();
     bios_iam::iam_initializer::init(web_server).await.unwrap();

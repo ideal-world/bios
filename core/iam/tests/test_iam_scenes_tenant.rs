@@ -449,7 +449,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             &format!("/ct/cert/user-pwd?account_id={}", account_id),
             &IamCertUserPwdRestReq {
-                new_sk: TrimString("123456".to_string()),
+                new_sk: TrimString("1234567".to_string()),
             },
         )
         .await;
@@ -475,7 +475,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
 
     // Find Menu Tree
     let res_tree: RbumSetTreeResp = client.get("/ct/res/tree").await;
-    assert_eq!(res_tree.main.len(), 1);
+    assert_eq!(res_tree.main.len(), 3);
     let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();

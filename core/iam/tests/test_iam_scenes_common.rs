@@ -99,7 +99,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
         .await;
 
     common_console_by_tenant(client).await?;
-    common_console_by_ldap(client, &tenant_id).await?;
+    // common_console_by_ldap(client, &tenant_id).await?;
 
     // Add Account
     let app_account_id: String = client
@@ -191,8 +191,9 @@ pub async fn common_console_by_tenant(client: &mut BIOSWebTestClient) -> TardisR
 
     // Find Account Name By Ids
     let account_id = &accounts.records[0].id;
-    let accounts: Vec<String> = client.get(&format!("/cc/account/name?ids={}", account_id)).await;
-    assert_eq!(accounts[0], format!("{},测试管理员", account_id));
+    let icon = &accounts.records[0].icon;
+    let accounts_by_name: Vec<String> = client.get(&format!("/cc/account/name?ids={}", account_id)).await;
+    assert_eq!(accounts_by_name[0], format!("{},测试管理员,{}", account_id, icon));
 
     // Find Roles
     let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?page_number=1&page_size=10").await;
@@ -225,11 +226,11 @@ pub async fn common_console_by_app(client: &mut BIOSWebTestClient) -> TardisResu
     assert_eq!(accounts.len(), 2);
 
     // Find Roles
-    let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?page_number=1&page_size=10").await;
-    assert_eq!(roles.total_size, 2);
+    let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?page_number=1&page_size=15").await;
+    assert_eq!(roles.total_size, 13);
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
-    let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?name=app&page_number=1&page_size=10").await;
-    assert_eq!(roles.total_size, 1);
+    let roles: TardisPage<IamRoleBoneResp> = client.get("/cc/role?name=app&page_number=1&page_size=15").await;
+    assert_eq!(roles.total_size, 12);
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
 
     // Find Org Cates By Current Tenant

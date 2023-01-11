@@ -139,8 +139,8 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     info!("【app_console_auth_mgr_page】");
 
     // Find Roles
-    let roles: TardisPage<IamRoleSummaryResp> = client.get("/ca/role?page_number=1&page_size=10").await;
-    assert_eq!(roles.total_size, 1);
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/ca/role?page_number=1&page_size=15").await;
+    assert_eq!(roles.total_size, 12);
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
 
     // Find Accounts
@@ -154,7 +154,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
 
     // Find Res Tree
     let res_tree: RbumSetTreeResp = client.get("/ca/res/tree").await;
-    assert_eq!(res_tree.main.len(), 1);
+    assert_eq!(res_tree.main.len(), 3);
     let res = res_tree.ext.as_ref().unwrap().items[&res_tree.main.iter().find(|i| i.name == "Menus").unwrap().id].get(0).unwrap();
     assert!(res.rel_rbum_item_name.contains("Console"));
     let res_id = res.rel_rbum_item_id.clone();
