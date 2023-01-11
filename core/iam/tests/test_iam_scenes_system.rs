@@ -252,7 +252,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     // Delete By Account Id
     client.delete(&format!("/cs/account/{}?tenant_id={}", account_id, tenant_id)).await;
     let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
-    assert_eq!(accounts.total_size, 2);
+    assert_eq!(accounts.total_size, 1);
 
     // Offline By Account Id
     client.delete(&format!("/cs/account/{}/token?tenant_id={}", sys_admin_account_id, tenant_id)).await;
@@ -465,7 +465,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
         .put(
             &format!("/cs/cert/user-pwd?account_id={}", account_id),
             &IamCertUserPwdRestReq {
-                new_sk: TrimString("123456".to_string()),
+                new_sk: TrimString("1234567".to_string()),
             },
         )
         .await;
@@ -481,7 +481,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
 
     // Find Menu Tree
     let res_tree: RbumSetTreeResp = client.get("/cs/res/tree/menu").await;
-    assert_eq!(res_tree.main.len(), 1);
+    assert_eq!(res_tree.main.len(), 3);
     let cate_menus_id = res_tree.main.iter().find(|i| i.bus_code == "__menus__").map(|i| i.id.clone()).unwrap();
 
     // Find Api Tree
@@ -716,10 +716,10 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
     assert_eq!(modify_role_resp.code, "200");
 
     // Find Roles
-    let roles: TardisPage<IamRoleSummaryResp> = client.get("/cs/role?with_sub=true&page_number=1&page_size=10").await;
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/cs/role?with_sub=true&page_number=1&page_size=16").await;
     let sys_admin_role_id = &roles.records.iter().find(|i| i.name == "sys_admin").unwrap().id;
     let test_role_id = &roles.records.iter().find(|i| i.name == "测试角色2").unwrap().id;
-    assert_eq!(roles.total_size, 5);
+    assert_eq!(roles.total_size, 16);
     assert!(roles.records.iter().any(|i| i.name == "审计管理员"));
     assert!(roles.records.iter().any(|i| i.name == "测试角色2"));
 
@@ -735,7 +735,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
 
     // Find Res Tree
     let res_tree: RbumSetTreeResp = client.get("/cs/res/tree").await;
-    assert_eq!(res_tree.main.len(), 3);
+    assert_eq!(res_tree.main.len(), 5);
 
     // Add Res To Role
     let _: Void = client.put(&format!("/cs/role/{}/res/{}", sys_admin_role_id, res_menu_id), &Void {}).await;

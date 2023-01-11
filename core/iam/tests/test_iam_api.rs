@@ -23,6 +23,7 @@ async fn test_iam_api() -> TardisResult<()> {
 
     let funs = iam_constants::get_tardis_inst();
     funs.mq().subscribe("rbum::event", |(_, _)| async { Ok(()) }).await?;
+    funs.mq().subscribe("rbum::entity_deleted", |(_, _)| async { Ok(()) }).await?;
     let (sysadmin_name, sysadmin_password) = bios_iam::iam_initializer::init_db(funs).await?.unwrap();
 
     let web_server = TardisFuns::web_server();

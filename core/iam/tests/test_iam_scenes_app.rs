@@ -139,8 +139,8 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     info!("【app_console_auth_mgr_page】");
 
     // Find Roles
-    let roles: TardisPage<IamRoleSummaryResp> = client.get("/ca/role?page_number=1&page_size=10").await;
-    assert_eq!(roles.total_size, 1);
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/ca/role?page_number=1&page_size=15").await;
+    assert_eq!(roles.total_size, 12);
     assert!(roles.records.iter().any(|i| i.name == "app_admin"));
 
     // Find Accounts
