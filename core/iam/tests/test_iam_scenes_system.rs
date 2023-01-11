@@ -194,7 +194,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     assert!(tenant.cert_conf_by_mail_vcode);
 
     // Find Roles By Tenant Id
-    let roles: TardisPage<IamRoleSummaryResp> = client.get(&format!("/cs/role?tenant_id={}&with_sub=true&page_number=1&page_size=10", tenant_id)).await;
+    let roles: TardisPage<IamRoleSummaryResp> = client.get(&format!("/cs/role?tenant_id={}&with_sub=true&page_number=1&page_size=15", tenant_id)).await;
     assert_eq!(roles.total_size, 13);
     let sys_admin_role_id = &roles.records.iter().find(|i| i.name == "tenant_admin").unwrap().id;
 
@@ -390,9 +390,9 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     // =============== Prepare ===============
 
     // Find Roles
-    let roles: TardisPage<IamRoleSummaryResp> = client.get("/cs/role?page_number=1&page_size=10").await;
+    let roles: TardisPage<IamRoleSummaryResp> = client.get("/cs/role?page_number=1&page_size=15").await;
     let role_id = &roles.records.iter().find(|i| i.name == "审计管理员").unwrap().id;
-    assert_eq!(roles.total_size, 4);
+    assert_eq!(roles.total_size, 15);
     assert!(roles.records.iter().any(|i| i.name == "sys_admin"));
     assert!(roles.records.iter().any(|i| i.name == "审计管理员"));
 
