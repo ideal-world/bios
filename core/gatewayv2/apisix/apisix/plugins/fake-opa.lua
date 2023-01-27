@@ -31,7 +31,7 @@ local schema = {
             type = "boolean",
             default = true,
         },
-        policy = {type = "string"},
+        policy = {type = "string", default = "auth_apisix" },
         timeout = {
             type = "integer",
             minimum = 1,
@@ -48,7 +48,7 @@ local schema = {
 
         head_key_context = { type = "string", default = "Tardis-Context" },
     },
-    required = {"host", "policy"}
+    required = {"host"}
 }
 
 
@@ -66,11 +66,11 @@ end
 
 
 function _M.access(conf, ctx)
-    local body = helper.build_opa_input(conf, ctx, "http")
+    local req_body = helper.build_opa_input(conf, ctx, "http")
 
     local params = {
         method = "POST",
-        body = core.json.encode(body),
+        body = core.json.encode(req_body),
         headers = {
             ["Content-Type"] = "application/json",
         },
@@ -83,49 +83,55 @@ function _M.access(conf, ctx)
         params.keepalive_pool = conf.keepalive_pool
     end
 
-    local endpoint = conf.host .. "auth/v1/data/" .. conf.policy
+    local host_end_idx = string.find(string.sub(conf.host, -2), "/")
+    local endpoint = conf.host .. "/auth/v1/data/" .. conf.policy
+    if host_end_idx then
+        endpoint = conf.host .. "auth/v1/data/" .. conf.policy
+    end
+
 
     local httpc = http.new()
     httpc:set_timeout(conf.timeout)
-    core.log.error("before request_uri======================");
-    core.log.error("endpoint:",endpoint);
-    core.log.error("params:",params.body);
-    local res, err = httpc:request_uri(endpoint, params)
+
+    core.log.info("before request_uri======================");
+    core.log.info("endpoint:",endpoint);
+    core.log.info("params:",params.body);
+
+    local res, req_err = httpc:request_uri(endpoint, params)
 
 
-    core.log.error("err:",err);
+    core.log.info("auth service err:", req_err);
 
     -- block by default when decision is unavailable
     if not res then
-        core.log.error("failed to process OPA decision, err: ", err)
+        core.log.error("failed to process OPA decision, err: ", req_err)
         return 403
     end
 
-    core.log.error("res.body:",res.body);
+    core.log.info("res.body:",res.body);
     -- parse the results of the decision
-    local data, err = core.json.decode(res.body)
+    local body, err = core.json.decode(res.body)
 
-    if not data then
+    if not body then
         core.log.error("invalid response body: ", res.body, " err: ", err)
         return 503
     end
 
-    if not data.result then
-        core.log.error("invalid OPA decision format: ", res.body,
-                " err: `result` field does not exist")
-        return 503
-    end
-
-    local auth_resp = data.result
-
-    if  auth_resp.code~=200 then
-        core.log.error("invalid OPA service return code: ", auth_resp.code,
-                " err:", auth_resp.msg)
+    if body.code ~='200' then
+        core.log.error("invalid OPA service return code: ", body.code,
+                " err:", body.msg)
         return 502
     end
 
-    local result= auth_resp.data
-    core.log.error("result:",core.json.encode(result))
+    if not body.data then
+        core.log.error("invalid OPA decision format: ", res.body,
+                " err: `data` field does not exist")
+        return 503
+    end
+
+    local result = body.data
+
+    core.log.info("result:",core.json.encode(result))
     if not result.allow then
 
         local status_code = 403
@@ -143,7 +149,7 @@ function _M.access(conf, ctx)
         return status_code, reason
     else
         if result.headers then
-            core.log.error("result.headers: ", core.json.encode(result.headers["Tardis-Context"]))
+            core.log.info("result.headers: ", core.json.encode(result.headers["Tardis-Context"]))
             core.request.set_header(ctx,conf.head_key_context,result.headers["Tardis-Context"])
         end
     end

@@ -58,6 +58,6 @@ pub async fn init_data() -> TardisResult<()> {
 }
 
 pub async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (auth_mgr_api::MgrApi, auth_apisix_api::AuthApi, auth_apisix_api::FakeOPAApi)).await;
+    web_server.add_module(DOMAIN_CODE, (auth_mgr_api::MgrApi, auth_apisix_api::AuthApi, auth_apisix_api::MockOPAApi)).await;
     Ok(())
 }

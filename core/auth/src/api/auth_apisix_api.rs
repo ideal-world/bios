@@ -26,16 +26,16 @@ impl AuthApi {
     // }
 }
 
-pub struct FakeOPAApi;
+pub struct MockOPAApi;
 /// fake OPA API
-///POST /v1/data/<policy>
+/// POST /v1/data/<policy>
 #[poem_openapi::OpenApi(prefix_path = "/v1")]
-impl FakeOPAApi {
+impl MockOPAApi {
     /// Auth endpoint
     #[oai(path = "/data/:policy", method = "post")]
     async fn apisix(&self, mut req: Json<ApisixAuthReq>, policy: Path<String>) -> TardisApiResult<AuthResp> {
         debug!("policy:{}", policy.0);
-        let result = auth_kernel_serv::auth(&mut req.0.input.request).await.unwrap();
+        let result = auth_kernel_serv::auth(&mut req.0.input.request).await?;
         TardisResp::ok(result)
     }
 }
