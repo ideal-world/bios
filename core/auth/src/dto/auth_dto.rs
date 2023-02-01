@@ -9,21 +9,6 @@ use tardis::{
 
 use crate::auth_config::AuthConfig;
 
-//"request": {
-//       "host": "httpbin.org",
-//       "query": {
-//         "foo2": "bar2",
-//         "foo1": "bar1"
-//       },
-//       "port": 9080,
-//       "headers": {
-//         "host": "httpbin.org",
-//         "postman-token": "cee5c0d3-a1e9-4d3e-8268-dcd358062814"
-//       },
-//       "method": "GET",
-//       "scheme": "http",
-//       "path": "\/get"
-//     },
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct AuthReq {
     pub scheme: String,
