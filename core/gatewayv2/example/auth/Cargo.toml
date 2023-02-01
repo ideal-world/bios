@@ -8,7 +8,7 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-bios-auth={ path = "../../auth" }
+bios-auth={ path = "../../../auth" }
 tardis = { version = "0.1.0-alpha33", features = [
     "web-server",
 ] }
