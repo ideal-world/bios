@@ -16,14 +16,14 @@ use crate::serv::auth_kernel_serv;
 pub struct AuthApi;
 
 /// Auth API
-#[poem_openapi::OpenApi(prefix_path = "/auth")]
+#[poem_openapi::OpenApi(prefix_path = "/apisix")]
 impl AuthApi {
-    // Auth
-    // #[oai(path = "/apisix", method = "put")]
-    // async fn apisix(&self, mut req: Json<ApisixAuthReq>) -> TardisApiResult<AuthResp> {
-    //      let result = auth_kernel_serv::auth(&mut req.0.request).await?;
-    //     TardisResp::ok(result)
-    // }
+    /// Auth
+    #[oai(path = "/", method = "post")]
+    async fn apisix(&self, mut req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
+        let result = auth_kernel_serv::auth(&mut req.0).await?;
+        TardisResp::ok(result)
+    }
 }
 
 pub struct MockOPAApi;
@@ -31,13 +31,12 @@ pub struct MockOPAApi;
 /// POST /v1/data/<policy>
 #[poem_openapi::OpenApi(prefix_path = "/v1")]
 impl MockOPAApi {
-    /// Auth endpoint
-    #[oai(path = "/data/:policy", method = "post")]
-    async fn apisix(&self, mut req: Json<ApisixAuthReq>, policy: Path<String>) -> TardisApiResult<AuthResp> {
-        debug!("policy:{}", policy.0);
-        let result = auth_kernel_serv::auth(&mut req.0.input.request).await?;
-        TardisResp::ok(result)
-    }
+    // /// Auth endpoint
+    // #[oai(path = "/data/:policy", method = "post")]
+    // async fn apisix(&self, mut req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
+    //     let result = auth_kernel_serv::auth(&mut req.0).await?;
+    //     TardisResp::ok(result)
+    // }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

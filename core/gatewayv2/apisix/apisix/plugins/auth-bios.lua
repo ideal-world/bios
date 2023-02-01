@@ -1,23 +1,3 @@
---
--- Licensed to the Apache Software Foundation (ASF) under one or more
--- contributor license agreements.  See the NOTICE file distributed with
--- this work for additional information regarding copyright ownership.
--- The ASF licenses this file to You under the Apache License, Version 2.0
--- (the "License"); you may not use this file except in compliance with
--- the License.  You may obtain a copy of the License at
---
---     http://www.apache.org/licenses/LICENSE-2.0
---
--- Unless required by applicable law or agreed to in writing, software
--- distributed under the License is distributed on an "AS IS" BASIS,
--- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
--- See the License for the specific language governing permissions and
--- limitations under the License.
---
-
-
--- It is modified on the basis of opa plugin file[https://github.com/apache/apisix/blob/master/apisix/plugins/opa.lua]
---
 local core   = require("apisix.core")
 local http   = require("resty.http")
 local helper = require("apisix.plugins.opa.helper")
@@ -31,7 +11,6 @@ local schema = {
             type = "boolean",
             default = true,
         },
-        policy = {type = "string", default = "auth_apisix" },
         timeout = {
             type = "integer",
             minimum = 1,
@@ -54,8 +33,8 @@ local schema = {
 
 local _M = {
     version = 0.1,
-    priority = 2001,
-    name = "opa",
+    priority = 5001,
+    name = "auth",
     schema = schema,
 }
 
@@ -66,8 +45,21 @@ end
 
 
 function _M.access(conf, ctx)
-    local req_body = helper.build_opa_input(conf, ctx, "http")
-
+    --local req_body = helper.build_opa_input(conf, ctx, "http")
+    local uri=ctx.var.uri
+    if uri == nil or uri=='' then
+        uri="/"
+    end
+    local req_body={
+        scheme  = core.request.get_scheme(ctx),
+        method  = core.request.get_method(),
+        host    = core.request.get_host(ctx),
+        port    = core.request.get_port(ctx),
+        path    = uri,
+        headers = core.request.headers(ctx),
+        query   = core.request.get_uri_args(ctx),
+    }
+    core.log.warn("auth-bios req_body:", core.json.encode(req_body));
     local params = {
         method = "POST",
         body = core.json.encode(req_body),
@@ -84,32 +76,26 @@ function _M.access(conf, ctx)
     end
 
     local host_end_idx = string.find(string.sub(conf.host, -2), "/")
-    local endpoint = conf.host .. "/auth/v1/data/" .. conf.policy
+    local endpoint = conf.host .. "/auth/apisix"
     if host_end_idx then
-        endpoint = conf.host .. "auth/v1/data/" .. conf.policy
+        endpoint = conf.host .. "auth/apisix"
     end
 
 
     local httpc = http.new()
     httpc:set_timeout(conf.timeout)
 
-    core.log.info("before request_uri======================");
-    core.log.info("endpoint:",endpoint);
-    core.log.info("params:",params.body);
-
     local res, req_err = httpc:request_uri(endpoint, params)
 
+    core.log.warn("auth service err:", req_err);
 
-    core.log.info("auth service err:", req_err);
-
-    -- block by default when decision is unavailable
     if not res then
-        core.log.error("failed to process OPA decision, err: ", req_err)
+        core.log.error("failed auth service, err: ", req_err)
         return 403
     end
 
-    core.log.info("res.body:",res.body);
-    -- parse the results of the decision
+    core.log.warn("auth service response body:",res.body);
+
     local body, err = core.json.decode(res.body)
 
     if not body then
@@ -118,22 +104,14 @@ function _M.access(conf, ctx)
     end
 
     if body.code ~='200' then
-        core.log.error("invalid OPA service return code: ", body.code,
+        core.log.error("invalid auth service return code: ", body.code,
                 " err:", body.msg)
         return 502
     end
 
-    if not body.data then
-        core.log.error("invalid OPA decision format: ", res.body,
-                " err: `data` field does not exist")
-        return 503
-    end
-
     local result = body.data
 
-    core.log.info("result:",core.json.encode(result))
     if not result.allow then
-
         local status_code = 403
         if result.status_code then
             status_code = result.status_code
@@ -149,7 +127,7 @@ function _M.access(conf, ctx)
         return status_code, reason
     else
         if result.headers then
-            core.log.info("result.headers: ", core.json.encode(result.headers["Tardis-Context"]))
+            core.log.warn("request.headers: ", core.json.encode(result.headers["Tardis-Context"]))
             core.request.set_header(ctx,conf.head_key_context,result.headers["Tardis-Context"])
         end
     end

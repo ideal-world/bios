@@ -21,6 +21,7 @@ services:
       - etcd
 #    network_mode: host
     ports:
+      - "9090:9090/tcp"
       - "9180:9180/tcp"
       - "9080:9080/tcp"
       - "9091:9091/tcp"
