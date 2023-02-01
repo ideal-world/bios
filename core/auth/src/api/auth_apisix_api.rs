@@ -49,22 +49,3 @@ struct ApisixAuthReq {
 struct ApisixAuthInputReq {
     pub request: AuthReq,
 }
-
-// #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-// pub struct OPAAuthResp {
-//     pub result: AuthResp,
-// }
-//
-// impl IntoResponse for OPAAuthResp {
-//     fn into_response(self) -> Response {
-//         tardis::TardisFuns::json.obj_to_string(&self).unwrap().into()
-//     }
-// }
-//
-// impl ApiResponse for OPAAuthResp {
-//     fn meta() -> MetaResponses {
-//         MetaResponses { responses: vec![] }
-//     }
-//
-//     fn register(registry: &mut Registry) {}
-// }
