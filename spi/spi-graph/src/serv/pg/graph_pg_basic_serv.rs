@@ -67,7 +67,7 @@ pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq, fu
             sql_vals.push(Value::from(rel_version.to_string()));
             where_del_rel_fragments.push(format!("rel_version = ${}", sql_vals.len()));
         }
-        where_fragments.push(format!("{}", where_del_rel_fragments.join(" AND ")));
+        where_fragments.push(where_del_rel_fragments.join(" AND ").to_string());
     }
     let where_fragments = if where_fragments.is_empty() {
         "".to_string()
