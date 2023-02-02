@@ -1,14 +1,14 @@
 [package]
 name = "bios-serv-all"
-version = "0.1.0"
-authors = ["gudaoxuri <i@sunisle.org>"]
-homepage = "https://bios.idealworld.group"
-documentation = "https://bios.idealworld.group"
-repository = "https://github.com/ideal-world/bios"
-license = "Apache-2.0"
-edition = "2021"
-readme = "README.adoc"
-publish = false
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
 
 [profile.release]
 lto = true
@@ -16,8 +16,8 @@ codegen-units = 1
 opt-level = "z"
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha33", features = [
+serde.workspace = true
+tardis = { workspace = true, features = [
     "web-server",
     "conf-remote",
     "reldb-mysql",

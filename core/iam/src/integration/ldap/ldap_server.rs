@@ -117,27 +117,27 @@ impl LdapSession {
                             attributes: vec![
                                 LdapPartialAttribute {
                                     atype: "sAMAccountName".to_string(),
-                                    vals: vec![cn.to_string()],
+                                    vals: vec![cn.to_string().into()],
                                 },
                                 // TODO
                                 LdapPartialAttribute {
                                     atype: "mail".to_string(),
-                                    vals: vec![format!("{}@example.com", cn)],
+                                    vals: vec![format!("{cn}@example.com").into()],
                                 },
                                 // TODO
                                 LdapPartialAttribute {
                                     atype: "cn".to_string(),
-                                    vals: vec![cn.to_string()],
+                                    vals: vec![cn.to_string().into()],
                                 },
                                 // TODO
                                 LdapPartialAttribute {
                                     atype: "givenName".to_string(),
-                                    vals: vec!["".to_string()],
+                                    vals: vec!["".to_string().into()],
                                 },
                                 // TODO
                                 LdapPartialAttribute {
                                     atype: "sn".to_string(),
-                                    vals: vec![cn.to_string()],
+                                    vals: vec![cn.to_string().into()],
                                 },
                             ],
                         }),
@@ -171,27 +171,27 @@ impl LdapSession {
                                 attributes: vec![
                                     LdapPartialAttribute {
                                         atype: "sAMAccountName".to_string(),
-                                        vals: vec![cn.clone()],
+                                        vals: vec![cn.clone().into()],
                                     },
                                     // TODO
                                     LdapPartialAttribute {
                                         atype: "mail".to_string(),
-                                        vals: vec![format!("{}@example.com", cn.clone())],
+                                        vals: vec![format!("{}@example.com", cn.clone()).into()],
                                     },
                                     // TODO
                                     LdapPartialAttribute {
                                         atype: "cn".to_string(),
-                                        vals: vec![cn.clone()],
+                                        vals: vec![cn.clone().into()],
                                     },
                                     // TODO
                                     LdapPartialAttribute {
                                         atype: "givenName".to_string(),
-                                        vals: vec!["".to_string()],
+                                        vals: vec!["".to_string().into()],
                                     },
                                     // TODO
                                     LdapPartialAttribute {
                                         atype: "sn".to_string(),
-                                        vals: vec![cn.clone()],
+                                        vals: vec![cn.clone().into()],
                                     },
                                 ],
                             }),
@@ -201,6 +201,10 @@ impl LdapSession {
                         Err(_) => vec![req.gen_error(LdapResultCode::Unavailable, "Service internal error".to_string())],
                     },
                 }
+            }
+            _ => {
+                // TODO
+                Vec::new()
             }
         }
     }
