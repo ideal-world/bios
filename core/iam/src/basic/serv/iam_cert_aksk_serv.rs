@@ -102,20 +102,18 @@ impl IamCertAkSkServ {
             ctx,
         )
         .await?;
+        let tenant_id = add_req.tenant_id.clone();
+        let app_id = add_req.app_id.clone();
         let new_ctx = TardisContext {
             owner: RBUM_SYSTEM_OWNER.to_string(),
-            own_paths: if add_req.app_id.is_some() {
-                format!("{}/{}", add_req.tenant_id, add_req.app_id.clone().unwrap())
+            own_paths: if app_id.is_some() {
+                format!("{}/{}", tenant_id, app_id.clone().unwrap())
             } else {
-                add_req.tenant_id.clone()
+                tenant_id.clone()
             },
             ..ctx.clone()
         };
-        let rel_rbum_id = if add_req.app_id.is_some() {
-            add_req.app_id.as_ref().unwrap()
-        } else {
-            &add_req.tenant_id
-        };
+        let rel_rbum_id = if app_id.is_some() { app_id.clone().unwrap() } else { tenant_id.clone() };
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: ak.into(),
@@ -137,7 +135,7 @@ impl IamCertAkSkServ {
             &new_ctx,
         )
         .await?;
-        IamIdentCacheServ::add_aksk(ak, sk, rel_rbum_id, cert_conf.expire_sec, funs).await?;
+        IamIdentCacheServ::add_aksk(ak, sk, &tenant_id, app_id, cert_conf.expire_sec, funs).await?;
         Ok(id)
     }
     pub async fn delete_cert(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
