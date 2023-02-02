@@ -13,7 +13,7 @@ use crate::auth_config::AuthConfig;
 pub struct AuthReq {
     pub scheme: String,
     pub path: String,
-    pub query: String,
+    pub query: HashMap<String, String>,
     pub method: String,
     pub host: String,
     pub port: u16,
