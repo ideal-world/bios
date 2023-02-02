@@ -104,6 +104,42 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
         })
+    } else if let Some(ak) = req.headers.get(&config.head_key_ak) {
+        let (cache_sk, tenant_id, cache_appid) = if let Some(ak_info) = cache_client.get(&format!("{}{}", config.cache_key_aksk_info, ak)).await? {
+            let ak_vec = ak_info.split(",").collect::<Vec<_>>();
+            (ak_vec[1].to_string(), ak_vec[2].to_string(), ak_vec[3].to_string())
+        } else {
+            return Err(TardisError::unauthorized(&format!("[Auth] Ak [{}] is not legal", ak), "401-auth-req-ak-not-exist"));
+        };
+
+        if let Some(sk) = req.headers.get(&config.head_key_sk) {
+            if *sk != cache_sk {
+                return Err(TardisError::unauthorized(&format!("Ak [{}] authentication failed", ak), "401-auth-req-sk-not-exist"));
+            }
+        } else {
+            return Err(TardisError::unauthorized(&format!("Ak [{}] authentication failed", ak), "401-auth-req-sk-not-exist"));
+        };
+        let mut own_paths = tenant_id.clone();
+        if !app_id.is_empty() {
+            if app_id != cache_appid {
+                return Err(TardisError::unauthorized(
+                    &format!("Ak [{}]  with App [{}] is not legal", ak, app_id),
+                    "401-auth-req-ak-or-app-not-exist",
+                ));
+            }
+            own_paths = format!("{}/{}", tenant_id, app_id,)
+        }
+        Ok(AuthContext {
+            rbum_uri,
+            rbum_action,
+            iam_app_id: if app_id.is_empty() { None } else { Some(app_id) },
+            iam_tenant_id: Some(tenant_id),
+            iam_account_id: None,
+            iam_roles: None,
+            iam_groups: None,
+            own_paths: Some(own_paths),
+            ak: Some(ak.to_string()),
+        })
     } else {
         // public
         Ok(AuthContext {
