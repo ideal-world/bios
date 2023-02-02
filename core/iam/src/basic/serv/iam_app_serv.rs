@@ -10,7 +10,7 @@ use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;

@@ -63,7 +63,7 @@ impl AuthResp {
             allow: true,
             status_code: 200,
             reason: None,
-            headers: headers,
+            headers,
         }
     }
 
@@ -89,7 +89,7 @@ pub struct AuthContext {
     pub ak: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct ResContainerNode {
     children: Option<HashMap<String, ResContainerNode>>,
     leaf_info: Option<ResContainerLeafInfo>,
