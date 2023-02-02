@@ -174,7 +174,7 @@ pub mod common_pg {
         indexes: Vec<(&str, &str)>,
         update_time_field: Option<&str>,
     ) -> TardisResult<TardisRelDBlConnection> {
-        let tag = tag.map(|t| format!("_{}", t)).unwrap_or("".to_string());
+        let tag = tag.map(|t| format!("_{}", t)).unwrap_or_else(|| "".to_string());
         let mut conn = bs_inst.0.conn();
         let mut schema_name = "".to_string();
         if let Some(_schema_name) = get_schema_name_from_ext(bs_inst.1) {

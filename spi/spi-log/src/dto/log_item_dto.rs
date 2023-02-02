@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tardis::{
+    basic::field::TrimString,
     chrono::{DateTime, Utc},
-    web::poem_openapi, basic::field::TrimString,
+    web::poem_openapi,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

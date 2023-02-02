@@ -2,6 +2,7 @@ use std::sync::RwLock;
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use tardis::web::poem_openapi::types::Type;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     log::info,
@@ -28,7 +29,7 @@ pub(crate) fn sort_query(query: &str) -> String {
     if query.is_empty() {
         return "".to_string();
     }
-    query.split("&").sorted_by(|a, b| Ord::cmp(&a.to_lowercase(), &b.to_lowercase())).join("&")
+    query.split('&').sorted_by(|a, b| Ord::cmp(&a.to_lowercase(), &b.to_lowercase())).join("&")
 }
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
@@ -79,7 +80,7 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) -> Tard
 }
 
 fn remove_empty_node(res_container_node: &mut ResContainerNode, mut res_items: Vec<String>) {
-    if res_container_node.child_len() == 0 || res_items.len() == 0 {
+    if res_container_node.child_len() == 0 || res_items.is_empty() {
         return;
     }
     let res_item = res_items.remove(0);
@@ -102,13 +103,13 @@ pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
         res_container_node = res_container_node.get_child_mut(res_item);
     }
     res_container_node.remove_child(&res_action);
-    remove_empty_node(&mut res_container.as_mut().unwrap(), res_items);
+    remove_empty_node(res_container.as_mut().unwrap(), res_items);
     Ok(())
 }
 
 fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &Vec<String>, multi_wildcard: bool, matched_uris: &mut Vec<ResContainerLeafInfo>) {
     // TODO "res_items[0] == "?"" approach will ignore the query, there needs to be a better way
-    if res_container.has_child("$") && (res_items.len() == 0 || multi_wildcard || res_items[0] == "?") {
+    if res_container.has_child("$") && (res_items.is_empty() || multi_wildcard || res_items[0] == "?") {
         // matched
         if let Some(leaf_node) = res_container.get_child("$").get_child_opt(res_action) {
             matched_uris.push(leaf_node.get_leaf_info());
@@ -118,7 +119,7 @@ fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &
         }
         return;
     }
-    if res_items.len() == 0 {
+    if res_items.is_empty() {
         // un-matched
         return;
     }
@@ -145,6 +146,6 @@ pub fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContain
     res_items.remove(res_items.len() - 1);
     let mut matched_uris = vec![];
     let res_container = RES_CONTAINER.read()?;
-    do_match_res(&res_action, &res_container.as_ref().unwrap(), &res_items, false, &mut matched_uris);
+    do_match_res(&res_action, res_container.as_ref().unwrap(), &res_items, false, &mut matched_uris);
     Ok(matched_uris)
 }

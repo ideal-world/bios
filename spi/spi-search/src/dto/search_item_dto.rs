@@ -1,9 +1,10 @@
 use bios_basic::spi::dto::spi_basic_dto::SpiQueryCondReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
+    basic::field::TrimString,
     chrono::{DateTime, Utc},
     serde_json::Value,
-    web::poem_openapi, basic::field::TrimString,
+    web::poem_openapi,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
