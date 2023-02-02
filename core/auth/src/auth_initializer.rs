@@ -6,7 +6,7 @@ use crate::{
     auth_constants::DOMAIN_CODE,
     serv::auth_res_serv,
 };
-use redis::{AsyncCommands, AsyncIter};
+use tardis::cache::{AsyncCommands, AsyncIter};
 use tardis::{
     basic::result::TardisResult,
     log::{info, trace},

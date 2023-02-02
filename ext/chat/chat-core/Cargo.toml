@@ -1,14 +1,14 @@
 [package]
 name = "bios-chat-core"
-version = "0.1.0"
-authors = ["gudaoxuri <i@sunisle.org>"]
-homepage = "https://bios.idealworld.group"
-documentation = "https://bios.idealworld.group"
-repository = "https://github.com/ideal-world/bios"
-license = "Apache-2.0"
-edition = "2021"
-readme = "README.adoc"
-publish = false
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
 
 [profile.release]
 lto = true
@@ -22,8 +22,8 @@ path = "src/lib.rs"
 [features]
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-tardis = { version = "0.1.0-alpha30", features = [
+serde.workspace = true
+tardis = { workspace = true, features = [
     "reldb",
     "web-server",
     "web-client",
@@ -33,4 +33,4 @@ bios-basic = { path = "../../../basic", features = ["default"] }
 bios-chat-basic = { path = "../chat-basic" }
 
 [dev-dependencies]
-tardis = { version = "0.1.0-alpha30", features = ["test"] }
+tardis = { workspace = true, features = ["test"] }
