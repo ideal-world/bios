@@ -114,17 +114,6 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// batch Add Role Rel Accounts(split with ',')
-    #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
-    async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let ids = account_ids.0.split(',').map(|s| s.to_string()).collect();
-        IamRoleServ::add_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_TENANT), &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
     /// Delete Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
