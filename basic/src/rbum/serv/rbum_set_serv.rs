@@ -182,11 +182,11 @@ impl RbumSetServ {
             let mut values = HashMap::from([("rel_rbum_set_id".to_string(), rbum_set_ids)]);
             let mut sys_code_vec = vec![];
             for sys_code in sys_codes {
-                if sys_code != "" {
+                if !sys_code.is_empty() {
                     sys_code_vec.push(sys_code.to_string());
                 }
             }
-            if sys_code_vec.len() > 0 {
+            if !sys_code_vec.is_empty() {
                 values.insert("sys_code".to_string(), &sys_code_vec);
                 Self::check_scopes(values, sys_code_vec.len() as u64, RbumSetCateServ::get_table_name(), funs, ctx).await?;
             }
@@ -266,7 +266,7 @@ impl RbumSetServ {
         if filter.hide_cate_with_empty_item {
             let exist_cate_ids =
                 tree_main.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree_main, &cate.id, &rbum_set_items)).collect::<Vec<String>>();
-            tree_main = tree_main.into_iter().filter(|cate| exist_cate_ids.contains(&cate.id)).collect();
+            tree_main.retain(|cate| exist_cate_ids.contains(&cate.id));
         }
         let items = tree_main
             .iter()

@@ -151,7 +151,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
             if ext_item.op == SpiQueryOpKind::Like {
-                sql_vals.push(Value::from(format!("%{}%", ext_item.value.to_string())));
+                sql_vals.push(Value::from(format!("%{}%", ext_item.value)));
             } else {
                 sql_vals.push(Value::from(ext_item.value.to_string()));
             }

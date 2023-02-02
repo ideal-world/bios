@@ -742,12 +742,19 @@ pub async fn login_by_oauth2(client: &mut BIOSWebTestClient) -> TardisResult<()>
 
 pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     const LDAP_SUPPLIER: &str = "TEST_LDAP";
-    let user1 = "Barbara";
-    let user1_pwd = "123456";
-    let user2 = "testUser";
-    let user2_pwd = "123456";
+    const LDAP_SUPPLIER2: &str = "TEST_LDAP2";
+    let ldap_user1 = "Barbara";
+    let ldap_user1_pwd = "123456";
+    let ldap_user2 = "testUser";
+    let ldap_user2_pwd = "123456";
+    let ldap_user3 = "testUser1";
+    let ldap_user3_pwd = "123456";
+    let ldap_user4 = "testUser2";
+    let ldap_user4_pwd = "123456";
 
-    info!("【login_by_ldap】");
+    let global_user1 = "global_user1";
+
+    info!("【login_by_ldap】prepare");
     //=======preparation area===========
     let funs = iam_constants::get_tardis_inst();
     let ctx = TardisContext {
@@ -783,7 +790,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             &IamAccountAggAddReq {
                 id: None,
                 name: TrimString("用户2".to_string()),
-                cert_user_name: TrimString("user2".to_string()),
+                cert_user_name: TrimString(global_user1.to_string()),
                 cert_password: TrimString("1234567".to_string()),
                 cert_phone: None,
                 cert_mail: None,
@@ -829,20 +836,33 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 disabled: None,
                 account_self_reg: Some(true),
                 cert_conf_by_oauth2: None,
-                cert_conf_by_ldap: None,
+                cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
+                    supplier: TrimString(LDAP_SUPPLIER2.to_string()),
+                    name: LDAP_SUPPLIER2.to_string(),
+                    conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
+                    is_tls: false,
+                    principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
+                    credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
+                    base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
+                    field_display_name: "displayName".to_string(),
+                    search_base_filter: "objectClass=*".to_string(),
+                }]),
             },
         )
         .await;
     sleep(Duration::from_secs(1)).await;
     login_page("tenant_admin2", "123456", Some(tenant1_id.clone()), None, true, client).await?;
+
+    let tenant1_user1 = "user3";
+    let tenant1_user1_pwd = "1234567";
     let tenant1_account_id: String = client
         .post(
             "/ct/account",
             &IamAccountAggAddReq {
                 id: None,
                 name: TrimString("用户3".to_string()),
-                cert_user_name: TrimString("user3".to_string()),
-                cert_password: TrimString("123456".to_string()),
+                cert_user_name: TrimString(tenant1_user1.to_string()),
+                cert_password: TrimString(tenant1_user1_pwd.to_string()),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
@@ -859,42 +879,56 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     //=======end preparation area===========
 
-    assert!(client
-        .put_resp::<IamCpLdapLoginReq, String>(
-            "/cp/ldap/login",
-            &IamCpLdapLoginReq {
-                code: TrimString(LDAP_SUPPLIER.to_string()),
-                name: "dftrvtr".into(),
-                password: user1_pwd.to_string(),
-                tenant_id: Some(tenant1_id.clone()),
-            },
-        )
-        .await
-        .code
-        .starts_with("401"));
+    //=======Test multiple area============
+    info!("test global_user1 login and bind test");
+    do_test_ldap(
+        client,
+        LDAP_SUPPLIER,
+        Some(tenant1_id.clone()),
+        ldap_user1,
+        ldap_user1_pwd,
+        ldap_user2,
+        ldap_user2_pwd,
+        global_user1,
+    )
+    .await?;
 
-    let account: IamAccountInfoWithUserPwdAkResp = client
-        .put(
-            "/cp/ldap/login",
-            &IamCpLdapLoginReq {
-                code: TrimString(LDAP_SUPPLIER.to_string()),
-                name: user1.into(),
-                password: user1_pwd.to_string(),
-                tenant_id: None,
-            },
-        )
-        .await;
+    info!("test tenant level ldap user login and bind test");
+    do_test_ldap(
+        client,
+        LDAP_SUPPLIER2,
+        Some(tenant1_id),
+        ldap_user3,
+        ldap_user3_pwd,
+        ldap_user4,
+        ldap_user4_pwd,
+        tenant1_user1,
+    )
+    .await?;
 
-    assert_eq!(account.iam_account_info_resp.account_name, "");
-    assert!(account.iam_account_info_resp.access_token.is_none());
+    //=======End test multiple area============
 
+    info!("ldap login test succeed");
+    Ok(())
+}
+
+pub async fn do_test_ldap(
+    client: &mut BIOSWebTestClient,
+    ldap_supplier: &str,
+    tenant_id: Option<String>,
+    ldap_user: &str,
+    ldap_user_pwd: &str,
+    ldap_user2: &str,
+    ldap_user2_pwd: &str,
+    ak_user: &str,
+) -> TardisResult<()> {
     assert!(client
         .post_resp::<IamCpUserPwdCheckReq, String>(
             "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
                 ak: "tugherugfqeyvfb".into(),
-                code: LDAP_SUPPLIER.into(),
-                tenant_id: Some(tenant1_id.clone()),
+                code: ldap_supplier.into(),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await
@@ -906,44 +940,75 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
                 ak: "user1".into(),
-                code: LDAP_SUPPLIER.into(),
-                tenant_id: Some(tenant1_id.clone()),
+                code: ldap_supplier.into(),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await
         .code
         .starts_with("404"));
 
+    info!("test error login");
+    assert!(client
+        .put_resp::<IamCpLdapLoginReq, String>(
+            "/cp/ldap/login",
+            &IamCpLdapLoginReq {
+                code: TrimString(ldap_supplier.to_string()),
+                name: "dftrvtr".into(),
+                password: ldap_user_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await
+        .code
+        .starts_with("401"));
+
+    info!("test ldap_user:{} login,and not bind", ldap_user);
+    let account: IamAccountInfoWithUserPwdAkResp = client
+        .put(
+            "/cp/ldap/login",
+            &IamCpLdapLoginReq {
+                code: TrimString(ldap_supplier.to_string()),
+                name: ldap_user.into(),
+                password: ldap_user_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
+            },
+        )
+        .await;
+
+    assert_eq!(account.iam_account_info_resp.account_name, "");
+    assert!(account.iam_account_info_resp.access_token.is_none());
+
+    info!("test ak_user:{} check-bind", ak_user);
     let user_pwd_bind_resp: IamCpUserPwdBindResp = client
         .post(
             "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
-                ak: "user2".into(),
-                code: LDAP_SUPPLIER.into(),
-                tenant_id: Some(tenant1_id.clone()),
+                ak: ak_user.into(),
+                code: ldap_supplier.into(),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await;
 
     assert!(!user_pwd_bind_resp.is_bind);
 
-    //binding user1
+    info!("ldap_user:{} create aksk ", ldap_user);
     let user1_account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/bind-or-create-userpwd",
             &IamCpUserPwdBindWithLdapReq {
                 bind_user_pwd: IamCpUserPwdBindReq { ak: None, sk: "123456".into() },
                 ldap_login: IamCpLdapLoginReq {
-                    code: LDAP_SUPPLIER.into(),
-                    name: user1.into(),
-                    password: user1_pwd.to_string(),
-                    tenant_id: Some(tenant1_id.clone()),
+                    code: ldap_supplier.into(),
+                    name: ldap_user.into(),
+                    password: ldap_user_pwd.to_string(),
+                    tenant_id: tenant_id.clone(),
                 },
-                tenant_id: Some(tenant1_id.clone()),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await;
-    println!("{:?}", user1_account);
 
     assert!(user1_account.iam_account_info_resp.access_token.is_some());
     assert!(!user1_account.iam_account_info_resp.account_name.is_empty());
@@ -970,7 +1035,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             &IamCpUserPwdLoginReq {
                 ak: TrimString(user1_account.ak.to_string()),
                 sk: TrimString(rest_user1_pwd.to_string()),
-                tenant_id: tenant1_id.clone().into(),
+                tenant_id: tenant_id.clone(),
                 flag: None,
             },
         )
@@ -982,10 +1047,10 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .put(
             "/cp/ldap/login",
             &IamCpLdapLoginReq {
-                code: TrimString(LDAP_SUPPLIER.to_string()),
-                name: user1.into(),
-                password: user1_pwd.to_string(),
-                tenant_id: Some(tenant1_id.clone()),
+                code: TrimString(ldap_supplier.to_string()),
+                name: ldap_user.into(),
+                password: ldap_user_pwd.to_string(),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await;
@@ -995,25 +1060,26 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     assert!(!account.iam_account_info_resp.account_id.is_empty());
     assert_eq!(account.status, "Enabled");
 
+    info!("bind ldap_user2 with ak_user:{}", ak_user);
     let account: IamAccountInfoWithUserPwdAkResp = client
         .put(
             "/cp/ldap/bind-or-create-userpwd",
             &IamCpUserPwdBindWithLdapReq {
                 bind_user_pwd: IamCpUserPwdBindReq {
-                    ak: Some("user2".into()),
+                    ak: Some(ak_user.into()),
                     sk: "1234567".into(),
                 },
                 ldap_login: IamCpLdapLoginReq {
-                    code: LDAP_SUPPLIER.into(),
-                    name: user2.into(),
-                    password: user2_pwd.to_string(),
-                    tenant_id: Some(tenant1_id.clone()),
+                    code: ldap_supplier.into(),
+                    name: ldap_user2.into(),
+                    password: ldap_user2_pwd.to_string(),
+                    tenant_id: tenant_id.clone(),
                 },
-                tenant_id: Some(tenant1_id.clone()),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await;
-    println!("{:?}", account);
+    info!("relogin user2 by ldap resp:{:?}", account);
 
     assert!(!account.iam_account_info_resp.account_id.is_empty());
     assert!(account.iam_account_info_resp.access_token.is_some());
@@ -1024,9 +1090,9 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
         .post(
             "/cp/ldap/check-bind",
             &IamCpUserPwdCheckReq {
-                ak: "user2".into(),
-                code: LDAP_SUPPLIER.into(),
-                tenant_id: Some(tenant1_id.clone()),
+                ak: ak_user.into(),
+                code: ldap_supplier.into(),
+                tenant_id: tenant_id.clone(),
             },
         )
         .await;

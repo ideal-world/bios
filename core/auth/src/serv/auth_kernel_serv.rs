@@ -68,7 +68,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
 
     if let Some(token) = req.headers.get(&config.head_key_token) {
         let account_id = if let Some(account_info) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
-            let account_info = account_info.split(",").collect::<Vec<_>>();
+            let account_info = account_info.split(',').collect::<Vec<_>>();
             account_info[1].to_string()
         } else {
             return Err(TardisError::unauthorized(&format!("[Auth] Token [{}] is not legal", token), "401-auth-req-token-not-exist"));
@@ -203,5 +203,5 @@ pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
             }
         }
     }
-    return Err(TardisError::unauthorized("[Auth] Permission denied", "401-auth-req-permission-denied"));
+    Err(TardisError::unauthorized("[Auth] Permission denied", "401-auth-req-permission-denied"))
 }
