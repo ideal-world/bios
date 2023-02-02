@@ -302,8 +302,8 @@ impl IamCertLdapServ {
     }
 
     pub async fn get_account_with_verify(user_name: &str, password: &str, tenant_id: Option<String>, code: &str, funs: &TardisFunsInst) -> TardisResult<Option<(String, String)>> {
-        let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
-        let (mut ldap_client, _, cert_conf_id) = Self::get_ldap_client(None, code, funs, &mock_ctx).await?;
+        let mock_ctx = Self::generate_default_mock_ctx(code, tenant_id.clone(), funs).await;
+        let (mut ldap_client, _, cert_conf_id) = Self::get_ldap_client(Some(mock_ctx.own_paths.clone()), code, funs, &mock_ctx).await?;
         let dn = if let Some(dn) = ldap_client.bind(user_name, password).await? {
             dn
         } else {
@@ -347,11 +347,7 @@ impl IamCertLdapServ {
         Ok(accounts)
     }
 
-    pub async fn check_user_pwd_is_bind(ak: &str, code: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<bool> {
-        let mut tenant_id = tenant_id.clone();
-        if tenant_id.is_some() && tenant_id.clone().unwrap().is_empty() {
-            tenant_id = None;
-        }
+    pub async fn check_user_pwd_is_bind(ak: &str, supplier: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<bool> {
         if tenant_id.is_some() && IamTenantServ::is_disabled(&tenant_id.clone().unwrap(), funs).await? {
             return Err(funs.err().conflict(
                 "user_pwd",
@@ -360,26 +356,34 @@ impl IamCertLdapServ {
                 "409-iam-tenant-is-disabled",
             ));
         }
-        let global_userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), None, funs).await?;
-        let ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), code, None, funs).await;
-        if ldap_cert_conf_id_result.is_err() {
+        let tenant_ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, tenant_id.clone(), funs).await;
+        let global_ldap_cert_conf_id_result = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, None, funs).await;
+        if tenant_ldap_cert_conf_id_result.is_err() && global_ldap_cert_conf_id_result.is_err() {
             return Ok(false);
         }
-        let ldap_cert_conf_id = ldap_cert_conf_id_result?;
-        let global_userpwd_exist = RbumCertServ::check_exist(ak, &global_userpwd_cert_conf_id, "", funs).await?;
-        let exist = if let (Some(tenant_id), false) = (tenant_id.clone(), global_userpwd_exist) {
-            let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
-            if let true = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, &tenant_id, funs).await? {
-                return Err(funs.err().conflict("user_pwd", "check_bind", "user is private", "409-user-is-private"));
-            } else {
-                false
-            }
+        let tenant_userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), tenant_id.clone(), funs).await?;
+        let tenant_exist = RbumCertServ::check_exist(ak, &tenant_userpwd_cert_conf_id, &tenant_id.clone().unwrap_or_default(), funs).await?;
+        //if tenant have cert_conf,then use tenant level
+        let (ldap_cert_conf_id, userpwd_cert_conf_id, userpwd_cert_exist) = if tenant_ldap_cert_conf_id_result.is_ok() {
+            (tenant_ldap_cert_conf_id_result?, tenant_userpwd_cert_conf_id, tenant_exist)
         } else {
-            global_userpwd_exist
+            let userpwd_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), None, funs).await?;
+            let global_userpwd_exist = RbumCertServ::check_exist(ak, &userpwd_cert_conf_id, "", funs).await?;
+            let exist = if tenant_id.is_some() && !global_userpwd_exist {
+                if tenant_exist {
+                    return Err(funs.err().conflict("user_pwd", "check_bind", "user is private", "409-user-is-private"));
+                } else {
+                    false
+                }
+            } else {
+                true
+            };
+            (global_ldap_cert_conf_id_result?, userpwd_cert_conf_id, exist)
         };
-        if exist {
-            let mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
-            if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &global_userpwd_cert_conf_id, funs, &mock_ctx).await? {
+
+        if userpwd_cert_exist {
+            let mock_ctx = Self::generate_default_mock_ctx(supplier, tenant_id.clone(), funs).await;
+            if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &userpwd_cert_conf_id, funs, &mock_ctx).await? {
                 let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?;
                 if cert_id.is_some() {
                     Ok(true)
@@ -398,9 +402,11 @@ impl IamCertLdapServ {
 
     pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let tenant_id = login_req.tenant_id.clone();
-        let mut mock_ctx = Self::generate_default_mock_ctx(tenant_id.clone()).await;
+        // mock_ctx decide whether the login mode is global or tenant level
+        let mut mock_ctx = Self::generate_default_mock_ctx(login_req.ldap_login.code.as_ref(), tenant_id.clone(), funs).await;
 
-        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(None, login_req.ldap_login.code.to_string().as_str(), funs, &mock_ctx).await?;
+        let (mut ldap_client, cert_conf, cert_conf_id) =
+            Self::get_ldap_client(Some(mock_ctx.own_paths.clone()), login_req.ldap_login.code.to_string().as_str(), funs, &mock_ctx).await?;
         let dn = if let Some(dn) = ldap_client.bind(login_req.ldap_login.name.to_string().as_str(), login_req.ldap_login.password.as_str()).await? {
             dn
         } else {
@@ -504,10 +510,12 @@ impl IamCertLdapServ {
                     funs,
                 )
                 .await;
-                if tenant_check.is_ok() {
+                if tenant_check.is_ok() && ctx.own_paths.is_empty() {
                     return Err(funs.err().conflict("rbum_cert", "bind_user_pwd_by_ldap", "user is private", "409-user-is-private"));
-                } else {
+                } else if tenant_check.is_err() {
                     return Err(funs.err().unauthorized("rbum_cert", "valid", "validation error", "401-rbum-cert-valid-error"));
+                } else {
+                    tenant_check?
                 }
             } else {
                 global_check?
@@ -524,7 +532,7 @@ impl IamCertLdapServ {
             )
             .await?
         };
-        if let true = Self::check_user_pwd_is_bind(user_name, code, tenant_id.clone(), funs).await? {
+        if Self::check_user_pwd_is_bind(user_name, code, tenant_id.clone(), funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "user is bound by ldap", "409-iam-user-is-bound"));
         }
         //查出用户名密码的account_id
@@ -532,7 +540,17 @@ impl IamCertLdapServ {
         Ok(rbum_item_id)
     }
 
-    pub async fn generate_default_mock_ctx(_tenant_id: Option<String>) -> TardisContext {
+    pub async fn generate_default_mock_ctx(supplier: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisContext {
+        //if tenant_id is some and tenant have cert_conf \
+        // then assign tenant_id to own_paths
+        if IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, tenant_id.clone(), funs).await.is_ok() {
+            if let Some(tenant_id) = tenant_id {
+                return TardisContext {
+                    own_paths: tenant_id,
+                    ..Default::default()
+                };
+            }
+        }
         TardisContext { ..Default::default() }
     }
 
@@ -563,8 +581,8 @@ impl IamCertLdapServ {
         Ok(account_id)
     }
 
-    async fn get_ldap_client(tenant_id: Option<String>, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
-        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), code, tenant_id, funs).await?;
+    async fn get_ldap_client(tenant_id: Option<String>, supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
+        let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, tenant_id, funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
         let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.is_tls, &cert_conf.base_dn).await?;
         Ok((client, cert_conf, cert_conf_id))

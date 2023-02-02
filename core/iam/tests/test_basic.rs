@@ -7,6 +7,46 @@ use tardis::testcontainers::images::generic::GenericImage;
 use tardis::testcontainers::Container;
 use tardis::TardisFuns;
 
+const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: Barbara
+sn: Jensen
+displayName: Barbara Jensen
+title: the world's most famous mythical manager
+mail: bjensen@test.com
+uid: bjensen
+userpassword: 123456
+
+dn: cn=testUser,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: testUser
+sn: user
+displayName: testUser
+title: the world's most famous mythical manager
+mail: testUser@test.com
+uid: tuser
+userpassword: 123456
+
+dn: cn=testUser1,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: testUser1
+sn: user1
+displayName: testUser1
+title: the world's most famous mythical manager
+mail: testUser1@test.com
+uid: tuser1
+userpassword: 123456
+
+dn: cn=testUser2,dc=test,dc=com
+objectClass: inetOrgPerson
+cn: testUser2
+sn: user2
+displayName: testUser2
+title: the world's most famous mythical manager
+mail: testUser2@test.com
+uid: tuser2
+userpassword: 123456";
+
 pub struct LifeHold<'a> {
     pub ldap: Container<'a, GenericImage>,
 }
@@ -33,25 +73,6 @@ async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> 
             .with_wait_for(WaitFor::message_on_stdout("First start is done...")),
     );
 
-    const BASE_LDIF: &str = "dn: cn=Barbara,dc=test,dc=com
-objectClass: inetOrgPerson
-cn: Barbara
-sn: Jensen
-displayName: Barbara Jensen
-title: the world's most famous mythical manager
-mail: bjensen@test.com
-uid: bjensen
-userpassword: 123456
-
-dn: cn=testUser,dc=test,dc=com
-objectClass: inetOrgPerson
-cn: testUser
-sn: user1
-displayName: testUser1
-title: the world's most famous mythical manager
-mail: testUser@test.com
-uid: tuser1
-userpassword: 123456";
     let port = ldap_container.get_host_port_ipv4(389);
     let url = format!("ldap://localhost:{}", port);
     let base_dn = format!("DC={},DC=com", ORGANISATION);

@@ -1,2 +1,2 @@
-pub mod s3;
 pub mod object_obj_serv;
+pub mod s3;

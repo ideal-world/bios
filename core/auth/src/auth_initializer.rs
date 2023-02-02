@@ -44,7 +44,7 @@ pub async fn init_data() -> TardisResult<()> {
                     let key = changed_key.strip_prefix(&config.cache_key_res_changed_info).unwrap();
                     trace!("[Auth]Fetch changed key [{}]", key);
                     let f = key.split("##").collect::<Vec<_>>();
-                    if let Some(changed_value) = TardisFuns::cache_by_module_or_default(DOMAIN_CODE).hget(&config.cache_key_res_info, &key).await.unwrap() {
+                    if let Some(changed_value) = TardisFuns::cache_by_module_or_default(DOMAIN_CODE).hget(&config.cache_key_res_info, key).await.unwrap() {
                         auth_res_serv::add_res(f[1], f[0], &TardisFuns::json.str_to_obj(&changed_value).unwrap()).unwrap();
                     } else {
                         auth_res_serv::remove_res(f[1], f[0]).unwrap();

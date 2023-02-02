@@ -99,7 +99,12 @@ pub struct IamCertConfOAuth2Resp {
     pub sk: String,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamCertConfAkSkAddOrModifyReq {}
+pub struct IamCertConfAkSkAddOrModifyReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub name: TrimString,
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
+    pub expire_sec: Option<i64>,
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
