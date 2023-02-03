@@ -7,7 +7,7 @@ pub struct AuthConfig {
     pub head_key_token: String,
 
     pub head_key_ak_authorization: String,
-
+    pub head_key_date_flag: String,
     pub head_key_app: String,
     pub head_key_protocol: String,
     pub head_key_context: String,
@@ -28,7 +28,8 @@ impl Default for AuthConfig {
     fn default() -> Self {
         AuthConfig {
             head_key_token: "Bios-Token".to_string(),
-            head_key_ak_authorization: "Ak-Authorization".to_string(),
+            head_key_ak_authorization: "Bios-Ak-Authorization".to_string(),
+            head_key_date_flag: "Bios-Date".to_string(),
             head_key_app: "Bios-App".to_string(),
             head_key_protocol: "Bios-Proto".to_string(),
             head_key_context: "Tardis-Context".to_string(),
