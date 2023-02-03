@@ -88,6 +88,13 @@ pub async fn test_req() -> TardisResult<()> {
     assert!(ctx.roles.is_empty());
     assert!(ctx.groups.is_empty());
 
+    // token is not legal
+    let resp = mock_req("GET", "/iam/ci/account", "", vec![("Bios-Ak-Authorization", "aaaa")]).await;
+    println!("{resp:?}");
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 401);
+    assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing header [Bios-Date]");
+
     // request token by system account
     cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
     cache_client

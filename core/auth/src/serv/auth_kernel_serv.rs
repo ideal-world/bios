@@ -110,7 +110,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             req_date
         } else {
             return Err(TardisError::unauthorized(
-                &format!("[Auth] Request is not legal, missing [{}]", config.head_key_date_flag),
+                &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_date_flag),
                 "401-auth-req-ak-not-exist",
             ));
         };
@@ -132,15 +132,16 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 "401-auth-req-ak-not-exist",
             ));
         };
-        // local calc_signature = ngx_encode_base64(hmac_sha1(sk, string.lower(req_method .. "\n" .. req_date .. "\n" .. req_path .. "\n" .. sorted_req_query)))
 
         let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
         let calc_signature = TardisFuns::crypto
             .base64
             .encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("{}\n{}\n{}\n{}", req.method, req_date, req.path, sorted_req_query).to_lowercase(), &cache_sk)?);
+
         if calc_signature != signature {
             return Err(TardisError::unauthorized(&format!("Ak [{ak}] authentication failed"), "401-auth-req-authenticate-fail"));
         }
+
         let mut own_paths = cache_tenant_id.clone();
         if !app_id.is_empty() {
             if app_id != cache_appid {
