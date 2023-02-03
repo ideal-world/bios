@@ -1,6 +1,5 @@
 local core   = require("apisix.core")
 local http   = require("resty.http")
-local helper = require("apisix.plugins.opa.helper")
 local type   = type
 
 local schema = {
@@ -45,7 +44,7 @@ end
 
 
 function _M.access(conf, ctx)
-    --local req_body = helper.build_opa_input(conf, ctx, "http")
+    --todo add option and cros
     local uri=ctx.var.uri
     if uri == nil or uri=='' then
         uri="/"
@@ -59,7 +58,7 @@ function _M.access(conf, ctx)
         headers = core.request.headers(ctx),
         query   = core.request.get_uri_args(ctx),
     }
-    core.log.warn("auth-bios req_body:", core.json.encode(req_body));
+    core.log.info("auth-bios req_body:", core.json.encode(req_body));
     local params = {
         method = "POST",
         body = core.json.encode(req_body),
@@ -87,14 +86,14 @@ function _M.access(conf, ctx)
 
     local res, req_err = httpc:request_uri(endpoint, params)
 
-    core.log.warn("auth service err:", req_err);
+    core.log.info("auth service err:", req_err);
 
     if not res then
         core.log.error("failed auth service, err: ", req_err)
         return 403
     end
 
-    core.log.warn("auth service response body:",res.body);
+    core.log.info("auth service response body:",res.body);
 
     local body, err = core.json.decode(res.body)
 
@@ -127,7 +126,7 @@ function _M.access(conf, ctx)
         return status_code, reason
     else
         if result.headers then
-            core.log.warn("request.headers: ", core.json.encode(result.headers["Tardis-Context"]))
+            core.log.info("request.headers: ", core.json.encode(result.headers["Tardis-Context"]))
             core.request.set_header(ctx,conf.head_key_context,result.headers["Tardis-Context"])
         end
     end

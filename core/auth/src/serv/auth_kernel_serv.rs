@@ -104,8 +104,8 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
         })
-    } else if let Some(ak) = req.headers.get(&config.head_key_ak) {
-        let (cache_sk, tenant_id, cache_appid) = if let Some(ak_info) = cache_client.get(&format!("{}{}", config.cache_key_aksk_info, ak)).await? {
+    } else if let Some(ak) = req.headers.get(&config.head_key_ak_authorization) {
+        let (cache_sk, cache_tenant_id, cache_appid) = if let Some(ak_info) = cache_client.get(&format!("{}{}", config.cache_key_aksk_info, ak)).await? {
             let ak_vec = ak_info.split(",").collect::<Vec<_>>();
             (ak_vec[1].to_string(), ak_vec[2].to_string(), ak_vec[3].to_string())
         } else {
@@ -119,7 +119,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         } else {
             return Err(TardisError::unauthorized(&format!("Ak [{}] authentication failed", ak), "401-auth-req-sk-not-exist"));
         };
-        let mut own_paths = tenant_id.clone();
+        let mut own_paths = cache_tenant_id.clone();
         if !app_id.is_empty() {
             if app_id != cache_appid {
                 return Err(TardisError::unauthorized(
@@ -127,13 +127,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                     "401-auth-req-ak-or-app-not-exist",
                 ));
             }
-            own_paths = format!("{}/{}", tenant_id, app_id,)
+            own_paths = format!("{}/{}", cache_tenant_id, app_id,)
         }
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
             iam_app_id: if app_id.is_empty() { None } else { Some(app_id) },
-            iam_tenant_id: Some(tenant_id),
+            iam_tenant_id: Some(cache_tenant_id),
             iam_account_id: None,
             iam_roles: None,
             iam_groups: None,

@@ -6,8 +6,7 @@ use std::fmt::Debug;
 pub struct AuthConfig {
     pub head_key_token: String,
 
-    pub head_key_ak: String,
-    pub head_key_sk: String,
+    pub head_key_ak_authorization: String,
 
     pub head_key_app: String,
     pub head_key_protocol: String,
@@ -19,7 +18,6 @@ pub struct AuthConfig {
     pub cache_key_res_info: String,
     pub cache_key_res_changed_info: String,
     pub cache_key_res_changed_timer_sec: u32,
-    pub cache_key_aksk_local_expire_sec: u32,
 
     pub cors_allow_origin: String,
     pub cors_allow_methods: String,
@@ -30,8 +28,7 @@ impl Default for AuthConfig {
     fn default() -> Self {
         AuthConfig {
             head_key_token: "Bios-Token".to_string(),
-            head_key_ak: "Bios-Ak".to_string(),
-            head_key_sk: "Bios-Sk".to_string(),
+            head_key_ak_authorization: "Ak-Authorization".to_string(),
             head_key_app: "Bios-App".to_string(),
             head_key_protocol: "Bios-Proto".to_string(),
             head_key_context: "Tardis-Context".to_string(),
@@ -41,7 +38,6 @@ impl Default for AuthConfig {
             cache_key_res_info: "iam:res:info".to_string(),
             cache_key_res_changed_info: "iam:res:changed:info:".to_string(),
             cache_key_res_changed_timer_sec: 30,
-            cache_key_aksk_local_expire_sec: 0,
             cors_allow_origin: "*".to_string(),
             cors_allow_methods: "*".to_string(),
             cors_allow_headers: "*".to_string(),
