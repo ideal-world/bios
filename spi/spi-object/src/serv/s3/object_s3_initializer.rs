@@ -11,9 +11,9 @@ pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _: bool) -> Tard
     let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
     let client = TardisOSClient::init(
         "s3",
-        ext.get("endpoint").unwrap().as_str().unwrap(),
-        ext.get("ak").unwrap().as_str().unwrap(),
-        ext.get("sk").unwrap().as_str().unwrap(),
+        &bs_cert.conn_uri,
+        &bs_cert.ak,
+        &bs_cert.sk,
         ext.get("region").unwrap().as_str().unwrap(),
         if let Some(default_bucket) = ext.get("default_bucket") {
             default_bucket.as_str().unwrap()

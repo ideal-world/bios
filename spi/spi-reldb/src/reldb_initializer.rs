@@ -17,7 +17,7 @@ use tardis::{
 use crate::{
     api::ci::api::reldb_exec_api,
     reldb_config::ReldbConfig,
-    reldb_constants::DOMAIN_CODE,
+    reldb_constants::{self, DOMAIN_CODE},
     serv::{self, reldb_exec_serv},
 };
 
@@ -36,7 +36,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 
 async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     spi_initializer::add_kind(spi_constants::SPI_PG_KIND_CODE, funs, ctx).await?;
-    spi_initializer::add_kind("spi-mysql", funs, ctx).await?;
+    spi_initializer::add_kind(reldb_constants::SPI_MYSQL_KIND_CODE, funs, ctx).await?;
     Ok(())
 }
 
@@ -59,7 +59,7 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, _: bool) -> T
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init(&bs_cert, &client, ctx).await?,
         #[cfg(feature = "spi-mysql")]
-        "spi-mysql" => serv::mysql::reldb_mysql_initializer::init(&bs_cert, &client, ctx).await?,
+        reldb_constants::SPI_MYSQL_KIND_CODE => serv::mysql::reldb_mysql_initializer::init(&bs_cert, &client, ctx).await?,
         _ => Err(bs_cert.bs_not_implemented())?,
     };
     Ok(SpiBsInst { client: Box::new(client), ext })
@@ -71,7 +71,7 @@ pub async fn inst_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, S
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init_conn(conn, &bs_inst.1).await,
         #[cfg(feature = "spi-mysql")]
-        "spi-mysql" => serv::mysql::reldb_mysql_initializer::init_conn(conn, &bs_inst.1).await,
+        reldb_constants::SPI_MYSQL_KIND_CODE => serv::mysql::reldb_mysql_initializer::init_conn(conn, &bs_inst.1).await,
         kind_code => Err(spi_funs::bs_not_implemented(kind_code))?,
     }
 }
