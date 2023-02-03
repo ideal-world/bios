@@ -75,9 +75,9 @@ function _M.access(conf, ctx)
     end
 
     local host_end_idx = string.find(string.sub(conf.host, -2), "/")
-    local endpoint = conf.host .. "/auth/apisix"
+    local endpoint = conf.host .. "/auth/auth/apisix"
     if host_end_idx then
-        endpoint = conf.host .. "auth/apisix"
+        endpoint = conf.host .. "auth/auth/apisix"
     end
 
 
