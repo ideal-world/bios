@@ -9,6 +9,7 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::tokio::time::sleep;
+use tardis::web::poem_openapi::types::Type;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
@@ -268,7 +269,7 @@ impl RbumSetServ {
                 tree_main.iter().filter(|cate| cate.pid.is_none()).flat_map(|cate| Self::filter_exist_items(&tree_main, &cate.id, &rbum_set_items)).collect::<Vec<String>>();
             tree_main.retain(|cate| exist_cate_ids.contains(&cate.id));
         }
-        let items = tree_main
+        let mut items = tree_main
             .iter()
             .map(|cate| {
                 (
@@ -296,6 +297,29 @@ impl RbumSetServ {
                 )
             })
             .collect::<HashMap<String, Vec<RbumSetItemInfoResp>>>();
+        items.insert(
+            "".to_string(),
+            rbum_set_items
+                .iter()
+                .filter(|i| i.rel_rbum_set_cate_id.is_none())
+                .map(|i| RbumSetItemInfoResp {
+                    id: i.id.to_string(),
+                    sort: i.sort,
+                    rel_rbum_item_id: i.rel_rbum_item_id.to_string(),
+                    rel_rbum_item_code: i.rel_rbum_item_code.to_string(),
+                    rel_rbum_item_name: i.rel_rbum_item_name.to_string(),
+                    rel_rbum_item_kind_id: i.rel_rbum_item_kind_id.to_string(),
+                    rel_rbum_item_domain_id: i.rel_rbum_item_domain_id.to_string(),
+                    rel_rbum_item_owner: i.rel_rbum_item_owner.to_string(),
+                    rel_rbum_item_create_time: i.rel_rbum_item_create_time,
+                    rel_rbum_item_update_time: i.rel_rbum_item_update_time,
+                    rel_rbum_item_disabled: i.rel_rbum_item_disabled,
+                    rel_rbum_item_scope_level: i.rel_rbum_item_scope_level.clone(),
+                    own_paths: i.own_paths.to_string(),
+                    owner: i.owner.to_string(),
+                })
+                .collect(),
+        );
         let mut item_number_agg = tree_main
             .iter()
             .map(|cate| {
@@ -752,7 +776,11 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
     }
 
     async fn package_add(add_req: &RbumSetItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<rbum_set_item::ActiveModel> {
-        let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?;
+        let rel_sys_code = if add_req.rel_rbum_set_cate_id.is_empty() {
+            "".to_string()
+        } else {
+            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_id.as_str(), funs, ctx).await?
+        };
         Ok(rbum_set_item::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
             rel_rbum_set_id: Set(add_req.rel_rbum_set_id.to_string()),
@@ -767,7 +795,11 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         Self::check_scope(&add_req.rel_rbum_set_id, RbumSetServ::get_table_name(), funs, ctx).await?;
         Self::check_scope(&add_req.rel_rbum_item_id, RbumItemServ::get_table_name(), funs, ctx).await?;
         Self::check_scope(&add_req.rel_rbum_set_cate_id, RbumSetCateServ::get_table_name(), funs, ctx).await?;
-        let rel_sys_code = RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?;
+        let rel_sys_code = if add_req.rel_rbum_set_cate_id.is_empty() {
+            "".to_string()
+        } else {
+            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_id.as_str(), funs, ctx).await?
+        };
         if funs
             .db()
             .count(
