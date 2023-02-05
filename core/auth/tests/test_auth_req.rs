@@ -6,7 +6,7 @@ use bios_auth::{
     dto::auth_dto::{AuthReq, AuthResp},
 };
 use serde::{Deserialize, Serialize};
-use tardis::chrono::Local;
+use tardis::chrono::{Duration, Local, Utc};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
@@ -95,8 +95,39 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(resp.status_code, 401);
     assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing header [Bios-Date]");
 
+    // bad date format
+    let now = Utc::now().format("%Yy%mm%dd %H:%M:%S");
+    let now = now.to_string();
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![(&config.head_key_ak_authorization, "aaaa:"), (&config.head_key_date_flag, &now)],
+    )
+    .await;
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 400);
+    assert_eq!(resp.reason.unwrap(), "[Auth] bad date format");
+
+    // bad date format
+    let now = (Utc::now() - Duration::seconds(20)).format(&config.auth_head_date_format);
+    let now = now.to_string();
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![(&config.head_key_ak_authorization, "aaaa:"), (&config.head_key_date_flag, &now)],
+    )
+    .await;
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 401);
+    assert_eq!(
+        resp.reason.unwrap(),
+        "[Auth] The request has already been made or the client's time is incorrect. Please try again."
+    );
+
     // [Auth] Ak-Authorization [aaaa] is not legal
-    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = Utc::now().format(&config.auth_head_date_format);
     let now = now.to_string();
     let resp = mock_req(
         "GET",
@@ -112,7 +143,7 @@ pub async fn test_req() -> TardisResult<()> {
     let sk = "bbbbbb";
 
     // is not legal
-    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = Utc::now().format(&config.auth_head_date_format);
     let now = now.to_string();
     let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
     let resp = mock_req(
@@ -127,7 +158,7 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(resp.reason.unwrap(), "[Auth] Ak [aaaa] is not legal");
 
     // 200
-    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = Utc::now().format(&config.auth_head_date_format);
     let now = now.to_string();
     cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},tenant_id123,")).await?;
     let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
@@ -142,7 +173,7 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(resp.status_code, 200);
 
     // app_id not legal
-    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = Utc::now().format(&config.auth_head_date_format);
     let now = now.to_string();
     let app_id = "app_idcc";
     cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},tenant_id123,")).await?;
@@ -163,7 +194,7 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(resp.reason.unwrap(), "Ak [aaaa]  with App [app_idcc] is not legal");
 
     // app_id legal
-    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = Utc::now().format(&config.auth_head_date_format);
     let now = now.to_string();
     let app_id = "app_idcc";
     cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},tenant_id123,{app_id}")).await?;

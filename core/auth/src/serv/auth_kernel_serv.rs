@@ -1,3 +1,4 @@
+use tardis::chrono::{Local, TimeZone, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
@@ -118,6 +119,18 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             return Err(TardisError::unauthorized(
                 &format!("[Auth] Ak-Authorization [{ak_authorization}] is not legal",),
                 "401-auth-req-ak-not-exist",
+            ));
+        }
+        let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.auth_head_date_format) {
+            date_time.timestamp_millis()
+        } else {
+            return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
+        };
+        let now = Utc::now().timestamp_millis();
+        if now - req_head_time > config.auth_head_date_interval_millsec {
+            return Err(TardisError::unauthorized(
+                "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
+                "401-auth-req-date-incorrect",
             ));
         }
         let ak_authorizations = ak_authorization.split(':').collect::<Vec<_>>();
