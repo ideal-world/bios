@@ -25,6 +25,19 @@ local schema = {
         with_consumer = {type = "boolean", default = false},
 
         head_key_context = { type = "string", default = "Tardis-Context" },
+
+        cors_allow_origin = { type = "string", default = "*" },
+        cors_allow_methods = { type = "string", default = "*" },
+        cors_allow_headers = { type = "string", default = "*" },
+
+        exclude_prefix_paths = {
+            type = "array",
+            items = {
+                type = "string",
+            },
+            default = {}
+        },
+
     },
     required = {"host"}
 }
@@ -43,8 +56,28 @@ function _M.check_schema(conf)
 end
 
 
+local function cors(conf)
+    core.response.set_header("Access-Control-Allow-Origin", conf.cors_allow_origin)
+    core.response.set_header("Access-Control-Allow-Methods", conf.cors_allow_methods)
+    core.response.set_header("Access-Control-Allow-Headers", conf.cors_allow_headers)
+    core.response.set_header("Access-Control-Max-Age", "3600000")
+    core.response.set_header("Access-Control-Allow-Credentials", "true")
+    core.response.set_header("Content-Type", "application/json")
+end
+
 function _M.access(conf, ctx)
-    --todo add option and cros
+    local path = ngx.var.request_uri
+    for _, prefix_path in pairs(conf.exclude_prefix_paths) do
+       if string.sub(path, 1, string.len(prefix_path)) == prefix_path then
+           return 200
+       end
+    end
+
+    if ctx.var.request_method == "OPTIONS" then
+        cors(conf)
+        return 200
+    end
+
     local uri=ctx.var.uri
     if uri == nil or uri=='' then
         uri="/"
@@ -86,25 +119,25 @@ function _M.access(conf, ctx)
 
     local res, req_err = httpc:request_uri(endpoint, params)
 
-    core.log.info("auth service err:", req_err);
-
     if not res then
         core.log.error("failed auth service, err: ", req_err)
+        cors(conf)
         return 403
     end
 
     core.log.info("auth service response body:",res.body);
-
     local body, err = core.json.decode(res.body)
 
     if not body then
         core.log.error("invalid response body: ", res.body, " err: ", err)
+        cors(conf)
         return 503
     end
 
     if body.code ~='200' then
         core.log.error("invalid auth service return code: ", body.code,
                 " err:", body.msg)
+        cors(conf)
         return 502
     end
 
@@ -122,7 +155,7 @@ function _M.access(conf, ctx)
                     and core.json.encode(result.reason)
                     or result.reason
         end
-
+        cors(conf)
         return status_code, reason
     else
         if result.headers then

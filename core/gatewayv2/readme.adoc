@@ -1,0 +1,93 @@
+
+
+=== Gateway
+
+==== Directory Description
+
+----
+|apisix
+|-- apisix
+|---- plugins
+|------ auth-bios.lua               # auth-bios plugin
+|-- conf
+|---- config.yaml                   # config
+|---- config-default.yaml           # added auth-bios plugin
+|-- Dockerfile                      # Dockerfile
+----
+
+==== Environmental preparation
+
+
+==== Use image
+
+[source,sh]
+----
+docker run --name bios-gateway -d -p 9080:9080 ghcr.io/ideal-world/bios-gateway:latest
+----
+
+===== Or Run with dashboard
+[source,sh]
+----
+cat > ./dashboard.yml <<EOF
+conf:
+  listen:
+    host: 0.0.0.0
+    port: 9000
+  etcd:
+    endpoints:
+      - gateway:2379
+authentication:
+  secret: biossec
+  expire_time: 3600  
+  users:
+    - username: admin
+      password: dsfDs3#￥2
+EOF
+
+cat > ./docker-compose.yaml <<EOF 
+version: "3"
+
+services:
+  apisix-dashboard:
+    image: apache/apisix-dashboard:2.15.0-alpine
+    volumes:
+      - ./dashboard.yml:/usr/local/apisix-dashboard/conf/conf.yaml
+    restart: always
+    ports:
+      - "9000:9000"
+    networks:
+      apisix:
+
+  apisix:
+    image: ghcr.io/ideal-world/bios-gateway:latest
+    restart: always
+#    network_mode: host
+    ports:
+      - "9180:9180/tcp"
+      - "9080:9080/tcp"
+      - "9091:9091/tcp"
+      - "9443:9443/tcp"
+      - "9092:9092/tcp"
+    networks:
+      apisix:
+
+networks:
+  apisix:
+    driver: bridge
+
+EOF
+----
+
+[source,sh]
+----
+docker-compose up -d
+----
+
+==== Build image from source
+
+[source,sh]
+----
+docker build -f apisix/Dockerfile -t bios-gateway apisix/
+docker run --name bios-gateway1 -d -p 9080:9080 bios-gateway
+----
+
