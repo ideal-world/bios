@@ -125,12 +125,9 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         let signature = ak_authorizations[1];
         let (cache_sk, cache_tenant_id, cache_appid) = if let Some(ak_info) = cache_client.get(&format!("{}{}", config.cache_key_aksk_info, ak)).await? {
             let ak_vec = ak_info.split(',').collect::<Vec<_>>();
-            (ak_vec[1].to_string(), ak_vec[2].to_string(), ak_vec[3].to_string())
+            (ak_vec[0].to_string(), ak_vec[1].to_string(), ak_vec[2].to_string())
         } else {
-            return Err(TardisError::unauthorized(
-                &format!("[Auth] Ak [{ak_authorization}] is not legal"),
-                "401-auth-req-ak-not-exist",
-            ));
+            return Err(TardisError::unauthorized(&format!("[Auth] Ak [{ak}] is not legal"), "401-auth-req-ak-not-exist"));
         };
 
         let sorted_req_query = auth_common_helper::sort_hashmap_query(req.query.clone());
@@ -146,7 +143,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         if !app_id.is_empty() {
             if app_id != cache_appid {
                 return Err(TardisError::unauthorized(
-                    &format!("Ak [{}]  with App [{}] is not legal", ak_authorization, app_id),
+                    &format!("Ak [{}]  with App [{}] is not legal", ak, app_id),
                     "401-auth-req-ak-or-app-not-exist",
                 ));
             }

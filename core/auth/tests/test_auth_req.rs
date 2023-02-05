@@ -6,6 +6,7 @@ use bios_auth::{
     dto::auth_dto::{AuthReq, AuthResp},
 };
 use serde::{Deserialize, Serialize};
+use tardis::chrono::Local;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
@@ -89,19 +90,97 @@ pub async fn test_req() -> TardisResult<()> {
     assert!(ctx.groups.is_empty());
 
     // missing header [Bios-Date]
-    let resp = mock_req("GET", "/iam/ci/account", "", vec![("Bios-Ak-Authorization", "aaaa")]).await;
-    println!("{resp:?}");
+    let resp = mock_req("GET", "/iam/ci/account", "", vec![(&config.head_key_ak_authorization, "aaaa")]).await;
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 401);
     assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing header [Bios-Date]");
 
-    // missing header [Bios-Date]
-    let now = Local::now().toString();
-    let resp = mock_req("GET", "/iam/ci/account", "", vec![("Bios-Ak-Authorization", "aaaa"), ("Bios-Date", now)]).await;
-    println!("{resp:?}");
+    // [Auth] Ak-Authorization [aaaa] is not legal
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = now.to_string();
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![(&config.head_key_ak_authorization, "aaaa"), (&config.head_key_date_flag, &now)],
+    )
+    .await;
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 401);
-    assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing header [Bios-Date]");
+    assert_eq!(resp.reason.unwrap(), "[Auth] Ak-Authorization [aaaa] is not legal");
+
+    let sk = "bbbbbb";
+
+    // is not legal
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = now.to_string();
+    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![(&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)), (&config.head_key_date_flag, &now)],
+    )
+    .await;
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 401);
+    assert_eq!(resp.reason.unwrap(), "[Auth] Ak [aaaa] is not legal");
+
+    // 200
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = now.to_string();
+    cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},tenant_id123,")).await?;
+    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![(&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)), (&config.head_key_date_flag, &now)],
+    )
+    .await;
+    assert!(resp.allow);
+    assert_eq!(resp.status_code, 200);
+
+    // app_id not legal
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = now.to_string();
+    let app_id = "app_idcc";
+    cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},tenant_id123,")).await?;
+    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![
+            (&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)),
+            (&config.head_key_date_flag, &now),
+            (&config.head_key_app, app_id),
+        ],
+    )
+    .await;
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 401);
+    assert_eq!(resp.reason.unwrap(), "Ak [aaaa]  with App [app_idcc] is not legal");
+
+    // app_id legal
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let now = now.to_string();
+    let app_id = "app_idcc";
+    cache_client.set(&format!("{}aaaa", config.cache_key_aksk_info), &format!("{sk},tenant_id123,{app_id}")).await?;
+    let calc_signature = TardisFuns::crypto.base64.encode(&TardisFuns::crypto.digest.hmac_sha256(&format!("GET\n{}\niam/ci/account\n", now,).to_lowercase(), sk)?);
+    let resp = mock_req(
+        "GET",
+        "/iam/ci/account",
+        "",
+        vec![
+            (&config.head_key_ak_authorization, &format!("aaaa:{}", calc_signature)),
+            (&config.head_key_date_flag, &now),
+            (&config.head_key_app, app_id),
+        ],
+    )
+    .await;
+    assert!(resp.allow);
+    assert_eq!(resp.status_code, 200);
 
     // request token by system account
     cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
