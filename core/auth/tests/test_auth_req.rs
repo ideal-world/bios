@@ -88,8 +88,16 @@ pub async fn test_req() -> TardisResult<()> {
     assert!(ctx.roles.is_empty());
     assert!(ctx.groups.is_empty());
 
-    // token is not legal
+    // missing header [Bios-Date]
     let resp = mock_req("GET", "/iam/ci/account", "", vec![("Bios-Ak-Authorization", "aaaa")]).await;
+    println!("{resp:?}");
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 401);
+    assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing header [Bios-Date]");
+
+    // missing header [Bios-Date]
+    let now = Local::now().toString();
+    let resp = mock_req("GET", "/iam/ci/account", "", vec![("Bios-Ak-Authorization", "aaaa"), ("Bios-Date", now)]).await;
     println!("{resp:?}");
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 401);
