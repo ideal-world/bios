@@ -313,7 +313,7 @@ impl IamCertUserPwdServ {
             .unwrap_or_else(|| "".to_string());
             let vec_str: Vec<&str> = string.split(':').collect();
             if vec_str.len() != 2 {
-                Ok(format!("{}:{}", name, count_duplicate_name).into())
+                Ok(format!("{name}:{count_duplicate_name}").into())
             } else {
                 let parse_u32 = vec_str[vec_str.len() - 1].parse::<u32>();
                 if let Ok(count) = parse_u32 {

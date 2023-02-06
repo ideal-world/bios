@@ -552,7 +552,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
                                 cond = cond.add(
-                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str())).add(
+                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str())).add(
                                         Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
                                             .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
                                     ),
@@ -560,7 +560,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                             }
                         } else {
                             for sys_code in sys_codes {
-                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()));
                             }
                         }
                     }
@@ -569,7 +569,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
                                         .add(
                                             Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
@@ -581,7 +581,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
                                 );
                             }
@@ -659,7 +659,7 @@ impl RbumSetCateServ {
     }
 
     async fn package_sys_code(rbum_set_id: &str, rbum_set_parent_cate_id: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let lock_key = format!("rbum_set_cate_sys_code_{}", rbum_set_id);
+        let lock_key = format!("rbum_set_cate_sys_code_{rbum_set_id}");
         while !funs.cache().set_nx(&lock_key, "waiting").await? {
             sleep(Duration::from_millis(100)).await;
         }
@@ -680,7 +680,7 @@ impl RbumSetCateServ {
         query.columns(vec![(rbum_set_cate::Column::SysCode)]).from(rbum_set_cate::Entity).and_where(Expr::col(rbum_set_cate::Column::RelRbumSetId).eq(rbum_set_id));
 
         if let Some(parent_sys_code) = parent_sys_code {
-            query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{}%", parent_sys_code).as_str()));
+            query.and_where(Expr::col(rbum_set_cate::Column::SysCode).like(format!("{parent_sys_code}%").as_str()));
             query.and_where(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).eq((parent_sys_code.len() + set_cate_sys_code_node_len) as i32));
         } else {
             // fetch max code in level 1
@@ -701,7 +701,7 @@ impl RbumSetCateServ {
                         "400-rbum-set-sys-code-saturated",
                     )
                 })?;
-                Ok(format!("{}{}", parent_sys_code, curr_level_sys_code))
+                Ok(format!("{parent_sys_code}{curr_level_sys_code}"))
             } else {
                 // if level 1 not empty
                 Ok(TardisFuns::field.incr_by_base36(&max_sys_code).ok_or_else(|| {
@@ -734,7 +734,7 @@ impl RbumSetCateServ {
                 funs.err().not_found(
                     &Self::get_obj_name(),
                     "get_sys_code",
-                    &format!("not found set cate {}", rbum_set_cate_id),
+                    &format!("not found set cate {rbum_set_cate_id}"),
                     "404-rbum-set-cate-not-exist",
                 )
             })?
@@ -869,7 +869,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
                                 cond = cond.add(
-                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str())).add(
+                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str())).add(
                                         Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
                                             .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
                                     ),
@@ -877,7 +877,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             }
                         } else {
                             for sys_code in sys_codes {
-                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()));
+                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()));
                             }
                         }
                     }
@@ -886,7 +886,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
                                         .add(
                                             Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
@@ -898,7 +898,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{}%", sys_code).as_str()))
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
                                 );
                             }

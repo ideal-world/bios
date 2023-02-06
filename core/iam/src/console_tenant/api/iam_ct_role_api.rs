@@ -145,7 +145,8 @@ impl IamCtRoleApi {
         let split = account_ids.0.split(',').collect::<Vec<_>>();
         for s in split {
             IamRoleServ::delete_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_TENANT), &funs, &ctx.0).await?;
-        }funs.commit().await?;
+        }
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
