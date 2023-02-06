@@ -39,14 +39,14 @@ docker run -d \
 ===== Or Run with dashboard(by docker-compose)
 [source,sh]
 ----
-cat  << EOF > $(pwd)/dashboard.yml >
+cat  << EOF > $(pwd)/dashboard.yml
 conf:
   listen:
     host: 0.0.0.0
     port: 9000
   etcd:
     endpoints:
-      - gateway:2379
+      - etcd:2379
 authentication:
   secret: biossec
   expire_time: 3600  
@@ -69,6 +69,9 @@ deployment:
       - "http://etcd:2379"
     prefix: "/apisix"
     timeout: 30
+
+  plugins:
+    - auth-bios
 EOF
 
 cat <<EOF > $(pwd)/docker-compose.yaml
@@ -89,7 +92,7 @@ services:
     image: ghcr.io/ideal-world/bios-gateway:latest
     restart: always
     volumes:
-      - $(pwd)/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./config.yaml:/usr/local/apisix/conf/config.yaml:ro
     ports:
       - "9180:9180/tcp"
       - "9080:9080/tcp"
@@ -124,7 +127,7 @@ volumes:
 
 EOF
 ----
-
+start gateway
 [source,sh]
 ----
 docker-compose up -d
@@ -135,6 +138,12 @@ docker-compose up -d
 [source,sh]
 ----
 docker build -f apisix/Dockerfile -t bios-gateway apisix/
-docker run --name bios-gateway1 -d -p 9080:9080 bios-gateway
+docker run -d \
+  --name etcd \
+  --net host \
+  -e ALLOW_NONE_AUTHENTICATION=yes \
+  -e ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379 \
+  bitnami/etcd:latest
+docker run --name bios-gateway1 --net host -d -p 9080:9080 bios-gateway
 ----
 
