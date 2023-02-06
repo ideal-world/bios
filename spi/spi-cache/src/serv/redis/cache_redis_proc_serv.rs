@@ -11,7 +11,7 @@ use crate::dto::cache_proc_dto::{ExpReq, KIncrReq, KReq, KbRagngeReq, KbReq, Kbv
 
 fn format_key(req_key: &str, ext: &HashMap<String, String>) -> String {
     if let Some(key_prefix) = common::get_isolation_flag_from_ext(ext) {
-        format!("{key_prefix}{req_key}" )
+        format!("{key_prefix}{req_key}")
     } else {
         req_key.to_string()
     }

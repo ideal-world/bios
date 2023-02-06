@@ -886,7 +886,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%" ).as_str()))
+                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
                                         .add(
                                             Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))

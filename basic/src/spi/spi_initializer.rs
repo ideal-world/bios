@@ -200,9 +200,7 @@ pub mod common_pg {
         .await?;
         for (field_name, index_type) in indexes {
             conn.execute_one(
-                &format!(
-                    "CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{field_name} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name})"
-                ),
+                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{field_name} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name})"),
                 vec![],
             )
             .await?;
