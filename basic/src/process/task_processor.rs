@@ -19,8 +19,8 @@ impl TaskProcessor {
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
         let task_id_split2: usize = (task_id % max).try_into()?;
-        cache_client.setbit(&format!("{}:1", cache_key), task_id_split1, false).await?;
-        cache_client.setbit(&format!("{}:2", cache_key), task_id_split2, false).await?;
+        cache_client.setbit(&format!("{cache_key}:1"), task_id_split1, false).await?;
+        cache_client.setbit(&format!("{cache_key}:2"), task_id_split2, false).await?;
         Ok(task_id)
     }
 
@@ -28,8 +28,8 @@ impl TaskProcessor {
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
         let task_id_split2: usize = (task_id % max).try_into()?;
-        cache_client.setbit(&format!("{}:1", cache_key), task_id_split1, status).await?;
-        cache_client.setbit(&format!("{}:2", cache_key), task_id_split2, status).await?;
+        cache_client.setbit(&format!("{cache_key}:1"), task_id_split1, status).await?;
+        cache_client.setbit(&format!("{cache_key}:2"), task_id_split2, status).await?;
         Ok(())
     }
 
@@ -37,8 +37,8 @@ impl TaskProcessor {
         let max: i64 = u32::MAX.into();
         let task_id_split1: usize = (task_id / max).try_into()?;
         let task_id_split2: usize = (task_id % max).try_into()?;
-        let result1 = cache_client.getbit(&format!("{}:1", cache_key), task_id_split1).await?;
-        let result2 = cache_client.getbit(&format!("{}:2", cache_key), task_id_split2).await?;
+        let result1 = cache_client.getbit(&format!("{cache_key}:1"), task_id_split1).await?;
+        let result2 = cache_client.getbit(&format!("{cache_key}:2"), task_id_split2).await?;
         Ok(result1 && result2)
     }
 
@@ -72,7 +72,7 @@ impl TaskProcessor {
     {
         let task_id = Self::execute_task(cache_key, process, funs).await?;
         if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG)? {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{},{}", exist_task_ids, task_id))
+            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}"))
         } else {
             ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string())
         }

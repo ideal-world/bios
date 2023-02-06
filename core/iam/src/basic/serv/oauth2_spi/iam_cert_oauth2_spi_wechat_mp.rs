@@ -12,10 +12,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiWeChatMp {
         let result = funs
             .web_client()
             .post_to_obj::<Value>(
-                &format!(
-                    "https://api.weixin.qq.com/sns/jscode2session?appid={}&secret={}&js_code={}&grant_type=authorization_code",
-                    ak, sk, code
-                ),
+                &format!("https://api.weixin.qq.com/sns/jscode2session?appid={ak}&secret={sk}&js_code={code}&grant_type=authorization_code"),
                 "",
                 None,
             )
