@@ -105,9 +105,9 @@ async fn test_single_level(context: &TardisContext, account_name: &str, another_
     assert!(!role.disabled);
 
     info!("【test_cc_role】 : test_single_level : Find Roles");
-    let roles = IamRoleServ::paginate_items(&IamRoleFilterReq::default(), 1, 10, None, None, &funs, context).await?;
+    let roles = IamRoleServ::paginate_items(&IamRoleFilterReq::default(), 1, 15, None, None, &funs, context).await?;
     assert_eq!(roles.page_number, 1);
-    assert_eq!(roles.page_size, 10);
+    assert_eq!(roles.page_size, 15);
     assert!(roles.records.iter().any(|i| i.name == "角色3"));
 
     // ----------------------- Rel Account -----------------------
