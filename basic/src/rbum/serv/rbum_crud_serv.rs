@@ -116,7 +116,7 @@ where
 
     async fn check_scopes(values: HashMap<String, &Vec<String>>, expect_number: u64, table_name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut query = Query::select();
-        let msg = values.iter().map(|(k, v)| format!("{}={:?}", k, v)).join(",");
+        let msg = values.iter().map(|(k, v)| format!("{k}={v:?}")).join(",");
         query.column((Alias::new(table_name), ID_FIELD.clone())).from(Alias::new(table_name)).with_scope(table_name, &ctx.own_paths, false);
         for (k, v) in values {
             query.and_where(Expr::tbl(Alias::new(table_name), Alias::new(&k)).is_in(v.clone()));
@@ -580,10 +580,10 @@ impl RbumCrudQueryPackage for SelectStatement {
         }
 
         if let Some(name) = &filter.name {
-            self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(format!("%{}%", name).as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(format!("%{name}%").as_str()));
         }
         if let Some(code) = &filter.code {
-            self.and_where(Expr::tbl(Alias::new(table_name), CODE_FIELD.clone()).like(format!("{}%", code).as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), CODE_FIELD.clone()).like(format!("{code}%").as_str()));
         }
 
         if let Some(rbum_kind_id) = &filter.rbum_kind_id {
@@ -604,7 +604,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         if has_scope && !filter.ignore_scope {
             self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths);
         } else if filter.with_sub_own_paths {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths).as_str()));
+            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{filter_own_paths}%").as_str()));
         } else {
             self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths));
         }
@@ -618,7 +618,7 @@ impl RbumCrudQueryPackage for SelectStatement {
         let mut cond = Cond::any().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0));
 
         let own_cond = if with_sub_own_paths {
-            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", filter_own_paths))
+            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{filter_own_paths}%"))
         } else {
             Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths)
         };
@@ -629,7 +629,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                 Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1)).add(
                     Cond::any()
                         .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
+                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
                 ),
             );
             if let Some(p2) = rbum_scope_helper::get_pre_paths(2, filter_own_paths) {
@@ -641,9 +641,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                             .add(
                                 Cond::all()
                                     .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
+                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
                             )
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p2))),
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%"))),
                     ),
                 );
                 if let Some(p3) = rbum_scope_helper::get_pre_paths(3, filter_own_paths) {
@@ -654,14 +654,14 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
                                 )
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len * 2 + 1))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p2))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%"))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p3))),
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p3}%"))),
                         ),
                     );
                 } else if with_sub_own_paths {
@@ -682,9 +682,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%" ))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p2))),
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%" ))),
                         ),
                     );
                 }
@@ -693,7 +693,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                     Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
                         Cond::any()
                             .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{}%", p1))),
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%" ))),
                     ),
                 );
             }

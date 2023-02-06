@@ -62,7 +62,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                 .await?
                 > 0
             {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {} already exists", code), "409-rbum-*-code-exist"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "add", &format!("code {code} already exists" ), "409-rbum-*-code-exist"));
             }
             code.0.clone()
         } else {
@@ -112,7 +112,7 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                 .await?
                 > 0
             {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("code {} already exists", code), "409-rbum-*-code-exist"));
+                return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("code {code} already exists" ), "409-rbum-*-code-exist"));
             }
             rbum_item.code = Set(code.to_string());
         }
@@ -543,7 +543,7 @@ where
                 query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).eq(ext_eq.to_string()));
             }
             if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
-                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).like(format!("%{}%", ext_like).as_str()));
+                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).like(format!("%{ext_like}%" ).as_str()));
             }
             if let Some(own_paths) = &rbum_item_rel_filter_req.own_paths {
                 query.and_where(Expr::tbl(rel_table, rbum_rel::Column::OwnPaths).eq(own_paths.to_string()));

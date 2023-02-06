@@ -155,7 +155,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
 
 pub fn bs_not_implemented(bs_code: &str) -> TardisError {
     TardisError::not_implemented(
-        &format!("Backend service kind {} does not exist or SPI feature is not enabled", bs_code),
+        &format!("Backend service kind {bs_code} does not exist or SPI feature is not enabled" ),
         "406-rbum-*-enum-init-error",
     )
 }
