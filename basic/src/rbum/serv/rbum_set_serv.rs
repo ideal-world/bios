@@ -701,7 +701,7 @@ impl RbumSetCateServ {
                         "400-rbum-set-sys-code-saturated",
                     )
                 })?;
-                Ok(format!("{}{}", parent_sys_code, curr_level_sys_code))
+                Ok(format!("{parent_sys_code}{curr_level_sys_code}" ))
             } else {
                 // if level 1 not empty
                 Ok(TardisFuns::field.incr_by_base36(&max_sys_code).ok_or_else(|| {
@@ -734,7 +734,7 @@ impl RbumSetCateServ {
                 funs.err().not_found(
                     &Self::get_obj_name(),
                     "get_sys_code",
-                    &format!("not found set cate {}", rbum_set_cate_id),
+                    &format!("not found set cate {rbum_set_cate_id}"),
                     "404-rbum-set-cate-not-exist",
                 )
             })?
