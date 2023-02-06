@@ -124,7 +124,7 @@ impl IamCsRoleApi {
     }
 
     /// Batch Add Role Rel Account
-    #[oai(path = "/:id/account/:account_id", method = "put")]
+    #[oai(path = "/:id/account/batch/:account_id", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
