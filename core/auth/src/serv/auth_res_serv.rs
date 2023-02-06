@@ -1,8 +1,6 @@
 use std::sync::RwLock;
 
-use itertools::Itertools;
 use lazy_static::lazy_static;
-use tardis::web::poem_openapi::types::Type;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     log::info,
@@ -12,6 +10,7 @@ use tardis::{
 };
 
 use crate::dto::auth_dto::{ResAuthInfo, ResContainerLeafInfo, ResContainerNode};
+use crate::helper::auth_common_helper;
 
 lazy_static! {
     static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
@@ -23,13 +22,6 @@ pub fn get_res_json() -> TardisResult<Value> {
     } else {
         Ok(Value::Null)
     }
-}
-
-pub(crate) fn sort_query(query: &str) -> String {
-    if query.is_empty() {
-        return "".to_string();
-    }
-    query.split('&').sorted_by(|a, b| Ord::cmp(&a.to_lowercase(), &b.to_lowercase())).join("&")
 }
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
@@ -52,7 +44,7 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     }
     if let Some(query) = res_uri.query() {
         uri_items.push("?".to_string());
-        uri_items.push(sort_query(query));
+        uri_items.push(auth_common_helper::sort_query(query));
     }
     uri_items.push("$".to_string());
     Ok(uri_items)
