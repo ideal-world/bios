@@ -15,7 +15,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
         let result = funs
             .web_client()
             .post_to_obj::<Value>(
-                &format!("https://github.com/login/oauth/access_token?client_id={}&client_secret={}&code={}", ak, sk, code),
+                &format!("https://github.com/login/oauth/access_token?client_id={ak}&client_secret={sk}&code={code}"),
                 "",
                 Some(headers),
             )
@@ -33,7 +33,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
         if let Some(access_token) = result.get("access_token") {
             let access_token = access_token.as_str().unwrap();
             let headers = vec![
-                ("Authorization".to_string(), format!("Bearer {}", access_token)),
+                ("Authorization".to_string(), format!("Bearer {access_token}")),
                 ("Accept".to_string(), "application/json".to_string()),
                 ("User-Agent".to_string(), "BIOS".to_string()),
             ];
@@ -50,7 +50,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
             }
             let user_info = result.body.unwrap();
             let user_info = TardisFuns::json.str_to_obj::<Value>(&user_info)?;
-            funs.cache().set_ex(&format!("{}{}", OAUTH2_GITHUB_USER_INFO_CACHE_KEY, access_token), &user_info.to_string(), 5).await?;
+            funs.cache().set_ex(&format!("{OAUTH2_GITHUB_USER_INFO_CACHE_KEY}{access_token}"), &user_info.to_string(), 5).await?;
             if let Some(id) = user_info.get("id") {
                 Ok(IamCertOAuth2TokenInfo {
                     open_id: id.to_string(),
@@ -75,7 +75,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
             Err(funs.err().not_found(
                 "oauth_spi_github",
                 "get_access_token",
-                &format!("oauth get access token error:{}", v_error),
+                &format!("oauth get access token error:{v_error}"),
                 "500-iam-cert-oauth-get-access-token-error",
             ))
         }

@@ -51,7 +51,7 @@ pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsIns
 FROM starsys_kv
 WHERE 
     k = $1"#,
-                if let Some(extract) = extract { format!("->'{}'", extract) } else { "".to_string() },
+                if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
             ),
             vec![Value::from(key)],
         )
@@ -87,7 +87,7 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
 FROM starsys_kv
 WHERE 
     k IN ({})"#,
-                if let Some(extract) = extract { format!("->'{}'", extract) } else { "".to_string() },
+                if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
                 place_holder
             ),
             sql_vals,
@@ -117,7 +117,7 @@ pub async fn match_items(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     let mut sql_vals: Vec<Value> = vec![];
-    sql_vals.push(Value::from(format!("{}%", key_perfix)));
+    sql_vals.push(Value::from(format!("{key_perfix}%")));
     sql_vals.push(Value::from(page_size));
     sql_vals.push(Value::from((page_number - 1) * page_size as u32));
 
@@ -131,7 +131,7 @@ FROM starsys_kv
 WHERE 
     k LIKE $1
 LIMIT $2 OFFSET $3"#,
-                if let Some(extract) = extract { format!("->'{}'", extract) } else { "".to_string() },
+                if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
             ),
             sql_vals,
         )

@@ -31,7 +31,7 @@ impl IamIdentCacheServ {
             funs.cache()
                 .set_ex(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{},{}", token_kind, rel_iam_item_id).as_str(),
+                    format!("{token_kind},{rel_iam_item_id}").as_str(),
                     expire_sec as usize,
                 )
                 .await?;
@@ -39,7 +39,7 @@ impl IamIdentCacheServ {
             funs.cache()
                 .set(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{},{}", token_kind, rel_iam_item_id).as_str(),
+                    format!("{token_kind},{rel_iam_item_id}").as_str(),
                 )
                 .await?;
         }
@@ -319,19 +319,19 @@ impl IamResCacheServ {
         if let Some(rels) = rels {
             let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
             for account in &delete_req.accounts {
-                res_dto.accounts = res_dto.accounts.replace(&format!("#{}#", account), "#");
+                res_dto.accounts = res_dto.accounts.replace(&format!("#{account}#"), "#");
             }
             for role in &delete_req.roles {
-                res_dto.roles = res_dto.roles.replace(&format!("#{}#", role), "#");
+                res_dto.roles = res_dto.roles.replace(&format!("#{role}#"), "#");
             }
             for group in &delete_req.groups {
-                res_dto.groups = res_dto.groups.replace(&format!("#{}#", group), "#");
+                res_dto.groups = res_dto.groups.replace(&format!("#{group}#"), "#");
             }
             for app in &delete_req.apps {
-                res_dto.apps = res_dto.apps.replace(&format!("#{}#", app), "#");
+                res_dto.apps = res_dto.apps.replace(&format!("#{app}#"), "#");
             }
             for tenant in &delete_req.tenants {
-                res_dto.tenants = res_dto.tenants.replace(&format!("#{}#", tenant), "#");
+                res_dto.tenants = res_dto.tenants.replace(&format!("#{tenant}#"), "#");
             }
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;

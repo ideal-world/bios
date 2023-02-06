@@ -132,7 +132,7 @@ pub struct IamBasicInfoManager;
 
 impl IamBasicInfoManager {
     pub fn set(basic_info: BasicInfo) -> TardisResult<()> {
-        let mut conf = BASIC_INFO.lock().map_err(|e| TardisError::internal_error(&format!("{:?}", e), ""))?;
+        let mut conf = BASIC_INFO.lock().map_err(|e| TardisError::internal_error(&format!("{e:?}"), ""))?;
         *conf = Some(basic_info);
         Ok(())
     }
@@ -141,7 +141,7 @@ impl IamBasicInfoManager {
     where
         F: Fn(&BasicInfo) -> T,
     {
-        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("iam basic config lock error: {:?}", e));
+        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("iam basic config lock error: {e:?}"));
         let conf = conf.as_ref().unwrap_or_else(|| panic!("rbum config not set"));
         fun(conf)
     }

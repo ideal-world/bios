@@ -41,27 +41,27 @@ impl SearchItemVisitKeysReq {
         let mut sqls = Vec::new();
         if let Some(accounts) = &self.accounts {
             for account in accounts {
-                sqls.push(format!("ac:{}", account));
+                sqls.push(format!("ac:{account}"));
             }
         }
         if let Some(apps) = &self.apps {
             for app in apps {
-                sqls.push(format!("ap:{}", app));
+                sqls.push(format!("ap:{app}"));
             }
         }
         if let Some(tenants) = &self.tenants {
             for tenant in tenants {
-                sqls.push(format!("te:{}", tenant));
+                sqls.push(format!("te:{tenant}"));
             }
         }
         if let Some(roles) = &self.roles {
             for role in roles {
-                sqls.push(format!("ro:{}", role));
+                sqls.push(format!("ro:{role}"));
             }
         }
         if let Some(groups) = &self.groups {
             for group in groups {
-                sqls.push(format!("gr:{}", group));
+                sqls.push(format!("gr:{group}"));
             }
         }
         sqls
@@ -94,22 +94,22 @@ impl SearchItemSearchCtxReq {
     pub fn to_sql(&self) -> Vec<String> {
         let mut sqls = Vec::new();
         if let Some(account) = &self.account {
-            sqls.push(format!("ac:{}", account));
+            sqls.push(format!("ac:{account}"));
         }
         if let Some(app) = &self.app {
-            sqls.push(format!("ap:{}", app));
+            sqls.push(format!("ap:{app}"));
         }
         if let Some(tenant) = &self.tenant {
-            sqls.push(format!("te:{}", tenant));
+            sqls.push(format!("te:{tenant}"));
         }
         if let Some(roles) = &self.roles {
             for role in roles {
-                sqls.push(format!("ro:{}", role));
+                sqls.push(format!("ro:{role}"));
             }
         }
         if let Some(groups) = &self.groups {
             for group in groups {
-                sqls.push(format!("gr:{}", group));
+                sqls.push(format!("gr:{group}"));
             }
         }
         sqls
