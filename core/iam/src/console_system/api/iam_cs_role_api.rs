@@ -123,6 +123,20 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
+    /// Batch Add Role Rel Account
+    #[oai(path = "/:id/account/batch/:account_id", method = "put")]
+    async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let split = account_ids.0.split(',').collect::<Vec<_>>();
+        for s in split {
+            IamRoleServ::add_rel_account(&id.0, s, None, &funs, &ctx).await?;
+        }
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Delete Role Rel Account
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -130,6 +144,20 @@ impl IamCsRoleApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamRoleServ::delete_rel_account(&id.0, &account_id.0, None, &funs, &ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Batch delete Role Rel Account
+    #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
+    async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let split = account_ids.0.split(',').collect::<Vec<_>>();
+        for s in split {
+            IamRoleServ::delete_rel_account(&id.0, s, None, &funs, &ctx).await?;
+        }
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

@@ -21,7 +21,7 @@ impl IamRoleKind {
             0 => Ok(IamRoleKind::System),
             1 => Ok(IamRoleKind::Tenant),
             2 => Ok(IamRoleKind::App),
-            _ => Err(TardisError::format_error(&format!("invalid IamRoleKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid IamRoleKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -37,7 +37,7 @@ impl IamRoleKind {
 impl TryGetable for IamRoleKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        IamRoleKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        IamRoleKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -67,7 +67,7 @@ pub enum IamCertOAuth2Supplier {
 
 impl IamCertOAuth2Supplier {
     pub fn parse(kind: &str) -> TardisResult<IamCertOAuth2Supplier> {
-        IamCertOAuth2Supplier::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {}", kind), "404-iam-cert-oauth-kind-not-exist"))
+        IamCertOAuth2Supplier::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {kind}",), "404-iam-cert-oauth-kind-not-exist"))
     }
 }
 
@@ -113,7 +113,7 @@ impl IamResKind {
             0 => Ok(IamResKind::Menu),
             1 => Ok(IamResKind::Api),
             2 => Ok(IamResKind::Ele),
-            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -129,7 +129,7 @@ impl IamResKind {
 impl TryGetable for IamResKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        IamResKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        IamResKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -150,7 +150,7 @@ pub enum IamSetCateKind {
 
 impl IamSetCateKind {
     pub fn parse(kind: &str) -> TardisResult<IamSetCateKind> {
-        IamSetCateKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support SetCate kind: {}", kind), "404-iam-cert-set-cate-kind-not-exist"))
+        IamSetCateKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support SetCate kind: {kind}"), "404-iam-cert-set-cate-kind-not-exist"))
     }
 }
 
@@ -163,6 +163,6 @@ pub enum Oauth2GrantType {
 
 impl Oauth2GrantType {
     pub fn parse(kind: &str) -> TardisResult<Oauth2GrantType> {
-        Oauth2GrantType::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {}", kind), "404-iam-cert-oauth-kind-not-exist"))
+        Oauth2GrantType::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {kind}"), "404-iam-cert-oauth-kind-not-exist"))
     }
 }

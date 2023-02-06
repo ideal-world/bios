@@ -242,7 +242,7 @@ impl IamCertServ {
             Err(funs.err().not_found(
                 "iam_cert",
                 "get_kernel_cert",
-                &format!("not found credential of kind {:?}", rel_iam_cert_kind),
+                &format!("not found credential of kind {rel_iam_cert_kind:?}"),
                 "404-iam-cert-kind-not-exist",
             ))
         }
@@ -419,7 +419,7 @@ impl IamCertServ {
             return Err(funs.err().conflict(
                 "cert",
                 "delete",
-                &format!("can not delete cert.{} when there are associated by rel.{:?}", id, rel_ids),
+                &format!("can not delete cert.{id} when there are associated by rel.{rel_ids:?}"),
                 "409-iam-delete-conflict",
             ));
         }
@@ -526,7 +526,7 @@ impl IamCertServ {
             Err(funs.err().not_found(
                 "iam_cert",
                 "get_cert_by_relrubmid_kind_supplier",
-                &format!("not found credential of kind:{} supplier {:?}", kind, cert_supplier),
+                &format!("not found credential of kind:{kind} supplier {cert_supplier:?}"),
                 "404-iam-cert-kind-not-exist",
             ))
         }
@@ -575,7 +575,7 @@ impl IamCertServ {
             Err(funs.err().not_found(
                 "iam_cert",
                 "get_3th_kind_cert_by_rel_rubm_id",
-                &format!("not found credential of supplier {:?}", cert_supplier),
+                &format!("not found credential of supplier {cert_supplier:?}"),
                 "404-iam-cert-kind-not-exist",
             ))
         }
@@ -645,7 +645,7 @@ impl IamCertServ {
             Err(funs.err().not_found(
                 "iam_cert",
                 "get_3th_kind_cert_by_id",
-                &format!("not found credential by id {}", id),
+                &format!("not found credential by id {id}"),
                 "404-rbum-cert-not-exist",
             ))
         }
@@ -797,7 +797,7 @@ impl IamCertServ {
             funs.err().not_found(
                 "iam_cert_conf",
                 "get",
-                &format!("not found cert conf kind:{} supplier:{} rel_iam_item_id:{:?}", kind, supplier, rel_iam_item_id),
+                &format!("not found cert conf kind:{kind} supplier:{supplier} rel_iam_item_id:{rel_iam_item_id:?}"),
                 "401-iam-cert-code-not-exist",
             )
         })
@@ -931,7 +931,7 @@ impl IamCertServ {
 
     pub fn use_app_ctx(ctx: TardisContext, app_id: &str) -> TardisResult<TardisContext> {
         let own_paths = ctx.own_paths.clone();
-        rbum_scope_helper::degrade_own_paths(ctx, format!("{}/{}", own_paths, app_id).as_str())
+        rbum_scope_helper::degrade_own_paths(ctx, format!("{own_paths}/{app_id}").as_str())
     }
 
     pub fn get_anonymous_context() -> TardisContext {

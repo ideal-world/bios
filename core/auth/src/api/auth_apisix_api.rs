@@ -8,10 +8,10 @@ use crate::serv::auth_kernel_serv;
 pub struct AuthApi;
 
 /// Auth API
-#[poem_openapi::OpenApi(prefix_path = "/apisix")]
+#[poem_openapi::OpenApi(prefix_path = "/auth")]
 impl AuthApi {
     /// Auth
-    #[oai(path = "/", method = "post")]
+    #[oai(path = "/apisix", method = "post")]
     async fn apisix(&self, mut req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
         let result = auth_kernel_serv::auth(&mut req.0).await?;
         TardisResp::ok(result)
