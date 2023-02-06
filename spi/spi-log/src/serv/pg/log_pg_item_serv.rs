@@ -53,7 +53,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             })
             .collect::<Vec<String>>()
             .join(",");
-        where_fragments.push(format!("key IN ({})", place_holder));
+        where_fragments.push(format!("key IN ({place_holder})" ));
     }
     if let Some(ops) = &find_req.ops {
         let place_holder = ops
@@ -64,7 +64,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             })
             .collect::<Vec<String>>()
             .join(",");
-        where_fragments.push(format!("op IN ({})", place_holder));
+        where_fragments.push(format!("op IN ({place_holder})" ));
     }
     if let Some(rel_keys) = &find_req.rel_keys {
         let place_holder = rel_keys
@@ -75,7 +75,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             })
             .collect::<Vec<String>>()
             .join(",");
-        where_fragments.push(format!("rel_key IN ({})", place_holder));
+        where_fragments.push(format!("rel_key IN ({place_holder})" ));
     }
     if let Some(ts_start) = find_req.ts_start {
         sql_vals.push(Value::from(ts_start));

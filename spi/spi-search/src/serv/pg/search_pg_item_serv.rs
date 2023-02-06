@@ -87,7 +87,7 @@ DO UPDATE SET
 pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conn = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
-    conn.execute_one(&format!("DELETE FROM starsys_search_{} WHERE key = $1", tag), vec![Value::from(key)]).await?;
+    conn.execute_one(&format!("DELETE FROM starsys_search_{tag} WHERE key = $1" ), vec![Value::from(key)]).await?;
     conn.commit().await?;
     Ok(())
 }
@@ -121,15 +121,15 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
 
     if let Some(key) = &search_req.query.key {
-        sql_vals.push(Value::from(format!("{}%", key)));
+        sql_vals.push(Value::from(format!("{key}%" )));
         where_fragments.push(format!("key LIKE ${}", sql_vals.len()));
     }
     if let Some(owner) = &search_req.query.owner {
-        sql_vals.push(Value::from(format!("{}%", owner)));
+        sql_vals.push(Value::from(format!("{owner}%" )));
         where_fragments.push(format!("owner LIKE ${}", sql_vals.len()));
     }
     if let Some(own_paths) = &search_req.query.own_paths {
-        sql_vals.push(Value::from(format!("{}%", own_paths)));
+        sql_vals.push(Value::from(format!("{own_paths}%" )));
         where_fragments.push(format!("own_paths LIKE ${}", sql_vals.len()));
     }
     if let Some(create_time_start) = search_req.query.create_time_start {
