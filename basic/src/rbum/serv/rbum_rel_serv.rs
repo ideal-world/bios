@@ -199,7 +199,7 @@ impl RbumCrudOperation<rbum_rel::ActiveModel, RbumRelAddReq, RbumRelModifyReq, R
             query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Ext).eq(ext_eq.to_string()));
         }
         if let Some(ext_like) = &filter.ext_like {
-            query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Ext).like(format!("%{ext_like}%" ).as_str()));
+            query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Ext).like(format!("%{ext_like}%").as_str()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, true, false, ctx);
         Ok(query)
@@ -692,7 +692,7 @@ impl RbumRelServ {
         let result = Self::package_agg_rels(rbum_rels.records, filter, funs, ctx).await?;
         Ok(TardisPage {
             page_number,
-            total_size: rbum_rels.total_size ,
+            total_size: rbum_rels.total_size,
             page_size,
             records: result,
         })

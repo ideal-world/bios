@@ -25,12 +25,12 @@ pub fn get_res_json() -> TardisResult<Value> {
 }
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
-    let res_uri = Url::parse(res_uri).map_err(|_| TardisError::format_error(&format!("[Auth] Invalid url {}", res_uri), ""))?;
+    let res_uri = Url::parse(res_uri).map_err(|_| TardisError::format_error(&format!("[Auth] Invalid url {res_uri}"), ""))?;
     let mut uri_items = vec![];
     uri_items.push(res_uri.scheme().to_lowercase());
     if let Some(host) = res_uri.host_str() {
         if let Some(port) = res_uri.port() {
-            uri_items.push(format!("{}:{}", host, port));
+            uri_items.push(format!("{host}:{port}"));
         } else {
             uri_items.push(host.to_string());
         }

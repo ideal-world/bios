@@ -90,7 +90,7 @@ impl IamSetServ {
     pub async fn get_set_id_by_code(code: &str, with_sub: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         RbumSetServ::get_rbum_set_id_by_code(code, with_sub, funs, ctx)
             .await?
-            .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {}", code), "404-rbum-set-code-not-exist"))
+            .ok_or_else(|| funs.err().not_found("iam_set", "get_id", &format!("not found set by code {code}"), "404-rbum-set-code-not-exist"))
     }
 
     pub fn get_default_org_code_by_system() -> String {

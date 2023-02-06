@@ -682,9 +682,9 @@ impl RbumCrudQueryPackage for SelectStatement {
                                 .add(
                                     Cond::all()
                                         .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%" ))),
+                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%" ))),
+                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%"))),
                         ),
                     );
                 }
@@ -693,7 +693,7 @@ impl RbumCrudQueryPackage for SelectStatement {
                     Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
                         Cond::any()
                             .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%" ))),
+                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
                     ),
                 );
             }

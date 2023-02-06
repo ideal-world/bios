@@ -1,4 +1,4 @@
-use tardis::chrono::{ TimeZone, Utc};
+use tardis::chrono::{TimeZone, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     cache::cache_client::TardisCacheClient,
@@ -73,13 +73,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             let account_info = account_info.split(',').collect::<Vec<_>>();
             account_info[1].to_string()
         } else {
-            return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal" ), "401-auth-req-token-not-exist"));
+            return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal"), "401-auth-req-token-not-exist"));
         };
         let mut context = if let Some(context) = cache_client.hget(&format!("{}{}", config.cache_key_account_info, account_id), &app_id).await? {
             TardisFuns::json.str_to_obj::<TardisContext>(&context)?
         } else {
             return Err(TardisError::unauthorized(
-                &format!("[Auth] Token [{token}] with App [{app_id}] is not legal" ),
+                &format!("[Auth] Token [{token}] with App [{app_id}] is not legal"),
                 "401-auth-req-token-or-app-not-exist",
             ));
         };
@@ -198,7 +198,7 @@ pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
     for mathced_res in mathced_res {
         if let Some(mathed_accounts) = mathced_res.auth.accounts {
             if let Some(req_account_id) = &ctx.iam_account_id {
-                if mathed_accounts.contains(&format!("#{req_account_id}#" )) {
+                if mathed_accounts.contains(&format!("#{req_account_id}#")) {
                     return Ok(());
                 }
             }
@@ -206,7 +206,7 @@ pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
         if let Some(mathed_roles) = mathced_res.auth.roles {
             if let Some(iam_roles) = &ctx.iam_roles {
                 for iam_role in iam_roles {
-                    if mathed_roles.contains(&format!("#{iam_role}#" )) {
+                    if mathed_roles.contains(&format!("#{iam_role}#")) {
                         return Ok(());
                     }
                 }
@@ -215,7 +215,7 @@ pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
         if let Some(mathed_groups) = mathced_res.auth.groups {
             if let Some(iam_groups) = &ctx.iam_groups {
                 for iam_group in iam_groups {
-                    if Regex::new(&format!(r"#{iam_group}.*#" ))?.is_match(&mathed_groups) {
+                    if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(&mathed_groups) {
                         return Ok(());
                     }
                 }
@@ -223,14 +223,14 @@ pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
         }
         if let Some(mathed_apps) = mathced_res.auth.apps {
             if let Some(iam_app_id) = &ctx.iam_app_id {
-                if mathed_apps.contains(&format!("#{iam_app_id}#" )) {
+                if mathed_apps.contains(&format!("#{iam_app_id}#")) {
                     return Ok(());
                 }
             }
         }
         if let Some(mathed_tenants) = mathced_res.auth.tenants {
             if let Some(iam_tenant_id) = &ctx.iam_tenant_id {
-                if mathed_tenants.contains(&format!("#{iam_tenant_id}#" )) {
+                if mathed_tenants.contains(&format!("#{iam_tenant_id}#")) {
                     return Ok(());
                 }
             }
