@@ -24,13 +24,13 @@ pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, _: bool) -> Tard
     let mut ext = HashMap::new();
     if !bs_cert.private {
         let bucket_name_prefix = spi_initializer::common::get_isolation_flag_from_context(ctx);
-        let resp = client.bucket_create_simple(&format!("{}-pri", bucket_name_prefix), true).await;
+        let resp = client.bucket_create_simple(&format!("{bucket_name_prefix}-pri"), true).await;
         if resp.is_err() && resp.err().unwrap().code != "409" {
-            return Err(TardisError::internal_error(&format!("Bucket {}-pri creation failed", bucket_name_prefix), ""));
+            return Err(TardisError::internal_error(&format!("Bucket {bucket_name_prefix}-pri creation failed"), ""));
         }
-        let resp = client.bucket_create_simple(&format!("{}-pub", bucket_name_prefix), false).await;
+        let resp = client.bucket_create_simple(&format!("{bucket_name_prefix}-pub"), false).await;
         if resp.is_err() && resp.err().unwrap().code != "409" {
-            return Err(TardisError::internal_error(&format!("Bucket {}-pub creation failed", bucket_name_prefix), ""));
+            return Err(TardisError::internal_error(&format!("Bucket {bucket_name_prefix}-pub creation failed"), ""));
         }
         spi_initializer::common::set_isolation_flag_to_ext(&bucket_name_prefix, &mut ext);
     };

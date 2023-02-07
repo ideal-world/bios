@@ -29,7 +29,7 @@ impl RbumScopeLevelKind {
             1 => Ok(RbumScopeLevelKind::L1),
             2 => Ok(RbumScopeLevelKind::L2),
             3 => Ok(RbumScopeLevelKind::L3),
-            _ => Err(TardisError::format_error(&format!("invalid RbumScopeLevelKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid RbumScopeLevelKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -48,7 +48,7 @@ impl RbumScopeLevelKind {
 impl TryGetable for RbumScopeLevelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -66,7 +66,7 @@ impl RbumCertRelKind {
             0 => Ok(RbumCertRelKind::Item),
             1 => Ok(RbumCertRelKind::Set),
             2 => Ok(RbumCertRelKind::Rel),
-            _ => Err(TardisError::format_error(&format!("invalid RbumCertRelKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertRelKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -83,7 +83,7 @@ impl RbumCertRelKind {
 impl TryGetable for RbumCertRelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        RbumCertRelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumCertRelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -103,7 +103,7 @@ impl RbumRelFromKind {
             1 => Ok(RbumRelFromKind::Set),
             2 => Ok(RbumRelFromKind::SetCate),
             3 => Ok(RbumRelFromKind::Cert),
-            _ => Err(TardisError::format_error(&format!("invalid RbumRelFromKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid RbumRelFromKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -121,7 +121,7 @@ impl RbumRelFromKind {
 impl TryGetable for RbumRelFromKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        RbumRelFromKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumRelFromKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -136,7 +136,7 @@ impl RbumCertConfStatusKind {
         match s {
             0 => Ok(RbumCertConfStatusKind::Disabled),
             1 => Ok(RbumCertConfStatusKind::Enabled),
-            _ => Err(TardisError::format_error(&format!("invalid RbumCertConfStatusKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertConfStatusKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -161,7 +161,7 @@ impl RbumCertStatusKind {
             0 => Ok(RbumCertStatusKind::Disabled),
             1 => Ok(RbumCertStatusKind::Enabled),
             2 => Ok(RbumCertStatusKind::Pending),
-            _ => Err(TardisError::format_error(&format!("invalid RbumCertStatusKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid RbumCertStatusKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -178,7 +178,7 @@ impl RbumCertStatusKind {
 impl TryGetable for RbumCertStatusKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -196,7 +196,7 @@ impl RbumRelEnvKind {
             0 => Ok(RbumRelEnvKind::DatetimeRange),
             1 => Ok(RbumRelEnvKind::TimeRange),
             2 => Ok(RbumRelEnvKind::Ips),
-            _ => Err(TardisError::format_error(&format!("invalid RbumRelEnvKind: {}", s), "406-rbum-*-enum-init-error")),
+            _ => Err(TardisError::format_error(&format!("invalid RbumRelEnvKind: {s}"), "406-rbum-*-enum-init-error")),
         }
     }
 
@@ -213,7 +213,7 @@ impl RbumRelEnvKind {
 impl TryGetable for RbumRelEnvKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
-        RbumRelEnvKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumRelEnvKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -239,7 +239,7 @@ pub enum RbumDataTypeKind {
 impl TryGetable for RbumDataTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
-        RbumDataTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumDataTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 
@@ -271,7 +271,7 @@ pub enum RbumWidgetTypeKind {
 impl TryGetable for RbumWidgetTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
-        RbumWidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{}:{}", pre, col))))
+        RbumWidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
 }
 

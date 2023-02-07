@@ -119,7 +119,7 @@ pub mod common_pg {
     pub async fn create_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
         let schema_name = get_schema_name_from_context(ctx);
         if !check_schema_exit(client, ctx).await? {
-            client.conn().execute_one(&format!("CREATE SCHEMA {}", schema_name), vec![]).await?;
+            client.conn().execute_one(&format!("CREATE SCHEMA {schema_name}"), vec![]).await?;
         }
         Ok(schema_name)
     }
@@ -137,7 +137,7 @@ pub mod common_pg {
 
     pub async fn set_schema_to_session(schema_name: &str, conn: &mut TardisRelDBlConnection) -> TardisResult<()> {
         conn.begin().await?;
-        conn.execute_one(&format!("SET SCHEMA '{}'", schema_name), vec![]).await?;
+        conn.execute_one(&format!("SET SCHEMA '{schema_name}'"), vec![]).await?;
         Ok(())
     }
 
@@ -176,35 +176,31 @@ pub mod common_pg {
         indexes: Vec<(&str, &str)>,
         update_time_field: Option<&str>,
     ) -> TardisResult<TardisRelDBlConnection> {
-        let tag = tag.map(|t| format!("_{}", t)).unwrap_or_else(|| "".to_string());
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
         let mut conn = bs_inst.0.conn();
         let mut schema_name = "".to_string();
         if let Some(_schema_name) = get_schema_name_from_ext(bs_inst.1) {
             schema_name = _schema_name;
             set_schema_to_session(&schema_name, &mut conn).await?;
         }
-        if check_table_exit(&format!("starsys_{}{}", table_flag, tag), &conn, ctx).await? {
+        if check_table_exit(&format!("starsys_{table_flag}{tag}"), &conn, ctx).await? {
             return Ok(conn);
         } else if !mgr {
             return Err(TardisError::bad_request("The requested tag does not exist", ""));
         }
         conn.execute_one(
             &format!(
-                r#"CREATE TABLE {}.starsys_{}{}
+                r#"CREATE TABLE {schema_name}.starsys_{table_flag}{tag}
 (
-    {}
-)"#,
-                schema_name, table_flag, tag, table_create_content
+    {table_create_content}
+)"#
             ),
             vec![],
         )
         .await?;
         for (field_name, index_type) in indexes {
             conn.execute_one(
-                &format!(
-                    "CREATE INDEX idx_{}{}_{}_{} ON {}.starsys_{}{} USING {}({})",
-                    schema_name, tag, table_flag, field_name, schema_name, table_flag, tag, index_type, field_name
-                ),
+                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{field_name} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name})"),
                 vec![],
             )
             .await?;

@@ -11,7 +11,7 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-authors = ["gudaoxuri <i@sunisle.org>"]
+authors = ["gudaoxuri <i@sunisle.org>","hermitCode <17743125563@163.com>","RWDai <rwdai@foxmail.com>"]
 homepage = "https://bios.idealworld.group"
 documentation = "https://bios.idealworld.group"
 repository = "https://github.com/ideal-world/bios"
