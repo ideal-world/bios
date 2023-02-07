@@ -141,8 +141,8 @@ impl IamBasicInfoManager {
     where
         F: Fn(&BasicInfo) -> T,
     {
-        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("iam basic config lock error: {:?}", e));
-        let conf = conf.as_ref().unwrap_or_else(|| panic!("rbum config not set"));
+        let conf = BASIC_INFO.lock().unwrap_or_else(|e| panic!("iam basic info lock error: {:?}", e));
+        let conf = conf.as_ref().unwrap_or_else(|| panic!("iam basic info not set"));
         fun(conf)
     }
 }
