@@ -2,7 +2,6 @@ use std::sync::RwLock;
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use tardis::web::poem_openapi::types::Type;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     log::info,
