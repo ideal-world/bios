@@ -70,8 +70,8 @@ deployment:
     prefix: "/apisix"
     timeout: 30
 
-  plugins:
-    - auth-bios
+plugins:
+  - auth-bios
 EOF
 
 cat <<EOF > $(pwd)/docker-compose.yaml
