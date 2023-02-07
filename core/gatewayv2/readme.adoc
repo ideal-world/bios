@@ -1,0 +1,140 @@
+
+
+=== Gateway
+
+==== Directory Description
+
+----
+|apisix
+|-- apisix
+|---- plugins
+|------ auth-bios.lua               # auth-bios plugin
+|-- conf
+|---- config.yaml                   # config
+|---- config-default.yaml           # added auth-bios plugin
+|-- Dockerfile                      # Dockerfile
+----
+
+==== Environmental preparation
+
+
+==== Use image
+
+[source,sh]
+----
+# step1: Start etcd.
+docker run -d \
+  --name etcd \
+  --net host \
+  -e ALLOW_NONE_AUTHENTICATION=yes \
+  -e ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379 \
+  bitnami/etcd:latest
+# step2: Start APISIX.
+docker run -d \
+  --name bios-gateway \
+  --net host \
+  ghcr.io/ideal-world/bios-gateway:latest
+----
+
+===== Or Run with dashboard(by docker-compose)
+[source,sh]
+----
+cat  << EOF > $(pwd)/dashboard.yml >
+conf:
+  listen:
+    host: 0.0.0.0
+    port: 9000
+  etcd:
+    endpoints:
+      - gateway:2379
+authentication:
+  secret: biossec
+  expire_time: 3600  
+  users:
+    - username: admin
+      password: dsfDs3#￥2
+EOF
+
+cat << EOF > $(pwd)/config.yaml
+deployment:
+  role: traditional
+  role_traditional:
+    config_provider: etcd
+  admin:
+    allow_admin:
+      - 0.0.0.0/0  # Please set it to the subnet address you obtained.
+                  # If not set, by default all IP access is allowed.
+  etcd:
+    host:
+      - "http://etcd:2379"
+    prefix: "/apisix"
+    timeout: 30
+EOF
+
+cat <<EOF > $(pwd)/docker-compose.yaml
+version: "3"
+
+services:
+  apisix-dashboard:
+    image: apache/apisix-dashboard:2.15.0-alpine
+    volumes:
+      - ./dashboard.yml:/usr/local/apisix-dashboard/conf/conf.yaml
+    restart: always
+    ports:
+      - "9000:9000"
+    networks:
+      apisix:
+
+  apisix:
+    image: ghcr.io/ideal-world/bios-gateway:latest
+    restart: always
+    volumes:
+      - $(pwd)/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    ports:
+      - "9180:9180/tcp"
+      - "9080:9080/tcp"
+      - "9091:9091/tcp"
+      - "9443:9443/tcp"
+      - "9092:9092/tcp"
+    networks:
+      apisix:
+
+  etcd:
+    image: bitnami/etcd:3.4.15
+    restart: always
+    volumes:
+      - etcd_data:/bitnami/etcd
+    environment:
+      ETCD_ENABLE_V2: "true"
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_ADVERTISE_CLIENT_URLS: "http://etcd:2379"
+      ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
+    ports:
+      - "2379:2379/tcp"
+    networks:
+      apisix:
+
+networks:
+  apisix:
+    driver: bridge
+
+volumes:
+  etcd_data:
+    driver: local
+
+EOF
+----
+
+[source,sh]
+----
+docker-compose up -d
+----
+
+==== Build image from source
+
+[source,sh]
+----
+docker build -f apisix/Dockerfile -t bios-gateway apisix/
+docker run --name bios-gateway1 -d -p 9080:9080 bios-gateway
+----
+

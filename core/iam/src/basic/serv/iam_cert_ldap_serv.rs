@@ -648,7 +648,7 @@ mod ldap {
             } else {
                 LdapConnSettings::new()
             };
-            let (conn, ldap) = LdapConnAsync::with_settings(setting, url).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] connection error: {:?}", e), ""))?;
+            let (conn, ldap) = LdapConnAsync::with_settings(setting, url).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] connection error: {e:?}"), ""))?;
             ldap3::drive!(conn);
             Ok(LdapClient {
                 ldap,
@@ -658,7 +658,7 @@ mod ldap {
 
         pub async fn bind(&mut self, cn: &str, pw: &str) -> TardisResult<Option<String>> {
             let dn = format!("cn={},{}", cn, self.base_dn);
-            let result = self.ldap.simple_bind(&dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {:?}", e), ""))?.success().map(|_| ());
+            let result = self.ldap.simple_bind(&dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), ""))?.success().map(|_| ());
             if let Some(err) = result.err() {
                 warn!("[Iam.Ldap] ldap bind error: {:?}", err);
                 Ok(None)
@@ -672,9 +672,9 @@ mod ldap {
                 .ldap
                 .search(&self.base_dn, Scope::Subtree, filter, return_attr)
                 .await
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {:?}", e), ""))?
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?
                 .success()
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {:?}", e), ""))?;
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?;
             let result = rs.into_iter().map(SearchEntry::construct).map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect();
             Ok(result)
         }
@@ -684,9 +684,9 @@ mod ldap {
                 .ldap
                 .search(dn, Scope::Subtree, "objectClass=*", return_attr)
                 .await
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {:?}", e), ""))?
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?
                 .success()
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {:?}", e), ""))?;
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?;
             let result = rs.into_iter().map(SearchEntry::construct).map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect::<Vec<LdapSearchResp>>();
             if let Some(result) = result.first() {
                 Ok(Some(result.clone()))
@@ -696,7 +696,7 @@ mod ldap {
         }
 
         pub async fn unbind(&mut self) -> TardisResult<()> {
-            self.ldap.unbind().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] unbind error: {:?}", e), ""))
+            self.ldap.unbind().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] unbind error: {e:?}"), ""))
         }
     }
 

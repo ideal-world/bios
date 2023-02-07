@@ -58,7 +58,7 @@ pub struct RbumConfigManager;
 
 impl RbumConfigManager {
     pub fn add(code: &str, config: RbumConfig) -> TardisResult<()> {
-        let mut conf = RBUM_CONFIG.lock().map_err(|e| TardisError::internal_error(&format!("{:?}", e), ""))?;
+        let mut conf = RBUM_CONFIG.lock().map_err(|e| TardisError::internal_error(&format!("{e:?}"), ""))?;
         conf.insert(code.to_string(), config);
         Ok(())
     }
@@ -71,8 +71,8 @@ impl RbumConfigManager {
     where
         F: Fn(&RbumConfig) -> T,
     {
-        let conf = RBUM_CONFIG.lock().unwrap_or_else(|e| panic!("rbum config lock error: {:?}", e));
-        let conf = conf.get(code).unwrap_or_else(|| panic!("not found rbum config code {}", code));
+        let conf = RBUM_CONFIG.lock().unwrap_or_else(|e| panic!("rbum config lock error: {e:?}"));
+        let conf = conf.get(code).unwrap_or_else(|| panic!("not found rbum config code {code}"));
         fun(conf)
     }
 }
