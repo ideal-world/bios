@@ -1,0 +1,31 @@
+[package]
+name = "bios-mw-event"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
+[lib]
+name = "bios_mw_event"
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+async-trait.workspace = true
+lazy_static.workspace = true
+tardis = { workspace = true, features = ["reldb-postgres", "web-server", "ws-client"] }
+bios-basic = { path = "../../basic", features = ["default"] }
+
+[dev-dependencies]
+tardis = { workspace = true, features = ["test"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }
