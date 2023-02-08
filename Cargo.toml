@@ -1,6 +1,13 @@
 [workspace]
 
-members = ["basic", "core/iam", "core/auth", "spi/*", "services/*"]
+members = [
+    "basic",
+    "core/iam",
+    "core/auth",
+    "spi/*",
+    "middleware/*",
+    "services/*",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -19,7 +26,7 @@ async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { version = "0.1.0-alpha36" }
+tardis = { version = "0.1.0-alpha38" }
 
 [workspace.dev-dependencies]
-tardis = { version = "0.1.0-alpha36", features = ["test"] }
+tardis = { version = "0.1.0-alpha38", features = ["test"] }

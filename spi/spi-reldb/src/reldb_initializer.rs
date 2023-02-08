@@ -15,7 +15,7 @@ use tardis::{
 };
 
 use crate::{
-    api::ci::api::reldb_exec_api,
+    api::ci::reldb_ci_exec_api,
     reldb_config::ReldbConfig,
     reldb_constants::{self, DOMAIN_CODE},
     serv::{self, reldb_exec_serv},
@@ -41,7 +41,7 @@ async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, reldb_exec_api::ReldbCiExecApi)).await;
+    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, reldb_ci_exec_api::ReldbCiExecApi)).await;
     Ok(())
 }
 

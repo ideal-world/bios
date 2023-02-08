@@ -6,7 +6,7 @@ use tardis::{
 };
 
 use crate::{
-    api::ci::api::cache_ci_proc_api,
+    api::ci::cache_ci_proc_api,
     cache_constants::{self, DOMAIN_CODE},
     serv,
 };
