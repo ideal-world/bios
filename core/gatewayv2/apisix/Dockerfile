@@ -4,7 +4,7 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 COPY apisix/plugins/auth-bios.lua /usr/local/apisix/apisix/plugins/auth-bios.lua
-COPY conf/config-default.yaml /usr/local/apisix/conf/config-default.yaml
+#COPY conf/config-default.yaml /usr/local/apisix/conf/config-default.yaml
 COPY conf/config.yaml /usr/local/apisix/conf/config.yaml
 
 VOLUME /usr/local/apisix/conf

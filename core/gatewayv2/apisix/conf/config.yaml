@@ -3,3 +3,6 @@ apisix:
     - name: admin
       key: edd1c9f034335f136f87ad84b6acecs1  # using fixed API token has security risk, please update it when you deploy to production environment
       role: admin
+
+plugins:
+  - auth-bios
