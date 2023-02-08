@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -17,10 +18,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::domain::iam_account;
-use crate::basic::dto::iam_account_dto::{
-    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountModifyReq,
-    IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
-};
+use crate::basic::dto::iam_account_dto::{AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp};
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
@@ -492,6 +490,22 @@ impl IamAccountServ {
             total_size: accounts.total_size,
             records: account_aggs,
         })
+    }
+
+    pub async fn get_account_tenant_info(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<AccountTenantInfoResp> {
+        let tenant_info=HashMap::new();
+        let raw_roles = Self::find_simple_rel_roles(id, true, Some(true), None, funs, ctx).await?;
+        let mut roles: Vec<RbumRelBoneResp> = vec![];
+        for role in raw_roles {
+            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                roles.push(role)
+            }
+        }
+
+        let set_id=IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
+
+        let tenant_info=AccountTenantInfoResp{ tenant_info };
+        Ok(tenant_info)
     }
 
     pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
