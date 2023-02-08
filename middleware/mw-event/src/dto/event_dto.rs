@@ -7,7 +7,7 @@ use tardis::{
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct EventDefAddOrModifyReq {
+pub struct EventTopicAddOrModifyReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub code: TrimString,
     pub name: TrimString,
@@ -19,7 +19,7 @@ pub struct EventDefAddOrModifyReq {
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
-pub struct EventDefInfoResp {
+pub struct EventTopicInfoResp {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub code: String,
     pub name: String,
@@ -32,11 +32,11 @@ pub struct EventDefInfoResp {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
-pub struct EventDefFilterReq {
+pub struct EventTopicFilterReq {
     pub basic: RbumBasicFilterReq,
 }
 
-impl RbumItemFilterFetcher for EventDefFilterReq {
+impl RbumItemFilterFetcher for EventTopicFilterReq {
     fn basic(&self) -> &RbumBasicFilterReq {
         &self.basic
     }
@@ -53,40 +53,36 @@ impl RbumItemFilterFetcher for EventDefFilterReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct EventListenerRegisterReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
-    pub event_code: TrimString,
-    pub event_sk: Option<String>,
+    pub topic_code: TrimString,
+    pub topic_sk: Option<String>,
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
-    pub listener_code: TrimString,
-    pub channel: EventChannelKind,
+    pub event_code: Option<TrimString>,
+    pub avatars: Vec<TrimString>,
     pub subscribe_mode: bool,
-    pub callback_url: Option<String>,
+}
+
+impl EventListenerRegisterReq {
+    pub fn event_code(&self) -> String {
+        if let Some(event_code) = &self.event_code {
+            event_code.to_string()
+        } else {
+            "".to_string()
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct EventListenerRegisterResp {
-    pub ws_addr: Option<String>,
-    pub http_addr: Option<String>,
+    pub ws_addr: String,
+    pub listener_code: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventListenerInfo {
-    pub channel: EventChannelKind,
+    pub topic_code: String,
     pub subscribe_mode: bool,
+    pub event_code: String,
+    pub avatars: Vec<String>,
     pub mgr: bool,
-    pub token:String,
+    pub token: String,
 }
-
-#[derive(poem_openapi::Enum, Serialize, Deserialize, Debug)]
-pub enum EventChannelKind {
-    #[oai(rename = "ws")]
-    Ws,
-    #[oai(rename = "http")]
-    Http,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EventMsgReq {
-    pub msg: String,
-    pub to_sessions: Vec<String>,
-}
-
