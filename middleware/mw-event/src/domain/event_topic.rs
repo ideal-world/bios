@@ -5,7 +5,7 @@ use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, Tab
 use tardis::db::sea_orm::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "event_def")]
+#[sea_orm(table_name = "event_topic")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
