@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::vec;
+use tardis::db::sea_orm::IdenStatic;
 use tardis::regex::Regex;
 
 use async_trait::async_trait;
@@ -327,9 +328,9 @@ impl RbumCrudOperation<rbum_kind_attr::ActiveModel, RbumKindAttrAddReq, RbumKind
             query.and_where(Expr::col(rbum_kind_attr::Column::ParentAttrName).eq(parent_attr_name.to_string()));
         }
         if is_detail {
-            query.expr_as(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Name), Alias::new("rel_rbum_kind_name")).inner_join(
+            query.expr_as(Expr::col((rbum_kind::Entity, rbum_kind::Column::Name)), Alias::new("rel_rbum_kind_name")).inner_join(
                 rbum_kind::Entity,
-                Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId),
+                Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_kind_attr::Entity, rbum_kind_attr::Column::RelRbumKindId)),
             );
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);

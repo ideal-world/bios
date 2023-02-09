@@ -5,9 +5,9 @@ use serde::Serialize;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
-use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -51,13 +51,13 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                         .from(rbum_item::Entity)
                         .inner_join(
                             rbum_domain::Entity,
-                            Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+                            Expr::col((rbum_domain::Entity, rbum_domain::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumDomainId)),
                         )
                         .inner_join(
                             rbum_kind::Entity,
-                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
+                            Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                         )
-                        .and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Code).eq(code.0.as_str())),
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.0.as_str())),
                 )
                 .await?
                 > 0
@@ -100,14 +100,14 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
                         .from(rbum_item::Entity)
                         .inner_join(
                             rbum_domain::Entity,
-                            Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+                            Expr::col((rbum_domain::Entity, rbum_domain::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumDomainId)),
                         )
                         .inner_join(
                             rbum_kind::Entity,
-                            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
+                            Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                         )
-                        .and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Code).eq(code.0.as_str()))
-                        .and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).ne(id)),
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Code)).eq(code.0.as_str()))
+                        .and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Id)).ne(id)),
                 )
                 .await?
                 > 0
@@ -170,15 +170,15 @@ impl RbumCrudOperation<rbum_item::ActiveModel, RbumItemAddReq, RbumItemKernelMod
 
         if is_detail {
             query
-                .expr_as(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Name), Alias::new("rel_rbum_kind_name"))
-                .expr_as(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Name), Alias::new("rel_rbum_domain_name"))
+                .expr_as(Expr::col((rbum_kind::Entity, rbum_kind::Column::Name)), Alias::new("rel_rbum_kind_name"))
+                .expr_as(Expr::col((rbum_domain::Entity, rbum_domain::Column::Name)), Alias::new("rel_rbum_domain_name"))
                 .inner_join(
                     rbum_kind::Entity,
-                    Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
+                    Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
                 )
                 .inner_join(
                     rbum_domain::Entity,
-                    Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+                    Expr::col((rbum_domain::Entity, rbum_domain::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumDomainId)),
                 );
         }
         query.with_filter(Self::get_table_name(), filter, is_detail, true, ctx);
@@ -500,18 +500,18 @@ where
                         JoinType::LeftJoin,
                         rbum_rel::Entity,
                         rel_table.clone(),
-                        Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                        Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                     );
                 } else {
                     query.join_as(
                         JoinType::InnerJoin,
                         rbum_rel::Entity,
                         rel_table.clone(),
-                        Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                        Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                     );
                 }
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
+                    query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).eq(rel_item_id.to_string()));
                 }
             } else {
                 if rbum_item_rel_filter_req.is_left {
@@ -519,34 +519,34 @@ where
                         JoinType::LeftJoin,
                         rbum_rel::Entity,
                         rel_table.clone(),
-                        Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                        Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                     );
                 } else {
                     query.join_as(
                         JoinType::InnerJoin,
                         rbum_rel::Entity,
                         rel_table.clone(),
-                        Expr::tbl(rel_table.clone(), rbum_rel::Column::ToRbumItemId).equals(rbum_item::Entity, rbum_item::Column::Id),
+                        Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                     );
                 }
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
+                    query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).eq(rel_item_id.to_string()));
                 }
             }
             if let Some(tag) = &rbum_item_rel_filter_req.tag {
-                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Tag).eq(tag.to_string()));
+                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::Tag)).eq(tag.to_string()));
             }
             if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
-                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumKind)).eq(from_rbum_kind.to_int()));
             }
             if let Some(ext_eq) = &rbum_item_rel_filter_req.ext_eq {
-                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).eq(ext_eq.to_string()));
+                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::Ext)).eq(ext_eq.to_string()));
             }
             if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
-                query.and_where(Expr::tbl(rel_table.clone(), rbum_rel::Column::Ext).like(format!("%{ext_like}%").as_str()));
+                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::Ext)).like(format!("%{ext_like}%").as_str()));
             }
             if let Some(own_paths) = &rbum_item_rel_filter_req.own_paths {
-                query.and_where(Expr::tbl(rel_table, rbum_rel::Column::OwnPaths).eq(own_paths.to_string()));
+                query.and_where(Expr::col((rel_table, rbum_rel::Column::OwnPaths)).eq(own_paths.to_string()));
             }
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel() {
@@ -569,10 +569,10 @@ where
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
-        query.and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).eq(id));
+        query.and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Id)).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
@@ -593,10 +593,10 @@ where
         let mut query = Self::package_item_query(true, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, true, filter, funs, ctx).await?;
-        query.and_where(Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).eq(id));
+        query.and_where(Expr::col((rbum_item::Entity, rbum_item::Column::Id)).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
@@ -633,7 +633,7 @@ where
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
@@ -675,7 +675,7 @@ where
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
@@ -717,7 +717,7 @@ where
         let mut query = Self::package_item_query(true, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, true, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
@@ -768,7 +768,7 @@ where
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
@@ -800,7 +800,7 @@ where
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
@@ -845,7 +845,7 @@ where
         let mut query = Self::package_item_query(true, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, true, filter, funs, ctx).await?;
         if let Some(sort) = desc_sort_by_create {
@@ -865,7 +865,7 @@ where
         let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
         query.inner_join(
             Alias::new(Self::get_ext_table_name()),
-            Expr::tbl(Alias::new(Self::get_ext_table_name()), ID_FIELD.clone()).equals(rbum_item::Entity, rbum_item::Column::Id),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
         funs.db().count(&query).await
@@ -953,22 +953,22 @@ impl RbumCrudOperation<rbum_item_attr::ActiveModel, RbumItemAttrAddReq, RbumItem
                 (rbum_item_attr::Entity, rbum_item_attr::Column::CreateTime),
                 (rbum_item_attr::Entity, rbum_item_attr::Column::UpdateTime),
             ])
-            .expr_as(Expr::tbl(rbum_item::Entity, rbum_item::Column::Name), Alias::new("rel_rbum_item_name"))
-            .expr_as(Expr::tbl(rbum_kind_attr::Entity, rbum_kind_attr::Column::Name), Alias::new("rel_rbum_kind_attr_name"))
+            .expr_as(Expr::col((rbum_item::Entity, rbum_item::Column::Name)), Alias::new("rel_rbum_item_name"))
+            .expr_as(Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Name)), Alias::new("rel_rbum_kind_attr_name"))
             .from(rbum_item_attr::Entity)
             .inner_join(
                 rbum_item::Entity,
-                Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).equals(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId),
+                Expr::col((rbum_item::Entity, rbum_item::Column::Id)).equals((rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId)),
             )
             .inner_join(
                 rbum_kind_attr::Entity,
-                Expr::tbl(rbum_kind_attr::Entity, rbum_kind_attr::Column::Id).equals(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId),
+                Expr::col((rbum_kind_attr::Entity, rbum_kind_attr::Column::Id)).equals((rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId)),
             );
         if let Some(rel_rbum_item_id) = &filter.rel_rbum_item_id {
-            query.and_where(Expr::tbl(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId).eq(rel_rbum_item_id.to_string()));
+            query.and_where(Expr::col((rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumItemId)).eq(rel_rbum_item_id.to_string()));
         }
         if let Some(rel_rbum_kind_attr_id) = &filter.rel_rbum_kind_attr_id {
-            query.and_where(Expr::tbl(rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId).eq(rel_rbum_kind_attr_id.to_string()));
+            query.and_where(Expr::col((rbum_item_attr::Entity, rbum_item_attr::Column::RelRbumKindAttrId)).eq(rel_rbum_kind_attr_id.to_string()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)

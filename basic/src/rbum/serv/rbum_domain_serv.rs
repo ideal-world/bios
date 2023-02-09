@@ -3,6 +3,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::IdResp;
 use tardis::db::sea_orm::sea_query::*;
+use tardis::db::sea_orm::IdenStatic;
 use tardis::db::sea_orm::*;
 use tardis::TardisFuns;
 use tardis::TardisFunsInst;
