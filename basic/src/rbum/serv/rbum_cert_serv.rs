@@ -4,9 +4,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Duration, Utc};
-use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::TardisFunsInst;
 use tardis::{log, TardisFuns};
 
@@ -299,31 +299,31 @@ impl RbumCrudOperation<rbum_cert_conf::ActiveModel, RbumCertConfAddReq, RbumCert
             ])
             .from(rbum_cert_conf::Entity);
         if let Some(kind) = &filter.kind {
-            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Kind).eq(kind.to_string()));
+            query.and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Kind)).eq(kind.to_string()));
         }
         if let Some(supplier) = &filter.supplier {
-            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert::Column::Supplier).eq(supplier.to_string()));
+            query.and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert::Column::Supplier)).eq(supplier.to_string()));
         }
         if let Some(status) = &filter.status {
-            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert::Column::Status).eq(status.to_int()));
+            query.and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert::Column::Status)).eq(status.to_int()));
         }
         if let Some(rel_rbum_domain_id) = &filter.rel_rbum_domain_id {
-            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId).eq(rel_rbum_domain_id.to_string()));
+            query.and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId)).eq(rel_rbum_domain_id.to_string()));
         }
         if let Some(rbum_item_id) = &filter.rel_rbum_item_id {
-            query.and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id.to_string()));
+            query.and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumItemId)).eq(rbum_item_id.to_string()));
         }
         if is_detail {
             query
-                .expr_as(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Name), Alias::new("rel_rbum_domain_name"))
-                .expr_as(Expr::tbl(rbum_item::Entity, rbum_item::Column::Name).if_null(""), Alias::new("rel_rbum_item_name"))
+                .expr_as(Expr::col((rbum_domain::Entity, rbum_domain::Column::Name)), Alias::new("rel_rbum_domain_name"))
+                .expr_as(Expr::col((rbum_item::Entity, rbum_item::Column::Name)).if_null(""), Alias::new("rel_rbum_item_name"))
                 .inner_join(
                     rbum_domain::Entity,
-                    Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId),
+                    Expr::col((rbum_domain::Entity, rbum_domain::Column::Id)).equals((rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId)),
                 )
                 .left_join(
                     rbum_item::Entity,
-                    Expr::tbl(rbum_item::Entity, rbum_item::Column::Id).equals(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumItemId),
+                    Expr::col((rbum_item::Entity, rbum_item::Column::Id)).equals((rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumItemId)),
                 );
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
@@ -610,41 +610,41 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                 (rbum_cert::Entity, rbum_cert::Column::UpdateTime),
             ])
             .expr_as(
-                Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Name).if_null(""),
+                Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Name)).if_null(""),
                 Alias::new("rel_rbum_cert_conf_name"),
             )
             .expr_as(
-                Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Name).if_null(""),
+                Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Name)).if_null(""),
                 Alias::new("rel_rbum_cert_conf_code"),
             )
             .from(rbum_cert::Entity)
             .left_join(
                 rbum_cert_conf::Entity,
-                Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Id).equals(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
+                Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Id)).equals((rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId)),
             );
         if let Some(ak) = &filter.ak {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).eq(ak.to_string()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Ak)).eq(ak.to_string()));
         }
         if let Some(ak) = &filter.ak_like {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Ak).like(format!("{ak}%")));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Ak)).like(format!("{ak}%")));
         }
         if let Some(kind) = &filter.kind {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Kind).eq(kind.to_string()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Kind)).eq(kind.to_string()));
         }
         if let Some(supplier) = &filter.supplier {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Supplier).is_in::<&str, Vec<&str>>(supplier.iter().map(|s| &s[..]).collect()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Supplier)).is_in::<&str, Vec<&str>>(supplier.iter().map(|s| &s[..]).collect()));
         }
         if let Some(status) = &filter.status {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Status).eq(status.to_int()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Status)).eq(status.to_int()));
         }
         if let Some(rel_rbum_cert_conf_ids) = &filter.rel_rbum_cert_conf_ids {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId).is_in(rel_rbum_cert_conf_ids.clone()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId)).is_in(rel_rbum_cert_conf_ids.clone()));
         }
         if let Some(rel_rbum_kind) = &filter.rel_rbum_kind {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumKind).eq(rel_rbum_kind.to_int()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumKind)).eq(rel_rbum_kind.to_int()));
         }
         if let Some(rel_rbum_id) = &filter.rel_rbum_id {
-            query.and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumId).eq(rel_rbum_id.to_string()));
+            query.and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).eq(rel_rbum_id.to_string()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
@@ -941,7 +941,7 @@ impl RbumCertServ {
             .db()
             .get_dto::<BasicCertInfoResp>(
                 Query::select()
-                    .expr_as(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Id).if_null(""), Alias::new("id"))
+                    .expr_as(Expr::col((rbum_cert::Entity, rbum_cert::Column::Id)).if_null(""), Alias::new("id"))
                     .column(rbum_cert::Column::Ak)
                     .column(rbum_cert::Column::Sk)
                     .column(rbum_cert::Column::RelRbumKind)
@@ -954,11 +954,11 @@ impl RbumCertServ {
                     .from(rbum_cert::Entity)
                     .inner_join(
                         rbum_cert_conf::Entity,
-                        Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::Id).equals(rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId),
+                        Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::Id)).equals((rbum_cert::Entity, rbum_cert::Column::RelRbumCertConfId)),
                     )
                     .and_where(Expr::col(rbum_cert::Column::RelRbumId).eq(rel_rbum_id))
-                    .and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId).eq(rel_rbum_domain_id))
-                    .and_where(Expr::tbl(rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic).eq(true)),
+                    .and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::RelRbumDomainId)).eq(rel_rbum_domain_id))
+                    .and_where(Expr::col((rbum_cert_conf::Entity, rbum_cert_conf::Column::IsBasic)).eq(true)),
             )
             .await?
             .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found basic cert conf", "404-rbum-cert-conf-not-exist"))?;
@@ -1013,7 +1013,7 @@ impl RbumCertServ {
             pub sk: String,
         }
         let mut query = Query::select();
-        query.column((rbum_cert::Entity, rbum_cert::Column::Sk)).from(rbum_cert::Entity).and_where(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Id).eq(id)).with_filter(
+        query.column((rbum_cert::Entity, rbum_cert::Column::Sk)).from(rbum_cert::Entity).and_where(Expr::col((rbum_cert::Entity, rbum_cert::Column::Id)).eq(id)).with_filter(
             Self::get_table_name(),
             &filter.basic,
             false,

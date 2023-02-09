@@ -53,14 +53,14 @@ pub async fn get_first_account_context<'a>(rbum_kind_code: &str, rbum_domain_cod
         .from(rbum_item::Entity)
         .inner_join(
             rbum_kind::Entity,
-            Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
+            Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
         )
         .inner_join(
             rbum_domain::Entity,
-            Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+            Expr::col((rbum_domain::Entity, rbum_domain::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumDomainId)),
         )
-        .and_where(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Code).eq(rbum_kind_code))
-        .and_where(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Code).eq(rbum_domain_code))
+        .and_where(Expr::col((rbum_kind::Entity, rbum_kind::Column::Code)).eq(rbum_kind_code))
+        .and_where(Expr::col((rbum_domain::Entity, rbum_domain::Column::Code)).eq(rbum_domain_code))
         .order_by((rbum_item::Entity, rbum_item::Column::CreateTime), Order::Asc);
 
     let context: Option<TmpContext> = funs.db().get_dto(&query).await?;

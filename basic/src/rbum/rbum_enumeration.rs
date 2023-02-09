@@ -50,6 +50,10 @@ impl TryGetable for RbumScopeLevelKind {
         let s = i16::try_get(res, pre, col)?;
         RbumScopeLevelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -84,6 +88,10 @@ impl TryGetable for RbumCertRelKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
         RbumCertRelKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
     }
 }
 
@@ -122,6 +130,10 @@ impl TryGetable for RbumRelFromKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = i16::try_get(res, pre, col)?;
         RbumRelFromKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
     }
 }
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -180,6 +192,10 @@ impl TryGetable for RbumCertStatusKind {
         let s = i16::try_get(res, pre, col)?;
         RbumCertStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -215,6 +231,10 @@ impl TryGetable for RbumRelEnvKind {
         let s = i16::try_get(res, pre, col)?;
         RbumRelEnvKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
     }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -240,6 +260,10 @@ impl TryGetable for RbumDataTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         RbumDataTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
     }
 }
 
@@ -272,6 +296,10 @@ impl TryGetable for RbumWidgetTypeKind {
     fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
         let s = String::try_get(res, pre, col)?;
         RbumWidgetTypeKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implemented")
     }
 }
 
