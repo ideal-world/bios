@@ -102,7 +102,7 @@ impl KvCiItemApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<KvTagFindResp>> {
-        let mut funs = request.tardis_fun_inst();
+        let funs = request.tardis_fun_inst();
         let resp = kv_item_serv::find_tags(key_perfix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
