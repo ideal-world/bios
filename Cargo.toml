@@ -24,6 +24,11 @@ edition = "2021"
 readme = "README.adoc"
 publish = false
 
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 async-trait = { version = "0.1" }
