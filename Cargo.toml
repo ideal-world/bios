@@ -30,7 +30,7 @@ async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { version = "0.1.0-alpha39" }
+tardis = { version = "0.1.0-alpha40" }
 
 [workspace.dev-dependencies]
-tardis = { version = "0.1.0-alpha39", features = ["test"] }
+tardis = { version = "0.1.0-alpha40", features = ["test"] }
