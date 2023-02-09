@@ -23,6 +23,24 @@ impl Default for EventConfig {
     }
 }
 
+impl EventConfig {
+    pub fn event_url(&self) -> String {
+        if self.event_url.ends_with("/") {
+            self.event_url.clone()
+        } else {
+            format!("{}/", self.event_url)
+        }
+    }
+
+    pub fn log_url(&self) -> String {
+        if self.log_url.ends_with("/") {
+            self.log_url.clone()
+        } else {
+            format!("{}/", self.log_url)
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EventInfo {
     pub kind_id: String,
