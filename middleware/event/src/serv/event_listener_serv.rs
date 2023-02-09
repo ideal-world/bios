@@ -30,13 +30,8 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
         let avatars = if mgr {
             vec![format!("{MGR_LISTENER_AVATAR_PREFIX}{}", listener.event_code())]
         } else {
-            if listener.avatars.is_empty(){
-                return Err(funs.err().bad_request(
-                    "listener",
-                    "register",
-                    "avatars can not be empty",
-                    "400-event-listener-avatars-empty",
-                ));
+            if listener.avatars.is_empty() {
+                return Err(funs.err().bad_request("listener", "register", "avatars can not be empty", "400-event-listener-avatars-empty"));
             }
             if listener.avatars.iter().any(|v| v.starts_with(MGR_LISTENER_AVATAR_PREFIX)) {
                 return Err(funs.err().bad_request(
