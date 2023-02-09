@@ -11,10 +11,11 @@ use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemSumm
 use super::kv_pg_initializer;
 
 pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let mut params = Vec::new();
-    params.push(Value::from(add_or_modify_req.key.to_string()));
-    params.push(Value::from(add_or_modify_req.value.clone()));
-    params.push(Value::from(add_or_modify_req.info.as_ref().unwrap_or(&"".to_string()).as_str()));
+    let params = vec![
+        Value::from(add_or_modify_req.key.to_string()),
+        Value::from(add_or_modify_req.value.clone()),
+        Value::from(add_or_modify_req.info.as_ref().unwrap_or(&"".to_string()).as_str()),
+    ];
     let mut update_opt_fragments: Vec<&str> = Vec::new();
     update_opt_fragments.push("v = $2");
     if add_or_modify_req.info.is_some() {

@@ -25,7 +25,7 @@ impl Default for EventConfig {
 
 impl EventConfig {
     pub fn event_url(&self) -> String {
-        if self.event_url.ends_with("/") {
+        if self.event_url.ends_with('/') {
             self.event_url.clone()
         } else {
             format!("{}/", self.event_url)
@@ -33,7 +33,7 @@ impl EventConfig {
     }
 
     pub fn log_url(&self) -> String {
-        if self.log_url.ends_with("/") {
+        if self.log_url.ends_with('/') {
             self.log_url.clone()
         } else {
             format!("{}/", self.log_url)
@@ -55,7 +55,7 @@ pub struct EventInfoManager;
 
 impl EventInfoManager {
     pub fn set(event_info: EventInfo) -> TardisResult<()> {
-        let mut conf = EVENT_INFO.lock().map_err(|e| TardisError::internal_error(&format!("{:?}", e), ""))?;
+        let mut conf = EVENT_INFO.lock().map_err(|e| TardisError::internal_error(&format!("{e:?}"), ""))?;
         *conf = Some(event_info);
         Ok(())
     }
@@ -64,7 +64,7 @@ impl EventInfoManager {
     where
         F: Fn(&EventInfo) -> T,
     {
-        let conf = EVENT_INFO.lock().unwrap_or_else(|e| panic!("event info lock error: {:?}", e));
+        let conf = EVENT_INFO.lock().unwrap_or_else(|e| panic!("event info lock error: {e:?}"));
         let conf = conf.as_ref().unwrap_or_else(|| panic!("rbum config not set"));
         fun(conf)
     }

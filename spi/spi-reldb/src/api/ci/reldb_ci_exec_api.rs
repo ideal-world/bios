@@ -18,8 +18,8 @@ impl ReldbCiExecApi {
     /// Fetch Transaction ID
     #[oai(path = "/tx", method = "get")]
     async fn tx_begin(&self, auto_commit: Query<bool>, exp_sec: Query<Option<u8>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ReldbTxResp> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = reldb_exec_serv::tx_begin(auto_commit.0, exp_sec.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = reldb_exec_serv::tx_begin(auto_commit.0, exp_sec.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
@@ -40,24 +40,24 @@ impl ReldbCiExecApi {
     /// DDL
     #[oai(path = "/ddl", method = "post")]
     async fn ddl(&self, mut ddl_req: Json<ReldbDdlReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        reldb_exec_serv::ddl(&mut ddl_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        reldb_exec_serv::ddl(&mut ddl_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// DML
     #[oai(path = "/dml", method = "post")]
     async fn dml(&self, mut dml_req: Json<ReldbDmlReq>, tx_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ReldbDmlResp> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = reldb_exec_serv::dml(&mut dml_req.0, tx_id.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = reldb_exec_serv::dml(&mut dml_req.0, tx_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
     /// DQL
     #[oai(path = "/dql", method = "put")]
     async fn dql(&self, mut dql_req: Json<ReldbDqlReq>, tx_id: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<Value>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = reldb_exec_serv::dql(&mut dql_req.0, tx_id.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = reldb_exec_serv::dql(&mut dql_req.0, tx_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }

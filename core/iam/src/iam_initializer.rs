@@ -1,6 +1,4 @@
-use bios_basic::rbum::dto::rbum_set_cate_dto::RbumSetCateAddReq;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
-use bios_basic::rbum::serv::rbum_set_serv::RbumSetCateServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -44,7 +42,7 @@ use crate::console_tenant::api::{
 use crate::iam_config::{BasicInfo, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::RBUM_SCOPE_LEVEL_GLOBAL;
-use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetCateKind, IamSetKind};
+use crate::iam_enumeration::{IamResKind, IamRoleKind, IamSetKind};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
