@@ -19,24 +19,24 @@ impl EventTopicApi {
     /// Add Event Definition
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        let mut funs = request.tardis_fun_inst();
-        let id = EventDefServ::add_item(&mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let id = EventDefServ::add_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(id)
     }
 
     /// Modify Event Definition
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        EventDefServ::modify_item(&id.0, &mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        EventDefServ::modify_item(&id.0, &mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Event Definition
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        EventDefServ::delete_item(&id.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        EventDefServ::delete_item(&id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -63,7 +63,6 @@ impl EventTopicApi {
                     code: code.0,
                     ..Default::default()
                 },
-                ..Default::default()
             },
             page_number.0,
             page_size.0,

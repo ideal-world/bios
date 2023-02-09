@@ -58,15 +58,13 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
         LISTENERS.write().await.insert(listener_code.clone(), listener_info);
         if mgr {
             let mut mgr_listeners = MGR_LISTENERS.write().await;
-            if !mgr_listeners.contains_key(&listener.topic_code.to_string()) {
-                mgr_listeners.insert(listener.topic_code.to_string(), HashMap::new());
-            }
+            mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
             mgr_listeners.get_mut(&listener.topic_code.to_string()).unwrap().insert(listener.event_code(), avatars.get(0).unwrap().to_string());
         }
         let event_url = funs.conf::<EventConfig>().event_url();
         Ok(EventListenerRegisterResp {
             listener_code: listener_code.clone(),
-            ws_addr: format!("{}proc/{}?token={}", event_url, listener_code, token),
+            ws_addr: format!("{event_url}proc/{listener_code}?token={token}"),
         })
     } else {
         Err(funs.err().not_found("listener", "register", "topic not found", "404-event-topic-not-exist"))

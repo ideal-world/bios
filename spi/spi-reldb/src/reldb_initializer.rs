@@ -71,7 +71,7 @@ pub async fn inst_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, S
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => serv::pg::reldb_pg_initializer::init_conn(conn, bs_inst.1).await,
         #[cfg(feature = "spi-mysql")]
-        reldb_constants::SPI_MYSQL_KIND_CODE => serv::mysql::reldb_mysql_initializer::init_conn(conn, &bs_inst.1).await,
+        reldb_constants::SPI_MYSQL_KIND_CODE => serv::mysql::reldb_mysql_initializer::init_conn(conn, bs_inst.1).await,
         kind_code => Err(spi_funs::bs_not_implemented(kind_code))?,
     }
 }

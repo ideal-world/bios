@@ -23,8 +23,8 @@ impl ObjectCiObjApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<String> {
-        let mut funs = request.tardis_fun_inst();
-        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Upload, object_path.0.trim(), None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Upload, object_path.0.trim(), None, None, exp_secs.0, private.0, &funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -38,8 +38,8 @@ impl ObjectCiObjApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<String> {
-        let mut funs = request.tardis_fun_inst();
-        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Delete, object_path.0.trim(), None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::Delete, object_path.0.trim(), None, None, exp_secs.0, private.0, &funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -53,8 +53,8 @@ impl ObjectCiObjApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<String> {
-        let mut funs = request.tardis_fun_inst();
-        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::View, object_path.0.trim(), None, None, exp_secs.0, private.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let url = object_obj_serv::presign_obj_url(ObjectObjPresignKind::View, object_path.0.trim(), None, None, exp_secs.0, private.0, &funs, &ctx.0).await?;
         TardisResp::ok(url)
     }
 
@@ -70,7 +70,7 @@ impl ObjectCiObjApi {
     //     ctx: TardisContextExtractor,
     //     request: &Request,
     // ) -> TardisApiResult<String> {
-    //     let mut funs = request.tardis_fun_inst();
+    //     let funs = request.tardis_fun_inst();
     //     let url = object_obj_serv::presign_obj_url(
     //         ObjectObjPresignKind::View,
     //         object_path.0.trim(),
@@ -78,7 +78,7 @@ impl ObjectCiObjApi {
     //         max_height.0,
     //         exp_secs.0,
     //         private.0,
-    //         &mut funs,
+    //         &funs,
     //         &ctx.0,
     //     )
     //     .await?;
