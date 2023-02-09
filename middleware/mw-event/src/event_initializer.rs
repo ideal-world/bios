@@ -11,11 +11,11 @@ use tardis::{
 };
 
 use crate::{
-    api::{event_def_api, event_listener_api, event_proc_api},
-    domain::event_def,
+    api::{event_listener_api, event_proc_api, event_topic_api},
+    domain::event_topic,
     event_config::{EventInfo, EventInfoManager},
     event_constants::{DOMAIN_CODE, KIND_CODE},
-    serv::event_def_serv::EventDefServ,
+    serv::event_topic_serv::EventDefServ,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -43,7 +43,7 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
     }
 
     // Initialize event component RBUM item table and indexs
-    funs.db().init(event_def::ActiveModel::init(TardisFuns::reldb().backend(), None)).await?;
+    funs.db().init(event_topic::ActiveModel::init(TardisFuns::reldb().backend(), None)).await?;
     // Initialize event component RBUM domain data
     let domain_id = RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
@@ -66,7 +66,7 @@ async fn init_db(domain_code: String, kind_code: String, funs: &TardisFunsInst, 
             note: None,
             icon: None,
             sort: None,
-            ext_table_name: Some("event_def".to_lowercase()),
+            ext_table_name: Some("event_topic".to_lowercase()),
             scope_level: Some(RbumScopeLevelKind::Root),
         },
         funs,
@@ -81,7 +81,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             DOMAIN_CODE,
-            (event_def_api::EventDefApi, event_proc_api::EventProcApi, event_listener_api::EventListenerApi),
+            (event_topic_api::EventTopicApi, event_proc_api::EventProcApi, event_listener_api::EventListenerApi),
         )
         .await;
     Ok(())
