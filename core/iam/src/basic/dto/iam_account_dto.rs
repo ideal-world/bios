@@ -241,7 +241,7 @@ pub struct AccountTenantInfoResp {
     pub tenant_info:HashMap<String,AccountTenantInfo>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug,Default)]
 pub struct AccountTenantInfo {
     pub roles: HashMap<String, String>,
     pub orgs: Vec<String>,

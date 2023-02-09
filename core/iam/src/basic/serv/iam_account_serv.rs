@@ -493,16 +493,46 @@ impl IamAccountServ {
     }
 
     pub async fn get_account_tenant_info(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<AccountTenantInfoResp> {
-        let tenant_info=HashMap::new();
+        let mut tenant_ids =Vec::new();
         let raw_roles = Self::find_simple_rel_roles(id, true, Some(true), None, funs, ctx).await?;
         let mut roles: Vec<RbumRelBoneResp> = vec![];
         for role in raw_roles {
             if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                roles.push(role)
+                let rel_own_path = role.rel_own_paths.clone();
+                let tenant_id = rel_own_path.split('/').collect::<Vec<_>>();
+                if !tenant_ids.contains(&tenant_id[0].to_string()){
+                    tenant_ids.push(tenant_id[0].to_string());
+                }
+                roles.push(role);
             }
         }
 
-        let set_id=IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, ""), true, funs, ctx).await?
+        let mut tenant_info=HashMap::new();
+        for tenant_id in tenant_ids {
+            let tenant_ctx=IamCertServ::use_tenant_ctx(ctx.clone(), &tenant_id)?;
+            let tenant_result = IamAccountServ::get_account_detail_aggs(
+                id,
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                false,
+                true,
+                funs,
+                &tenant_ctx,
+            )
+                .await?;
+            let account_tenant_info = AccountTenantInfo {
+                roles: tenant_result.roles,
+                orgs: tenant_result.orgs,
+                groups: tenant_result.groups,
+                apps: tenant_result.apps,
+            };
+            tenant_info.insert(tenant_id.clone(),account_tenant_info);
+        }
 
         let tenant_info=AccountTenantInfoResp{ tenant_info };
         Ok(tenant_info)
