@@ -1,3 +1,4 @@
+use std::env;
 use std::time::Duration;
 
 use bios_basic::rbum::rbum_initializer::get_first_account_context;
@@ -27,6 +28,8 @@ mod test_key_cache;
 
 #[tokio::test]
 async fn test_iam_serv() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
+
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
     let _y = test_basic::init(&docker).await?;

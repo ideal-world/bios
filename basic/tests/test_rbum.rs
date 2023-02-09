@@ -1,3 +1,5 @@
+use std::env;
+
 use bios_basic::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
 use bios_basic::rbum::dto::rbum_item_dto::RbumItemAddReq;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindAddReq;
@@ -31,6 +33,8 @@ mod test_scope;
 
 #[tokio::test]
 async fn test_rbum() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
+
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
     let ctx = init_test_data().await?;
