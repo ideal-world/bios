@@ -47,12 +47,3 @@
 400-rbum-cert-sk-need-empty	动态密钥模式下凭证密钥不用填写
 400-rbum-cert-vcode-require	动态码不能为空
 409-rbum-cert-ak-duplicate	平台已存在相同用户名
-
-404-spi-bs-not-exist	找不到对应的后端服务
-501-spi-bs-not-exist	后端服务类型不存在或SPI特性未启用
-400-spi-graph-key-require	[from_key]与[to_key]至少有一个不能为空
-
-404-mw-event-code-not-exist	找不到对应的预定义事件
-404-mw-listener-not-exist	找不到对应的监听器
-401-mw-listener-sk-not-match	权限不匹配
-401-mw-listener-token-not-match	权限不匹配
