@@ -10,6 +10,7 @@ use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
 use tardis::web::ws_processor::{ws_broadcast, ws_echo, TardisWebsocketResp};
 use tardis::{tokio, TardisFuns, TardisFunsInst};
 
+use crate::dto::event_dto::EventMessageMgrWrap;
 use crate::event_config::EventConfig;
 
 use super::event_listener_serv::{LISTENERS, MGR_LISTENERS};
@@ -26,19 +27,20 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
             let topic = topic.get(&listener.topic_code).unwrap();
             let need_mgr = topic.need_mgr;
             let save_message = topic.save_message;
+            let is_mgr = listener.mgr;
 
             if !SENDERS.read().await.contains_key(&listener.topic_code) {
                 SENDERS.write().await.insert(listener.topic_code.clone(), tokio::sync::broadcast::channel::<String>(topic.queue_size as usize).0);
             }
             let sender = SENDERS.read().await.get(&listener.topic_code).unwrap().clone();
-
             ws_broadcast(
                 listener.avatars.clone(),
+                listener.mgr,
                 listener.subscribe_mode,
                 HashMap::from([
                     ("listener_code".to_string(), listener_code),
                     ("topic_code".to_string(), listener.topic_code.clone()),
-                    ("log_url".to_string(), funs.conf::<EventConfig>().log_url.clone()),
+                    ("log_url".to_string(), funs.conf::<EventConfig>().log_url()),
                     ("app_key".to_string(), TardisFuns::json.obj_to_string(&funs.conf::<EventConfig>().app_key).unwrap()),
                 ]),
                 websocket,
@@ -54,14 +56,14 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                             .await
                             .unwrap();
                     }
-                    if !need_mgr {
+                    if !need_mgr || is_mgr {
                         return Some(TardisWebsocketResp {
                             msg: req_msg.msg,
                             to_avatars: req_msg.to_avatars.unwrap_or(vec![]),
                             ignore_avatars: vec![],
                         });
                     }
-                    // set cache
+                    // TODO set cache
                     if let Some(msg_event_code_info) = MGR_LISTENERS.read().await.get(ext.get("topic_code").unwrap()) {
                         let msg_avatar = if let Some(req_event_code) = &req_msg.event {
                             msg_event_code_info.get(req_event_code)
@@ -70,7 +72,13 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                         };
                         if let Some(msg_avatar) = msg_avatar {
                             return Some(TardisWebsocketResp {
-                                msg: req_msg.msg,
+                                msg: TardisFuns::json
+                                    .obj_to_json(&EventMessageMgrWrap {
+                                        msg: req_msg.msg,
+                                        ori_from_avatar: req_msg.from_avatar,
+                                        ori_to_avatars: req_msg.to_avatars,
+                                    })
+                                    .unwrap(),
                                 to_avatars: vec![msg_avatar.clone()],
                                 ignore_avatars: vec![],
                             });

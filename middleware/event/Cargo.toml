@@ -27,5 +27,5 @@ tardis = { workspace = true, features = ["reldb-postgres", "web-server", "ws-cli
 bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]
-tardis = { workspace = true, features = ["test"] }
+tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
