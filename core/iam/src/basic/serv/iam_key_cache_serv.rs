@@ -179,8 +179,8 @@ impl IamIdentCacheServ {
                 &TardisFuns::json.obj_to_string(&TardisContext {
                     own_paths: tenant_id.to_string(),
                     owner: account_info.account_id.to_string(),
-                    roles: account_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
-                    groups: account_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
+                    roles: account_info.roles.keys().map(|id| id.to_string()).collect(),
+                    groups: account_info.groups.keys().map(|id| id.to_string()).collect(),
                     ..Default::default()
                 })?,
             )
@@ -193,8 +193,8 @@ impl IamIdentCacheServ {
                     &TardisFuns::json.obj_to_string(&TardisContext {
                         own_paths: format!("{}/{}", tenant_id, account_app_info.app_id).to_string(),
                         owner: account_info.account_id.to_string(),
-                        roles: account_app_info.roles.iter().map(|(id, _)| id.to_string()).collect(),
-                        groups: account_app_info.groups.iter().map(|(id, _)| id.to_string()).collect(),
+                        roles: account_app_info.roles.keys().map(|id| id.to_string()).collect(),
+                        groups: account_app_info.groups.keys().map(|id| id.to_string()).collect(),
                         ..Default::default()
                     })?,
                 )

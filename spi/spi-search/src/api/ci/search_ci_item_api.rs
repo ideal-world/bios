@@ -17,24 +17,24 @@ impl SearchCiItemApi {
     /// Add Or Modify Item
     #[oai(path = "/", method = "put")]
     async fn add_or_modify(&self, mut add_or_modify_req: Json<SearchItemAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        search_item_serv::add_or_modify(&mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        search_item_serv::add_or_modify(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Item
     #[oai(path = "/", method = "delete")]
     async fn delete(&self, tag: Query<String>, key: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        search_item_serv::delete(&tag.0, &key.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        search_item_serv::delete(&tag.0, &key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Search Items
     #[oai(path = "/search", method = "put")]
     async fn search(&self, mut search_req: Json<SearchItemSearchReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<TardisPage<SearchItemSearchResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = search_item_serv::search(&mut search_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = search_item_serv::search(&mut search_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }

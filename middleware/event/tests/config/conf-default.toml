@@ -1,0 +1,11 @@
+[cs]
+
+[csm.event]
+event_url = "ws://127.0.0.1:8080/event/"
+
+[fw.web_server]
+port = 8080
+
+[fw.web_server.modules.event]
+title = "事件服务"
+doc_urls = [["test env", "http://localhost:8080/"]]

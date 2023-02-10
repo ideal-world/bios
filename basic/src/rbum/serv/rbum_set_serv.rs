@@ -5,9 +5,9 @@ use async_trait::async_trait;
 use itertools::Itertools;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
+use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::tokio::time::sleep;
 use tardis::web::poem_openapi::types::Type;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -142,31 +142,31 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
             ])
             .from(rbum_set::Entity);
         if let Some(kind) = &filter.kind {
-            query.and_where(Expr::tbl(rbum_set::Entity, rbum_set::Column::Kind).eq(kind.to_string()));
+            query.and_where(Expr::col((rbum_set::Entity, rbum_set::Column::Kind)).eq(kind.to_string()));
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel {
             if rbum_item_rel_filter_req.rel_by_from {
                 query.inner_join(
                     rbum_rel::Entity,
-                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).equals(rbum_set::Entity, rbum_set::Column::Id),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).equals((rbum_set::Entity, rbum_set::Column::Id)),
                 );
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
+                    query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(rel_item_id.to_string()));
                 }
             } else {
                 query.inner_join(
                     rbum_rel::Entity,
-                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).equals(rbum_set::Entity, rbum_set::Column::Id),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).equals((rbum_set::Entity, rbum_set::Column::Id)),
                 );
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
+                    query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(rel_item_id.to_string()));
                 }
             }
             if let Some(tag) = &rbum_item_rel_filter_req.tag {
-                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Tag).eq(tag.to_string()));
+                query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Tag)).eq(tag.to_string()));
             }
             if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
-                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+                query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(from_rbum_kind.to_int()));
             }
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
@@ -489,10 +489,10 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                     .inner_join(
                         rbum_set_cate::Entity,
                         Condition::all()
-                            .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode))
-                            .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)),
+                            .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)))
+                            .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId))),
                     )
-                    .and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).eq(id)),
+                    .and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Id)).eq(id)),
             )
             .await?
             > 0
@@ -560,7 +560,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
             ])
             .from(rbum_set_cate::Entity);
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
-            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
+            query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).eq(rel_rbum_set_id.to_string()));
         }
         if let Some(sys_codes) = &filter.sys_codes {
             let query_kind = filter.sys_code_query_kind.clone().unwrap_or(RbumSetCateLevelQueryKind::Current);
@@ -576,7 +576,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
                                 cond = cond.add(
-                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str())).add(
+                                    Cond::all().add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str())).add(
                                         Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
                                             .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
                                     ),
@@ -584,7 +584,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                             }
                         } else {
                             for sys_code in sys_codes {
-                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()));
+                                cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()));
                             }
                         }
                     }
@@ -593,7 +593,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
+                                        .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
                                         .add(
                                             Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
@@ -605,7 +605,7 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
+                                        .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
                                 );
                             }
@@ -615,18 +615,18 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
                         for sys_code in sys_codes {
                             let mut sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
                             sys_codes.insert(0, sys_code.to_string());
-                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(sys_codes));
+                            cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).is_in(sys_codes));
                         }
                     }
                     RbumSetCateLevelQueryKind::Parent => {
                         for sys_code in sys_codes {
                             let parent_sys_codes = Self::get_parent_sys_codes(sys_code, funs)?;
-                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
+                            cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).is_in(parent_sys_codes));
                         }
                     }
                     RbumSetCateLevelQueryKind::Current => {
                         for sys_code in sys_codes {
-                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).eq(sys_code.as_str()));
+                            cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).eq(sys_code.as_str()));
                         }
                     }
                 }
@@ -634,31 +634,31 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
             }
         }
         if let Some(cate_exts) = &filter.cate_exts {
-            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Ext).is_in(cate_exts.clone()));
+            query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Ext)).is_in(cate_exts.clone()));
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel {
             if rbum_item_rel_filter_req.rel_by_from {
                 query.inner_join(
                     rbum_rel::Entity,
-                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).equals(rbum_set_cate::Entity, rbum_set_cate::Column::Id),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).equals((rbum_set_cate::Entity, rbum_set_cate::Column::Id)),
                 );
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).eq(rel_item_id.to_string()));
+                    query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(rel_item_id.to_string()));
                 }
             } else {
                 query.inner_join(
                     rbum_rel::Entity,
-                    Expr::tbl(rbum_rel::Entity, rbum_rel::Column::ToRbumItemId).equals(rbum_set_cate::Entity, rbum_set_cate::Column::Id),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).equals((rbum_set_cate::Entity, rbum_set_cate::Column::Id)),
                 );
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumId).eq(rel_item_id.to_string()));
+                    query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(rel_item_id.to_string()));
                 }
             }
             if let Some(tag) = &rbum_item_rel_filter_req.tag {
-                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::Tag).eq(tag.to_string()));
+                query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Tag)).eq(tag.to_string()));
             }
             if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
-                query.and_where(Expr::tbl(rbum_rel::Entity, rbum_rel::Column::FromRbumKind).eq(from_rbum_kind.to_int()));
+                query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(from_rbum_kind.to_int()));
             }
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
@@ -841,51 +841,54 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                 (rbum_set_item::Entity, rbum_set_item::Column::CreateTime),
                 (rbum_set_item::Entity, rbum_set_item::Column::UpdateTime),
             ])
-            .expr_as(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id), Alias::new("rel_rbum_set_cate_id"))
-            .expr_as(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode), Alias::new("rel_rbum_set_cate_sys_code"))
-            .expr_as(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Name), Alias::new("rel_rbum_set_cate_name"))
-            .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Name), Alias::new("rel_rbum_item_name"))
+            .expr_as(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Id)), Alias::new("rel_rbum_set_cate_id"))
+            .expr_as(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)), Alias::new("rel_rbum_set_cate_sys_code"))
+            .expr_as(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Name)), Alias::new("rel_rbum_set_cate_name"))
+            .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::Name)), Alias::new("rel_rbum_item_name"))
             .from(rbum_set_item::Entity)
             .inner_join(
                 rbum_set_cate::Entity,
                 Cond::all()
-                    .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode))
-                    .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)),
+                    .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)))
+                    .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId))),
             )
             .join_as(
                 JoinType::InnerJoin,
                 rbum_item::Entity,
                 rel_item_table.clone(),
-                Expr::tbl(rel_item_table.clone(), rbum_item::Column::Id).equals(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId),
+                Expr::col((rel_item_table.clone(), rbum_item::Column::Id)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId)),
             );
         if is_detail {
             query
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Code), Alias::new("rel_rbum_item_code"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumKindId), Alias::new("rel_rbum_item_kind_id"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumDomainId), Alias::new("rel_rbum_item_domain_id"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Owner), Alias::new("rel_rbum_item_owner"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::CreateTime), Alias::new("rel_rbum_item_create_time"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::UpdateTime), Alias::new("rel_rbum_item_update_time"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Disabled), Alias::new("rel_rbum_item_disabled"))
-                .expr_as(Expr::tbl(rel_item_table.clone(), rbum_item::Column::ScopeLevel), Alias::new("rel_rbum_item_scope_level"));
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::Code)), Alias::new("rel_rbum_item_code"))
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::RelRbumKindId)), Alias::new("rel_rbum_item_kind_id"))
+                .expr_as(
+                    Expr::col((rel_item_table.clone(), rbum_item::Column::RelRbumDomainId)),
+                    Alias::new("rel_rbum_item_domain_id"),
+                )
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::Owner)), Alias::new("rel_rbum_item_owner"))
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::CreateTime)), Alias::new("rel_rbum_item_create_time"))
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::UpdateTime)), Alias::new("rel_rbum_item_update_time"))
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::Disabled)), Alias::new("rel_rbum_item_disabled"))
+                .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::ScopeLevel)), Alias::new("rel_rbum_item_scope_level"));
         }
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
-            query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId).eq(rel_rbum_set_id.to_string()));
+            query.and_where(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)).eq(rel_rbum_set_id.to_string()));
         }
         if let Some(rel_rbum_set_cate_ids) = &filter.rel_rbum_set_cate_ids {
-            query.and_where(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::Id).is_in(rel_rbum_set_cate_ids.clone()));
+            query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Id)).is_in(rel_rbum_set_cate_ids.clone()));
         }
         if let Some(rel_rbum_item_ids) = &filter.rel_rbum_item_ids {
-            query.and_where(Expr::tbl(rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId).is_in(rel_rbum_item_ids.clone()));
+            query.and_where(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId)).is_in(rel_rbum_item_ids.clone()));
         }
         if let Some(rel_rbum_item_disabled) = &filter.rel_rbum_item_disabled {
-            query.and_where(Expr::tbl(rel_item_table.clone(), rbum_item::Column::Disabled).eq(*rel_rbum_item_disabled));
+            query.and_where(Expr::col((rel_item_table.clone(), rbum_item::Column::Disabled)).eq(*rel_rbum_item_disabled));
         }
         if let Some(rel_rbum_item_domain_ids) = &filter.rel_rbum_item_domain_ids {
-            query.and_where(Expr::tbl(rel_item_table.clone(), rbum_item::Column::RelRbumDomainId).is_in(rel_rbum_item_domain_ids.clone()));
+            query.and_where(Expr::col((rel_item_table.clone(), rbum_item::Column::RelRbumDomainId)).is_in(rel_rbum_item_domain_ids.clone()));
         }
         if let Some(rel_rbum_item_kind_ids) = &filter.rel_rbum_item_kind_ids {
-            query.and_where(Expr::tbl(rel_item_table, rbum_item::Column::RelRbumKindId).is_in(rel_rbum_item_kind_ids.clone()));
+            query.and_where(Expr::col((rel_item_table, rbum_item::Column::RelRbumKindId)).is_in(rel_rbum_item_kind_ids.clone()));
         }
         if let Some(sys_codes) = &filter.rel_rbum_set_cate_sys_codes {
             let query_kind = filter.sys_code_query_kind.clone().unwrap_or(RbumSetCateLevelQueryKind::Current);
@@ -901,7 +904,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                         if let Some(depth) = filter.sys_code_query_depth {
                             for sys_code in sys_codes {
                                 cond = cond.add(
-                                    Cond::all().add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str())).add(
+                                    Cond::all().add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str())).add(
                                         Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
                                             .lte((sys_code.len() + funs.rbum_conf_set_cate_sys_code_node_len() * depth as usize) as i32),
                                     ),
@@ -909,7 +912,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             }
                         } else {
                             for sys_code in sys_codes {
-                                cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()));
+                                cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()));
                             }
                         }
                     }
@@ -918,7 +921,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
+                                        .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32))
                                         .add(
                                             Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode)))
@@ -930,7 +933,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                             for sys_code in sys_codes {
                                 cond = cond.add(
                                     Cond::all()
-                                        .add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).like(format!("{sys_code}%").as_str()))
+                                        .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).like(format!("{sys_code}%").as_str()))
                                         .add(Expr::expr(Func::char_length(Expr::col(rbum_set_cate::Column::SysCode))).gt(sys_code.len() as i32)),
                                 );
                             }
@@ -940,18 +943,18 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                         for sys_code in sys_codes {
                             let mut sys_codes = RbumSetCateServ::get_parent_sys_codes(sys_code, funs)?;
                             sys_codes.insert(0, sys_code.to_string());
-                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(sys_codes));
+                            cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).is_in(sys_codes));
                         }
                     }
                     RbumSetCateLevelQueryKind::Parent => {
                         for sys_code in sys_codes {
                             let parent_sys_codes = RbumSetCateServ::get_parent_sys_codes(sys_code, funs)?;
-                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).is_in(parent_sys_codes));
+                            cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).is_in(parent_sys_codes));
                         }
                     }
                     RbumSetCateLevelQueryKind::Current => {
                         for sys_code in sys_codes {
-                            cond = cond.add(Expr::tbl(rbum_set_cate::Entity, rbum_set_cate::Column::SysCode).eq(sys_code.as_str()));
+                            cond = cond.add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).eq(sys_code.as_str()));
                         }
                     }
                 }

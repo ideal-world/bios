@@ -11,7 +11,7 @@ pub struct Model {
     pub id: String,
     pub save_message: bool,
     pub need_mgr: bool,
-    pub queue_size: u16,
+    pub queue_size: i32,
     pub use_sk: String,
     pub mgr_sk: String,
 

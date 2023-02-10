@@ -98,7 +98,7 @@ where
                 Query::select()
                     .column((Alias::new(table_name), ID_FIELD.clone()))
                     .from(Alias::new(table_name))
-                    .and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).eq(id))
+                    .and_where(Expr::col((Alias::new(table_name), ID_FIELD.clone())).eq(id))
                     .with_scope(table_name, &ctx.own_paths, false),
             )
             .await?
@@ -119,7 +119,7 @@ where
         let msg = values.iter().map(|(k, v)| format!("{k}={v:?}")).join(",");
         query.column((Alias::new(table_name), ID_FIELD.clone())).from(Alias::new(table_name)).with_scope(table_name, &ctx.own_paths, false);
         for (k, v) in values {
-            query.and_where(Expr::tbl(Alias::new(table_name), Alias::new(&k)).is_in(v.clone()));
+            query.and_where(Expr::col((Alias::new(table_name), Alias::new(&k))).is_in(v.clone()));
         }
         if funs.db().count(&query).await? != expect_number {
             return Err(funs.err().not_found(
@@ -141,7 +141,7 @@ where
                 Query::select()
                     .column((Alias::new(rel_table_name), ID_FIELD.clone()))
                     .from(Alias::new(rel_table_name))
-                    .and_where(Expr::tbl(Alias::new(rel_table_name), Alias::new(rel_field_name)).eq(id)),
+                    .and_where(Expr::col((Alias::new(rel_table_name), Alias::new(rel_field_name))).eq(id)),
             )
             .await?
             > 0
@@ -293,7 +293,7 @@ where
 
     async fn do_peek_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SummaryResp> {
         let mut query = Self::package_query(false, filter, funs, ctx).await?;
-        query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
+        query.and_where(Expr::col((Alias::new(Self::get_table_name()), ID_FIELD.clone())).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
@@ -312,7 +312,7 @@ where
 
     async fn do_get_rbum(id: &str, filter: &FilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<DetailResp> {
         let mut query = Self::package_query(true, filter, funs, ctx).await?;
-        query.and_where(Expr::tbl(Alias::new(Self::get_table_name()), ID_FIELD.clone()).eq(id));
+        query.and_where(Expr::col((Alias::new(Self::get_table_name()), ID_FIELD.clone())).eq(id));
         let query = funs.db().get_dto(&query).await?;
         match query {
             Some(resp) => Ok(resp),
@@ -566,47 +566,47 @@ pub trait RbumCrudQueryPackage {
 impl RbumCrudQueryPackage for SelectStatement {
     fn with_filter(&mut self, table_name: &str, filter: &RbumBasicFilterReq, with_owner: bool, has_scope: bool, ctx: &TardisContext) -> &mut Self {
         if filter.rel_ctx_owner {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWNER_FIELD.clone()).eq(ctx.owner.as_str()));
+            self.and_where(Expr::col((Alias::new(table_name), OWNER_FIELD.clone())).eq(ctx.owner.as_str()));
         }
         if let Some(ids) = &filter.ids {
-            self.and_where(Expr::tbl(Alias::new(table_name), ID_FIELD.clone()).is_in(ids.clone()));
+            self.and_where(Expr::col((Alias::new(table_name), ID_FIELD.clone())).is_in(ids.clone()));
         }
 
         if let Some(scope_level) = &filter.scope_level {
-            self.and_where(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(scope_level.to_int()));
+            self.and_where(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(scope_level.to_int()));
         }
         if let Some(enabled) = filter.enabled {
-            self.and_where(Expr::tbl(Alias::new(table_name), DISABLED_FIELD.clone()).eq(!enabled));
+            self.and_where(Expr::col((Alias::new(table_name), DISABLED_FIELD.clone())).eq(!enabled));
         }
 
         if let Some(name) = &filter.name {
-            self.and_where(Expr::tbl(Alias::new(table_name), NAME_FIELD.clone()).like(format!("%{name}%").as_str()));
+            self.and_where(Expr::col((Alias::new(table_name), NAME_FIELD.clone())).like(format!("%{name}%").as_str()));
         }
         if let Some(code) = &filter.code {
-            self.and_where(Expr::tbl(Alias::new(table_name), CODE_FIELD.clone()).like(format!("{code}%").as_str()));
+            self.and_where(Expr::col((Alias::new(table_name), CODE_FIELD.clone())).like(format!("{code}%").as_str()));
         }
 
         if let Some(rbum_kind_id) = &filter.rbum_kind_id {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_KIND_ID_FIELD.clone()).eq(rbum_kind_id.to_string()));
+            self.and_where(Expr::col((Alias::new(table_name), REL_KIND_ID_FIELD.clone())).eq(rbum_kind_id.to_string()));
         }
         if let Some(rbum_domain_id) = &filter.rbum_domain_id {
-            self.and_where(Expr::tbl(Alias::new(table_name), REL_DOMAIN_ID_FIELD.clone()).eq(rbum_domain_id.to_string()));
+            self.and_where(Expr::col((Alias::new(table_name), REL_DOMAIN_ID_FIELD.clone())).eq(rbum_domain_id.to_string()));
         }
         if with_owner {
-            self.expr_as(Expr::tbl(OWNER_TABLE.clone(), NAME_FIELD.clone()), Alias::new("owner_name")).join_as(
+            self.expr_as(Expr::col((OWNER_TABLE.clone(), NAME_FIELD.clone())), Alias::new("owner_name")).join_as(
                 JoinType::LeftJoin,
                 rbum_item::Entity,
                 OWNER_TABLE.clone(),
-                Expr::tbl(OWNER_TABLE.clone(), ID_FIELD.clone()).equals(Alias::new(table_name), OWNER_FIELD.clone()),
+                Expr::col((OWNER_TABLE.clone(), ID_FIELD.clone())).equals((Alias::new(table_name), OWNER_FIELD.clone())),
             );
         }
         let filter_own_paths = if let Some(own_paths) = &filter.own_paths { own_paths.as_str() } else { &ctx.own_paths };
         if has_scope && !filter.ignore_scope {
             self.with_scope(table_name, filter_own_paths, filter.with_sub_own_paths);
         } else if filter.with_sub_own_paths {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{filter_own_paths}%").as_str()));
+            self.and_where(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{filter_own_paths}%").as_str()));
         } else {
-            self.and_where(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths));
+            self.and_where(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(filter_own_paths));
         }
         if let Some(desc_by_sort) = filter.desc_by_sort {
             self.order_by((Alias::new(table_name), SORT_FIELD.clone()), if desc_by_sort { Order::Desc } else { Order::Asc });
@@ -615,53 +615,53 @@ impl RbumCrudQueryPackage for SelectStatement {
     }
 
     fn with_scope(&mut self, table_name: &str, filter_own_paths: &str, with_sub_own_paths: bool) -> &mut Self {
-        let mut cond = Cond::any().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(0));
+        let mut cond = Cond::any().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(0));
 
         let own_cond = if with_sub_own_paths {
-            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{filter_own_paths}%"))
+            Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{filter_own_paths}%"))
         } else {
-            Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(filter_own_paths)
+            Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(filter_own_paths)
         };
         cond = cond.add(own_cond);
 
         if let Some(p1) = rbum_scope_helper::get_pre_paths(1, filter_own_paths) {
             cond = cond.add(
-                Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(1)).add(
+                Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(1)).add(
                     Cond::any()
-                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
+                        .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(""))
+                        .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p1}%"))),
                 ),
             );
             if let Some(p2) = rbum_scope_helper::get_pre_paths(2, filter_own_paths) {
                 let node_len = (p2.len() - p1.len() - 1) as u8;
                 cond = cond.add(
-                    Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
+                    Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(2)).add(
                         Cond::any()
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                            .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(""))
                             .add(
                                 Cond::all()
-                                    .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                    .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
+                                    .add(Expr::expr(Func::char_length(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())))).eq(node_len))
+                                    .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p1}%"))),
                             )
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%"))),
+                            .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p2}%"))),
                     ),
                 );
                 if let Some(p3) = rbum_scope_helper::get_pre_paths(3, filter_own_paths) {
                     cond = cond.add(
-                        Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3)).add(
+                        Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(3)).add(
                             Cond::any()
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                                .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(""))
                                 .add(
                                     Cond::all()
-                                        .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
+                                        .add(Expr::expr(Func::char_length(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())))).eq(node_len))
+                                        .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p1}%"))),
                                 )
                                 .add(
                                     Cond::all()
-                                        .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len * 2 + 1))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%"))),
+                                        .add(Expr::expr(Func::char_length(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())))).eq(node_len * 2 + 1))
+                                        .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p2}%"))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p3}%"))),
+                                .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p3}%"))),
                         ),
                     );
                 } else if with_sub_own_paths {
@@ -676,24 +676,24 @@ impl RbumCrudQueryPackage for SelectStatement {
                     // OR (scope_level = 2 AND (own_paths = '' OR own_paths LIKE '<tenant_id>%'))
                     // ```
                     cond = cond.add(
-                        Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(3)).add(
+                        Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(3)).add(
                             Cond::any()
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
+                                .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(""))
                                 .add(
                                     Cond::all()
-                                        .add(Expr::expr(Func::char_length(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()))).eq(node_len))
-                                        .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
+                                        .add(Expr::expr(Func::char_length(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())))).eq(node_len))
+                                        .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p1}%"))),
                                 )
-                                .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p2}%"))),
+                                .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p2}%"))),
                         ),
                     );
                 }
             } else if with_sub_own_paths {
                 cond = cond.add(
-                    Cond::all().add(Expr::tbl(Alias::new(table_name), SCOPE_LEVEL_FIELD.clone()).eq(2)).add(
+                    Cond::all().add(Expr::col((Alias::new(table_name), SCOPE_LEVEL_FIELD.clone())).eq(2)).add(
                         Cond::any()
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).eq(""))
-                            .add(Expr::tbl(Alias::new(table_name), OWN_PATHS_FIELD.clone()).like(format!("{p1}%"))),
+                            .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).eq(""))
+                            .add(Expr::col((Alias::new(table_name), OWN_PATHS_FIELD.clone())).like(format!("{p1}%"))),
                     ),
                 );
             }

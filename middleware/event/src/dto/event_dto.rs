@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     db::sea_orm::{self},
+    serde_json::Value,
     web::poem_openapi,
 };
 
@@ -13,7 +14,8 @@ pub struct EventTopicAddOrModifyReq {
     pub name: TrimString,
     pub save_message: bool,
     pub need_mgr: bool,
-    pub queue_size: u16,
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
+    pub queue_size: i32,
     pub use_sk: Option<String>,
     pub mgr_sk: Option<String>,
 }
@@ -25,7 +27,8 @@ pub struct EventTopicInfoResp {
     pub name: String,
     pub save_message: bool,
     pub need_mgr: bool,
-    pub queue_size: u16,
+    #[oai(validator(minimum(value = "1", exclusive = "false")))]
+    pub queue_size: i32,
     pub use_sk: String,
     pub mgr_sk: String,
 }
@@ -85,4 +88,11 @@ pub struct EventListenerInfo {
     pub avatars: Vec<String>,
     pub mgr: bool,
     pub token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EventMessageMgrWrap {
+    pub msg: Value,
+    pub ori_from_avatar: String,
+    pub ori_to_avatars: Option<Vec<String>>,
 }

@@ -1,0 +1,6 @@
+404-event-topic-not-exist	找不到对应的主题
+404-event-listener-not-exist	找不到对应的监听器
+401-event-listener-sk-not-match	权限不匹配
+401-event-listener-token-not-match	权限不匹配
+400-event-listener-avatars-invalid	Avatar格式不正确
+400-event-listener-avatars-empty	Avatar不能为空

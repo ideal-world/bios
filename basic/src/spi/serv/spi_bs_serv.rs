@@ -151,34 +151,34 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &SpiBsFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query
             .column((spi_bs::Entity, spi_bs::Column::Private))
-            .expr_as(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id), Alias::new("kind_id"))
-            .expr_as(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Code), Alias::new("kind_code"))
-            .expr_as(Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Name), Alias::new("kind_name"))
+            .expr_as(Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)), Alias::new("kind_id"))
+            .expr_as(Expr::col((rbum_kind::Entity, rbum_kind::Column::Code)), Alias::new("kind_code"))
+            .expr_as(Expr::col((rbum_kind::Entity, rbum_kind::Column::Name)), Alias::new("kind_name"))
             .column((rbum_cert::Entity, rbum_cert::Column::ConnUri))
             .column((rbum_cert::Entity, rbum_cert::Column::Ak))
             .column((rbum_cert::Entity, rbum_cert::Column::Sk))
             .column((rbum_cert::Entity, rbum_cert::Column::Ext))
             .left_join(
                 rbum_kind::Entity,
-                Expr::tbl(rbum_kind::Entity, rbum_kind::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumKindId),
+                Expr::col((rbum_kind::Entity, rbum_kind::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumKindId)),
             )
             .left_join(
                 rbum_cert::Entity,
                 Condition::all()
-                    .add(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Kind).eq(SPI_CERT_KIND))
-                    .add(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumKind).eq(RbumCertRelKind::Item.to_int()))
-                    .add(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::Supplier).equals(spi_bs::Entity, spi_bs::Column::Id))
-                    .add(Expr::tbl(rbum_cert::Entity, rbum_cert::Column::RelRbumId).equals(spi_bs::Entity, spi_bs::Column::Id)),
+                    .add(Expr::col((rbum_cert::Entity, rbum_cert::Column::Kind)).eq(SPI_CERT_KIND))
+                    .add(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumKind)).eq(RbumCertRelKind::Item.to_int()))
+                    .add(Expr::col((rbum_cert::Entity, rbum_cert::Column::Supplier)).equals((spi_bs::Entity, spi_bs::Column::Id)))
+                    .add(Expr::col((rbum_cert::Entity, rbum_cert::Column::RelRbumId)).equals((spi_bs::Entity, spi_bs::Column::Id))),
             );
         if let Some(private) = filter.private {
-            query.and_where(Expr::tbl(spi_bs::Entity, spi_bs::Column::Private).eq(private));
+            query.and_where(Expr::col((spi_bs::Entity, spi_bs::Column::Private)).eq(private));
         }
         if let Some(domain_code) = &filter.domain_code {
             query.left_join(
                 rbum_domain::Entity,
-                Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Id).equals(rbum_item::Entity, rbum_item::Column::RelRbumDomainId),
+                Expr::col((rbum_domain::Entity, rbum_domain::Column::Id)).equals((rbum_item::Entity, rbum_item::Column::RelRbumDomainId)),
             );
-            query.and_where(Expr::tbl(rbum_domain::Entity, rbum_domain::Column::Code).eq(domain_code.to_string()));
+            query.and_where(Expr::col((rbum_domain::Entity, rbum_domain::Column::Code)).eq(domain_code.to_string()));
         }
         Ok(())
     }

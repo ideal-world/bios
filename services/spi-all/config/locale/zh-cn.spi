@@ -1,0 +1,3 @@
+404-spi-bs-not-exist	找不到对应的后端服务
+501-spi-bs-not-exist	后端服务类型不存在或SPI特性未启用
+400-spi-graph-key-require	[from_key]与[to_key]至少有一个不能为空

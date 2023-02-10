@@ -9,7 +9,13 @@ use tardis::{TardisFuns, TardisFunsInst};
 pub struct IamCiOauth2AkSkServ;
 
 impl IamCiOauth2AkSkServ {
-    pub async fn generate_token(grant_type: Oauth2GrantType, client_id: &str, client_secret: &str, scope: Option<String>, funs: TardisFunsInst) -> TardisResult<IamOauth2AkSkResp> {
+    pub async fn generate_token(
+        grant_type: Oauth2GrantType,
+        client_id: &str,
+        client_secret: &str,
+        _scope: Option<String>,
+        funs: TardisFunsInst,
+    ) -> TardisResult<IamOauth2AkSkResp> {
         let (_, _, rel_iam_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(
             client_id,
             client_secret,
