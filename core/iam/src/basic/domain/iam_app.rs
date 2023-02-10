@@ -11,6 +11,7 @@ pub struct Model {
     pub id: String,
     pub icon: String,
     pub sort: i64,
+    // 联系号码
     pub contact_phone: String,
 
     pub own_paths: String,

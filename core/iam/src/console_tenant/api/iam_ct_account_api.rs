@@ -128,6 +128,16 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
+    /// Delete Token By Account Id
+    #[oai(path = "/:id/token", method = "delete")]
+    async fn offline(&self, id: Path<String>,  ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::delete_tokens(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Count Accounts
     #[oai(path = "/total", method = "get")]
     async fn count(&self, app_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {

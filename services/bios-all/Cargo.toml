@@ -18,3 +18,4 @@ tardis = { workspace = true, features = [
     "reldb-mysql",
 ] }
 bios-iam = { path = "../../core/iam" }
+bios-auth = { path = "../../core/auth" }

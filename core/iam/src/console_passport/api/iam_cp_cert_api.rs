@@ -145,24 +145,6 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// Get AppId by Wechat MP
-    #[oai(path = "/ak/wechat-mp/:tenant_id", method = "get")]
-    async fn get_ak_by_wechat_mp(&self, tenant_id: Path<String>) -> TardisApiResult<String> {
-        let funs = iam_constants::get_tardis_inst();
-        let resp = IamCpCertOAuth2Serv::get_ak(IamCertOAuth2Supplier::WechatMp, tenant_id.0, &funs).await?;
-        TardisResp::ok(resp)
-    }
-
-    /// Login by Wechat MP
-    #[oai(path = "/login/wechat-mp", method = "put")]
-    async fn login_or_register_by_wechat_mp(&self, login_req: Json<IamCpOAuth2LoginReq>) -> TardisApiResult<IamAccountInfoResp> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let resp = IamCpCertOAuth2Serv::login_or_register(IamCertOAuth2Supplier::WechatMp, &login_req.0, &funs).await?;
-        funs.commit().await?;
-        TardisResp::ok(resp)
-    }
-
     /// Login by general oauth2
     #[oai(path = "/login/:supplier", method = "put")]
     async fn login_or_register_by_oauth2(&self, supplier: Path<String>, login_req: Json<IamCpOAuth2LoginReq>) -> TardisApiResult<IamAccountInfoResp> {
