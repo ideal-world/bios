@@ -53,7 +53,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
             return Some(TardisFuns::json.obj_to_string(&receive_msg.into_req(ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap());
         }
         if receive_msg.event == Some("feed_add".to_string()) {
-             FEED_FROM_USER_COUNTER.fetch_add(1, Ordering::SeqCst);
+            FEED_FROM_USER_COUNTER.fetch_add(1, Ordering::SeqCst);
             return Some(TardisFuns::json.obj_to_string(&receive_msg.into_req(ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap());
         }
         let raw_msg = TardisFuns::json.json_to_obj::<EbWebsocketMessage>(ori_msg.msg.clone()).unwrap();
@@ -118,7 +118,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
             FEED_FROM_MGR_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
         if raw_msg.content == "feed yyyy add" {
-             assert!(1 == 2);
+            assert!(1 == 2);
             FEED_FROM_USER_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
         None

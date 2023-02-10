@@ -35,8 +35,8 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
                 Some(events) => events
                     .iter()
                     .map(|event_code| {
-                        mgr_listeners_with_topic.insert(event_code.to_string(), format!("{MGR_LISTENER_AVATAR_PREFIX}{}", event_code));
-                        format!("{MGR_LISTENER_AVATAR_PREFIX}{}", event_code)
+                        mgr_listeners_with_topic.insert(event_code.to_string(), format!("{MGR_LISTENER_AVATAR_PREFIX}{event_code}"));
+                        format!("{MGR_LISTENER_AVATAR_PREFIX}{event_code}")
                     })
                     .collect(),
                 None => {
