@@ -323,8 +323,7 @@ impl IamTenantServ {
                 }
 
                 let delete_cert_conf_code_by_oauth2 = cert_conf_by_oauth2_supplier_id_map
-                    .iter()
-                    .map(|(k, _)| k)
+                    .keys()
                     .filter(|r| !cert_conf_by_oauth2.iter().map(|y| y.supplier.clone().to_string()).any(|x| x == r.to_string()))
                     .collect::<Vec<_>>();
                 for delete in delete_cert_conf_code_by_oauth2 {
@@ -355,8 +354,7 @@ impl IamTenantServ {
                 }
 
                 let delete_cert_conf_code_by_ldap = cert_conf_by_ldap_code_id_map
-                    .iter()
-                    .map(|(k, _)| k)
+                    .keys()
                     .filter(|r| !cert_conf_by_ldaps.iter().map(|y| y.supplier.clone().to_string()).any(|x| x == r.to_string()))
                     .collect::<Vec<_>>();
                 for delete in delete_cert_conf_code_by_ldap {

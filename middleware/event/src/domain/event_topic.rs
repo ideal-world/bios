@@ -5,13 +5,13 @@ use tardis::db::sea_orm::sea_query::{ColumnDef, IndexCreateStatement, Table, Tab
 use tardis::db::sea_orm::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "event_def")]
+#[sea_orm(table_name = "event_topic")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub save_message: bool,
     pub need_mgr: bool,
-    pub queue_size: u16,
+    pub queue_size: i32,
     pub use_sk: String,
     pub mgr_sk: String,
 

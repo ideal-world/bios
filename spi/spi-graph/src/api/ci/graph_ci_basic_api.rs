@@ -17,24 +17,24 @@ impl GraphCiRelApi {
     /// Add Rel
     #[oai(path = "/rel", method = "put")]
     async fn add_rel(&self, add_or_modify_req: Json<GraphRelAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        graph_basic_serv::add_rel(&add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        graph_basic_serv::add_rel(&add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Upgrade Version
     #[oai(path = "/version", method = "put")]
     async fn upgrade_version(&self, upgrade_version_req: Json<GraphRelUpgardeVersionReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        graph_basic_serv::upgrade_version(&upgrade_version_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        graph_basic_serv::upgrade_version(&upgrade_version_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Find Versions
     #[oai(path = "/versions", method = "get")]
     async fn find_versions(&self, tag: Query<String>, key: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<GraphNodeVersionResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = graph_basic_serv::find_versions(tag.0, key.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = graph_basic_serv::find_versions(tag.0, key.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
@@ -50,8 +50,8 @@ impl GraphCiRelApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        graph_basic_serv::delete_rels(tag.0, from_key.0, to_key.0, from_version.0, to_version.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        graph_basic_serv::delete_rels(tag.0, from_key.0, to_key.0, from_version.0, to_version.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -65,8 +65,8 @@ impl GraphCiRelApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<GraphRelDetailResp> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = graph_basic_serv::find_rels(from_key.0, from_version.0, depth.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = graph_basic_serv::find_rels(from_key.0, from_version.0, depth.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }

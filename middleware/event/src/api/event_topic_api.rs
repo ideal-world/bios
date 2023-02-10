@@ -8,35 +8,35 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::event_dto::{EventDefAddOrModifyReq, EventDefFilterReq, EventDefInfoResp};
-use crate::serv::event_def_serv::EventDefServ;
+use crate::dto::event_dto::{EventTopicAddOrModifyReq, EventTopicFilterReq, EventTopicInfoResp};
+use crate::serv::event_topic_serv::EventDefServ;
 
-pub struct EventDefApi;
+pub struct EventTopicApi;
 
-/// Event Definition API
-#[poem_openapi::OpenApi(prefix_path = "/def")]
-impl EventDefApi {
+/// Event Topic API
+#[poem_openapi::OpenApi(prefix_path = "/topic")]
+impl EventTopicApi {
     /// Add Event Definition
     #[oai(path = "/", method = "post")]
-    async fn add(&self, mut add_or_modify_req: Json<EventDefAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
-        let mut funs = request.tardis_fun_inst();
-        let id = EventDefServ::add_item(&mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+    async fn add(&self, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        let funs = request.tardis_fun_inst();
+        let id = EventDefServ::add_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(id)
     }
 
     /// Modify Event Definition
     #[oai(path = "/:id", method = "put")]
-    async fn modify(&self, id: Path<String>, mut add_or_modify_req: Json<EventDefAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        EventDefServ::modify_item(&id.0, &mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+    async fn modify(&self, id: Path<String>, mut add_or_modify_req: Json<EventTopicAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+        let funs = request.tardis_fun_inst();
+        EventDefServ::modify_item(&id.0, &mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Event Definition
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        EventDefServ::delete_item(&id.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        EventDefServ::delete_item(&id.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -53,17 +53,16 @@ impl EventDefApi {
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<TardisPage<EventDefInfoResp>> {
+    ) -> TardisApiResult<TardisPage<EventTopicInfoResp>> {
         let funs = request.tardis_fun_inst();
         let result = EventDefServ::paginate_items(
-            &EventDefFilterReq {
+            &EventTopicFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     code: code.0,
                     ..Default::default()
                 },
-                ..Default::default()
             },
             page_number.0,
             page_size.0,

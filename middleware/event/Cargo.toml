@@ -10,11 +10,6 @@ edition.workspace = true
 readme.workspace = true
 publish.workspace = true
 
-[profile.release]
-lto = true
-codegen-units = 1
-opt-level = "z"
-
 [lib]
 name = "bios_mw_event"
 path = "src/lib.rs"
@@ -27,5 +22,5 @@ tardis = { workspace = true, features = ["reldb-postgres", "web-server", "ws-cli
 bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]
-tardis = { workspace = true, features = ["test"] }
+tardis = { workspace = true, features = ["test", "ws-client"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

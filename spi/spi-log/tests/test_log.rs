@@ -19,10 +19,10 @@ mod test_log_item;
 
 #[tokio::test]
 async fn test_log() -> TardisResult<()> {
+    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
+
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
-
-    env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");
 
     init_data().await?;
 

@@ -17,16 +17,16 @@ impl KvCiItemApi {
     /// Add Or Modify Item
     #[oai(path = "/item", method = "put")]
     async fn add_or_modify_item(&self, mut add_or_modify_req: Json<KvItemAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        kv_item_serv::add_or_modify_item(&mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        kv_item_serv::add_or_modify_item(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Get Item
     #[oai(path = "/item", method = "get")]
     async fn get_item(&self, key: Query<String>, extract: Query<Option<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Option<KvItemDetailResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::get_item(key.0, extract.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = kv_item_serv::get_item(key.0, extract.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
@@ -39,8 +39,8 @@ impl KvCiItemApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<KvItemSummaryResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::find_items(keys.0, extract.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = kv_item_serv::find_items(keys.0, extract.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
@@ -55,40 +55,40 @@ impl KvCiItemApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<KvItemSummaryResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::match_items(key_perfix.0, extract.0, page_number.0, page_size.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = kv_item_serv::match_items(key_perfix.0, extract.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
     /// Delete Item
     #[oai(path = "/item", method = "delete")]
     async fn delete_item(&self, key: Query<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        kv_item_serv::delete_item(key.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        kv_item_serv::delete_item(key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Add Or Modify Key-Name
     #[oai(path = "/scene/key-name", method = "put")]
     async fn add_or_modify_key_name(&self, mut add_or_modify_req: Json<KvNameAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        kv_item_serv::add_or_modify_key_name(&mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        kv_item_serv::add_or_modify_key_name(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Find Names By keys
     #[oai(path = "/scene/key-names", method = "get")]
     async fn find_key_names(&self, keys: Query<Vec<String>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<KvNameFindResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::find_key_names(keys.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = kv_item_serv::find_key_names(keys.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
     /// Add Or Modify Tag
     #[oai(path = "/scene/tag", method = "put")]
     async fn add_or_modify_tag(&self, mut add_or_modify_req: Json<KvTagAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
-        let mut funs = request.tardis_fun_inst();
-        kv_item_serv::add_or_modify_tag(&mut add_or_modify_req.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        kv_item_serv::add_or_modify_tag(&mut add_or_modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -102,8 +102,8 @@ impl KvCiItemApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<KvTagFindResp>> {
-        let mut funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::find_tags(key_perfix.0, page_number.0, page_size.0, &mut funs, &ctx.0).await?;
+        let funs = request.tardis_fun_inst();
+        let resp = kv_item_serv::find_tags(key_perfix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }

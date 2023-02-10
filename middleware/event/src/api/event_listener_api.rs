@@ -20,10 +20,10 @@ impl EventListenerApi {
         TardisResp::ok(resp)
     }
 
-    #[oai(path = "/:event_code/:listener_code", method = "delete")]
-    async fn remove(&self, event_code: Path<String>, listener_code: Path<String>, token: Query<String>, request: &Request) -> TardisApiResult<Void> {
+    #[oai(path = "/:listener_code", method = "delete")]
+    async fn remove(&self, listener_code: Path<String>, token: Query<String>, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        event_listener_serv::remove(&event_code.0, &listener_code.0, &token.0, &funs).await?;
+        event_listener_serv::remove(&listener_code.0, &token.0, &funs).await?;
         TardisResp::ok(Void {})
     }
 }

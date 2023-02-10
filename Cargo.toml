@@ -11,7 +11,11 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-authors = ["gudaoxuri <i@sunisle.org>","hermitCode <17743125563@163.com>","RWDai <rwdai@foxmail.com>"]
+authors = [
+    "gudaoxuri <i@sunisle.org>",
+    "hermitCode <17743125563@163.com>",
+    "RWDai <rwdai@foxmail.com>",
+]
 homepage = "https://bios.idealworld.group"
 documentation = "https://bios.idealworld.group"
 repository = "https://github.com/ideal-world/bios"
@@ -20,13 +24,18 @@ edition = "2021"
 readme = "README.adoc"
 publish = false
 
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
-tardis = { version = "0.1.0-alpha38" }
+tardis = { version = "0.1.0-alpha41" }
 
 [workspace.dev-dependencies]
-tardis = { version = "0.1.0-alpha38", features = ["test"] }
+tardis = { version = "0.1.0-alpha41", features = ["test"] }
