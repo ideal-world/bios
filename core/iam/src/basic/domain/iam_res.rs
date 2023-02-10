@@ -12,8 +12,11 @@ pub struct Model {
     pub kind: i16,
     pub icon: String,
     pub sort: i64,
+    // 资源方法 例如：*、GET、POST、PUT、DELETE
     pub method: String,
+    // 是否隐藏
     pub hide: bool,
+    // 资源动作 例如：*、list、create、update、delete
     pub action: String,
 
     pub own_paths: String,

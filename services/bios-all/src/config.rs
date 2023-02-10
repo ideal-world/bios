@@ -1,3 +1,4 @@
+use bios_auth::auth_config::AuthConfig;
 use tardis::serde::{Deserialize, Serialize};
 
 use bios_iam::iam_config::IamConfig;
@@ -6,4 +7,5 @@ use bios_iam::iam_config::IamConfig;
 #[serde(default)]
 pub struct BiosConfig {
     pub iam: IamConfig,
+    pub auth: AuthConfig,
 }

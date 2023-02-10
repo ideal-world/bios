@@ -532,7 +532,7 @@ async fn add_role<'a>(
     code: &str,
     name: &str,
     scope_level: &RbumScopeLevelKind,
-    _kind: &IamRoleKind,
+    kind: &IamRoleKind,
     res_ids: Option<Vec<String>>,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
@@ -542,7 +542,7 @@ async fn add_role<'a>(
             role: IamRoleAddReq {
                 code: TrimString(code.to_string()),
                 name: TrimString(name.to_string()),
-                kind: Some(IamRoleKind::App),
+                kind: Some(kind.clone()),
                 scope_level: Some(scope_level.clone()),
                 disabled: None,
                 icon: None,
