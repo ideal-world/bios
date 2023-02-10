@@ -30,7 +30,7 @@ impl IamCcResApi {
 
     /// Find res by apps
     #[oai(path = "/res", method = "get")]
-    async fn get_res_by_role(&self, app_ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, Vec<IamResSummaryResp>>> {
+    async fn get_res_by_app(&self, app_ids: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, Vec<IamResSummaryResp>>> {
         let funs = iam_constants::get_tardis_inst();
         let ids = app_ids.0.split(',').map(|s| s.to_string()).collect();
         let result = IamResServ::get_res_by_app(ids, &funs, &ctx.0).await?;

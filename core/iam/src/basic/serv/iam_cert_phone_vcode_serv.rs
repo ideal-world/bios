@@ -273,10 +273,10 @@ impl IamCertPhoneVCodeServ {
     pub async fn send_login_phone(phone: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(phone, &vcode, own_paths, funs).await?;
-        let mut subject = funs.conf::<IamConfig>().phone_template_cert_login_title.clone();
-        let mut content = funs.conf::<IamConfig>().phone_template_cert_login_content.clone();
-        subject = subject.replace("{vcode}", &vcode);
-        content = content.replace("{vcode}", &vcode);
+        // let mut subject = funs.conf::<IamConfig>().phone_template_cert_login_title.clone();
+        // let mut content = funs.conf::<IamConfig>().phone_template_cert_login_content.clone();
+        // subject = subject.replace("{vcode}", &vcode);
+        // content = content.replace("{vcode}", &vcode);
         // todo send sms web
         Ok(())
     }
