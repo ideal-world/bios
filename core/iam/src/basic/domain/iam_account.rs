@@ -10,9 +10,11 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub icon: String,
+    // 索引扩展字段 idx 1-3
     pub ext1_idx: String,
     pub ext2_idx: String,
     pub ext3_idx: String,
+    // 普通扩展字段 4-9
     pub ext4: String,
     pub ext5: String,
     pub ext6: String,

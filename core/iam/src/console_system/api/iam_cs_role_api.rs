@@ -26,7 +26,7 @@ impl IamCsRoleApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        add_req.0.role.kind = Some(IamRoleKind::App);
+        add_req.0.role.kind = Some(IamRoleKind::System);
         let result = IamRoleServ::add_role_agg(&mut add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(result)

@@ -22,7 +22,7 @@ impl IamCiCertApi {
         TardisResp::ok(result)
     }
 
-    #[oai(path = "/conf/aksk", method = "delete")]
+    #[oai(path = "/aksk", method = "delete")]
     async fn delete_aksk(&self, id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamCiCertAkSkServ::delete_cert(&id.0, &funs, &ctx.0).await?;
