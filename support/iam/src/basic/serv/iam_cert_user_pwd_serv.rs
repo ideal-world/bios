@@ -286,6 +286,7 @@ impl IamCertUserPwdServ {
         Ok(())
     }
 
+    //todo rename function name to ak
     pub async fn rename_name_if_duplicate(name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TrimString> {
         let count_duplicate_name = RbumCertServ::count_rbums(
             &RbumCertFilterReq {
