@@ -3,9 +3,7 @@ name: Publish gateway docker image
 on:
   push:
     paths:
-      - "core/gateway/Apisix_Dockerfile"
-      - "core/gateway/Apisix_etcd_Dockerfile"
-      - "core/gateway/apisix/**"
+      - "gateway/apisix/**"
       - ".github/workflows/gateway-docker.yml"
 
 jobs:
@@ -22,21 +20,10 @@ jobs:
       - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: core/gateway
-          dockerfile: core/gateway/Apisix_Dockerfile
+          directory: gateway
+          dockerfile: gateway/apisix/Dockerfile
           registry: ghcr.io
           image: bios-gateway
-          tags: latest
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Build and push Docker image with etcd to github
-        uses: mr-smithers-excellent/docker-build-push@v5
-        with:
-          directory: core/gateway
-          dockerfile: core/gateway/Apisix_etcd_Dockerfile
-          registry: ghcr.io
-          image: bios-gateway-with-etcd
           tags: latest
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
@@ -44,21 +31,11 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: core/gateway
-          dockerfile: core/gateway/Apisix_Dockerfile
+          directory: gateway
+          dockerfile: gateway/apisix/Dockerfile
           registry: docker.io
           image: ecfront/bios-gateway
           tags: latest
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image with etcd to dockerhub
-        uses: mr-smithers-excellent/docker-build-push@v5
-        with:
-          directory: core/gateway
-          dockerfile: core/gateway/Apisix_etcd_Dockerfile
-          registry: docker.io
-          image: ecfront/bios-gateway-with-etcd
-          tags: latest
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
