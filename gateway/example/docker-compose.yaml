@@ -19,6 +19,8 @@ services:
     ports:
       - "9080:9080/tcp"
       - "9443:9443/tcp"
+    depends_on:
+      - etcd
     networks:
       apisix:
 
