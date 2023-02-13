@@ -34,13 +34,13 @@ impl IamCcCertApi {
         } else {
             tenant_id.0
         };
-        let conf_id = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), true_tenant_id, &funs).await {
+        let conf_id = if let Ok(conf_id) = IamCertServ::get_cert_conf_id_by_kind_supplier(&kind, &supplier.clone(), true_tenant_id.clone(), &funs).await {
             Some(conf_id)
         } else {
             None
         };
 
-        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &funs, &ctx.0).await?;
+        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id,&true_tenant_id.unwrap_or_default() ,&funs, &ctx.0).await?;
         TardisResp::ok(cert)
     }
 }
