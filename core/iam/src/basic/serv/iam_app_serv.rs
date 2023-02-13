@@ -164,6 +164,7 @@ impl IamAppServ {
             &app_ctx,
         )
         .await?;
+        // todo 是否需要在这里初始化应用级别的set？
         IamSetServ::init_set(IamSetKind::Org, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         IamSetServ::init_set(IamSetKind::Apps, RBUM_SCOPE_LEVEL_APP, funs, &app_ctx).await?;
         if let Some(admin_ids) = &add_req.admin_ids {
