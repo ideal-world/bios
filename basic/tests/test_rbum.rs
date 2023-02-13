@@ -173,7 +173,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
 
     funs.commit().await?;
     Ok(TardisContext {
-        own_paths: format!("{}/{}", tenant_id, app_id),
+        own_paths: format!("{tenant_id}/{app_id}"),
         owner: account_id.to_string(),
         ak: "".to_string(),
         roles: vec![],

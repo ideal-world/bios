@@ -461,6 +461,7 @@ impl IamCertServ {
         kind: &str,
         cert_supplier: Vec<String>,
         cert_conf_id: Option<String>,
+        tenant_id: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
@@ -489,12 +490,20 @@ impl IamCertServ {
                 false
             };
             RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(tenant_id.to_string()),
+                    ..Default::default()
+                },
                 rel_rbum_id: Some(rel_rubm_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![cert_conf_id]),
                 ..Default::default()
             }
         } else {
             RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(tenant_id.to_string()),
+                    ..Default::default()
+                },
                 kind: Some(kind.to_string()),
                 supplier: Some(cert_supplier.clone()),
                 rel_rbum_id: Some(rel_rubm_id.to_string()),
