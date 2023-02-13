@@ -334,6 +334,7 @@ impl IamCertServ {
         Ok(())
     }
 
+    /// todo 需要精简代码 统一使用 3th 的方法
     pub async fn add_manage_cert(add_req: &IamCertManageAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
