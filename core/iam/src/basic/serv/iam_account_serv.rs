@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use async_trait::async_trait;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -17,10 +18,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::domain::iam_account;
-use crate::basic::dto::iam_account_dto::{
-    IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountModifyReq,
-    IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
-};
+use crate::basic::dto::iam_account_dto::{AccountTenantInfo, AccountTenantInfoResp, IamAccountAddReq, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountAppInfoResp, IamAccountAttrResp, IamAccountDetailAggResp, IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp};
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
@@ -492,6 +490,52 @@ impl IamAccountServ {
             total_size: accounts.total_size,
             records: account_aggs,
         })
+    }
+
+    pub async fn get_account_tenant_info(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<AccountTenantInfoResp> {
+        let mut tenant_ids =Vec::new();
+        let raw_roles = Self::find_simple_rel_roles(id, true, Some(true), None, funs, ctx).await?;
+        let mut roles: Vec<RbumRelBoneResp> = vec![];
+        for role in raw_roles {
+            if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                let rel_own_path = role.rel_own_paths.clone();
+                let tenant_id = rel_own_path.split('/').collect::<Vec<_>>();
+                if !tenant_ids.contains(&tenant_id[0].to_string()){
+                    tenant_ids.push(tenant_id[0].to_string());
+                }
+                roles.push(role);
+            }
+        }
+
+        let mut tenant_info=HashMap::new();
+        for tenant_id in tenant_ids {
+            let tenant_ctx=IamCertServ::use_tenant_ctx(ctx.clone(), &tenant_id)?;
+            let tenant_result = IamAccountServ::get_account_detail_aggs(
+                id,
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                false,
+                true,
+                funs,
+                &tenant_ctx,
+            )
+                .await?;
+            let account_tenant_info = AccountTenantInfo {
+                roles: tenant_result.roles,
+                orgs: tenant_result.orgs,
+                groups: tenant_result.groups,
+                apps: tenant_result.apps,
+            };
+            tenant_info.insert(tenant_id.clone(),account_tenant_info);
+        }
+
+        let tenant_info=AccountTenantInfoResp{ tenant_info };
+        Ok(tenant_info)
     }
 
     pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
