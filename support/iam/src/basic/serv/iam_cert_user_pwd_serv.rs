@@ -286,21 +286,20 @@ impl IamCertUserPwdServ {
         Ok(())
     }
 
-    // todo name -> ak
-    pub async fn rename_name_if_duplicate(name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TrimString> {
-        let count_duplicate_name = RbumCertServ::count_rbums(
+    pub async fn rename_ak_if_duplicate(ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TrimString> {
+        let count_duplicate_ak = RbumCertServ::count_rbums(
             &RbumCertFilterReq {
-                ak_like: Some(TrimString(name.to_string()).to_string()),
+                ak_like: Some(TrimString(ak.to_string()).to_string()),
                 ..Default::default()
             },
             funs,
             ctx,
         )
         .await?;
-        if count_duplicate_name > 0 {
+        if count_duplicate_ak > 0 {
             let string = RbumCertServ::find_rbums(
                 &RbumCertFilterReq {
-                    ak_like: Some(TrimString(name.to_string()).to_string()),
+                    ak_like: Some(TrimString(ak.to_string()).to_string()),
                     ..Default::default()
                 },
                 None,
@@ -314,17 +313,17 @@ impl IamCertUserPwdServ {
             .unwrap_or_else(|| "".to_string());
             let vec_str: Vec<&str> = string.split(':').collect();
             if vec_str.len() != 2 {
-                Ok(format!("{name}:{count_duplicate_name}").into())
+                Ok(format!("{ak}:{count_duplicate_ak}").into())
             } else {
                 let parse_u32 = vec_str[vec_str.len() - 1].parse::<u32>();
                 if let Ok(count) = parse_u32 {
-                    Ok(format!("{}:{}", name, count + 1).into())
+                    Ok(format!("{}:{}", ak, count + 1).into())
                 } else {
-                    Ok(format!("{}:{}", name, count_duplicate_name + 1).into())
+                    Ok(format!("{}:{}", ak, count_duplicate_ak + 1).into())
                 }
             }
         } else {
-            Ok(name.into())
+            Ok(ak.into())
         }
     }
 
