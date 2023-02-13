@@ -55,6 +55,7 @@ impl IamCsCertApi {
         TardisResp::ok(rbum_certs)
     }
 
+    /// TODO 移动至 ci 并且名称修改
     /// Add Gitlab Cert
     #[oai(path = "/gitlab", method = "put")]
     async fn add_gitlab_cert(
