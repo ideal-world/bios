@@ -28,7 +28,22 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
             return Err(funs.err().unauthorized("listener", "register", "sk do not match", "401-event-listener-sk-not-match"));
         };
         let avatars = if mgr {
-            vec![format!("{MGR_LISTENER_AVATAR_PREFIX}{}", listener.event_code())]
+            let mut mgr_listeners = MGR_LISTENERS.write().await;
+            mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
+            let mgr_listeners_with_topic = mgr_listeners.get_mut(&listener.topic_code.to_string()).unwrap();
+            match &listener.events {
+                Some(events) => events
+                    .iter()
+                    .map(|event_code| {
+                        mgr_listeners_with_topic.insert(event_code.to_string(), format!("{MGR_LISTENER_AVATAR_PREFIX}{event_code}"));
+                        format!("{MGR_LISTENER_AVATAR_PREFIX}{event_code}")
+                    })
+                    .collect(),
+                None => {
+                    mgr_listeners_with_topic.insert("".to_string(), MGR_LISTENER_AVATAR_PREFIX.to_string());
+                    vec![MGR_LISTENER_AVATAR_PREFIX.to_string()]
+                }
+            }
         } else {
             if listener.avatars.is_empty() {
                 return Err(funs.err().bad_request("listener", "register", "avatars can not be empty", "400-event-listener-avatars-empty"));
@@ -49,18 +64,13 @@ pub(crate) async fn register(listener: EventListenerRegisterReq, funs: &TardisFu
 
         let listener_info = EventListenerInfo {
             topic_code: listener.topic_code.to_string(),
-            event_code: listener.event_code(),
+            events: listener.events.map(|v| v.iter().map(|v| v.to_string()).collect()),
             mgr,
             subscribe_mode: listener.subscribe_mode,
             token: token.clone(),
             avatars: avatars.clone(),
         };
         LISTENERS.write().await.insert(listener_code.clone(), listener_info);
-        if mgr {
-            let mut mgr_listeners = MGR_LISTENERS.write().await;
-            mgr_listeners.entry(listener.topic_code.to_string()).or_insert_with(HashMap::new);
-            mgr_listeners.get_mut(&listener.topic_code.to_string()).unwrap().insert(listener.event_code(), avatars.get(0).unwrap().to_string());
-        }
         let event_url = funs.conf::<EventConfig>().event_url();
         Ok(EventListenerRegisterResp {
             listener_code: listener_code.clone(),
@@ -78,7 +88,14 @@ pub(crate) async fn remove(listener_code: &str, token: &str, funs: &TardisFunsIn
             if listener.mgr {
                 let mut mgr_listeners = MGR_LISTENERS.write().await;
                 if let Some(event_code_info) = mgr_listeners.get_mut(&listener.topic_code) {
-                    event_code_info.remove(&listener.event_code);
+                    match &listener.events {
+                        Some(events) => events.iter().for_each(|event_code| {
+                            event_code_info.remove(event_code);
+                        }),
+                        None => {
+                            event_code_info.remove("");
+                        }
+                    }
                 }
             }
             Ok(())

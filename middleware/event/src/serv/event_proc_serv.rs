@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use bios_basic::process::ci_processor;
 use lazy_static::lazy_static;
-use tardis::log::warn;
+use tardis::log::{info, warn};
 use tardis::tokio::sync::broadcast::Sender;
 use tardis::tokio::sync::RwLock;
 use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
@@ -47,14 +47,18 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                 sender,
                 move |req_msg, ext| async move {
                     if save_message {
-                        TardisFuns::web_client()
-                            .post_obj_to_str(
-                                &format!("{}/ci/item", ext.get("log_url").unwrap()),
-                                &req_msg,
-                                Some(ci_processor::signature(&TardisFuns::json.str_to_obj(ext.get("app_key").unwrap()).unwrap(), "post", "/ci/item", "", Vec::new()).unwrap()),
-                            )
-                            .await
-                            .unwrap();
+                        if ext.get("log_url").unwrap() == "/" {
+                            info!("[Event] MESSAGE LOG: {}", TardisFuns::json.obj_to_string(&req_msg).unwrap());
+                        } else {
+                            TardisFuns::web_client()
+                                .post_obj_to_str(
+                                    &format!("{}/ci/item", ext.get("log_url").unwrap()),
+                                    &req_msg,
+                                    Some(ci_processor::signature(&TardisFuns::json.str_to_obj(ext.get("app_key").unwrap()).unwrap(), "post", "/ci/item", "", Vec::new()).unwrap()),
+                                )
+                                .await
+                                .unwrap();
+                        }
                     }
                     if !need_mgr || is_mgr {
                         return Some(TardisWebsocketResp {
@@ -82,6 +86,12 @@ pub(crate) async fn ws_process(listener_code: String, token: String, websocket: 
                                 to_avatars: vec![msg_avatar.clone()],
                                 ignore_avatars: vec![],
                             });
+                        } else {
+                            warn!(
+                                "[Event] topic [{}] event code [{}] management node not found",
+                                ext.get("topic_code").unwrap(),
+                                &req_msg.event.unwrap_or("".to_string())
+                            );
                         }
                     }
                     None

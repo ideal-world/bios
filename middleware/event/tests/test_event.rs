@@ -10,7 +10,9 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
+mod test_event_with_event_code;
 mod test_event_with_im;
+mod test_event_without_mgr;
 
 #[tokio::test]
 async fn test_event() -> TardisResult<()> {
@@ -51,6 +53,8 @@ async fn init_data() -> TardisResult<()> {
 
     client.set_auth(&ctx)?;
 
+    test_event_without_mgr::test(&mut client).await?;
+    test_event_with_event_code::test(&mut client).await?;
     test_event_with_im::test(&mut client).await?;
 
     Ok(())
