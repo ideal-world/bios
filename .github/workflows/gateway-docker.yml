@@ -20,7 +20,7 @@ jobs:
       - name: Build and push Docker image to github
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: gateway
+          directory: gateway/apisix
           dockerfile: gateway/apisix/Dockerfile
           registry: ghcr.io
           image: bios-gateway
@@ -31,7 +31,7 @@ jobs:
       - name: Build and push Docker image to dockerhub
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
-          directory: gateway
+          directory: gateway/apisix
           dockerfile: gateway/apisix/Dockerfile
           registry: docker.io
           image: ecfront/bios-gateway
