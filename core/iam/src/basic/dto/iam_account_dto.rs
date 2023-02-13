@@ -236,3 +236,15 @@ pub struct IamCpUserPwdBindResp {
     /// true=is bind ,false=not bind
     pub is_bind: bool,
 }
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct AccountTenantInfoResp {
+    pub tenant_info:HashMap<String,AccountTenantInfo>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug,Default)]
+pub struct AccountTenantInfo {
+    pub roles: HashMap<String, String>,
+    pub orgs: Vec<String>,
+    pub groups: HashMap<String, String>,
+    pub apps: Vec<IamAccountAppInfoResp>,
+}

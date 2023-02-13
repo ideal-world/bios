@@ -58,22 +58,11 @@ pub struct EventListenerRegisterReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub topic_code: TrimString,
     pub topic_sk: Option<String>,
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
-    pub event_code: Option<TrimString>,
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
+    pub events: Option<Vec<TrimString>>,
     pub avatars: Vec<TrimString>,
     pub subscribe_mode: bool,
 }
-
-impl EventListenerRegisterReq {
-    pub fn event_code(&self) -> String {
-        if let Some(event_code) = &self.event_code {
-            event_code.to_string()
-        } else {
-            "".to_string()
-        }
-    }
-}
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct EventListenerRegisterResp {
     pub ws_addr: String,
@@ -84,7 +73,7 @@ pub struct EventListenerRegisterResp {
 pub struct EventListenerInfo {
     pub topic_code: String,
     pub subscribe_mode: bool,
-    pub event_code: String,
+    pub events: Option<Vec<String>>,
     pub avatars: Vec<String>,
     pub mgr: bool,
     pub token: String,
