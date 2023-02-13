@@ -2,8 +2,8 @@
 
 members = [
     "basic",
-    "core/iam",
-    "core/auth",
+    "support/iam",
+    "support/auth",
     "spi/*",
     "middleware/*",
     "services/*",
