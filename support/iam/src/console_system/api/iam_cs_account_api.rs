@@ -9,7 +9,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_account_dto::{AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -163,7 +163,15 @@ impl IamCsAccountApi {
         TardisResp::ok(result)
     }
 
-    ///unlock account
+    ///Get account's tenant_info by account id
+    #[oai(path = "/:id/tenant", method = "get")]
+    async fn get_account_tenant_info(&self,id: Path<String>,ctx: TardisContextExtractor)-> TardisApiResult<AccountTenantInfoResp>{
+        let funs = iam_constants::get_tardis_inst();
+        let result=IamAccountServ::get_account_tenant_info(&id.0,&funs,&ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    ///Unlock account
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
