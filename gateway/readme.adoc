@@ -1,0 +1,75 @@
+
+
+=== Gateway
+
+==== Directory Description
+
+----
+|apisix
+|-- apisix
+|---- plugins
+|------ auth-bios.lua               # auth-bios plugin
+|-- conf
+|---- config.yaml                   # config
+|-- Dockerfile                      # Dockerfile
+----
+
+==== Environmental preparation
+
+==== Use image
+
+[source,sh]
+----
+# step1: create bridge network
+docker network create -d bridge gateway_net
+# step2: Start etcd.
+docker run -d \
+  --name etcd \
+  --network  gateway_net \
+  -e ALLOW_NONE_AUTHENTICATION=yes \
+  -e ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379 \
+  bitnami/etcd:latest
+
+# step3: Start APISIX.
+docker run -d \
+  --name bios-gateway \
+  --network gateway_net \
+  -p 9080:9080 \
+  -p 9443:9443 \
+  -v $(pwd)/example/config.yaml:/usr/local/apisix/conf/config.yaml \
+  ghcr.io/ideal-world/bios-gateway:latest
+----
+
+===== Run with dashboard(by docker-compose)
+
+[source,sh]
+----
+cd example/
+docker-compose up -d
+----
+
+==== Build image from source
+
+[source,sh]
+----
+# step1: build image
+docker build -f apisix/Dockerfile -t bios-gateway apisix/
+# step2: create bridge network
+docker network create -d bridge gateway_net
+# step3: Start etcd.
+docker run -d \
+  --name etcd \
+  --network  gateway_net \
+  -e ALLOW_NONE_AUTHENTICATION=yes \
+  -e ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379 \
+  bitnami/etcd:latest
+
+# step4: Start APISIX.
+docker run -d \
+  --name bios-gateway \
+  --network gateway_net \
+  -p 9080:9080 \
+  -p 9443:9443 \
+  -v $(pwd)/example/config.yaml:/usr/local/apisix/conf/config.yaml \
+  bios-gateway
+----
