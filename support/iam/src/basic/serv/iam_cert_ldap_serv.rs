@@ -561,7 +561,7 @@ impl IamCertLdapServ {
             &IamAccountAggAddReq {
                 id: Some(TrimString(ctx.owner.clone())),
                 name: TrimString(account_name.to_string()),
-                cert_user_name: IamCertUserPwdServ::rename_name_if_duplicate(&TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()), funs, ctx).await?,
+                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(&TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()), funs, ctx).await?,
                 cert_password: userpwd_password.into(),
                 cert_phone: None,
                 cert_mail: None,

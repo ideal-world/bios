@@ -212,7 +212,7 @@ impl IamCertOAuth2Serv {
             &IamAccountAggAddReq {
                 id: Some(TrimString(mock_ctx.owner.clone())),
                 name: TrimString(client.get_account_name(oauth_token_info.clone(), funs).await?),
-                cert_user_name: IamCertUserPwdServ::rename_name_if_duplicate(&TardisFuns::field.nanoid_len(8).to_lowercase(), funs, &mock_ctx).await?,
+                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(&TardisFuns::field.nanoid_len(8).to_lowercase(), funs, &mock_ctx).await?,
                 // FIXME 临时密码
                 cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
                 cert_phone: None,
