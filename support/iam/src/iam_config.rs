@@ -43,6 +43,8 @@ pub struct IamConfig {
     pub phone_template_cert_activate_content: String,
     pub phone_template_cert_login_title: String,
     pub phone_template_cert_login_content: String,
+    pub sms_base_url: String,
+    pub sms_path: String,
 
     pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
@@ -107,6 +109,8 @@ impl Default for IamConfig {
             init_menu_json_path: "config/init-menu-default.json".to_string(),
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
+            sms_base_url: "http://reach:8080".to_string(),
+            sms_path: "/cc/msg/vcode".to_string(),
         }
     }
 }
