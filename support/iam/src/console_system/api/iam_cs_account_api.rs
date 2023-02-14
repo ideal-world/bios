@@ -165,9 +165,9 @@ impl IamCsAccountApi {
 
     ///Get account's tenant_info by account id
     #[oai(path = "/:id/tenant", method = "get")]
-    async fn get_account_tenant_info(&self,id: Path<String>,ctx: TardisContextExtractor)-> TardisApiResult<AccountTenantInfoResp>{
+    async fn get_account_tenant_info(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<AccountTenantInfoResp> {
         let funs = iam_constants::get_tardis_inst();
-        let result=IamAccountServ::get_account_tenant_info(&id.0,&funs,&ctx.0).await?;
+        let result = IamAccountServ::get_account_tenant_info(&id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

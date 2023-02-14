@@ -40,7 +40,7 @@ impl IamCcCertApi {
             None
         };
 
-        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id,&true_tenant_id.unwrap_or_default() ,&funs, &ctx.0).await?;
+        let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), &funs, &ctx.0).await?;
         TardisResp::ok(cert)
     }
 }
