@@ -779,7 +779,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         let rel_sys_code = if add_req.rel_rbum_set_cate_id.is_empty() {
             "".to_string()
         } else {
-            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_id.as_str(), funs, ctx).await?
+            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?
         };
         Ok(rbum_set_item::ActiveModel {
             id: Set(TardisFuns::field.nanoid()),
@@ -798,7 +798,7 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         let rel_sys_code = if add_req.rel_rbum_set_cate_id.is_empty() {
             "".to_string()
         } else {
-            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_id.as_str(), funs, ctx).await?
+            RbumSetCateServ::get_sys_code(add_req.rel_rbum_set_cate_id.as_str(), funs, ctx).await?
         };
         if funs
             .db()
