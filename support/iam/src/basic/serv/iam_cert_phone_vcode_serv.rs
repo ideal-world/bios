@@ -216,26 +216,24 @@ impl IamCertPhoneVCodeServ {
             return Err(funs.err().unauthorized("iam_cert_phone_vcode", "activate", "phone already exist", "401-iam-cert-valid"));
         }
         let vcode = Self::get_vcode();
-        let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, ctx).await?.name;
         RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, funs).await?;
-        let mut subject = funs.conf::<IamConfig>().phone_template_cert_activate_title.clone();
-        let mut content = funs.conf::<IamConfig>().phone_template_cert_activate_content.clone();
-        subject = subject.replace("{account_name}", &account_name).replace("{vcode}", &vcode);
-        content = content.replace("{account_name}", &account_name).replace("{vcode}", &vcode);
-        TardisMailClient::send_quiet(
-            funs.module_code().to_string(),
-            TardisMailSendReq {
-                subject,
-                txt_body: content,
-                html_body: None,
-                to: vec![phone.to_string()],
-                reply_to: None,
-                cc: None,
-                bcc: None,
-                from: None,
-            },
-        )?;
-        Ok(())
+        let conf = funs.conf::<IamConfig>();
+        let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
+        match funs
+            .web_client()
+            .put_str_to_str(
+                &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_path, phone, &vcode),
+                "",
+                Some(vec![(
+                    TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
+                    ctx_base64.to_string(),
+                )]),
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(_) => Err(funs.err().unauthorized("iam_cert_phone_vcode", "activate", "send sms error", "401-iam-cert-valid")),
+        }
     }
 
     pub async fn bind_phone(phone: &str, input_vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
