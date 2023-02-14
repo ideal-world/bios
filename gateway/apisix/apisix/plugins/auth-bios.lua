@@ -159,8 +159,8 @@ function _M.access(conf, ctx)
         return status_code, reason
     else
         if result.headers then
-            core.log.info("request.headers: ", core.json.encode(result.headers["Tardis-Context"]))
-            core.request.set_header(ctx,conf.head_key_context,result.headers["Tardis-Context"])
+            core.log.info("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
+            core.request.set_header(ctx,conf.head_key_context,result.headers[conf.head_key_context])
         end
     end
 end
