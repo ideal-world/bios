@@ -200,6 +200,7 @@ pub struct IamAccountInfoWithUserPwdAkResp {
 pub struct IamAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,
+    pub app_icon:String,
     pub roles: HashMap<String, String>,
     pub groups: HashMap<String, String>,
 }
