@@ -77,6 +77,7 @@ impl IamCtOrgApi {
 
     /// Add Org Item
     #[oai(path = "/item", method = "put")]
+    #[deprecated]
     async fn add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -92,6 +93,31 @@ impl IamCtOrgApi {
             &ctx.0,
         )
         .await?;
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
+
+    /// Batch Add Org Item
+    #[oai(path = "/item/batch", method = "put")]
+    async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
+        let mut result=vec![];
+        for s in split {
+            result.push(IamSetServ::add_set_item(
+                &IamSetItemAddReq {
+                    set_id:set_id.clone(),
+                    set_cate_id: add_req.set_cate_id.to_string(),
+                    sort: add_req.sort,
+                    rel_rbum_item_id: s.to_string(),
+                },
+                &funs,
+                &ctx.0,
+            )
+                .await?);
+        }
         funs.commit().await?;
         TardisResp::ok(result)
     }
