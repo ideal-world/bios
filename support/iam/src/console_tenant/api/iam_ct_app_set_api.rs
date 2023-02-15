@@ -105,6 +105,32 @@ impl IamCtAppSetApi {
         TardisResp::ok(result)
     }
 
+    /// Batch Add App Set Item (App Or Account)
+    #[oai(path = "/item/batch", method = "put")]
+    async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
+        let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
+        let mut result=vec![];
+        for s in split {
+            result.push(  IamSetServ::add_set_item(
+                &IamSetItemAddReq {
+                    set_id:set_id.clone(),
+                    set_cate_id: add_req.set_cate_id.to_string(),
+                    sort: add_req.sort,
+                    rel_rbum_item_id: s.to_string(),
+                },
+                &funs,
+                &ctx,
+            )
+                .await?);
+        }
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
+
     /// Find App Set Items (App Or Account)
     #[oai(path = "/item", method = "get")]
     async fn find_items(&self, cate_id: Query<Option<String>>, item_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
