@@ -1,6 +1,6 @@
 use tardis::basic::result::TardisResult;
-use tardis::TardisFuns;
 use tardis::tokio;
+use tardis::TardisFuns;
 
 mod config;
 mod initializer;
