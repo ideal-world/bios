@@ -23,7 +23,7 @@ use crate::basic::dto::iam_account_dto::{
     IamAccountDetailResp, IamAccountModifyReq, IamAccountSelfModifyReq, IamAccountSummaryAggResp, IamAccountSummaryResp,
 };
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
-use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -534,7 +534,10 @@ impl IamAccountServ {
                 groups: tenant_result.groups,
                 apps: tenant_result.apps,
             };
-            tenant_info.insert(tenant_id.clone(), account_tenant_info);
+            tenant_info.insert(
+                IamTenantServ::peek_item(&tenant_id, &IamTenantFilterReq::default(), funs, ctx).await?.name,
+                account_tenant_info,
+            );
         }
 
         let tenant_info = AccountTenantInfoResp { tenant_info };
