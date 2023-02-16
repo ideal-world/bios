@@ -1,5 +1,3 @@
-
-
 === Gateway
 
 ==== Directory Description
@@ -38,6 +36,8 @@ docker run -d \
   -p 9443:9443 \
   -v $(pwd)/example/config.yaml:/usr/local/apisix/conf/config.yaml \
   ghcr.io/ideal-world/bios-gateway:latest
+
+# step4:
 ----
 
 ===== Run with dashboard(by docker-compose)
