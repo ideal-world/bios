@@ -375,6 +375,7 @@ impl IamAccountServ {
             apps.push(IamAccountAppInfoResp {
                 app_id: app.id,
                 app_name: app.name,
+                app_icon: app.icon,
                 roles: roles.iter().filter(|r| r.rel_own_paths == app.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
                 groups,
             });
