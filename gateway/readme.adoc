@@ -1,5 +1,3 @@
-
-
 === Gateway
 
 ==== Directory Description
@@ -38,6 +36,32 @@ docker run -d \
   -p 9443:9443 \
   -v $(pwd)/example/config.yaml:/usr/local/apisix/conf/config.yaml \
   ghcr.io/ideal-world/bios-gateway:latest
+
+# step4: mock auth server
+docker run -d \
+    --name mock_auth \
+    --network gateway_net \
+    -p 9080:80 \
+    -v $(pwd)/example/mock_auth.conf:/etc/nginx/nginx.conf \
+    nginx:1.19.0-alpine
+
+# step5: create route
+curl http://127.0.0.1:9080/apisix/admin/routes/1 -H 'X-API-KEY: edd1c9f034335f136f87ad84b6acecs1' -X PUT -i -d '
+{
+    "uri": "/*",
+    "plugins": {
+        "auth-bios": {
+            "host": "http://localhost:9080"
+        }
+    },
+    "upstream": {
+        "type": "roundrobin",
+        "nodes": {
+            "httpbin.org:80": 1
+        }
+    }
+}'
+
 ----
 
 ===== Run with dashboard(by docker-compose)
