@@ -43,7 +43,7 @@ pub struct IamSetItemAggAddReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamSetItemWithDefaultSetAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub set_cate_id: String,
+    pub set_cate_id: Option<String>,
     pub sort: i64,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
