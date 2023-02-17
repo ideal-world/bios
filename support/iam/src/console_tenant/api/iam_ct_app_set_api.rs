@@ -93,7 +93,7 @@ impl IamCtAppSetApi {
         let result = IamSetServ::add_set_item(
             &IamSetItemAddReq {
                 set_id,
-                set_cate_id: add_req.set_cate_id.to_string(),
+                set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
                 sort: add_req.sort,
                 rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
             },
@@ -118,7 +118,7 @@ impl IamCtAppSetApi {
             result.push(  IamSetServ::add_set_item(
                 &IamSetItemAddReq {
                     set_id:set_id.clone(),
-                    set_cate_id: add_req.set_cate_id.to_string(),
+                    set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
                     sort: add_req.sort,
                     rel_rbum_item_id: s.to_string(),
                 },
