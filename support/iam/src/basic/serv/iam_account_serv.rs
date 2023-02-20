@@ -504,7 +504,7 @@ impl IamAccountServ {
             if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
                 let rel_own_path = role.rel_own_paths.clone();
                 let tenant_id = rel_own_path.split('/').collect::<Vec<_>>();
-                if !tenant_ids.contains(&tenant_id[0].to_string()) {
+                if !tenant_ids.contains(&tenant_id[0].to_string()) && !tenant_id[0].is_empty() {
                     tenant_ids.push(tenant_id[0].to_string());
                 }
                 roles.push(role);
