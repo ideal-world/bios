@@ -61,11 +61,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         "".to_string()
     };
     // package rbum info
-    let rbum_uri = if let Some(index) = req.path.find('/') {
-        format!("{}://{}{}", rbum_kind, &req.path[..index], &req.path[index + 1..])
-    } else {
-        format!("{}://{}", rbum_kind, req.path)
-    };
+    let rbum_uri = format!("{}://{}", rbum_kind, req.path);
     let rbum_action = req.method.to_lowercase();
 
     if let Some(token) = req.headers.get(&config.head_key_token) {
