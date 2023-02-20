@@ -1,3 +1,4 @@
+use tardis::log::trace;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
@@ -14,6 +15,7 @@ impl AuthApi {
     #[oai(path = "/apisix", method = "post")]
     async fn apisix(&self, mut req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
         let result = auth_kernel_serv::auth(&mut req.0).await?;
+        trace!("[Auth] Response auth: {:?}", result);
         TardisResp::ok(result)
     }
 }

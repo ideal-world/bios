@@ -149,14 +149,14 @@ impl ResContainerNode {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ResContainerLeafInfo {
     pub action: String,
     pub uri: String,
     pub auth: ResAuthInfo,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ResAuthInfo {
     pub accounts: Option<String>,
     pub roles: Option<String>,
