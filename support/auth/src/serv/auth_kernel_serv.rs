@@ -190,6 +190,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
 }
 
 pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
+    trace!("[Auth] do_auth rbum_action:{},rbum_uri:{}", &ctx.rbum_action, &ctx.rbum_uri);
     let mathced_res = auth_res_serv::match_res(&ctx.rbum_action, &ctx.rbum_uri)?;
     trace!("[Auth] do_auth mathced_res: {:?}", mathced_res);
     if mathced_res.is_empty() {
