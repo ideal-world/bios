@@ -61,11 +61,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         "".to_string()
     };
     // package rbum info
-    let rbum_uri = if let Some(index) = req.path.find('/') {
-        format!("{}://{}{}", rbum_kind, &req.path[..index], &req.path[index + 1..])
-    } else {
-        format!("{}://{}", rbum_kind, req.path)
-    };
+    let rbum_uri = format!("{}://{}", rbum_kind, req.path);
     let rbum_action = req.method.to_lowercase();
 
     if let Some(token) = req.headers.get(&config.head_key_token) {
@@ -190,9 +186,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
 }
 
 pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
-    trace!("[Auth] do_auth rbum_action:{},rbum_uri:{}", &ctx.rbum_action, &ctx.rbum_uri);
     let mathced_res = auth_res_serv::match_res(&ctx.rbum_action, &ctx.rbum_uri)?;
-    trace!("[Auth] do_auth mathced_res: {:?}", mathced_res);
     if mathced_res.is_empty() {
         // No authentication required
         return Ok(());
