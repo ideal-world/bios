@@ -41,7 +41,7 @@ docker run -d \
 docker run -d \
     --name mock_auth \
     --network gateway_net \
-    -p 9080:80 \
+    -p 80:80 \
     -v $(pwd)/example/mock_auth.conf:/etc/nginx/nginx.conf \
     nginx:1.19.0-alpine
 
@@ -51,7 +51,7 @@ curl http://127.0.0.1:9080/apisix/admin/routes/1 -H 'X-API-KEY: edd1c9f034335f13
     "uri": "/*",
     "plugins": {
         "auth-bios": {
-            "host": "http://localhost:9080"
+            "host": "http://localhost:80"
         }
     },
     "upstream": {
