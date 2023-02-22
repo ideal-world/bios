@@ -113,19 +113,21 @@ impl IamCtAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
-        let mut result=vec![];
+        let mut result = vec![];
         for s in split {
-            result.push(  IamSetServ::add_set_item(
-                &IamSetItemAddReq {
-                    set_id:set_id.clone(),
-                    set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-                    sort: add_req.sort,
-                    rel_rbum_item_id: s.to_string(),
-                },
-                &funs,
-                &ctx,
-            )
-                .await?);
+            result.push(
+                IamSetServ::add_set_item(
+                    &IamSetItemAddReq {
+                        set_id: set_id.clone(),
+                        set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
+                        sort: add_req.sort,
+                        rel_rbum_item_id: s.to_string(),
+                    },
+                    &funs,
+                    &ctx,
+                )
+                .await?,
+            );
         }
         funs.commit().await?;
         TardisResp::ok(result)
