@@ -16,8 +16,7 @@ pub struct IamRoleAggAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamRoleAddReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub code: TrimString,
+    pub code: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: TrimString,
     pub kind: Option<IamRoleKind>,
