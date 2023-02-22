@@ -961,6 +961,9 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                 query.cond_where(Cond::all().add(cond));
             }
         }
+        if let Some(rbum_set_item_cate_code)=&filter.rel_rbum_set_item_cate_code {
+            query.and_where(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).eq(rbum_set_item_cate_code.as_str()));
+        }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
     }
