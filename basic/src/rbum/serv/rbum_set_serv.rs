@@ -828,7 +828,11 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
 
     async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
-
+        let rbum_set_cate_join_type = if let Some(true) = filter.table_rbum_set_cate_is_left {
+            JoinType::LeftJoin
+        } else {
+            JoinType::InnerJoin
+        };
         let mut query = Query::select();
         query
             .columns(vec![
@@ -846,7 +850,8 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
             .expr_as(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Name)), Alias::new("rel_rbum_set_cate_name"))
             .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::Name)), Alias::new("rel_rbum_item_name"))
             .from(rbum_set_item::Entity)
-            .inner_join(
+            .join(
+                rbum_set_cate_join_type,
                 rbum_set_cate::Entity,
                 Cond::all()
                     .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)))
