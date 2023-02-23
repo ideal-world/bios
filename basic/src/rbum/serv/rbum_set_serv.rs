@@ -9,7 +9,6 @@ use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::tokio::time::sleep;
-use tardis::web::poem_openapi::types::Type;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
@@ -276,7 +275,7 @@ impl RbumSetServ {
                     cate.id.clone(),
                     rbum_set_items
                         .iter()
-                        .filter(|i| i.rel_rbum_set_cate_id == cate.id)
+                        .filter(|i| i.rel_rbum_set_cate_id.clone().unwrap_or_default() == cate.id)
                         .map(|i| RbumSetItemInfoResp {
                             id: i.id.to_string(),
                             sort: i.sort,
@@ -379,7 +378,7 @@ impl RbumSetServ {
         let cate = tree_main.iter().find(|cate| cate.id == cate_id).unwrap();
         if sub_cates.is_empty() {
             // leaf node
-            if !rbum_set_items.iter().any(|item| item.rel_rbum_set_cate_id == cate.id) {
+            if !rbum_set_items.iter().any(|item| item.rel_rbum_set_cate_id.clone().unwrap_or_default() == cate.id) {
                 vec![]
             } else {
                 vec![cate.id.to_string()]

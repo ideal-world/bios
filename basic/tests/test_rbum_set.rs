@@ -984,7 +984,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
     .await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.sort, 0);
-    assert_eq!(rbum.rel_rbum_set_cate_name, "l2");
+    assert_eq!(rbum.rel_rbum_set_cate_name.unwrap_or_default(), "l2");
     assert_eq!(rbum.rel_rbum_item_name, "用户1");
 
     info!("【test_rbum_set_item】 : Test Find Set Paths : RbumSetItemServ::get_rbum");
