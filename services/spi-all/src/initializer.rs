@@ -6,6 +6,7 @@ use bios_spi_log::log_initializer;
 use bios_spi_object::object_initializer;
 use bios_spi_reldb::reldb_initializer;
 use bios_spi_search::search_initializer;
+use bios_spi_stats::stats_initializer;
 use tardis::basic::result::TardisResult;
 use tardis::web::web_server::TardisWebServer;
 
@@ -17,5 +18,6 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     object_initializer::init(web_server).await?;
     reldb_initializer::init(web_server).await?;
     search_initializer::init(web_server).await?;
+    stats_initializer::init(web_server).await?;
     Ok(())
 }

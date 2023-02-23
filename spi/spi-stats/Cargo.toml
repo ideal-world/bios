@@ -1,0 +1,28 @@
+[package]
+name = "bios-spi-stats"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+readme.workspace = true
+publish.workspace = true
+
+[lib]
+name = "bios_spi_stats"
+path = "src/lib.rs"
+
+[features]
+default = ["spi-pg"]
+spi-pg = ["tardis/reldb-postgres"]
+
+[dependencies]
+serde.workspace = true
+tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
+bios-basic = { path = "../../basic", features = ["default"] }
+
+[dev-dependencies]
+tardis = { workspace = true, features = ["test"] }
+bios-basic = { path = "../../basic", features = ["default", "test"] }

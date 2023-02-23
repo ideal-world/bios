@@ -1,3 +1,11 @@
 404-spi-bs-not-exist	找不到对应的后端服务
 501-spi-bs-not-exist	后端服务类型不存在或SPI特性未启用
 400-spi-graph-key-require	[from_key]与[to_key]至少有一个不能为空
+409-spi-stats-dim-conf-exist	维度配置已存在
+409-spi-stats-dim-inst-exist	维度实例已存在
+409-spi-stats-fact-conf-exist	事实配置已存在
+409-spi-stats-fact-inst-exist	事实实例已存在
+409-spi-stats-fact-conf-col-exist	事实字段配已存在
+404-spi-stats-dim-conf-not-exist	维度配置不存在
+404-spi-stats-fact-conf-not-exist	事实配置不存在
+404-spi-stats-fact-col-conf-not-exist	事实字段配置不存在
