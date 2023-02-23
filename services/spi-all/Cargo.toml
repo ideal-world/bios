@@ -16,8 +16,9 @@ tardis = { workspace = true, features = [
     "web-server",
     "conf-remote",
     "reldb-postgres",
+    "test",
 ] }
-bios-basic = { path = "../../basic" }
+bios-basic = { path = "../../basic", features = ["test"] }
 bios-spi-cache = { path = "../../spi/spi-cache" }
 bios-spi-graph = { path = "../../spi/spi-graph" }
 bios-spi-kv = { path = "../../spi/spi-kv" }
@@ -25,3 +26,4 @@ bios-spi-log = { path = "../../spi/spi-log" }
 bios-spi-object = { path = "../../spi/spi-object" }
 bios-spi-reldb = { path = "../../spi/spi-reldb" }
 bios-spi-search = { path = "../../spi/spi-search" }
+bios-spi-stats = { path = "../../spi/spi-stats" }

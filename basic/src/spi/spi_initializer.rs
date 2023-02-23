@@ -5,6 +5,7 @@ use tardis::db::reldb_client::TardisActiveModel;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
+use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use crate::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 use crate::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -44,21 +45,33 @@ pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisConte
     Ok(ctx)
 }
 
-pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-    RbumKindServ::add_rbum(
-        &mut RbumKindAddReq {
-            code: TrimString(scheme.to_string()),
-            name: TrimString(scheme.to_string()),
-            note: None,
-            icon: None,
-            sort: None,
-            ext_table_name: Some("spi_bs".to_lowercase()),
-            scope_level: Some(RbumScopeLevelKind::Root),
+pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    if !RbumKindServ::exist_rbum(
+        &RbumBasicFilterReq {
+            code: Some(scheme.to_string()),
+            ..Default::default()
         },
         funs,
         ctx,
     )
-    .await
+    .await?
+    {
+        RbumKindServ::add_rbum(
+            &mut RbumKindAddReq {
+                code: TrimString(scheme.to_string()),
+                name: TrimString(scheme.to_string()),
+                note: None,
+                icon: None,
+                sort: None,
+                ext_table_name: Some("spi_bs".to_lowercase()),
+                scope_level: Some(RbumScopeLevelKind::Root),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+    }
+    Ok(())
 }
 
 pub mod common {
@@ -188,6 +201,35 @@ pub mod common_pg {
         } else if !mgr {
             return Err(TardisError::bad_request("The requested tag does not exist", ""));
         }
+        do_init_table(schema_name, &conn, tag, table_flag, table_create_content, indexes, update_time_field).await?;
+        Ok(conn)
+    }
+
+    pub async fn init_table(
+        conn: &TardisRelDBlConnection,
+        tag: Option<&str>,
+        table_flag: &str,
+        table_create_content: &str,
+        // field name -> index type
+        indexes: Vec<(&str, &str)>,
+        update_time_field: Option<&str>,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
+        let schema_name = get_schema_name_from_context(ctx);
+        do_init_table(schema_name, conn, tag, table_flag, table_create_content, indexes, update_time_field).await
+    }
+
+    async fn do_init_table(
+        schema_name: String,
+        conn: &TardisRelDBlConnection,
+        tag: String,
+        table_flag: &str,
+        table_create_content: &str,
+        // field name -> index type
+        indexes: Vec<(&str, &str)>,
+        update_time_field: Option<&str>,
+    ) -> TardisResult<()> {
         conn.execute_one(
             &format!(
                 r#"CREATE TABLE {schema_name}.starsys_{table_flag}{tag}
@@ -199,8 +241,9 @@ pub mod common_pg {
         )
         .await?;
         for (field_name, index_type) in indexes {
+            let index_part = TardisFuns::crypto.base64.decode(field_name).unwrap();
             conn.execute_one(
-                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{field_name} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name})"),
+                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name})"),
                 vec![],
             )
             .await?;
@@ -238,6 +281,6 @@ EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_ITME_{}();"###,
             )
             .await?;
         }
-        Ok(conn)
+        Ok(())
     }
 }

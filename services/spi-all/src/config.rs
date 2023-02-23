@@ -5,6 +5,7 @@ use bios_spi_log::log_config::LogConfig;
 use bios_spi_object::object_config::ObjectConfig;
 use bios_spi_reldb::reldb_config::ReldbConfig;
 use bios_spi_search::search_config::SearchConfig;
+use bios_spi_stats::stats_config::StatsConfig;
 use tardis::serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Serialize, Deserialize)]
@@ -17,4 +18,5 @@ pub struct BiosConfig {
     pub object: ObjectConfig,
     pub reldb: ReldbConfig,
     pub search: SearchConfig,
+    pub stats: StatsConfig,
 }
