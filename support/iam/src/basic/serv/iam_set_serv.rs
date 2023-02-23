@@ -338,8 +338,8 @@ impl IamSetServ {
             .into_iter()
             .map(|item| {
                 (
-                    format!("{}{}{}", item.rel_rbum_set_id, SET_AND_ITEM_SPLIT_FLAG, item.rel_rbum_set_cate_sys_code),
-                    item.rel_rbum_set_cate_name,
+                    format!("{}{}{}", item.rel_rbum_set_id, SET_AND_ITEM_SPLIT_FLAG, item.rel_rbum_set_cate_sys_code.unwrap_or_default()),
+                    item.rel_rbum_set_cate_name.unwrap_or_default(),
                 )
             })
             .collect();
