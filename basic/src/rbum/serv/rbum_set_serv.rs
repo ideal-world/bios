@@ -9,7 +9,6 @@ use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::{self, IdenStatic};
 use tardis::tokio::time::sleep;
-use tardis::web::poem_openapi::types::Type;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
@@ -252,11 +251,11 @@ impl RbumSetServ {
                 sys_code_query_kind: filter.sys_code_query_kind.clone(),
                 sys_code_query_depth: filter.sys_code_query_depth,
                 rel_rbum_set_cate_sys_codes: filter.sys_codes.clone(),
-                rel_rbum_set_cate_ids: None,
                 rel_rbum_item_ids: filter.rel_rbum_item_ids.clone(),
                 rel_rbum_item_kind_ids: filter.rel_rbum_item_kind_ids.clone(),
                 rel_rbum_item_domain_ids: filter.rel_rbum_item_domain_ids.clone(),
                 rel_rbum_item_disabled,
+                ..Default::default()
             },
             None,
             None,
@@ -276,7 +275,7 @@ impl RbumSetServ {
                     cate.id.clone(),
                     rbum_set_items
                         .iter()
-                        .filter(|i| i.rel_rbum_set_cate_id == cate.id)
+                        .filter(|i| i.rel_rbum_set_cate_id.clone().unwrap_or_default() == cate.id)
                         .map(|i| RbumSetItemInfoResp {
                             id: i.id.to_string(),
                             sort: i.sort,
@@ -379,7 +378,7 @@ impl RbumSetServ {
         let cate = tree_main.iter().find(|cate| cate.id == cate_id).unwrap();
         if sub_cates.is_empty() {
             // leaf node
-            if !rbum_set_items.iter().any(|item| item.rel_rbum_set_cate_id == cate.id) {
+            if !rbum_set_items.iter().any(|item| item.rel_rbum_set_cate_id.clone().unwrap_or_default() == cate.id) {
                 vec![]
             } else {
                 vec![cate.id.to_string()]
@@ -828,7 +827,11 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
 
     async fn package_query(is_detail: bool, filter: &RbumSetItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let rel_item_table = Alias::new("relItem");
-
+        let rbum_set_cate_join_type = if let Some(true) = filter.table_rbum_set_cate_is_left {
+            JoinType::LeftJoin
+        } else {
+            JoinType::InnerJoin
+        };
         let mut query = Query::select();
         query
             .columns(vec![
@@ -846,7 +849,8 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
             .expr_as(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::Name)), Alias::new("rel_rbum_set_cate_name"))
             .expr_as(Expr::col((rel_item_table.clone(), rbum_item::Column::Name)), Alias::new("rel_rbum_item_name"))
             .from(rbum_set_item::Entity)
-            .inner_join(
+            .join(
+                rbum_set_cate_join_type,
                 rbum_set_cate::Entity,
                 Cond::all()
                     .add(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::SysCode)).equals((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)))
@@ -960,6 +964,9 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
                 }
                 query.cond_where(Cond::all().add(cond));
             }
+        }
+        if let Some(rbum_set_item_cate_code) = &filter.rel_rbum_set_item_cate_code {
+            query.and_where(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).eq(rbum_set_item_cate_code.as_str()));
         }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)

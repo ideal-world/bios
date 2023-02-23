@@ -107,7 +107,7 @@ impl IamCsRoleApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamRoleServ::delete_item(&id.0, &funs, &ctx).await?;
+        IamRoleServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

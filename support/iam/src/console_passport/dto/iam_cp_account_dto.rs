@@ -24,5 +24,6 @@ pub struct IamCpAccountInfoResp {
 pub struct IamCpAccountAppInfoResp {
     pub app_id: String,
     pub app_name: String,
+    pub app_icon: String,
     pub roles: HashMap<String, String>,
 }

@@ -156,7 +156,7 @@ function _M.access(conf, ctx)
                     or result.reason
         end
         cors(conf)
-        return status_code, { code = status_code .. '-gateway-auth-error',  message = reason }
+        return status_code, { code = status_code .. '-gateway-cert-error',  message = reason }
     else
         if result.headers then
             core.log.info("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
