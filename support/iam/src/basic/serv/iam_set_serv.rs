@@ -299,8 +299,20 @@ impl IamSetServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumSetItemDetailResp>> {
-        RbumSetItemServ::find_detail_rbums(
-            &RbumSetItemFilterReq {
+        let filter = if set_cate_id.is_none() {
+            RbumSetItemFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: with_sub,
+                    ..Default::default()
+                },
+                rel_rbum_item_disabled: Some(false),
+                rel_rbum_set_id: set_id.clone(),
+                rel_rbum_set_item_cate_code: Some("".to_string()),
+                rel_rbum_item_ids: item_id.map(|i| vec![i]),
+                ..Default::default()
+            }
+        } else {
+            RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
                     ..Default::default()
@@ -310,13 +322,9 @@ impl IamSetServ {
                 rel_rbum_set_cate_ids: set_cate_id.map(|r| vec![r]),
                 rel_rbum_item_ids: item_id.map(|i| vec![i]),
                 ..Default::default()
-            },
-            None,
-            None,
-            funs,
-            ctx,
-        )
-        .await
+            }
+        };
+        RbumSetItemServ::find_detail_rbums(&filter, None, None, funs, ctx).await
     }
 
     pub async fn find_set_paths(set_item_id: &str, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<Vec<RbumSetPathResp>>> {
