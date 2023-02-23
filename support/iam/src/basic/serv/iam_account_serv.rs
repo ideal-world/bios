@@ -254,7 +254,7 @@ impl IamAccountServ {
         if let Some(input_org_cate_ids) = &modify_req.org_cate_ids {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
             let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), false, funs, ctx).await?;
-            let mut stored_cate_ids: Vec<String> = stored_cates.iter().map(|r| r.rel_rbum_set_cate_id.to_string()).collect();
+            let mut stored_cate_ids: Vec<String> = stored_cates.iter().map(|r| r.rel_rbum_set_cate_id.clone().unwrap_or_default()).collect();
             stored_cate_ids.dedup();
             for input_org_cate_id in input_org_cate_ids {
                 if !stored_cate_ids.contains(input_org_cate_id) {
@@ -271,7 +271,7 @@ impl IamAccountServ {
                     .await?;
                 }
             }
-            let deleted_item_ids: Vec<String> = stored_cates.into_iter().filter(|r| !input_org_cate_ids.contains(&r.rel_rbum_set_cate_id)).map(|r| r.id).unique().collect();
+            let deleted_item_ids: Vec<String> = stored_cates.into_iter().filter(|r| !input_org_cate_ids.contains(&r.rel_rbum_set_cate_id.clone().unwrap_or_default())).map(|r| r.id).unique().collect();
             for deleted_item_id in deleted_item_ids {
                 IamSetServ::delete_set_item(&deleted_item_id, funs, ctx).await?;
             }
