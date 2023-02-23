@@ -166,8 +166,12 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamRoleDetailResp>> {
         let item = IamRoleServ::get_item(id, &IamRoleFilterReq { ..Default::default() }, funs, ctx).await?;
-        if item.scope_level==RbumScopeLevelKind::Private{
-            return  Ok(None);
+        if item.scope_level == RbumScopeLevelKind::Private
+            && id != funs.iam_basic_role_app_admin_id()
+            && id != funs.iam_basic_role_sys_admin_id()
+            && id != funs.iam_basic_role_tenant_admin_id()
+        {
+            return Ok(None);
         }
         Err(funs.err().conflict(&Self::get_obj_name(), "delete", "role is not private", "409-iam-delete-role-conflict"))
     }
