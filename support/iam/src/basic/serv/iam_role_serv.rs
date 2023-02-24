@@ -165,7 +165,21 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
     }
 
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamRoleDetailResp>> {
-        let item = IamRoleServ::get_item(id, &IamRoleFilterReq { ..Default::default() }, funs, ctx).await?;
+        let item = IamRoleServ::get_item(
+            id,
+            &IamRoleFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    rel_ctx_owner: true,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         if item.scope_level != RbumScopeLevelKind::Private
             || id == funs.iam_basic_role_app_admin_id()
             || id == funs.iam_basic_role_sys_admin_id()
