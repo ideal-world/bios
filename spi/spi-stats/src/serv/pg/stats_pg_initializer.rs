@@ -1,15 +1,22 @@
 use std::collections::HashMap;
 
 use bios_basic::spi::spi_initializer;
-use tardis::{basic::{dto::TardisContext, result::TardisResult}, db::reldb_client::{TardisRelDBlConnection, TardisRelDBClient}};
+use tardis::{
+    basic::{dto::TardisContext, result::TardisResult},
+    db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+};
 
-pub async fn init_conf_dim_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String), ctx: &TardisContext, mgr: bool) -> TardisResult<TardisRelDBlConnection> {
+pub async fn init_conf_dim_table_and_conn(
+    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    ctx: &TardisContext,
+    mgr: bool,
+) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
         mgr,
-        Some("conf_dim"),
-        "stats",
+        None,
+        "stats_conf_dim",
         r#"key character varying NOT NULL,
         show_name character varying NOT NULL,
         stable_ds boolean DEFAULT FALSE,
@@ -24,13 +31,17 @@ pub async fn init_conf_dim_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap
     .await
 }
 
-pub async fn init_conf_fact_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String), ctx: &TardisContext, mgr: bool) -> TardisResult<TardisRelDBlConnection> {
+pub async fn init_conf_fact_table_and_conn(
+    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    ctx: &TardisContext,
+    mgr: bool,
+) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
         mgr,
-        Some("conf_fact"),
-        "stats",
+        None,
+        "stats_conf_fact",
         r#"key character varying NOT NULL,
         show_name character varying NOT NULL,
         query_limit integer DEFAULT 1000,
@@ -43,13 +54,17 @@ pub async fn init_conf_fact_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMa
     .await
 }
 
-pub async fn init_conf_fact_col_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String), ctx: &TardisContext, mgr: bool) -> TardisResult<TardisRelDBlConnection> {
+pub async fn init_conf_fact_col_table_and_conn(
+    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    ctx: &TardisContext,
+    mgr: bool,
+) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,
         mgr,
-        Some("conf_fact_col"),
-        "stats",
+        None,
+        "stats_conf_fact_col",
         r#"key character varying NOT NULL,
         show_name character varying NOT NULL,
         kind character varying NOT NULL,
@@ -65,7 +80,7 @@ pub async fn init_conf_fact_col_table_and_conn(bs_inst: (&TardisRelDBClient, &Ha
         create_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
         update_time timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
         unique (key, rel_conf_fact_key)"#,
-        vec![("rel_conf_fact_key","btree")],
+        vec![("rel_conf_fact_key", "btree")],
         Some("update_time"),
     )
     .await

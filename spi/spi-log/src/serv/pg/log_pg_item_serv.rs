@@ -22,15 +22,15 @@ pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &Tardi
     }
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
+    let (mut conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
+    conn.begin().await?;
     conn.execute_one(
         &format!(
-            r#"INSERT INTO starsys_log_{} 
+            r#"INSERT INTO {table_name} 
     (key, op, content, rel_key{})
 VALUES
     ($1, $2, $3, $4{})
 	"#,
-            add_req.tag,
             if add_req.ts.is_some() { ", ts" } else { "" },
             if add_req.ts.is_some() { ", $5" } else { "" },
         ),
@@ -95,17 +95,16 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = log_pg_initializer::init_table_and_conn(bs_inst, &find_req.tag, ctx, false).await?;
+    let (conn, table_name) = log_pg_initializer::init_table_and_conn(bs_inst, &find_req.tag, ctx, false).await?;
     let result = conn
         .query_all(
             format!(
                 r#"SELECT ts, key, op, content, rel_key, count(*) OVER() AS total
-FROM starsys_log_{}
+FROM {table_name}
 WHERE 
     {}
 ORDER BY ts DESC
 {}"#,
-                find_req.tag,
                 where_fragments.join(" AND "),
                 page_fragments
             )
@@ -113,7 +112,6 @@ ORDER BY ts DESC
             sql_vals,
         )
         .await?;
-    conn.commit().await?;
 
     let mut total_size: i64 = 0;
 

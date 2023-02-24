@@ -154,6 +154,11 @@ pub mod common_pg {
         Ok(())
     }
 
+    pub fn package_table_name(table_name: &str, ctx: &TardisContext) -> String {
+        let schema_name = get_schema_name_from_context(ctx);
+        format!("{schema_name}.{table_name}")
+    }
+
     pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
         let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
         let client = TardisRelDBClient::init(
@@ -166,7 +171,7 @@ pub mod common_pg {
         .await?;
         let mut ext = HashMap::new();
         let schema_name = if bs_cert.private {
-            "".to_string()
+            "public".to_string()
         } else if mgr {
             create_schema(&client, ctx).await?
         } else if check_schema_exit(&client, ctx).await? {
@@ -178,6 +183,7 @@ pub mod common_pg {
         Ok(SpiBsInst { client: Box::new(client), ext })
     }
 
+    /// return db connection and table name
     pub async fn init_table_and_conn(
         bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
         ctx: &TardisContext,
@@ -188,29 +194,24 @@ pub mod common_pg {
         // field name -> index type
         indexes: Vec<(&str, &str)>,
         update_time_field: Option<&str>,
-    ) -> TardisResult<TardisRelDBlConnection> {
+    ) -> TardisResult<(TardisRelDBlConnection, String)> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
-        let mut conn = bs_inst.0.conn();
-        let mut schema_name = "".to_string();
-        if let Some(_schema_name) = get_schema_name_from_ext(bs_inst.1) {
-            schema_name = _schema_name;
-            set_schema_to_session(&schema_name, &mut conn).await?;
-        }
+        let conn = bs_inst.0.conn();
+        let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
         if check_table_exit(&format!("starsys_{table_flag}{tag}"), &conn, ctx).await? {
-            return Ok(conn);
+            return Ok((conn, format!("{schema_name}.starsys_{table_flag}{tag}")));
         } else if !mgr {
             return Err(TardisError::bad_request("The requested tag does not exist", ""));
         }
-        do_init_table(schema_name, &conn, tag, table_flag, table_create_content, indexes, update_time_field).await?;
-        Ok(conn)
+        do_init_table(&schema_name, &conn, &tag, table_flag, table_create_content, indexes, update_time_field).await?;
+        Ok((conn, format!("{schema_name}.starsys_{table_flag}{tag}")))
     }
 
-    pub async fn init_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String)) -> TardisResult<TardisRelDBlConnection> {
-        let mut conn = bs_inst.0.conn();
-        if let Some(schema_name) = get_schema_name_from_ext(bs_inst.1) {
-            set_schema_to_session(&schema_name, &mut conn).await?;
-        }
-        Ok(conn)
+    /// return db connection and schema name
+    pub async fn init_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String)) -> TardisResult<(TardisRelDBlConnection, String)> {
+        let conn = bs_inst.0.conn();
+        let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
+        Ok((conn, schema_name))
     }
 
     pub async fn init_table(
@@ -225,13 +226,13 @@ pub mod common_pg {
     ) -> TardisResult<()> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
         let schema_name = get_schema_name_from_context(ctx);
-        do_init_table(schema_name, conn, tag, table_flag, table_create_content, indexes, update_time_field).await
+        do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, indexes, update_time_field).await
     }
 
     async fn do_init_table(
-        schema_name: String,
+        schema_name: &str,
         conn: &TardisRelDBlConnection,
-        tag: String,
+        tag: &str,
         table_flag: &str,
         table_create_content: &str,
         // field name -> index type
@@ -248,10 +249,10 @@ pub mod common_pg {
             vec![],
         )
         .await?;
-        for (field_name, index_type) in indexes {
-            let index_part = TardisFuns::crypto.base64.decode(field_name).unwrap();
+        for (field_name_or_fun, index_type) in indexes {
+            let index_part = field_name_or_fun.replace(|c: char| !c.is_ascii_alphanumeric(), "_");
             conn.execute_one(
-                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name})"),
+                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
                 vec![],
             )
             .await?;

@@ -1,4 +1,7 @@
-use bios_basic::spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common_pg};
+use bios_basic::spi::{
+    spi_funs::SpiBsInstExtractor,
+    spi_initializer::common_pg::{self, package_table_name},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{
@@ -19,28 +22,11 @@ async fn has_inst_table(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisCo
     common_pg::check_table_exit(&format!("starsys_stats_inst_dim_{key}"), conn, ctx).await
 }
 
-async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<()> {
-    let mut sql = vec![];
-    sql.push("id serial PRIMARY KEY".to_string());
-    sql.push("key character varying NOT NULL".to_string());
-    sql.push("show_name character varying NOT NULL".to_string());
-    if !dim_conf.hierarchy.is_empty() {
-        sql.push("hierarchy smallint NOT NULL".to_string());
-    }
-    for hierarchy in 0..dim_conf.hierarchy.len() {
-        sql.push(format!("key{hierarchy} character varying NOT NULL DEFAULT ''"));
-    }
-    sql.push("st timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
-    sql.push("et timestamp without time zone".to_string());
-
-    common_pg::init_table(conn, Some(&dim_conf.key), "starsys_stats_inst_dim_", sql.join(",\r\n").as_str(), vec![], None, ctx).await?;
-    Ok(())
-}
-
 pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
-    if conn.query_one("SELECT 1 starsys_stats_conf_dim WHERE key = $1", vec![Value::from(&add_req.key)]).await?.is_some() {
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    if conn.query_one(&format!("SELECT 1 {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await?.is_some() {
         return Err(funs.err().conflict(
             "dim_conf",
             "add",
@@ -67,7 +53,7 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ct
 
     conn.execute_one(
         &format!(
-            r#"INSERT INTO starsys_stats_conf_dim
+            r#"INSERT INTO {table_name}
 (key, show_name, stable_ds, data_type, hierarchy, remark)
 VALUES
 ($1, $2, $3, $4, $5, $6)
@@ -82,7 +68,8 @@ VALUES
 
 pub(crate) async fn modify(key: &str, modify_req: &StatsConfDimModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
     if has_inst_table(key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "dim_conf",
@@ -115,7 +102,7 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfDimModifyReq, funs: 
     }
     conn.execute_one(
         &format!(
-            r#"UPDATE starsys_stats_conf_dim
+            r#"UPDATE {table_name}
 SET {}
 WHERE key = $1
 "#,
@@ -130,33 +117,12 @@ WHERE key = $1
 
 pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
-    conn.execute_one("DELETE FROM starsys_stats_conf_dim WHERE key = $1", vec![Value::from(key)]).await?;
-    conn.execute_one(&format!("DROP TABLE starsys_stats_inst_dim_{key}"), vec![]).await?;
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
+    conn.execute_one(&format!("DROP TABLE {}_{key}", package_table_name("starsys_stats_inst_dim", ctx)), vec![]).await?;
     conn.commit().await?;
     CONF_DIMS.write().await.remove(key);
-    Ok(())
-}
-
-pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let mut dim_conf = paginate(Some(key.to_string()), None, 1, 1, None, None, funs, ctx).await?;
-    if dim_conf.total_size == 0 {
-        return Err(funs.err().not_found("dim_fact", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"));
-    }
-    let dim_conf = dim_conf.records.pop().unwrap();
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = common_pg::init_conn(bs_inst).await?;
-    if has_inst_table(key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "dim_inst",
-            "create_inst",
-            "The dimension instance table already exists, please delete it and then create it.",
-            "409-spi-stats-dim-inst-exist",
-        ));
-    }
-    create_inst_table(&dim_conf, &conn, ctx).await?;
-    conn.commit().await?;
-    CONF_DIMS.write().await.insert(key.to_string(), dim_conf);
     Ok(())
 }
 
@@ -191,12 +157,12 @@ pub(crate) async fn paginate(
     }
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
             &format!(
                 r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, create_time, update_time, count(*) OVER() AS total
-FROM starsys_stats_conf_dim
+FROM {table_name}
 WHERE 
     {}
 LIMIT $2 OFFSET $3
@@ -211,10 +177,8 @@ LIMIT $2 OFFSET $3
             params,
         )
         .await?;
-    conn.commit().await?;
 
     let mut total_size: i64 = 0;
-
     let result = result
         .into_iter()
         .map(|item| {
@@ -239,4 +203,45 @@ LIMIT $2 OFFSET $3
         total_size: total_size as u64,
         records: result,
     })
+}
+
+pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let mut dim_conf = paginate(Some(key.to_string()), None, 1, 1, None, None, funs, ctx).await?;
+    if dim_conf.total_size == 0 {
+        return Err(funs.err().not_found("dim_fact", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"));
+    }
+    let dim_conf = dim_conf.records.pop().unwrap();
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
+    conn.begin().await?;
+    if has_inst_table(key, &conn, ctx).await? {
+        return Err(funs.err().conflict(
+            "dim_inst",
+            "create_inst",
+            "The dimension instance table already exists, please delete it and then create it.",
+            "409-spi-stats-dim-inst-exist",
+        ));
+    }
+    create_inst_table(&dim_conf, &conn, ctx).await?;
+    conn.commit().await?;
+    CONF_DIMS.write().await.insert(key.to_string(), dim_conf);
+    Ok(())
+}
+
+async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<()> {
+    let mut sql = vec![];
+    sql.push("id serial PRIMARY KEY".to_string());
+    sql.push("key character varying NOT NULL".to_string());
+    sql.push("show_name character varying NOT NULL".to_string());
+    if !dim_conf.hierarchy.is_empty() {
+        sql.push("hierarchy smallint NOT NULL".to_string());
+    }
+    for hierarchy in 0..dim_conf.hierarchy.len() {
+        sql.push(format!("key{hierarchy} character varying NOT NULL DEFAULT ''"));
+    }
+    sql.push("st timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
+    sql.push("et timestamp without time zone".to_string());
+
+    common_pg::init_table(conn, Some(&dim_conf.key), "stats_inst_dim", sql.join(",\r\n").as_str(), vec![], None, ctx).await?;
+    Ok(())
 }

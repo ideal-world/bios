@@ -62,10 +62,11 @@ pub async fn add_or_modify(add_or_modify_req: &mut SearchItemAddOrModifyReq, fun
     }
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = search_pg_initializer::init_table_and_conn(bs_inst, &add_or_modify_req.tag, ctx, true).await?;
+    let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_or_modify_req.tag, ctx, true).await?;
+    conn.begin().await?;
     conn.execute_one(
         &format!(
-            r#"INSERT INTO starsys_search_{} 
+            r#"INSERT INTO {table_name} 
     (key, title, title_tsv, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
     ($1, $2, to_tsvector('public.chinese_zh', $3), to_tsvector('public.chinese_zh', $4), $5, $6, $7, $8, $9, {})
@@ -73,7 +74,6 @@ ON CONFLICT (key)
 DO UPDATE SET
     {}
 "#,
-            add_or_modify_req.tag,
             if add_or_modify_req.visit_keys.is_some() { "$10" } else { "null" },
             update_opt_fragments.join(", ")
         ),
@@ -86,8 +86,9 @@ DO UPDATE SET
 
 pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
-    conn.execute_one(&format!("DELETE FROM starsys_search_{tag} WHERE key = $1"), vec![Value::from(key)]).await?;
+    let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, false).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
     conn.commit().await?;
     Ok(())
 }
@@ -180,18 +181,17 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = search_pg_initializer::init_table_and_conn(bs_inst, &search_req.tag, ctx, false).await?;
+    let (conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &search_req.tag, ctx, false).await?;
     let result = conn
         .query_all(
             format!(
                 r#"SELECT key, title, owner, own_paths, create_time, update_time, ext, count(*) OVER() AS total{}
-FROM starsys_search_{}{}
+FROM {table_name}{}
 WHERE 
     {}
     {}
 {}"#,
                 select_fragments,
-                search_req.tag,
                 from_fragments,
                 where_fragments.join(" AND "),
                 if order_fragments.is_empty() {
@@ -205,10 +205,8 @@ WHERE
             sql_vals,
         )
         .await?;
-    conn.commit().await?;
 
     let mut total_size: i64 = 0;
-
     let result = result
         .into_iter()
         .map(|item| {

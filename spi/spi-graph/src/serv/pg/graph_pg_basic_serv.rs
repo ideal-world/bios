@@ -12,13 +12,16 @@ use super::graph_pg_initializer;
 
 pub async fn add_rel(add_req: &GraphRelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (mut conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
     conn.execute_one(
-        r#"INSERT INTO starsys_graph
-    (tag, from_key, from_version, to_key, to_version, reverse)
-VALUES
-    ($1, $2, $3, $4, $5, false)
-	"#,
+        &format!(
+            r#"INSERT INTO {table_name}
+        (tag, from_key, from_version, to_key, to_version, reverse)
+    VALUES
+        ($1, $2, $3, $4, $5, false)
+        "#
+        ),
         vec![
             Value::from(add_req.tag.as_str()),
             Value::from(add_req.from_key.to_string()),
@@ -29,11 +32,13 @@ VALUES
     )
     .await?;
     conn.execute_one(
-        r#"INSERT INTO starsys_graph
-    (tag, from_key, from_version, to_key, to_version, reverse)
-VALUES
-    ($1, $2, $3, $4, $5, true)
-	"#,
+        &format!(
+            r#"INSERT INTO {table_name}
+        (tag, from_key, from_version, to_key, to_version, reverse)
+    VALUES
+        ($1, $2, $3, $4, $5, true)
+        "#
+        ),
         vec![
             Value::from(add_req.tag.as_str()),
             Value::from(add_req.to_key.to_string()),
@@ -76,12 +81,13 @@ pub async fn upgrade_version(upgrade_version_req: &GraphRelUpgardeVersionReq, fu
     };
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
+    let (mut conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
+    conn.begin().await?;
     conn.execute_one(
         format!(
-            r#"INSERT INTO starsys_graph
+            r#"INSERT INTO {table_name}
 SELECT tag, from_key, $1, to_key, to_version, reverse
-FROM starsys_graph
+FROM {table_name}
 WHERE from_key = $2 AND from_version = $3 {}"#,
             where_fragments.replace("rel_key", "to_key").replace("rel_version", "to_version"),
         )
@@ -91,9 +97,9 @@ WHERE from_key = $2 AND from_version = $3 {}"#,
     .await?;
     conn.execute_one(
         format!(
-            r#"INSERT INTO starsys_graph
+            r#"INSERT INTO {table_name}
 SELECT tag, from_key, from_version, to_key, $1, reverse
-FROM starsys_graph
+FROM {table_name}
 WHERE to_key = $2 AND to_version = $3 {}"#,
             where_fragments.replace("rel_key", "from_key").replace("rel_version", "from_version"),
         )
@@ -107,13 +113,15 @@ WHERE to_key = $2 AND to_version = $3 {}"#,
 
 pub async fn find_versions(tag: String, key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<GraphNodeVersionResp>> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
-            r#"SELECT DISTINCT ON(from_version) from_version, ts FROM starsys_graph
-WHERE tag = $1 AND from_key = $2 AND reverse = false
-ORDER BY from_version DESC
-	"#,
+            &format!(
+                r#"SELECT DISTINCT ON(from_version) from_version, ts FROM {table_name}
+            WHERE tag = $1 AND from_key = $2 AND reverse = false
+            ORDER BY from_version DESC
+                "#
+            ),
             vec![Value::from(tag.as_str()), Value::from(key.as_str())],
         )
         .await?;
@@ -143,13 +151,12 @@ pub async fn find_rels(from_key: String, from_version: String, depth: Option<u8>
     }
     let records: Vec<GraphRelRecord>;
     {
-        let conn = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
+        let (conn, _) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
         let result = conn.query_all(
         &format!(r#"SELECT o_tag, o_from_key, o_from_version, o_to_key, o_to_version, o_tags, o_depth, o_paths, o_reverse FROM public.GRAPH_SEARCH($1, $2, $3{}) ORDER BY O_DEPTH, O_TAG"#, if depth.is_some() { ", $4" } else { "" }),
         sql_vals.clone(),
     )
     .await?;
-        conn.commit().await?;
         records = result
             .into_iter()
             .map(|item| GraphRelRecord {
@@ -228,10 +235,11 @@ pub async fn delete_rels(
     }
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
+    let (mut conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
+    conn.begin().await?;
     conn.execute_one(
         &format!(
-            "DELETE FROM starsys_graph WHERE {} AND reverse = false",
+            "DELETE FROM {table_name} WHERE {} AND reverse = false",
             where_fragments.join(" AND ").replace("key1", "from_key").replace("key2", "to_key").replace("version1", "from_version").replace("version2", "to_version")
         ),
         sql_vals.clone(),
@@ -239,7 +247,7 @@ pub async fn delete_rels(
     .await?;
     conn.execute_one(
         &format!(
-            "DELETE FROM starsys_graph WHERE {} AND reverse = true",
+            "DELETE FROM {table_name} WHERE {} AND reverse = true",
             where_fragments.join(" AND ").replace("key1", "to_key").replace("key2", "from_key").replace("version1", "to_version").replace("version2", "from_version")
         ),
         sql_vals,

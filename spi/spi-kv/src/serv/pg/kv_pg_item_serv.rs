@@ -22,10 +22,11 @@ pub async fn add_or_modify_item(add_or_modify_req: &KvItemAddOrModifyReq, funs: 
         update_opt_fragments.push("info = $3");
     }
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
     conn.execute_one(
         &format!(
-            r#"INSERT INTO starsys_kv 
+            r#"INSERT INTO {} 
     (k, v, info)
 VALUES
     ($1, $2, $3)
@@ -33,6 +34,7 @@ ON CONFLICT (k)
 DO UPDATE SET
     {}
 "#,
+            table_name,
             update_opt_fragments.join(", ")
         ),
         params,
@@ -44,20 +46,20 @@ DO UPDATE SET
 
 pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<KvItemDetailResp>> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_one(
             &format!(
                 r#"SELECT k, v{} AS v, info, create_time, update_time
-FROM starsys_kv
+FROM {}
 WHERE 
     k = $1"#,
                 if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
+                table_name,
             ),
             vec![Value::from(key)],
         )
         .await?;
-    conn.commit().await?;
 
     let result = result.map(|item| KvItemDetailResp {
         key: item.try_get("", "k").unwrap(),
@@ -80,21 +82,21 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
         .collect::<Vec<String>>()
         .join(",");
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
             &format!(
                 r#"SELECT k, v{} AS v, info, create_time, update_time
-FROM starsys_kv
+FROM {}
 WHERE 
     k IN ({})"#,
                 if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
+                table_name,
                 place_holder
             ),
             sql_vals,
         )
         .await?;
-    conn.commit().await?;
 
     let result = result
         .into_iter()
@@ -123,21 +125,21 @@ pub async fn match_items(
     sql_vals.push(Value::from((page_number - 1) * page_size as u32));
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
             &format!(
                 r#"SELECT k, v{} AS v, info, create_time, update_time, count(*) OVER() AS total
-FROM starsys_kv
+FROM {}
 WHERE 
     k LIKE $1
 LIMIT $2 OFFSET $3"#,
                 if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
+                table_name,
             ),
             sql_vals,
         )
         .await?;
-    conn.commit().await?;
 
     let mut total_size: i64 = 0;
 
@@ -166,8 +168,9 @@ LIMIT $2 OFFSET $3"#,
 
 pub async fn delete_item(key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
-    conn.execute_one("DELETE FROM starsys_kv WHERE k = $1", vec![Value::from(key)]).await?;
+    let (mut conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE k = $1"), vec![Value::from(key)]).await?;
     conn.commit().await?;
     Ok(())
 }

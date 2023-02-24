@@ -7,7 +7,6 @@ use tardis::{
 
 use crate::{
     api::ci::{stats_ci_conf_api, stats_ci_query_api, stats_ci_record_api},
-    serv,
     stats_constants::DOMAIN_CODE,
 };
 
