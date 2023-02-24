@@ -1,4 +1,3 @@
-use std::env;
 use std::time::Duration;
 
 use bios_basic::rbum::rbum_config::RbumConfig;

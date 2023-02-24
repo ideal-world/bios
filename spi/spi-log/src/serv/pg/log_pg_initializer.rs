@@ -11,7 +11,7 @@ pub async fn init_table_and_conn(
     tag: &str,
     ctx: &TardisContext,
     mgr: bool,
-) -> TardisResult<TardisRelDBlConnection> {
+) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,

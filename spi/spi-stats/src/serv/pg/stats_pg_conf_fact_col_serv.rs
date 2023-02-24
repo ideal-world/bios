@@ -12,10 +12,11 @@ use super::stats_pg_initializer;
 
 pub(crate) async fn add(rel_conf_fact_key: &str, add_req: &StatsConfFactColAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
     if conn
         .query_one(
-            "SELECT 1 starsys_stats_conf_fact_col WHERE key = $1 AND rel_conf_fact_key = $2",
+            &format!("SELECT 1 {table_name} WHERE key = $1 AND rel_conf_fact_key = $2"),
             vec![Value::from(&add_req.key), Value::from(rel_conf_fact_key)],
         )
         .await?
@@ -63,7 +64,7 @@ pub(crate) async fn add(rel_conf_fact_key: &str, add_req: &StatsConfFactColAddRe
 
     conn.execute_one(
         &format!(
-            r#"INSERT INTO starsys_stats_conf_fact_col
+            r#"INSERT INTO {table_name}
 (key, show_name, kind, rel_conf_fact_key, remark {})
 VALUES
 ($1, $2, $3, $4, $5 {})
@@ -84,7 +85,8 @@ VALUES
 
 pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactColModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(key.to_string())];
     if let Some(show_name) = &modify_req.show_name {
@@ -122,7 +124,7 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactColModifyReq, fu
 
     conn.execute_one(
         &format!(
-            r#"UPDATE starsys_stats_conf_fact_col
+            r#"UPDATE {table_name}
 SET {}
 WHERE key = $1
 "#,
@@ -137,8 +139,9 @@ WHERE key = $1
 
 pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
-    conn.execute_one("DELETE FROM starsys_stats_conf_fact_col WHERE key = $1", vec![Value::from(key)]).await?;
+    let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
     conn.commit().await?;
     Ok(())
 }
@@ -179,12 +182,12 @@ pub(crate) async fn paginate(
     }
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = stats_pg_initializer::init_conf_fact_col_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
             &format!(
                 r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, mes_data_type, mes_frequency, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, update_time, count(*) OVER() AS total
-FROM starsys_stats_conf_fact
+FROM {table_name}
 WHERE 
     {}
 LIMIT $2 OFFSET $3
@@ -199,10 +202,8 @@ LIMIT $2 OFFSET $3
             params,
         )
         .await?;
-    conn.commit().await?;
 
     let mut total_size: i64 = 0;
-
     let result = result
         .into_iter()
         .map(|item| {

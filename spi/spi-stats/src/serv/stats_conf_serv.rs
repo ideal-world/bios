@@ -3,12 +3,12 @@ use std::sync::Arc;
 
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use lazy_static::lazy_static;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::sync::RwLock;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
-use lazy_static::lazy_static;
 
 use crate::dto::stats_conf_dto::{
     StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,

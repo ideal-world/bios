@@ -6,7 +6,11 @@ use tardis::{
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
 };
 
-pub async fn init_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String), ctx: &TardisContext, mgr: bool) -> TardisResult<TardisRelDBlConnection> {
+pub async fn init_table_and_conn(
+    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    ctx: &TardisContext,
+    mgr: bool,
+) -> TardisResult<(TardisRelDBlConnection, String)> {
     spi_initializer::common_pg::init_table_and_conn(
         bs_inst,
         ctx,

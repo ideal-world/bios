@@ -14,7 +14,7 @@ use super::stats_conf_serv::{CONF_DIMS, CONF_FACTS};
 
 pub(crate) async fn fact_load_record(fact_key: String, record_key: String, add_req: StatsFactRecordLoadReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let conf_fact_lock = CONF_FACTS.read().await;
-    let (fact_conf, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
+    let (_, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
         "fact_record",
         "load",
         &format!("The fact instance table [{}] not exists.", &fact_key),
@@ -29,7 +29,7 @@ pub(crate) async fn fact_load_record(fact_key: String, record_key: String, add_r
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key).ok_or(funs.err().not_found(
             "fact_record",
             "load",
-            &format!("The fact column config [{}] not exists.", req_fact_col_key),
+            &format!("The fact column config [{req_fact_col_key}] not exists."),
             "404-spi-stats-fact-col-conf-not-exist",
         ))?;
 
@@ -113,7 +113,7 @@ pub(crate) async fn fact_load_record(fact_key: String, record_key: String, add_r
 
 pub(crate) async fn fact_delete_record(fact_key: String, record_key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let conf_fact_lock = CONF_FACTS.read().await;
-    let (fact_conf, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
+    let (_, _) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
         "fact_record",
         "delete",
         &format!("The fact instance table [{}] not exists.", &fact_key),
@@ -129,7 +129,7 @@ pub(crate) async fn fact_delete_record(fact_key: String, record_key: String, fun
 
 pub(crate) async fn fact_load_records(fact_key: String, add_req_set: Vec<StatsFactRecordsLoadReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let conf_fact_lock = CONF_FACTS.read().await;
-    let (fact_conf, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
+    let (_, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
         "fact_record",
         "load_set",
         &format!("The fact instance table [{}] not exists.", &fact_key),
@@ -209,7 +209,7 @@ pub(crate) async fn fact_load_records(fact_key: String, add_req_set: Vec<StatsFa
             // TODO check data type
         }
         value_sets.push(values);
-            has_fields_init = true;
+        has_fields_init = true;
     }
 
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
@@ -221,7 +221,7 @@ pub(crate) async fn fact_load_records(fact_key: String, add_req_set: Vec<StatsFa
 
 pub(crate) async fn fact_delete_records(fact_key: String, delete_keys: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let conf_fact_lock = CONF_FACTS.read().await;
-    let (fact_conf, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
+    let (_, _) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
         "fact_record",
         "delete_set",
         &format!("The fact instance table [{}] not exists.", &fact_key),
@@ -237,7 +237,7 @@ pub(crate) async fn fact_delete_records(fact_key: String, delete_keys: Vec<Strin
 
 pub(crate) async fn fact_clean_records(fact_key: String, before_ct: Option<DateTime<Utc>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let conf_fact_lock = CONF_FACTS.read().await;
-    let (fact_conf, fact_col_conf_set) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
+    let (_, _) = conf_fact_lock.get(&fact_key).ok_or(funs.err().not_found(
         "fact_record",
         "clean",
         &format!("The fact instance table [{}] not exists.", &fact_key),
