@@ -15,13 +15,12 @@ use tardis::{
 
 use crate::{
     dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq},
-    serv::stats_conf_serv::{CONF_DIMS, CONF_FACTS},
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
-use super::{stats_pg_conf_fact_col_serv, stats_pg_initializer};
+use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer};
 
-async fn has_inst_table(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
+pub async fn online(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("starsys_stats_inst_fact_{key}"), conn, ctx).await
 }
 
@@ -29,7 +28,7 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if conn.query_one(&format!("SELECT 1 {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await?.is_some() {
+    if conn.query_one(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await?.is_some() {
         return Err(funs.err().conflict(
             "fact_conf",
             "add",
@@ -37,7 +36,7 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
             "409-spi-stats-fact-conf-exist",
         ));
     }
-    if has_inst_table(&add_req.key, &conn, ctx).await? {
+    if online(&add_req.key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_conf",
             "add",
@@ -71,7 +70,7 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactModifyReq, funs:
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if has_inst_table(key, &conn, ctx).await? {
+    if online(key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_conf",
             "modify",
@@ -82,15 +81,15 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactModifyReq, funs:
     let mut sql_sets = vec![];
     let mut params = vec![Value::from(key.to_string())];
     if let Some(show_name) = &modify_req.show_name {
-        sql_sets.push(format!("show_name = ${}", sql_sets.len() + 2));
+        sql_sets.push(format!("show_name = ${}", params.len() + 1));
         params.push(Value::from(show_name.to_string()));
     }
     if let Some(query_limit) = modify_req.query_limit {
-        sql_sets.push(format!("query_limit = ${}", sql_sets.len() + 2));
+        sql_sets.push(format!("query_limit = ${}", params.len() + 1));
         params.push(Value::from(query_limit));
     }
     if let Some(remark) = &modify_req.remark {
-        sql_sets.push(format!("remark = ${}", sql_sets.len() + 2));
+        sql_sets.push(format!("remark = ${}", params.len() + 1));
         params.push(Value::from(remark.to_string()));
     }
     conn.execute_one(
@@ -118,10 +117,16 @@ pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext
         vec![Value::from(key)],
     )
     .await?;
-    conn.execute_one(&format!("DROP TABLE {}{key}", package_table_name("starsys_stats_inst_fact_", ctx)), vec![]).await?;
+    if online(key, &conn, ctx).await? {
+        conn.execute_one(&format!("DROP TABLE {}{key}", package_table_name("starsys_stats_inst_fact_", ctx)), vec![]).await?;
+        conn.execute_one(&format!("DROP TABLE {}{key}_del", package_table_name("starsys_stats_inst_fact_", ctx)), vec![]).await?;
+    }
     conn.commit().await?;
-    CONF_FACTS.write().await.remove(key);
     Ok(())
+}
+
+pub(in crate::serv::pg) async fn get(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
+    do_paginate(Some(key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
@@ -134,19 +139,34 @@ pub(crate) async fn paginate(
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfFactInfoResp>> {
-    let mut sql_where = vec![];
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
+
+    do_paginate(key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
+}
+
+async fn do_paginate(
+    key: Option<String>,
+    show_name: Option<String>,
+    page_number: u64,
+    page_size: u64,
+    desc_by_create: Option<bool>,
+    desc_by_update: Option<bool>,
+    conn: &TardisRelDBlConnection,
+    ctx: &TardisContext,
+) -> TardisResult<TardisPage<StatsConfFactInfoResp>> {
+    let table_name = package_table_name("starsys_stats_conf_fact", ctx);
+    let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
-    let mut params: Vec<Value> = vec![];
+    let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(key) = &key {
-        sql_where.push(format!("key = ${}", sql_where.len() + 1));
+        sql_where.push(format!("key = ${}", params.len() + 1));
         params.push(Value::from(key.to_string()));
     }
     if let Some(show_name) = &show_name {
-        sql_where.push(format!("show_name LIKE ${}", sql_where.len() + 1));
+        sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
         params.push(Value::from(format!("%{show_name}%")));
     }
-    params.push(Value::from(page_size));
-    params.push(Value::from((page_number - 1) * page_size));
     if let Some(desc_by_create) = desc_by_create {
         sql_order.push(format!("create_time {}", if desc_by_create { "DESC" } else { "ASC" }));
     }
@@ -154,8 +174,6 @@ pub(crate) async fn paginate(
         sql_order.push(format!("update_time {}", if desc_by_update { "DESC" } else { "ASC" }));
     }
 
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
         .query_all(
             &format!(
@@ -163,9 +181,9 @@ pub(crate) async fn paginate(
 FROM {table_name}
 WHERE 
     {}
-LIMIT $2 OFFSET $3
+LIMIT $1 OFFSET $2
 {}"#,
-                sql_where.join(","),
+                sql_where.join(" AND "),
                 if sql_order.is_empty() {
                     "".to_string()
                 } else {
@@ -177,38 +195,38 @@ LIMIT $2 OFFSET $3
         .await?;
 
     let mut total_size: i64 = 0;
-    let result = result
-        .into_iter()
-        .map(|item| {
-            if total_size == 0 {
-                total_size = item.try_get("", "total").unwrap();
-            }
-            StatsConfFactInfoResp {
-                key: item.try_get("", "key").unwrap(),
-                show_name: item.try_get("", "show_name").unwrap(),
-                query_limit: item.try_get("", "query_limit").unwrap(),
-                remark: item.try_get("", "remark").unwrap(),
-                create_time: item.try_get("", "create_time").unwrap(),
-                update_time: item.try_get("", "update_time").unwrap(),
-            }
-        })
-        .collect();
+    let mut final_result = vec![];
+    for item in result {
+        if total_size == 0 {
+            total_size = item.try_get("", "total").unwrap();
+        }
+        final_result.push(StatsConfFactInfoResp {
+            key: item.try_get("", "key").unwrap(),
+            show_name: item.try_get("", "show_name").unwrap(),
+            query_limit: item.try_get("", "query_limit").unwrap(),
+            remark: item.try_get("", "remark").unwrap(),
+            create_time: item.try_get("", "create_time").unwrap(),
+            update_time: item.try_get("", "update_time").unwrap(),
+            online: online(&item.try_get::<String>("", "key").unwrap(), &conn, ctx).await.unwrap(),
+        });
+    }
     Ok(TardisPage {
         page_size: page_size as u64,
         page_number: page_number as u64,
         total_size: total_size as u64,
-        records: result,
+        records: final_result,
     })
 }
 
 pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let mut fact_conf = paginate(Some(key.to_string()), None, 1, 1, None, None, funs, ctx).await?;
-    if fact_conf.total_size == 0 {
-        return Err(funs.err().not_found("fact_conf", "create_inst", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"));
-    }
-    let fact_conf = fact_conf.records.pop().unwrap();
-    let fact_col_conf = stats_pg_conf_fact_col_serv::paginate(None, Some(key.to_string()), None, 1, 1000, None, None, funs, ctx).await?;
-    if fact_col_conf.total_size == 0 {
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
+    conn.begin().await?;
+
+    let fact_conf = get(key, &conn, ctx).await?.ok_or(funs.err().not_found("fact_conf", "create_inst", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?;
+
+    let fact_col_conf = stats_pg_conf_fact_col_serv::find_by_fact_key(&fact_conf.key, &conn, ctx).await?;
+    if fact_col_conf.len() == 0 {
         return Err(funs.err().not_found(
             "fact_conf",
             "create_inst",
@@ -216,10 +234,8 @@ pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisCo
             "404-spi-stats-fact-col-conf-not-exist",
         ));
     }
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
-    conn.begin().await?;
-    if has_inst_table(key, &conn, ctx).await? {
+
+    if online(key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_inst",
             "create_inst",
@@ -227,9 +243,8 @@ pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisCo
             "409-spi-stats-fact-inst-exist",
         ));
     }
-    create_inst_table(&fact_conf, &fact_col_conf.records, &conn, funs, ctx).await?;
+    create_inst_table(&fact_conf, &fact_col_conf, &conn, funs, ctx).await?;
     conn.commit().await?;
-    CONF_FACTS.write().await.insert(key.to_string(), (fact_conf, fact_col_conf.records));
     Ok(())
 }
 
@@ -248,53 +263,54 @@ async fn create_inst_table(
     index.push(("own_paths".to_string(), "btree"));
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {
-            if let Some(dim_conf) = CONF_DIMS.read().await.get(&fact_col_conf.dim_rel_conf_dim_key.clone().unwrap()) {
-                if dim_conf.stable_ds {
-                    sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
-                    index.push((fact_col_conf.key.clone(), "btree"));
-                } else if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    sql.push(format!("{} character varying[] NOT NULL", &fact_col_conf.key));
-                    index.push((fact_col_conf.key.clone(), "gin"));
-                } else {
-                    match dim_conf.data_type {
-                        StatsDataTypeKind::Number => {
-                            sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
-                            index.push((fact_col_conf.key.clone(), "btree"));
-                        }
-                        StatsDataTypeKind::Boolean => {
-                            sql.push(format!("{} boolean NOT NULL", &fact_col_conf.key));
-                            index.push((fact_col_conf.key.clone(), "btree"));
-                        }
-                        StatsDataTypeKind::DateTime => {
-                            sql.push(format!("{} timestamp without time zone NOT NULL", &fact_col_conf.key));
-                            index.push((fact_col_conf.key.clone(), "btree"));
-                            index.push((format!("({}::date)", fact_col_conf.key), "btree"));
-                            index.push((format!("date_part('hour',{})", fact_col_conf.key), "btree"));
-                            index.push((format!("date_part('day',{})", fact_col_conf.key), "btree"));
-                        }
-                        StatsDataTypeKind::Date => {
-                            sql.push(format!("{} date NOT NULL", &fact_col_conf.key));
-                            index.push((fact_col_conf.key.clone(), "btree"));
-                        }
-                        StatsDataTypeKind::String => {
-                            sql.push(format!("{} character varying NOT NULL", &fact_col_conf.key));
-                            index.push((fact_col_conf.key.clone(), "btree"));
-                        }
+            let dim_conf_key = &fact_col_conf.dim_rel_conf_dim_key.clone().unwrap();
+            if !stats_pg_conf_dim_serv::online(dim_conf_key, &conn, ctx).await? {
+                return Err(funs.err().conflict(
+                    "fact_inst",
+                    "create",
+                    &format!("The dimension config [{dim_conf_key}] not online."),
+                    "409-spi-stats-dim-conf-not-online",
+                ));
+            }
+            let dim_conf = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx).await?.unwrap();
+            if dim_conf.stable_ds {
+                sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
+                index.push((fact_col_conf.key.clone(), "btree"));
+            } else if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                sql.push(format!("{} character varying[] NOT NULL", &fact_col_conf.key));
+                index.push((fact_col_conf.key.clone(), "gin"));
+            } else {
+                match dim_conf.data_type {
+                    StatsDataTypeKind::Number => {
+                        sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
+                        index.push((fact_col_conf.key.clone(), "btree"));
+                    }
+                    StatsDataTypeKind::Boolean => {
+                        sql.push(format!("{} boolean NOT NULL", &fact_col_conf.key));
+                        index.push((fact_col_conf.key.clone(), "btree"));
+                    }
+                    StatsDataTypeKind::DateTime => {
+                        sql.push(format!("{} timestamp with time zone NOT NULL", &fact_col_conf.key));
+                        index.push((fact_col_conf.key.clone(), "btree"));
+                        index.push((format!("({}::date)", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('hour',{})", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('day',{})", fact_col_conf.key), "btree"));
+                    }
+                    StatsDataTypeKind::Date => {
+                        sql.push(format!("{} date NOT NULL", &fact_col_conf.key));
+                        index.push((fact_col_conf.key.clone(), "btree"));
+                    }
+                    StatsDataTypeKind::String => {
+                        sql.push(format!("{} character varying NOT NULL", &fact_col_conf.key));
+                        index.push((fact_col_conf.key.clone(), "btree"));
                     }
                 }
-            } else {
-                return Err(funs.err().not_found(
-                    "fact_inst",
-                    "fact_inst",
-                    &format!("The dimension config [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.clone().unwrap()),
-                    "404-spi-stats-dim-conf-not-exist",
-                ));
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
             match fact_col_conf.mes_data_type {
                 Some(StatsDataTypeKind::Number) => sql.push(format!("{} integer NOT NULL", &fact_col_conf.key)),
                 Some(StatsDataTypeKind::Boolean) => sql.push(format!("{} boolean NOT NULL", &fact_col_conf.key)),
-                Some(StatsDataTypeKind::DateTime) => sql.push(format!("{} timestamp without time zone NOT NULL", &fact_col_conf.key)),
+                Some(StatsDataTypeKind::DateTime) => sql.push(format!("{} timestamp with time zone NOT NULL", &fact_col_conf.key)),
                 Some(StatsDataTypeKind::Date) => sql.push(format!("{} date NOT NULL", &fact_col_conf.key)),
                 Some(StatsDataTypeKind::String) => sql.push(format!("{} character varying NOT NULL", &fact_col_conf.key)),
                 None => sql.push(format!("{} integer NOT NULL", &fact_col_conf.key)),
@@ -303,7 +319,7 @@ async fn create_inst_table(
             sql.push(format!("{} character varying", &fact_col_conf.key));
         }
     }
-    sql.push("ct timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
+    sql.push("ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
     index.push(("ct".to_string(), "btree"));
     index.push(("(ct::date)".to_string(), "btree"));
     index.push(("date_part('hour',ct)".to_string(), "btree"));
@@ -321,7 +337,7 @@ async fn create_inst_table(
         Some(&format!("{}_del", fact_conf.key)),
         "stats_inst_fact",
         r#"key character varying NOT NULL,
-    ct timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
+    ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
         vec![],
         None,
         ctx,

@@ -67,6 +67,8 @@ pub struct StatsConfDimInfoResp {
     /// Multiple fields can be defined for each dimension.
     /// e.g. address dimension can be province-city-district, etc.
     pub hierarchy: Vec<String>,
+    /// Whether the dimension is enabled
+    pub online: bool,
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
@@ -111,6 +113,8 @@ pub struct StatsConfFactInfoResp {
     /// The default maximum number of queries
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub query_limit: i64,
+    /// Whether the dimension is enabled
+    pub online: bool,
     pub remark: Option<String>,
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,

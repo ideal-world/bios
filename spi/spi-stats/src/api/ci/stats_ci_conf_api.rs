@@ -18,7 +18,7 @@ pub struct StatsCiConfApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/conf", tag = "bios_basic::ApiTag::Interface")]
 impl StatsCiConfApi {
     /// Add Dimension Configuration
-    #[oai(path = "/dim", method = "post")]
+    #[oai(path = "/dim", method = "put")]
     async fn dim_add(&self, add_req: Json<StatsConfDimAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
         stats_conf_serv::dim_add(&add_req.0, &funs, &ctx.0).await?;
@@ -60,7 +60,7 @@ impl StatsCiConfApi {
     }
 
     /// Add Fact Configuration
-    #[oai(path = "/fact", method = "post")]
+    #[oai(path = "/fact", method = "put")]
     async fn fact_add(&self, add_req: Json<StatsConfFactAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
         stats_conf_serv::fact_add(&add_req.0, &funs, &ctx.0).await?;
@@ -102,7 +102,7 @@ impl StatsCiConfApi {
     }
 
     /// Add Fact Column Configuration
-    #[oai(path = "/fact/:fact_key/col", method = "post")]
+    #[oai(path = "/fact/:fact_key/col", method = "put")]
     async fn fact_col_add(&self, fact_key: Path<String>, add_req: Json<StatsConfFactColAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
         stats_conf_serv::fact_col_add(&fact_key.0, &add_req.0, &funs, &ctx.0).await?;
@@ -161,19 +161,19 @@ impl StatsCiConfApi {
         TardisResp::ok(resp)
     }
 
-    /// Confirm Dim Configuration
-    #[oai(path = "/dim/:dim_key/confirm", method = "put")]
-    async fn dim_confirm(&self, dim_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    /// Online Dim Configuration
+    #[oai(path = "/dim/:dim_key/online", method = "put")]
+    async fn dim_online(&self, dim_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_conf_serv::dim_confirm(&dim_key.0, &funs, &ctx.0).await?;
+        stats_conf_serv::dim_online(&dim_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
-    /// Confirm Fact Configuration
-    #[oai(path = "/fact/:fact_key/confirm", method = "put")]
-    async fn fact_confirm(&self, fact_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    /// Online Fact Configuration
+    #[oai(path = "/fact/:fact_key/online", method = "put")]
+    async fn fact_online(&self, fact_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_conf_serv::fact_confirm(&fact_key.0, &funs, &ctx.0).await?;
+        stats_conf_serv::fact_online(&fact_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }

@@ -1,12 +1,7 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
-use lazy_static::lazy_static;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::tokio::sync::RwLock;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
@@ -17,11 +12,6 @@ use crate::dto::stats_conf_dto::{
 use crate::stats_initializer;
 
 use super::pg;
-
-lazy_static! {
-    pub static ref CONF_FACTS: Arc<RwLock<HashMap<String, (StatsConfFactInfoResp, Vec<StatsConfFactColInfoResp>)>>> = Arc::new(RwLock::new(HashMap::new()));
-    pub static ref CONF_DIMS: Arc<RwLock<HashMap<String, StatsConfDimInfoResp>>> = Arc::new(RwLock::new(HashMap::new()));
-}
 
 pub async fn dim_add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
@@ -149,7 +139,7 @@ pub async fn fact_col_paginate(
     }
 }
 
-pub async fn dim_confirm(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn dim_online(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_dim_serv::create_inst(key, funs, ctx).await,
@@ -157,7 +147,7 @@ pub async fn dim_confirm(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) 
     }
 }
 
-pub async fn fact_confirm(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn fact_online(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_conf_fact_serv::create_inst(key, funs, ctx).await,
