@@ -205,6 +205,14 @@ pub mod common_pg {
         Ok(conn)
     }
 
+    pub async fn init_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String)) -> TardisResult<TardisRelDBlConnection> {
+        let mut conn = bs_inst.0.conn();
+        if let Some(schema_name) = get_schema_name_from_ext(bs_inst.1) {
+            set_schema_to_session(&schema_name, &mut conn).await?;
+        }
+        Ok(conn)
+    }
+
     pub async fn init_table(
         conn: &TardisRelDBlConnection,
         tag: Option<&str>,

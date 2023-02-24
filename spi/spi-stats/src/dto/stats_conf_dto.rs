@@ -134,10 +134,6 @@ pub struct StatsConfFactColAddReq {
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
-    /// Valid when kind = Dimension, Whether the dimension row item is exclusive or not.
-    /// When true only one record can be valid for the same subject for the same time period.
-    /// E.g. the previous record will be invalid for the subsequent time period after the creator modifies it.
-    pub dim_exclusive_rec: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.
@@ -166,10 +162,6 @@ pub struct StatsConfFactColModifyReq {
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
-    /// Valid when kind = Dimension, Whether the dimension row item is exclusive or not.
-    /// When true only one record can be valid for the same subject for the same time period.
-    /// E.g. the previous record will be invalid for the subsequent time period after the creator modifies it.
-    pub dim_exclusive_rec: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.
@@ -201,10 +193,6 @@ pub struct StatsConfFactColInfoResp {
     /// valid when kind = Dimension, whether to allow multiple values.
     /// When true, the corresponding data format is an array type, and uses the gin type index
     pub dim_multi_values: Option<bool>,
-    /// Valid when kind = Dimension, Whether the dimension row item is exclusive or not.
-    /// When true only one record can be valid for the same subject for the same time period.
-    /// E.g. the previous record will be invalid for the subsequent time period after the creator modifies it.
-    pub dim_exclusive_rec: Option<bool>,
     /// Valid when kind = Measure, Used to specify the data type
     pub mes_data_type: Option<StatsDataTypeKind>,
     /// Valid when kind = Measure, Used to specify the data update frequency.

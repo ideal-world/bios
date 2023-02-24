@@ -44,10 +44,6 @@ pub(crate) async fn add(rel_conf_fact_key: &str, add_req: &StatsConfFactColAddRe
         params.push(Value::from(dim_multi_values));
         sql_fields.push("dim_multi_values");
     }
-    if let Some(dim_exclusive_rec) = add_req.dim_exclusive_rec {
-        params.push(Value::from(dim_exclusive_rec));
-        sql_fields.push("dim_exclusive_rec");
-    }
     if let Some(mes_data_type) = &add_req.mes_data_type {
         params.push(Value::from(mes_data_type.to_string()));
         sql_fields.push("mes_data_type");
@@ -106,10 +102,6 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactColModifyReq, fu
     if let Some(dim_multi_values) = modify_req.dim_multi_values {
         sql_sets.push(format!("dim_multi_values = ${}", sql_sets.len() + 2));
         params.push(Value::from(dim_multi_values));
-    }
-    if let Some(dim_exclusive_rec) = modify_req.dim_exclusive_rec {
-        sql_sets.push(format!("dim_exclusive_rec = ${}", sql_sets.len() + 2));
-        params.push(Value::from(dim_exclusive_rec));
     }
     if let Some(mes_data_type) = &modify_req.mes_data_type {
         sql_sets.push(format!("mes_data_type = ${}", sql_sets.len() + 2));
@@ -191,7 +183,7 @@ pub(crate) async fn paginate(
     let result = conn
         .query_all(
             &format!(
-                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, dim_exclusive_rec, mes_data_type, mes_frequency, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, update_time, count(*) OVER() AS total
+                r#"SELECT key, show_name, kind, remark, dim_rel_conf_dim_key, dim_multi_values, mes_data_type, mes_frequency, mes_act_by_dim_conf_keys, rel_conf_fact_and_col_key, update_time, count(*) OVER() AS total
 FROM starsys_stats_conf_fact
 WHERE 
     {}
@@ -223,7 +215,6 @@ LIMIT $2 OFFSET $3
                 kind: item.try_get("", "kind").unwrap(),
                 dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key").unwrap(),
                 dim_multi_values: item.try_get("", "dim_multi_values").unwrap(),
-                dim_exclusive_rec: item.try_get("", "dim_exclusive_rec").unwrap(),
                 mes_data_type: item.try_get("", "mes_data_type").unwrap(),
                 mes_frequency: item.try_get("", "mes_frequency").unwrap(),
                 mes_act_by_dim_conf_keys: item.try_get("", "mes_act_by_dim_conf_keys").unwrap(),
