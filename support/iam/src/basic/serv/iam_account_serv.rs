@@ -271,7 +271,8 @@ impl IamAccountServ {
                     .await?;
                 }
             }
-            let deleted_item_ids: Vec<String> = stored_cates.into_iter().filter(|r| !input_org_cate_ids.contains(&r.rel_rbum_set_cate_id.clone().unwrap_or_default())).map(|r| r.id).unique().collect();
+            let deleted_item_ids: Vec<String> =
+                stored_cates.into_iter().filter(|r| !input_org_cate_ids.contains(&r.rel_rbum_set_cate_id.clone().unwrap_or_default())).map(|r| r.id).unique().collect();
             for deleted_item_id in deleted_item_ids {
                 IamSetServ::delete_set_item(&deleted_item_id, funs, ctx).await?;
             }
