@@ -6,7 +6,7 @@ use tardis::{
 };
 
 use crate::{
-    api::ci::{stats_ci_conf_api, stats_ci_query_api},
+    api::ci::{stats_ci_conf_api, stats_ci_query_api, stats_ci_record_api},
     serv,
     stats_constants::DOMAIN_CODE,
 };
@@ -29,7 +29,12 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
     web_server
         .add_module(
             DOMAIN_CODE,
-            (spi_ci_bs_api::SpiCiBsApi, stats_ci_conf_api::StatsCiConfApi, stats_ci_query_api::StatsCiQueryApi),
+            (
+                spi_ci_bs_api::SpiCiBsApi,
+                stats_ci_conf_api::StatsCiConfApi,
+                stats_ci_record_api::StatsCiRecordApi,
+                stats_ci_query_api::StatsCiQueryApi,
+            ),
         )
         .await;
     Ok(())

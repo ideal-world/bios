@@ -1,9 +1,14 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::tokio::sync::RwLock;
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
+use lazy_static::lazy_static;
 
 use crate::dto::stats_conf_dto::{
     StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,
@@ -12,6 +17,11 @@ use crate::dto::stats_conf_dto::{
 use crate::stats_initializer;
 
 use super::pg;
+
+lazy_static! {
+    pub static ref CONF_FACTS: Arc<RwLock<HashMap<String, (StatsConfFactInfoResp, Vec<StatsConfFactColInfoResp>)>>> = Arc::new(RwLock::new(HashMap::new()));
+    pub static ref CONF_DIMS: Arc<RwLock<HashMap<String, StatsConfDimInfoResp>>> = Arc::new(RwLock::new(HashMap::new()));
+}
 
 pub async fn dim_add(add_req: &StatsConfDimAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {

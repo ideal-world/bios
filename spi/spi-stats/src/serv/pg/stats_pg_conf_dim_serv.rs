@@ -9,15 +9,17 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::stats_conf_dto::{StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq};
-
 use super::stats_pg_initializer;
+use crate::{
+    dto::stats_conf_dto::{StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq},
+    serv::stats_conf_serv::CONF_DIMS,
+};
 
 async fn has_inst_table(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("starsys_stats_inst_dim_{key}"), conn, ctx).await
 }
 
-async fn create_inst_table(dim_conf: StatsConfDimInfoResp, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<()> {
+async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<()> {
     let mut sql = vec![];
     sql.push("id serial PRIMARY KEY".to_string());
     sql.push("key character varying NOT NULL".to_string());
@@ -26,7 +28,7 @@ async fn create_inst_table(dim_conf: StatsConfDimInfoResp, conn: &TardisRelDBlCo
         sql.push("hierarchy smallint NOT NULL".to_string());
     }
     for hierarchy in 0..dim_conf.hierarchy.len() {
-        sql.push(format!("key{hierarchy} character varying NOT NULL"));
+        sql.push(format!("key{hierarchy} character varying NOT NULL DEFAULT ''"));
     }
     sql.push("st timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
     sql.push("et timestamp without time zone".to_string());
@@ -132,16 +134,18 @@ pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext
     conn.execute_one("DELETE FROM starsys_stats_conf_dim WHERE key = $1", vec![Value::from(key)]).await?;
     conn.execute_one(&format!("DROP TABLE starsys_stats_inst_dim_{key}"), vec![]).await?;
     conn.commit().await?;
+    CONF_DIMS.write().await.remove(key);
     Ok(())
 }
 
 pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
-    let result = get(key, &conn, ctx).await?;
-    if result.is_none() {
+    let mut dim_conf = paginate(Some(key.to_string()), None, 1, 1, None, None, funs, ctx).await?;
+    if dim_conf.total_size == 0 {
         return Err(funs.err().not_found("dim_fact", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"));
     }
+    let dim_conf = dim_conf.records.pop().unwrap();
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let conn = common_pg::init_conn(bs_inst).await?;
     if has_inst_table(key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "dim_inst",
@@ -150,34 +154,10 @@ pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisCo
             "409-spi-stats-dim-inst-exist",
         ));
     }
-    create_inst_table(result.unwrap(), &conn, ctx).await?;
+    create_inst_table(&dim_conf, &conn, ctx).await?;
     conn.commit().await?;
+    CONF_DIMS.write().await.insert(key.to_string(), dim_conf);
     Ok(())
-}
-
-pub(crate) async fn get(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfDimInfoResp>> {
-    let result = conn
-        .query_one(
-            &format!(
-                r#"SELECT key, show_name, stable_ds, data_type, hierarchy, remark, create_time, update_time
-FROM starsys_stats_conf_dim
-WHERE 
-    key = $1"#,
-            ),
-            vec![Value::from(key)],
-        )
-        .await?;
-    let result = result.map(|item| StatsConfDimInfoResp {
-        key: item.try_get("", "key").unwrap(),
-        show_name: item.try_get("", "show_name").unwrap(),
-        stable_ds: item.try_get("", "stable_ds").unwrap(),
-        data_type: item.try_get("", "data_type").unwrap(),
-        hierarchy: item.try_get("", "hierarchy").unwrap(),
-        remark: item.try_get("", "remark").unwrap(),
-        create_time: item.try_get("", "create_time").unwrap(),
-        update_time: item.try_get("", "update_time").unwrap(),
-    });
-    Ok(result)
 }
 
 pub(crate) async fn paginate(

@@ -3,9 +3,17 @@
 400-spi-graph-key-require	[from_key]与[to_key]至少有一个不能为空
 409-spi-stats-dim-conf-exist	维度配置已存在
 409-spi-stats-dim-inst-exist	维度实例已存在
+409-spi-stats-dim-inst-record-exist	维度实例记录已存在
 409-spi-stats-fact-conf-exist	事实配置已存在
 409-spi-stats-fact-inst-exist	事实实例已存在
 409-spi-stats-fact-conf-col-exist	事实字段配已存在
 404-spi-stats-dim-conf-not-exist	维度配置不存在
+404-spi-stats-dim-inst-not-exist	维度实例不存在
+404-spi-stats-dim-inst-record-not-exist	维度实例记录不存在
 404-spi-stats-fact-conf-not-exist	事实配置不存在
 404-spi-stats-fact-col-conf-not-exist	事实字段配置不存在
+404-spi-stats-fact-inst-not-exist	事实实例不存在
+404-spi-stats-fact-inst-record-not-exist	维度实例记录不存在
+400-spi-stats-dim-conf-not-hierarchy	维度配置不支持多层级
+409-spi-stats-dim-inst-record-hierarchy-too-deep	维度实例记录层级过深
+400-spi-stats-fact-inst-record-missing-column	事实实例记录缺少必要的字段

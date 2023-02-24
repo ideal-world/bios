@@ -3,3 +3,4 @@ pub mod stats_pg_conf_fact_serv;
 pub mod stats_pg_conf_fact_col_serv;
 pub mod stats_pg_initializer;
 pub mod stats_pg_query_serv;
+pub mod stats_pg_record_serv;

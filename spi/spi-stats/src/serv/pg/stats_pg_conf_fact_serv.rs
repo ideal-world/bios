@@ -1,4 +1,5 @@
 use bios_basic::spi::{spi_funs::SpiBsInstExtractor, spi_initializer::common_pg};
+
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{
@@ -11,10 +12,11 @@ use tardis::{
 
 use crate::{
     dto::stats_conf_dto::{StatsConfFactAddReq, StatsConfFactColInfoResp, StatsConfFactInfoResp, StatsConfFactModifyReq},
+    serv::stats_conf_serv::{CONF_DIMS, CONF_FACTS},
     stats_enumeration::{StatsDataTypeKind, StatsFactColKind},
 };
 
-use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer};
+use super::{stats_pg_conf_fact_col_serv, stats_pg_initializer};
 
 async fn has_inst_table(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("starsys_stats_inst_fact_{key}"), conn, ctx).await
@@ -22,20 +24,20 @@ async fn has_inst_table(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisCo
 
 async fn create_inst_table(
     fact_conf: &StatsConfFactInfoResp,
-    fact_col_conf_set: Vec<StatsConfFactColInfoResp>,
+    fact_col_conf_set: &Vec<StatsConfFactColInfoResp>,
     conn: &TardisRelDBlConnection,
     funs: &TardisFunsInst,
     ctx: &TardisContext,
 ) -> TardisResult<()> {
+    // Create fact inst table
     let mut sql = vec![];
     let mut index = vec![];
     sql.push("key character varying NOT NULL".to_string());
     sql.push("own_paths character varying NOT NULL".to_string());
     index.push(("own_paths".to_string(), "btree"));
-    sql.push("show_name character varying NOT NULL".to_string());
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {
-            if let Some(dim_conf) = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.clone().unwrap(), conn, ctx).await? {
+            if let Some(dim_conf) = CONF_DIMS.read().await.get(&fact_col_conf.dim_rel_conf_dim_key.clone().unwrap()) {
                 if dim_conf.stable_ds {
                     sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
                     index.push((fact_col_conf.key.clone(), "btree"));
@@ -73,7 +75,7 @@ async fn create_inst_table(
                 return Err(funs.err().not_found(
                     "fact_inst",
                     "fact_inst",
-                    &format!("The dimension config [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.unwrap()),
+                    &format!("The dimension config [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.clone().unwrap()),
                     "404-spi-stats-dim-conf-not-exist",
                 ));
             }
@@ -90,19 +92,31 @@ async fn create_inst_table(
             sql.push(format!("{} character varying", &fact_col_conf.key));
         }
     }
-    sql.push("st timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
-    index.push(("st".to_string(), "btree"));
-    index.push(("(st::date)".to_string(), "btree"));
-    index.push(("date_part('hour',st)".to_string(), "btree"));
-    index.push(("date_part('day',st)".to_string(), "btree"));
-    sql.push("et timestamp without time zone".to_string());
-    index.push(("et".to_string(), "btree"));
+    sql.push("ct timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
+    index.push(("ct".to_string(), "btree"));
+    index.push(("(ct::date)".to_string(), "btree"));
+    index.push(("date_part('hour',ct)".to_string(), "btree"));
+    index.push(("date_part('day',ct)".to_string(), "btree"));
 
     let mut swap_index = vec![];
     for i in &index {
         swap_index.push((&i.0[..], i.1));
     }
     common_pg::init_table(conn, Some(&fact_conf.key), "starsys_stats_inst_fact_", sql.join(",\r\n").as_str(), swap_index, None, ctx).await?;
+
+    // Create fact inst delete status table
+    common_pg::init_table(
+        conn,
+        Some(&format!("{}_del", fact_conf.key)),
+        "starsys_stats_inst_fact_",
+        r#"key character varying NOT NULL,
+    ct timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
+        vec![],
+        None,
+        ctx,
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -194,14 +208,16 @@ pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext
     conn.execute_one("DELETE FROM starsys_stats_conf_fact_col WHERE rel_conf_fact_key = $1", vec![Value::from(key)]).await?;
     conn.execute_one(&format!("DROP TABLE starsys_stats_inst_fact_{key}"), vec![]).await?;
     conn.commit().await?;
+    CONF_FACTS.write().await.remove(key);
     Ok(())
 }
 
 pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let fact_conf = paginate(Some(key.to_string()), None, 1, 1, None, None, funs, ctx).await?;
+    let mut fact_conf = paginate(Some(key.to_string()), None, 1, 1, None, None, funs, ctx).await?;
     if fact_conf.total_size == 0 {
         return Err(funs.err().not_found("fact_conf", "create_inst", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"));
     }
+    let fact_conf = fact_conf.records.pop().unwrap();
     let fact_col_conf = stats_pg_conf_fact_col_serv::paginate(None, Some(key.to_string()), None, 1, 1000, None, None, funs, ctx).await?;
     if fact_col_conf.total_size == 0 {
         return Err(funs.err().not_found(
@@ -212,7 +228,7 @@ pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisCo
         ));
     }
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let conn = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
+    let conn = common_pg::init_conn(bs_inst).await?;
     if has_inst_table(key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_inst",
@@ -221,8 +237,9 @@ pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisCo
             "409-spi-stats-fact-inst-exist",
         ));
     }
-    create_inst_table(fact_conf.records.first().unwrap(), fact_col_conf.records, &conn, funs, ctx).await?;
+    create_inst_table(&fact_conf, &fact_col_conf.records, &conn, funs, ctx).await?;
     conn.commit().await?;
+    CONF_FACTS.write().await.insert(key.to_string(), (fact_conf, fact_col_conf.records));
     Ok(())
 }
 
