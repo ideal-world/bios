@@ -17,3 +17,5 @@
 400-spi-stats-dim-conf-not-hierarchy	维度配置不支持多层级
 409-spi-stats-dim-inst-record-hierarchy-too-deep	维度实例记录层级过深
 400-spi-stats-fact-inst-record-missing-column	事实实例记录缺少必要的字段
+409-spi-stats-dim-conf-not-online	维度配置未发布
+409-spi-stats-fact-conf-not-online	事实配置未发布

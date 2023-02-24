@@ -15,7 +15,7 @@ use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
 use tardis::{testcontainers, tokio, TardisFuns};
-mod test_stats_proc;
+mod test_stats_conf;
 
 #[tokio::test]
 async fn test_log() -> TardisResult<()> {
@@ -76,7 +76,7 @@ async fn init_data() -> TardisResult<()> {
 
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
 
-    test_stats_proc::test(&mut client).await?;
+    test_stats_conf::test(&mut client).await?;
 
     Ok(())
 }
