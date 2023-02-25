@@ -107,7 +107,7 @@ pub mod common_pg {
         TardisFuns,
     };
 
-    use crate::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_funs::SpiBsInst};
+    use crate::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants::GLOBAL_STORAGE_FLAG, spi_funs::SpiBsInst};
 
     use super::common;
 
@@ -142,7 +142,7 @@ pub mod common_pg {
         let table = conn
             .query_one(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2",
-                vec![Value::from(schema_name.as_str()), Value::from(table_name)],
+                vec![Value::from(schema_name.as_str()), Value::from(format!("{GLOBAL_STORAGE_FLAG}_{table_name}"))],
             )
             .await?;
         Ok(table.is_some())
@@ -156,7 +156,7 @@ pub mod common_pg {
 
     pub fn package_table_name(table_name: &str, ctx: &TardisContext) -> String {
         let schema_name = get_schema_name_from_context(ctx);
-        format!("{schema_name}.starsys_{table_name}")
+        format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_name}")
     }
 
     pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
@@ -198,13 +198,13 @@ pub mod common_pg {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
         let conn = bs_inst.0.conn();
         let schema_name = get_schema_name_from_ext(bs_inst.1).unwrap();
-        if check_table_exit(&format!("starsys_{table_flag}{tag}"), &conn, ctx).await? {
-            return Ok((conn, format!("{schema_name}.starsys_{table_flag}{tag}")));
+        if check_table_exit(&format!("{table_flag}{tag}"), &conn, ctx).await? {
+            return Ok((conn, format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}")));
         } else if !mgr {
             return Err(TardisError::bad_request("The requested tag does not exist", ""));
         }
         do_init_table(&schema_name, &conn, &tag, table_flag, table_create_content, indexes, update_time_field).await?;
-        Ok((conn, format!("{schema_name}.starsys_{table_flag}{tag}")))
+        Ok((conn, format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}")))
     }
 
     /// return db connection and schema name
@@ -241,7 +241,7 @@ pub mod common_pg {
     ) -> TardisResult<()> {
         conn.execute_one(
             &format!(
-                r#"CREATE TABLE {schema_name}.starsys_{table_flag}{tag}
+                r#"CREATE TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}
 (
     {table_create_content}
 )"#
@@ -252,7 +252,7 @@ pub mod common_pg {
         for (field_name_or_fun, index_type) in indexes {
             let index_part = field_name_or_fun.replace(|c: char| !c.is_ascii_alphanumeric(), "_");
             conn.execute_one(
-                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.starsys_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
+                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
                 vec![],
             )
             .await?;
@@ -278,7 +278,7 @@ $$ language 'plpgsql';"###,
                     r###"CREATE OR REPLACE TRIGGER TARDIS_ATUO_UPDATE_TIME_ON
     BEFORE UPDATE
     ON
-        {}.starsys_{}{}
+        {}.{GLOBAL_STORAGE_FLAG}_{}{}
     FOR EACH ROW
 EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_ITME_{}();"###,
                     schema_name,

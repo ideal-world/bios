@@ -47,8 +47,8 @@ impl StatsCiConfApi {
         &self,
         key: Query<Option<String>>,
         show_name: Query<Option<String>>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
@@ -89,8 +89,8 @@ impl StatsCiConfApi {
         &self,
         key: Query<Option<String>>,
         show_name: Query<Option<String>>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
@@ -113,21 +113,22 @@ impl StatsCiConfApi {
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "patch")]
     async fn fact_col_modify(
         &self,
+        fact_key: Path<String>,
         fact_col_key: Path<String>,
         modify_req: Json<StatsConfFactColModifyReq>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_conf_serv::fact_col_modify(&fact_col_key.0, &modify_req.0, &funs, &ctx.0).await?;
+        stats_conf_serv::fact_col_modify(&fact_key.0, &fact_col_key.0, &modify_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
     /// Delete Fact Column Configuration
     #[oai(path = "/fact/:fact_key/col/:fact_col_key", method = "delete")]
-    async fn fact_col_delete(&self, fact_col_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn fact_col_delete(&self, fact_key: Path<String>, fact_col_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_conf_serv::fact_col_delete(&fact_col_key.0, &funs, &ctx.0).await?;
+        stats_conf_serv::fact_col_delete(&fact_key.0, &fact_col_key.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -135,11 +136,11 @@ impl StatsCiConfApi {
     #[oai(path = "/fact/:fact_key/col", method = "get")]
     async fn fact_col_paginate(
         &self,
-        fact_key: Query<Option<String>>,
+        fact_key: Path<String>,
+        key: Query<Option<String>>,
         show_name: Query<Option<String>>,
-        rel_conf_fact_key: Query<Option<String>>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,
@@ -148,8 +149,8 @@ impl StatsCiConfApi {
         let funs = request.tardis_fun_inst();
         let resp = stats_conf_serv::fact_col_paginate(
             fact_key.0,
+            key.0,
             show_name.0,
-            rel_conf_fact_key.0,
             page_number.0,
             page_size.0,
             desc_by_create.0,
@@ -161,7 +162,7 @@ impl StatsCiConfApi {
         TardisResp::ok(resp)
     }
 
-    /// Online Dim Configuration
+    /// Online dimension configuration
     #[oai(path = "/dim/:dim_key/online", method = "put")]
     async fn dim_online(&self, dim_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
