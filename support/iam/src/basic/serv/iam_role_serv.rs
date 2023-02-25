@@ -347,8 +347,8 @@ impl IamRoleServ {
 
     pub async fn paginate_id_rel_accounts(
         role_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -359,8 +359,8 @@ impl IamRoleServ {
 
     pub async fn paginate_simple_rel_accounts(
         role_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -434,8 +434,8 @@ impl IamRoleServ {
 
     pub async fn paginate_id_rel_res(
         role_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -446,8 +446,8 @@ impl IamRoleServ {
 
     pub async fn paginate_simple_rel_res(
         role_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_by_create: Option<bool>,
         desc_by_update: Option<bool>,
         funs: &TardisFunsInst,

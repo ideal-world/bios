@@ -156,7 +156,7 @@ pub mod common_pg {
 
     pub fn package_table_name(table_name: &str, ctx: &TardisContext) -> String {
         let schema_name = get_schema_name_from_context(ctx);
-        format!("{schema_name}.{table_name}")
+        format!("{schema_name}.starsys_{table_name}")
     }
 
     pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {

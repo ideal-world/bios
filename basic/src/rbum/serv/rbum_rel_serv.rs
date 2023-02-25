@@ -342,8 +342,8 @@ impl RbumRelServ {
         from_rbum_kind: &RbumRelFromKind,
         with_sub: bool,
         from_rbum_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -375,8 +375,8 @@ impl RbumRelServ {
         from_rbum_kind: &RbumRelFromKind,
         with_sub: bool,
         from_rbum_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -414,8 +414,8 @@ impl RbumRelServ {
         from_rbum_kind: &RbumRelFromKind,
         with_sub: bool,
         from_rbum_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -531,8 +531,8 @@ impl RbumRelServ {
     pub async fn paginate_to_id_rels(
         tag: &str,
         to_rbum_item_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -550,8 +550,8 @@ impl RbumRelServ {
     pub async fn paginate_to_simple_rels(
         tag: &str,
         to_rbum_item_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -588,8 +588,8 @@ impl RbumRelServ {
     pub async fn paginate_to_rels(
         tag: &str,
         to_rbum_item_id: &str,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -666,8 +666,8 @@ impl RbumRelServ {
 
     pub async fn paginate_simple_rels(
         filter: &RbumRelFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         is_from: bool,
@@ -685,8 +685,8 @@ impl RbumRelServ {
 
     pub async fn paginate_rels(
         filter: &RbumRelFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -695,9 +695,9 @@ impl RbumRelServ {
         let rbum_rels = RbumRelServ::paginate_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await?;
         let result = Self::package_agg_rels(rbum_rels.records, filter, funs, ctx).await?;
         Ok(TardisPage {
-            page_number,
+            page_size: page_size as u64,
+            page_number: page_number as u64,
             total_size: rbum_rels.total_size,
-            page_size,
             records: result,
         })
     }

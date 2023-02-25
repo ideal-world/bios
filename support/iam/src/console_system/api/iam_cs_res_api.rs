@@ -141,8 +141,8 @@ impl IamCsResApi {
     #[oai(path = "/page", method = "get")]
     async fn paginate(
         &self,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
         ctx: TardisContextExtractor,

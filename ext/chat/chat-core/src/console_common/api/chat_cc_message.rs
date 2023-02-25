@@ -32,8 +32,8 @@ impl ChatCcMessageApi {
         to_id: Query<String>,
         start_time: Query<DateTime<Utc>>,
         end_time: Query<DateTime<Utc>>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<ChatMessageInfoResp>> {
         let funs = chat_constants::get_tardis_inst();

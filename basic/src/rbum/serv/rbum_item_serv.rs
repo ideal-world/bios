@@ -611,8 +611,8 @@ where
 
     async fn paginate_id_items(
         filter: &ItemFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -623,8 +623,8 @@ where
 
     async fn do_paginate_id_items(
         filter: &ItemFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -642,10 +642,10 @@ where
         if let Some(sort) = desc_sort_by_update {
             query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
-        let (records, total_size) = funs.db().paginate_dtos::<IdResp>(&query, page_number, page_size).await?;
+        let (records, total_size) = funs.db().paginate_dtos::<IdResp>(&query, page_number as u64, page_size as u64).await?;
         Ok(TardisPage {
-            page_size,
-            page_number,
+            page_size: page_size as u64,
+            page_number: page_number as u64,
             total_size,
             records: records.into_iter().map(|resp| resp.id).collect(),
         })
@@ -653,8 +653,8 @@ where
 
     async fn paginate_items(
         filter: &ItemFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -665,8 +665,8 @@ where
 
     async fn do_paginate_items(
         filter: &ItemFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -684,10 +684,10 @@ where
         if let Some(sort) = desc_sort_by_update {
             query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
-        let (records, total_size) = funs.db().paginate_dtos(&query, page_number, page_size).await?;
+        let (records, total_size) = funs.db().paginate_dtos(&query, page_number as u64, page_size as u64).await?;
         Ok(TardisPage {
-            page_size,
-            page_number,
+            page_size: page_size as u64,
+            page_number: page_number as u64,
             total_size,
             records,
         })
@@ -695,8 +695,8 @@ where
 
     async fn paginate_detail_items(
         filter: &ItemFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -707,8 +707,8 @@ where
 
     async fn do_paginate_detail_items(
         filter: &ItemFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -726,10 +726,10 @@ where
         if let Some(sort) = desc_sort_by_update {
             query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
-        let (records, total_size) = funs.db().paginate_dtos(&query, page_number, page_size).await?;
+        let (records, total_size) = funs.db().paginate_dtos(&query, page_number as u64, page_size as u64).await?;
         Ok(TardisPage {
-            page_size,
-            page_number,
+            page_size: page_size as u64,
+            page_number: page_number as u64,
             total_size,
             records,
         })

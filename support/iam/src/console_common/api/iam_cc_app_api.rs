@@ -24,8 +24,8 @@ impl IamCcAppApi {
         name: Query<Option<String>>,
         desc_by_create: Query<Option<bool>>,
         desc_by_update: Query<Option<bool>>,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAppSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
