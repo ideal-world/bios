@@ -89,8 +89,8 @@ impl IamCtCertManageApi {
     #[oai(path = "/", method = "get")]
     async fn paginate_certs(
         &self,
-        page_number: Query<u64>,
-        page_size: Query<u64>,
+        page_number: Query<u32>,
+        page_size: Query<u32>,
         supplier: Query<String>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<RbumCertDetailResp>> {

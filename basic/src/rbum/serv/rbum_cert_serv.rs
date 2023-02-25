@@ -494,7 +494,7 @@ impl RbumCrudOperation<rbum_cert::ActiveModel, RbumCertAddReq, RbumCertModifyReq
                         },
                         // Skip normal records
                         2,
-                        rbum_cert_conf.coexist_num as u64 - 1,
+                        rbum_cert_conf.coexist_num as u32 - 1,
                         Some(true),
                         None,
                         funs,

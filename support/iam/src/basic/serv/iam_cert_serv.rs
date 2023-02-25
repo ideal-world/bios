@@ -254,8 +254,8 @@ impl IamCertServ {
         name: Option<String>,
         with_sub: bool,
         iam_item_id: Option<String>,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
@@ -663,8 +663,8 @@ impl IamCertServ {
 
     pub async fn paginate_certs(
         filter: &RbumCertFilterReq,
-        page_number: u64,
-        page_size: u64,
+        page_number: u32,
+        page_size: u32,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
