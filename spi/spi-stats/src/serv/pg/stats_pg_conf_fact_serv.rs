@@ -20,8 +20,8 @@ use crate::{
 
 use super::{stats_pg_conf_dim_serv, stats_pg_conf_fact_col_serv, stats_pg_initializer};
 
-pub async fn online(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
-    common_pg::check_table_exit(&format!("starsys_stats_inst_fact_{key}"), conn, ctx).await
+pub async fn online(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
+    common_pg::check_table_exit(&format!("stats_inst_fact_{fact_conf_key}"), conn, ctx).await
 }
 
 pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -34,14 +34,6 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
             "add",
             "The fact config already exists, please delete it and then add it.",
             "409-spi-stats-fact-conf-exist",
-        ));
-    }
-    if online(&add_req.key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "fact_conf",
-            "add",
-            "The fact instance table already exists, please delete it and then add it.",
-            "409-spi-stats-fact-inst-exist",
         ));
     }
     let params = vec![
@@ -66,11 +58,11 @@ VALUES
     Ok(())
 }
 
-pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn modify(fact_conf_key: &str, modify_req: &StatsConfFactModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if online(key, &conn, ctx).await? {
+    if online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_conf",
             "modify",
@@ -79,7 +71,7 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfFactModifyReq, funs:
         ));
     }
     let mut sql_sets = vec![];
-    let mut params = vec![Value::from(key.to_string())];
+    let mut params = vec![Value::from(fact_conf_key.to_string())];
     if let Some(show_name) = &modify_req.show_name {
         sql_sets.push(format!("show_name = ${}", params.len() + 1));
         params.push(Value::from(show_name.to_string()));
@@ -107,33 +99,36 @@ WHERE key = $1
     Ok(())
 }
 
-pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn delete(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
-    conn.execute_one(
-        &format!("DELETE FROM {} WHERE rel_conf_fact_key = $1", package_table_name("starsys_stats_conf_fact_col", ctx)),
-        vec![Value::from(key)],
-    )
-    .await?;
-    if online(key, &conn, ctx).await? {
-        conn.execute_one(&format!("DROP TABLE {}{key}", package_table_name("starsys_stats_inst_fact_", ctx)), vec![]).await?;
-        conn.execute_one(&format!("DROP TABLE {}{key}_del", package_table_name("starsys_stats_inst_fact_", ctx)), vec![]).await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(fact_conf_key)]).await?;
+    // The lazy loading mechanism may cause the ``<schema>.starsys_stats_inst_fact_<key>_col`` table to not be created
+    if common_pg::check_table_exit(&format!("stats_inst_fact_{fact_conf_key}_col"), &conn, ctx).await? {
+        conn.execute_one(
+            &format!("DELETE FROM {} WHERE rel_conf_fact_key = $1", package_table_name("stats_conf_fact_col", ctx)),
+            vec![Value::from(fact_conf_key)],
+        )
+        .await?;
+    }
+    if online(fact_conf_key, &conn, ctx).await? {
+        conn.execute_one(&format!("DROP TABLE {}{fact_conf_key}", package_table_name("stats_inst_fact_", ctx)), vec![]).await?;
+        conn.execute_one(&format!("DROP TABLE {}{fact_conf_key}_del", package_table_name("stats_inst_fact_", ctx)), vec![]).await?;
     }
     conn.commit().await?;
     Ok(())
 }
 
-pub(in crate::serv::pg) async fn get(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
-    do_paginate(Some(key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+pub(in crate::serv::pg) async fn get(fact_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfFactInfoResp>> {
+    do_paginate(Some(fact_conf_key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
-    key: Option<String>,
+    fact_conf_key: Option<String>,
     show_name: Option<String>,
-    page_number: u64,
-    page_size: u64,
+    page_number: u32,
+    page_size: u32,
     desc_by_create: Option<bool>,
     desc_by_update: Option<bool>,
     funs: &TardisFunsInst,
@@ -142,26 +137,26 @@ pub(crate) async fn paginate(
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, _) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
 
-    do_paginate(key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
+    do_paginate(fact_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
 }
 
 async fn do_paginate(
-    key: Option<String>,
+    fact_conf_key: Option<String>,
     show_name: Option<String>,
-    page_number: u64,
-    page_size: u64,
+    page_number: u32,
+    page_size: u32,
     desc_by_create: Option<bool>,
     desc_by_update: Option<bool>,
     conn: &TardisRelDBlConnection,
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfFactInfoResp>> {
-    let table_name = package_table_name("starsys_stats_conf_fact", ctx);
+    let table_name = package_table_name("stats_conf_fact", ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
-    if let Some(key) = &key {
+    if let Some(fact_conf_key) = &fact_conf_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(Value::from(key.to_string()));
+        params.push(Value::from(fact_conf_key.to_string()));
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
@@ -207,7 +202,7 @@ LIMIT $1 OFFSET $2
             remark: item.try_get("", "remark").unwrap(),
             create_time: item.try_get("", "create_time").unwrap(),
             update_time: item.try_get("", "update_time").unwrap(),
-            online: online(&item.try_get::<String>("", "key").unwrap(), &conn, ctx).await.unwrap(),
+            online: online(&item.try_get::<String>("", "key").unwrap(), conn, ctx).await.unwrap(),
         });
     }
     Ok(TardisPage {
@@ -218,15 +213,16 @@ LIMIT $1 OFFSET $2
     })
 }
 
-pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn create_inst(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
 
-    let fact_conf = get(key, &conn, ctx).await?.ok_or(funs.err().not_found("fact_conf", "create_inst", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?;
-
-    let fact_col_conf = stats_pg_conf_fact_col_serv::find_by_fact_key(&fact_conf.key, &conn, ctx).await?;
-    if fact_col_conf.len() == 0 {
+    let fact_conf = get(fact_conf_key, &conn, ctx)
+        .await?
+        .ok_or_else(|| funs.err().not_found("fact_conf", "create_inst", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?;
+    let fact_col_conf = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf.key, &conn, ctx).await?;
+    if fact_col_conf.is_empty() {
         return Err(funs.err().not_found(
             "fact_conf",
             "create_inst",
@@ -235,7 +231,7 @@ pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisCo
         ));
     }
 
-    if online(key, &conn, ctx).await? {
+    if online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "fact_inst",
             "create_inst",
@@ -264,7 +260,7 @@ async fn create_inst_table(
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let dim_conf_key = &fact_col_conf.dim_rel_conf_dim_key.clone().unwrap();
-            if !stats_pg_conf_dim_serv::online(dim_conf_key, &conn, ctx).await? {
+            if !stats_pg_conf_dim_serv::online(dim_conf_key, conn, ctx).await? {
                 return Err(funs.err().conflict(
                     "fact_inst",
                     "create",
@@ -273,7 +269,10 @@ async fn create_inst_table(
                 ));
             }
             let dim_conf = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx).await?.unwrap();
-            if dim_conf.stable_ds {
+            if dim_conf.stable_ds && fact_col_conf.dim_multi_values.unwrap_or(false) {
+                sql.push(format!("{} integer[] NOT NULL", &fact_col_conf.key));
+                index.push((fact_col_conf.key.clone(), "btree"));
+            } else if dim_conf.stable_ds {
                 sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
                 index.push((fact_col_conf.key.clone(), "btree"));
             } else if fact_col_conf.dim_multi_values.unwrap_or(false) {
@@ -292,9 +291,9 @@ async fn create_inst_table(
                     StatsDataTypeKind::DateTime => {
                         sql.push(format!("{} timestamp with time zone NOT NULL", &fact_col_conf.key));
                         index.push((fact_col_conf.key.clone(), "btree"));
-                        index.push((format!("({}::date)", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('hour',{})", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('day',{})", fact_col_conf.key), "btree"));
+                        index.push((format!("date(timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('hour',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
                     }
                     StatsDataTypeKind::Date => {
                         sql.push(format!("{} date NOT NULL", &fact_col_conf.key));
@@ -321,9 +320,9 @@ async fn create_inst_table(
     }
     sql.push("ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
     index.push(("ct".to_string(), "btree"));
-    index.push(("(ct::date)".to_string(), "btree"));
-    index.push(("date_part('hour',ct)".to_string(), "btree"));
-    index.push(("date_part('day',ct)".to_string(), "btree"));
+    index.push(("date(timezone('UTC', ct))".to_string(), "btree"));
+    index.push(("date_part('hour',timezone('UTC', ct))".to_string(), "btree"));
+    index.push(("date_part('day',timezone('UTC', ct))".to_string(), "btree"));
 
     let mut swap_index = vec![];
     for i in &index {

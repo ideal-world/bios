@@ -44,7 +44,7 @@ pub async fn init_conf_fact_table_and_conn(
         "stats_conf_fact",
         r#"key character varying NOT NULL,
     show_name character varying NOT NULL,
-    query_limit integer DEFAULT 1000,
+    query_limit integer DEFAULT 10000,
     remark character varying NOT NULL,
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,

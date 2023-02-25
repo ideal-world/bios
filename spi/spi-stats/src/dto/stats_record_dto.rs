@@ -27,5 +27,4 @@ pub struct StatsFactRecordsLoadReq {
 pub struct StatsDimRecordAddReq {
     pub show_name: String,
     pub parent_key: Option<String>,
-    pub ct: DateTime<Utc>,
 }

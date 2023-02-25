@@ -15,8 +15,8 @@ use tardis::{
 use super::stats_pg_initializer;
 use crate::dto::stats_conf_dto::{StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq};
 
-pub async fn online(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
-    common_pg::check_table_exit(&format!("starsys_stats_inst_dim_{key}"), conn, ctx).await
+pub async fn online(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
+    common_pg::check_table_exit(&format!("stats_inst_dim_{dim_conf_key}"), conn, ctx).await
 }
 
 pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -29,14 +29,6 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ct
             "add",
             "The dimension config already exists, please delete it and then add it.",
             "409-spi-stats-dim-conf-exist",
-        ));
-    }
-    if online(&add_req.key, &conn, ctx).await? {
-        return Err(funs.err().conflict(
-            "dim_conf",
-            "add",
-            "The dimension instance table already exists, please delete it and then add it.",
-            "409-spi-stats-dim-inst-exist",
         ));
     }
     let params = vec![
@@ -63,11 +55,11 @@ VALUES
     Ok(())
 }
 
-pub(crate) async fn modify(key: &str, modify_req: &StatsConfDimModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn modify(dim_conf_key: &str, modify_req: &StatsConfDimModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if online(key, &conn, ctx).await? {
+    if online(dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "dim_conf",
             "modify",
@@ -76,7 +68,7 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfDimModifyReq, funs: 
         ));
     }
     let mut sql_sets = vec![];
-    let mut params = vec![Value::from(key.to_string())];
+    let mut params = vec![Value::from(dim_conf_key.to_string())];
     if let Some(show_name) = &modify_req.show_name {
         sql_sets.push(format!("show_name = ${}", params.len() + 1));
         params.push(Value::from(show_name.to_string()));
@@ -101,8 +93,7 @@ pub(crate) async fn modify(key: &str, modify_req: &StatsConfDimModifyReq, funs: 
         &format!(
             r#"UPDATE {table_name}
 SET {}
-WHERE key = $1
-"#,
+WHERE key = $1"#,
             sql_sets.join(",")
         ),
         params,
@@ -112,27 +103,27 @@ WHERE key = $1
     Ok(())
 }
 
-pub(crate) async fn delete(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn delete(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
-    if online(key, &conn, ctx).await? {
-        conn.execute_one(&format!("DROP TABLE {}_{key}", package_table_name("starsys_stats_inst_dim", ctx)), vec![]).await?;
+    conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(dim_conf_key)]).await?;
+    if online(dim_conf_key, &conn, ctx).await? {
+        conn.execute_one(&format!("DROP TABLE {}_{dim_conf_key}", package_table_name("stats_inst_dim", ctx)), vec![]).await?;
     }
     conn.commit().await?;
     Ok(())
 }
 
-pub(in crate::serv::pg) async fn get(key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfDimInfoResp>> {
-    do_paginate(Some(key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
+pub(in crate::serv::pg) async fn get(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<StatsConfDimInfoResp>> {
+    do_paginate(Some(dim_conf_key.to_string()), None, 1, 1, None, None, conn, ctx).await.map(|page| page.records.into_iter().next())
 }
 
 pub(crate) async fn paginate(
-    key: Option<String>,
+    dim_conf_key: Option<String>,
     show_name: Option<String>,
-    page_number: u64,
-    page_size: u64,
+    page_number: u32,
+    page_size: u32,
     desc_by_create: Option<bool>,
     desc_by_update: Option<bool>,
     funs: &TardisFunsInst,
@@ -140,26 +131,26 @@ pub(crate) async fn paginate(
 ) -> TardisResult<TardisPage<StatsConfDimInfoResp>> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, _) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
-    do_paginate(key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
+    do_paginate(dim_conf_key, show_name, page_number, page_size, desc_by_create, desc_by_update, &conn, ctx).await
 }
 
 async fn do_paginate(
-    key: Option<String>,
+    dim_conf_key: Option<String>,
     show_name: Option<String>,
-    page_number: u64,
-    page_size: u64,
+    page_number: u32,
+    page_size: u32,
     desc_by_create: Option<bool>,
     desc_by_update: Option<bool>,
     conn: &TardisRelDBlConnection,
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<StatsConfDimInfoResp>> {
-    let table_name = package_table_name("starsys_stats_conf_dim", ctx);
+    let table_name = package_table_name("stats_conf_dim", ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
     let mut sql_order = vec![];
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
-    if let Some(key) = &key {
+    if let Some(dim_conf_key) = &dim_conf_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(Value::from(key.to_string()));
+        params.push(Value::from(dim_conf_key.to_string()));
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
@@ -207,7 +198,7 @@ LIMIT $1 OFFSET $2
             remark: item.try_get("", "remark").unwrap(),
             create_time: item.try_get("", "create_time").unwrap(),
             update_time: item.try_get("", "update_time").unwrap(),
-            online: online(&item.try_get::<String>("", "key").unwrap(), &conn, ctx).await.unwrap(),
+            online: online(&item.try_get::<String>("", "key").unwrap(), conn, ctx).await.unwrap(),
         });
     }
     Ok(TardisPage {
@@ -218,15 +209,16 @@ LIMIT $1 OFFSET $2
     })
 }
 
-pub(crate) async fn create_inst(key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
 
-    let dim_conf =
-        get(key, &conn, ctx).await?.ok_or(funs.err().not_found("dim_fact", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
+    let dim_conf = get(dim_conf_key, &conn, ctx)
+        .await?
+        .ok_or_else(|| funs.err().not_found("dim_fact", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
 
-    if online(key, &conn, ctx).await? {
+    if online(dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
             "dim_inst",
             "create_inst",
@@ -250,7 +242,7 @@ async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlC
     for hierarchy in 0..dim_conf.hierarchy.len() {
         sql.push(format!("key{hierarchy} character varying NOT NULL DEFAULT ''"));
     }
-    sql.push("st timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
+    sql.push("ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
     sql.push("et timestamp with time zone".to_string());
 
     common_pg::init_table(conn, Some(&dim_conf.key), "stats_inst_dim", sql.join(",\r\n").as_str(), vec![], None, ctx).await?;

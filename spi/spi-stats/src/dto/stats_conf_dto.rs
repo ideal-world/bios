@@ -85,7 +85,7 @@ pub struct StatsConfFactAddReq {
     pub show_name: String,
     /// The default maximum number of queries
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub query_limit: i64,
+    pub query_limit: i32,
     pub remark: Option<String>,
 }
 
@@ -97,7 +97,7 @@ pub struct StatsConfFactModifyReq {
     pub show_name: Option<String>,
     /// The default maximum number of queries
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub query_limit: Option<i64>,
+    pub query_limit: Option<i32>,
     pub remark: Option<String>,
 }
 
@@ -112,7 +112,7 @@ pub struct StatsConfFactInfoResp {
     pub show_name: String,
     /// The default maximum number of queries
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
-    pub query_limit: i64,
+    pub query_limit: i32,
     /// Whether the dimension is enabled
     pub online: bool,
     pub remark: Option<String>,

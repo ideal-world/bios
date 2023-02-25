@@ -19,3 +19,4 @@
 400-spi-stats-fact-inst-record-missing-column	事实实例记录缺少必要的字段
 409-spi-stats-dim-conf-not-online	维度配置未发布
 409-spi-stats-fact-conf-not-online	事实配置未发布
+400-spi-stats-dim-conf-stable-ds-false	维度配置为非稳定数据集
