@@ -2,7 +2,10 @@ use bios_basic::spi::{spi_funs::SpiBsInstExtractor, spi_initializer};
 use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    db::{
+        reldb_client::TardisRelDBClient,
+        sea_orm::{self, Value},
+    },
     TardisFunsInst,
 };
 
@@ -115,9 +118,9 @@ pub async fn find_versions(tag: String, key: String, funs: &TardisFunsInst, ctx:
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, table_name) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
-        .query_all(
+        .find_dtos_by_sql(
             &format!(
-                r#"SELECT DISTINCT ON(from_version) from_version, ts FROM {table_name}
+                r#"SELECT DISTINCT ON(from_version) from_version AS version, ts FROM {table_name}
             WHERE tag = $1 AND from_key = $2 AND reverse = false
             ORDER BY from_version DESC
                 "#
@@ -125,14 +128,6 @@ pub async fn find_versions(tag: String, key: String, funs: &TardisFunsInst, ctx:
             vec![Value::from(tag.as_str()), Value::from(key.as_str())],
         )
         .await?;
-    conn.commit().await?;
-    let result = result
-        .into_iter()
-        .map(|item| GraphNodeVersionResp {
-            version: item.try_get("", "from_version").unwrap(),
-            ts: item.try_get("", "ts").unwrap(),
-        })
-        .collect();
     Ok(result)
 }
 
@@ -149,27 +144,14 @@ pub async fn find_rels(from_key: String, from_version: String, depth: Option<u8>
     if let Some(depth) = depth {
         sql_vals.push(Value::from(depth));
     }
-    let records: Vec<GraphRelRecord>;
-    {
-        let (conn, _) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
-        let result = conn.query_all(
-        &format!(r#"SELECT o_tag, o_from_key, o_from_version, o_to_key, o_to_version, o_tags, o_depth, o_paths, o_reverse FROM public.GRAPH_SEARCH($1, $2, $3{}) ORDER BY O_DEPTH, O_TAG"#, if depth.is_some() { ", $4" } else { "" }),
+    let (conn, _) = graph_pg_initializer::init_table_and_conn(bs_inst, ctx, false).await?;
+    let result = conn.find_dtos_by_sql(
+        &format!(r#"SELECT o_tag AS tag, o_from_key AS from_key, o_from_version AS from_version, o_to_key AS to_key, o_to_version AS to_version, o_reverse AS reverse FROM public.GRAPH_SEARCH($1, $2, $3{}) ORDER BY O_DEPTH, O_TAG"#, if depth.is_some() { ", $4" } else { "" }),
         sql_vals.clone(),
     )
     .await?;
-        records = result
-            .into_iter()
-            .map(|item| GraphRelRecord {
-                tag: item.try_get("", "o_tag").unwrap(),
-                from_key: item.try_get("", "o_from_key").unwrap(),
-                from_version: item.try_get("", "o_from_version").unwrap(),
-                to_key: item.try_get("", "o_to_key").unwrap(),
-                to_version: item.try_get("", "o_to_version").unwrap(),
-                reverse: item.try_get("", "o_reverse").unwrap(),
-            })
-            .collect();
-    }
-    let result = package_rels(&from_key, &from_version, &records);
+
+    let result = package_rels(&from_key, &from_version, &result);
     Ok(result)
 }
 
@@ -257,6 +239,7 @@ pub async fn delete_rels(
     Ok(())
 }
 
+#[derive(sea_orm::FromQueryResult)]
 struct GraphRelRecord {
     pub tag: String,
     pub from_key: String,

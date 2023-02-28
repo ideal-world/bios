@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
+    db::sea_orm,
     serde_json::Value,
     web::poem_openapi,
 };
@@ -14,7 +15,7 @@ pub struct KvItemAddOrModifyReq {
     pub info: Option<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
 pub struct KvItemDetailResp {
     #[oai(validator(min_length = "2"))]
     pub key: String,
@@ -24,7 +25,7 @@ pub struct KvItemDetailResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
 pub struct KvItemSummaryResp {
     #[oai(validator(min_length = "2"))]
     pub key: String,

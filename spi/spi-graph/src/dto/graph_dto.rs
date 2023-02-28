@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
+    db::sea_orm,
     web::poem_openapi,
 };
 
@@ -29,7 +30,7 @@ pub struct GraphRelUpgardeVersionReq {
     pub del_rels: Vec<GraphRelUpgardeDelRelReq>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, sea_orm::FromQueryResult)]
 pub struct GraphNodeVersionResp {
     pub version: String,
     pub ts: DateTime<Utc>,

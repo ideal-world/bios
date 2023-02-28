@@ -48,9 +48,9 @@ pub async fn get_item(key: String, extract: Option<String>, funs: &TardisFunsIns
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
-        .query_one(
+        .get_dto_by_sql(
             &format!(
-                r#"SELECT k, v{} AS v, info, create_time, update_time
+                r#"SELECT k AS key, v{} AS value, info, create_time, update_time
 FROM {}
 WHERE 
     k = $1"#,
@@ -60,14 +60,6 @@ WHERE
             vec![Value::from(key)],
         )
         .await?;
-
-    let result = result.map(|item| KvItemDetailResp {
-        key: item.try_get("", "k").unwrap(),
-        value: item.try_get("", "v").unwrap(),
-        info: item.try_get("", "info").unwrap(),
-        create_time: item.try_get("", "create_time").unwrap(),
-        update_time: item.try_get("", "update_time").unwrap(),
-    });
     Ok(result)
 }
 
@@ -84,9 +76,9 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let result = conn
-        .query_all(
+        .find_dtos_by_sql(
             &format!(
-                r#"SELECT k, v{} AS v, info, create_time, update_time
+                r#"SELECT k AS key, v{} AS value, info, create_time, update_time
 FROM {}
 WHERE 
     k IN ({})"#,
@@ -97,17 +89,6 @@ WHERE
             sql_vals,
         )
         .await?;
-
-    let result = result
-        .into_iter()
-        .map(|item| KvItemSummaryResp {
-            key: item.try_get("", "k").unwrap(),
-            value: item.try_get("", "v").unwrap(),
-            info: item.try_get("", "info").unwrap(),
-            create_time: item.try_get("", "create_time").unwrap(),
-            update_time: item.try_get("", "update_time").unwrap(),
-        })
-        .collect();
     Ok(result)
 }
 

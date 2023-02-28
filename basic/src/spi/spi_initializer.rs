@@ -125,8 +125,8 @@ pub mod common_pg {
 
     pub async fn check_schema_exit(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<bool> {
         let schema_name = get_schema_name_from_context(ctx);
-        let schema = client.conn().query_one("SELECT 1 FROM information_schema.schemata WHERE schema_name = $1", vec![Value::from(schema_name.as_str())]).await?;
-        Ok(schema.is_some())
+        let schema = client.conn().count_by_sql("SELECT 1 FROM information_schema.schemata WHERE schema_name = $1", vec![Value::from(schema_name.as_str())]).await?;
+        Ok(schema != 0)
     }
 
     pub async fn create_schema(client: &TardisRelDBClient, ctx: &TardisContext) -> TardisResult<String> {
@@ -140,12 +140,12 @@ pub mod common_pg {
     pub async fn check_table_exit(table_name: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
         let schema_name = get_schema_name_from_context(ctx);
         let table = conn
-            .query_one(
+            .count_by_sql(
                 "SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2",
                 vec![Value::from(schema_name.as_str()), Value::from(format!("{GLOBAL_STORAGE_FLAG}_{table_name}"))],
             )
             .await?;
-        Ok(table.is_some())
+        Ok(table != 0)
     }
 
     pub async fn set_schema_to_session(schema_name: &str, conn: &mut TardisRelDBlConnection) -> TardisResult<()> {
