@@ -99,7 +99,7 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
                 key: "req_priority".to_string(),
                 show_name: "需求优先级".to_string(),
                 stable_ds: true,
-                data_type: StatsDataTypeKind::String,
+                data_type: StatsDataTypeKind::Int,
                 hierarchy: None,
                 remark: Some("需求优先级".to_string()),
             },
@@ -555,7 +555,7 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
                 kind: StatsFactColKind::Measure,
                 dim_rel_conf_dim_key: None,
                 dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Number),
+                mes_data_type: Some(StatsDataTypeKind::Int),
                 mes_frequency: Some("RT".to_string()),
                 mes_act_by_dim_conf_keys: Some(vec!["account".to_string()]),
                 rel_conf_fact_and_col_key: None,
@@ -588,7 +588,7 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
                 kind: Some(StatsFactColKind::Measure),
                 dim_rel_conf_dim_key: None,
                 dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Number),
+                mes_data_type: Some(StatsDataTypeKind::Int),
                 mes_frequency: Some("1H".to_string()),
                 mes_act_by_dim_conf_keys: Some(vec!["account".to_string()]),
                 rel_conf_fact_and_col_key: None,
@@ -605,7 +605,7 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
                 kind: StatsFactColKind::Measure,
                 dim_rel_conf_dim_key: None,
                 dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Number),
+                mes_data_type: Some(StatsDataTypeKind::Int),
                 mes_frequency: Some("RT".to_string()),
                 mes_act_by_dim_conf_keys: Some(vec!["account".to_string()]),
                 rel_conf_fact_and_col_key: None,
@@ -637,7 +637,7 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     assert_eq!(list.records[0].kind, StatsFactColKind::Measure);
     assert_eq!(list.records[0].dim_rel_conf_dim_key, None);
     assert_eq!(list.records[0].dim_multi_values, None);
-    assert_eq!(list.records[0].mes_data_type, Some(StatsDataTypeKind::Number));
+    assert_eq!(list.records[0].mes_data_type, Some(StatsDataTypeKind::Int));
     assert_eq!(list.records[0].mes_frequency, Some("1H".to_string()));
     assert_eq!(list.records[0].mes_act_by_dim_conf_keys, Some(vec!["account".to_string()]));
     assert_eq!(list.records[0].rel_conf_fact_and_col_key, None);

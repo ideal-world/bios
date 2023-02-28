@@ -13,7 +13,10 @@ use tardis::{
 };
 
 use super::stats_pg_initializer;
-use crate::dto::stats_conf_dto::{StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq};
+use crate::{
+    dto::stats_conf_dto::{StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq},
+    stats_enumeration::StatsDataTypeKind,
+};
 
 pub async fn online(dim_conf_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<bool> {
     common_pg::check_table_exit(&format!("stats_inst_dim_{dim_conf_key}"), conn, ctx).await
@@ -23,7 +26,7 @@ pub(crate) async fn add(add_req: &StatsConfDimAddReq, funs: &&TardisFunsInst, ct
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_dim_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if conn.query_one(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await?.is_some() {
+    if conn.count_by_sql(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await? != 0 {
         return Err(funs.err().conflict(
             "dim_conf",
             "add",
@@ -233,8 +236,18 @@ pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: 
 
 async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<()> {
     let mut sql = vec![];
+    let mut index = vec![];
     sql.push("id serial PRIMARY KEY".to_string());
-    sql.push("key character varying NOT NULL".to_string());
+    sql.push(format!("key {} NOT NULL", dim_conf.data_type.to_pg_data_type()));
+    index.push(("key", "btree"));
+    match dim_conf.data_type {
+        StatsDataTypeKind::DateTime => {
+            index.push(("date(timezone('UTC', key))", "btree"));
+            index.push(("date_part('hour',timezone('UTC', key))", "btree"));
+            index.push(("date_part('day',timezone('UTC', key))", "btree"));
+        }
+        _ => {}
+    }
     sql.push("show_name character varying NOT NULL".to_string());
     if !dim_conf.hierarchy.is_empty() {
         sql.push("hierarchy smallint NOT NULL".to_string());

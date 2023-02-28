@@ -29,12 +29,12 @@ pub(crate) async fn add(fact_conf_key: &str, add_req: &StatsConfFactColAddReq, f
         ));
     }
     if conn
-        .query_one(
+        .count_by_sql(
             &format!("SELECT 1 FROM {table_name} WHERE key = $1 AND rel_conf_fact_key = $2"),
             vec![Value::from(&add_req.key), Value::from(fact_conf_key)],
         )
         .await?
-        .is_some()
+        != 0
     {
         return Err(funs.err().conflict(
             "fact_col_conf",
@@ -260,7 +260,6 @@ async fn do_paginate(
 FROM {table_name}
 WHERE 
     {}
-LIMIT $2 OFFSET $3
 {}"#,
                 sql_where.join(" AND "),
                 if sql_order.is_empty() {
