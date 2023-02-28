@@ -28,7 +28,7 @@ pub(crate) async fn add(add_req: &StatsConfFactAddReq, funs: &TardisFunsInst, ct
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = stats_pg_initializer::init_conf_fact_table_and_conn(bs_inst, ctx, true).await?;
     conn.begin().await?;
-    if conn.query_one(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await?.is_some() {
+    if conn.count_by_sql(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![Value::from(&add_req.key)]).await? != 0 {
         return Err(funs.err().conflict(
             "fact_conf",
             "add",
@@ -276,44 +276,22 @@ async fn create_inst_table(
                 sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
                 index.push((fact_col_conf.key.clone(), "btree"));
             } else if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                sql.push(format!("{} character varying[] NOT NULL", &fact_col_conf.key));
+                sql.push(format!("{} {}[] NOT NULL", &fact_col_conf.key, dim_conf.data_type.to_pg_data_type()));
                 index.push((fact_col_conf.key.clone(), "gin"));
             } else {
+                sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, dim_conf.data_type.to_pg_data_type()));
+                index.push((fact_col_conf.key.clone(), "btree"));
                 match dim_conf.data_type {
-                    StatsDataTypeKind::Number => {
-                        sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
-                        index.push((fact_col_conf.key.clone(), "btree"));
-                    }
-                    StatsDataTypeKind::Boolean => {
-                        sql.push(format!("{} boolean NOT NULL", &fact_col_conf.key));
-                        index.push((fact_col_conf.key.clone(), "btree"));
-                    }
                     StatsDataTypeKind::DateTime => {
-                        sql.push(format!("{} timestamp with time zone NOT NULL", &fact_col_conf.key));
-                        index.push((fact_col_conf.key.clone(), "btree"));
                         index.push((format!("date(timezone('UTC', {}))", fact_col_conf.key), "btree"));
                         index.push((format!("date_part('hour',timezone('UTC', {}))", fact_col_conf.key), "btree"));
                         index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
                     }
-                    StatsDataTypeKind::Date => {
-                        sql.push(format!("{} date NOT NULL", &fact_col_conf.key));
-                        index.push((fact_col_conf.key.clone(), "btree"));
-                    }
-                    StatsDataTypeKind::String => {
-                        sql.push(format!("{} character varying NOT NULL", &fact_col_conf.key));
-                        index.push((fact_col_conf.key.clone(), "btree"));
-                    }
+                    _ => {}
                 }
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
-            match fact_col_conf.mes_data_type {
-                Some(StatsDataTypeKind::Number) => sql.push(format!("{} integer NOT NULL", &fact_col_conf.key)),
-                Some(StatsDataTypeKind::Boolean) => sql.push(format!("{} boolean NOT NULL", &fact_col_conf.key)),
-                Some(StatsDataTypeKind::DateTime) => sql.push(format!("{} timestamp with time zone NOT NULL", &fact_col_conf.key)),
-                Some(StatsDataTypeKind::Date) => sql.push(format!("{} date NOT NULL", &fact_col_conf.key)),
-                Some(StatsDataTypeKind::String) => sql.push(format!("{} character varying NOT NULL", &fact_col_conf.key)),
-                None => sql.push(format!("{} integer NOT NULL", &fact_col_conf.key)),
-            }
+            sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, &fact_col_conf.mes_data_type.as_ref().unwrap().to_pg_data_type()));
         } else {
             sql.push(format!("{} character varying", &fact_col_conf.key));
         }

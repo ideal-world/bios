@@ -19,7 +19,7 @@ pub struct StatsQueryMetricsReq {
     pub _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
     /// Sort conditions
     pub order: Option<Vec<StatsQueryMetricsOrderReq>>,
-    /// Filter conditons after group
+    /// Filter conditions after group
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
     pub distinct: bool,
     pub limit: Option<u32>,

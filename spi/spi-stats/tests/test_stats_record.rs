@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_stats::dto::stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
+use bios_spi_stats::dto::stats_record_dto::{StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::serde_json::{json, Value};
@@ -17,236 +17,78 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
 pub async fn test_dim_record(client: &mut TestHttpClient) -> TardisResult<()> {
     // dimension not exist error
     assert_eq!(
-        client
-            .put_resp::<StatsDimRecordAddReq, Void>(
-                "/ci/record/dim/xx/xxx",
-                &StatsDimRecordAddReq {
-                    show_name: "错误记录".to_string(),
-                    parent_key: None,
-                },
-            )
-            .await
-            .code,
+        client.put_resp::<Value, Void>("/ci/record/dim/xx", &json!({ "key":"xxx","show_name":"错误记录" })).await.code,
         "409-spi-stats-dim_record-add"
     );
 
     // stable_ds = false error
     assert_eq!(
-        client
-            .put_resp::<StatsDimRecordAddReq, Void>(
-                "/ci/record/dim/account/xxx",
-                &StatsDimRecordAddReq {
-                    show_name: "错误记录".to_string(),
-                    parent_key: None,
-                },
-            )
-            .await
-            .code,
+        client.put_resp::<Value, Void>("/ci/record/dim/account", &json!({ "key":"xxx","show_name":"错误记录" })).await.code,
         "400-spi-stats-dim_record-add"
     );
 
     // hierarchy is empty error
     assert_eq!(
-        client
-            .put_resp::<StatsDimRecordAddReq, Void>(
-                "/ci/record/dim/tag/t1",
-                &StatsDimRecordAddReq {
-                    show_name: "标签1".to_string(),
-                    parent_key: Some("t2".to_string()),
-                },
-            )
-            .await
-            .code,
+        client.put_resp::<Value, Void>("/ci/record/dim/tag", &json!({ "key":"t1","show_name":"标签1","parent_key":"t2" })).await.code,
         "400-spi-stats-dim_record-add"
     );
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/address/cn",
-            &StatsDimRecordAddReq {
-                show_name: "中国".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/address", &json!({ "key":"cn","show_name":"中国" })).await;
 
     // parent dimension not exist error
     assert_eq!(
-        client
-            .put_resp::<StatsDimRecordAddReq, Void>(
-                "/ci/record/dim/address/zhejiang",
-                &StatsDimRecordAddReq {
-                    show_name: "浙江".to_string(),
-                    parent_key: Some("xxx".to_string()),
-                },
-            )
-            .await
-            .code,
+        client.put_resp::<Value, Void>("/ci/record/dim/address", &json!({ "key":"zhejiang","show_name":"浙江","parent_key":"xxx" })).await.code,
         "404-spi-stats-dim_record-add"
     );
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/address/zhejiang",
-            &StatsDimRecordAddReq {
-                show_name: "浙江".to_string(),
-                parent_key: Some("cn".to_string()),
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/address", &json!({ "key":"zhejiang","show_name":"浙江","parent_key":"cn" })).await;
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/address/hangzhou",
-            &StatsDimRecordAddReq {
-                show_name: "杭州".to_string(),
-                parent_key: Some("zhejiang".to_string()),
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/address", &json!({ "key":"hangzhou","show_name":"杭州","parent_key":"zhejiang" })).await;
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/address/taizhou",
-            &StatsDimRecordAddReq {
-                show_name: "台州".to_string(),
-                parent_key: Some("zhejiang".to_string()),
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/address", &json!({ "key":"taizhou","show_name":"台州","parent_key":"zhejiang" })).await;
 
     // dimension too deep error
     assert_eq!(
-        client
-            .put_resp::<StatsDimRecordAddReq, Void>(
-                "/ci/record/dim/address/linhai",
-                &StatsDimRecordAddReq {
-                    show_name: "临海".to_string(),
-                    parent_key: Some("taizhou".to_string()),
-                },
-            )
-            .await
-            .code,
+        client.put_resp::<Value, Void>("/ci/record/dim/address", &json!({ "key":"linhai","show_name":"临海","parent_key":"taizhou" })).await.code,
         "409-spi-stats-dim_record-add"
     );
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/tag/t1",
-            &StatsDimRecordAddReq {
-                show_name: "标签1".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/tag", &json!({ "key":"t1","show_name":"标签1" })).await;
 
     // key exist error
     assert_eq!(
-        client
-            .put_resp::<StatsDimRecordAddReq, Void>(
-                "/ci/record/dim/tag/t1",
-                &StatsDimRecordAddReq {
-                    show_name: "标签1".to_string(),
-                    parent_key: None,
-                },
-            )
-            .await
-            .code,
+        client.put_resp::<Value, Void>("/ci/record/dim/tag", &json!({ "key":"t1","show_name":"标签1" })).await.code,
         "409-spi-stats-dim_record-add"
     );
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/tag/t2",
-            &StatsDimRecordAddReq {
-                show_name: "标签2".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/tag", &json!({ "key":"t2","show_name":"标签2" })).await;
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_status/open",
-            &StatsDimRecordAddReq {
-                show_name: "打开".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_status/progress",
-            &StatsDimRecordAddReq {
-                show_name: "进行中".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_status/close",
-            &StatsDimRecordAddReq {
-                show_name: "关闭".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/req_status", &json!({ "key":"open","show_name":"打开" })).await;
+    let _: Void = client.put("/ci/record/dim/req_status", &json!({ "key":"progress","show_name":"进行中" })).await;
+    let _: Void = client.put("/ci/record/dim/req_status", &json!({ "key":"close","show_name":"关闭" })).await;
 
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_priority/1",
-            &StatsDimRecordAddReq {
-                show_name: "紧急".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_priority/2",
-            &StatsDimRecordAddReq {
-                show_name: "重要".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_priority/3",
-            &StatsDimRecordAddReq {
-                show_name: "一般".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
-    let _: Void = client
-        .put(
-            "/ci/record/dim/req_priority/4",
-            &StatsDimRecordAddReq {
-                show_name: "一般2_to_del".to_string(),
-                parent_key: None,
-            },
-        )
-        .await;
+    let _: Void = client.put("/ci/record/dim/req_priority", &json!({ "key":1,"show_name":"紧急" })).await;
+    let _: Void = client.put("/ci/record/dim/req_priority", &json!({ "key":2,"show_name":"重要" })).await;
+    let _: Void = client.put("/ci/record/dim/req_priority", &json!({ "key":3,"show_name":"一般" })).await;
+    let _: Void = client.put("/ci/record/dim/req_priority", &json!({ "key":4,"show_name":"一般2_to_del" })).await;
     sleep(Duration::from_millis(1000)).await;
-    client.delete("/ci/record/dim/req_priority/4").await;
+    let _: Void = client.put("/ci/record/dim/req_priority/remove", &json!({ "key":4})).await;
 
     let list: TardisPage<Value> = client.get("/ci/record/dim/req_priority?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 4);
-    let list: TardisPage<Value> = client.get("/ci/record/dim/req_priority?show_name=一般&key=3&page_number=1&page_size=10").await;
-    assert_eq!(list.total_size, 1);
-    assert_eq!(list.records[0].get("key").unwrap().as_str().unwrap(), "3");
+    let list: TardisPage<Value> = client.get("/ci/record/dim/req_priority?show_name=一般&page_number=1&page_size=10").await;
+    assert_eq!(list.total_size, 2);
+    assert_eq!(list.records[0].get("key").unwrap().as_i64().unwrap(), 3);
     assert_eq!(list.records[0].get("show_name").unwrap().as_str().unwrap(), "一般");
     assert!(!list.records[0].get("ct").unwrap().as_str().unwrap().is_empty());
-    assert!(list.records[0].get("et").is_none());
-    let list: TardisPage<Value> = client.get("/ci/record/dim/req_priority?&key=4&page_number=1&page_size=10").await;
+    assert!(list.records[0].get("et").unwrap().is_null());
+    let list: TardisPage<Value> = client.get("/ci/record/dim/req_priority?&show_name=一般2_to_del&page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 1);
-    assert_eq!(list.records[0].get("key").unwrap().as_str().unwrap(), "4");
+    assert_eq!(list.records[0].get("key").unwrap().as_i64().unwrap(), 4);
     assert_eq!(list.records[0].get("show_name").unwrap().as_str().unwrap(), "一般2_to_del");
     assert!(!list.records[0].get("ct").unwrap().as_str().unwrap().is_empty());
     assert!(!list.records[0].get("et").unwrap().as_str().unwrap().is_empty());
-    let list: TardisPage<Value> = client.get("/ci/record/dim/address?key=taizhou&page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/record/dim/address?show_name=台州&page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 1);
     assert_eq!(list.records[0].get("key").unwrap().as_str().unwrap(), "taizhou");
     assert_eq!(list.records[0].get("show_name").unwrap().as_str().unwrap(), "台州");
@@ -340,7 +182,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                 data: json!({
                     "source":"zhejiang",
                     "status": "open",
-                    "priority":"1",
+                    "priority":1,
                     "tag":["t1","t2"],
                     "creator":"acc001",
                     "act_hours": 40,
@@ -358,7 +200,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                 data: json!({
                     "source":"hangzhou",
                     "status": "open",
-                    "priority":"2",
+                    "priority":2,
                     "tag":["t1"],
                     "creator":"acc002",
                     "act_hours": 15,
@@ -388,7 +230,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                 own_paths: "t1/a1".to_string(),
                 ct: Utc::now(),
                 data: json!({
-                    "priority": "1",
+                    "priority": 1,
                 }),
             },
         )
@@ -442,7 +284,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({
                         "source":"xxxx",
                         "status": "open",
-                        "priority":"1",
+                        "priority":1,
                         "tag":["t1","t2"],
                         "creator":"acc001",
                         "act_hours": 40,
@@ -466,7 +308,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({
                         "source":"zhejiang",
                         "status": "open",
-                        "priority":"1",
+                        "priority":1,
                         "tag":["t1","t2"],
                         "creator":"acc001",
                         "act_hours": 40,
@@ -480,7 +322,7 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
                     data: json!({
                         "source":"zhejiang",
                         "status": "open",
-                        "priority":"2",
+                        "priority":2,
                         "tag":["t1","t2"],
                         "creator":"acc001",
                         "act_hours": 40,

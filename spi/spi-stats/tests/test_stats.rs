@@ -19,7 +19,7 @@ mod test_stats_conf;
 mod test_stats_record;
 
 #[tokio::test]
-async fn test_log() -> TardisResult<()> {
+async fn test_stats() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_stats=trace,sqlx::query=off");
 
     let docker = testcontainers::clients::Cli::default();

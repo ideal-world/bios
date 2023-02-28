@@ -57,17 +57,17 @@ pub(crate) async fn fact_records_clean(fact_conf_key: String, before_ct: Option<
     }
 }
 
-pub(crate) async fn dim_record_add(dim_conf_key: String, dim_record_key: String, add_req: StatsDimRecordAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecordAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv::dim_record_add(dim_conf_key, dim_record_key, add_req, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv::dim_record_add(dim_conf_key, add_req, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
 
 pub(crate) async fn dim_record_paginate(
     dim_conf_key: String,
-    dim_record_key: Option<String>,
+    dim_record_key: Option<Value>,
     show_name: Option<String>,
     page_number: u32,
     page_size: u32,
@@ -85,7 +85,7 @@ pub(crate) async fn dim_record_paginate(
     }
 }
 
-pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: Value, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv::dim_record_delete(dim_conf_key, dim_record_key, funs, ctx).await,

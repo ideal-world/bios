@@ -8,7 +8,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
+use crate::dto::stats_record_dto::{StatsDimRecordAddReq, StatsDimRecordDeleteReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
 use crate::serv::stats_record_serv;
 
 pub struct StatsCiRecordApi;
@@ -70,17 +70,10 @@ impl StatsCiRecordApi {
     }
 
     /// Add Dimension Record
-    #[oai(path = "/dim/:dim_key/:record_key", method = "put")]
-    async fn dim_record_add(
-        &self,
-        dim_key: Path<String>,
-        record_key: Path<String>,
-        add_req: Json<StatsDimRecordAddReq>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Void> {
+    #[oai(path = "/dim/:dim_key", method = "put")]
+    async fn dim_record_add(&self, dim_key: Path<String>, add_req: Json<StatsDimRecordAddReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::dim_record_add(dim_key.0, record_key.0, add_req.0, &funs, &ctx.0).await?;
+        stats_record_serv::dim_record_add(dim_key.0, add_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
@@ -89,7 +82,6 @@ impl StatsCiRecordApi {
     async fn dim_record_paginate(
         &self,
         dim_key: Path<String>,
-        key: Query<Option<String>>,
         show_name: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
@@ -99,15 +91,15 @@ impl StatsCiRecordApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<Value>> {
         let funs = request.tardis_fun_inst();
-        let resp = stats_record_serv::dim_record_paginate(dim_key.0, key.0, show_name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let resp = stats_record_serv::dim_record_paginate(dim_key.0, None, show_name.0, page_number.0, page_size.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
     /// Delete Dimension Record
-    #[oai(path = "/dim/:dim_key/:record_key", method = "delete")]
-    async fn dim_record_delete(&self, dim_key: Path<String>, record_key: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    #[oai(path = "/dim/:dim_key/remove", method = "put")]
+    async fn dim_record_delete(&self, dim_key: Path<String>, delete_req: Json<StatsDimRecordDeleteReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::dim_record_delete(dim_key.0, record_key.0, &funs, &ctx.0).await?;
+        stats_record_serv::dim_record_delete(dim_key.0, delete_req.0.key, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 }

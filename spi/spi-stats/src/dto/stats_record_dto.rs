@@ -25,6 +25,13 @@ pub struct StatsFactRecordsLoadReq {
 /// Add Dimension Record Request Object
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsDimRecordAddReq {
+    pub key: Value,
     pub show_name: String,
-    pub parent_key: Option<String>,
+    pub parent_key: Option<Value>,
+}
+
+/// Delete Dimension Record Request Object
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsDimRecordDeleteReq {
+    pub key: Value,
 }
