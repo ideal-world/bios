@@ -23,6 +23,7 @@ pub async fn init_table_and_conn(
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
         vec![("k", "btree"), ("v", "gin")],
+        None,
         Some("update_time"),
     )
     .await

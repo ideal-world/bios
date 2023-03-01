@@ -15,10 +15,7 @@ use tardis::{
 };
 
 use crate::{
-    dto::{
-        stats_conf_dto::StatsConfDimInfoResp,
-        stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq},
-    },
+    dto::stats_record_dto::{StatsDimRecordAddReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq},
     stats_enumeration::StatsFactColKind,
 };
 
@@ -49,45 +46,16 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
         })?;
         if fact_col_conf.kind == StatsFactColKind::Dimension {
             let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
-            if stats_pg_conf_dim_serv::get(fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap().stable_ds {
-                // Replace dimension instance record id to dimension instance record key
-                fields.push(req_fact_col_key.to_string());
-                if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    let mut dim_record_ids = vec![];
-                    for req_fact_col_value in req_fact_col_value.as_array().unwrap() {
-                        let dim_record_id = dim_get_inst_record_id(&dim_conf, req_fact_col_value, &conn, ctx).await?.ok_or_else(|| {
-                            funs.err().not_found(
-                                "fact_record",
-                                "load",
-                                &format!("The dimension instance record [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap()),
-                                "404-spi-stats-dim-inst-record-not-exist",
-                            )
-                        })?;
-                        dim_record_ids.push(dim_record_id);
-                    }
-                    values.push(Value::from(dim_record_ids));
-                } else {
-                    let dim_record_id = dim_get_inst_record_id(&dim_conf, req_fact_col_value, &conn, ctx).await?.ok_or_else(|| {
-                        funs.err().not_found(
-                            "fact_record",
-                            "load",
-                            &format!("The dimension instance record [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap()),
-                            "404-spi-stats-dim-inst-record-not-exist",
-                        )
-                    })?;
-                    values.push(Value::from(dim_record_id));
-                }
+            // TODO check value enum when stable_ds =true
+            fields.push(req_fact_col_key.to_string());
+            if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false));
             } else {
-                fields.push(req_fact_col_key.to_string());
-                if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value));
-                } else {
-                    values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value));
-                }
+                values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false));
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
             fields.push(req_fact_col_key.to_string());
-            values.push(fact_col_conf.mes_data_type.as_ref().unwrap().json_to_sea_orm_value(req_fact_col_value));
+            values.push(fact_col_conf.mes_data_type.as_ref().unwrap().json_to_sea_orm_value(req_fact_col_value, false));
         } else {
             fields.push(req_fact_col_key.to_string());
             values.push(Value::from(req_fact_col_value.as_str().unwrap()));
@@ -108,11 +76,7 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                 fields.push(fact_col_conf.key.to_string());
                 if fact_col_conf.kind == StatsFactColKind::Dimension {
                     let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.unwrap(), &conn, ctx).await?.unwrap();
-                    if dim_conf.stable_ds && fact_col_conf.dim_multi_values.unwrap_or(false) {
-                        values.push(Value::from(latest_data.try_get::<Vec<i32>>("", &fact_col_conf.key).unwrap()));
-                    } else if dim_conf.stable_ds {
-                        values.push(Value::from(latest_data.try_get::<i32>("", &fact_col_conf.key).unwrap()));
-                    } else if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                    if fact_col_conf.dim_multi_values.unwrap_or(false) {
                         values.push(Value::from(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)));
                     } else {
                         values.push(Value::from(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)));
@@ -180,42 +144,14 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
             })?;
             if fact_col_conf.kind == StatsFactColKind::Dimension {
                 let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
-                if stats_pg_conf_dim_serv::get(fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap().stable_ds {
-                    // Replace dimension instance record id to dimension instance record key
-                    if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                        let mut dim_record_ids = vec![];
-                        for req_fact_col_value in req_fact_col_value.as_array().unwrap() {
-                            let dim_record_id = dim_get_inst_record_id(&dim_conf, req_fact_col_value, &conn, ctx).await?.ok_or_else(|| {
-                                funs.err().not_found(
-                                    "fact_record",
-                                    "load_set",
-                                    &format!("The dimension instance record [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap()),
-                                    "404-spi-stats-dim-inst-record-not-exist",
-                                )
-                            })?;
-                            dim_record_ids.push(dim_record_id);
-                        }
-                        values.push(Value::from(dim_record_ids));
-                    } else {
-                        let dim_record_id = dim_get_inst_record_id(&dim_conf, req_fact_col_value, &conn, ctx).await?.ok_or_else(|| {
-                            funs.err().not_found(
-                                "fact_record",
-                                "load_set",
-                                &format!("The dimension instance record [{}] not exists.", &fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap()),
-                                "404-spi-stats-dim-inst-record-not-exist",
-                            )
-                        })?;
-                        values.push(Value::from(dim_record_id));
-                    }
+                // TODO check value enum when stable_ds =true
+                if fact_col_conf.dim_multi_values.unwrap_or(false) {
+                    values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false));
                 } else {
-                    if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                        values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value));
-                    } else {
-                        values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value));
-                    }
+                    values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false));
                 }
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
-                values.push(fact_col_conf.mes_data_type.as_ref().unwrap().json_to_sea_orm_value(req_fact_col_value));
+                values.push(fact_col_conf.mes_data_type.as_ref().unwrap().json_to_sea_orm_value(req_fact_col_value, false));
             } else {
                 values.push(Value::from(req_fact_col_value.as_str().unwrap()));
             }
@@ -339,7 +275,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
     }
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
-    let dim_record_key_value = dim_conf.data_type.json_to_sea_orm_value(&add_req.key);
+    let dim_record_key_value = dim_conf.data_type.json_to_sea_orm_value(&add_req.key, false);
     if conn.count_by_sql(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![dim_record_key_value.clone()]).await? != 0 {
         return Err(funs.err().conflict(
             "dim_record",
@@ -464,7 +400,7 @@ async fn dim_do_record_paginate(
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(dim_record_key) = &dim_record_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(dim_conf.data_type.json_to_sea_orm_value(&dim_record_key));
+        params.push(dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false));
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
@@ -523,7 +459,7 @@ pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: serd
     let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.unwrap();
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
-    let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key)];
+    let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)];
 
     conn.execute_one(
         &format!(
@@ -548,30 +484,4 @@ async fn fact_get_latest_record_raw(
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1"), vec![Value::from(dim_record_key)]).await?;
     Ok(result)
-}
-
-// async fn fact_get_latest_record_raw(fact_conf_key: &str, dim_record_key: &str, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<Option<serde_json::Value>> {
-//     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
-//     let result = conn
-//         .query_one(&format!("SELECT * FROM {table_name} WHERE key = $1"), vec![Value::from(dim_record_key)])
-//         .await?
-//         .map(|row| serde_json::Value::from_query_result_optional(&row, "").unwrap().unwrap());
-//     Ok(result)
-// }
-
-async fn dim_get_inst_record_id(
-    dim_conf: &StatsConfDimInfoResp,
-    dim_record_key: &serde_json::Value,
-    conn: &TardisRelDBlConnection,
-    ctx: &TardisContext,
-) -> TardisResult<Option<i32>> {
-    let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
-    let id = conn
-        .query_one(
-            &format!("SELECT id FROM {table_name} WHERE key = $1"),
-            vec![dim_conf.data_type.json_to_sea_orm_value(dim_record_key)],
-        )
-        .await?
-        .map(|r| r.try_get("", "id").unwrap());
-    Ok(id)
 }

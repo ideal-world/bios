@@ -269,13 +269,7 @@ async fn create_inst_table(
                 ));
             }
             let dim_conf = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx).await?.unwrap();
-            if dim_conf.stable_ds && fact_col_conf.dim_multi_values.unwrap_or(false) {
-                sql.push(format!("{} integer[] NOT NULL", &fact_col_conf.key));
-                index.push((fact_col_conf.key.clone(), "btree"));
-            } else if dim_conf.stable_ds {
-                sql.push(format!("{} integer NOT NULL", &fact_col_conf.key));
-                index.push((fact_col_conf.key.clone(), "btree"));
-            } else if fact_col_conf.dim_multi_values.unwrap_or(false) {
+            if fact_col_conf.dim_multi_values.unwrap_or(false) {
                 sql.push(format!("{} {}[] NOT NULL", &fact_col_conf.key, dim_conf.data_type.to_pg_data_type()));
                 index.push((fact_col_conf.key.clone(), "gin"));
             } else {
@@ -286,12 +280,23 @@ async fn create_inst_table(
                         index.push((format!("date(timezone('UTC', {}))", fact_col_conf.key), "btree"));
                         index.push((format!("date_part('hour',timezone('UTC', {}))", fact_col_conf.key), "btree"));
                         index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('month',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('year',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                    }
+                    StatsDataTypeKind::Date => {
+                        index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('month',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('year',timezone('UTC', {}))", fact_col_conf.key), "btree"));
                     }
                     _ => {}
                 }
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
-            sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, &fact_col_conf.mes_data_type.as_ref().unwrap().to_pg_data_type()));
+            sql.push(format!(
+                "{} {} NOT NULL",
+                &fact_col_conf.key,
+                &fact_col_conf.mes_data_type.as_ref().unwrap().to_pg_data_type()
+            ));
         } else {
             sql.push(format!("{} character varying", &fact_col_conf.key));
         }
@@ -301,12 +306,13 @@ async fn create_inst_table(
     index.push(("date(timezone('UTC', ct))".to_string(), "btree"));
     index.push(("date_part('hour',timezone('UTC', ct))".to_string(), "btree"));
     index.push(("date_part('day',timezone('UTC', ct))".to_string(), "btree"));
+    index.push(("date_part('month',timezone('UTC', ct))".to_string(), "btree"));
 
     let mut swap_index = vec![];
     for i in &index {
         swap_index.push((&i.0[..], i.1));
     }
-    common_pg::init_table(conn, Some(&fact_conf.key), "stats_inst_fact", sql.join(",\r\n").as_str(), swap_index, None, ctx).await?;
+    common_pg::init_table(conn, Some(&fact_conf.key), "stats_inst_fact", sql.join(",\r\n").as_str(), swap_index, None, None, ctx).await?;
 
     // Create fact inst delete status table
     common_pg::init_table(
@@ -316,6 +322,7 @@ async fn create_inst_table(
         r#"key character varying NOT NULL,
     ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
         vec![],
+        Some(vec!["key", "ct"]),
         None,
         ctx,
     )

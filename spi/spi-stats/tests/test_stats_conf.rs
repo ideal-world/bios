@@ -1,10 +1,6 @@
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_stats::dto::stats_conf_dto::{
-    StatsConfDimAddReq, StatsConfDimInfoResp, StatsConfDimModifyReq, StatsConfFactAddReq, StatsConfFactColAddReq, StatsConfFactColInfoResp, StatsConfFactColModifyReq,
-    StatsConfFactInfoResp, StatsConfFactModifyReq,
-};
-use bios_spi_stats::stats_enumeration::{StatsDataTypeKind, StatsFactColKind};
 use tardis::basic::result::TardisResult;
+use tardis::serde_json::{json, Value};
 use tardis::web::web_resp::{TardisPage, Void};
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
@@ -17,16 +13,15 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // key format error
     assert_eq!(
         client
-            .put_resp::<StatsConfDimAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/dim",
-                &StatsConfDimAddReq {
-                    key: "Account".to_string(),
-                    show_name: "账号".to_string(),
-                    stable_ds: false,
-                    data_type: StatsDataTypeKind::String,
-                    hierarchy: None,
-                    remark: Some("通用账号维度".to_string()),
-                },
+                &json!({
+                    "key":"Account",
+                    "show_name":"账号",
+                    "stable_ds": false,
+                    "data_type":"string",
+                    "remark":"通用账号维度"
+                }),
             )
             .await
             .code,
@@ -36,30 +31,28 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "account".to_string(),
-                show_name: "账号".to_string(),
-                stable_ds: false,
-                data_type: StatsDataTypeKind::String,
-                hierarchy: None,
-                remark: Some("通用账号维度".to_string()),
-            },
+            &json!({
+                "key":"account",
+                "show_name":"账号",
+                "stable_ds": false,
+                "data_type":"string",
+                "remark":"通用账号维度"
+            }),
         )
         .await;
 
     // key exist error
     assert_eq!(
         client
-            .put_resp::<StatsConfDimAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/dim",
-                &StatsConfDimAddReq {
-                    key: "account".to_string(),
-                    show_name: "账号".to_string(),
-                    stable_ds: false,
-                    data_type: StatsDataTypeKind::String,
-                    hierarchy: None,
-                    remark: Some("通用账号维度".to_string()),
-                },
+                &json!({
+                    "key":"account",
+                    "show_name":"账号",
+                    "stable_ds": false,
+                    "data_type":"string",
+                    "remark":"通用账号维度"
+                }),
             )
             .await
             .code,
@@ -69,108 +62,101 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "tag".to_string(),
-                show_name: "标签".to_string(),
-                stable_ds: true,
-                data_type: StatsDataTypeKind::String,
-                hierarchy: None,
-                remark: Some("通用标签".to_string()),
-            },
+            &json!({
+                "key":"tag",
+                "show_name":"标签",
+                "stable_ds": true,
+                "data_type":"string",
+                "remark":"通用标签"
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "address".to_string(),
-                show_name: "地址".to_string(),
-                stable_ds: true,
-                data_type: StatsDataTypeKind::String,
-                hierarchy: Some(vec!["国家".to_string(), "省".to_string(), "市".to_string()]),
-                remark: Some("通用地址维度".to_string()),
-            },
+            &json!({
+                "key":"address",
+                "show_name":"地址",
+                "stable_ds": true,
+                "data_type":"string",
+                "hierarchy":["国家","省","市"],
+                "remark":"通用地址维度"
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "req_priority".to_string(),
-                show_name: "需求优先级".to_string(),
-                stable_ds: true,
-                data_type: StatsDataTypeKind::Int,
-                hierarchy: None,
-                remark: Some("需求优先级".to_string()),
-            },
+            &json!({
+                "key":"req_priority",
+                "show_name":"需求优先级",
+                "stable_ds": true,
+                "data_type":"int",
+                "remark":"需求优先级"
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "req_status".to_string(),
-                show_name: "状态".to_string(),
-                stable_ds: false,
-                data_type: StatsDataTypeKind::Boolean,
-                hierarchy: None,
-                remark: Some("状态".to_string()),
-            },
+            &json!({
+                "key":"req_status",
+                "show_name":"状态",
+                "stable_ds": false,
+                "data_type":"bool",
+                "remark":"状态"
+            }),
         )
         .await;
     let _: Void = client
         .patch(
             "/ci/conf/dim/req_status",
-            &StatsConfDimModifyReq {
-                show_name: Some("需求状态".to_string()),
-                stable_ds: Some(true),
-                data_type: Some(StatsDataTypeKind::String),
-                hierarchy: None,
-                remark: Some("需求状态".to_string()),
-            },
+            &json!({
+                "key":"req_status",
+                "show_name":"需求状态",
+                "stable_ds": true,
+                "data_type":"string",
+                "remark":"需求状态"
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "to_be_del".to_string(),
-                show_name: "删除测试".to_string(),
-                stable_ds: false,
-                data_type: StatsDataTypeKind::Boolean,
-                hierarchy: None,
-                remark: None,
-            },
+            &json!({
+                "key":"to_be_del",
+                "show_name":"删除测试",
+                "stable_ds": false,
+                "data_type":"bool"
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/dim",
-            &StatsConfDimAddReq {
-                key: "to_be_del2".to_string(),
-                show_name: "删除测试2".to_string(),
-                stable_ds: false,
-                data_type: StatsDataTypeKind::Boolean,
-                hierarchy: None,
-                remark: None,
-            },
+            &json!({
+                "key":"to_be_del2",
+                "show_name":"删除测试2",
+                "stable_ds": false,
+                "data_type":"bool"
+            }),
         )
         .await;
-    let list: TardisPage<StatsConfDimInfoResp> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 7);
-    let list: TardisPage<StatsConfDimInfoResp> = client.get("/ci/conf/dim?page_number=1&page_size=10&show_name=需求状态&key=req_status").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/dim?page_number=1&page_size=10&show_name=需求状态&key=req_status").await;
     assert_eq!(list.total_size, 1);
-    assert_eq!(list.records[0].key, "req_status");
-    assert_eq!(list.records[0].show_name, "需求状态");
-    assert!(list.records[0].stable_ds);
-    assert_eq!(list.records[0].data_type, StatsDataTypeKind::String);
-    assert!(list.records[0].hierarchy.is_empty());
-    assert_eq!(list.records[0].remark, Some("需求状态".to_string()));
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "req_status");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "需求状态");
+    assert!(list.records[0]["stable_ds"].as_bool().unwrap());
+    assert_eq!(list.records[0]["data_type"].as_str().unwrap(), "string");
+    assert!(list.records[0]["hierarchy"].as_array().unwrap().is_empty());
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求状态");
 
     client.delete("/ci/conf/dim/to_be_del").await;
-    let list: TardisPage<StatsConfDimInfoResp> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 6);
-    assert!(!list.records.iter().any(|d| d.online));
+    assert!(!list.records.iter().any(|d| d["online"].as_bool().unwrap()));
 
     // online
     let _: Void = client.put("/ci/conf/dim/account/online", &Void {}).await;
@@ -183,15 +169,14 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // can't modify after online error
     assert_eq!(
         client
-            .patch_resp::<StatsConfDimModifyReq, Void>(
+            .patch_resp::<Value, Void>(
                 "/ci/conf/dim/req_status",
-                &StatsConfDimModifyReq {
-                    show_name: Some("需求状态".to_string()),
-                    stable_ds: Some(true),
-                    data_type: Some(StatsDataTypeKind::String),
-                    hierarchy: None,
-                    remark: Some("需求状态".to_string()),
-                },
+                &json!({
+                    "show_name":"需求状态",
+                    "stable_ds": true,
+                    "data_type":"string",
+                    "remark":"需求状态"
+                }),
             )
             .await
             .code,
@@ -199,9 +184,9 @@ pub async fn test_dim_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     );
 
     client.delete("/ci/conf/dim/to_be_del2").await;
-    let list: TardisPage<StatsConfDimInfoResp> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/dim?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 5);
-    assert_eq!(list.records.iter().filter(|d| d.online).count(), 5);
+    assert_eq!(list.records.iter().filter(|d| d.get("online").unwrap().as_bool().unwrap()).count(), 5);
 
     Ok(())
 }
@@ -210,14 +195,14 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // key format error
     assert_eq!(
         client
-            .put_resp::<StatsConfFactAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/fact",
-                &StatsConfFactAddReq {
-                    key: "Kb_doc".to_string(),
-                    show_name: "知识库文档".to_string(),
-                    query_limit: 1000,
-                    remark: Some("知识库文档".to_string()),
-                },
+                &json!({
+                    "key":"Kb_doc",
+                    "show_name":"知识库文档",
+                    "query_limit": 1000,
+                    "remark":"知识库文档"
+                }),
             )
             .await
             .code,
@@ -227,26 +212,26 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .put(
             "/ci/conf/fact",
-            &StatsConfFactAddReq {
-                key: "kb_doc".to_string(),
-                show_name: "知识库文档".to_string(),
-                query_limit: 1000,
-                remark: Some("知识库文档".to_string()),
-            },
+            &json!({
+                "key":"kb_doc",
+                "show_name":"知识库文档",
+                "query_limit": 1000,
+                "remark":"知识库文档"
+            }),
         )
         .await;
 
     // key exist error
     assert_eq!(
         client
-            .put_resp::<StatsConfFactAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/fact",
-                &StatsConfFactAddReq {
-                    key: "kb_doc".to_string(),
-                    show_name: "知识库文档".to_string(),
-                    query_limit: 1000,
-                    remark: Some("知识库文档".to_string()),
-                },
+                &json!({
+                    "key":"kb_doc",
+                    "show_name":"知识库文档",
+                    "query_limit": 1000,
+                    "remark":"知识库文档"
+                }),
             )
             .await
             .code,
@@ -256,59 +241,57 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     let _: Void = client
         .put(
             "/ci/conf/fact",
-            &StatsConfFactAddReq {
-                key: "req".to_string(),
-                show_name: "需求1".to_string(),
-                query_limit: 1000,
-                remark: Some("需求1".to_string()),
-            },
+            &json!({
+                "key":"req",
+                "show_name":"需求1",
+                "query_limit": 1000,
+                "remark":"需求1"
+            }),
         )
         .await;
     let _: Void = client
         .patch(
             "/ci/conf/fact/req",
-            &StatsConfFactModifyReq {
-                show_name: Some("需求".to_string()),
-                query_limit: Some(2000),
-                remark: Some("需求说明".to_string()),
-            },
+            &json!({
+                "show_name":"需求",
+                "query_limit": 2000,
+                "remark":"需求说明"
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact",
-            &StatsConfFactAddReq {
-                key: "to_be_del".to_string(),
-                show_name: "删除测试".to_string(),
-                query_limit: 1000,
-                remark: None,
-            },
+            &json!({
+                "key":"to_be_del",
+                "show_name":"删除测试",
+                "query_limit": 1000
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact",
-            &StatsConfFactAddReq {
-                key: "to_be_del2".to_string(),
-                show_name: "删除测试2".to_string(),
-                query_limit: 1000,
-                remark: None,
-            },
+            &json!({
+                "key":"to_be_del2",
+                "show_name":"删除测试2",
+                "query_limit": 1000
+            }),
         )
         .await;
-    let list: TardisPage<StatsConfFactInfoResp> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 4);
-    let list: TardisPage<StatsConfFactInfoResp> = client.get("/ci/conf/fact?page_number=1&page_size=10&show_name=需求&key=req").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10&show_name=需求&key=req").await;
     assert_eq!(list.total_size, 1);
-    assert_eq!(list.records[0].key, "req");
-    assert_eq!(list.records[0].show_name, "需求");
-    assert_eq!(list.records[0].query_limit, 2000);
-    assert_eq!(list.records[0].remark, Some("需求说明".to_string()));
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "req");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "需求");
+    assert_eq!(list.records[0]["query_limit"].as_i64().unwrap(), 2000);
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求说明");
 
     client.delete("/ci/conf/fact/to_be_del").await;
-    let list: TardisPage<StatsConfFactInfoResp> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 3);
-    assert!(!list.records.iter().any(|d| d.online));
+    assert!(!list.records.iter().any(|d| d["online"].as_bool().unwrap()));
 
     // fact column not exist error
     assert_eq!(
@@ -328,13 +311,13 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // can't modify fact after online error
     assert_eq!(
         client
-            .patch_resp::<StatsConfFactModifyReq, Void>(
+            .patch_resp::<Value, Void>(
                 "/ci/conf/fact/req",
-                &StatsConfFactModifyReq {
-                    show_name: Some("需求".to_string()),
-                    query_limit: Some(2000),
-                    remark: Some("需求说明".to_string()),
-                }
+                &json!({
+                    "show_name":"需求",
+                    "query_limit": 2000,
+                    "remark": "需求说明"
+                }),
             )
             .await
             .code,
@@ -344,19 +327,15 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // can't modify fact column after online error
     assert_eq!(
         client
-            .patch_resp::<StatsConfFactColModifyReq, Void>(
+            .patch_resp::<Value, Void>(
                 "/ci/conf/fact/req/col/source",
-                &StatsConfFactColModifyReq {
-                    show_name: Some("来源".to_string()),
-                    remark: Some("需求来源说明".to_string()),
-                    kind: Some(StatsFactColKind::Dimension),
-                    dim_rel_conf_dim_key: Some("address".to_string()),
-                    dim_multi_values: Some(false),
-                    mes_data_type: None,
-                    mes_frequency: None,
-                    mes_act_by_dim_conf_keys: None,
-                    rel_conf_fact_and_col_key: None,
-                },
+                &json!({
+                    "show_name":"来源",
+                    "remark": "需求来源说明",
+                    "kind": "dimension",
+                    "dim_rel_conf_dim_key": "address",
+                    "dim_multi_values": false
+                }),
             )
             .await
             .code,
@@ -366,9 +345,9 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(client.delete_resp("/ci/conf/fact/req/col/source").await.code, "409-spi-stats-fact_col_conf-delete");
 
     client.delete("/ci/conf/fact/to_be_del2").await;
-    let list: TardisPage<StatsConfFactInfoResp> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 2);
-    assert_eq!(list.records.iter().filter(|d| d.online).count(), 1);
+    assert_eq!(list.records.iter().filter(|d| d["online"].as_bool().unwrap()).count(), 1);
 
     Ok(())
 }
@@ -377,20 +356,16 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     // key format error
     assert_eq!(
         client
-            .put_resp::<StatsConfFactColAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/fact/req/col",
-                &StatsConfFactColAddReq {
-                    key: "Status".to_string(),
-                    show_name: "状态".to_string(),
-                    remark: Some("状态说明".to_string()),
-                    kind: StatsFactColKind::Dimension,
-                    dim_rel_conf_dim_key: Some("ssss".to_string()),
-                    dim_multi_values: Some(false),
-                    mes_data_type: None,
-                    mes_frequency: None,
-                    mes_act_by_dim_conf_keys: None,
-                    rel_conf_fact_and_col_key: None
-                },
+                &json!({
+                    "key":"Status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                    "dim_rel_conf_dim_key": "ssss",
+                    "dim_multi_values": false
+                }),
             )
             .await
             .code,
@@ -400,20 +375,16 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     // dimension not online/exist error
     assert_eq!(
         client
-            .put_resp::<StatsConfFactColAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/fact/req/col",
-                &StatsConfFactColAddReq {
-                    key: "status".to_string(),
-                    show_name: "状态".to_string(),
-                    remark: Some("状态说明".to_string()),
-                    kind: StatsFactColKind::Dimension,
-                    dim_rel_conf_dim_key: Some("ssss".to_string()),
-                    dim_multi_values: Some(false),
-                    mes_data_type: None,
-                    mes_frequency: None,
-                    mes_act_by_dim_conf_keys: None,
-                    rel_conf_fact_and_col_key: None
-                },
+                &json!({
+                    "key":"status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                    "dim_rel_conf_dim_key": "ssss",
+                    "dim_multi_values": false
+                }),
             )
             .await
             .code,
@@ -423,38 +394,30 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "status".to_string(),
-                show_name: "状态".to_string(),
-                remark: Some("状态说明".to_string()),
-                kind: StatsFactColKind::Dimension,
-                dim_rel_conf_dim_key: Some("req_status".to_string()),
-                dim_multi_values: Some(false),
-                mes_data_type: None,
-                mes_frequency: None,
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"status",
+                "show_name":"状态",
+                "remark": "状态说明",
+                "kind": "dimension",
+                "dim_rel_conf_dim_key": "req_status",
+                "dim_multi_values": false
+            }),
         )
         .await;
 
     // key exist error
     assert_eq!(
         client
-            .put_resp::<StatsConfFactColAddReq, Void>(
+            .put_resp::<Value, Void>(
                 "/ci/conf/fact/req/col",
-                &StatsConfFactColAddReq {
-                    key: "status".to_string(),
-                    show_name: "状态".to_string(),
-                    remark: Some("状态说明".to_string()),
-                    kind: StatsFactColKind::Dimension,
-                    dim_rel_conf_dim_key: Some("req_status".to_string()),
-                    dim_multi_values: Some(false),
-                    mes_data_type: None,
-                    mes_frequency: None,
-                    mes_act_by_dim_conf_keys: None,
-                    rel_conf_fact_and_col_key: None
-                },
+                &json!({
+                    "key":"status",
+                    "show_name":"状态",
+                    "remark": "状态说明",
+                    "kind": "dimension",
+                    "dim_rel_conf_dim_key": "req_status",
+                    "dim_multi_values": false
+                }),
             )
             .await
             .code,
@@ -464,186 +427,150 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "priority".to_string(),
-                show_name: "优先级".to_string(),
-                remark: Some("优先级说明".to_string()),
-                kind: StatsFactColKind::Dimension,
-                dim_rel_conf_dim_key: Some("req_priority".to_string()),
-                dim_multi_values: Some(false),
-                mes_data_type: None,
-                mes_frequency: None,
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"priority",
+                "show_name":"优先级",
+                "remark": "优先级说明",
+                "kind": "dimension",
+                "dim_rel_conf_dim_key": "req_priority",
+                "dim_multi_values": false
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "tag".to_string(),
-                show_name: "标签".to_string(),
-                remark: Some("标签说明".to_string()),
-                kind: StatsFactColKind::Dimension,
-                dim_rel_conf_dim_key: Some("tag".to_string()),
-                dim_multi_values: Some(true),
-                mes_data_type: None,
-                mes_frequency: None,
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"tag",
+                "show_name":"标签",
+                "remark": "标签说明",
+                "kind": "dimension",
+                "dim_rel_conf_dim_key": "tag",
+                "dim_multi_values": true
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "creator".to_string(),
-                show_name: "创建人".to_string(),
-                remark: Some("创建人说明".to_string()),
-                kind: StatsFactColKind::Dimension,
-                dim_rel_conf_dim_key: Some("account".to_string()),
-                dim_multi_values: Some(false),
-                mes_data_type: None,
-                mes_frequency: None,
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"creator",
+                "show_name":"创建人",
+                "remark": "创建人说明",
+                "kind": "dimension",
+                "dim_rel_conf_dim_key": "account",
+                "dim_multi_values": false
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "source".to_string(),
-                show_name: "来源_to_be_modify".to_string(),
-                remark: Some("需求来源说明1".to_string()),
-                kind: StatsFactColKind::Dimension,
-                dim_rel_conf_dim_key: Some("req_status".to_string()),
-                dim_multi_values: Some(true),
-                mes_data_type: None,
-                mes_frequency: None,
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"source",
+                "show_name":"来源_to_be_modify",
+                "remark": "需求来源说明1",
+                "kind": "dimension",
+                "dim_rel_conf_dim_key": "req_status",
+                "dim_multi_values": true
+            }),
         )
         .await;
     let _: Void = client
         .patch(
             "/ci/conf/fact/req/col/source",
-            &StatsConfFactColModifyReq {
-                show_name: Some("来源".to_string()),
-                remark: Some("需求来源说明".to_string()),
-                kind: Some(StatsFactColKind::Dimension),
-                dim_rel_conf_dim_key: Some("address".to_string()),
-                dim_multi_values: Some(false),
-                mes_data_type: None,
-                mes_frequency: None,
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "show_name":"来源",
+                "remark": "需求来源说明",
+                "kind": "dimension",
+                "dim_rel_conf_dim_key": "address",
+                "dim_multi_values": false
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "act_hours".to_string(),
-                show_name: "实例工时".to_string(),
-                remark: None,
-                kind: StatsFactColKind::Measure,
-                dim_rel_conf_dim_key: None,
-                dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Int),
-                mes_frequency: Some("RT".to_string()),
-                mes_act_by_dim_conf_keys: Some(vec!["account".to_string()]),
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"act_hours",
+                "show_name":"实例工时",
+                "kind": "measure",
+                "mes_data_type": "int",
+                "mes_frequency": "RT",
+                "mes_act_by_dim_conf_keys": ["account"]
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "plan_hours".to_string(),
-                show_name: "计划工时_to_be_modify".to_string(),
-                remark: None,
-                kind: StatsFactColKind::Measure,
-                dim_rel_conf_dim_key: None,
-                dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Boolean),
-                mes_frequency: Some("RT".to_string()),
-                mes_act_by_dim_conf_keys: None,
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"plan_hours",
+                "show_name":"计划工时_to_be_modify",
+                "kind": "measure",
+                "mes_data_type": "bool",
+                "mes_frequency": "RT"
+            }),
         )
         .await;
     let _: Void = client
         .patch(
             "/ci/conf/fact/req/col/plan_hours",
-            &StatsConfFactColModifyReq {
-                show_name: Some("计划工时".to_string()),
-                remark: Some("计划工时说明".to_string()),
-                kind: Some(StatsFactColKind::Measure),
-                dim_rel_conf_dim_key: None,
-                dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Int),
-                mes_frequency: Some("1H".to_string()),
-                mes_act_by_dim_conf_keys: Some(vec!["account".to_string()]),
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "show_name":"计划工时",
+                "remark":"计划工时说明",
+                "kind": "measure",
+                "mes_data_type": "int",
+                "mes_frequency": "1H",
+                "mes_act_by_dim_conf_keys": ["account"]
+            }),
         )
         .await;
     let _: Void = client
         .put(
             "/ci/conf/fact/req/col",
-            &StatsConfFactColAddReq {
-                key: "to_be_del".to_string(),
-                show_name: "删除测试".to_string(),
-                remark: None,
-                kind: StatsFactColKind::Measure,
-                dim_rel_conf_dim_key: None,
-                dim_multi_values: None,
-                mes_data_type: Some(StatsDataTypeKind::Int),
-                mes_frequency: Some("RT".to_string()),
-                mes_act_by_dim_conf_keys: Some(vec!["account".to_string()]),
-                rel_conf_fact_and_col_key: None,
-            },
+            &json!({
+                "key":"to_be_del",
+                "show_name":"删除测试",
+                "kind": "measure",
+                "mes_data_type": "int",
+                "mes_frequency": "RT",
+                "mes_act_by_dim_conf_keys": ["account"]
+            }),
         )
         .await;
 
-    let list: TardisPage<StatsConfFactColInfoResp> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 8);
-    let list: TardisPage<StatsConfFactColInfoResp> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&show_name=工时").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&show_name=工时").await;
     assert_eq!(list.total_size, 2);
-    let list: TardisPage<StatsConfFactColInfoResp> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&key=source").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&key=source").await;
     assert_eq!(list.total_size, 1);
-    assert_eq!(list.records[0].key, "source");
-    assert_eq!(list.records[0].show_name, "来源");
-    assert_eq!(list.records[0].remark, Some("需求来源说明".to_string()));
-    assert_eq!(list.records[0].kind, StatsFactColKind::Dimension);
-    assert_eq!(list.records[0].dim_rel_conf_dim_key, Some("address".to_string()));
-    assert_eq!(list.records[0].dim_multi_values, Some(false));
-    assert_eq!(list.records[0].mes_data_type, None);
-    assert_eq!(list.records[0].mes_frequency, None);
-    assert_eq!(list.records[0].mes_act_by_dim_conf_keys, None);
-    assert_eq!(list.records[0].rel_conf_fact_and_col_key, None);
-    let list: TardisPage<StatsConfFactColInfoResp> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&show_name=工时&key=plan_hours").await;
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "source");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "来源");
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求来源说明");
+    assert_eq!(list.records[0]["kind"].as_str().unwrap(), "dimension");
+    assert_eq!(list.records[0]["dim_rel_conf_dim_key"].as_str().unwrap(), "address");
+    assert_eq!(list.records[0]["dim_multi_values"].as_bool().unwrap(), false);
+    assert!(list.records[0]["mes_data_type"].is_null());
+    assert!(list.records[0]["mes_frequency"].is_null());
+    assert!(list.records[0]["mes_act_by_dim_conf_keys"].is_null());
+    assert!(list.records[0]["rel_conf_fact_and_col_key"].is_null());
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10&show_name=工时&key=plan_hours").await;
     assert_eq!(list.total_size, 1);
-    assert_eq!(list.records[0].key, "plan_hours");
-    assert_eq!(list.records[0].show_name, "计划工时");
-    assert_eq!(list.records[0].remark, Some("计划工时说明".to_string()));
-    assert_eq!(list.records[0].kind, StatsFactColKind::Measure);
-    assert_eq!(list.records[0].dim_rel_conf_dim_key, None);
-    assert_eq!(list.records[0].dim_multi_values, None);
-    assert_eq!(list.records[0].mes_data_type, Some(StatsDataTypeKind::Int));
-    assert_eq!(list.records[0].mes_frequency, Some("1H".to_string()));
-    assert_eq!(list.records[0].mes_act_by_dim_conf_keys, Some(vec!["account".to_string()]));
-    assert_eq!(list.records[0].rel_conf_fact_and_col_key, None);
+    assert_eq!(list.records[0]["key"].as_str().unwrap(), "plan_hours");
+    assert_eq!(list.records[0]["show_name"].as_str().unwrap(), "计划工时");
+    assert_eq!(list.records[0]["remark"].as_str().unwrap(), "计划工时说明");
+    assert_eq!(list.records[0]["kind"].as_str().unwrap(), "measure");
+    assert!(list.records[0]["dim_rel_conf_dim_key"].is_null());
+    assert!(list.records[0]["dim_multi_values"].is_null());
+    assert_eq!(list.records[0]["mes_data_type"].as_str().unwrap(), "int");
+    assert_eq!(list.records[0]["mes_frequency"].as_str().unwrap(), "1H");
+    assert_eq!(list.records[0]["mes_act_by_dim_conf_keys"].as_array().unwrap().len(), 1);
+    assert!(list.records[0]["rel_conf_fact_and_col_key"].is_null());
 
     client.delete("/ci/conf/fact/req/col/to_be_del").await;
-    let list: TardisPage<StatsConfFactColInfoResp> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
+    let list: TardisPage<Value> = client.get("/ci/conf/fact/req/col?page_number=1&page_size=10").await;
     assert_eq!(list.total_size, 7);
 
     Ok(())

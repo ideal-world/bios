@@ -26,6 +26,7 @@ pub async fn init_conf_dim_table_and_conn(
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
         vec![],
+        None,
         Some("update_time"),
     )
     .await
@@ -49,6 +50,7 @@ pub async fn init_conf_fact_table_and_conn(
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP"#,
         vec![],
+        None,
         Some("update_time"),
     )
     .await
@@ -81,6 +83,7 @@ pub async fn init_conf_fact_col_table_and_conn(
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     unique (key, rel_conf_fact_key)"#,
         vec![("rel_conf_fact_key", "btree")],
+        None,
         Some("update_time"),
     )
     .await

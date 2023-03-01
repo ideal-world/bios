@@ -272,30 +272,30 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
         "400-spi-stats-fact_record-load_set"
     );
 
-    // dimension not exist error
-    assert_eq!(
-        client
-            .put_resp::<Vec<StatsFactRecordsLoadReq>, Void>(
-                "/ci/record/fact/req/batch/load",
-                &vec![StatsFactRecordsLoadReq {
-                    key: "rec3".to_string(),
-                    own_paths: "t1/a1".to_string(),
-                    ct: Utc::now(),
-                    data: json!({
-                        "source":"xxxx",
-                        "status": "open",
-                        "priority":1,
-                        "tag":["t1","t2"],
-                        "creator":"acc001",
-                        "act_hours": 40,
-                        "plan_hours": 45
-                    })
-                }],
-            )
-            .await
-            .code,
-        "404-spi-stats-fact_record-load_set"
-    );
+    // // dimension not exist error
+    // assert_eq!(
+    //     client
+    //         .put_resp::<Vec<StatsFactRecordsLoadReq>, Void>(
+    //             "/ci/record/fact/req/batch/load",
+    //             &vec![StatsFactRecordsLoadReq {
+    //                 key: "rec3".to_string(),
+    //                 own_paths: "t1/a1".to_string(),
+    //                 ct: Utc::now(),
+    //                 data: json!({
+    //                     "source":"xxxx",
+    //                     "status": "open",
+    //                     "priority":1,
+    //                     "tag":["t1","t2"],
+    //                     "creator":"acc001",
+    //                     "act_hours": 40,
+    //                     "plan_hours": 45
+    //                 })
+    //             }],
+    //         )
+    //         .await
+    //         .code,
+    //     "404-spi-stats-fact_record-load_set"
+    // );
 
     let _: Void = client
         .put(

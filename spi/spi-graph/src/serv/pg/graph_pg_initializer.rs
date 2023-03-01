@@ -34,6 +34,7 @@ pub async fn init_table_and_conn(
             ("to_version", "btree"),
         ],
         None,
+        None,
     )
     .await
 }
