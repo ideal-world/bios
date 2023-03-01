@@ -1,8 +1,14 @@
+use std::collections::HashMap;
+
 use bios_basic::spi::spi_enumeration::SpiQueryOpKind;
 use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi;
+use tardis::{
+    chrono::{DateTime, Utc},
+    serde_json::Value,
+    web::poem_openapi,
+};
 
-use crate::stats_enumeration::{StatsQueryAggFunKind, StatsQueryFunKind, StatsQueryTimeWindowKind};
+use crate::stats_enumeration::{StatsQueryAggFunKind, StatsQueryTimeWindowKind};
 
 /// Query Metrics Request
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -21,7 +27,8 @@ pub struct StatsQueryMetricsReq {
     pub order: Option<Vec<StatsQueryMetricsOrderReq>>,
     /// Filter conditions after group
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
-    pub distinct: bool,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
     pub limit: Option<u32>,
 }
 
@@ -37,30 +44,27 @@ pub struct StatsQueryMetricsSelectReq {
 pub struct StatsQueryMetricsGroupReq {
     /// Column key
     pub code: String,
-    /// SQL function
-    pub fun: Option<StatsQueryFunKind>,
+    /// Time window function
+    pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsWhereReq {
     /// Column key
     pub code: String,
-    /// SQL function
-    pub fun: Option<StatsQueryFunKind>,
     /// Operator
     pub op: SpiQueryOpKind,
     /// Value
-    pub value: String,
-    /// Window function
-    pub time_window: StatsQueryTimeWindowKind,
+    pub value: Value,
+    /// Time window function
+    pub time_window: Option<StatsQueryTimeWindowKind>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsOrderReq {
     /// Column key
     pub code: String,
-    /// SQL function
-    pub fun: Option<StatsQueryFunKind>,
+    pub fun: Option<StatsQueryAggFunKind>,
     /// Sort direction
     pub asc: bool,
 }
@@ -69,12 +73,12 @@ pub struct StatsQueryMetricsOrderReq {
 pub struct StatsQueryMetricsHavingReq {
     /// Column key
     pub code: String,
-    /// SQL function
-    pub fun: Option<StatsQueryFunKind>,
+    /// Aggregate function
+    pub fun: Option<StatsQueryAggFunKind>,
     /// Operator
     pub op: SpiQueryOpKind,
     /// Value
-    pub value: String,
+    pub value: Value,
 }
 
 /// Query Metrics Response
@@ -82,18 +86,8 @@ pub struct StatsQueryMetricsHavingReq {
 pub struct StatsQueryMetricsResp {
     /// Fact key
     pub from: String,
+    /// Show names (alias_name -> show_name)
+    pub show_names: HashMap<String, String>,
     /// Group
-    group: Vec<StatsQueryMetricsGroupResp>,
-}
-
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct StatsQueryMetricsGroupResp {
-    /// Field alias name
-    pub alias_name: String,
-    /// Field show name
-    pub show_name: String,
-    /// Field value
-    pub value: String,
-    /// Sub group
-    pub sub: Vec<StatsQueryMetricsGroupResp>,
+    pub group: Value,
 }

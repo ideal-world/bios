@@ -25,6 +25,7 @@ pub async fn init_table_and_conn(
     rel_key character varying NOT NULL"#,
         vec![("ts", "btree"), ("key", "btree"), ("op", "btree"), ("rel_key", "btree")],
         None,
+        None,
     )
     .await
 }

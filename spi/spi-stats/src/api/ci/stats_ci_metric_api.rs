@@ -15,7 +15,7 @@ pub struct StatsCiMetricApi;
 impl StatsCiMetricApi {
     /// Query Metrics
     #[oai(path = "/", method = "put")]
-    async fn query_metrics(&self, query_req: Json<StatsQueryMetricsReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<StatsQueryMetricsResp>> {
+    async fn query_metrics(&self, query_req: Json<StatsQueryMetricsReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<StatsQueryMetricsResp> {
         let funs = request.tardis_fun_inst();
         let resp = stats_metric_serv::query_metrics(&query_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)

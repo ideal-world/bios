@@ -193,6 +193,7 @@ pub mod common_pg {
         table_create_content: &str,
         // field name -> index type
         indexes: Vec<(&str, &str)>,
+        primary_keys: Option<Vec<&str>>,
         update_time_field: Option<&str>,
     ) -> TardisResult<(TardisRelDBlConnection, String)> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
@@ -203,7 +204,7 @@ pub mod common_pg {
         } else if !mgr {
             return Err(TardisError::bad_request("The requested tag does not exist", ""));
         }
-        do_init_table(&schema_name, &conn, &tag, table_flag, table_create_content, indexes, update_time_field).await?;
+        do_init_table(&schema_name, &conn, &tag, table_flag, table_create_content, indexes, primary_keys, update_time_field).await?;
         Ok((conn, format!("{schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag}")))
     }
 
@@ -221,12 +222,13 @@ pub mod common_pg {
         table_create_content: &str,
         // field name -> index type
         indexes: Vec<(&str, &str)>,
+        primary_keys: Option<Vec<&str>>,
         update_time_field: Option<&str>,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
         let tag = tag.map(|t| format!("_{t}")).unwrap_or_else(|| "".to_string());
         let schema_name = get_schema_name_from_context(ctx);
-        do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, indexes, update_time_field).await
+        do_init_table(&schema_name, conn, &tag, table_flag, table_create_content, indexes, primary_keys, update_time_field).await
     }
 
     async fn do_init_table(
@@ -237,6 +239,7 @@ pub mod common_pg {
         table_create_content: &str,
         // field name -> index type
         indexes: Vec<(&str, &str)>,
+        primary_keys: Option<Vec<&str>>,
         update_time_field: Option<&str>,
     ) -> TardisResult<()> {
         conn.execute_one(
@@ -253,6 +256,14 @@ pub mod common_pg {
             let index_part = field_name_or_fun.replace(|c: char| !c.is_ascii_alphanumeric(), "_");
             conn.execute_one(
                 &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
+                vec![],
+            )
+            .await?;
+        }
+        if let Some(primary_keys) = primary_keys {
+            let pks = primary_keys.join(", ");
+            conn.execute_one(
+                &format!(r#"ALTER TABLE {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} ADD PRIMARY KEY ({pks})"#),
                 vec![],
             )
             .await?;

@@ -237,7 +237,6 @@ pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: 
 async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlConnection, ctx: &TardisContext) -> TardisResult<()> {
     let mut sql = vec![];
     let mut index = vec![];
-    sql.push("id serial PRIMARY KEY".to_string());
     sql.push(format!("key {} NOT NULL", dim_conf.data_type.to_pg_data_type()));
     index.push(("key", "btree"));
     match dim_conf.data_type {
@@ -258,6 +257,6 @@ async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlC
     sql.push("ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string());
     sql.push("et timestamp with time zone".to_string());
 
-    common_pg::init_table(conn, Some(&dim_conf.key), "stats_inst_dim", sql.join(",\r\n").as_str(), vec![], None, ctx).await?;
+    common_pg::init_table(conn, Some(&dim_conf.key), "stats_inst_dim", sql.join(",\r\n").as_str(), index, None, None, ctx).await?;
     Ok(())
 }

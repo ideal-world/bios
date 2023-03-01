@@ -21,6 +21,8 @@ pub enum SpiQueryOpKind {
     Le,
     #[oai(rename = "like")]
     Like,
+    #[oai(rename = "in")]
+    In,
 }
 
 impl SpiQueryOpKind {
@@ -33,6 +35,7 @@ impl SpiQueryOpKind {
             SpiQueryOpKind::Lt => "<".to_string(),
             SpiQueryOpKind::Le => "<=".to_string(),
             SpiQueryOpKind::Like => "LIKE".to_string(),
+            SpiQueryOpKind::In => "IN".to_string(),
         }
     }
 }

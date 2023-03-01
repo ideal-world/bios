@@ -39,6 +39,7 @@ pub async fn init_table_and_conn(
             ("update_time", "btree"),
             ("visit_keys", "btree"),
         ],
+        None,
         Some("update_time"),
     )
     .await
