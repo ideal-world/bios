@@ -11,7 +11,7 @@ use tardis::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
-    serde_json::{self, json},
+    serde_json::{self, json, Map},
     TardisFunsInst,
 };
 
@@ -31,8 +31,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let fact_inst_del_table_name = package_table_name(&format!("stats_inst_fact_{}_del", query_req.from), ctx);
 
     // Fetch config
-    let conf_info: Vec<StatsConfInfo> = conn
-        .find_dtos_by_sql(
+    let conf_info = conn
+        .query_all(
             &format!(
                 r#"SELECT
     col.key as col_key,
@@ -61,6 +61,27 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             "404-spi-stats-metric-fact-not-exist",
         ));
     }
+    let conf_info = conf_info
+        .into_iter()
+        .map(|item| StatsConfInfo {
+            col_key: item.try_get("", "col_key").unwrap(),
+            show_name: item.try_get("", "show_name").unwrap(),
+            col_kind: item.try_get("", "col_kind").unwrap(),
+            dim_multi_values: item.try_get("", "dim_multi_values").unwrap(),
+            mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type").unwrap().is_none() {
+                None
+            } else {
+                Some(item.try_get("", "mes_data_type").unwrap())
+            },
+            dim_data_type: if item.try_get::<Option<String>>("", "dim_data_type").unwrap().is_none() {
+                None
+            } else {
+                Some(item.try_get("", "dim_data_type").unwrap())
+            },
+            query_limit: item.try_get("", "query_limit").unwrap(),
+        })
+        .collect::<Vec<StatsConfInfo>>();
+
     let conf_limit = conf_info.get(0).unwrap().query_limit;
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone(), v)).collect::<HashMap<String, StatsConfInfo>>();
     if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code))
@@ -169,9 +190,9 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     }
     for select in &query_req.select {
         let col_conf = conf_info.get(&select.code).unwrap();
-        let col_data_type = col_conf.dim_data_type.as_ref().unwrap();
+        let col_data_type = col_conf.mes_data_type.as_ref().unwrap();
         let column_name_with_fun = col_data_type.to_pg_select(&format!("_.{}", &select.code), &select.fun);
-        let alias_name = format!("{}_{}", select.code, select.fun.to_string());
+        let alias_name = format!("{}_{}", select.code, select.fun.to_string().to_lowercase());
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), false));
     }
     let sql_part_outer_selects =
@@ -243,7 +264,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     };
 
     let final_sql = format!(
-        r#"SELECT{sql_part_outer_selects}
+        r#"SELECT {sql_part_outer_selects}
     FROM (
         SELECT
             DISTINCT ON (fact.key) fact.key, {sql_part_inner_selects}
@@ -285,22 +306,23 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
 
 fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: &Vec<String>, result: Vec<serde_json::Value>) -> serde_json::Value {
     if curr_select_dimension_keys.len() == 0 {
-        return json!({});
+        let mut leaf_node = Map::new();
+        select_measure_keys.iter().for_each(|measure_key| {
+            leaf_node.insert(measure_key.to_string(), result.get(0).unwrap().get(measure_key).unwrap().clone());
+        });
+        return serde_json::Value::Object(leaf_node);
     }
-    result
-        .iter()
-        .group_by(|record| record.get(curr_select_dimension_keys.get(0).unwrap()).unwrap())
-        .into_iter()
-        .map(|(key, group)| {
-            let key = if key.is_null() { "_".to_string() } else { key.as_str().unwrap().to_string() };
-            let sub = package_groups(
-                curr_select_dimension_keys[1..].to_vec(),
-                select_measure_keys,
-                group.into_iter().map(|r| r.clone()).collect::<Vec<serde_json::Value>>(),
-            );
-            json!({ key: sub })
-        })
-        .collect::<serde_json::Value>()
+    let mut node = Map::new();
+    result.iter().group_by(|record| record.get(curr_select_dimension_keys.get(0).unwrap()).unwrap()).into_iter().for_each(|(key, group)| {
+        let key = if key.is_null() { "_".to_string() } else { key.as_str().unwrap().to_string() };
+        let sub = package_groups(
+            curr_select_dimension_keys[1..].to_vec(),
+            select_measure_keys,
+            group.into_iter().map(|r| r.clone()).collect::<Vec<serde_json::Value>>(),
+        );
+        node.insert(key, sub);
+    });
+    serde_json::Value::Object(node)
 }
 
 #[derive(sea_orm::FromQueryResult)]

@@ -17,6 +17,7 @@ use tardis::web::web_resp::Void;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod test_stats_conf;
 mod test_stats_record;
+mod test_stats_metric;
 
 #[tokio::test]
 async fn test_stats() -> TardisResult<()> {
@@ -88,6 +89,7 @@ async fn init_data() -> TardisResult<()> {
 
     test_stats_conf::test(&mut client).await?;
     test_stats_record::test(&mut client).await?;
+    test_stats_metric::test(&mut client).await?;
 
     Ok(())
 }
