@@ -45,7 +45,7 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
             )
         })?;
         if fact_col_conf.kind == StatsFactColKind::Dimension {
-            let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
+            let dim_conf = stats_pg_conf_dim_serv::get(fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
             // TODO check value enum when stable_ds =true
             fields.push(req_fact_col_key.to_string());
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
@@ -77,9 +77,9 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                 if fact_col_conf.kind == StatsFactColKind::Dimension {
                     let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.unwrap(), &conn, ctx).await?.unwrap();
                     if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                        values.push(Value::from(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)));
+                        values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key));
                     } else {
-                        values.push(Value::from(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)));
+                        values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
                     }
                 } else if fact_col_conf.kind == StatsFactColKind::Measure {
                     values.push(fact_col_conf.mes_data_type.unwrap().result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
@@ -143,7 +143,7 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
                 )
             })?;
             if fact_col_conf.kind == StatsFactColKind::Dimension {
-                let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
+                let dim_conf = stats_pg_conf_dim_serv::get(fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
                 // TODO check value enum when stable_ds =true
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
                     values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false));
@@ -400,7 +400,7 @@ async fn dim_do_record_paginate(
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(dim_record_key) = &dim_record_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false));
+        params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false));
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));

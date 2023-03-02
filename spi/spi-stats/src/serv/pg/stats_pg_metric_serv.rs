@@ -63,7 +63,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             "404-spi-stats-metric-fact-not-exist",
         ));
     }
-    let conf_info = conf_info
+    let mut conf_info = conf_info
         .into_iter()
         .map(|item| StatsConfInfo {
             col_key: item.try_get("", "col_key").unwrap(),
@@ -83,6 +83,16 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             query_limit: item.try_get("", "query_limit").unwrap(),
         })
         .collect::<Vec<StatsConfInfo>>();
+    // Add default dimension
+    conf_info.push(StatsConfInfo {
+        col_key: "ct".to_string(),
+        show_name: "创建时间".to_string(),
+        col_kind: StatsFactColKind::Dimension,
+        dim_multi_values: Some(false),
+        mes_data_type: None,
+        dim_data_type: Some(StatsDataTypeKind::DateTime),
+        query_limit: conf_info.get(0).unwrap().query_limit,
+    });
 
     let conf_limit = conf_info.get(0).unwrap().query_limit;
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone(), v)).collect::<HashMap<String, StatsConfInfo>>();
@@ -91,17 +101,16 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         || query_req
             .order
             .as_ref()
-            .map(|orders| orders.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
+            .map(|orders| orders.iter().any(|order| !query_req.select.iter().any(|select| order.code == select.code && order.fun == select.fun)))
             .unwrap_or(false)
-        || query_req.having.as_ref().map(|orders| orders.iter().any(|i| !conf_info.contains_key(&i.code))).unwrap_or(false)
+        || query_req
+            .having
+            .as_ref()
+            .map(|havings| havings.iter().any(|having| !query_req.select.iter().any(|select| having.code == select.code && having.fun == select.fun)))
+            .unwrap_or(false)
         || query_req._where.as_ref().map(|or_wheres| or_wheres.iter().any(|and_wheres| and_wheres.iter().any(|where_| !conf_info.contains_key(&where_.code)))).unwrap_or(false)
     {
-        return Err(funs.err().not_found(
-            "metric",
-            "query",
-            &format!("The query some dimension does not exist."),
-            "404-spi-stats-metric-dim-not-exist",
-        ));
+        return Err(funs.err().not_found("metric", "query", "The query some dimension does not exist.", "404-spi-stats-metric-dim-not-exist"));
     }
 
     let mut params = vec![
@@ -118,13 +127,13 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             let mut sql_part_and_wheres = vec![];
             for and_where in or_wheres {
                 let col_conf = conf_info.get(&and_where.code).unwrap();
-                let col_data_type = if &col_conf.col_kind == &StatsFactColKind::Dimension {
+                let col_data_type = if col_conf.col_kind == StatsFactColKind::Dimension {
                     col_conf.dim_data_type.as_ref().unwrap()
                 } else {
                     col_conf.mes_data_type.as_ref().unwrap()
                 };
                 if let Some((sql_part, value)) = col_data_type.to_pg_where(
-                    col_conf.dim_multi_values.unwrap(),
+                    col_conf.dim_multi_values.unwrap_or(false),
                     &format!("fact.{}", &and_where.code),
                     &and_where.op,
                     params.len() + 1,
@@ -138,8 +147,9 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                         "metric",
                         "query",
                         &format!(
-                            "The query column=[{}] operation=[{}] time_window=[{}] multi_values=[{}] is not legal.",
+                            "The query column=[{}] type=[{}] operation=[{}] time_window=[{}] multi_values=[{}] is not legal.",
                             &and_where.code,
+                            col_data_type.to_string().to_lowercase(),
                             &and_where.op.to_sql(),
                             &and_where.time_window.is_some(),
                             col_conf.dim_multi_values.unwrap()
@@ -179,14 +189,19 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             let alias_name = format!(
                 "{}{FUNCTION_SUFFIX_FLAG}{}",
                 group.code,
-                group.time_window.as_ref().map(|i| i.to_string()).unwrap_or("".to_string())
+                group.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string())
             );
             sql_part_group_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone()));
         } else {
             return Err(funs.err().not_found(
                 "metric",
                 "query",
-                &format!("The group column=[{}] time_window=[{}] is not legal.", &group.code, &group.time_window.is_some(),),
+                &format!(
+                    "The group column=[{}] type=[{}] time_window=[{}] is not legal.",
+                    &group.code,
+                    col_data_type.to_string().to_lowercase(),
+                    &group.time_window.is_some(),
+                ),
                 "404-spi-stats-metric-op-not-legal",
             ));
         }
@@ -214,19 +229,9 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         let mut sql_part_havings = vec![];
         for having in havings {
             let col_conf = conf_info.get(&having.code).unwrap();
-            let col_data_type = if &col_conf.col_kind == &StatsFactColKind::Dimension {
-                col_conf.dim_data_type.as_ref().unwrap()
-            } else {
-                col_conf.mes_data_type.as_ref().unwrap()
-            };
-            if let Some((sql_part, value)) = col_data_type.to_pg_having(
-                col_conf.dim_multi_values.unwrap(),
-                &format!("_.{}", &having.code),
-                &having.op,
-                params.len() + 1,
-                &having.value,
-                &having.fun,
-            ) {
+            if let Some((sql_part, value)) =
+                col_conf.mes_data_type.as_ref().unwrap().to_pg_having(false, &format!("_.{}", &having.code), &having.op, params.len() + 1, &having.value, Some(&having.fun))
+            {
                 params.push(value);
                 sql_part_havings.push(sql_part);
             } else {
@@ -234,11 +239,11 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     "metric",
                     "query",
                     &format!(
-                        "The query column=[{}] operation=[{}] fun=[{}] multi_values=[{}] is not legal.",
+                        "The query column=[{}] type=[{}] operation=[{}] fun=[{}] is not legal.",
                         &having.code,
+                        col_conf.mes_data_type.as_ref().unwrap().to_string().to_lowercase(),
                         &having.op.to_sql(),
-                        &having.fun.is_some(),
-                        col_conf.dim_multi_values.unwrap()
+                        &having.fun.to_string().to_lowercase()
                     ),
                     "404-spi-stats-metric-op-not-legal",
                 ));
@@ -255,9 +260,9 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             .iter()
             .map(|order| {
                 format!(
-                    "{}_{} {}",
+                    "{}{FUNCTION_SUFFIX_FLAG}{} {}",
                     order.code,
-                    order.fun.as_ref().map(|i| i.to_string()).unwrap_or("".to_string()),
+                    order.fun.to_string().to_lowercase(),
                     if order.asc { "ASC" } else { "DESC" }
                 )
             })
@@ -295,15 +300,20 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     {query_limit}"#
     );
 
-    let result = conn.query_all(&final_sql, params).await?.iter().map(|record| serde_json::Value::from_query_result(record, "").unwrap()).collect::<Vec<serde_json::Value>>();
+    let result = conn
+        .query_all(&final_sql, params)
+        .await?
+        .iter()
+        .map(|record|
+        // TODO This method cannot get the data of array type, so the dimension of multiple values, such as labels, cannot be obtained.
+        serde_json::Value::from_query_result(record, "").unwrap())
+        .collect::<Vec<serde_json::Value>>();
 
     let select_dimension_keys =
         sql_part_outer_select_infos.iter().filter(|(_, _, _, is_dimension)| *is_dimension).map(|(_, alias_name, _, _)| alias_name.to_string()).collect::<Vec<String>>();
     let select_measure_keys =
         sql_part_outer_select_infos.iter().filter(|(_, _, _, is_dimension)| !*is_dimension).map(|(_, alias_name, _, _)| alias_name.to_string()).collect::<Vec<String>>();
     let show_names = sql_part_outer_select_infos.into_iter().map(|(_, alias_name, show_name, _)| (alias_name, show_name)).collect::<HashMap<String, String>>();
-
-    println!(">>>>>>>>>>>>{:?}", tardis::TardisFuns::json.obj_to_string(&result));
 
     Ok(StatsQueryMetricsResp {
         from: query_req.from.to_string(),
@@ -313,12 +323,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
 }
 
 fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: &Vec<String>, result: Vec<serde_json::Value>) -> serde_json::Value {
-    if curr_select_dimension_keys.len() == 0 {
+    if curr_select_dimension_keys.is_empty() {
         let mut leaf_node = Map::new();
         select_measure_keys.iter().for_each(|measure_key| {
             let val = result.get(0).unwrap().get(measure_key).unwrap();
             let val = if measure_key.ends_with(&format!("{FUNCTION_SUFFIX_FLAG}avg")) {
-                // Fix avg function return type error
+                // Fix `avg` function return type error
                 serde_json::Value::from(val.as_str().unwrap().parse::<f64>().unwrap())
             } else {
                 val.clone()
@@ -332,17 +342,27 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
         .iter()
         .group_by(|record| {
             let dimension_key = curr_select_dimension_keys.get(0).unwrap();
-            println!(">>>>>>>1>>>>>{:?}", dimension_key);
-            println!(">>>>>>>2>>>>>{:?}", record);
             record.get(dimension_key).unwrap()
         })
         .into_iter()
         .for_each(|(key, group)| {
-            let key = if key.is_null() { "".to_string() } else { key.as_str().unwrap().to_string() };
+            let key = if key.is_f64() {
+                key.as_f64().unwrap().to_string()
+            } else if key.is_i64() {
+                key.as_i64().unwrap().to_string()
+            } else if key.is_boolean() {
+                key.as_bool().unwrap().to_string()
+            } else if key.is_u64() {
+                key.as_u64().unwrap().to_string()
+            } else if key.is_null() {
+                "".to_string()
+            } else {
+                key.as_str().unwrap().to_string()
+            };
             let sub = package_groups(
                 curr_select_dimension_keys[1..].to_vec(),
                 select_measure_keys,
-                group.into_iter().map(|r| r.clone()).collect::<Vec<serde_json::Value>>(),
+                group.into_iter().cloned().collect::<Vec<serde_json::Value>>(),
             );
             node.insert(key, sub);
         });

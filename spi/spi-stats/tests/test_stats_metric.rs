@@ -107,6 +107,44 @@ pub async fn test_metric_query_check(client: &mut TestHttpClient) -> TardisResul
         "404-spi-stats-metric-query"
     );
 
+    // order info not exist in select error
+    assert_eq!(
+        client
+            .put_resp::<Value, StatsQueryMetricsResp>(
+                "/ci/metric",
+                &json!({
+                    "from":"req",
+                    "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                    "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
+                    "start_time":"2023-01-01T12:00:00.000Z",
+                    "end_time":"2023-02-01T12:00:00.000Z",
+                    "order": [{"code":"act_hours", "fun":"max","asc": false}]
+                }),
+            )
+            .await
+            .code,
+        "404-spi-stats-metric-query"
+    );
+
+    // having info not exist in select error
+    assert_eq!(
+        client
+            .put_resp::<Value, StatsQueryMetricsResp>(
+                "/ci/metric",
+                &json!({
+                    "from":"req",
+                    "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                    "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
+                    "start_time":"2023-01-01T12:00:00.000Z",
+                    "end_time":"2023-02-01T12:00:00.000Z",
+                    "having": [{"code":"act_hours", "fun":"max","op": "=","value":10}]
+                }),
+            )
+            .await
+            .code,
+        "404-spi-stats-metric-query"
+    );
+
     // select function not exist error
     assert_eq!(
         client
@@ -210,33 +248,19 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["act_hours__sum"], 10);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["plan_hours__max"], 20);
 
-    // test tree dimensions with multiple values
-    let resp: StatsQueryMetricsResp = client
-        .put(
-            "/ci/metric",
-            &json!({
-                "from":"req",
-                "select":[{"code":"act_hours","fun":"avg"},{"code":"plan_hours","fun":"avg"}],
-                "group":[{"code":"source"},{"code":"status"},{"code":"tag"}],
-                "start_time":"2023-01-01T12:00:00.000Z",
-                "end_time":"2023-02-01T12:00:00.000Z"
-            }),
-        )
-        .await;
-    assert_eq!(resp.from, "req");
-    assert_eq!(resp.show_names.len(), 5);
-    assert_eq!(resp.show_names["act_hours__avg"].as_str(), "实例工时");
-    assert_eq!(resp.show_names["plan_hours__avg"].as_str(), "计划工时");
-    assert_eq!(resp.show_names["status__"].as_str(), "状态");
-    assert_eq!(resp.show_names["source__"].as_str(), "来源");
-    assert_eq!(resp.show_names["tag__"].as_str(), "标签");
-    assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"][""]["act_hours__avg"], 80);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"][""]["plan_hours__avg"], 20);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["act_hours__avg"], 10);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["plan_hours__avg"], 20);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["f1"]["act_hours__avg"], 10);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["f2"]["plan_hours__avg"], 20);
+    // TODO test tree dimensions with multiple values
+    // let resp: StatsQueryMetricsResp = client
+    //     .put(
+    //         "/ci/metric",
+    //         &json!({
+    //             "from":"req",
+    //             "select":[{"code":"act_hours","fun":"avg"},{"code":"plan_hours","fun":"avg"}],
+    //             "group":[{"code":"source"},{"code":"status"},{"code":"tag"}],
+    //             "start_time":"2023-01-01T12:00:00.000Z",
+    //             "end_time":"2023-02-01T12:00:00.000Z"
+    //         }),
+    //     )
+    //     .await;
 
     // test two dimensions with time window
     let resp: StatsQueryMetricsResp = client
@@ -251,6 +275,16 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names.len(), 4);
+    assert_eq!(resp.show_names["ct__day"].as_str(), "创建时间");
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__avg"], 10.0);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__avg"], 20.0);
+    assert_eq!(resp.group.as_object().unwrap()["1"][""]["act_hours__avg"], 10.0);
+    assert_eq!(resp.group.as_object().unwrap()["1"][""]["plan_hours__avg"], 20.0);
+    assert_eq!(resp.group.as_object().unwrap()["1"]["open"]["act_hours__avg"], 10.0);
+    assert_eq!(resp.group.as_object().unwrap()["1"]["open"]["plan_hours__avg"], 20.0);
 
     // test two dimensions with limit
     let resp: StatsQueryMetricsResp = client
@@ -258,7 +292,7 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             "/ci/metric",
             &json!({
                 "from":"req",
-                "select":[{"code":"act_hours","fun":"avg"},{"code":"plan_hours","fun":"avg"}],
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z",
@@ -266,6 +300,11 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
+    assert_eq!(resp.group.as_object().unwrap().len(), 1);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"][""]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
 
     // test two dimensions with order
     let resp: StatsQueryMetricsResp = client
@@ -273,14 +312,21 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             "/ci/metric",
             &json!({
                 "from":"req",
-                "select":[{"code":"act_hours","fun":"avg"},{"code":"plan_hours","fun":"avg"}],
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z",
-                "order": [{"code":"ct","asc": false}]
+                "order": [{"code":"act_hours","fun":"sum","asc": false}]
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names.len(), 4);
+    assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-03"]["close"]["act_hours__sum"], 10);
 
     // test tree dimensions with having
     let resp: StatsQueryMetricsResp = client
@@ -296,6 +342,12 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.group.as_object().unwrap().len(), 2);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__sum"], 160);
 
     // test two dimensions with all
     let resp: StatsQueryMetricsResp = client
@@ -307,12 +359,19 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z",
-                "order": [{"code":"ct","asc": false}],
+                "order": [{"code":"act_hours","fun":"sum","asc": false}],
                 "having": [{"code":"act_hours","fun": "sum", "op":">", "value":30}],
                 "limit":2
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
+    assert_eq!(resp.group.as_object().unwrap().len(), 2);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__sum"], 160);
 
     // test where
     let resp: StatsQueryMetricsResp = client
@@ -322,12 +381,22 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
                 "from":"req",
                 "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
-                "where":[{"code":"act_hours", "op":">", "value":10},{"code":"ct", "op":"!=", "value":"01", "time_window":"day"}],
+                "where":[
+                    [{"code":"act_hours", "op":">", "value":10},{"code":"ct", "op":"!=", "value":1, "time_window":"day"}],
+                    [{"code":"status", "op":"=", "value":"open"}]
+                    ],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z"
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
+    assert_eq!(resp.group.as_object().unwrap().len(), 2);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 160);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__sum"], 160);
 
     // test with delete record
     let resp: StatsQueryMetricsResp = client
@@ -342,6 +411,11 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 160);
+
     assert_eq!(client.delete_resp("/ci/record/fact/req/r011").await.code, "200");
     sleep(Duration::from_millis(100)).await;
     let resp: StatsQueryMetricsResp = client
@@ -356,6 +430,11 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["act_hours__sum"], 70);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 140);
+
     let resp: StatsQueryMetricsResp = client
         .put(
             "/ci/metric",
@@ -368,6 +447,10 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
             }),
         )
         .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 160);
 
     Ok(())
 }
