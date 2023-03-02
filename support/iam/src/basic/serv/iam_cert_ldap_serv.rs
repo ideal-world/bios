@@ -75,7 +75,11 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
                 conn_uri: Some(add_req.conn_uri.clone()),
-                status: RbumCertConfStatusKind::Enabled,
+                status: if add_req.enabled {
+                    RbumCertConfStatusKind::Enabled
+                } else {
+                    RbumCertConfStatusKind::Disabled
+                },
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id.clone(),
             },
@@ -114,7 +118,11 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: Some(modify_req.conn_uri.clone()),
-                status: None,
+                status: if modify_req.enabled {
+                    Some(RbumCertConfStatusKind::Enabled)
+                } else {
+                    Some(RbumCertConfStatusKind::Disabled)
+                },
             },
             funs,
             ctx,
