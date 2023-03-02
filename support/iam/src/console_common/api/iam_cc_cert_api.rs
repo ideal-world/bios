@@ -8,6 +8,8 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
+// moved to ci,deprecated
+#[deprecated]
 pub struct IamCcCertApi;
 
 /// Common Console Cert API
