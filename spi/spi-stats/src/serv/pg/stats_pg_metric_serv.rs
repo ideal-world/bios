@@ -22,6 +22,71 @@ use crate::{
 
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 
+/// 查询指标.
+/// 
+/// # Examples
+/// 
+/// An example SQL assembled from a completed query is as follows:
+/// ```
+/// -- Outer SQL, responsible for grouping and sorting, filtering, and length limitation after grouping
+/// SELECT
+///  -- The format of the returned field is: `field name__<function name>`
+///   date(timezone('UTC', _.ct)) AS ct__date,
+///   _.status AS status__,
+///   sum(_.act_hours) AS act_hours__sum,
+///   sum(_.plan_hours) AS plan_hours__sum
+/// FROM
+///   (
+///     -- Inner SQL, responsible for filtering, deduplication, and length limitation
+///     SELECT
+///       -- Built-in statement for deduplication
+///       DISTINCT ON (fact.key) fact.key,
+///       -- Query dimensions and measures
+///       fact.act_hours AS act_hours,
+///       fact.plan_hours AS plan_hours,
+///       fact.ct AS ct,
+///       fact.status AS status
+///     FROM
+///       -- Query fact instance table
+///       xxx.starsys_stats_inst_fact_req fact 
+///       -- Association instance delete table
+///       LEFT JOIN xxx.starsys_stats_inst_fact_req_del del ON del.key = fact.key
+///       AND del.ct >= '2023-01-01 12:00:00 +00:00'
+///       AND del.ct <= '2023-02-01 12:00:00 +00:00'
+///     WHERE
+///       -- Built-in statement for permission control
+///       fact.own_paths LIKE 't1/a1%' 
+///       -- Built-in statement for filter deleted records
+///       AND del.key IS NULL 
+///       -- Time filter
+///       AND fact.ct >= '2023-01-01 12:00:00 +00:00'
+///       AND fact.ct <= '2023-02-01 12:00:00 +00:00'
+///       -- Other filter conditions, optional
+///       AND (
+///         fact.act_hours > 10
+///         AND date_part('day', timezone('UTC', fact.ct)) != 1
+///         OR fact.status = 'open'
+///       )
+///     ORDER BY
+///     -- Built-in statement for deduplication
+///       fact.key, fact.ct DESC
+///     LIMIT
+///     -- built-in statement, the value is the limit length in the fact configuration
+///       2000
+///   ) _
+/// GROUP BY
+/// -- List of dimensions to grouping
+///   ROLLUP(date(timezone('UTC', _.ct)), _.status)
+/// HAVING
+/// -- Filter condition of the measure value after grouping and aggregation, optional
+///   sum(_.act_hours) > 30
+/// ORDER BY
+/// -- Order of the measure values ​​after grouping ad aggregation, optional
+///   act_hours__sum DESC
+/// LIMIT
+/// -- Length limit after grouping, optional
+///   2
+/// ```
 pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<StatsQueryMetricsResp> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, _) = common_pg::init_conn(bs_inst).await?;
@@ -285,11 +350,11 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         SELECT
             DISTINCT ON (fact.key) fact.key, {sql_part_inner_selects}
         FROM {fact_inst_table_name} fact
-        LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 and del.ct <= $3
+        LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
         WHERE
             fact.own_paths LIKE $1
             AND del.key IS NULL
-            AND fact.ct >= $2 and fact.ct <= $3
+            AND fact.ct >= $2 AND fact.ct <= $3
             {sql_part_wheres}
         ORDER BY fact.key,fact.ct DESC
         LIMIT {conf_limit}

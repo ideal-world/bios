@@ -296,7 +296,7 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // fact column not exist error
     assert_eq!(
         client.put_resp::<Void, Void>("/ci/conf/fact/kb_doc/online", &Void {}).await.code,
-        "404-spi-stats-fact_conf-create_inst"
+        "404-spi-stats-fact_col_conf-create_inst"
     );
 
     test_fact_col_conf(client).await?;
@@ -304,7 +304,7 @@ pub async fn test_fact_conf(client: &mut TestHttpClient) -> TardisResult<()> {
     // online
     assert_eq!(
         client.put_resp::<Void, Void>("/ci/conf/fact/kb_doc/online", &Void {}).await.code,
-        "404-spi-stats-fact_conf-create_inst"
+        "404-spi-stats-fact_col_conf-create_inst"
     );
     let _: Void = client.put("/ci/conf/fact/req/online", &Void {}).await;
 
