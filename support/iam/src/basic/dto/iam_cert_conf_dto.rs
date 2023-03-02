@@ -129,6 +129,7 @@ pub struct IamCertConfLdapAddOrModifyReq {
     // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
     // this field can be &(objectCategory=group)
     pub search_base_filter: String,
+    pub enabled: bool,
 }
 
 impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
@@ -143,6 +144,7 @@ impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
             base_dn: iam_ldap_conf.base_dn,
             field_display_name: iam_ldap_conf.field_display_name,
             search_base_filter: iam_ldap_conf.search_base_filter,
+            enabled: true,
         }
     }
 }
