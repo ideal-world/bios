@@ -9,7 +9,7 @@ use tardis::web::poem_openapi;
 pub enum SpiQueryOpKind {
     #[oai(rename = "=")]
     Eq,
-    #[oai(rename = "<>")]
+    #[oai(rename = "!=")]
     Ne,
     #[oai(rename = ">")]
     Gt,
@@ -29,7 +29,7 @@ impl SpiQueryOpKind {
     pub fn to_sql(&self) -> String {
         match self {
             SpiQueryOpKind::Eq => "=".to_string(),
-            SpiQueryOpKind::Ne => "<>".to_string(),
+            SpiQueryOpKind::Ne => "!=".to_string(),
             SpiQueryOpKind::Gt => ">".to_string(),
             SpiQueryOpKind::Ge => ">=".to_string(),
             SpiQueryOpKind::Lt => "<".to_string(),

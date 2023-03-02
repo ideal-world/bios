@@ -239,13 +239,10 @@ async fn create_inst_table(dim_conf: &StatsConfDimInfoResp, conn: &TardisRelDBlC
     let mut index = vec![];
     sql.push(format!("key {} NOT NULL", dim_conf.data_type.to_pg_data_type()));
     index.push(("key", "btree"));
-    match dim_conf.data_type {
-        StatsDataTypeKind::DateTime => {
-            index.push(("date(timezone('UTC', key))", "btree"));
-            index.push(("date_part('hour',timezone('UTC', key))", "btree"));
-            index.push(("date_part('day',timezone('UTC', key))", "btree"));
-        }
-        _ => {}
+    if dim_conf.data_type == StatsDataTypeKind::DateTime {
+        index.push(("date(timezone('UTC', key))", "btree"));
+        index.push(("date_part('hour',timezone('UTC', key))", "btree"));
+        index.push(("date_part('day',timezone('UTC', key))", "btree"));
     }
     sql.push("show_name character varying NOT NULL".to_string());
     if !dim_conf.hierarchy.is_empty() {

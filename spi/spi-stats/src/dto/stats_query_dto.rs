@@ -24,8 +24,10 @@ pub struct StatsQueryMetricsReq {
     #[oai(rename = "where")]
     pub _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
     /// Sort conditions
+    /// The code and fun must exist in Select
     pub order: Option<Vec<StatsQueryMetricsOrderReq>>,
     /// Filter conditions after group
+    /// The code and fun must exist in Select
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
@@ -34,7 +36,7 @@ pub struct StatsQueryMetricsReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsSelectReq {
-    /// Column key
+    /// Fact Column key
     pub code: String,
     /// Aggregate function
     pub fun: StatsQueryAggFunKind,
@@ -42,7 +44,7 @@ pub struct StatsQueryMetricsSelectReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsGroupReq {
-    /// Column key
+    /// Dimension Column key
     pub code: String,
     /// Time window function
     pub time_window: Option<StatsQueryTimeWindowKind>,
@@ -62,19 +64,19 @@ pub struct StatsQueryMetricsWhereReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsOrderReq {
-    /// Column key
+    /// Fact Column key
     pub code: String,
-    pub fun: Option<StatsQueryAggFunKind>,
+    pub fun: StatsQueryAggFunKind,
     /// Sort direction
     pub asc: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsHavingReq {
-    /// Column key
+    /// Fact Column key
     pub code: String,
     /// Aggregate function
-    pub fun: Option<StatsQueryAggFunKind>,
+    pub fun: StatsQueryAggFunKind,
     /// Operator
     pub op: SpiQueryOpKind,
     /// Value

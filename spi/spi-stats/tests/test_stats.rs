@@ -16,8 +16,8 @@ use tardis::tokio::time::sleep;
 use tardis::web::web_resp::Void;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod test_stats_conf;
-mod test_stats_record;
 mod test_stats_metric;
+mod test_stats_record;
 
 #[tokio::test]
 async fn test_stats() -> TardisResult<()> {
