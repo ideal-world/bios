@@ -339,6 +339,19 @@ impl RbumCertConfServ {
         rbum_item_id: &str,
         funs: &TardisFunsInst,
     ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
+        let mut conf_info_stat = Query::select();
+        conf_info_stat
+            .column(rbum_cert_conf::Column::Id)
+            .column(rbum_cert_conf::Column::Ext)
+            .from(rbum_cert_conf::Entity)
+            .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
+            .and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()))
+            .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
+            .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id));
+        //Ldap can be no supplier
+        if kind != "Ldap" || !supplier.is_empty() {
+            conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier));
+        }
         let key = &format!(
             "{}{}",
             funs.rbum_conf_cache_key_cert_code_(),
@@ -346,21 +359,7 @@ impl RbumCertConfServ {
         );
         if let Some(cached_info) = funs.cache().get(key).await? {
             Ok(Some(TardisFuns::json.str_to_obj(&cached_info)?))
-        } else if let Some(rbum_cert_conf_id_and_ext) = funs
-            .db()
-            .get_dto::<RbumCertConfIdAndExtResp>(
-                Query::select()
-                    .column(rbum_cert_conf::Column::Id)
-                    .column(rbum_cert_conf::Column::Ext)
-                    .from(rbum_cert_conf::Entity)
-                    .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
-                    .and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier))
-                    .and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()))
-                    .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
-                    .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id)),
-            )
-            .await?
-        {
+        } else if let Some(rbum_cert_conf_id_and_ext) = funs.db().get_dto::<RbumCertConfIdAndExtResp>(&conf_info_stat).await? {
             funs.cache()
                 .set_ex(
                     key,
