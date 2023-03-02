@@ -213,6 +213,38 @@ LIMIT $1 OFFSET $2
     })
 }
 
+/// Create fact instance table.
+/// 
+/// The table name is `starsys_stats_inst_fact_<fact key>`
+/// The table fields are:
+/// - key                   the incoming primary key value
+/// - own_paths             data owner, used for data permission control
+/// - ct                    create time
+/// - [xxx,xxx,xxx,...]     all fields contained in the fact table
+/// 
+/// At the same time, a record deletion table will be created. 
+/// The table name is `starsys_stats_inst_fact_<fact key>_del`. It contains `key,ct` fields.
+/// 
+/// # Examples
+/// ```
+/// CREATE TABLE spi617070303031.starsys_stats_inst_fact_req (
+///  key character varying NOT NULL,
+///  own_paths character varying NOT NULL,
+///  status character varying NOT NULL,
+///  priority integer NOT NULL,
+///  tag character varying [] NOT NULL,
+///  creator character varying NOT NULL,
+///  source character varying NOT NULL,
+///  act_hours integer NOT NULL,
+///  plan_hours integer NOT NULL,
+///  ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+/// )
+/// 
+/// CREATE TABLE spi617070303031.starsys_stats_inst_fact_req_del (
+///  key character varying NOT NULL,
+///  ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+/// )
+/// ```
 pub(crate) async fn create_inst(fact_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
@@ -224,7 +256,7 @@ pub(crate) async fn create_inst(fact_conf_key: &str, funs: &TardisFunsInst, ctx:
     let fact_col_conf = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf.key, &conn, ctx).await?;
     if fact_col_conf.is_empty() {
         return Err(funs.err().not_found(
-            "fact_conf",
+            "fact_col_conf",
             "create_inst",
             "The fact column config does not exist.",
             "404-spi-stats-fact-col-conf-not-exist",

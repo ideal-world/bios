@@ -212,6 +212,30 @@ LIMIT $1 OFFSET $2
     })
 }
 
+/// Create dimension instance table.
+///
+/// The table name is `starsys_stats_inst_dim_<dimension key>`
+/// The table fields are:
+/// - key                   the incoming primary key value
+/// - show_name             display name
+/// - hierarchy             number of hierarchy levels
+/// - [key0 .. keyN]        when the hierarchy is greater than 0, it indicates the primary key value of each level, which is used for drilling up and down
+/// - ct                    create time
+/// - et                    expiration time, when the data of a certain dimension is deleted, et will be set as the deletion time
+/// 
+/// # Examples
+/// ```
+/// CREATE TABLE spi617070303031.starsys_stats_inst_dim_address (
+///  key character varying NOT NULL,
+///  show_name character varying NOT NULL,
+///  hierarchy smallint NOT NULL,
+///  key0 character varying NOT NULL DEFAULT '',
+///  key1 character varying NOT NULL DEFAULT '',
+///  key2 character varying NOT NULL DEFAULT '',
+///  ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+///  et timestamp with time zone
+/// )
+/// ```
 pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
@@ -219,7 +243,7 @@ pub(crate) async fn create_inst(dim_conf_key: &str, funs: &TardisFunsInst, ctx: 
 
     let dim_conf = get(dim_conf_key, &conn, ctx)
         .await?
-        .ok_or_else(|| funs.err().not_found("dim_fact", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
+        .ok_or_else(|| funs.err().not_found("fact_conf", "create_inst", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
 
     if online(dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict(
