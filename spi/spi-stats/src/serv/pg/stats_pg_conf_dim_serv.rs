@@ -222,7 +222,7 @@ LIMIT $1 OFFSET $2
 /// - [key0 .. keyN]        when the hierarchy is greater than 0, it indicates the primary key value of each level, which is used for drilling up and down
 /// - ct                    create time
 /// - et                    expiration time, when the data of a certain dimension is deleted, et will be set as the deletion time
-/// 
+///
 /// # Examples
 /// ```
 /// CREATE TABLE spi617070303031.starsys_stats_inst_dim_address (

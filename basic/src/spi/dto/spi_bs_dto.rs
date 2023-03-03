@@ -107,6 +107,7 @@ pub struct SpiBsFilterReq {
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
     pub private: Option<bool>,
+    pub kind_code: Option<String>,
     pub domain_code: Option<String>,
 }
 

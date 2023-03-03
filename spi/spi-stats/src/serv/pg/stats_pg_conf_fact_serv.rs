@@ -214,17 +214,17 @@ LIMIT $1 OFFSET $2
 }
 
 /// Create fact instance table.
-/// 
+///
 /// The table name is `starsys_stats_inst_fact_<fact key>`
 /// The table fields are:
 /// - key                   the incoming primary key value
 /// - own_paths             data owner, used for data permission control
 /// - ct                    create time
 /// - [xxx,xxx,xxx,...]     all fields contained in the fact table
-/// 
-/// At the same time, a record deletion table will be created. 
+///
+/// At the same time, a record deletion table will be created.
 /// The table name is `starsys_stats_inst_fact_<fact key>_del`. It contains `key,ct` fields.
-/// 
+///
 /// # Examples
 /// ```
 /// CREATE TABLE spi617070303031.starsys_stats_inst_fact_req (
@@ -239,7 +239,7 @@ LIMIT $1 OFFSET $2
 ///  plan_hours integer NOT NULL,
 ///  ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 /// )
-/// 
+///
 /// CREATE TABLE spi617070303031.starsys_stats_inst_fact_req_del (
 ///  key character varying NOT NULL,
 ///  ct timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP

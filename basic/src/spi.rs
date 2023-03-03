@@ -2,7 +2,8 @@
 pub mod api;
 mod domain;
 pub mod dto;
-mod serv;
+#[cfg(feature = "default")]
+pub mod serv;
 pub mod spi_constants;
 pub mod spi_enumeration;
 pub mod spi_funs;

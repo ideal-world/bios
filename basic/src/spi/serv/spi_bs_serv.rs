@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::sea_orm::{sea_query::*, EntityName, Set},
+    log::info,
     TardisFunsInst,
 };
 
@@ -173,6 +174,9 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
         if let Some(private) = filter.private {
             query.and_where(Expr::col((spi_bs::Entity, spi_bs::Column::Private)).eq(private));
         }
+        if let Some(kind_code) = &filter.kind_code {
+            query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Code)).eq(kind_code.to_string()));
+        }
         if let Some(domain_code) = &filter.domain_code {
             query.left_join(
                 rbum_domain::Entity,
@@ -275,7 +279,23 @@ impl SpiBsServ {
         Ok(())
     }
 
-    pub async fn get_bs_by_rel(app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsCertResp> {
+    pub async fn get_bs_by_rel_up(kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsCertResp> {
+        let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
+        let mut resp = Err(funs.err().not_found(&Self::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"));
+        for own_path in own_paths {
+            resp = Self::get_bs_by_rel(own_path.as_str(), kind_code.clone(), funs, ctx).await;
+            info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
+            if resp.is_ok() {
+                break;
+            }
+        }
+        match resp {
+            Ok(bs) => Ok(bs),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn get_bs_by_rel(app_tenant_id: &str, kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsCertResp> {
         let bs = Self::find_one_item(
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq {
@@ -289,6 +309,7 @@ impl SpiBsServ {
                     rel_item_id: Some(app_tenant_id.to_string()),
                     ..Default::default()
                 }),
+                kind_code,
                 domain_code: Some(funs.module_code().to_string()),
                 ..Default::default()
             },
@@ -305,5 +326,20 @@ impl SpiBsServ {
             ext: bs.ext,
             private: bs.private,
         })
+    }
+
+    pub fn get_parent_own_paths(own_paths: &str) -> TardisResult<Vec<String>> {
+        if own_paths.is_empty() {
+            return Ok(vec![]);
+        }
+        let mut paths = own_paths.split('/').map(|s| s.to_string()).collect::<Vec<String>>();
+        paths.reverse();
+        // let mut level = paths.len();
+        // let mut paths_item = Vec::with_capacity(level);
+        // while level != 0 {
+        //     paths_item.push(paths[..level].join("_").to_string());
+        //     level -= 1;
+        // }
+        Ok(paths)
     }
 }
