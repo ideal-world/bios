@@ -217,11 +217,11 @@ pub enum StatsQueryAggFunKind {
 impl StatsQueryAggFunKind {
     pub(crate) fn to_sql(&self, column_name: &str) -> String {
         match self {
-            StatsQueryAggFunKind::Sum => format!("sum({})", column_name),
-            StatsQueryAggFunKind::Avg => format!("avg({})", column_name),
-            StatsQueryAggFunKind::Max => format!("max({})", column_name),
-            StatsQueryAggFunKind::Min => format!("min({})", column_name),
-            StatsQueryAggFunKind::Count => format!("count({})", column_name),
+            StatsQueryAggFunKind::Sum => format!("sum({column_name})"),
+            StatsQueryAggFunKind::Avg => format!("avg({column_name})"),
+            StatsQueryAggFunKind::Max => format!("max({column_name})"),
+            StatsQueryAggFunKind::Min => format!("min({column_name})"),
+            StatsQueryAggFunKind::Count => format!("count({column_name})"),
         }
     }
 }

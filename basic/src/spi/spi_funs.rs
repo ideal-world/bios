@@ -81,7 +81,8 @@ impl SpiBsInstExtractor for TardisFunsInst {
         F: Fn(SpiBsCertResp, &'a TardisContext, bool) -> T + Send + Sync,
         T: Future<Output = TardisResult<SpiBsInst>> + Send,
     {
-        let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
+        let own_paths = ctx.own_paths.replace('/', "_");
+        let cache_key = format!("{}-{}", self.module_code(), own_paths);
         unsafe {
             if SPI_BS_CACHES.is_none() {
                 replace(&mut SPI_BS_CACHES, Some(HashMap::new()));
@@ -90,7 +91,7 @@ impl SpiBsInstExtractor for TardisFunsInst {
                 None => panic!("[SPI] CACHE instance doesn't exist"),
                 Some(caches) => {
                     if !caches.contains_key(&cache_key) {
-                        let spi_bs = SpiBsServ::get_bs_by_rel(&ctx.owner, self, ctx).await?;
+                        let spi_bs = SpiBsServ::get_bs_by_rel_up(None, self, ctx).await?;
                         info!(
                             "[SPI] Init and cache backend service instance [{}]:{}",
                             cache_key.clone(),
@@ -118,7 +119,8 @@ impl SpiBsInstExtractor for TardisFunsInst {
     /// the backend service instance
     /// ```
     async fn bs<'a>(&self, ctx: &'a TardisContext) -> TardisResult<&'static SpiBsInst> {
-        let cache_key = format!("{}-{}", self.module_code(), ctx.owner);
+        let own_paths = ctx.own_paths.replace('/', "_");
+        let cache_key = format!("{}-{}", self.module_code(), own_paths);
         unsafe {
             match &mut SPI_BS_CACHES {
                 None => panic!("[SPI] CACHE instance doesn't exist"),

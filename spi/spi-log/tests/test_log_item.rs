@@ -7,7 +7,7 @@ use tardis::web::web_resp::{TardisPage, TardisResp, Void};
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&TardisContext {
-        own_paths: "t1/a1".to_string(),
+        own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
         roles: vec![],
         groups: vec![],

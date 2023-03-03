@@ -23,9 +23,9 @@ use crate::{
 const FUNCTION_SUFFIX_FLAG: &str = "__";
 
 /// 查询指标.
-/// 
+///
 /// # Examples
-/// 
+///
 /// An example SQL assembled from a completed query is as follows:
 /// ```
 /// -- Outer SQL, responsible for grouping and sorting, filtering, and length limitation after grouping
@@ -48,16 +48,16 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 ///       fact.status AS status
 ///     FROM
 ///       -- Query fact instance table
-///       xxx.starsys_stats_inst_fact_req fact 
+///       xxx.starsys_stats_inst_fact_req fact
 ///       -- Association instance delete table
 ///       LEFT JOIN xxx.starsys_stats_inst_fact_req_del del ON del.key = fact.key
 ///       AND del.ct >= '2023-01-01 12:00:00 +00:00'
 ///       AND del.ct <= '2023-02-01 12:00:00 +00:00'
 ///     WHERE
 ///       -- Built-in statement for permission control
-///       fact.own_paths LIKE 't1/a1%' 
+///       fact.own_paths LIKE 't1/a1%'
 ///       -- Built-in statement for filter deleted records
-///       AND del.key IS NULL 
+///       AND del.key IS NULL
 ///       -- Time filter
 ///       AND fact.ct >= '2023-01-01 12:00:00 +00:00'
 ///       AND fact.ct <= '2023-02-01 12:00:00 +00:00'
@@ -338,11 +338,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     };
 
     // package limit
-    let query_limit = if let Some(limit) = &query_req.limit {
-        format!("LIMIT {}", limit)
-    } else {
-        "".to_string()
-    };
+    let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
 
     let final_sql = format!(
         r#"SELECT {sql_part_outer_selects}
