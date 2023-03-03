@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
 use tardis::basic::dto::TardisContext;
@@ -16,7 +18,7 @@ impl PluginExecServ {
         let spi_bs = SpiBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
         let result;
         if let Some(spi_api) = &spi_api {
-            let url = &format!("{}/{}", &spi_bs.conn_uri, &spi_api.path_and_query);
+            let url = Self::build_url(&format!("{}/{}", &spi_bs.conn_uri, &spi_api.path_and_query), exec_req.body, funs)?;
             let headers = Some(exec_req.header.unwrap_or_default().iter().map(|(k, v)| (k.to_string(), v.to_string())).collect());
             info!("url: {}", url);
             match spi_api.http_method {
@@ -43,5 +45,20 @@ impl PluginExecServ {
             return Ok(result);
         }
         return Err(funs.err().not_found(&PluginApiServ::get_obj_name(), "exec", "exec api is not fond", ""));
+    }
+
+    fn build_url(path: &str, body: Option<HashMap<String, String>>, funs: &TardisFunsInst) -> TardisResult<String> {
+        if !path.contains(":") {
+            Ok(path.to_string())
+        }
+        if let Some(body) = body {
+            path.split("/").into_iter().map(|r| {
+                if !r.starts_with(":") {
+                    return r;
+                }
+                return body.get(r.replace(':', "")).as_ref().ok_or_else(|| funs.err().not_found("build_url", "exec", "param is not found", ""));
+            })
+        }
+        Err(funs.err().not_found("build_url", "exec", "param is not found", ""))
     }
 }

@@ -89,7 +89,7 @@ async fn init_data() -> TardisResult<()> {
                 ext: "".to_string(),
                 http_method: PluginApiMethodKind::GET,
                 kind: "".to_string(),
-                path_and_query: "ci/spi/plugin/test/exec".to_string(),
+                path_and_query: "ci/spi/plugin/test/exec/:msg".to_string(),
                 save_message: true,
             },
         )

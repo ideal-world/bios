@@ -34,8 +34,8 @@ impl PluginExecApi {
     }
 
     /// Put Plugin exec
-    #[oai(path = "/test/exec", method = "get")]
-    async fn test_exec(&self, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
-        TardisResp::ok("test".to_string())
+    #[oai(path = "/test/exec/:msg", method = "get")]
+    async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
+        TardisResp::ok(msg.0)
     }
 }
