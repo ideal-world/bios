@@ -24,7 +24,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "Tardis-Context".to_string(),
                     TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&client.context()).unwrap()),
                 )])),
-                body: Some(HashMap::from([("msg".to_string(), "plugin exec!")])),
+                body: Some(HashMap::from([("msg".to_string(), "plugin exec!".to_string())])),
             },
         )
         .await;
