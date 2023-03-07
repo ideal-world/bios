@@ -369,8 +369,11 @@ impl IamTenantServ {
                 principal: conf.principal.clone(),
                 credentials: "".to_string(),
                 base_dn: conf.base_dn,
-                field_display_name: conf.field_display_name,
-                search_base_filter: conf.search_base_filter,
+                port: conf.port,
+                account_unique_id: conf.account_unique_id,
+                account_field_map: conf.account_field_map,
+                org_unique_id: conf.org_unique_id,
+                org_field_map: conf.org_field_map,
             })
         }
         let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };

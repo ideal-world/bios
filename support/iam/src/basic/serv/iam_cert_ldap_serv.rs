@@ -143,7 +143,7 @@ impl IamCertLdapServ {
                 principal: info.principal,
                 credentials: info.credentials,
                 base_dn: info.base_dn,
-                port: Some(info.port),
+                port: info.port,
                 account_unique_id: info.account_unique_id,
                 account_field_map: info.account_field_map,
                 org_unique_id: info.org_unique_id,
@@ -166,7 +166,7 @@ impl IamCertLdapServ {
                     principal: info.principal,
                     credentials: info.credentials,
                     base_dn: info.base_dn,
-                    port: Some(info.port),
+                    port: info.port,
                     account_unique_id: info.account_unique_id,
                     account_field_map: info.account_field_map,
                     org_unique_id: info.org_unique_id,
@@ -309,7 +309,7 @@ impl IamCertLdapServ {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
         };
-        let account = ldap_client.get_by_dn(dn, &vec!["dn", "cn", &cert_conf.field_display_name]).await?;
+        let account = ldap_client.get_by_dn(dn, &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name]).await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
             let mock_ctx = TardisContext {
@@ -319,7 +319,7 @@ impl IamCertLdapServ {
             };
             let account_id = Self::do_add_account(
                 &account.dn,
-                &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_default(),
+                &account.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
                 &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                 &cert_conf_id,
                 funs,
@@ -369,13 +369,13 @@ impl IamCertLdapServ {
         let accounts = ldap_client
             .search(
                 &cert_conf.package_fitler_by_search_account(user_or_display_name),
-                &vec!["dn", "cn", &cert_conf.field_display_name],
+                &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name],
             )
             .await?
             .into_iter()
             .map(|r| IamAccountExtSysResp {
                 user_name: r.get_simple_attr("cn").unwrap_or_default(),
-                display_name: r.get_simple_attr(&cert_conf.field_display_name).unwrap_or_default(),
+                display_name: r.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
                 account_id: r.dn,
             })
             .collect();
@@ -450,7 +450,7 @@ impl IamCertLdapServ {
             return Err(funs.err().unauthorized("rbum_cert", "get_or_add_account", "validation error", "401-rbum-cert-valid-error"));
         };
 
-        let account = ldap_client.get_by_dn(&dn, &vec!["dn", "cn", &cert_conf.field_display_name]).await?;
+        let account = ldap_client.get_by_dn(&dn, &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name]).await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
             mock_ctx.owner = TardisFuns::field.nanoid();
@@ -471,7 +471,7 @@ impl IamCertLdapServ {
                 // create user_pwd and bind user_pwd with ldap cert
                 Self::create_user_pwd_by_ldap(
                     &dn,
-                    &account.get_simple_attr(&cert_conf.field_display_name).unwrap_or_default(),
+                    &account.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
                     None,

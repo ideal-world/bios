@@ -21,7 +21,7 @@ use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{
-    IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq,
+    IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq,
 };
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
@@ -238,13 +238,8 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
     let (set_menu_ca_id, set_api_ca_id) = add_res(&set_res_id, &cate_menu_id, &cate_api_id, "ca", "App Console", funs, &ctx).await?;
 
     init_menu_by_file(&set_res_id, &cate_menu_id, &funs.conf::<IamConfig>().init_menu_json_path, funs, &ctx).await?;
-    // init_menu(&set_res_id, &cate_menu_id, funs, &ctx).await?;
 
     // Init kernel certs
-    let mut iam_cert_conf_ldap_add_or_modify_req: Vec<IamCertConfLdapAddOrModifyReq> = vec![];
-    for config in &funs.conf::<IamConfig>().ldap.client {
-        iam_cert_conf_ldap_add_or_modify_req.push((*config).clone().into());
-    }
     IamCertServ::init_default_ident_conf(
         &IamCertConfUserPwdAddOrModifyReq {
             // TODO config
@@ -264,7 +259,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         },
         Some(IamCertConfPhoneVCodeAddOrModifyReq { ak_note: None, ak_rule: None }),
         Some(IamCertConfMailVCodeAddOrModifyReq { ak_note: None, ak_rule: None }),
-        Some(iam_cert_conf_ldap_add_or_modify_req),
+        None,
         funs,
         &ctx,
     )
