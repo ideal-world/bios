@@ -2,6 +2,7 @@ use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
+use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
@@ -17,6 +18,7 @@ use crate::{
     iam_config::IamBasicConfigApi,
     iam_enumeration::IamCertExtKind,
 };
+use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumScopeLevelKind};
 use bios_basic::rbum::{
     dto::{
@@ -33,16 +35,16 @@ use bios_basic::rbum::{
 };
 use serde::{Deserialize, Serialize};
 use tardis::regex::Regex;
+use tardis::web::poem_openapi;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
 };
 
-use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
-
 pub struct IamCertLdapServ;
 
 impl IamCertLdapServ {
+    //ldap only can be one recode in each tenant
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
@@ -54,14 +56,7 @@ impl IamCertLdapServ {
                 ak_rule: None,
                 sk_note: None,
                 sk_rule: None,
-                ext: Some(TardisFuns::json.obj_to_string(&IamCertLdapServerAuthInfo {
-                    is_tls: add_req.is_tls,
-                    principal: add_req.principal.to_string(),
-                    credentials: add_req.credentials.to_string(),
-                    base_dn: add_req.base_dn.to_string(),
-                    search_base_filter: add_req.search_base_filter.to_string(),
-                    field_display_name: add_req.field_display_name.to_string(),
-                })?),
+                ext: Some(Self::iam_cert_ldap_server_auth_info_to_json(add_req)?),
                 sk_need: Some(false),
                 sk_dynamic: Some(false),
                 sk_encrypted: Some(false),
@@ -99,14 +94,7 @@ impl IamCertLdapServ {
                 ak_rule: None,
                 sk_note: None,
                 sk_rule: None,
-                ext: Some(TardisFuns::json.obj_to_string(&IamCertLdapServerAuthInfo {
-                    is_tls: modify_req.is_tls,
-                    principal: modify_req.principal.to_string(),
-                    credentials: modify_req.credentials.to_string(),
-                    base_dn: modify_req.base_dn.to_string(),
-                    search_base_filter: modify_req.search_base_filter.to_string(),
-                    field_display_name: modify_req.field_display_name.to_string(),
-                })?),
+                ext: Some(Self::iam_cert_ldap_server_auth_info_to_json(modify_req)?),
                 sk_need: None,
                 sk_encrypted: None,
                 repeatable: None,
@@ -130,6 +118,43 @@ impl IamCertLdapServ {
         .await
     }
 
+    pub async fn get_cert_conf_by_ctx(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamCertConfLdapResp>> {
+        if let Some(resp) = RbumCertConfServ::find_one_rbum(
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                },
+                kind: Some(TrimString("Ldap".to_string())),
+                status: Some(RbumCertConfStatusKind::Enabled),
+                rel_rbum_domain_id: Some(funs.iam_basic_domain_iam_id()),
+                rel_rbum_item_id: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+        {
+            let result = TardisFuns::json.str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext).map(|info| IamCertConfLdapResp {
+                supplier: resp.supplier,
+                conn_uri: resp.conn_uri,
+                is_tls: info.is_tls,
+                principal: info.principal,
+                credentials: info.credentials,
+                base_dn: info.base_dn,
+                port: Some(info.port),
+                account_unique_id: info.account_unique_id,
+                account_field_map: info.account_field_map,
+                org_unique_id: info.org_unique_id,
+                org_field_map: info.org_field_map,
+            })?;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertConfLdapResp> {
         RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await.map(|resp| {
             TardisFuns::json
@@ -141,8 +166,11 @@ impl IamCertLdapServ {
                     principal: info.principal,
                     credentials: info.credentials,
                     base_dn: info.base_dn,
-                    search_base_filter: info.search_base_filter,
-                    field_display_name: info.field_display_name,
+                    port: Some(info.port),
+                    account_unique_id: info.account_unique_id,
+                    account_field_map: info.account_field_map,
+                    org_unique_id: info.org_unique_id,
+                    org_field_map: info.org_field_map,
                 })
                 .unwrap()
         })
@@ -562,6 +590,20 @@ impl IamCertLdapServ {
         TardisContext { ..Default::default() }
     }
 
+    fn iam_cert_ldap_server_auth_info_to_json(add_req: &IamCertConfLdapAddOrModifyReq) -> TardisResult<String> {
+        TardisFuns::json.obj_to_string(&IamCertLdapServerAuthInfo {
+            port: 0,
+            is_tls: add_req.is_tls,
+            principal: add_req.principal.to_string(),
+            credentials: add_req.credentials.to_string(),
+            base_dn: add_req.base_dn.to_string(),
+            account_unique_id: add_req.account_unique_id.clone(),
+            org_unique_id: add_req.org_unique_id.clone(),
+            account_field_map: add_req.account_field_map.clone(),
+            org_field_map: add_req.org_field_map.clone(),
+        })
+    }
+
     /// do add account and ldap/userPwd cert \
     /// and return account_id
     async fn do_add_account(dn: &str, account_name: &str, userpwd_password: &str, ldap_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
@@ -770,10 +812,46 @@ mod tests {
 
 #[derive(Serialize, Deserialize)]
 struct IamCertLdapServerAuthInfo {
+    // server_uri is in RbumCertConf's conn_uri
+    pub port: u16,
     pub is_tls: bool,
     pub principal: String,
     pub credentials: String,
     pub base_dn: String,
-    pub search_base_filter: String,
+
+    pub account_unique_id: String,
+    pub account_field_map: AccountFieldMap,
+
+    pub org_unique_id: String,
+    pub org_field_map: OrgFieldMap,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct AccountFieldMap {
+    // The base condition fragment of the search filter,
+    // without the outermost parentheses.
+    // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
+    // this field can be &(objectCategory=group)
+    pub search_base_filter: Option<String>,
+    pub field_user_name: String,
     pub field_display_name: String,
+    pub field_mobile: String,
+    pub field_email: String,
+
+    pub field_user_name_remarks: String,
+    pub field_display_name_remarks: String,
+    pub field_mobile_remarks: String,
+    pub field_email_remarks: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
+pub struct OrgFieldMap {
+    pub search_base_filter: Option<String>,
+    pub field_dept_id: String,
+    pub field_dept_name: String,
+    pub field_parent_dept_id: String,
+
+    pub field_dept_id_remarks: String,
+    pub field_dept_name_remarks: String,
+    pub field_parent_dept_id_remarks: String,
 }

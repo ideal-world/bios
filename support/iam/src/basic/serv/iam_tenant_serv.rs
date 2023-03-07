@@ -211,12 +211,8 @@ impl IamTenantServ {
             }
         }
 
-        if let Some(cert_conf_by_ldaps) = &add_req.cert_conf_by_ldap {
-            if !cert_conf_by_ldaps.is_empty() {
-                for cert_conf_by_ldap in cert_conf_by_ldaps {
-                    IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.clone().into(), funs, &tenant_ctx).await?;
-                }
-            }
+        if let Some(cert_conf_by_ldap) = &add_req.cert_conf_by_ldap {
+            IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.clone().into(), funs, &tenant_ctx).await?;
         }
         // Init pwd
         let pwd = if let Some(admin_password) = &add_req.admin_password {

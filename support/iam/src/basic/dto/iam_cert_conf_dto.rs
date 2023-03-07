@@ -1,3 +1,4 @@
+use crate::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
 use crate::iam_config::LdapClientConfig;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
@@ -121,15 +122,14 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub credentials: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub base_dn: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub field_display_name: String,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
-    // The base condition fragment of the search filter,
-    // without the outermost parentheses.
-    // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
-    // this field can be &(objectCategory=group)
-    pub search_base_filter: String,
     pub enabled: bool,
+
+    pub port: Option<u16>,
+    pub account_unique_id: String,
+    pub account_field_map: AccountFieldMap,
+
+    pub org_unique_id: String,
+    pub org_field_map: OrgFieldMap,
 }
 
 impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
@@ -145,6 +145,11 @@ impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
             field_display_name: iam_ldap_conf.field_display_name,
             search_base_filter: iam_ldap_conf.search_base_filter,
             enabled: true,
+            port: None,
+            account_unique_id: "".to_string(),
+            account_field_map: AccountFieldMap {},
+            org_unique_id: "".to_string(),
+            org_field_map: OrgFieldMap {},
         }
     }
 }
@@ -161,17 +166,24 @@ pub struct IamCertConfLdapResp {
     pub credentials: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub base_dn: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub field_display_name: String,
+    pub port: Option<u16>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub search_base_filter: String,
+    pub account_unique_id: String,
+    pub account_field_map: AccountFieldMap,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub org_unique_id: String,
+    pub org_field_map: OrgFieldMap,
 }
 
 impl IamCertConfLdapResp {
     pub fn package_fitler_by_search_account(&self, user_or_display_name: &str) -> String {
-        format!(
-            "(&({})(|(cn=*{}*)({}=*{}*)))",
-            self.search_base_filter, user_or_display_name, self.field_display_name, user_or_display_name
-        )
+        if let Some(search_base_filter) = self.account_field_map.search_base_filter.clone() {
+            format!(
+                "(&({})(|(cn=*{}*)({}=*{}*)))",
+                search_base_filter, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
+            )
+        } else {
+            todo!()
+        }
     }
 }
