@@ -88,8 +88,111 @@ pub struct StatsQueryMetricsHavingReq {
 pub struct StatsQueryMetricsResp {
     /// Fact key
     pub from: String,
-    /// Show names (alias_name -> show_name)
+    /// Show names
+    ///
+    /// key = alias name, value = show name
+    ///
+    /// The format of the alias: `field name__<function name>`
     pub show_names: HashMap<String, String>,
     /// Group
+    ///
+    /// Format with only one level (single dimension):
+    /// ```
+    /// {
+    ///     "":{  // The root group
+    ///         "alias name1":value,
+    ///         "alias name...":value,
+    ///     },
+    ///     "<group name1>" {
+    ///         "alias name1":value,
+    ///         "alias name...":value,
+    ///     }
+    ///     "<group name...>" {
+    ///         "alias name1":value,
+    ///         "alias name...":value,
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// Format with multiple levels (multiple dimensions):
+    /// ```
+    /// {
+    ///     "":{  // The root group
+    ///         "": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         }
+    ///     },
+    ///     "<group name1>" {
+    ///         "": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         },
+    ///         "<sub group name...>": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         }
+    ///     }
+    ///     "<group name...>" {
+    ///         "": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         },
+    ///         "<sub group name...>": {
+    ///             "alias name1":value,
+    ///             "alias name...":value,
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Example
+    /// ```
+    /// {
+    ///     "from": "req",
+    ///     "show_names": {
+    ///         "ct__date": "创建时间",
+    ///         "act_hours__sum": "实例工时",
+    ///         "status__": "状态",
+    ///         "plan_hours__sum": "计划工时"
+    ///     },
+    ///     "group": {
+    ///         "": {
+    ///             "": {
+    ///                 "act_hours__sum": 180,
+    ///                 "plan_hours__sum": 330
+    ///             }
+    ///         },
+    ///         "2023-01-01": {
+    ///             "": {
+    ///                 "act_hours__sum": 120,
+    ///                 "plan_hours__sum": 240
+    ///             },
+    ///             "open": {
+    ///                 "act_hours__sum": 80,
+    ///                 "plan_hours__sum": 160
+    ///             },
+    ///             "close": {
+    ///                 "act_hours__sum": 40,
+    ///                 "plan_hours__sum": 80
+    ///             }
+    ///         }
+    ///         "2023-01-02": {
+    ///             "": {
+    ///                 "act_hours__sum": 60,
+    ///                 "plan_hours__sum": 90
+    ///             },
+    ///             "open": {
+    ///                 "act_hours__sum": 40,
+    ///                 "plan_hours__sum": 60
+    ///             },
+    ///             "progress": {
+    ///                 "act_hours__sum": 20,
+    ///                 "plan_hours__sum": 30
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// ```
     pub group: Value,
 }

@@ -93,7 +93,7 @@ WHERE
 }
 
 pub async fn match_items(
-    key_perfix: String,
+    key_prefix: String,
     extract: Option<String>,
     page_number: u32,
     page_size: u16,
@@ -101,7 +101,7 @@ pub async fn match_items(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     let mut sql_vals: Vec<Value> = vec![];
-    sql_vals.push(Value::from(format!("{key_perfix}%")));
+    sql_vals.push(Value::from(format!("{key_prefix}%")));
     sql_vals.push(Value::from(page_size));
     sql_vals.push(Value::from((page_number - 1) * page_size as u32));
 
