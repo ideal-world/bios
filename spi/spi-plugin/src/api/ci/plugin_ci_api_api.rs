@@ -50,7 +50,7 @@ impl PluginApiApi {
     ) -> TardisApiResult<TardisPage<PluginApiSummaryResp>> {
         let funs = request.tardis_fun_inst();
         let result = PluginApiServ::paginate_items(
-            &mut PluginApiFilterReq {
+            &PluginApiFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     ..Default::default()

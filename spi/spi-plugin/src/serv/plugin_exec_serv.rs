@@ -65,7 +65,7 @@ impl PluginExecServ {
                         return body.get(&new_r).unwrap();
                     }
                     is_ok = false;
-                    return r;
+                    r
                 })
                 .collect::<Vec<&str>>()
                 .join("/");
