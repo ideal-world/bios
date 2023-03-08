@@ -117,7 +117,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
         .put(
             "/ct/org/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node_id.to_string(),
+                set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: account_id.clone(),
             },
