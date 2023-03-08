@@ -45,7 +45,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 
     async fn package_item_add(add_req: &IamRoleAddReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         Ok(RbumItemKernelAddReq {
-            code: add_req.code.clone(),
+            code: Some(add_req.code.clone()),
             name: add_req.name.clone(),
             scope_level: add_req.scope_level.clone(),
             ..Default::default()

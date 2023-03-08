@@ -67,6 +67,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                     base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
                     field_display_name: "displayName".to_string(),
                     search_base_filter: "objectClass=*".to_string(),
+                    enabled: true,
                 }]),
             },
         )
@@ -91,7 +92,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
         .put(
             "/ct/org/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node_id.to_string(),
+                set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: account_id.clone(),
             },
@@ -126,7 +127,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
         .put(
             "/ct/org/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node_id.to_string(),
+                set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: app_account_id.clone(),
             },
