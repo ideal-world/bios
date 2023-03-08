@@ -36,7 +36,7 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
 }
 
 pub async fn match_items(
-    key_perfix: String,
+    key_prefix: String,
     extract: Option<String>,
     page_number: u32,
     page_size: u16,
@@ -45,7 +45,7 @@ pub async fn match_items(
 ) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(key_perfix, extract, page_number, page_size, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(key_prefix, extract, page_number, page_size, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

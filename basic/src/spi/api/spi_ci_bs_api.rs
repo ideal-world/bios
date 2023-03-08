@@ -90,7 +90,7 @@ impl SpiCiBsApi {
 
     /// Add Backend Service Rel App/Tenant
     #[oai(path = "/:id/rel/:app_tenant_id", method = "put")]
-    async fn add_rel_account(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn add_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         SpiBsServ::add_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
@@ -100,7 +100,7 @@ impl SpiCiBsApi {
 
     /// Delete Backend Service Rel App/Tenant
     #[oai(path = "/:id/rel/:app_tenant_id", method = "delete")]
-    async fn delete_rel_account(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
+    async fn delete_rel(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
         SpiBsServ::delete_rel(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;

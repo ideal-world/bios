@@ -48,7 +48,7 @@ impl KvCiItemApi {
     #[oai(path = "/item/match", method = "get")]
     async fn match_items(
         &self,
-        key_perfix: Query<String>,
+        key_prefix: Query<String>,
         extract: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u16>,
@@ -56,7 +56,7 @@ impl KvCiItemApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<KvItemSummaryResp>> {
         let funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::match_items(key_perfix.0, extract.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let resp = kv_item_serv::match_items(key_prefix.0, extract.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 
