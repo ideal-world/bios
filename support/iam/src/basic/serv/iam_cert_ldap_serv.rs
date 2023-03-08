@@ -368,7 +368,7 @@ impl IamCertLdapServ {
         };
         let accounts = ldap_client
             .search(
-                &cert_conf.package_fitler_by_search_account(user_or_display_name),
+                &cert_conf.package_filter_by_accurate_search(user_or_display_name),
                 &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name],
             )
             .await?

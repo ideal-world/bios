@@ -131,26 +131,6 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub org_field_map: OrgFieldMap,
 }
 
-// impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
-//     fn from(iam_ldap_conf: LdapClientConfig) -> Self {
-//         IamCertConfLdapAddOrModifyReq {
-//             supplier: iam_ldap_conf.code,
-//             name: iam_ldap_conf.name,
-//             conn_uri: iam_ldap_conf.conn_uri,
-//             is_tls: iam_ldap_conf.is_tls,
-//             principal: iam_ldap_conf.principal,
-//             credentials: iam_ldap_conf.credentials,
-//             base_dn: iam_ldap_conf.base_dn,
-//             enabled: true,
-//             port: Some(iam_ldap_conf.port),
-//             account_unique_id: "".to_string(),
-//             account_field_map: AccountFieldMap {},
-//             org_unique_id: "".to_string(),
-//             org_field_map: OrgFieldMap {},
-//         }
-//     }
-// }
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfLdapResp {
     pub supplier: String,
@@ -173,14 +153,27 @@ pub struct IamCertConfLdapResp {
 }
 
 impl IamCertConfLdapResp {
-    pub fn package_fitler_by_search_account(&self, user_or_display_name: &str) -> String {
+    //模糊搜索账号语句
+    pub fn package_filter_by_fuzzy_search_account(&self, user_or_display_name: &str) -> String {
         if let Some(search_base_filter) = self.account_field_map.search_base_filter.clone() {
             format!(
-                "(&({})(|(cn=*{}*)({}=*{}*)))",
-                search_base_filter, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
+                "(&({})(|({}=*{}*)({}=*{}*)))",
+                search_base_filter, self.account_unique_id, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
             )
         } else {
-            todo!()
+            // such as `(|(cn=*test*)(displayName=*test*))`
+            format!(
+                "(|({}=*{}*)({}=*{}*))",
+                self.account_unique_id, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
+            )
+        }
+    }
+    //根据唯一标识精确搜索
+    pub fn package_filter_by_accurate_search(&self, user_or_display_name: &str) -> String {
+        if let Some(search_base_filter) = self.account_field_map.search_base_filter.clone() {
+            format!("(&({})({}={}))", search_base_filter, self.account_unique_id, user_or_display_name)
+        } else {
+            format!("{}={}", self.account_unique_id, user_or_display_name)
         }
     }
 }
