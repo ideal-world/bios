@@ -304,7 +304,7 @@ impl IamCertLdapServ {
         if let Some(account_id) = Self::get_cert_rel_account_by_dn(dn, &cert_conf_id, funs, ctx).await? {
             return Ok((account_id, dn.to_string()));
         }
-        let mut ldap_client = LdapClient::new(&cert_conf.conn_uri, cert_conf.is_tls, &cert_conf.base_dn).await?;
+        let mut ldap_client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, &cert_conf.base_dn).await?;
         if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
@@ -592,7 +592,7 @@ impl IamCertLdapServ {
 
     fn iam_cert_ldap_server_auth_info_to_json(add_req: &IamCertConfLdapAddOrModifyReq) -> TardisResult<String> {
         TardisFuns::json.obj_to_string(&IamCertLdapServerAuthInfo {
-            port: 0,
+            port: add_req.port.unwrap_or_else(|| 389),
             is_tls: add_req.is_tls,
             principal: add_req.principal.to_string(),
             credentials: add_req.credentials.to_string(),
@@ -634,7 +634,7 @@ impl IamCertLdapServ {
     async fn get_ldap_client(tenant_id: Option<String>, supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
         let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, tenant_id, funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
-        let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.is_tls, &cert_conf.base_dn).await?;
+        let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, &cert_conf.base_dn).await?;
         Ok((client, cert_conf, cert_conf_id))
     }
 
@@ -692,13 +692,18 @@ mod ldap {
     }
 
     impl LdapClient {
-        pub async fn new(url: &str, tls: bool, base_dn: &str) -> TardisResult<LdapClient> {
+        pub async fn new(url: &str, port: u16, tls: bool, base_dn: &str) -> TardisResult<LdapClient> {
             let setting = if tls {
                 LdapConnSettings::new().set_starttls(true).set_no_tls_verify(true)
             } else {
                 LdapConnSettings::new()
             };
-            let (conn, ldap) = LdapConnAsync::with_settings(setting, url).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] connection error: {e:?}"), ""))?;
+            let url = if &url[url.len() - 1..] == "/" {
+                format!("{}:{port}", &url[..url.len() - 1])
+            } else {
+                format!("{url}:{port}")
+            };
+            let (conn, ldap) = LdapConnAsync::with_settings(setting, &url).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] connection error: {e:?}"), ""))?;
             ldap3::drive!(conn);
             Ok(LdapClient {
                 ldap,

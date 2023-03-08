@@ -74,19 +74,20 @@ async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> 
     );
 
     let port = ldap_container.get_host_port_ipv4(389);
-    let url = format!("ldap://localhost:{}", port);
-    let base_dn = format!("DC={},DC=com", ORGANISATION);
-    let admin_dn = format!("CN=admin,{}", base_dn);
+    let url = "ldap://localhost".to_string();
+    let base_dn = format!("DC={ORGANISATION},DC=com");
+    let admin_dn = format!("CN=admin,{base_dn}");
 
     ldap_container.exec(ExecCommand {
-        cmd: format!("echo \"{}\" > /home/base.ldif", BASE_LDIF),
+        cmd: format!("echo \"{BASE_LDIF}\" > /home/base.ldif",),
         ready_conditions: vec![],
     });
     ldap_container.exec(ExecCommand {
-        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{}\" -w {} -f /home/base.ldif ", admin_dn, ADMIN_PASSWORD),
+        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{admin_dn}\" -w {ADMIN_PASSWORD} -f /home/base.ldif "),
         ready_conditions: vec![WaitFor::millis(5)],
     });
 
+    env::set_var("TARDIS_FW.LDAP.PORT", port.to_string());
     env::set_var("TARDIS_FW.LDAP.URL", url);
     env::set_var("TARDIS_FW.LDAP.BASE_DN", base_dn);
     env::set_var("TARDIS_FW.LDAP.ADMIN_DN", admin_dn);

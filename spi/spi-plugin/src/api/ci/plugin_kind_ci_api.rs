@@ -1,10 +1,8 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp};
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::dto::rbum_kind_dto::RbumKindSummaryResp;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
-use tardis::basic::field::TrimString;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
