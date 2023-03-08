@@ -44,6 +44,7 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
             note: Set(add_req.note.as_ref().unwrap_or(&"".to_string()).to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             sort: Set(add_req.sort.unwrap_or(0)),
+            module: Set(add_req.module.as_ref().unwrap_or(&"".to_string()).to_string()),
             ext_table_name: Set(add_req.ext_table_name.as_ref().unwrap_or(&"".to_string()).to_string()),
             scope_level: Set(add_req.scope_level.as_ref().unwrap_or(&RbumScopeLevelKind::Private).to_int()),
             ..Default::default()
@@ -79,6 +80,9 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
         if let Some(sort) = modify_req.sort {
             rbum_kind.sort = Set(sort);
         }
+        if let Some(module) = &modify_req.module {
+            rbum_kind.module = Set(module.to_string());
+        }
         if let Some(ext_table_name) = &modify_req.ext_table_name {
             rbum_kind.ext_table_name = Set(ext_table_name.to_string());
         }
@@ -104,6 +108,7 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
             (rbum_kind::Entity, rbum_kind::Column::Note),
             (rbum_kind::Entity, rbum_kind::Column::Icon),
             (rbum_kind::Entity, rbum_kind::Column::Sort),
+            (rbum_kind::Entity, rbum_kind::Column::Module),
             (rbum_kind::Entity, rbum_kind::Column::ExtTableName),
             (rbum_kind::Entity, rbum_kind::Column::OwnPaths),
             (rbum_kind::Entity, rbum_kind::Column::Owner),

@@ -21,6 +21,8 @@ pub struct RbumKindAddReq {
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub module: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub ext_table_name: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -37,6 +39,8 @@ pub struct RbumKindModifyReq {
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
+    pub module: Option<String>,
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "255")))]
     pub ext_table_name: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
@@ -50,6 +54,7 @@ pub struct RbumKindSummaryResp {
     pub name: String,
     pub icon: String,
     pub sort: i64,
+    pub module: String,
     pub ext_table_name: String,
 
     pub own_paths: String,
@@ -69,6 +74,7 @@ pub struct RbumKindDetailResp {
     pub note: String,
     pub icon: String,
     pub sort: i64,
+    pub module: String,
     pub ext_table_name: String,
 
     pub own_paths: String,

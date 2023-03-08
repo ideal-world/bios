@@ -22,6 +22,7 @@ pub struct Model {
     pub note: String,
     pub icon: String,
     pub sort: i64,
+    pub module: String,
     /// Each resource kind can specify an extension table for storing customized data
     pub ext_table_name: String,
 
@@ -53,6 +54,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Note).not_null().string())
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Sort).not_null().big_integer())
+            .col(ColumnDef::new(Column::Module).not_null().string())
             .col(ColumnDef::new(Column::ExtTableName).not_null().string())
             // Basic
             .col(ColumnDef::new(Column::OwnPaths).not_null().string())

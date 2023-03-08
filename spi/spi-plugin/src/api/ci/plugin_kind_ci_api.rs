@@ -16,7 +16,6 @@ pub struct PluginKindApi;
 /// Plugin kind API
 #[poem_openapi::OpenApi(prefix_path = "/ci/spi/plugin/kind", tag = "bios_basic::ApiTag::Interface")]
 impl PluginKindApi {
-
     /// find Plugin kind
     #[oai(path = "/", method = "get")]
     async fn find_page(
@@ -31,7 +30,7 @@ impl PluginKindApi {
         let result = RbumKindServ::paginate_rbums(
             &mut RbumBasicFilterReq {
                 code: code.0,
-                
+
                 ..Default::default()
             },
             page_number.0,
