@@ -20,9 +20,7 @@ use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
 use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
-use crate::basic::dto::iam_cert_conf_dto::{
-    IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq,
-};
+use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
@@ -80,6 +78,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cs_account_api::IamCsAccountApi,
                     iam_cs_account_attr_api::IamCsAccountAttrApi,
                     iam_cs_cert_api::IamCsCertApi,
+                    iam_cs_cert_api::IamCsCertConfigLdapApi,
                     iam_cs_role_api::IamCsRoleApi,
                     iam_cs_res_api::IamCsResApi,
                 ),
