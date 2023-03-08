@@ -1,8 +1,8 @@
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::Json;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
