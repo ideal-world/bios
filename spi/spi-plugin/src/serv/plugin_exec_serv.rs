@@ -23,20 +23,20 @@ impl PluginExecServ {
             info!("url: {}", url);
             match spi_api.http_method {
                 crate::plugin_enumeration::PluginApiMethodKind::GET => {
-                    result = funs.web_client().get_to_str(&url.as_str(), headers.clone()).await?;
+                    result = funs.web_client().get_to_str(url.as_str(), headers.clone()).await?;
                 }
                 crate::plugin_enumeration::PluginApiMethodKind::PUT => {
-                    result = funs.web_client().put_str_to_str(&url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body.clone())?, headers.clone()).await?;
+                    result = funs.web_client().put_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body.clone())?, headers.clone()).await?;
                 }
                 crate::plugin_enumeration::PluginApiMethodKind::POST => {
-                    result = funs.web_client().post_str_to_str(&url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body.clone())?, headers.clone()).await?;
+                    result = funs.web_client().post_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body.clone())?, headers.clone()).await?;
                 }
 
                 crate::plugin_enumeration::PluginApiMethodKind::DELETE => {
-                    result = funs.web_client().delete(&url.as_str(), headers.clone()).await?;
+                    result = funs.web_client().delete(url.as_str(), headers.clone()).await?;
                 }
                 crate::plugin_enumeration::PluginApiMethodKind::PATCH => {
-                    result = funs.web_client().patch_str_to_str(&url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body)?, headers).await?;
+                    result = funs.web_client().patch_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body)?, headers).await?;
                 }
             }
             if spi_api.save_message {
@@ -48,24 +48,24 @@ impl PluginExecServ {
     }
 
     fn build_url(path: &str, body: Option<HashMap<String, String>>, funs: &TardisFunsInst) -> TardisResult<String> {
-        if !path.contains(":") {
+        if !path.contains(':') {
             return Ok(path.to_string());
         }
         if let Some(body) = body {
             let mut is_ok = true;
             let new_path = path
-                .split("/")
+                .split('/')
                 .into_iter()
                 .map(|r| {
-                    if !r.starts_with(":") {
+                    if !r.starts_with(':') {
                         return r;
                     }
-                    let new_r = r.replace(":", "");
+                    let new_r = r.replace(':', "");
                     if body.contains_key(&new_r) {
                         return body.get(&new_r).unwrap();
                     }
                     is_ok = false;
-                    return r;
+                    r
                 })
                 .collect::<Vec<&str>>()
                 .join("/");

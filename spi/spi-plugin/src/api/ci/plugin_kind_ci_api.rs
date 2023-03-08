@@ -84,7 +84,7 @@ impl PluginKindApi {
     ) -> TardisApiResult<TardisPage<RbumKindSummaryResp>> {
         let funs = request.tardis_fun_inst();
         let result = RbumKindServ::paginate_rbums(
-            &mut RbumBasicFilterReq {
+            &RbumBasicFilterReq {
                 code: code.0,
                 ..Default::default()
             },
