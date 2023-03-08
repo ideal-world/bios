@@ -3,10 +3,10 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
 use tardis::chrono::{self, Utc};
 use tardis::web::context_extractor::TardisContextExtractor;
-use tardis::web::poem::web::{Json, Query};
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
-use tardis::web::poem_openapi::param::Path;
+use tardis::web::poem_openapi::param::{Path, Query};
+use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::plugin_api_dto::{PluginApiAddOrModifyReq, PluginApiFilterReq, PluginApiSummaryResp};
@@ -18,7 +18,7 @@ pub struct PluginApiApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/spi/plugin/api", tag = "bios_basic::ApiTag::Interface")]
 impl PluginApiApi {
     /// Add or modify Plugin Api
-    #[oai(path = "/", method = "post")]
+    #[oai(path = "/", method = "put")]
     async fn add(&self, mut add_or_modify_req: Json<PluginApiAddOrModifyReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;

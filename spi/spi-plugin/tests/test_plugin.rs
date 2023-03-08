@@ -77,7 +77,7 @@ async fn init_data() -> TardisResult<()> {
 
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
     let _: String = client
-        .post(
+        .put(
             &format!("/ci/spi/plugin/api"),
             &PluginApiAddOrModifyReq {
                 code: TrimString("test-api".to_string()),
