@@ -592,7 +592,7 @@ impl IamCertLdapServ {
 
     fn iam_cert_ldap_server_auth_info_to_json(add_req: &IamCertConfLdapAddOrModifyReq) -> TardisResult<String> {
         TardisFuns::json.obj_to_string(&IamCertLdapServerAuthInfo {
-            port: add_req.port.unwrap_or_else(|| 389),
+            port: add_req.port.unwrap_or(if add_req.is_tls { 636 } else { 389 }),
             is_tls: add_req.is_tls,
             principal: add_req.principal.to_string(),
             credentials: add_req.credentials.to_string(),
