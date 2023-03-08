@@ -210,7 +210,7 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
         .put(
             "/ct/org/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node1_id.to_string(),
+                set_cate_id: Some(cate_node1_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: account_id.clone(),
             },
@@ -737,7 +737,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_id.to_string(),
+                set_cate_id: Some(cate_node2_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: app1_id.clone(),
             },
@@ -747,7 +747,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_id.to_string(),
+                set_cate_id: Some(cate_node2_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: app_account1_id.clone(),
             },
@@ -757,7 +757,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_id.to_string(),
+                set_cate_id: Some(cate_node2_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: client.context().owner.clone(),
             },
@@ -767,7 +767,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_1_id.to_string(),
+                set_cate_id: Some(cate_node2_1_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: app2_id.clone(),
             },
@@ -777,7 +777,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_1_id.to_string(),
+                set_cate_id: Some(cate_node2_1_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: app_account2_id.clone(),
             },
@@ -787,7 +787,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_1_1_id.to_string(),
+                set_cate_id: Some(cate_node2_1_1_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: app2_id.clone(),
             },
@@ -797,7 +797,7 @@ pub async fn tenant_console_app_set_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             "/ct/apps/item",
             &IamSetItemWithDefaultSetAddReq {
-                set_cate_id: cate_node2_1_1_id.to_string(),
+                set_cate_id: Some(cate_node2_1_1_id.to_string()),
                 sort: 0,
                 rel_rbum_item_id: client.context().owner.clone(),
             },
