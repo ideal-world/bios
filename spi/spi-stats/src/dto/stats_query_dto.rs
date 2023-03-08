@@ -36,7 +36,7 @@ pub struct StatsQueryMetricsReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsSelectReq {
-    /// Fact Column key
+    /// Measure column key
     pub code: String,
     /// Aggregate function
     pub fun: StatsQueryAggFunKind,
@@ -44,7 +44,7 @@ pub struct StatsQueryMetricsSelectReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsGroupReq {
-    /// Dimension Column key
+    /// Dimension column key
     pub code: String,
     /// Time window function
     pub time_window: Option<StatsQueryTimeWindowKind>,
@@ -52,7 +52,7 @@ pub struct StatsQueryMetricsGroupReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsWhereReq {
-    /// Column key
+    /// Dimension or measure column key
     pub code: String,
     /// Operator
     pub op: SpiQueryOpKind,
@@ -64,7 +64,7 @@ pub struct StatsQueryMetricsWhereReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsOrderReq {
-    /// Fact Column key
+    /// Measure column key
     pub code: String,
     pub fun: StatsQueryAggFunKind,
     /// Sort direction
@@ -73,7 +73,7 @@ pub struct StatsQueryMetricsOrderReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct StatsQueryMetricsHavingReq {
-    /// Fact Column key
+    /// Measure Column key
     pub code: String,
     /// Aggregate function
     pub fun: StatsQueryAggFunKind,
