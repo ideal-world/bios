@@ -34,7 +34,7 @@ impl RbumItemCrudOperation<plugin_api::ActiveModel, PluginApiAddOrModifyReq, Plu
 
     async fn package_item_add(add_req: &PluginApiAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumItemKernelAddReq> {
         if Self::count_items(
-            &mut PluginApiFilterReq {
+            &PluginApiFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     code: Some(add_req.code.to_string()),
