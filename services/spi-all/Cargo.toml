@@ -24,6 +24,7 @@ bios-spi-graph = { path = "../../spi/spi-graph" }
 bios-spi-kv = { path = "../../spi/spi-kv" }
 bios-spi-log = { path = "../../spi/spi-log" }
 bios-spi-object = { path = "../../spi/spi-object" }
+bios-spi-plugin = { path = "../../spi/spi-plugin" }
 bios-spi-reldb = { path = "../../spi/spi-reldb" }
 bios-spi-search = { path = "../../spi/spi-search" }
 bios-spi-stats = { path = "../../spi/spi-stats" }

@@ -18,6 +18,7 @@ default_lang = "zh-cn"
 [fw.web_server.modules.spi-reldb]
 [fw.web_server.modules.spi-search]
 [fw.web_server.modules.spi-stats]
+[fw.web_server.modules.spi-plugin]
 
 [fw.web_server]
 port = 8080
