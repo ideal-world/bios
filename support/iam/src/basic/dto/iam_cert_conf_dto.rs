@@ -1,4 +1,4 @@
-use crate::iam_config::LdapClientConfig;
+use crate::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -121,32 +121,14 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub credentials: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub base_dn: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub field_display_name: String,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
-    // The base condition fragment of the search filter,
-    // without the outermost parentheses.
-    // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
-    // this field can be &(objectCategory=group)
-    pub search_base_filter: String,
     pub enabled: bool,
-}
 
-impl From<LdapClientConfig> for IamCertConfLdapAddOrModifyReq {
-    fn from(iam_ldap_conf: LdapClientConfig) -> Self {
-        IamCertConfLdapAddOrModifyReq {
-            supplier: iam_ldap_conf.code,
-            name: iam_ldap_conf.name,
-            conn_uri: iam_ldap_conf.conn_uri,
-            is_tls: iam_ldap_conf.is_tls,
-            principal: iam_ldap_conf.principal,
-            credentials: iam_ldap_conf.credentials,
-            base_dn: iam_ldap_conf.base_dn,
-            field_display_name: iam_ldap_conf.field_display_name,
-            search_base_filter: iam_ldap_conf.search_base_filter,
-            enabled: true,
-        }
-    }
+    pub port: Option<u16>,
+    pub account_unique_id: String,
+    pub account_field_map: AccountFieldMap,
+
+    pub org_unique_id: String,
+    pub org_field_map: OrgFieldMap,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -161,17 +143,37 @@ pub struct IamCertConfLdapResp {
     pub credentials: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub base_dn: String,
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub field_display_name: String,
+    pub port: u16,
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub search_base_filter: String,
+    pub account_unique_id: String,
+    pub account_field_map: AccountFieldMap,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
+    pub org_unique_id: String,
+    pub org_field_map: OrgFieldMap,
 }
 
 impl IamCertConfLdapResp {
-    pub fn package_fitler_by_search_account(&self, user_or_display_name: &str) -> String {
-        format!(
-            "(&({})(|(cn=*{}*)({}=*{}*)))",
-            self.search_base_filter, user_or_display_name, self.field_display_name, user_or_display_name
-        )
+    //模糊搜索账号语句
+    pub fn package_filter_by_fuzzy_search_account(&self, user_or_display_name: &str) -> String {
+        if let Some(search_base_filter) = self.account_field_map.search_base_filter.clone() {
+            format!(
+                "(&({})(|({}=*{}*)({}=*{}*)))",
+                search_base_filter, self.account_unique_id, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
+            )
+        } else {
+            // such as `(|(cn=*test*)(displayName=*test*))`
+            format!(
+                "(|({}=*{}*)({}=*{}*))",
+                self.account_unique_id, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
+            )
+        }
+    }
+    //根据唯一标识精确搜索
+    pub fn package_filter_by_accurate_search(&self, user_or_display_name: &str) -> String {
+        if let Some(search_base_filter) = self.account_field_map.search_base_filter.clone() {
+            format!("(&({})({}={}))", search_base_filter, self.account_unique_id, user_or_display_name)
+        } else {
+            format!("{}={}", self.account_unique_id, user_or_display_name)
+        }
     }
 }

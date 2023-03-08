@@ -211,12 +211,8 @@ impl IamTenantServ {
             }
         }
 
-        if let Some(cert_conf_by_ldaps) = &add_req.cert_conf_by_ldap {
-            if !cert_conf_by_ldaps.is_empty() {
-                for cert_conf_by_ldap in cert_conf_by_ldaps {
-                    IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.clone().into(), funs, &tenant_ctx).await?;
-                }
-            }
+        if let Some(cert_conf_by_ldap) = &add_req.cert_conf_by_ldap {
+            IamCertLdapServ::add_cert_conf(cert_conf_by_ldap, tenant_id.clone().into(), funs, &tenant_ctx).await?;
         }
         // Init pwd
         let pwd = if let Some(admin_password) = &add_req.admin_password {
@@ -373,8 +369,11 @@ impl IamTenantServ {
                 principal: conf.principal.clone(),
                 credentials: "".to_string(),
                 base_dn: conf.base_dn,
-                field_display_name: conf.field_display_name,
-                search_base_filter: conf.search_base_filter,
+                port: conf.port,
+                account_unique_id: conf.account_unique_id,
+                account_field_map: conf.account_field_map,
+                org_unique_id: conf.org_unique_id,
+                org_field_map: conf.org_field_map,
             })
         }
         let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };
