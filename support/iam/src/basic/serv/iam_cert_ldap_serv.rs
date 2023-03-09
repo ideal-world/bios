@@ -247,6 +247,7 @@ impl IamCertLdapServ {
         Ok(())
     }
 
+    ///获取dn对应的account_id
     pub async fn get_cert_rel_account_by_dn(dn: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
         let result = RbumCertServ::find_rbums(
             &RbumCertFilterReq {
@@ -302,6 +303,8 @@ impl IamCertLdapServ {
         }
     }
 
+    ///根据add_req的account_id（dn）获取或者添加账号
+    /// 始终返回（account_id,dn）
     pub async fn get_or_add_account_without_verify(
         add_req: IamAccountExtSysAddReq,
         tenant_id: Option<String>,
@@ -319,7 +322,12 @@ impl IamCertLdapServ {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
         };
-        let account = ldap_client.get_by_dn(dn, &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name]).await?;
+        let account = ldap_client
+            .get_by_dn(
+                dn,
+                &vec!["dn", "cn", &cert_conf.account_field_map.field_user_name, &cert_conf.account_field_map.field_display_name],
+            )
+            .await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
             let mock_ctx = TardisContext {
@@ -330,6 +338,7 @@ impl IamCertLdapServ {
             let account_id = Self::do_add_account(
                 &account.dn,
                 &account.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
+                &account.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
                 &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                 &cert_conf_id,
                 funs,
@@ -378,7 +387,7 @@ impl IamCertLdapServ {
         };
         let accounts = ldap_client
             .search(
-                &cert_conf.package_filter_by_accurate_search(user_or_display_name),
+                &cert_conf.package_filter_by_fuzzy_search_account(user_or_display_name),
                 &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name],
             )
             .await?
@@ -460,7 +469,7 @@ impl IamCertLdapServ {
             return Err(funs.err().unauthorized("rbum_cert", "get_or_add_account", "validation error", "401-rbum-cert-valid-error"));
         };
 
-        let account = ldap_client.get_by_dn(&dn, &vec!["dn", "cn", &cert_conf.account_field_map.field_display_name]).await?;
+        let account = ldap_client.get_by_dn(&dn, &cert_conf.package_account_return_attr_with(vec!["dn", "cn"])).await?;
         ldap_client.unbind().await?;
         if let Some(account) = account {
             mock_ctx.owner = TardisFuns::field.nanoid();
@@ -479,12 +488,21 @@ impl IamCertLdapServ {
                 .await?
             } else {
                 // create user_pwd and bind user_pwd with ldap cert
-                Self::create_user_pwd_by_ldap(
+                if tenant_id.is_some() && !IamTenantServ::get_item(&tenant_id.unwrap(), &IamTenantFilterReq::default(), funs, &mock_ctx).await?.account_self_reg {
+                    return Err(funs.err().not_found(
+                        "rbum_cert",
+                        "create_user_pwd_by_ldap",
+                        &format!("not found ldap cert(openid): {} and self-registration disabled", &dn),
+                        "401-rbum-cert-valid-error",
+                    ));
+                }
+
+                Self::do_add_account(
                     &dn,
                     &account.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
+                    &account.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
-                    None,
                     funs,
                     &mock_ctx,
                 )
@@ -499,28 +517,6 @@ impl IamCertLdapServ {
                 "401-rbum-cert-valid-error",
             ));
         }
-    }
-
-    pub async fn create_user_pwd_by_ldap(
-        dn: &str,
-        account_name: &str,
-        password: &str,
-        cert_conf_id: &str,
-        tenant_id: Option<String>,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<String> {
-        if tenant_id.is_some() && !IamTenantServ::get_item(&tenant_id.unwrap(), &IamTenantFilterReq::default(), funs, ctx).await?.account_self_reg {
-            return Err(funs.err().not_found(
-                "rbum_cert",
-                "create_user_pwd_by_ldap",
-                &format!("not found ldap cert(openid): {} and self-registration disabled", &dn),
-                "401-rbum-cert-valid-error",
-            ));
-        }
-
-        let account_id = Self::do_add_account(dn, account_name, password, cert_conf_id, funs, ctx).await?;
-        Ok(account_id)
     }
 
     pub async fn bind_user_pwd_by_ldap(
@@ -586,6 +582,24 @@ impl IamCertLdapServ {
         Ok(rbum_item_id)
     }
 
+    //同步ldap人员到iam
+    pub async fn iam_sync_ldap_user_to_iam(conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let conf = Self::get_cert_conf(conf_id, funs, ctx).await?;
+        let mut ldap_client = LdapClient::new(&conf.conn_uri, conf.port, conf.is_tls, &conf.base_dn).await?;
+        let ldap_account: Vec<IamAccountExtSysResp> = ldap_client
+            .search("objectClass=person", &vec!["dn", &conf.account_unique_id, &conf.account_field_map.field_display_name])
+            .await?
+            .into_iter()
+            .map(|r| IamAccountExtSysResp {
+                user_name: r.get_simple_attr("cn").unwrap_or_default(),
+                display_name: r.get_simple_attr(&conf.account_field_map.field_display_name).unwrap_or_default(),
+                account_id: r.dn,
+            })
+            .collect();
+
+        Ok(())
+    }
+
     pub async fn generate_default_mock_ctx(supplier: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisContext {
         //if tenant_id is some and tenant have cert_conf \
         // then assign tenant_id to own_paths
@@ -606,12 +620,20 @@ impl IamCertLdapServ {
 
     /// do add account and ldap/userPwd cert \
     /// and return account_id
-    async fn do_add_account(dn: &str, account_name: &str, userpwd_password: &str, ldap_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    async fn do_add_account(
+        dn: &str,
+        account_name: &str,
+        cert_user_name: &str,
+        userpwd_password: &str,
+        ldap_cert_conf_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
         let account_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(ctx.owner.clone())),
                 name: TrimString(account_name.to_string()),
-                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(&TrimString(TardisFuns::field.nanoid_len(8).to_lowercase()), funs, ctx).await?,
+                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(cert_user_name, funs, ctx).await?,
                 cert_password: userpwd_password.into(),
                 cert_phone: None,
                 cert_mail: None,

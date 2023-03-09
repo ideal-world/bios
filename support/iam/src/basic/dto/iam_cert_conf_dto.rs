@@ -1,5 +1,6 @@
 use crate::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
 use serde::{Deserialize, Serialize};
+use std::iter;
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
 
@@ -105,7 +106,7 @@ pub struct IamCertConfAkSkAddOrModifyReq {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<i64>,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug,Clone)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -175,5 +176,14 @@ impl IamCertConfLdapResp {
         } else {
             format!("{}={}", self.account_unique_id, user_or_display_name)
         }
+    }
+    pub fn package_account_return_attr_with<'a>(&'a self, vec: Vec<&'a str>) -> Vec<&str> {
+        let vec1: Vec<&str> = vec![
+            &self.account_field_map.field_user_name,
+            &self.account_field_map.field_display_name,
+            &self.account_field_map.field_email,
+            &self.account_field_map.field_mobile,
+        ];
+        [vec, vec1].concat()
     }
 }
