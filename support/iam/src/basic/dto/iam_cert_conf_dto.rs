@@ -105,7 +105,7 @@ pub struct IamCertConfAkSkAddOrModifyReq {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<i64>,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug,Clone)]
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
     #[oai(validator(min_length = "2", max_length = "255"))]

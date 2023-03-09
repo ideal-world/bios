@@ -46,6 +46,16 @@ pub struct IamCertLdapServ;
 impl IamCertLdapServ {
     //ldap only can be one recode in each tenant
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        //验证cert conf配置是否正确
+        let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
+        let _ = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
+            funs.err().bad_request(
+                "IamCertLdap",
+                "add",
+                &format!("add cert conf err: ldap conf parameter error,and err:{e}"),
+                "400-iam--ldap-cert-add-parameter-incorrect",
+            )
+        })?;
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
@@ -830,6 +840,22 @@ struct IamCertLdapServerAuthInfo {
 
     pub org_unique_id: String,
     pub org_field_map: OrgFieldMap,
+}
+
+impl From<IamCertConfLdapAddOrModifyReq> for IamCertLdapServerAuthInfo {
+    fn from(v: IamCertConfLdapAddOrModifyReq) -> Self {
+        IamCertLdapServerAuthInfo {
+            port: v.port.unwrap_or(if v.is_tls { 636 } else { 389 }),
+            is_tls: v.is_tls,
+            principal: v.principal.to_string(),
+            credentials: v.credentials.to_string(),
+            base_dn: v.base_dn.to_string(),
+            account_unique_id: v.account_unique_id.clone(),
+            org_unique_id: v.org_unique_id.clone(),
+            account_field_map: v.account_field_map.clone(),
+            org_field_map: v.org_field_map.clone(),
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
