@@ -601,17 +601,7 @@ impl IamCertLdapServ {
     }
 
     fn iam_cert_ldap_server_auth_info_to_json(add_req: &IamCertConfLdapAddOrModifyReq) -> TardisResult<String> {
-        TardisFuns::json.obj_to_string(&IamCertLdapServerAuthInfo {
-            port: add_req.port.unwrap_or(if add_req.is_tls { 636 } else { 389 }),
-            is_tls: add_req.is_tls,
-            principal: add_req.principal.to_string(),
-            credentials: add_req.credentials.to_string(),
-            base_dn: add_req.base_dn.to_string(),
-            account_unique_id: add_req.account_unique_id.clone(),
-            org_unique_id: add_req.org_unique_id.clone(),
-            account_field_map: add_req.account_field_map.clone(),
-            org_field_map: add_req.org_field_map.clone(),
-        })
+        TardisFuns::json.obj_to_string::<IamCertLdapServerAuthInfo>(&(add_req.clone().into()))
     }
 
     /// do add account and ldap/userPwd cert \
