@@ -840,7 +840,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 admin_password: Some("123456".to_string()),
                 cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
-                    ak_rule_len_max: 20,
+                    ak_rule_len_max: 40,
                     sk_rule_len_min: 2,
                     sk_rule_len_max: 20,
                     sk_rule_need_num: false,
