@@ -393,8 +393,9 @@ impl IamCertLdapServ {
             .await?
             .into_iter()
             .map(|r| IamAccountExtSysResp {
-                user_name: r.get_simple_attr("cn").unwrap_or_default(),
+                user_name: r.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
                 display_name: r.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
+                account_unique_id: r.get_simple_attr(&cert_conf.account_unique_id).unwrap_or_default(),
                 account_id: r.dn,
             })
             .collect();
@@ -587,16 +588,17 @@ impl IamCertLdapServ {
         let conf = Self::get_cert_conf(conf_id, funs, ctx).await?;
         let mut ldap_client = LdapClient::new(&conf.conn_uri, conf.port, conf.is_tls, &conf.base_dn).await?;
         let ldap_account: Vec<IamAccountExtSysResp> = ldap_client
-            .search("objectClass=person", &vec!["dn", &conf.account_unique_id, &conf.account_field_map.field_display_name])
+            .search("objectClass=person", &conf.package_account_return_attr_with(vec!["dn"]))
             .await?
             .into_iter()
             .map(|r| IamAccountExtSysResp {
-                user_name: r.get_simple_attr("cn").unwrap_or_default(),
+                user_name: r.get_simple_attr(&conf.account_field_map.field_user_name).unwrap_or_default(),
                 display_name: r.get_simple_attr(&conf.account_field_map.field_display_name).unwrap_or_default(),
+                account_unique_id: r.get_simple_attr(&conf.account_unique_id).unwrap_or_default(),
                 account_id: r.dn,
             })
             .collect();
-
+        IamAccountServ::
         Ok(())
     }
 
@@ -865,7 +867,7 @@ impl From<IamCertConfLdapAddOrModifyReq> for IamCertLdapServerAuthInfo {
             account_unique_id: v.account_unique_id.clone(),
             org_unique_id: v.org_unique_id.clone(),
             account_field_map: v.account_field_map.clone(),
-            org_field_map: v.org_field_map.clone(),
+            org_field_map: v.org_field_map,
         }
     }
 }
