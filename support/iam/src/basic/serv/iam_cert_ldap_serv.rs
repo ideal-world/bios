@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use self::ldap::LdapClient;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
+use crate::basic::serv::iam_cert_ldap_serv::ldap::LdapSearchResp;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -211,7 +212,7 @@ impl IamCertLdapServ {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.dn.clone()),
                     sk: None,
-                    ext: None,
+                    ext: add_or_modify_req.account_unique_id.clone(),
                     start_time: None,
                     end_time: None,
                     conn_uri: None,
@@ -229,7 +230,7 @@ impl IamCertLdapServ {
                     kind: None,
                     supplier: None,
                     vcode: None,
-                    ext: None,
+                    ext: add_or_modify_req.account_unique_id.clone(),
                     start_time: None,
                     end_time: None,
                     conn_uri: None,
@@ -339,6 +340,7 @@ impl IamCertLdapServ {
                 &account.dn,
                 &account.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
                 &account.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
+                &account.get_simple_attr(&cert_conf.account_unique_id).unwrap_or_default(),
                 &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                 &cert_conf_id,
                 funs,
@@ -478,6 +480,7 @@ impl IamCertLdapServ {
                 // bind user_pwd with ldap cert
                 Self::bind_user_pwd_by_ldap(
                     &dn,
+                    &account.get_simple_attr(&cert_conf.account_unique_id).unwrap_or_default(),
                     ak.as_ref(),
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
@@ -502,6 +505,7 @@ impl IamCertLdapServ {
                     &dn,
                     &account.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
                     &account.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
+                    &account.get_simple_attr(&cert_conf.account_unique_id).unwrap_or_default(),
                     login_req.bind_user_pwd.sk.as_ref(),
                     &cert_conf_id,
                     funs,
@@ -522,6 +526,7 @@ impl IamCertLdapServ {
 
     pub async fn bind_user_pwd_by_ldap(
         dn: &str,
+        account_unique_id: &str,
         user_name: &str,
         password: &str,
         cert_conf_id: &str,
@@ -578,8 +583,18 @@ impl IamCertLdapServ {
         if Self::check_user_pwd_is_bind(user_name, code, tenant_id.clone(), funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "user is bound by ldap", "409-iam-user-is-bound"));
         }
-        //查出用户名密码的account_id
-        Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &rbum_item_id, cert_conf_id, funs, ctx).await?;
+        //添加这个用户的ldap登录cert
+        Self::add_or_modify_cert(
+            &IamCertLdapAddOrModifyReq {
+                dn: TrimString(dn.to_string()),
+                account_unique_id: Some(account_unique_id.to_string()),
+            },
+            &rbum_item_id,
+            cert_conf_id,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(rbum_item_id)
     }
 
@@ -587,8 +602,12 @@ impl IamCertLdapServ {
     pub async fn iam_sync_ldap_user_to_iam(conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let conf = Self::get_cert_conf(conf_id, funs, ctx).await?;
         let mut ldap_client = LdapClient::new(&conf.conn_uri, conf.port, conf.is_tls, &conf.base_dn).await?;
+        let mut map = HashMap::new();
         let ldap_account: Vec<IamAccountExtSysResp> = ldap_client
-            .search("objectClass=person", &conf.package_account_return_attr_with(vec!["dn"]))
+            .search(
+                &conf.account_field_map.search_base_filter.clone().unwrap_or("objectClass=person".to_string()),
+                &conf.package_account_return_attr_with(vec!["dn"]),
+            )
             .await?
             .into_iter()
             .map(|r| IamAccountExtSysResp {
@@ -598,7 +617,10 @@ impl IamCertLdapServ {
                 account_id: r.dn,
             })
             .collect();
-        IamAccountServ::
+        ldap_account.iter().for_each(|r| {
+            map.insert(r.account_unique_id.clone(), r);
+        });
+
         Ok(())
     }
 
@@ -626,6 +648,7 @@ impl IamCertLdapServ {
         dn: &str,
         account_name: &str,
         cert_user_name: &str,
+        account_unique_id: &str,
         userpwd_password: &str,
         ldap_cert_conf_id: &str,
         funs: &TardisFunsInst,
@@ -651,7 +674,17 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        Self::add_or_modify_cert(&IamCertLdapAddOrModifyReq { dn: TrimString(dn.to_string()) }, &account_id, ldap_cert_conf_id, funs, ctx).await?;
+        Self::add_or_modify_cert(
+            &IamCertLdapAddOrModifyReq {
+                dn: TrimString(dn.to_string()),
+                account_unique_id: Some(account_unique_id.to_string()),
+            },
+            &account_id,
+            ldap_cert_conf_id,
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(account_id)
     }
 
