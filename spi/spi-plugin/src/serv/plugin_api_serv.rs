@@ -2,11 +2,12 @@ use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, CODE_FIELD, CREATE_TIME_FIELD};
 use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
+use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::{EntityName, Set};
 use tardis::web::poem_openapi::types::Type;
 use tardis::TardisFunsInst;
@@ -86,7 +87,7 @@ impl RbumItemCrudOperation<plugin_api::ActiveModel, PluginApiAddOrModifyReq, Plu
         Ok(Some(RbumItemKernelModifyReq {
             code: None,
             name: Some(modify_req.name.clone()),
-            scope_level: None,
+            scope_level: Some(RbumScopeLevelKind::Root),
             disabled: None,
         }))
     }
@@ -119,6 +120,15 @@ impl RbumItemCrudOperation<plugin_api::ActiveModel, PluginApiAddOrModifyReq, Plu
         if let Some(path_and_query) = &filter.path_and_query {
             query.and_where(Expr::col(plugin_api::Column::PathAndQuery).like(format!("%{path_and_query}%").as_str()));
         }
+        if let Some(code) = &filter.code {
+            query.and_where(Expr::col((Alias::new(RbumItemServ::get_table_name()), CODE_FIELD.clone())).eq(code.as_str()));
+        }
+        if let Some(create_start) = &filter.create_start {
+            query.and_where(Expr::col((Alias::new(RbumItemServ::get_table_name()), CREATE_TIME_FIELD.clone())).gte(*create_start));
+        }
+        if let Some(create_end) = &filter.create_end {
+            query.and_where(Expr::col((Alias::new(RbumItemServ::get_table_name()), CREATE_TIME_FIELD.clone())).lte(*create_end));
+        }
         Ok(())
     }
 }
@@ -147,10 +157,10 @@ impl PluginApiServ {
         let resp = Self::find_one_detail_item(
             &PluginApiFilterReq {
                 basic: RbumBasicFilterReq {
-                    code: Some(code.to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
+                code: Some(code.to_string()),
                 ..Default::default()
             },
             funs,

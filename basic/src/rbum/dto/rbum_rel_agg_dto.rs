@@ -16,7 +16,7 @@ pub struct RbumRelAggAddReq {
     pub envs: Vec<RbumRelEnvAggAddReq>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAttrAggAddReq {
     pub is_from: bool,
@@ -29,7 +29,7 @@ pub struct RbumRelAttrAggAddReq {
     pub rel_rbum_kind_attr_id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelEnvAggAddReq {
     pub kind: RbumRelEnvKind,
@@ -39,7 +39,7 @@ pub struct RbumRelEnvAggAddReq {
     pub value2: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumRelAggResp {
     pub rel: RbumRelDetailResp,

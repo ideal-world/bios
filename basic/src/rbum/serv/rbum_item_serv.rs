@@ -15,7 +15,8 @@ use tardis::{TardisFuns, TardisFunsInst};
 use crate::process::task_processor::TaskProcessor;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{
-    RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumKindAttrFilterReq, RbumSetItemFilterReq,
+    RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumKindAttrFilterReq, RbumKindFilterReq,
+    RbumSetItemFilterReq,
 };
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp};
@@ -1019,7 +1020,7 @@ impl RbumItemAttrServ {
         if !in_main_table_attrs.is_empty() {
             // Implicit rel_rbum_item scope check
             let rel_rbum_kind_id = RbumItemServ::peek_rbum(&add_req.rel_rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
-            let main_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumBasicFilterReq::default(), funs, ctx).await?.ext_table_name;
+            let main_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumKindFilterReq::default(), funs, ctx).await?.ext_table_name;
 
             let mut update_statement = Query::update();
             update_statement.table(Alias::new(&main_table_name));
@@ -1125,7 +1126,7 @@ impl RbumItemAttrServ {
         let mut values: HashMap<String, String> = HashMap::new();
         if !in_main_table_attrs.is_empty() {
             let rel_rbum_kind_id = RbumItemServ::peek_rbum(rbum_item_id, &RbumBasicFilterReq::default(), funs, ctx).await?.rel_rbum_kind_id;
-            let ext_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumBasicFilterReq::default(), funs, ctx).await?.ext_table_name;
+            let ext_table_name = RbumKindServ::peek_rbum(&rel_rbum_kind_id, &RbumKindFilterReq::default(), funs, ctx).await?.ext_table_name;
 
             let mut select_statement = Query::select();
             select_statement.from(Alias::new(&ext_table_name));

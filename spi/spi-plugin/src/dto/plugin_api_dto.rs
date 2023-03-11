@@ -11,7 +11,8 @@ use crate::plugin_enumeration::PluginApiMethodKind;
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct PluginApiAddOrModifyReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    // #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    #[oai(validator(min_length = "2", max_length = "255"))]
     pub code: TrimString,
     pub name: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]

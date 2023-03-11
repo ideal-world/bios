@@ -62,7 +62,7 @@ impl StatsCiRecordApi {
     }
 
     /// Clean Fact Records
-    /// 
+    ///
     /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!
     #[oai(path = "/fact/:fact_key/batch/clean", method = "delete")]
     async fn fact_records_clean(&self, fact_key: Path<String>, before_ct: Query<Option<DateTime<Utc>>>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
