@@ -83,7 +83,7 @@ impl SpiCiBsApi {
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Void> {
         let mut funs = request.tardis_fun_inst();
         funs.begin().await?;
-        SpiBsServ::delete_item(&id.0, &funs, &ctx.0).await?;
+        SpiBsServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

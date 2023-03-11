@@ -13,7 +13,7 @@ pub struct StatsFactRecordLoadReq {
     /// Create time
     pub ct: DateTime<Utc>,
     /// Field data
-    /// 
+    ///
     /// Map format，key = field name of the fact table，value = field value
     pub data: Value,
 }
@@ -28,7 +28,7 @@ pub struct StatsFactRecordsLoadReq {
     /// Create time
     pub ct: DateTime<Utc>,
     /// Field data
-    /// 
+    ///
     /// Map format，key = field name of the fact table，value = field value
     pub data: Value,
 }

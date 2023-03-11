@@ -12,7 +12,7 @@ use tardis::tokio::time::sleep;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::domain::{rbum_cert, rbum_item, rbum_rel, rbum_set, rbum_set_cate, rbum_set_item};
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use crate::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateDetailResp, RbumSetCateModifyReq, RbumSetCateSummaryResp};
 use crate::rbum::dto::rbum_set_dto::{
     RbumSetAddReq, RbumSetDetailResp, RbumSetModifyReq, RbumSetPathResp, RbumSetSummaryResp, RbumSetTreeExtResp, RbumSetTreeMainResp, RbumSetTreeResp,
@@ -350,7 +350,7 @@ impl RbumSetServ {
         let domain_ids = items.values().flat_map(|items| items.iter().map(|item| item.rel_rbum_item_domain_id.clone())).collect::<HashSet<String>>();
         let mut item_kinds = HashMap::new();
         for kind_id in kind_ids {
-            let kind = RbumKindServ::peek_rbum(&kind_id, &RbumBasicFilterReq::default(), funs, ctx).await?;
+            let kind = RbumKindServ::peek_rbum(&kind_id, &RbumKindFilterReq::default(), funs, ctx).await?;
             item_kinds.insert(kind_id, kind);
         }
         let mut item_domains = HashMap::new();

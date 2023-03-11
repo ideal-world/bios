@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::sea_orm::{sea_query::*, EntityName, Set},
-    log::info,
     TardisFunsInst,
 };
 
@@ -13,6 +12,7 @@ use crate::{
             rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq},
             rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq, RbumRelFilterReq},
             rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
+            rbum_rel_agg_dto::{RbumRelAggAddReq, RbumRelAttrAggAddReq, RbumRelEnvAggAddReq},
             rbum_rel_dto::{RbumRelAddReq, RbumRelFindReq},
         },
         rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind},
@@ -177,6 +177,9 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
         if let Some(kind_code) = &filter.kind_code {
             query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Code)).eq(kind_code.to_string()));
         }
+        if let Some(kind_id) = &filter.kind_id {
+            query.and_where(Expr::col((rbum_kind::Entity, rbum_domain::Column::Id)).eq(kind_id.to_string()));
+        }
         if let Some(domain_code) = &filter.domain_code {
             query.left_join(
                 rbum_domain::Entity,
@@ -190,7 +193,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
 
 impl SpiBsServ {
     pub async fn get_bs(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsDetailResp> {
-        let bs = Self::get_item(id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let bs = Self::peek_item(id, &SpiBsFilterReq::default(), funs, ctx).await?;
         let app_tenant_ids = RbumRelServ::find_rbums(
             &RbumRelFilterReq {
                 tag: Some(SPI_IDENT_REL_TAG.to_string()),
@@ -226,6 +229,17 @@ impl SpiBsServ {
     }
 
     pub async fn add_rel(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::add_rel_agg(bs_id, app_tenant_id, None, None, funs, ctx).await
+    }
+
+    pub async fn add_rel_agg(
+        bs_id: &str,
+        app_tenant_id: &str,
+        attrs: Option<Vec<RbumRelAttrAggAddReq>>,
+        envs: Option<Vec<RbumRelEnvAggAddReq>>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         if !RbumRelServ::exist_simple_rel(
             &RbumRelFindReq {
                 tag: Some(SPI_IDENT_REL_TAG.to_string()),
@@ -239,16 +253,22 @@ impl SpiBsServ {
         )
         .await?
         {
-            RbumRelServ::add_rbum(
-                &mut RbumRelAddReq {
-                    tag: SPI_IDENT_REL_TAG.to_string(),
-                    note: None,
-                    from_rbum_kind: RbumRelFromKind::Item,
-                    from_rbum_id: bs_id.to_string(),
-                    to_rbum_item_id: app_tenant_id.to_string(),
-                    to_own_paths: ctx.own_paths.to_string(),
-                    to_is_outside: true,
-                    ext: None,
+            let attrs = attrs.unwrap_or(vec![]);
+            let envs = envs.unwrap_or(vec![]);
+            RbumRelServ::add_rel(
+                &mut RbumRelAggAddReq {
+                    rel: RbumRelAddReq {
+                        tag: SPI_IDENT_REL_TAG.to_string(),
+                        note: None,
+                        from_rbum_kind: RbumRelFromKind::Item,
+                        from_rbum_id: bs_id.to_string(),
+                        to_rbum_item_id: app_tenant_id.to_string(),
+                        to_own_paths: ctx.own_paths.to_string(),
+                        to_is_outside: true,
+                        ext: None,
+                    },
+                    attrs,
+                    envs,
                 },
                 funs,
                 ctx,
@@ -274,25 +294,9 @@ impl SpiBsServ {
         )
         .await?;
         for id in ids {
-            RbumRelServ::delete_rbum(&id, funs, ctx).await?;
+            RbumRelServ::delete_rel_with_ext(&id, funs, ctx).await?;
         }
         Ok(())
-    }
-
-    pub async fn get_bs_by_rel_up(kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsCertResp> {
-        let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
-        let mut resp = Err(funs.err().not_found(&Self::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"));
-        for own_path in own_paths {
-            resp = Self::get_bs_by_rel(own_path.as_str(), kind_code.clone(), funs, ctx).await;
-            info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
-            if resp.is_ok() {
-                break;
-            }
-        }
-        match resp {
-            Ok(bs) => Ok(bs),
-            Err(err) => Err(err),
-        }
     }
 
     pub async fn get_bs_by_rel(app_tenant_id: &str, kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SpiBsCertResp> {
@@ -326,20 +330,5 @@ impl SpiBsServ {
             ext: bs.ext,
             private: bs.private,
         })
-    }
-
-    pub fn get_parent_own_paths(own_paths: &str) -> TardisResult<Vec<String>> {
-        if own_paths.is_empty() {
-            return Ok(vec![]);
-        }
-        let mut paths = own_paths.split('/').map(|s| s.to_string()).collect::<Vec<String>>();
-        paths.reverse();
-        // let mut level = paths.len();
-        // let mut paths_item = Vec::with_capacity(level);
-        // while level != 0 {
-        //     paths_item.push(paths[..level].join("_").to_string());
-        //     level -= 1;
-        // }
-        Ok(paths)
     }
 }

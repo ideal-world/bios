@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
@@ -9,17 +8,24 @@ use tardis::web::web_client::TardisHttpResponse;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use super::plugin_api_serv::PluginApiServ;
+use super::plugin_bs_serv::PluginBsServ;
 use crate::dto::plugin_exec_dto::PluginExecReq;
 pub struct PluginExecServ;
 
 impl PluginExecServ {
     pub async fn exec(kind_code: &str, api_code: &str, exec_req: PluginExecReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisHttpResponse<String>> {
         let spi_api = PluginApiServ::get_by_code(api_code, funs, ctx).await?;
-        let spi_bs = SpiBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
         let result;
         if let Some(spi_api) = &spi_api {
+            let spi_bs = PluginBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
             let url = Self::build_url(&format!("{}/{}", &spi_bs.conn_uri, &spi_api.path_and_query), exec_req.body.clone(), funs)?;
-            let headers = Some(exec_req.header.unwrap_or_default().iter().map(|(k, v)| (k.to_string(), v.to_string())).collect());
+            let mut headers: Vec<(String, String)> = exec_req.header.unwrap_or_default().iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+            if let Some(rel) = spi_bs.rel {
+                rel.attrs.iter().for_each(|attr| {
+                    headers.push((attr.name.to_string(), attr.value.to_string()));
+                });
+            }
+            let headers = Some(headers);
             info!("url: {}", url);
             match spi_api.http_method {
                 crate::plugin_enumeration::PluginApiMethodKind::GET => {
