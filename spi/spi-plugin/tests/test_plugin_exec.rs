@@ -17,7 +17,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     })?;
 
     let resp: PluginExecResp = client
-        .post(
+        .put(
             &format!("/ci/spi/plugin/{}/api/{}/exec", "gitlib", "test-api"),
             &PluginExecReq {
                 header: Some(HashMap::from([(

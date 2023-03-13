@@ -16,7 +16,7 @@ pub struct PluginExecApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/spi/plugin", tag = "bios_basic::ApiTag::Interface")]
 impl PluginExecApi {
     /// Put Plugin exec
-    #[oai(path = "/:kind_code/api/:api_code/exec", method = "post")]
+    #[oai(path = "/:kind_code/api/:api_code/exec", method = "put")]
     async fn plugin_exec(
         &self,
         kind_code: Path<String>,
