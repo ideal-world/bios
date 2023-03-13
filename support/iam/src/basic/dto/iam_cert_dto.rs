@@ -2,6 +2,7 @@ use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
+use crate::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamContextFetchReq {
@@ -104,7 +105,16 @@ pub struct IamCertExtAddReq {
     pub sk: Option<String>,
     pub ext: Option<String>,
 }
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamThirdIntegrationSyncAddReq{
+    pub account_sync_from:IamCertExtKind,
+    pub account_sync_cron:String,
+    pub account_way_to_add:WayToAdd,
+    pub account_way_to_delete:WayToDelete,
 
+    pub org_sync_from:IamCertExtKind,
+    pub org_sync_cron:String,
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertManageAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]

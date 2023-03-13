@@ -363,6 +363,7 @@ impl IamTenantServ {
         for ldap_conf in cert_confs.iter().filter(|r| r.kind == IamCertExtKind::Ldap.to_string()) {
             let conf = IamCertLdapServ::get_cert_conf(&ldap_conf.id, funs, ctx).await?;
             vec1.push(IamCertConfLdapResp {
+                id: ldap_conf.id.clone(),
                 supplier: ldap_conf.kind.clone(),
                 conn_uri: ldap_conf.conn_uri.clone(),
                 is_tls: conf.is_tls,

@@ -174,3 +174,21 @@ impl Oauth2GrantType {
         Oauth2GrantType::from_str(kind).map_err(|_| TardisError::format_error(&format!("not support OAuth2 kind: {kind}"), "404-iam-cert-oauth-kind-not-exist"))
     }
 }
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum WayToAdd {
+    ///同步账号同步凭证
+    SynchronizeCert,
+    ///同步账号不凭证
+    NoSynchronizeCert,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum WayToDelete {
+    ///取消授权
+    DeleteCert,
+    ///禁用账号
+    Disable,
+    ///同步删除账号凭证
+    DeleteAccount,
+}

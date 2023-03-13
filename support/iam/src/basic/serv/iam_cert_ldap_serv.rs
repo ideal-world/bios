@@ -41,6 +41,7 @@ use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     TardisFuns, TardisFunsInst,
 };
+use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 
 pub struct IamCertLdapServ;
 
@@ -148,6 +149,7 @@ impl IamCertLdapServ {
         .await?
         {
             let result = TardisFuns::json.str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext).map(|info| IamCertConfLdapResp {
+                id: resp.id,
                 supplier: resp.supplier,
                 conn_uri: resp.conn_uri,
                 is_tls: info.is_tls,
@@ -171,6 +173,7 @@ impl IamCertLdapServ {
             TardisFuns::json
                 .str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext)
                 .map(|info| IamCertConfLdapResp {
+                    id: resp.id,
                     supplier: resp.supplier,
                     conn_uri: resp.conn_uri,
                     is_tls: info.is_tls,
@@ -621,6 +624,11 @@ impl IamCertLdapServ {
             map.insert(r.account_unique_id.clone(), r);
         });
 
+        // let iam_account_infos = IamAccountServ::find_items(&IamAccountFilterReq {
+        //     basic: Default::default(),
+        //     rel:
+        //     ..Default::default()
+        // }, None, None, funs, ctx).await?;
         Ok(())
     }
 

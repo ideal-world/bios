@@ -133,6 +133,7 @@ pub struct IamCertConfLdapAddOrModifyReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfLdapResp {
+    pub id:String,
     pub supplier: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
