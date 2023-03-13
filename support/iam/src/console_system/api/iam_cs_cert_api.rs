@@ -99,11 +99,19 @@ impl IamCsCertApi {
         TardisResp::ok(rbum_cert)
     }
     ///add sync config
-    #[oai(path="/sync", method = "put")]
-    async fn add_sync_third_integration_config(&self,req:Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor)->TardisApiResult<Void>{
+    #[oai(path = "/sync", method = "put")]
+    async fn add_or_modify_sync_third_integration_config(&self, req: Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCertServ::add_sync_third_integration_config(req,&funs,&ctx.0).await?;
-        TardisResp::ok(Void{})
+        IamCertServ::add_or_modify_sync_third_integration_config(req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    ///get sync config
+    #[oai(path = "/sync", method = "get")]
+    async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationSyncAddReq>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
+        TardisResp::ok(result)
     }
 }
 

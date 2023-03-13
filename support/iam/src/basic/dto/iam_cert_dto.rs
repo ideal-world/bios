@@ -1,8 +1,8 @@
+use crate::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
-use crate::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamContextFetchReq {
@@ -106,14 +106,17 @@ pub struct IamCertExtAddReq {
     pub ext: Option<String>,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamThirdIntegrationSyncAddReq{
-    pub account_sync_from:IamCertExtKind,
-    pub account_sync_cron:String,
-    pub account_way_to_add:WayToAdd,
-    pub account_way_to_delete:WayToDelete,
+pub struct IamThirdIntegrationSyncAddReq {
+    pub account_sync_from: IamCertExtKind,
+    pub account_sync_cron: String,
+    pub account_way_to_add: WayToAdd,
+    pub account_way_to_delete: WayToDelete,
 
-    pub org_sync_from:IamCertExtKind,
-    pub org_sync_cron:String,
+    pub org_sync_from: IamCertExtKind,
+    pub org_sync_cron: String,
+
+    ///组织关联账号
+    pub org_rel_account: bool,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertManageAddReq {
@@ -147,7 +150,7 @@ pub struct IamCertOAuth2AddOrModifyReq {
 pub struct IamCertLdapAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub dn: TrimString,
-    pub account_unique_id :Option<String>,
+    pub account_unique_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
