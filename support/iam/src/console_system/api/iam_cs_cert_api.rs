@@ -100,7 +100,7 @@ impl IamCsCertApi {
     }
 }
 
-struct IamCsCertConfigLdapApi;
+pub struct IamCsCertConfigLdapApi;
 /// System Console Cert Config LDAP API
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cs/ldap", tag = "bios_basic::ApiTag::System")]

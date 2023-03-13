@@ -5,7 +5,7 @@ use tardis::db::reldb_client::TardisActiveModel;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::rbum::dto::rbum_domain_dto::RbumDomainAddReq;
-use crate::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindFilterReq};
 use crate::rbum::dto::rbum_kind_dto::RbumKindAddReq;
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
 use crate::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -47,8 +47,11 @@ pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisConte
 
 pub async fn add_kind(scheme: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     if !RbumKindServ::exist_rbum(
-        &RbumBasicFilterReq {
-            code: Some(scheme.to_string()),
+        &RbumKindFilterReq {
+            basic: RbumBasicFilterReq {
+                code: Some(scheme.to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         },
         funs,

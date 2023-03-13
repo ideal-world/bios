@@ -1,4 +1,5 @@
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::web::Json;
 use tardis::web::poem::Request;
@@ -35,7 +36,10 @@ impl PluginExecApi {
 
     /// Put Plugin exec
     #[oai(path = "/test/exec/:msg", method = "get")]
-    async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, _request: &Request) -> TardisApiResult<String> {
+    async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+        for (k, v) in request.headers() {
+            info!("{}: {}", k, v.to_str().unwrap());
+        }
         TardisResp::ok(msg.0)
     }
 }

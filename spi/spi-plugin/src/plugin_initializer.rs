@@ -1,11 +1,8 @@
-use bios_basic::{
-    rbum::serv::rbum_domain_serv::RbumDomainServ,
-    spi::{api::spi_ci_bs_api, spi_initializer},
-};
+use bios_basic::{rbum::serv::rbum_domain_serv::RbumDomainServ, spi::spi_initializer};
 use tardis::{basic::result::TardisResult, db::reldb_client::TardisActiveModel, web::web_server::TardisWebServer, TardisFuns, TardisFunsInst};
 
 use crate::{
-    api::ci::{plugin_ci_api_api, plugin_exec_ci_api},
+    api::ci::{plugin_ci_api_api, plugin_ci_bs_api, plugin_ci_exec_api, plugin_ci_kind_api},
     domain::plugin_api,
     plugin_constants::DOMAIN_CODE,
 };
@@ -29,6 +26,16 @@ async fn init_db(domain_code: String, funs: &TardisFunsInst) -> TardisResult<()>
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (spi_ci_bs_api::SpiCiBsApi, plugin_ci_api_api::PluginApiApi, plugin_exec_ci_api::PluginExecApi)).await;
+    web_server
+        .add_module(
+            DOMAIN_CODE,
+            (
+                plugin_ci_bs_api::PluginCiBsApi,
+                plugin_ci_api_api::PluginApiApi,
+                plugin_ci_exec_api::PluginExecApi,
+                plugin_ci_kind_api::PluginKindApi,
+            ),
+        )
+        .await;
     Ok(())
 }

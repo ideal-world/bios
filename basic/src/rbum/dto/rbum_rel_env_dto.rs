@@ -29,7 +29,7 @@ pub struct RbumRelEnvModifyReq {
     pub value2: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumRelEnvDetailResp {
     pub id: String,

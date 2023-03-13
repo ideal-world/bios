@@ -59,6 +59,14 @@ pub struct RbumCertFilterReq {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 #[serde(default)]
+pub struct RbumKindFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub module: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+#[serde(default)]
 pub struct RbumKindAttrFilterReq {
     pub basic: RbumBasicFilterReq,
     pub secret: Option<bool>,

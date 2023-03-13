@@ -15,6 +15,7 @@ use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
+use crate::rbum::dto::rbum_filer_dto::RbumKindFilterReq;
 use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
@@ -31,7 +32,7 @@ lazy_static! {
 }
 
 #[async_trait]
-impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp, RbumBasicFilterReq> for RbumKindServ {
+impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq, RbumKindSummaryResp, RbumKindDetailResp, RbumKindFilterReq> for RbumKindServ {
     fn get_table_name() -> &'static str {
         rbum_kind::Entity.table_name()
     }
@@ -99,7 +100,7 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
         Ok(None)
     }
 
-    async fn package_query(is_detail: bool, filter: &RbumBasicFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
+    async fn package_query(is_detail: bool, filter: &RbumKindFilterReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SelectStatement> {
         let mut query = Query::select();
         query.columns(vec![
             (rbum_kind::Entity, rbum_kind::Column::Id),
@@ -116,7 +117,10 @@ impl RbumCrudOperation<rbum_kind::ActiveModel, RbumKindAddReq, RbumKindModifyReq
             (rbum_kind::Entity, rbum_kind::Column::UpdateTime),
             (rbum_kind::Entity, rbum_kind::Column::ScopeLevel),
         ]);
-        query.from(rbum_kind::Entity).with_filter(Self::get_table_name(), filter, is_detail, true, ctx);
+        if let Some(module) = &filter.module {
+            query.and_where(Expr::col((rbum_kind::Entity, rbum_kind::Column::Module)).eq(module.to_string()));
+        }
+        query.from(rbum_kind::Entity).with_filter(Self::get_table_name(), &filter.basic, is_detail, true, ctx);
         Ok(query)
     }
 }
