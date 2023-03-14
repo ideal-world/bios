@@ -151,6 +151,7 @@ pub struct IamCertLdapAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub dn: TrimString,
     pub account_unique_id: Option<String>,
+    pub status: RbumCertStatusKind,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

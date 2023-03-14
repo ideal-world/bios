@@ -124,3 +124,8 @@ pub struct RbumCertDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RbumCertExt {
+    pub account_unique_id: Option<String>,
+}
