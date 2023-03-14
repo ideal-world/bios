@@ -183,12 +183,25 @@ pub enum WayToAdd {
     NoSynchronizeCert,
 }
 
+impl Default for WayToAdd {
+    fn default() -> Self {
+        WayToAdd::SynchronizeCert
+    }
+}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum WayToDelete {
+    ///什么也不做
+    DoNotDelete,
     ///取消授权
     DeleteCert,
     ///禁用账号
     Disable,
     ///同步删除账号凭证
     DeleteAccount,
+}
+impl Default for WayToDelete {
+    fn default() -> Self {
+        WayToDelete::DoNotDelete
+    }
 }

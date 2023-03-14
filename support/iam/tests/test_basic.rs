@@ -123,15 +123,15 @@ pub fn gen_test_ldap_conf() -> IamCertConfLdapAddOrModifyReq {
             field_mobile_remarks: "".to_string(),
             field_email_remarks: "".to_string(),
         },
-        org_unique_id: "ou".to_string(),
-        org_field_map: OrgFieldMap {
-            search_base_filter: Some("objectClass=organizationalUnit".to_string()),
-            field_dept_id: "ou".to_string(),
-            field_dept_name: "ou".to_string(),
-            field_parent_dept_id: "".to_string(),
-            field_dept_id_remarks: "".to_string(),
-            field_dept_name_remarks: "".to_string(),
-            field_parent_dept_id_remarks: "".to_string(),
-        },
+        // org_unique_id: "ou".to_string(),
+        // org_field_map: OrgFieldMap {
+        //     search_base_filter: Some("objectClass=organizationalUnit".to_string()),
+        //     field_dept_id: "ou".to_string(),
+        //     field_dept_name: "ou".to_string(),
+        //     field_parent_dept_id: "".to_string(),
+        //     field_dept_id_remarks: "".to_string(),
+        //     field_dept_name_remarks: "".to_string(),
+        //     field_parent_dept_id_remarks: "".to_string(),
+        // },
     }
 }

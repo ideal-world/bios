@@ -7,7 +7,7 @@ use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggM
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, WayToAdd};
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, WayToAdd, WayToDelete};
 use crate::{
     basic::dto::{
         iam_account_dto::{IamAccountAggAddReq, IamAccountExtSysResp},
@@ -16,7 +16,7 @@ use crate::{
         iam_filer_dto::IamTenantFilterReq,
     },
     iam_config::IamBasicConfigApi,
-    iam_enumeration,
+    iam_constants, iam_enumeration,
 };
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertExt;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
@@ -253,7 +253,8 @@ impl IamCertLdapServ {
                 funs,
                 ctx,
             )
-            .await?;
+            .await
+            .unwrap();
         };
         Ok(())
     }
@@ -682,6 +683,9 @@ impl IamCertLdapServ {
             } else {
                 //ldap没有 iam有的 需要同步删除
                 match sync_config.account_way_to_delete {
+                    WayToDelete::DoNotDelete => {
+                        continue;
+                    }
                     iam_enumeration::WayToDelete::DeleteCert => {
                         RbumCertServ::modify_rbum(
                             &cert.id,
@@ -729,9 +733,11 @@ impl IamCertLdapServ {
                 ..ctx.clone()
             };
             let ldap_resp = map.get(account_unique_id).unwrap();
+            let mut funs = iam_constants::get_tardis_inst();
+            funs.begin().await?;
             match sync_config.account_way_to_add {
                 WayToAdd::SynchronizeCert => {
-                    Self::do_add_account(
+                    let add_result = Self::do_add_account(
                         &ldap_resp.account_id,
                         &ldap_resp.display_name,
                         &ldap_resp.user_name,
@@ -739,13 +745,17 @@ impl IamCertLdapServ {
                         &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                         &cert_conf_id,
                         RbumCertStatusKind::Enabled,
-                        funs,
+                        &funs,
                         &mock_ctx,
                     )
-                    .await?;
+                    .await;
+                    if add_result.is_err() {
+                        funs.rollback().await?;
+                        continue;
+                    };
                 }
                 WayToAdd::NoSynchronizeCert => {
-                    Self::do_add_account(
+                    let add_result = Self::do_add_account(
                         &ldap_resp.account_id,
                         &ldap_resp.display_name,
                         &ldap_resp.user_name,
@@ -753,12 +763,17 @@ impl IamCertLdapServ {
                         &format!("{}0Pw$", TardisFuns::field.nanoid_len(6)),
                         &cert_conf_id,
                         RbumCertStatusKind::Disabled,
-                        funs,
+                        &funs,
                         &mock_ctx,
                     )
-                    .await?;
+                    .await;
+                    if add_result.is_err() {
+                        funs.rollback().await?;
+                        continue;
+                    };
                 }
             }
+            funs.commit().await?;
         }
         Ok(())
     }
@@ -1025,7 +1040,6 @@ struct IamCertLdapServerAuthInfo {
 
     pub account_unique_id: String,
     pub account_field_map: AccountFieldMap,
-
     // pub org_unique_id: String,
     // pub org_field_map: OrgFieldMap,
 }

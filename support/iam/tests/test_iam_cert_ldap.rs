@@ -1,18 +1,19 @@
 use crate::test_basic;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::IamThirdIntegrationSyncAddReq;
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
-use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, IamCertLdapServ, OrgFieldMap};
+use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::iam_constants;
-use bios_iam::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
+use bios_iam::iam_enumeration::IamCertExtKind;
 use ldap3::log::info;
 use tardis::basic::dto::TardisContext;
 
 pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisContext, tenant2_admin_context: &TardisContext) -> () {
     let mut funs = iam_constants::get_tardis_inst();
-    // funs.begin().await.unwrap();
+    //不能开启事务 iam_sync_ldap_user_to_iam 这个方法里有自己的事务
     info!("【test ldap conf curd】");
     let ldap_cert_conf = IamCertLdapServ::get_cert_conf_by_ctx(&funs, admin_ctx).await.unwrap();
     assert!(ldap_cert_conf.is_none());
@@ -53,11 +54,8 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
         IamThirdIntegrationSyncAddReq {
             account_sync_from: IamCertExtKind::Ldap,
             account_sync_cron: "".to_string(),
-            account_way_to_add: WayToAdd::SynchronizeCert,
-            account_way_to_delete: WayToDelete::DeleteCert,
-            org_sync_from: IamCertExtKind::Ldap,
-            org_sync_cron: "".to_string(),
-            org_rel_account: false,
+            account_way_to_add: None,
+            account_way_to_delete: None,
         },
         &funs,
         admin_ctx,
@@ -65,13 +63,11 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
     IamCertLdapServ::iam_sync_ldap_user_to_iam(&conf_id, &funs, admin_ctx).await.unwrap();
-    let account_page = IamAccountServ::paginate_account_summary_aggs(
+    let account_page = IamAccountServ::paginate_detail_items(
         &IamAccountFilterReq {
             basic: Default::default(),
             ..Default::default()
         },
-        false,
-        false,
         1,
         50,
         None,
@@ -81,9 +77,8 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     )
     .await
     .unwrap();
-    println!("{:?}", account_page.records);
-    assert_eq!(account_page.total_size, 4);
+    println!("================={:?}", account_page.records);
+    assert_eq!(account_page.total_size, 5);
 
-    //todo
-    // funs.commit().await.unwrap();
+    funs.commit().await.unwrap();
 }

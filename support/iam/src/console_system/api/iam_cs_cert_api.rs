@@ -9,7 +9,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertUserPwdRestReq, IamThirdIntegrationSyncAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -108,7 +108,7 @@ impl IamCsCertApi {
 
     ///get sync config
     #[oai(path = "/sync", method = "get")]
-    async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationSyncAddReq>> {
+    async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationConfigDto>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
         TardisResp::ok(result)

@@ -20,7 +20,7 @@ use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
 };
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationSyncAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
@@ -1018,13 +1018,23 @@ impl IamCertServ {
     pub async fn add_or_modify_sync_third_integration_config(req: IamThirdIntegrationSyncAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         //将来有spi服务，可以切换到spi-kv里
         let third_integration_config_key = funs.conf::<IamConfig>().third_integration_config_key.clone();
-        funs.cache().set(&format!("{third_integration_config_key}:{}", ctx.own_paths), &TardisFuns::json.obj_to_string(&req)?).await?;
+        funs.cache()
+            .set(
+                &format!("{third_integration_config_key}:{}", ctx.own_paths),
+                &TardisFuns::json.obj_to_string(&IamThirdIntegrationConfigDto {
+                    account_sync_from: req.account_sync_from,
+                    account_sync_cron: req.account_sync_cron,
+                    account_way_to_add: req.account_way_to_add.unwrap_or_default(),
+                    account_way_to_delete: req.account_way_to_delete.unwrap_or_default(),
+                })?,
+            )
+            .await?;
         Ok(())
     }
-    pub async fn get_sync_third_integration_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamThirdIntegrationSyncAddReq>> {
+    pub async fn get_sync_third_integration_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamThirdIntegrationConfigDto>> {
         let conf = funs.conf::<IamConfig>();
         if let Some(iam_third_integration_sync_add_req_string) = funs.cache().get(&format!("{}:{}", conf.third_integration_config_key, ctx.own_paths)).await? {
-            let result = TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncAddReq>(&iam_third_integration_sync_add_req_string)?;
+            let result = TardisFuns::json.str_to_obj::<IamThirdIntegrationConfigDto>(&iam_third_integration_sync_add_req_string)?;
             Ok(Some(result))
         } else {
             Ok(None)
