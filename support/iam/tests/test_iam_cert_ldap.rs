@@ -1,5 +1,7 @@
 use crate::test_basic;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
+use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::iam_constants;
@@ -26,7 +28,19 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     info!("【test ldap sync function】");
     let conf_id = IamCertServ::get_cert_conf_id_by_kind("Ldap", None, &funs).await.unwrap();
     assert_eq!(conf_id, ldap_cert_conf_id);
+
+    let account_page = IamAccountServ::paginate_account_summary_aggs(&IamAccountFilterReq {
+        basic: Default::default(),
+        ..Default::default()
+    }, false, false, 1, 50, None, None, &funs, admin_ctx).await.unwrap();
+    assert_eq!(account_page.total_size,5);
     IamCertLdapServ::iam_sync_ldap_user_to_iam(&conf_id, &funs, admin_ctx).await.unwrap();
+    let account_page = IamAccountServ::paginate_account_summary_aggs(&IamAccountFilterReq {
+        basic: Default::default(),
+        ..Default::default()
+    }, false, false, 1, 50, None, None, &funs, admin_ctx).await.unwrap();
+    assert_eq!(account_page.total_size,5);
+
     //todo
     // funs.commit().await.unwrap();
 }
