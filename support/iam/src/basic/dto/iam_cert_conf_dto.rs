@@ -1,4 +1,4 @@
-use crate::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
+use crate::basic::serv::iam_cert_ldap_serv::AccountFieldMap;
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -105,7 +105,7 @@ pub struct IamCertConfAkSkAddOrModifyReq {
     #[oai(validator(minimum(value = "1", exclusive = "false")))]
     pub expire_sec: Option<i64>,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -124,15 +124,17 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub enabled: bool,
 
     pub port: Option<u16>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub account_unique_id: String,
     pub account_field_map: AccountFieldMap,
-
-    pub org_unique_id: String,
-    pub org_field_map: OrgFieldMap,
+    // #[oai(validator(min_length = "2", max_length = "2000"))]
+    // pub org_unique_id: String,
+    // pub org_field_map: OrgFieldMap,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct IamCertConfLdapResp {
+    pub id: String,
     pub supplier: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
@@ -147,9 +149,9 @@ pub struct IamCertConfLdapResp {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub account_unique_id: String,
     pub account_field_map: AccountFieldMap,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub org_unique_id: String,
-    pub org_field_map: OrgFieldMap,
+    // #[oai(validator(min_length = "2", max_length = "2000"))]
+    // pub org_unique_id: String,
+    // pub org_field_map: OrgFieldMap,
 }
 
 impl IamCertConfLdapResp {
@@ -175,5 +177,14 @@ impl IamCertConfLdapResp {
         } else {
             format!("{}={}", self.account_unique_id, user_or_display_name)
         }
+    }
+    pub fn package_account_return_attr_with<'a>(&'a self, vec: Vec<&'a str>) -> Vec<&str> {
+        let vec1: Vec<&str> = vec![
+            &self.account_field_map.field_user_name,
+            &self.account_field_map.field_display_name,
+            &self.account_field_map.field_email,
+            &self.account_field_map.field_mobile,
+        ];
+        [vec, vec1].concat()
     }
 }
