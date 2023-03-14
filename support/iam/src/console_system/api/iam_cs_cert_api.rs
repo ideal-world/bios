@@ -76,6 +76,7 @@ impl IamCsCertApi {
         TardisResp::ok(Void {})
     }
 
+    // TODO 移动至 ci 并且名称修改
     /// Get Gitlab Certs By Account Id
     #[oai(path = "/gitlab", method = "get")]
     async fn get_gitlab_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
