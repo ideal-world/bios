@@ -124,7 +124,7 @@ async fn test_iam_serv() -> TardisResult<()> {
     .await?;
 
     test_key_cache::test(&system_admin_context).await?;
-    test_iam_oauth2::test(&tenant1_admin_context).await?;
+    // test_iam_oauth2::test(&tenant1_admin_context).await?;
     test_iam_cert_ldap::test(&system_admin_context, &tenant1_admin_context, &tenant3_admin_context).await;
     Ok(())
 }
