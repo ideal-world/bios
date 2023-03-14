@@ -1,4 +1,4 @@
-use crate::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
+use crate::basic::serv::iam_cert_ldap_serv::{AccountFieldMap};
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -124,11 +124,13 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub enabled: bool,
 
     pub port: Option<u16>,
+    #[oai(validator(min_length = "2", max_length = "2000"))]
     pub account_unique_id: String,
     pub account_field_map: AccountFieldMap,
 
-    pub org_unique_id: String,
-    pub org_field_map: OrgFieldMap,
+    // #[oai(validator(min_length = "2", max_length = "2000"))]
+    // pub org_unique_id: String,
+    // pub org_field_map: OrgFieldMap,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
@@ -148,9 +150,9 @@ pub struct IamCertConfLdapResp {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub account_unique_id: String,
     pub account_field_map: AccountFieldMap,
-    #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub org_unique_id: String,
-    pub org_field_map: OrgFieldMap,
+    // #[oai(validator(min_length = "2", max_length = "2000"))]
+    // pub org_unique_id: String,
+    // pub org_field_map: OrgFieldMap,
 }
 
 impl IamCertConfLdapResp {

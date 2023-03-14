@@ -49,7 +49,7 @@ impl IamCertLdapServ {
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         //验证cert conf配置是否正确
         let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
-        let _ = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
+        let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
             funs.err().bad_request(
                 "IamCertLdap",
                 "add",
@@ -57,6 +57,10 @@ impl IamCertLdapServ {
                 "400-iam--ldap-cert-add-parameter-incorrect",
             )
         })?;
+        if ldap_client.bind(&ldap_auth_info.principal, &ldap_auth_info.credentials).await?.is_none() {
+            ldap_client.unbind().await?;
+            return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
+        }
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
@@ -158,8 +162,8 @@ impl IamCertLdapServ {
                 port: info.port,
                 account_unique_id: info.account_unique_id,
                 account_field_map: info.account_field_map,
-                org_unique_id: info.org_unique_id,
-                org_field_map: info.org_field_map,
+                // org_unique_id: info.org_unique_id,
+                // org_field_map: info.org_field_map,
             })?;
             Ok(Some(result))
         } else {
@@ -182,8 +186,8 @@ impl IamCertLdapServ {
                     port: info.port,
                     account_unique_id: info.account_unique_id,
                     account_field_map: info.account_field_map,
-                    org_unique_id: info.org_unique_id,
-                    org_field_map: info.org_field_map,
+                    // org_unique_id: info.org_unique_id,
+                    // org_field_map: info.org_field_map,
                 })
                 .unwrap()
         })
@@ -615,7 +619,11 @@ impl IamCertLdapServ {
             return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
         };
 
-        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, &ctx).await?;
+        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
+        if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
+            ldap_client.unbind().await?;
+            return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
+        }
         let mut map = HashMap::new();
         let ldap_account: Vec<IamAccountExtSysResp> = ldap_client
             .search(
@@ -635,21 +643,7 @@ impl IamCertLdapServ {
             map.insert(r.account_unique_id.clone(), r);
         });
 
-        // let iam_account_infos = IamAccountServ::find_items(
-        //     &IamAccountFilterReq {
-        //         basic: RbumBasicFilterReq {
-        //             own_paths: Some(ctx.own_paths.clone()),
-        //             with_sub_own_paths: false,
-        //             ..Default::default()
-        //         },
-        //         ..Default::default()
-        //     },
-        //     None,
-        //     None,
-        //     funs,
-        //     ctx,
-        // )
-        // .await?;
+        ldap_client.unbind().await?;
 
         let certs = IamCertServ::find_certs(
             &RbumCertFilterReq {
@@ -730,6 +724,10 @@ impl IamCertLdapServ {
         }
         //ldap有的 但是iam没有的 需要添加
         for account_unique_id in map.keys() {
+            let mock_ctx = TardisContext {
+                owner: TardisFuns::field.nanoid(),
+                ..ctx.clone()
+            };
             let ldap_resp = map.get(account_unique_id).unwrap();
             match sync_config.account_way_to_add {
                 WayToAdd::SynchronizeCert => {
@@ -742,7 +740,7 @@ impl IamCertLdapServ {
                         &cert_conf_id,
                         RbumCertStatusKind::Enabled,
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?;
                 }
@@ -756,7 +754,7 @@ impl IamCertLdapServ {
                         &cert_conf_id,
                         RbumCertStatusKind::Disabled,
                         funs,
-                        ctx,
+                        &mock_ctx,
                     )
                     .await?;
                 }
@@ -1028,8 +1026,8 @@ struct IamCertLdapServerAuthInfo {
     pub account_unique_id: String,
     pub account_field_map: AccountFieldMap,
 
-    pub org_unique_id: String,
-    pub org_field_map: OrgFieldMap,
+    // pub org_unique_id: String,
+    // pub org_field_map: OrgFieldMap,
 }
 
 impl From<IamCertConfLdapAddOrModifyReq> for IamCertLdapServerAuthInfo {
@@ -1041,9 +1039,9 @@ impl From<IamCertConfLdapAddOrModifyReq> for IamCertLdapServerAuthInfo {
             credentials: v.credentials.to_string(),
             base_dn: v.base_dn.to_string(),
             account_unique_id: v.account_unique_id.clone(),
-            org_unique_id: v.org_unique_id.clone(),
-            account_field_map: v.account_field_map.clone(),
-            org_field_map: v.org_field_map,
+            account_field_map: v.account_field_map,
+            // org_unique_id: v.org_unique_id.clone(),
+            // org_field_map: v.org_field_map,
         }
     }
 }

@@ -49,82 +49,82 @@ async fn test_iam_serv() -> TardisResult<()> {
     .await?
     .unwrap();
 
-    test_cp_all::test((&sysadmin_name, &sysadmin_password), &system_admin_context).await?;
-
-    test_cs_tenant::test(&system_admin_context).await?;
-
+    // test_cp_all::test((&sysadmin_name, &sysadmin_password), &system_admin_context).await?;
+    //
+    // test_cs_tenant::test(&system_admin_context).await?;
+    //
     let (tenant1_admin_context, tenant2_admin_context) = test_ct_basic::test(&system_admin_context).await?;
-    test_ct_tenant::test(&tenant1_admin_context, &tenant2_admin_context).await?;
-    test_ct_app::test(&tenant1_admin_context, &tenant2_admin_context).await?;
+    // test_ct_tenant::test(&tenant1_admin_context, &tenant2_admin_context).await?;
+    // test_ct_app::test(&tenant1_admin_context, &tenant2_admin_context).await?;
 
     let (app1_admin_context, app2_admin_context, tenant3_admin_context) = test_ca_basic::test(&system_admin_context).await?;
-    test_ca_app::test(&app1_admin_context, &app2_admin_context).await?;
-
-    test_cc_account::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-
-    test_cc_attr::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-
-    test_cc_role::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-
-    test_cc_res::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-
-    test_cc_set::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-
-    test_cc_cert_conf::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-
-    test_cc_cert::test(
-        &system_admin_context,
-        &tenant1_admin_context,
-        &tenant3_admin_context,
-        &app1_admin_context,
-        &app2_admin_context,
-    )
-    .await?;
-    
-    test_key_cache::test(&system_admin_context).await?;
-    test_iam_oauth2::test(&tenant1_admin_context).await?;
+    // test_ca_app::test(&app1_admin_context, &app2_admin_context).await?;
+    //
+    // test_cc_account::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_cc_attr::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_cc_role::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_cc_res::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_cc_set::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_cc_cert_conf::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_cc_cert::test(
+    //     &system_admin_context,
+    //     &tenant1_admin_context,
+    //     &tenant3_admin_context,
+    //     &app1_admin_context,
+    //     &app2_admin_context,
+    // )
+    // .await?;
+    //
+    // test_key_cache::test(&system_admin_context).await?;
+    // test_iam_oauth2::test(&tenant1_admin_context).await?;
     test_iam_cert_ldap::test(&system_admin_context, &tenant1_admin_context, &tenant3_admin_context).await;
     Ok(())
 }

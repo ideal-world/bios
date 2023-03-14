@@ -373,8 +373,8 @@ impl IamTenantServ {
                 port: conf.port,
                 account_unique_id: conf.account_unique_id,
                 account_field_map: conf.account_field_map,
-                org_unique_id: conf.org_unique_id,
-                org_field_map: conf.org_field_map,
+                // org_unique_id: conf.org_unique_id,
+                // org_field_map: conf.org_field_map,
             })
         }
         let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };
