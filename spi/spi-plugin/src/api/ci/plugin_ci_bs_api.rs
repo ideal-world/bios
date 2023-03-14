@@ -67,6 +67,7 @@ impl PluginCiBsApi {
                     name: name.0,
                     ..Default::default()
                 },
+                domain_code: Some(funs.module_code().to_string()),
                 ..Default::default()
             },
             page_number.0,
