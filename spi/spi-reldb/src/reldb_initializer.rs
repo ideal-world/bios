@@ -24,7 +24,7 @@ use crate::{
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let clean_interval_sec = funs.conf::<ReldbConfig>().tx_clean_interval_sec;
-
+    bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<ReldbConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
