@@ -15,6 +15,7 @@ use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, Iam
 use bios_iam::basic::dto::iam_role_dto::IamRoleBoneResp;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
+use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
 use bios_iam::iam_test_helper::BIOSWebTestClient;
 
@@ -57,7 +58,7 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_oauth2: None,
-                cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
+                cert_conf_by_ldap: Some(IamCertConfLdapAddOrModifyReq {
                     supplier: TrimString(LDAP_CODE.to_string()),
                     name: "githubLdap".to_string(),
                     conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
@@ -65,10 +66,31 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                     principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
                     credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
                     base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-                    field_display_name: "displayName".to_string(),
-                    search_base_filter: "objectClass=*".to_string(),
                     enabled: true,
-                }]),
+                    port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
+                    account_unique_id: "cn".to_string(),
+                    account_field_map: AccountFieldMap {
+                        search_base_filter: Some("objectClass=*".to_string()),
+                        field_user_name: "displayName".to_string(),
+                        field_display_name: "displayName".to_string(),
+                        field_mobile: "mobile".to_string(),
+                        field_email: "email".to_string(),
+                        field_user_name_remarks: "".to_string(),
+                        field_display_name_remarks: "".to_string(),
+                        field_mobile_remarks: "".to_string(),
+                        field_email_remarks: "".to_string(),
+                    },
+                    org_unique_id: "ou".to_string(),
+                    org_field_map: OrgFieldMap {
+                        search_base_filter: Some("objectClass=*".to_string()),
+                        field_dept_id: "".to_string(),
+                        field_dept_name: "".to_string(),
+                        field_parent_dept_id: "".to_string(),
+                        field_dept_id_remarks: "".to_string(),
+                        field_dept_name_remarks: "".to_string(),
+                        field_parent_dept_id_remarks: "".to_string(),
+                    },
+                }),
             },
         )
         .await;

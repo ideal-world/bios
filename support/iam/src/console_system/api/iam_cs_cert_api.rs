@@ -9,7 +9,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertUserPwdRestReq};
+use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -98,6 +98,21 @@ impl IamCsCertApi {
         };
         TardisResp::ok(rbum_cert)
     }
+    ///add sync config
+    #[oai(path = "/sync", method = "put")]
+    async fn add_or_modify_sync_third_integration_config(&self, req: Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamCertServ::add_or_modify_sync_third_integration_config(req.0, &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
+    ///get sync config
+    #[oai(path = "/sync", method = "get")]
+    async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationConfigDto>> {
+        let funs = iam_constants::get_tardis_inst();
+        let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
 }
 
 pub struct IamCsCertConfigLdapApi;
@@ -105,7 +120,7 @@ pub struct IamCsCertConfigLdapApi;
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cs/ldap", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertConfigLdapApi {
-    /// add ldap cert
+    /// add ldap cert conf
     #[oai(path = "/", method = "post")]
     async fn add_ldap_cert(&self, add_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -114,7 +129,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
-    /// modify ldap cert
+    /// modify ldap cert conf
     #[oai(path = "/:id", method = "put")]
     async fn modify_ldap_cert(&self, id: Path<String>, modify_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -123,7 +138,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    /// get ldap cert
+    /// get ldap cert conf
     #[oai(path = "/", method = "get")]
     async fn get_ldap_cert(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamCertConfLdapResp>> {
         let mut funs = iam_constants::get_tardis_inst();
