@@ -5,7 +5,6 @@ use self::ldap::LdapClient;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::serv::iam_cert_ldap_serv::ldap::LdapSearchResp;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -603,6 +602,12 @@ impl IamCertLdapServ {
 
     //同步ldap人员到iam
     pub async fn iam_sync_ldap_user_to_iam(conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let sync_config = if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(funs, ctx).await? {
+            sync_config
+        } else {
+            return Err(funs.err().conflict("ldap_account","sync","should have sync config!","iam-not-found-sync-config"));
+        };
+
         let conf = Self::get_cert_conf(conf_id, funs, ctx).await?;
         let mut ldap_client = LdapClient::new(&conf.conn_uri, conf.port, conf.is_tls, &conf.base_dn).await?;
         let mut map = HashMap::new();
@@ -624,11 +629,43 @@ impl IamCertLdapServ {
             map.insert(r.account_unique_id.clone(), r);
         });
 
-        // let iam_account_infos = IamAccountServ::find_items(&IamAccountFilterReq {
-        //     basic: Default::default(),
-        //     rel:
-        //     ..Default::default()
-        // }, None, None, funs, ctx).await?;
+        let iam_account_infos = IamAccountServ::find_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+
+        let certs = IamCertServ::find_certs(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    with_sub_own_paths: false,
+                    ..Default::default()
+                },
+                kind: Some(IamCertExtKind::Ldap.to_string()),
+                supplier: None,
+                status: Some(RbumCertStatusKind::Enabled),
+                rel_rbum_kind: None,
+                rel_rbum_id: None,
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -666,7 +703,7 @@ impl IamCertLdapServ {
             &IamAccountAggAddReq {
                 id: Some(TrimString(ctx.owner.clone())),
                 name: TrimString(account_name.to_string()),
-                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(&cert_user_name, funs, ctx).await?,
+                cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(cert_user_name, funs, ctx).await?,
                 cert_password: userpwd_password.into(),
                 cert_phone: None,
                 cert_mail: None,

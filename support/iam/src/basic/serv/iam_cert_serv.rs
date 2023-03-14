@@ -1,11 +1,9 @@
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
-use std::result;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::web::poem_openapi::payload::Json;
-use tardis::web::web_resp::{TardisPage, Void};
+use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
@@ -13,7 +11,6 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, R
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumRelFilterReq};
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelBoneResp};
 use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind, RbumRelFromKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -1027,7 +1024,7 @@ impl IamCertServ {
     pub async fn get_sync_third_integration_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamThirdIntegrationSyncAddReq>> {
         let conf = funs.conf::<IamConfig>();
         if let Some(iam_third_integration_sync_add_req_string) = funs.cache().get(&format!("{}:{}", conf.third_integration_config_key, ctx.own_paths)).await? {
-            let result = TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncAddReq>(&IamThirdIntegrationSyncAddReqString)?;
+            let result = TardisFuns::json.str_to_obj::<IamThirdIntegrationSyncAddReq>(&iam_third_integration_sync_add_req_string)?;
             Ok(Some(result))
         } else {
             Ok(None)

@@ -1,10 +1,9 @@
 use crate::test_basic;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
-use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, IamCertLdapServ, OrgFieldMap};
+use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::iam_constants;
 use ldap3::log::info;
-use std::env;
 use tardis::basic::dto::TardisContext;
 
 pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisContext, tenant2_admin_context: &TardisContext) -> () {
@@ -27,6 +26,6 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     info!("【test ldap sync function】");
     let conf_id = IamCertServ::get_cert_conf_id_by_kind("Ldap", None, &funs).await.unwrap();
     assert_eq!(conf_id, ldap_cert_conf_id);
-    IamCertLdapServ::iam_sync_ldap_user_to_iam(&conf_id, &funs, &admin_ctx).await.unwrap();
+    IamCertLdapServ::iam_sync_ldap_user_to_iam(&conf_id, &funs, admin_ctx).await.unwrap();
     // funs.commit().await.unwrap();
 }
