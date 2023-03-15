@@ -21,7 +21,7 @@ use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, Iam
 use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
-use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
+use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, IamCertLdapServ, OrgFieldMap};
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
@@ -775,9 +775,30 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
             credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
             base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-            field_display_name: "displayName".to_string(),
-            search_base_filter: "objectClass=*".to_string(),
             enabled: true,
+            port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
+            account_unique_id: "cn".to_string(),
+            account_field_map: AccountFieldMap {
+                search_base_filter: Some("objectClass=*".to_string()),
+                field_user_name: "displayName".to_string(),
+                field_display_name: "displayName".to_string(),
+                field_mobile: "mobile".to_string(),
+                field_email: "email".to_string(),
+                field_user_name_remarks: "".to_string(),
+                field_display_name_remarks: "".to_string(),
+                field_mobile_remarks: "".to_string(),
+                field_email_remarks: "".to_string(),
+            },
+            org_unique_id: "ou".to_string(),
+            org_field_map: OrgFieldMap {
+                search_base_filter: Some("objectClass=*".to_string()),
+                field_dept_id: "".to_string(),
+                field_dept_name: "".to_string(),
+                field_parent_dept_id: "".to_string(),
+                field_dept_id_remarks: "".to_string(),
+                field_dept_name_remarks: "".to_string(),
+                field_parent_dept_id_remarks: "".to_string(),
+            },
         },
         None,
         &funs,
@@ -819,7 +840,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 admin_password: Some("123456".to_string()),
                 cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
                     ak_rule_len_min: 2,
-                    ak_rule_len_max: 20,
+                    ak_rule_len_max: 40,
                     sk_rule_len_min: 2,
                     sk_rule_len_max: 20,
                     sk_rule_need_num: false,
@@ -837,7 +858,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                 disabled: None,
                 account_self_reg: Some(true),
                 cert_conf_by_oauth2: None,
-                cert_conf_by_ldap: Some(vec![IamCertConfLdapAddOrModifyReq {
+                cert_conf_by_ldap: Some(IamCertConfLdapAddOrModifyReq {
                     supplier: TrimString(LDAP_SUPPLIER2.to_string()),
                     name: LDAP_SUPPLIER2.to_string(),
                     conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
@@ -845,10 +866,31 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                     principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
                     credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
                     base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-                    field_display_name: "displayName".to_string(),
-                    search_base_filter: "objectClass=*".to_string(),
                     enabled: true,
-                }]),
+                    port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
+                    account_unique_id: "cn".to_string(),
+                    account_field_map: AccountFieldMap {
+                        search_base_filter: Some("objectClass=*".to_string()),
+                        field_user_name: "displayName".to_string(),
+                        field_display_name: "displayName".to_string(),
+                        field_mobile: "mobile".to_string(),
+                        field_email: "email".to_string(),
+                        field_user_name_remarks: "".to_string(),
+                        field_display_name_remarks: "".to_string(),
+                        field_mobile_remarks: "".to_string(),
+                        field_email_remarks: "".to_string(),
+                    },
+                    org_unique_id: "ou".to_string(),
+                    org_field_map: OrgFieldMap {
+                        search_base_filter: Some("objectClass=*".to_string()),
+                        field_dept_id: "".to_string(),
+                        field_dept_name: "".to_string(),
+                        field_parent_dept_id: "".to_string(),
+                        field_dept_id_remarks: "".to_string(),
+                        field_dept_name_remarks: "".to_string(),
+                        field_parent_dept_id_remarks: "".to_string(),
+                    },
+                }),
             },
         )
         .await;

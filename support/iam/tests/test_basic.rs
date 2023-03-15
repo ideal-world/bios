@@ -1,5 +1,8 @@
 use std::env;
+use tardis::basic::field::TrimString;
 
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
+use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
 use tardis::basic::result::TardisResult;
 use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::{ExecCommand, WaitFor};
@@ -74,23 +77,61 @@ async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> 
     );
 
     let port = ldap_container.get_host_port_ipv4(389);
-    let url = format!("ldap://localhost:{}", port);
-    let base_dn = format!("DC={},DC=com", ORGANISATION);
-    let admin_dn = format!("CN=admin,{}", base_dn);
+    let url = "ldap://localhost".to_string();
+    let base_dn = format!("DC={ORGANISATION},DC=com");
+    let admin_dn = format!("CN=admin,{base_dn}");
 
     ldap_container.exec(ExecCommand {
-        cmd: format!("echo \"{}\" > /home/base.ldif", BASE_LDIF),
+        cmd: format!("echo \"{BASE_LDIF}\" > /home/base.ldif",),
         ready_conditions: vec![],
     });
     ldap_container.exec(ExecCommand {
-        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{}\" -w {} -f /home/base.ldif ", admin_dn, ADMIN_PASSWORD),
+        cmd: format!("ldapadd -x -H ldap://localhost  -D \"{admin_dn}\" -w {ADMIN_PASSWORD} -f /home/base.ldif "),
         ready_conditions: vec![WaitFor::millis(5)],
     });
 
+    env::set_var("TARDIS_FW.LDAP.PORT", port.to_string());
     env::set_var("TARDIS_FW.LDAP.URL", url);
     env::set_var("TARDIS_FW.LDAP.BASE_DN", base_dn);
     env::set_var("TARDIS_FW.LDAP.ADMIN_DN", admin_dn);
     env::set_var("TARDIS_FW.LDAP.ADMIN_CN", "admin");
     env::set_var("TARDIS_FW.LDAP.ADMIN_PASSWORD", ADMIN_PASSWORD);
     ldap_container
+}
+
+//生成测试通用ldap 配置
+pub fn gen_test_ldap_conf() -> IamCertConfLdapAddOrModifyReq {
+    IamCertConfLdapAddOrModifyReq {
+        supplier: TrimString("TEST".to_string()),
+        name: "testLdap".to_string(),
+        conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
+        is_tls: false,
+        principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap()),
+        credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap()),
+        base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
+        enabled: true,
+        port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
+        account_unique_id: "cn".to_string(),
+        account_field_map: AccountFieldMap {
+            search_base_filter: Some("objectClass=person".to_string()),
+            field_user_name: "cn".to_string(),
+            field_display_name: "displayName".to_string(),
+            field_mobile: "mobile".to_string(),
+            field_email: "email".to_string(),
+            field_user_name_remarks: "".to_string(),
+            field_display_name_remarks: "".to_string(),
+            field_mobile_remarks: "".to_string(),
+            field_email_remarks: "".to_string(),
+        },
+        // org_unique_id: "ou".to_string(),
+        // org_field_map: OrgFieldMap {
+        //     search_base_filter: Some("objectClass=organizationalUnit".to_string()),
+        //     field_dept_id: "ou".to_string(),
+        //     field_dept_name: "ou".to_string(),
+        //     field_parent_dept_id: "".to_string(),
+        //     field_dept_id_remarks: "".to_string(),
+        //     field_dept_name_remarks: "".to_string(),
+        //     field_parent_dept_id_remarks: "".to_string(),
+        // },
+    }
 }
