@@ -101,7 +101,7 @@ impl PluginBsServ {
         .await?;
         let mut bs_records = vec![];
         for rel_agg in rel_agg.records {
-            let bs = SpiBsServ::get_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+            let bs = SpiBsServ::peek_item(&rel_agg.rel.from_rbum_id, &SpiBsFilterReq::default(), funs, ctx).await?;
             bs_records.push(PluginBsInfoResp {
                 id: bs.id,
                 name: bs.name,
@@ -121,7 +121,7 @@ impl PluginBsServ {
 
     pub async fn get_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
         let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
-        let bs = SpiBsServ::get_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
         Ok(PluginBsInfoResp {
             id: bs.id,
             name: bs.name,
