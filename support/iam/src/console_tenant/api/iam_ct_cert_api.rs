@@ -3,7 +3,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
+use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryWithSkResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
@@ -53,5 +53,20 @@ impl IamCtCertApi {
         )
         .await?;
         TardisResp::ok(rbum_certs)
+    }
+
+    /// Find third-kind Certs By Account Id
+    #[oai(path = "/third-kind", method = "get")]
+    async fn get_third_cert(
+        &self,
+        account_id: Query<String>,
+        cert_supplier: Query<String>,
+        tenant_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let funs = iam_constants::get_tardis_inst();
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![cert_supplier.0], &funs, &ctx).await?;
+        TardisResp::ok(rbum_cert)
     }
 }
