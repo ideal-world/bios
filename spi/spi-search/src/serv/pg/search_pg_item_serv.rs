@@ -103,10 +103,15 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let mut sql_vals: Vec<Value> = vec![];
 
     if let Some(q) = &search_req.query.q {
-        select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
         sql_vals.push(Value::from(q.as_str()));
         from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
-        where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+        if search_req.query.q_with_content.unwrap_or(false) {
+            select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
+            where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+        } else {
+            select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
+            where_fragments.push("(query @@ title_tsv)".to_string());
+        }
     } else {
         select_fragments = ", 0::float4 AS rank_title, 0::float4 AS rank_content".to_string();
     }
