@@ -6,13 +6,16 @@ use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
+use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
-use bios_basic::rbum::rbum_enumeration::{RbumScopeLevelKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, RbumSetServ};
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
@@ -348,5 +351,29 @@ impl IamSetServ {
 
     pub async fn check_scope(app_id: &str, account_id: &str, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         RbumSetItemServ::check_a_is_parent_or_sibling_of_b(account_id, app_id, set_id, funs, ctx).await
+    }
+
+    pub async fn bind_cate_with_platform(cate_id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        RbumRelServ::add_rel(
+            &mut RbumRelAggAddReq {
+                rel: RbumRelAddReq {
+                    tag: IamRelKind::IamOrgRel.to_string(),
+                    note: None,
+                    from_rbum_kind: RbumRelFromKind::SetCate,
+                    from_rbum_id: cate_id.to_string(),
+                    to_rbum_item_id: set_id,
+                    to_own_paths: "".to_string(),
+                    to_is_outside: false,
+                    ext: None,
+                },
+                attrs: vec![],
+                envs: vec![],
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
     }
 }
