@@ -45,7 +45,7 @@ pub struct IamConfig {
     pub phone_template_cert_login_content: String,
     pub sms_base_url: String,
     pub sms_path: String,
-
+    pub third_integration_config_key: String,
     pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
 }
@@ -95,6 +95,7 @@ impl Default for IamConfig {
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
             sms_base_url: "http://reach:8080".to_string(),
             sms_path: "/cc/msg/vcode".to_string(),
+            third_integration_config_key: "iam:third:integration:config:key".to_string(),
         }
     }
 }

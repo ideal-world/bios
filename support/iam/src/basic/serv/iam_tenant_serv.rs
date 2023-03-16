@@ -363,6 +363,7 @@ impl IamTenantServ {
         for ldap_conf in cert_confs.iter().filter(|r| r.kind == IamCertExtKind::Ldap.to_string()) {
             let conf = IamCertLdapServ::get_cert_conf(&ldap_conf.id, funs, ctx).await?;
             vec1.push(IamCertConfLdapResp {
+                id: ldap_conf.id.clone(),
                 supplier: ldap_conf.kind.clone(),
                 conn_uri: ldap_conf.conn_uri.clone(),
                 is_tls: conf.is_tls,
@@ -372,8 +373,8 @@ impl IamTenantServ {
                 port: conf.port,
                 account_unique_id: conf.account_unique_id,
                 account_field_map: conf.account_field_map,
-                org_unique_id: conf.org_unique_id,
-                org_field_map: conf.org_field_map,
+                // org_unique_id: conf.org_unique_id,
+                // org_field_map: conf.org_field_map,
             })
         }
         let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };

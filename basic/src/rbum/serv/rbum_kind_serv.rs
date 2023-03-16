@@ -15,8 +15,8 @@ use tardis::TardisFuns;
 use tardis::TardisFunsInst;
 
 use crate::rbum::domain::{rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel_attr};
+use crate::rbum::dto::rbum_filer_dto::RbumKindAttrFilterReq;
 use crate::rbum::dto::rbum_filer_dto::RbumKindFilterReq;
-use crate::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
 use crate::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrDetailResp, RbumKindAttrModifyReq, RbumKindAttrSummaryResp};
 use crate::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindDetailResp, RbumKindModifyReq, RbumKindSummaryResp};
 use crate::rbum::rbum_enumeration::RbumScopeLevelKind;
