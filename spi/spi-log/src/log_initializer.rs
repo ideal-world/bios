@@ -5,10 +5,11 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::log_ci_item_api, log_constants::DOMAIN_CODE};
+use crate::{api::ci::log_ci_item_api, log_constants::DOMAIN_CODE, log_config::LogConfig};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+    bios_basic::rbum::rbum_initializer::init(funs.module_code(), funs.conf::<LogConfig>().rbum.clone()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     init_db(&funs, &ctx).await?;
