@@ -159,6 +159,24 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
+    assert_eq!(search_result.total_size, 0);
+
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{
+                    "app":"003"
+                },
+                "query":{
+                    "q": "类型 | 上传",
+                    "q_with_content": true,
+                },
+                "page":{"number":1,"size":10}
+            }),
+        )
+        .await;
     assert_eq!(search_result.total_size, 2);
     assert_eq!(search_result.records[0].key, "002");
     assert_eq!(search_result.records[1].key, "003");
@@ -315,6 +333,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 },
                 "query":{
                      "q": "新增",
+                     "q_with_content": true,
                      "own_paths":"t001",
                     "ext": [{
                         "field":"end_time",
