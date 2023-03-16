@@ -102,6 +102,7 @@ pub enum IamRelKind {
     IamResApi,
     IamAccountRel,
     IamCertRel,
+    IamOrgRel,
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum)]
