@@ -180,6 +180,7 @@ impl IamCertConfLdapResp {
     }
     pub fn package_account_return_attr_with<'a>(&'a self, vec: Vec<&'a str>) -> Vec<&str> {
         let vec1: Vec<&str> = vec![
+            &self.account_unique_id,
             &self.account_field_map.field_user_name,
             &self.account_field_map.field_display_name,
             &self.account_field_map.field_email,

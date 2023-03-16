@@ -49,7 +49,8 @@ title: the world's most famous mythical manager
 mail: testUser2@test.com
 uid: tuser2
 userpassword: 123456";
-
+//if BASE_LDIF change,LDAP_ACCOUNT_NUB must change too
+pub const LDAP_ACCOUNT_NUB: u16 = 4;
 pub struct LifeHold<'a> {
     pub ldap: Container<'a, GenericImage>,
 }

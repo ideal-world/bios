@@ -1,4 +1,5 @@
 use crate::test_basic;
+use crate::test_basic::LDAP_ACCOUNT_NUB;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::IamThirdIntegrationSyncAddReq;
@@ -62,7 +63,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     )
     .await
     .unwrap();
-    IamCertLdapServ::iam_sync_ldap_user_to_iam(&conf_id, &funs, admin_ctx).await.unwrap();
+    IamCertLdapServ::iam_sync_ldap_user_to_iam(&funs, admin_ctx).await.unwrap();
     let account_page = IamAccountServ::paginate_detail_items(
         &IamAccountFilterReq {
             basic: Default::default(),
@@ -78,7 +79,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
     println!("================={:?}", account_page.records);
-    assert_eq!(account_page.total_size, 5);
+    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 1);
 
     funs.commit().await.unwrap();
 }

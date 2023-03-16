@@ -210,7 +210,6 @@ pub struct IamAccountExtSysResp {
     pub account_id: String,
     pub user_name: String,
     pub display_name: String,
-    pub account_unique_id: String,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

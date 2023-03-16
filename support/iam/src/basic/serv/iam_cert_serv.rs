@@ -1,3 +1,4 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::basic::dto::TardisContext;
@@ -1039,5 +1040,22 @@ impl IamCertServ {
         } else {
             Ok(None)
         }
+    }
+    pub async fn third_integration_sync(account_sync_from: IamCertExtKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let task_ctx = ctx.clone();
+        TaskProcessor::execute_task_with_ctx(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move || async move {
+                let funs = iam_constants::get_tardis_inst();
+                match account_sync_from {
+                    IamCertExtKind::Ldap => IamCertLdapServ::iam_sync_ldap_user_to_iam(Some(IamThirdIntegrationConfigDto::default()), &funs, &task_ctx).await,
+                    _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
+                }
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
     }
 }
