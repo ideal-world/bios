@@ -120,6 +120,7 @@ impl SearchItemSearchCtxReq {
 pub struct SearchItemQueryReq {
     #[oai(validator(min_length = "2"))]
     pub q: Option<String>,
+    pub q_with_content: Option<bool>,
     #[oai(validator(min_length = "2"))]
     pub key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]

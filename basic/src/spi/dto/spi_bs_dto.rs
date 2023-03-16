@@ -17,9 +17,7 @@ pub struct SpiBsAddReq {
     pub kind_id: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
-    #[oai(validator(min_length = "2"))]
     pub ak: TrimString,
-    #[oai(validator(min_length = "2"))]
     pub sk: TrimString,
     pub ext: String,
     pub private: bool,
