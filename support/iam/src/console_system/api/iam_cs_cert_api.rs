@@ -1,3 +1,4 @@
+use bios_basic::process::task_processor::TaskProcessor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
@@ -14,7 +15,7 @@ use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamCertKernelKind;
+use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind};
 
 pub struct IamCsCertApi;
 
@@ -99,7 +100,18 @@ impl IamCsCertApi {
         };
         TardisResp::ok(rbum_cert)
     }
-    ///add sync config
+
+    /// Delete Cert Conf By Id
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete_ldap_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertServ::delete_cert_conf(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    ///Add Or Modify Sync Config
     #[oai(path = "/sync", method = "put")]
     async fn add_or_modify_sync_third_integration_config(&self, req: Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
@@ -107,12 +119,34 @@ impl IamCsCertApi {
         TardisResp::ok(Void {})
     }
 
-    ///get sync config
+    ///Get Sync Config
     #[oai(path = "/sync", method = "get")]
     async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationConfigDto>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
         TardisResp::ok(result)
+    }
+
+    ///Manual sync/手动触发第三方集成同步
+    #[oai(path = "/sync", method = "post")]
+    async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        IamCertServ::third_integration_sync(
+            Some(IamThirdIntegrationConfigDto {
+                account_sync_from: account_sync_from.0,
+                account_sync_cron: None,
+                account_way_to_add: Default::default(),
+                account_way_to_delete: Default::default(),
+            }),
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 }
 
@@ -121,7 +155,7 @@ pub struct IamCsCertConfigLdapApi;
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cs/ldap", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertConfigLdapApi {
-    /// add ldap cert conf
+    /// Add Ldap Cert Conf
     #[oai(path = "/", method = "post")]
     async fn add_ldap_cert(&self, add_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -130,7 +164,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
-    /// modify ldap cert conf
+    /// Modify Ldap Cert Conf
     #[oai(path = "/:id", method = "put")]
     async fn modify_ldap_cert(&self, id: Path<String>, modify_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -139,7 +173,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    /// get ldap cert conf
+    /// Get Ldap Cert Conf
     #[oai(path = "/", method = "get")]
     async fn get_ldap_cert(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamCertConfLdapResp>> {
         let mut funs = iam_constants::get_tardis_inst();

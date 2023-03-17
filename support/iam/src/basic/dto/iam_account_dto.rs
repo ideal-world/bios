@@ -6,6 +6,8 @@ use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
 
+use crate::basic::dto::iam_cert_conf_dto::IamCertConfLdapResp;
+use crate::basic::serv::iam_cert_ldap_serv::ldap::LdapSearchResp;
 use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -210,7 +212,18 @@ pub struct IamAccountExtSysResp {
     pub account_id: String,
     pub user_name: String,
     pub display_name: String,
-    pub account_unique_id: String,
+    pub mobile: String,
+}
+
+impl IamAccountExtSysResp {
+    pub fn form_ldap_search_resp(resp: LdapSearchResp, config: &IamCertConfLdapResp) -> IamAccountExtSysResp {
+        IamAccountExtSysResp {
+            user_name: resp.get_simple_attr(&config.account_field_map.field_user_name).unwrap_or_default(),
+            display_name: resp.get_simple_attr(&config.account_field_map.field_display_name).unwrap_or_default(),
+            account_id: resp.get_simple_attr(&config.account_unique_id).unwrap_or_default(),
+            mobile: resp.get_simple_attr(&config.account_field_map.field_mobile).unwrap_or_default(),
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]

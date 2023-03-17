@@ -7,8 +7,9 @@ use tardis::{
 
 use crate::{
     api::ci::cache_ci_proc_api,
+    cache_config::CacheConfig,
     cache_constants::{self, DOMAIN_CODE},
-    serv, cache_config::CacheConfig,
+    serv,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
