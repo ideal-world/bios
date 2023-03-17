@@ -393,11 +393,7 @@ impl IamCertLdapServ {
             )
             .await?
             .into_iter()
-            .map(|r| IamAccountExtSysResp {
-                user_name: r.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
-                display_name: r.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
-                account_id: r.get_simple_attr(&cert_conf.account_unique_id).unwrap_or_default(),
-            })
+            .map(|r| IamAccountExtSysResp::form_ldap_search_resp(r, &cert_conf))
             .collect();
         ldap_client.unbind().await?;
         Ok(accounts)
@@ -617,11 +613,7 @@ impl IamCertLdapServ {
             )
             .await?
             .into_iter()
-            .map(|r| IamAccountExtSysResp {
-                user_name: r.get_simple_attr(&cert_conf.account_field_map.field_user_name).unwrap_or_default(),
-                display_name: r.get_simple_attr(&cert_conf.account_field_map.field_display_name).unwrap_or_default(),
-                account_id: r.get_simple_attr(&cert_conf.account_unique_id).unwrap_or_default(),
-            })
+            .map(|r| IamAccountExtSysResp::form_ldap_search_resp(r, &cert_conf))
             .collect();
         ldap_account.iter().for_each(|r| {
             ldap_id_to_account_map.insert(r.account_id.clone(), r);
@@ -650,11 +642,13 @@ impl IamCertLdapServ {
         )
         .await?;
         for cert in certs {
+            let mut funs = iam_constants::get_tardis_inst();
+            funs.begin().await?;
             let local_ldap_id = cert.ak;
             if let Some(iam_account_ext_sys_resp) = ldap_id_to_account_map.get(&local_ldap_id) {
                 //并集 两边都有相
                 //更新用户名
-                IamAccountServ::modify_account_agg(
+                let modify_result = IamAccountServ::modify_account_agg(
                     &cert.rel_rbum_id,
                     &IamAccountAggModifyReq {
                         name: Some(TrimString(iam_account_ext_sys_resp.display_name.clone())),
@@ -665,27 +659,57 @@ impl IamCertLdapServ {
                         org_cate_ids: None,
                         exts: None,
                     },
-                    funs,
+                    &funs,
                     ctx,
                 )
-                .await?;
-                //todo 更新手机
-                let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await?;
-                IamCertServ::find_certs(
+                .await;
+                if modify_result.is_err() {
+                    tardis::log::error!("modify user name id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                    funs.rollback().await?;
+                    continue;
+                }
+                let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
+                if let Some(phone_cert) = RbumCertServ::find_one_rbum(
                     &RbumCertFilterReq {
-                        basic: RbumBasicFilterReq { ..Default::default() },
+                        basic: RbumBasicFilterReq {
+                            own_paths: Some(ctx.own_paths.clone()),
+                            with_sub_own_paths: true,
+                            ignore_scope: true,
+                            ..Default::default()
+                        },
                         status: Some(RbumCertStatusKind::Enabled),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_id: Some(cert.rel_rbum_id),
                         rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id]),
                         ..Default::default()
                     },
-                    None,
-                    None,
-                    funs,
+                    &funs,
                     ctx,
                 )
-                .await?;
+                .await?
+                {
+                    let modify_result = RbumCertServ::modify_rbum(
+                        &phone_cert.id,
+                        &mut RbumCertModifyReq {
+                            ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
+                            sk: None,
+                            ext: None,
+                            start_time: None,
+                            end_time: None,
+                            conn_uri: None,
+                            status: None,
+                        },
+                        &funs,
+                        ctx,
+                    )
+                    .await;
+                    if modify_result.is_err() {
+                        tardis::log::error!("modify phone cert_id:{} failed:{}", phone_cert.id, modify_result.err().unwrap());
+                    }
+                } else {
+                    continue;
+                };
+
                 ldap_id_to_account_map.remove(&local_ldap_id);
             } else {
                 //ldap没有 iam有的 需要同步删除
@@ -705,7 +729,7 @@ impl IamCertLdapServ {
                                 conn_uri: None,
                                 status: Some(RbumCertStatusKind::Disabled),
                             },
-                            funs,
+                            &funs,
                             ctx,
                         )
                         .await?;
@@ -722,16 +746,17 @@ impl IamCertLdapServ {
                                 org_cate_ids: None,
                                 exts: None,
                             },
-                            funs,
+                            &funs,
                             ctx,
                         )
                         .await?;
                     }
                     WayToDelete::DeleteAccount => {
-                        IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, funs, ctx).await?;
+                        IamAccountServ::delete_item_with_all_rels(&cert.rel_rbum_id, &funs, ctx).await?;
                     }
                 }
             };
+            funs.commit().await?;
         }
         //ldap有的 但是iam没有的 需要添加
         for ldap_id in ldap_id_to_account_map.keys() {
@@ -895,7 +920,7 @@ impl IamCertLdapServ {
     }
 }
 
-mod ldap {
+pub(crate) mod ldap {
     use std::collections::HashMap;
 
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry};

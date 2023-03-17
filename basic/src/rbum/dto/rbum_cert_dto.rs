@@ -124,4 +124,3 @@ pub struct RbumCertDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 }
-
