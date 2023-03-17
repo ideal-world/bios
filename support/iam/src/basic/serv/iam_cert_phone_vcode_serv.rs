@@ -237,7 +237,7 @@ impl IamCertPhoneVCodeServ {
     }
 
     pub async fn bind_phone(phone: &str, input_vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let ctx=IamAccountServ::new_context_if_account_is_global(ctx,funs).await?;
+        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
         if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(phone, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =

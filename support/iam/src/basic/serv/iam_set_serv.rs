@@ -354,7 +354,7 @@ impl IamSetServ {
     }
 
     pub async fn bind_cate_with_platform(cate_id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
         RbumRelServ::add_rel(
             &mut RbumRelAggAddReq {
                 rel: RbumRelAddReq {

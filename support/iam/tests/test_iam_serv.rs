@@ -23,7 +23,7 @@ mod test_cs_tenant;
 mod test_ct_app;
 mod test_ct_basic;
 mod test_ct_tenant;
-mod test_iam_cert_ldap;
+mod test_iam_cert_sync;
 mod test_iam_oauth2;
 mod test_key_cache;
 
@@ -125,6 +125,6 @@ async fn test_iam_serv() -> TardisResult<()> {
 
     test_key_cache::test(&system_admin_context).await?;
     // test_iam_oauth2::test(&tenant1_admin_context).await?;
-    test_iam_cert_ldap::test(&system_admin_context, &tenant1_admin_context, &tenant3_admin_context).await;
+    test_iam_cert_sync::test(&system_admin_context, &tenant1_admin_context, &tenant3_admin_context).await;
     Ok(())
 }

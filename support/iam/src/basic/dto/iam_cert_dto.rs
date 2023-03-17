@@ -108,14 +108,15 @@ pub struct IamCertExtAddReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamThirdIntegrationSyncAddReq {
     pub account_sync_from: IamCertExtKind,
-    pub account_sync_cron: String,
+    pub account_sync_cron: Option<String>,
     pub account_way_to_add: Option<WayToAdd>,
     pub account_way_to_delete: Option<WayToDelete>,
 }
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamThirdIntegrationConfigDto {
     pub account_sync_from: IamCertExtKind,
-    pub account_sync_cron: String,
+    /// None表示手动
+    pub account_sync_cron: Option<String>,
     pub account_way_to_add: WayToAdd,
     pub account_way_to_delete: WayToDelete,
     // pub org_sync_from: IamCertExtKind,
@@ -154,9 +155,9 @@ pub struct IamCertOAuth2AddOrModifyReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertLdapAddOrModifyReq {
+    // ldap account unique id
     #[oai(validator(min_length = "2", max_length = "2000"))]
-    pub dn: TrimString,
-    pub account_unique_id: Option<String>,
+    pub ldap_id: TrimString,
     pub status: RbumCertStatusKind,
 }
 

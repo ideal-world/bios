@@ -5,7 +5,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::{api::ci::search_ci_item_api, search_constants::DOMAIN_CODE, search_config::SearchConfig};
+use crate::{api::ci::search_ci_item_api, search_config::SearchConfig, search_constants::DOMAIN_CODE};
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);

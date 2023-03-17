@@ -376,7 +376,7 @@ impl IamRelServ {
             }
             IamRelKind::IamAccountRel => {}
             IamRelKind::IamCertRel => {}
-            IamRelKind::IamOrgRel=>{}
+            IamRelKind::IamOrgRel => {}
         }
         Ok(())
     }

@@ -109,7 +109,7 @@ pub struct IamCertConfAkSkAddOrModifyReq {
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub supplier: TrimString,
+    pub supplier: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -121,7 +121,6 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub credentials: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub base_dn: String,
-    pub enabled: bool,
 
     pub port: Option<u16>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -180,6 +179,7 @@ impl IamCertConfLdapResp {
     }
     pub fn package_account_return_attr_with<'a>(&'a self, vec: Vec<&'a str>) -> Vec<&str> {
         let vec1: Vec<&str> = vec![
+            &self.account_unique_id,
             &self.account_field_map.field_user_name,
             &self.account_field_map.field_display_name,
             &self.account_field_map.field_email,

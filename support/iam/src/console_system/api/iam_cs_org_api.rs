@@ -13,7 +13,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 pub struct IamCsOrgApi;
 
 /// System Console Org API
-#[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "bios_basic::ApiTag::System")]
+#[poem_openapi::OpenApi(prefix_path = "/cs/org", tag = "bios_basic::ApiTag::System")]
 impl IamCsOrgApi {
     //todo 修改cs和ct的查询tree逻辑
     /// Find Org Tree

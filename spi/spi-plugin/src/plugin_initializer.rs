@@ -4,7 +4,8 @@ use tardis::{basic::result::TardisResult, db::reldb_client::TardisActiveModel, w
 use crate::{
     api::ci::{plugin_ci_api_api, plugin_ci_bs_api, plugin_ci_exec_api, plugin_ci_kind_api},
     domain::plugin_api,
-    plugin_constants::DOMAIN_CODE, plugin_config::PluginConfig,
+    plugin_config::PluginConfig,
+    plugin_constants::DOMAIN_CODE,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
