@@ -337,7 +337,7 @@ impl IamCertUserPwdServ {
             ));
         }
         Ok(format!(
-            "^[0-9a-zA-Z-_@\\.]{{{},{}}}$",
+            "^[0-9a-zA-Z-_@:\\.]{{{},{}}}$",
             cert_conf_by_user_pwd.ak_rule_len_min, cert_conf_by_user_pwd.ak_rule_len_max
         ))
     }

@@ -63,18 +63,20 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     // )
     // .await
     // .unwrap();
-    IamCertServ::third_integration_sync(
-        Some(IamThirdIntegrationConfigDto {
+    info!("【exec manual sync】");
+    IamCertLdapServ::iam_sync_ldap_user_to_iam(
+        IamThirdIntegrationConfigDto {
             account_sync_from: IamCertExtKind::Ldap,
             account_sync_cron: None,
             account_way_to_add: WayToAdd::default(),
             account_way_to_delete: WayToDelete::default(),
-        }),
+        },
         &funs,
         admin_ctx,
     )
     .await
     .unwrap();
+
     let account_page = IamAccountServ::paginate_detail_items(
         &IamAccountFilterReq {
             basic: Default::default(),
