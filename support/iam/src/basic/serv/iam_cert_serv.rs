@@ -1041,26 +1041,24 @@ impl IamCertServ {
             Ok(None)
         }
     }
-    pub async fn third_integration_sync(account_sync_from: IamCertExtKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    /// 第三方集成同步方法入口
+    /// 如果手动导入,那么third_integration_config必须Some
+    /// 如果自动导入,那么third_integration_config是None,同步配置配置会从缓存读取
+    pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
-                match account_sync_from {
-                    IamCertExtKind::Ldap => {
-                        IamCertLdapServ::iam_sync_ldap_user_to_iam(
-                            Some(IamThirdIntegrationConfigDto {
-                                account_sync_from,
-                                account_sync_cron: "".to_string(),
-                                account_way_to_add: Default::default(),
-                                account_way_to_delete: Default::default(),
-                            }),
-                            &funs,
-                            &task_ctx,
-                        )
-                        .await
-                    }
+                let sync_config = if let Some(sync_config) = sync_config {
+                    sync_config
+                } else if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(&funs, &task_ctx).await? {
+                    sync_config
+                } else {
+                    return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
+                };
+                match sync_config.account_sync_from {
+                    IamCertExtKind::Ldap => IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await,
                     _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
                 }
             },

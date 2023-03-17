@@ -591,14 +591,7 @@ impl IamCertLdapServ {
     }
 
     //同步ldap人员到iam
-    pub async fn iam_sync_ldap_user_to_iam(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let sync_config = if let Some(sync_config) = sync_config {
-            sync_config
-        } else if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(funs, ctx).await? {
-            sync_config
-        } else {
-            return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
-        };
+    pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
 
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {

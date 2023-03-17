@@ -131,7 +131,17 @@ impl IamCsCertApi {
     #[oai(path = "/sync", method = "post")]
     async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let funs = iam_constants::get_tardis_inst();
-        IamCertServ::third_integration_sync(account_sync_from.0, &funs, &ctx.0).await?;
+        IamCertServ::third_integration_sync(
+            Some(IamThirdIntegrationConfigDto {
+                account_sync_from: account_sync_from.0,
+                account_sync_cron: None,
+                account_way_to_add: Default::default(),
+                account_way_to_delete: Default::default(),
+            }),
+            &funs,
+            &ctx.0,
+        )
+        .await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
             TardisResp::accepted(Some(task_id))
         } else {

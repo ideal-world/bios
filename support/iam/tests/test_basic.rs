@@ -50,7 +50,7 @@ mail: testUser2@test.com
 uid: tuser2
 userpassword: 123456";
 //if BASE_LDIF change,LDAP_ACCOUNT_NUB must change too
-pub const LDAP_ACCOUNT_NUB: u16 = 4;
+pub const LDAP_ACCOUNT_NUB: u64 = 4;
 pub struct LifeHold<'a> {
     pub ldap: Container<'a, GenericImage>,
 }
@@ -103,14 +103,13 @@ async fn get_ldap_container<'a>(docker: &'a Cli) -> Container<'a, GenericImage> 
 //生成测试通用ldap 配置
 pub fn gen_test_ldap_conf() -> IamCertConfLdapAddOrModifyReq {
     IamCertConfLdapAddOrModifyReq {
-        supplier: TrimString("TEST".to_string()),
+        supplier: Some(TrimString("TEST".to_string())),
         name: "testLdap".to_string(),
         conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
         is_tls: false,
         principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap()),
         credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap()),
         base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-        enabled: true,
         port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
         account_unique_id: "cn".to_string(),
         account_field_map: AccountFieldMap {

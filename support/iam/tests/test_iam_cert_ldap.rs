@@ -2,13 +2,13 @@ use crate::test_basic;
 use crate::test_basic::LDAP_ACCOUNT_NUB;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
-use bios_iam::basic::dto::iam_cert_dto::IamThirdIntegrationSyncAddReq;
+use bios_iam::basic::dto::iam_cert_dto::{IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::iam_constants;
-use bios_iam::iam_enumeration::IamCertExtKind;
+use bios_iam::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 use ldap3::log::info;
 use tardis::basic::dto::TardisContext;
 
@@ -51,19 +51,30 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .unwrap();
     assert_eq!(account_page.total_size, 1);
 
-    IamCertServ::add_or_modify_sync_third_integration_config(
-        IamThirdIntegrationSyncAddReq {
+    // IamCertServ::add_or_modify_sync_third_integration_config(
+    //     IamThirdIntegrationSyncAddReq {
+    //         account_sync_from: IamCertExtKind::Ldap,
+    //         account_sync_cron: Some(),
+    //         account_way_to_add: None,
+    //         account_way_to_delete: None,
+    //     },
+    //     &funs,
+    //     admin_ctx,
+    // )
+    // .await
+    // .unwrap();
+    IamCertServ::third_integration_sync(
+        Some(IamThirdIntegrationConfigDto {
             account_sync_from: IamCertExtKind::Ldap,
-            account_sync_cron: "".to_string(),
-            account_way_to_add: None,
-            account_way_to_delete: None,
-        },
+            account_sync_cron: None,
+            account_way_to_add: WayToAdd::default(),
+            account_way_to_delete: WayToDelete::default(),
+        }),
         &funs,
         admin_ctx,
     )
     .await
     .unwrap();
-    IamCertLdapServ::iam_sync_ldap_user_to_iam(&funs, admin_ctx).await.unwrap();
     let account_page = IamAccountServ::paginate_detail_items(
         &IamAccountFilterReq {
             basic: Default::default(),
