@@ -64,7 +64,7 @@ impl IamCertLdapServ {
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
-                supplier: Some(add_req.supplier.clone()),
+                supplier: add_req.supplier.clone(),
                 name: TrimString(add_req.name.clone()),
                 note: None,
                 ak_note: None,
@@ -85,11 +85,7 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: Some(1),
                 conn_uri: Some(add_req.conn_uri.clone()),
-                status: if add_req.enabled {
-                    RbumCertConfStatusKind::Enabled
-                } else {
-                    RbumCertConfStatusKind::Disabled
-                },
+                status: RbumCertConfStatusKind::Enabled,
                 rel_rbum_domain_id: funs.iam_basic_domain_iam_id(),
                 rel_rbum_item_id: rel_iam_item_id.clone(),
             },
@@ -121,11 +117,7 @@ impl IamCertLdapServ {
                 sk_lock_duration_sec: None,
                 coexist_num: None,
                 conn_uri: Some(modify_req.conn_uri.clone()),
-                status: if modify_req.enabled {
-                    Some(RbumCertConfStatusKind::Enabled)
-                } else {
-                    Some(RbumCertConfStatusKind::Disabled)
-                },
+                status: None,
             },
             funs,
             ctx,
@@ -659,9 +651,41 @@ impl IamCertLdapServ {
         .await?;
         for cert in certs {
             let local_ldap_id = cert.ak;
-            if let Some(_iam_account_ext_sys_resp) = ldap_id_to_account_map.get(&local_ldap_id) {
-                //并集 两边都有相同的
-                //todo 更新用户名 手机号
+            if let Some(iam_account_ext_sys_resp) = ldap_id_to_account_map.get(&local_ldap_id) {
+                //并集 两边都有相
+                //更新用户名
+                IamAccountServ::modify_account_agg(
+                    &cert.rel_rbum_id,
+                    &IamAccountAggModifyReq {
+                        name: Some(TrimString(iam_account_ext_sys_resp.display_name.clone())),
+                        scope_level: None,
+                        disabled: None,
+                        icon: None,
+                        role_ids: None,
+                        org_cate_ids: None,
+                        exts: None,
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+                //todo 更新手机
+                let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await?;
+                IamCertServ::find_certs(
+                    &RbumCertFilterReq {
+                        basic: RbumBasicFilterReq { ..Default::default() },
+                        status: Some(RbumCertStatusKind::Enabled),
+                        rel_rbum_kind: Some(RbumCertRelKind::Item),
+                        rel_rbum_id: Some(cert.rel_rbum_id),
+                        rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id]),
+                        ..Default::default()
+                    },
+                    None,
+                    None,
+                    funs,
+                    ctx,
+                )
+                .await?;
                 ldap_id_to_account_map.remove(&local_ldap_id);
             } else {
                 //ldap没有 iam有的 需要同步删除

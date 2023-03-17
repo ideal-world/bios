@@ -112,7 +112,7 @@ pub struct IamThirdIntegrationSyncAddReq {
     pub account_way_to_add: Option<WayToAdd>,
     pub account_way_to_delete: Option<WayToDelete>,
 }
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamThirdIntegrationConfigDto {
     pub account_sync_from: IamCertExtKind,
     pub account_sync_cron: String,

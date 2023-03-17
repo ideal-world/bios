@@ -100,6 +100,17 @@ impl IamCsCertApi {
         };
         TardisResp::ok(rbum_cert)
     }
+
+    /// Delete Cert Conf By Id
+    #[oai(path = "/:id", method = "delete")]
+    async fn delete_ldap_cert(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertServ::delete_cert_conf(&id.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
     ///Add Or Modify Sync Config
     #[oai(path = "/sync", method = "put")]
     async fn add_or_modify_sync_third_integration_config(&self, req: Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -134,7 +145,7 @@ pub struct IamCsCertConfigLdapApi;
 #[cfg(feature = "ldap_client")]
 #[poem_openapi::OpenApi(prefix_path = "/cs/ldap", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertConfigLdapApi {
-    /// add ldap cert conf
+    /// Add Ldap Cert Conf
     #[oai(path = "/", method = "post")]
     async fn add_ldap_cert(&self, add_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -143,7 +154,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(resp)
     }
-    /// modify ldap cert conf
+    /// Modify Ldap Cert Conf
     #[oai(path = "/:id", method = "put")]
     async fn modify_ldap_cert(&self, id: Path<String>, modify_req: Json<IamCertConfLdapAddOrModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -152,7 +163,7 @@ impl IamCsCertConfigLdapApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    /// get ldap cert conf
+    /// Get Ldap Cert Conf
     #[oai(path = "/", method = "get")]
     async fn get_ldap_cert(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamCertConfLdapResp>> {
         let mut funs = iam_constants::get_tardis_inst();

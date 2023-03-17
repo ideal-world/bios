@@ -109,7 +109,7 @@ pub struct IamCertConfAkSkAddOrModifyReq {
 pub struct IamCertConfLdapAddOrModifyReq {
     /// Assign a code to the LdapCertConf,Used to distinguish different sources
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub supplier: TrimString,
+    pub supplier: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -121,7 +121,6 @@ pub struct IamCertConfLdapAddOrModifyReq {
     pub credentials: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub base_dn: String,
-    pub enabled: bool,
 
     pub port: Option<u16>,
     #[oai(validator(min_length = "2", max_length = "2000"))]

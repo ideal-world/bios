@@ -1048,7 +1048,19 @@ impl IamCertServ {
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
                 match account_sync_from {
-                    IamCertExtKind::Ldap => IamCertLdapServ::iam_sync_ldap_user_to_iam(Some(IamThirdIntegrationConfigDto::default()), &funs, &task_ctx).await,
+                    IamCertExtKind::Ldap => {
+                        IamCertLdapServ::iam_sync_ldap_user_to_iam(
+                            Some(IamThirdIntegrationConfigDto {
+                                account_sync_from,
+                                account_sync_cron: "".to_string(),
+                                account_way_to_add: Default::default(),
+                                account_way_to_delete: Default::default(),
+                            }),
+                            &funs,
+                            &task_ctx,
+                        )
+                        .await
+                    }
                     _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
                 }
             },
