@@ -592,7 +592,6 @@ impl IamCertLdapServ {
 
     //同步ldap人员到iam
     pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
@@ -760,9 +759,9 @@ impl IamCertLdapServ {
             let ldap_resp = ldap_id_to_account_map.get(ldap_id).unwrap();
             let mut funs = iam_constants::get_tardis_inst();
             funs.begin().await?;
-            match sync_config.account_way_to_add {
+            let add_result = match sync_config.account_way_to_add {
                 WayToAdd::SynchronizeCert => {
-                    let add_result = Self::do_add_account(
+                    Self::do_add_account(
                         &ldap_resp.account_id,
                         &ldap_resp.display_name,
                         &ldap_resp.user_name,
@@ -772,14 +771,10 @@ impl IamCertLdapServ {
                         &funs,
                         &mock_ctx,
                     )
-                    .await;
-                    if add_result.is_err() {
-                        funs.rollback().await?;
-                        continue;
-                    };
+                    .await
                 }
                 WayToAdd::NoSynchronizeCert => {
-                    let add_result = Self::do_add_account(
+                    Self::do_add_account(
                         &ldap_resp.account_id,
                         &ldap_resp.display_name,
                         &ldap_resp.user_name,
@@ -789,12 +784,14 @@ impl IamCertLdapServ {
                         &funs,
                         &mock_ctx,
                     )
-                    .await;
-                    if add_result.is_err() {
-                        funs.rollback().await?;
-                        continue;
-                    };
+                    .await
                 }
+            };
+
+            if add_result.is_err() {
+                tardis::log::error!("add account:{:?} failed:{}", ldap_resp, add_result.err().unwrap());
+                funs.rollback().await?;
+                continue;
             }
             funs.commit().await?;
         }
