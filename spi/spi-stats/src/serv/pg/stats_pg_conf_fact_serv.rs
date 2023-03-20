@@ -176,8 +176,9 @@ async fn do_paginate(
 FROM {table_name}
 WHERE 
     {}
+    {}
 LIMIT $1 OFFSET $2
-{}"#,
+"#,
                 sql_where.join(" AND "),
                 if sql_order.is_empty() {
                     "".to_string()
