@@ -89,7 +89,7 @@ impl PluginBsServ {
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<PluginBsInfoResp>> {
         let rel_agg = RbumRelServ::paginate_to_rels(
-            &spi_constants::SPI_IDENT_REL_TAG,
+            spi_constants::SPI_IDENT_REL_TAG,
             app_tenant_id,
             page_number,
             page_size,
