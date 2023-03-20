@@ -7,6 +7,7 @@ use std::fmt::Debug;
 pub struct ScheduleConfig {
     pub rbum: RbumConfig,
     pub app_key: AppKeyConfig,
+    pub spi_app_id: String,
     pub kv_url: String,
     pub log_url: String,
     pub cache_key_job_changed_info: String,
@@ -18,6 +19,7 @@ impl Default for ScheduleConfig {
         ScheduleConfig {
             rbum: RbumConfig::default(),
             app_key: AppKeyConfig::default(),
+            spi_app_id: "".to_string(),
             kv_url: "".to_string(),
             log_url: "".to_string(),
             cache_key_job_changed_info: "spi:job:changed:info:".to_string(),
