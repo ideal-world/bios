@@ -27,7 +27,7 @@ pub async fn init_table_and_conn(
     create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ext jsonb NOT NULL,
-    visit_keys character varying[]"#,
+    visit_keys jsonb"#,
         vec![
             ("key", "btree"),
             ("title_tsv", "gin"),

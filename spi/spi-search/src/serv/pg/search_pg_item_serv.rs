@@ -136,8 +136,7 @@ async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConn
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
     let select_fragments;
     let mut from_fragments = "".to_string();
-    let mut where_fragments: Vec<String> = Vec::new();
-    let mut where_visit_keys_fragments: Vec<String> = Vec::new();
+    let mut where_fragments: Vec<String> = vec!["1=1".to_string()];
     let mut order_fragments: Vec<String> = Vec::new();
 
     let mut sql_vals: Vec<Value> = vec![];
@@ -163,21 +162,35 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         select_fragments = ", 0::float4 AS rank_title, 0::float4 AS rank_content".to_string();
     }
 
-    for visit_keys in search_req.ctx.to_sql() {
-        sql_vals.push(Value::from(visit_keys));
-        where_visit_keys_fragments.push(format!("${}::varchar", sql_vals.len()));
-    }
-    if where_visit_keys_fragments.is_empty() {
-        where_fragments.push("visit_keys IS NULL".to_string());
-    } else {
-        where_fragments.push(format!("(visit_keys IS NULL OR visit_keys @> ARRAY[{}])", where_visit_keys_fragments.join(", ")));
+    // Add visit_keys filter
+    let req_ctx = search_req.ctx.to_sql();
+    if !req_ctx.is_empty() {
+        let mut where_visit_keys_fragments = Vec::new();
+        for (scope_key, scope_values) in req_ctx {
+            if scope_values.is_empty() {
+                continue;
+            }
+            if scope_values.len() == 1 {
+                where_visit_keys_fragments.push(format!("visit_keys -> '{}' ? ${}", scope_key, sql_vals.len() + 1));
+            } else {
+                where_visit_keys_fragments.push(format!(
+                    "visit_keys -> '{}' ?| array[{}]",
+                    scope_key,
+                    (0..scope_values.len()).into_iter().map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                ));
+            }
+            for scope_value in scope_values {
+                sql_vals.push(Value::from(scope_value));
+            }
+        }
+        where_fragments.push(format!("(visit_keys IS NULL OR ({}))", where_visit_keys_fragments.join(" AND ")));
     }
 
     if let Some(keys) = &search_req.query.keys {
         if !keys.is_empty() {
             where_fragments.push(format!(
                 "key LIKE ANY (ARRAY[{}])",
-                keys.iter().enumerate().map(|(idx, _)| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                (0..keys.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for key in keys {
                 sql_vals.push(Value::from(format!("{key}%")));
@@ -188,7 +201,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         if !owners.is_empty() {
             where_fragments.push(format!(
                 "owner LIKE ANY (ARRAY[{}])",
-                owners.iter().enumerate().map(|(idx, _)| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                (0..owners.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for owner in owners {
                 sql_vals.push(Value::from(format!("{owner}%")));
@@ -199,7 +212,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         if !own_paths.is_empty() {
             where_fragments.push(format!(
                 "own_paths LIKE ANY (ARRAY[{}])",
-                own_paths.iter().enumerate().map(|(idx, _)| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+                (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for own_path in own_paths {
                 sql_vals.push(Value::from(format!("{own_path}%")));
@@ -224,12 +237,16 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
-            if ext_item.op == SpiQueryOpKind::Like {
-                sql_vals.push(Value::from(format!("%{}%", ext_item.value)));
+            if ext_item.op == SpiQueryOpKind::In {
+                sql_vals.push(Value::from(ext_item.value.to_string()));
+                where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len()));
+            } else if ext_item.op == SpiQueryOpKind::Like {
+                sql_vals.push(Value::from(format!("{}%", ext_item.value)));
+                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len()));
             } else {
                 sql_vals.push(Value::from(ext_item.value.to_string()));
+                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len()));
             }
-            where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len()));
         }
     }
 
