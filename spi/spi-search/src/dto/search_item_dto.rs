@@ -12,7 +12,7 @@ use tardis::{
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemAddReq {
-    #[oai(validator(pattern = r"^[a-z0-9-_]+_$"))]
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
