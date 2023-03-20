@@ -74,7 +74,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "create_time":"2022-09-26T23:23:59.000Z",
                 "update_time": "2022-09-27T01:20:20.000Z",
                 "ext":{"start_time":"2022-09-25T14:23:20.000Z","end_time":"2022-09-30T14:23:20.000Z","rel_accounts":"acc03,acc04,","version":"1.3"},
-                "visit_keys":{"apps":["003"],"tenants":["001"],"roles":["sys"]}
+                "visit_keys":{"apps":["003"],"tenants":["001"],"roles":["sys","admin"]}
             }),
         )
         .await;
@@ -104,7 +104,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    assert_eq!(search_result.total_size, 1);
+    assert_eq!(search_result.total_size, 3);
     assert_eq!(search_result.records[0].key, "001");
 
     // Basic search
@@ -327,7 +327,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "ctx":{
                     "app":"003",
                     "tenant":"001",
-                    "roles":["sys"]
+                    "roles":["root","sys"]
                 },
                 "query":{
                     "q": "新增",

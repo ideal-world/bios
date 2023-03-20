@@ -1,10 +1,13 @@
+use std::collections::HashMap;
+
 use bios_basic::spi::dto::spi_basic_dto::SpiQueryCondReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
-    serde_json::Value,
+    serde_json::{self, Value},
     web::poem_openapi,
+    TardisFuns,
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -55,34 +58,24 @@ pub struct SearchItemVisitKeysReq {
 }
 
 impl SearchItemVisitKeysReq {
-    pub fn to_sql(&self) -> Vec<String> {
-        let mut sqls = Vec::new();
+    pub fn to_sql(&self) -> serde_json::Value {
+        let mut sqls = HashMap::new();
         if let Some(accounts) = &self.accounts {
-            for account in accounts {
-                sqls.push(format!("ac:{account}"));
-            }
+            sqls.insert("accounts".to_string(), accounts.clone());
         }
         if let Some(apps) = &self.apps {
-            for app in apps {
-                sqls.push(format!("ap:{app}"));
-            }
+            sqls.insert("apps".to_string(), apps.clone());
         }
         if let Some(tenants) = &self.tenants {
-            for tenant in tenants {
-                sqls.push(format!("te:{tenant}"));
-            }
+            sqls.insert("tenants".to_string(), tenants.clone());
         }
         if let Some(roles) = &self.roles {
-            for role in roles {
-                sqls.push(format!("ro:{role}"));
-            }
+            sqls.insert("roles".to_string(), roles.clone());
         }
         if let Some(groups) = &self.groups {
-            for group in groups {
-                sqls.push(format!("gr:{group}"));
-            }
+            sqls.insert("groups".to_string(), groups.clone());
         }
-        sqls
+        TardisFuns::json.obj_to_json(&sqls).unwrap()
     }
 }
 
@@ -111,26 +104,22 @@ pub struct SearchItemSearchCtxReq {
 }
 
 impl SearchItemSearchCtxReq {
-    pub fn to_sql(&self) -> Vec<String> {
-        let mut sqls = Vec::new();
+    pub fn to_sql(&self) -> HashMap<&str, Vec<String>> {
+        let mut sqls = HashMap::new();
         if let Some(account) = &self.account {
-            sqls.push(format!("ac:{account}"));
+            sqls.insert("accounts", vec![account.clone()]);
         }
         if let Some(app) = &self.app {
-            sqls.push(format!("ap:{app}"));
+            sqls.insert("apps", vec![app.clone()]);
         }
         if let Some(tenant) = &self.tenant {
-            sqls.push(format!("te:{tenant}"));
+            sqls.insert("tenants", vec![tenant.clone()]);
         }
         if let Some(roles) = &self.roles {
-            for role in roles {
-                sqls.push(format!("ro:{role}"));
-            }
+            sqls.insert("roles", roles.clone());
         }
         if let Some(groups) = &self.groups {
-            for group in groups {
-                sqls.push(format!("gr:{group}"));
-            }
+            sqls.insert("groups", groups.clone());
         }
         sqls
     }
