@@ -196,8 +196,15 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         }
     }
     if let Some(own_paths) = &search_req.query.own_paths {
-        sql_vals.push(Value::from(format!("{own_paths}%")));
-        where_fragments.push(format!("own_paths LIKE ${}", sql_vals.len()));
+        if !own_paths.is_empty() {
+            where_fragments.push(format!(
+                "own_paths LIKE ANY (ARRAY[{}])",
+                own_paths.iter().enumerate().map(|(idx, _)| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for own_path in own_paths {
+                sql_vals.push(Value::from(format!("{own_path}%")));
+            }
+        }
     }
     if let Some(create_time_start) = search_req.query.create_time_start {
         sql_vals.push(Value::from(create_time_start));

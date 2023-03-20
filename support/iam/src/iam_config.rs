@@ -46,8 +46,12 @@ pub struct IamConfig {
     pub sms_base_url: String,
     pub sms_path: String,
     pub third_integration_config_key: String,
+    pub third_integration_schedule_code: String,
     pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
+
+    pub schedule_url: String,
+    pub iam_base_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -96,6 +100,9 @@ impl Default for IamConfig {
             sms_base_url: "http://reach:8080".to_string(),
             sms_path: "/cc/msg/vcode".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
+            third_integration_schedule_code: "iam:third:integration".to_string(),
+            schedule_url: "".to_string(),
+            iam_base_url: "".to_string(),
         }
     }
 }

@@ -96,6 +96,13 @@ impl IamCcRoleApi {
                 RbumScopeLevelKind::L2.to_int(),
                 RbumScopeLevelKind::L3.to_int(),
             ]),
+            Some(vec![
+                RbumScopeLevelKind::Private.to_int(),
+                RbumScopeLevelKind::Root.to_int(),
+                RbumScopeLevelKind::L1.to_int(),
+                RbumScopeLevelKind::L2.to_int(),
+                RbumScopeLevelKind::L3.to_int(),
+            ]),
             &funs,
             &ctx,
         )

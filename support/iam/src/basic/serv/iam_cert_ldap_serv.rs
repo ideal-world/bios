@@ -591,7 +591,8 @@ impl IamCertLdapServ {
     }
 
     //同步ldap人员到iam
-    pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let mut msg = "".to_string();
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
         if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
@@ -656,7 +657,9 @@ impl IamCertLdapServ {
                 )
                 .await;
                 if modify_result.is_err() {
-                    tardis::log::error!("modify user name id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                    let err_msg = format!("modify user name id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                    tardis::log::error!("{}", err_msg);
+                    msg = format!("{msg}{err_msg}\n");
                     funs.rollback().await?;
                     continue;
                 }
@@ -696,7 +699,9 @@ impl IamCertLdapServ {
                     )
                     .await;
                     if modify_result.is_err() {
-                        tardis::log::error!("modify phone cert_id:{} failed:{}", phone_cert.id, modify_result.err().unwrap());
+                        let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, modify_result.err().unwrap());
+                        tardis::log::error!("{}", err_msg);
+                        msg = format!("{msg}{err_msg}\n");
                     }
                 } else {
                     continue;
@@ -789,13 +794,15 @@ impl IamCertLdapServ {
             };
 
             if add_result.is_err() {
-                tardis::log::error!("add account:{:?} failed:{}", ldap_resp, add_result.err().unwrap());
+                let err_msg = format!("add account:{:?} failed:{}", ldap_resp, add_result.err().unwrap());
+                tardis::log::error!("{}", err_msg);
+                msg = format!("{msg}{err_msg}\n");
                 funs.rollback().await?;
                 continue;
             }
             funs.commit().await?;
         }
-        Ok(())
+        Ok(msg)
     }
 
     pub async fn generate_default_mock_ctx(supplier: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisContext {
