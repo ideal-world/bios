@@ -9,7 +9,7 @@ use tardis::{
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemAddReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9-_]+_$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
     pub key: TrimString,
@@ -88,7 +88,7 @@ impl SearchItemVisitKeysReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
     // Search context for record permission filtering
     pub ctx: SearchItemSearchCtxReq,
