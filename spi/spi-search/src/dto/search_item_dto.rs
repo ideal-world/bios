@@ -151,7 +151,7 @@ pub struct SearchItemQueryReq {
     pub owners: Option<Vec<String>>,
     #[oai(validator(min_length = "2"))]
     // Match own_path, support prefix match
-    pub own_paths: Option<String>,
+    pub own_paths: Option<Vec<String>>,
     pub create_time_start: Option<DateTime<Utc>>,
     pub create_time_end: Option<DateTime<Utc>>,
     pub update_time_start: Option<DateTime<Utc>>,
