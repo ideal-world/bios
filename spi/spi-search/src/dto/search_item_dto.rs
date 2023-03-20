@@ -8,7 +8,7 @@ use tardis::{
 };
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct SearchItemAddOrModifyReq {
+pub struct SearchItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
@@ -24,6 +24,24 @@ pub struct SearchItemAddOrModifyReq {
     pub create_time: Option<DateTime<Utc>>,
     pub update_time: Option<DateTime<Utc>>,
     pub ext: Option<Value>,
+    pub visit_keys: Option<SearchItemVisitKeysReq>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct SearchItemModifyReq {
+    #[oai(validator(min_length = "2"))]
+    pub title: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub content: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub own_paths: Option<String>,
+    pub create_time: Option<DateTime<Utc>>,
+    pub update_time: Option<DateTime<Utc>>,
+    pub ext: Option<Value>,
+    // Overwrites the original content when it is true
+    pub ext_override: Option<bool>,
     pub visit_keys: Option<SearchItemVisitKeysReq>,
 }
 
@@ -72,7 +90,9 @@ impl SearchItemVisitKeysReq {
 pub struct SearchItemSearchReq {
     #[oai(validator(pattern = r"^[a-z0-9]+$"))]
     pub tag: String,
+    // Search context for record permission filtering
     pub ctx: SearchItemSearchCtxReq,
+    // Search conditions
     pub query: SearchItemQueryReq,
     pub sort: Option<Vec<SearchItemSearchSortReq>>,
     pub page: SearchItemSearchPageReq,
@@ -118,19 +138,25 @@ impl SearchItemSearchCtxReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemQueryReq {
+    // Fuzzy search content
     #[oai(validator(min_length = "2"))]
     pub q: Option<String>,
+    // Fuzzy search scope
     pub q_scope: Option<SearchItemSearchQScopeKind>,
     #[oai(validator(min_length = "2"))]
+    // Match keys, support prefix match
     pub keys: Option<Vec<TrimString>>,
     #[oai(validator(min_length = "2"))]
+    // Match owners, support prefix match
     pub owners: Option<Vec<String>>,
     #[oai(validator(min_length = "2"))]
+    // Match own_path, support prefix match
     pub own_paths: Option<String>,
     pub create_time_start: Option<DateTime<Utc>>,
     pub create_time_end: Option<DateTime<Utc>>,
     pub update_time_start: Option<DateTime<Utc>>,
     pub update_time_end: Option<DateTime<Utc>>,
+    // Extended filtering conditions
     pub ext: Option<Vec<SpiQueryCondReq>>,
 }
 
