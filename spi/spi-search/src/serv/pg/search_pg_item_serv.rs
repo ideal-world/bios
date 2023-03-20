@@ -7,7 +7,7 @@ use tardis::{
     TardisFuns, TardisFunsInst,
 };
 
-use crate::dto::search_item_dto::{SearchItemAddOrModifyReq, SearchItemSearchReq, SearchItemSearchResp};
+use crate::dto::search_item_dto::{SearchItemAddOrModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
 
 use super::search_pg_initializer;
 
@@ -105,12 +105,19 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(q) = &search_req.query.q {
         sql_vals.push(Value::from(q.as_str()));
         from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
-        if search_req.query.q_with_content.unwrap_or(false) {
-            select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
-            where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
-        } else {
-            select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
-            where_fragments.push("(query @@ title_tsv)".to_string());
+        match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
+            SearchItemSearchQScopeKind::Title => {
+                select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, 0::float4 AS rank_content".to_string();
+                where_fragments.push("(query @@ title_tsv)".to_string());
+            }
+            SearchItemSearchQScopeKind::Content => {
+                select_fragments = ", 0::float4 AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
+                where_fragments.push("(query @@ content_tsv)".to_string());
+            }
+            SearchItemSearchQScopeKind::TitleContent => {
+                select_fragments = ", COALESCE(ts_rank(title_tsv, query), 0::float4) AS rank_title, COALESCE(ts_rank(content_tsv, query), 0::float4) AS rank_content".to_string();
+                where_fragments.push("(query @@ title_tsv OR query @@ content_tsv)".to_string());
+            }
         }
     } else {
         select_fragments = ", 0::float4 AS rank_title, 0::float4 AS rank_content".to_string();
@@ -126,13 +133,27 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         where_fragments.push(format!("(visit_keys IS NULL OR visit_keys @> ARRAY[{}])", where_visit_keys_fragments.join(", ")));
     }
 
-    if let Some(key) = &search_req.query.key {
-        sql_vals.push(Value::from(format!("{key}%")));
-        where_fragments.push(format!("key LIKE ${}", sql_vals.len()));
+    if let Some(keys) = &search_req.query.keys {
+        if !keys.is_empty() {
+            where_fragments.push(format!(
+                "key LIKE ANY (ARRAY[{}])",
+                keys.iter().enumerate().map(|(idx, _)| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for key in keys {
+                sql_vals.push(Value::from(format!("{key}%")));
+            }
+        }
     }
-    if let Some(owner) = &search_req.query.owner {
-        sql_vals.push(Value::from(format!("{owner}%")));
-        where_fragments.push(format!("owner LIKE ${}", sql_vals.len()));
+    if let Some(owners) = &search_req.query.owners {
+        if !owners.is_empty() {
+            where_fragments.push(format!(
+                "owner LIKE ANY (ARRAY[{}])",
+                owners.iter().enumerate().map(|(idx, _)| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for owner in owners {
+                sql_vals.push(Value::from(format!("{owner}%")));
+            }
+        }
     }
     if let Some(own_paths) = &search_req.query.own_paths {
         sql_vals.push(Value::from(format!("{own_paths}%")));
