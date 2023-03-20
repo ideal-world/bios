@@ -309,6 +309,47 @@ impl IamCertServ {
         Ok(result)
     }
 
+    pub async fn delete_cert_and_conf_by_conf_id(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+            id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if rbum_cert_conf.kind == IamCertKernelKind::UserPwd.to_string() {
+            return Err(funs.err().conflict("iam_cert_conf", "delete", "can not delete default credential", "409-rbum-cert-conf-basic-delete"));
+        }
+        let certs = IamCertServ::find_certs(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_cert_conf_ids: Some(vec![id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for cert in certs {
+            IamCertServ::delete_cert(&cert.id, funs, ctx).await?;
+        }
+        let result = RbumCertConfServ::delete_rbum(id, funs, ctx).await?;
+        Self::clean_cache_by_cert_conf(id, Some(rbum_cert_conf), funs, ctx).await?;
+        Ok(result)
+    }
+
     pub async fn clean_cache_by_cert_conf(id: &str, fetched_cert_conf: Option<RbumCertConfSummaryResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf = if let Some(rbum_cert_conf) = fetched_cert_conf {
             rbum_cert_conf
