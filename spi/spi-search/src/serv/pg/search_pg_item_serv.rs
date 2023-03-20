@@ -2,80 +2,112 @@ use bios_basic::spi::{spi_enumeration::SpiQueryOpKind, spi_funs::SpiBsInstExtrac
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    db::{
+        reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
+        sea_orm::Value,
+    },
+    serde_json,
     web::web_resp::TardisPage,
     TardisFuns, TardisFunsInst,
 };
 
-use crate::dto::search_item_dto::{SearchItemAddOrModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
+use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchItemSearchQScopeKind, SearchItemSearchReq, SearchItemSearchResp};
 
 use super::search_pg_initializer;
 
-pub async fn add_or_modify(add_or_modify_req: &mut SearchItemAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let mut params = Vec::new();
-    params.push(Value::from(add_or_modify_req.key.to_string()));
-    params.push(Value::from(add_or_modify_req.title.as_str()));
-    params.push(Value::from(add_or_modify_req.title.as_str()));
-    params.push(Value::from(add_or_modify_req.content.as_str()));
-    params.push(Value::from(add_or_modify_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()));
-    params.push(Value::from(add_or_modify_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()));
-    params.push(Value::from(if let Some(create_time) = add_or_modify_req.create_time {
-        create_time
-    } else {
-        Utc::now()
-    }));
-    params.push(Value::from(if let Some(update_time) = add_or_modify_req.update_time {
-        update_time
-    } else {
-        Utc::now()
-    }));
-    params.push(Value::from(if let Some(ext) = &add_or_modify_req.ext {
+    params.push(Value::from(add_req.key.to_string()));
+    params.push(Value::from(add_req.title.as_str()));
+    params.push(Value::from(add_req.title.as_str()));
+    params.push(Value::from(add_req.content.as_str()));
+    params.push(Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()));
+    params.push(Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()));
+    params.push(Value::from(if let Some(create_time) = add_req.create_time { create_time } else { Utc::now() }));
+    params.push(Value::from(if let Some(update_time) = add_req.update_time { update_time } else { Utc::now() }));
+    params.push(Value::from(if let Some(ext) = &add_req.ext {
         ext.clone()
     } else {
         TardisFuns::json.str_to_json("{}")?
     }));
-    if let Some(visit_keys) = &add_or_modify_req.visit_keys {
+    if let Some(visit_keys) = &add_req.visit_keys {
         params.push(Value::from(visit_keys.to_sql()));
     };
 
-    let mut update_opt_fragments: Vec<&str> = Vec::new();
-    update_opt_fragments.push("title = $2");
-    update_opt_fragments.push("title_tsv = to_tsvector('public.chinese_zh', $3)");
-    update_opt_fragments.push("content_tsv = to_tsvector('public.chinese_zh', $4)");
-    if add_or_modify_req.owner.is_some() {
-        update_opt_fragments.push("owner = $5");
-    }
-    if add_or_modify_req.own_paths.is_some() {
-        update_opt_fragments.push("own_paths = $6");
-    }
-    if add_or_modify_req.create_time.is_some() {
-        update_opt_fragments.push("create_time = $7");
-    }
-    if add_or_modify_req.update_time.is_some() {
-        update_opt_fragments.push("update_time = $8");
-    }
-    if add_or_modify_req.ext.is_some() {
-        update_opt_fragments.push("ext = $9");
-    }
-    if add_or_modify_req.visit_keys.is_some() {
-        update_opt_fragments.push("visit_keys = $10");
-    }
-
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_or_modify_req.tag, ctx, true).await?;
+    let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, &add_req.tag, ctx, true).await?;
     conn.begin().await?;
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
     (key, title, title_tsv, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, to_tsvector('public.chinese_zh', $3), to_tsvector('public.chinese_zh', $4), $5, $6, $7, $8, $9, {})
-ON CONFLICT (key)
-DO UPDATE SET
-    {}
+    ($1, $2, to_tsvector('public.chinese_zh', $3), to_tsvector('public.chinese_zh', $4), $5, $6, $7, $8, $9, {})"#,
+            if add_req.visit_keys.is_some() { "$10" } else { "null" },
+        ),
+        params,
+    )
+    .await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = search_pg_initializer::init_table_and_conn(bs_inst, tag, ctx, true).await?;
+
+    let mut params = Vec::new();
+    params.push(Value::from(key));
+
+    let mut sql_sets: Vec<String> = Vec::new();
+
+    if let Some(title) = &modify_req.title {
+        sql_sets.push(format!("title = ${}", params.len() + 1));
+        sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
+        params.push(Value::from(title));
+    };
+    if let Some(content) = &modify_req.content {
+        sql_sets.push(format!("content_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
+        params.push(Value::from(content));
+    };
+    if let Some(owner) = &modify_req.owner {
+        sql_sets.push(format!("owner = ${}", params.len() + 1));
+        params.push(Value::from(owner));
+    };
+    if let Some(own_paths) = &modify_req.own_paths {
+        sql_sets.push(format!("own_paths = ${}", params.len() + 1));
+        params.push(Value::from(own_paths));
+    };
+    if let Some(create_time) = modify_req.create_time {
+        sql_sets.push(format!("create_time = ${}", params.len() + 1));
+        params.push(Value::from(create_time));
+    };
+    if let Some(update_time) = modify_req.update_time {
+        sql_sets.push(format!("update_time = ${}", params.len() + 1));
+        params.push(Value::from(update_time));
+    };
+    if let Some(ext) = &modify_req.ext {
+        let mut ext = ext.clone();
+        if !modify_req.ext_override.unwrap_or(false) {
+            let storage_ext = get_ext(tag, key, &table_name, &conn, funs).await?;
+            merge(&mut ext, storage_ext);
+        }
+        sql_sets.push(format!("ext = ${}", params.len() + 1));
+        params.push(Value::from(ext.clone()));
+    };
+    if let Some(visit_keys) = &modify_req.visit_keys {
+        sql_sets.push(format!("visit_keys = ${}", params.len() + 1));
+        params.push(Value::from(visit_keys.to_sql()));
+    };
+
+    conn.begin().await?;
+    conn.execute_one(
+        &format!(
+            r#"UPDATE {table_name}
+SET {}
+WHERE key = $1
 "#,
-            if add_or_modify_req.visit_keys.is_some() { "$10" } else { "null" },
-            update_opt_fragments.join(", ")
+            sql_sets.join(",")
         ),
         params,
     )
@@ -91,6 +123,14 @@ pub async fn delete(tag: &str, key: &str, funs: &TardisFunsInst, ctx: &TardisCon
     conn.execute_one(&format!("DELETE FROM {table_name} WHERE key = $1"), vec![Value::from(key)]).await?;
     conn.commit().await?;
     Ok(())
+}
+
+async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConnection, funs: &TardisFunsInst) -> TardisResult<serde_json::Value> {
+    let result = conn
+        .query_one(&format!("SELECT ext FROM {table_name} WHERE key = $1"), vec![Value::from(key)])
+        .await?
+        .ok_or_else(|| funs.err().not_found("item", "get_ext", &format!("search item [{key}] not found in [{tag}]"), "404-spi-search-item-not-exist"))?;
+    Ok(result.try_get("", "ext").unwrap())
 }
 
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
@@ -259,4 +299,16 @@ WHERE
         total_size: total_size as u64,
         records: result,
     })
+}
+
+fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
+    match (a, b) {
+        (a @ &mut serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
+            let a = a.as_object_mut().unwrap();
+            for (k, v) in b {
+                merge(a.entry(k).or_insert(serde_json::Value::Null), v);
+            }
+        }
+        (a, b) => *a = b,
+    }
 }
