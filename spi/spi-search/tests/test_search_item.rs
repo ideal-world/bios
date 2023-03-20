@@ -171,7 +171,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 },
                 "query":{
                     "q": "类型 | 上传",
-                    "q_with_content": true,
+                    "q_scope": "title_content",
                 },
                 "page":{"number":1,"size":10}
             }),
@@ -332,9 +332,9 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "roles":["sys"]
                 },
                 "query":{
-                     "q": "新增",
-                     "q_with_content": true,
-                     "own_paths":"t001",
+                    "q": "新增",
+                    "q_scope": "title_content",
+                    "own_paths":"t001",
                     "ext": [{
                         "field":"end_time",
                         "op":"<=",
@@ -366,7 +366,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "tag":"feed",
                 "ctx":{},
                 "query":{
-                    "key": "001"
+                    "keys": ["001","0xxx"]
                 },
                 "page":{"number":1,"size":10}
             }),
@@ -381,7 +381,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "tag":"feed",
                 "ctx":{},
                 "query":{
-                    "key": "001"
+                    "keys": ["001"]
                 },
                 "page":{"number":1,"size":10}
             }),

@@ -120,11 +120,11 @@ impl SearchItemSearchCtxReq {
 pub struct SearchItemQueryReq {
     #[oai(validator(min_length = "2"))]
     pub q: Option<String>,
-    pub q_with_content: Option<bool>,
+    pub q_scope: Option<SearchItemSearchQScopeKind>,
     #[oai(validator(min_length = "2"))]
-    pub key: Option<TrimString>,
+    pub keys: Option<Vec<TrimString>>,
     #[oai(validator(min_length = "2"))]
-    pub owner: Option<String>,
+    pub owners: Option<Vec<String>>,
     #[oai(validator(min_length = "2"))]
     pub own_paths: Option<String>,
     pub create_time_start: Option<DateTime<Utc>>,
@@ -132,6 +132,16 @@ pub struct SearchItemQueryReq {
     pub update_time_start: Option<DateTime<Utc>>,
     pub update_time_end: Option<DateTime<Utc>>,
     pub ext: Option<Vec<SpiQueryCondReq>>,
+}
+
+#[derive(poem_openapi::Enum, Serialize, Deserialize, Debug)]
+pub enum SearchItemSearchQScopeKind {
+    #[oai(rename = "title")]
+    Title,
+    #[oai(rename = "content")]
+    Content,
+    #[oai(rename = "title_content")]
+    TitleContent,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
