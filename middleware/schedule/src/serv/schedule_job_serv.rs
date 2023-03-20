@@ -34,7 +34,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
     )]);
     if let Some(_uuid) = scheds.get(&add_or_modify.code.0.clone()) {
-        self::delete(&add_or_modify.code.0, funs, &ctx).await?;
+        self::delete(&add_or_modify.code.0, funs, ctx).await?;
     }
     funs.web_client()
         .post_obj_to_str(
@@ -76,7 +76,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
             &HashMap::from([
                 ("tag", "schedule:job"),
                 ("content", "delete job"),
-                ("key", &code),
+                ("key", code),
                 ("op", "d"),
                 ("ts", &Utc::now().format("%a, %d %b %Y %T GMT").to_string()),
             ]),
@@ -156,10 +156,10 @@ pub(crate) async fn find_task(
         (page_size * 2)
     );
     if let Some(ts_start) = ts_start {
-        url += &format!("&ts_start={}", ts_start.format("%a, %d %b %Y %T GMT").to_string());
+        url += &format!("&ts_start={}", ts_start.format("%a, %d %b %Y %T GMT"));
     }
     if let Some(ts_end) = ts_end {
-        url += &format!("&ts_end={}", ts_end.format("%a, %d %b %Y %T GMT").to_string());
+        url += &format!("&ts_end={}", ts_end.format("%a, %d %b %Y %T GMT"));
     }
     let resp = funs.web_client().get::<TardisPage<ScheduleTaskLogFindResp>>(&url, headers).await.unwrap();
     if resp.code != 200 {

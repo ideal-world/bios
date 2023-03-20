@@ -81,4 +81,13 @@ impl IamCiCertApi {
         let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), &funs, &ctx.0).await?;
         TardisResp::ok(cert)
     }
+
+    ///Auto sync/定时任务触发第三方集成同步
+    #[oai(path = "/sync", method = "get")]
+    async fn third_integration_sync(&self, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let funs = iam_constants::get_tardis_inst();
+        let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
+
+        TardisResp::ok(msg)
+    }
 }

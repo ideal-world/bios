@@ -405,7 +405,8 @@ impl IamRoleServ {
         role_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
-        scope_levels: Option<Vec<i16>>,
+        from_scope_levels: Option<Vec<i16>>,
+        to_scope_levels: Option<Vec<i16>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
@@ -419,8 +420,8 @@ impl IamRoleServ {
                 },
                 tag: Some(IamRelKind::IamResRole.to_string()),
                 to_rbum_item_id: Some(role_id.to_string()),
-                from_rbum_scope_levels: scope_levels.clone(),
-                to_rbum_item_scope_levels: scope_levels.clone(),
+                from_rbum_scope_levels: from_scope_levels.clone(),
+                to_rbum_item_scope_levels: to_scope_levels.clone(),
                 ..Default::default()
             },
             desc_sort_by_create,
