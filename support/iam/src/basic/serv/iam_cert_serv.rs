@@ -1,6 +1,7 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -302,6 +303,47 @@ impl IamCertServ {
         .await?;
         if rbum_cert_conf.kind == IamCertKernelKind::UserPwd.to_string() {
             return Err(funs.err().conflict("iam_cert_conf", "delete", "can not delete default credential", "409-rbum-cert-conf-basic-delete"));
+        }
+        let result = RbumCertConfServ::delete_rbum(id, funs, ctx).await?;
+        Self::clean_cache_by_cert_conf(id, Some(rbum_cert_conf), funs, ctx).await?;
+        Ok(result)
+    }
+
+    pub async fn delete_cert_and_conf_by_conf_id(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let rbum_cert_conf = RbumCertConfServ::peek_rbum(
+            id,
+            &RbumCertConfFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if rbum_cert_conf.kind == IamCertKernelKind::UserPwd.to_string() {
+            return Err(funs.err().conflict("iam_cert_conf", "delete", "can not delete default credential", "409-rbum-cert-conf-basic-delete"));
+        }
+        let certs = IamCertServ::find_certs(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                rel_rbum_cert_conf_ids: Some(vec![id.to_string()]),
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for cert in certs {
+            IamCertServ::delete_cert(&cert.id, funs, ctx).await?;
         }
         let result = RbumCertConfServ::delete_rbum(id, funs, ctx).await?;
         Self::clean_cache_by_cert_conf(id, Some(rbum_cert_conf), funs, ctx).await?;
@@ -1017,7 +1059,28 @@ impl IamCertServ {
     }
 
     pub async fn add_or_modify_sync_third_integration_config(req: IamThirdIntegrationSyncAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        //将来有spi服务，可以切换到spi-kv里
+        let headers = Some(vec![(
+            "Tardis-Context".to_string(),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+        )]);
+        let schedule_url = funs.conf::<IamConfig>().schedule_url.clone();
+
+        if let Some(sync_cron) = req.account_sync_cron.clone() {
+            funs.web_client()
+                .put_obj_to_str(
+                    &format!("{schedule_url}/ci/schedule/jobs"),
+                    &HashMap::from([
+                        ("code", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
+                        ("cron", sync_cron),
+                        ("callback_url", format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,)),
+                    ]),
+                    headers.clone(),
+                )
+                .await
+                .unwrap();
+        }
+
+        //将来切换到spi-kv里
         let third_integration_config_key = funs.conf::<IamConfig>().third_integration_config_key.clone();
         funs.cache()
             .set(
@@ -1041,9 +1104,8 @@ impl IamCertServ {
             Ok(None)
         }
     }
-    /// 第三方集成同步方法入口
+    /// 第三方集成手动同步方法入口
     /// 如果手动导入,那么third_integration_config必须Some
-    /// 如果自动导入,那么third_integration_config是None,同步配置配置会从缓存读取
     pub async fn third_integration_sync(sync_config: Option<IamThirdIntegrationConfigDto>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let task_ctx = ctx.clone();
         TaskProcessor::execute_task_with_ctx(
@@ -1058,7 +1120,10 @@ impl IamCertServ {
                     return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
                 };
                 match sync_config.account_sync_from {
-                    IamCertExtKind::Ldap => IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await,
+                    IamCertExtKind::Ldap => {
+                        IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, &funs, &task_ctx).await?;
+                        Ok(())
+                    }
                     _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
                 }
             },
@@ -1067,5 +1132,16 @@ impl IamCertServ {
         )
         .await?;
         Ok(())
+    }
+    pub async fn third_integration_sync_without_config(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let sync_config = if let Some(sync_config) = IamCertServ::get_sync_third_integration_config(funs, ctx).await? {
+            sync_config
+        } else {
+            return Err(funs.err().conflict("ldap_account", "sync", "should have sync config!", "iam-not-found-sync-config"));
+        };
+        match sync_config.account_sync_from {
+            IamCertExtKind::Ldap => IamCertLdapServ::iam_sync_ldap_user_to_iam(sync_config, funs, ctx).await,
+            _ => Err(funs.err().not_implemented("third_integration", "sync", "501-sync-from-is-not-implemented", "501-sync-from-is-not-implemented")),
+        }
     }
 }
