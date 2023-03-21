@@ -119,7 +119,6 @@ impl IamCsCertApi {
         IamCertServ::delete_cert_and_conf_by_conf_id(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
-
     }
 
     ///Add Or Modify Sync Config
