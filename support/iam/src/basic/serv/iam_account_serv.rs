@@ -6,10 +6,12 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::chrono::Utc;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::web::poem_openapi::types::ToJSON;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::TardisFunsInst;
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -220,6 +222,8 @@ impl IamAccountServ {
             }
         }
         IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, ctx).await?;
+
+        Self::add_or_modify_account_search(&account_id, false, funs, ctx).await.unwrap();
         Ok(account_id)
     }
 
@@ -280,6 +284,7 @@ impl IamAccountServ {
         if let Some(exts) = &modify_req.exts {
             IamAttrServ::add_or_modify_account_attr_values(id, exts.clone(), funs, ctx).await?;
         }
+        Self::add_or_modify_account_search(id, false, funs, ctx).await.unwrap();
         Ok(())
     }
 
@@ -629,5 +634,68 @@ impl IamAccountServ {
         } else {
             Ok(ctx.clone())
         }
+    }
+
+    // 全局搜索埋点方法
+    async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let account_resp = IamAccountServ::get_account_detail_aggs(
+            &account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            funs,
+            ctx,
+        )
+        .await?;
+        let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
+        let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
+        let search_url = funs.conf::<IamConfig>().search_url.clone();
+        let kv_url = funs.conf::<IamConfig>().kv_url.clone();
+        let headers = Some(vec![(
+            "Tardis-Context".to_string(),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+        )]);
+
+        //add kv
+        funs.web_client()
+            .put_obj_to_str(
+                &format!("{kv_url}/ci/item"),
+                &HashMap::from([("key", account_id), ("value", &account_resp.name)]),
+                headers.clone(),
+            )
+            .await
+            .unwrap();
+        let utc_now = Utc::now().to_string();
+        let mut search_body = HashMap::from([
+            ("tag", funs.conf::<IamConfig>().search_tag.clone()),
+            ("key", account_id.to_string()),
+            ("title", account_resp.name.clone()),
+            ("content", format!("{},{:?}", account_resp.name, account_certs,)),
+            ("owner", ctx.owner.clone()),
+            ("own_paths", ctx.own_paths.clone()),
+            ("update_time", utc_now.clone()),
+            (
+                "ext",
+                TardisFuns::json.obj_to_string(&HashMap::from([
+                    ("status", account_resp.disabled.to_string()),
+                    ("org_id", format!("{:?}", account_resp.orgs)),
+                    ("app_id", format!("{account_app_ids:?}")),
+                    ("create_time", account_resp.create_time.to_string()),
+                ]))?,
+            ),
+        ]);
+        if !is_modify {
+            search_body.insert("create_time", utc_now);
+        }
+        //add search
+        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await?;
+        Ok(())
     }
 }

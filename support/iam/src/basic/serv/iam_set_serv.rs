@@ -5,7 +5,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
@@ -355,6 +355,27 @@ impl IamSetServ {
 
     pub async fn bind_cate_with_platform(cate_id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
+        //删除原来的关联
+        let old_rel = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                basic: Default::default(),
+                tag: Some(IamRelKind::IamOrgRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                from_rbum_id: None,
+                from_rbum_scope_levels: None,
+                to_rbum_item_id: Some(set_id.clone()),
+                to_rbum_item_scope_levels: None,
+                to_own_paths: Some("".to_string()),
+                ext_eq: None,
+                ext_like: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(old_rel) = old_rel {
+            RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
+        };
         RbumRelServ::add_rel(
             &mut RbumRelAggAddReq {
                 rel: RbumRelAddReq {
