@@ -213,10 +213,11 @@ impl PluginBsServ {
 
     pub fn get_parent_own_paths(own_paths: &str) -> TardisResult<Vec<String>> {
         if own_paths.is_empty() {
-            return Ok(vec![]);
+            return Ok(vec!["".to_string()]);
         }
         let mut paths = own_paths.split('/').map(|s| s.to_string()).collect::<Vec<String>>();
         paths.reverse();
+        paths.push("".to_string());
         Ok(paths)
     }
 }
