@@ -52,6 +52,7 @@ impl PluginCiBsApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
+        kind_id: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -67,6 +68,7 @@ impl PluginCiBsApi {
                     name: name.0,
                     ..Default::default()
                 },
+                kind_id: kind_id.0,
                 domain_code: Some(funs.module_code().to_string()),
                 ..Default::default()
             },
