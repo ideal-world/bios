@@ -227,6 +227,7 @@ impl RbumSetServ {
                 owner: r.owner.to_string(),
                 scope_level: r.scope_level.clone(),
                 pid: resp.iter().find(|i| i.sys_code == r.sys_code[..r.sys_code.len() - set_cate_sys_code_node_len]).map(|i| i.id.to_string()),
+                rel: None,
             })
             .collect();
         if !filter.fetch_cate_item {

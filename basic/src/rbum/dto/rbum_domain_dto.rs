@@ -38,7 +38,7 @@ pub struct RbumDomainModifyReq {
     pub scope_level: Option<RbumScopeLevelKind>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumDomainSummaryResp {
     pub id: String,

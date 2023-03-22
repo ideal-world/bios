@@ -71,7 +71,7 @@ pub struct RbumSetItemDetailResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct RbumSetItemInfoResp {
     pub id: String,
