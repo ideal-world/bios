@@ -191,11 +191,24 @@ impl IamSetServ {
             )
             .await?;
             if let Some(set) = set {
-                r = &RbumSetTreeMainResp {
+                let new_resp = RbumSetTreeMainResp {
                     rel: Some(set.id.clone()),
                     ..r.clone()
                 };
-                let resp = RbumSetServ::get_tree(&set.id, filter, funs, ctx).await?;
+                r = &new_resp;
+                let mut resp = RbumSetServ::get_tree(&set.id, filter, funs, ctx).await?;
+                let resp_root_node: Vec<RbumSetTreeMainResp> = resp
+                    .main
+                    .clone()
+                    .iter()
+                    .filter(|r_main| r_main.pid.is_none())
+                    .map(|r_main| RbumSetTreeMainResp {
+                        pid: Some(r.id.clone()),
+                        ..r_main.clone()
+                    })
+                    .collect();
+                resp.main.retain(|r_main| r_main.pid.is_some());
+                result_main.extend(resp_root_node);
                 result_main.extend(resp.main);
                 if filter.fetch_cate_item {
                     let ext_resp = resp.ext.unwrap();

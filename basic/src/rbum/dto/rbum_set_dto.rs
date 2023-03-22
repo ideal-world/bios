@@ -101,7 +101,7 @@ pub struct RbumSetPathResp {
     pub own_paths: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeResp {
     pub main: Vec<RbumSetTreeMainResp>,
