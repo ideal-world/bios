@@ -256,10 +256,9 @@ pub mod common_pg {
             vec![],
         )
         .await?;
-        for (field_name_or_fun, index_type) in indexes {
-            let index_part = field_name_or_fun.replace(|c: char| !c.is_ascii_alphanumeric(), "_");
+        for (idx, (field_name_or_fun, index_type)) in indexes.into_iter().enumerate() {
             conn.execute_one(
-                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{index_part} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
+                &format!("CREATE INDEX idx_{schema_name}{tag}_{table_flag}_{idx} ON {schema_name}.{GLOBAL_STORAGE_FLAG}_{table_flag}{tag} USING {index_type}({field_name_or_fun})"),
                 vec![],
             )
             .await?;
