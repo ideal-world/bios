@@ -101,14 +101,14 @@ pub struct RbumSetPathResp {
     pub own_paths: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeResp {
     pub main: Vec<RbumSetTreeMainResp>,
     pub ext: Option<RbumSetTreeExtResp>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeMainResp {
     pub id: String,
@@ -124,9 +124,11 @@ pub struct RbumSetTreeMainResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub pid: Option<String>,
+    //关联的set_id
+    pub rel: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct RbumSetTreeExtResp {
     // cate.id -> items

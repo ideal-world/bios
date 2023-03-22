@@ -51,6 +51,9 @@ pub struct IamConfig {
     pub ldap: IamLdapConfig,
 
     pub schedule_url: String,
+    pub search_url: String,
+    pub search_tag: String,
+    pub kv_url: String,
     pub iam_base_url: String,
 }
 
@@ -102,6 +105,9 @@ impl Default for IamConfig {
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
             schedule_url: "".to_string(),
+            search_url: "".to_string(),
+            search_tag: "iam_account".to_string(),
+            kv_url: "".to_string(),
             iam_base_url: "".to_string(),
         }
     }
