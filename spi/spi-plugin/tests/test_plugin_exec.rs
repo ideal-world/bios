@@ -4,6 +4,7 @@ use bios_basic::test::test_http_client::TestHttpClient;
 use bios_spi_plugin::dto::plugin_exec_dto::{PluginExecReq, PluginExecResp};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::serde_json::json;
 use tardis::TardisFuns;
 
 pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
@@ -24,7 +25,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "Tardis-Context".to_string(),
                     TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&client.context()).unwrap()),
                 )])),
-                body: Some(HashMap::from([("msg".to_string(), "plugin exec!".to_string())])),
+                body: Some(json!({ "msg": "object" })),
             },
         )
         .await;

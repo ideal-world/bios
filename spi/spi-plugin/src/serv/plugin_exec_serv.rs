@@ -4,6 +4,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
+use tardis::serde_json::Value;
 use tardis::web::web_client::TardisHttpResponse;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -53,7 +54,7 @@ impl PluginExecServ {
         return Err(funs.err().not_found(&PluginApiServ::get_obj_name(), "exec", "exec api is not fond", ""));
     }
 
-    fn build_url(path: &str, body: Option<HashMap<String, String>>, funs: &TardisFunsInst) -> TardisResult<String> {
+    fn build_url(path: &str, body: Option<Value>, funs: &TardisFunsInst) -> TardisResult<String> {
         if !path.contains(':') {
             return Ok(path.to_string());
         }
@@ -67,8 +68,8 @@ impl PluginExecServ {
                         return r;
                     }
                     let new_r = r.replace(':', "");
-                    if body.contains_key(&new_r) {
-                        return body.get(&new_r).unwrap();
+                    if let Some(new_r) = body.get(&new_r) {
+                        return new_r.as_str().unwrap_or("");
                     }
                     is_ok = false;
                     r
