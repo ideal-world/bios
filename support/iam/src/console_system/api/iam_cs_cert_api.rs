@@ -102,7 +102,7 @@ impl IamCsCertApi {
     }
 
     /// Delete Cert Conf By Id
-    #[oai(path = "/:id", method = "delete")]
+    #[oai(path = "/conf/:id", method = "delete")]
     async fn delete_cert_conf(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -112,7 +112,7 @@ impl IamCsCertApi {
     }
 
     /// Force Delete Cert And Cert-Conf By Conf Id
-    #[oai(path = "/:id", method = "delete")]
+    #[oai(path = "/conf/force/:id", method = "delete")]
     async fn delete_cert_and_conf(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
