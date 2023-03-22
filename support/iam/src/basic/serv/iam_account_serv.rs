@@ -684,9 +684,14 @@ impl IamAccountServ {
                 "ext",
                 TardisFuns::json.obj_to_string(&HashMap::from([
                     ("status", account_resp.disabled.to_string()),
-                    ("org_id", format!("{:?}", account_resp.orgs)),
-                    ("app_id", format!("{account_app_ids:?}")),
                     ("create_time", account_resp.create_time.to_string()),
+                ]))?,
+            ),
+            (
+                "visit_keys",
+                TardisFuns::json.obj_to_string(&HashMap::from([
+                    ("apps", TardisFuns::json.obj_to_string(&account_app_ids)),
+                    ("groups", TardisFuns::json.obj_to_string(&account_resp.orgs)),
                 ]))?,
             ),
         ]);
