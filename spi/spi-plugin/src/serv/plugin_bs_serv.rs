@@ -36,7 +36,7 @@ impl PluginBsServ {
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: false,
+                    rel_by_from: true,
                     tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
                     rel_item_id: Some(app_tenant_id.to_owned()),
