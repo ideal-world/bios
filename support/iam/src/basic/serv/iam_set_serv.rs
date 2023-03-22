@@ -5,11 +5,11 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelAddReq;
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
-use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeResp};
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeMainResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
@@ -161,9 +161,62 @@ impl IamSetServ {
 
     pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
-        RbumSetServ::get_tree(set_id, filter, funs, ctx).await
+        let resp = RbumSetServ::get_tree(set_id, filter, funs, ctx).await?;
+        Self::find_rel_set_cate(resp, filter, funs, ctx).await
     }
+    // find set_cate 对应的set_id,返回set_id下面set_cate
+    async fn find_rel_set_cate(mut resp: RbumSetTreeResp, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
+        let mut result_main: Vec<RbumSetTreeMainResp> = vec![];
+        let mut resp_items = HashMap::new();
+        let mut resp_item_domains = HashMap::new();
+        let mut resp_item_kinds = HashMap::new();
+        let mut resp_item_number_agg = HashMap::new();
 
+        for mut r in &resp.main {
+            let set = RbumRelServ::find_one_rbum(
+                &RbumRelFilterReq {
+                    basic: Default::default(),
+                    tag: Some(IamRelKind::IamOrgRel.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Set),
+                    from_rbum_id: None,
+                    from_rbum_scope_levels: None,
+                    to_rbum_item_scope_levels: None,
+                    to_rbum_item_id: Some(r.id.to_string()),
+                    to_own_paths: Some("".to_string()),
+                    ext_eq: None,
+                    ext_like: None,
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            if let Some(set) = set {
+                r = &RbumSetTreeMainResp {
+                    rel: Some(set.id.clone()),
+                    ..r.clone()
+                };
+                let resp = RbumSetServ::get_tree(&set.id, filter, funs, ctx).await?;
+                result_main.extend(resp.main);
+                if filter.fetch_cate_item {
+                    let ext_resp = resp.ext.unwrap();
+                    resp_items.extend(ext_resp.items);
+                    resp_item_domains.extend(ext_resp.item_domains);
+                    resp_item_kinds.extend(ext_resp.item_kinds);
+                    resp_item_number_agg.extend(ext_resp.item_number_agg);
+                }
+            }
+        }
+        resp.main.extend(result_main);
+        if filter.fetch_cate_item {
+            let mut ext_resp = resp.ext.clone().unwrap();
+            ext_resp.items.extend(resp_items);
+            ext_resp.item_domains.extend(resp_item_domains);
+            ext_resp.item_kinds.extend(resp_item_kinds);
+            ext_resp.item_number_agg.extend(resp_item_number_agg);
+            resp.ext = Some(ext_resp);
+        }
+        Ok(resp)
+    }
     pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let tree_with_account = Self::get_tree(
             set_id,
@@ -360,10 +413,10 @@ impl IamSetServ {
             &RbumRelFilterReq {
                 basic: Default::default(),
                 tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::SetCate),
-                from_rbum_id: None,
+                from_rbum_kind: Some(RbumRelFromKind::Set),
+                from_rbum_id: Some(set_id.clone()),
                 from_rbum_scope_levels: None,
-                to_rbum_item_id: Some(set_id.clone()),
+                to_rbum_item_id: None,
                 to_rbum_item_scope_levels: None,
                 to_own_paths: Some("".to_string()),
                 ext_eq: None,
@@ -381,9 +434,9 @@ impl IamSetServ {
                 rel: RbumRelAddReq {
                     tag: IamRelKind::IamOrgRel.to_string(),
                     note: None,
-                    from_rbum_kind: RbumRelFromKind::SetCate,
-                    from_rbum_id: cate_id.to_string(),
-                    to_rbum_item_id: set_id,
+                    from_rbum_kind: RbumRelFromKind::Set,
+                    from_rbum_id: set_id,
+                    to_rbum_item_id: cate_id.to_string(),
                     to_own_paths: "".to_string(),
                     to_is_outside: false,
                     ext: None,

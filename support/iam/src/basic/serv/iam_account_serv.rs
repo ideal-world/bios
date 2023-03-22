@@ -9,7 +9,6 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::web::poem_openapi::types::ToJSON;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -639,7 +638,7 @@ impl IamAccountServ {
     // 全局搜索埋点方法
     async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_resp = IamAccountServ::get_account_detail_aggs(
-            &account_id,
+            account_id,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
