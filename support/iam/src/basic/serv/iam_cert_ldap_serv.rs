@@ -600,7 +600,8 @@ impl IamCertLdapServ {
         }
         let mut ldap_id_to_account_map = HashMap::new();
         let ldap_account: Vec<IamAccountExtSysResp> = ldap_client
-            .search(
+            .page_search(
+                100,
                 &cert_conf.account_field_map.search_base_filter.clone().unwrap_or("objectClass=person".to_string()),
                 &cert_conf.package_account_return_attr_with(vec!["dn"]),
             )
@@ -920,6 +921,7 @@ impl IamCertLdapServ {
 pub(crate) mod ldap {
     use std::collections::HashMap;
 
+    use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry};
     use serde::{Deserialize, Serialize};
     use tardis::basic::{error::TardisError, result::TardisResult};
@@ -969,6 +971,22 @@ pub(crate) mod ldap {
                 .success()
                 .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?;
             let result = rs.into_iter().map(SearchEntry::construct).map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect();
+            Ok(result)
+        }
+
+        pub async fn page_search(&mut self, page_size: i32, filter: &str, return_attr: &Vec<&str>) -> TardisResult<Vec<LdapSearchResp>> {
+            let adapters: Vec<Box<dyn Adapter<_, _>>> = vec![Box::new(EntriesOnly::new()), Box::new(PagedResults::new(page_size))];
+            let mut search = self
+                .ldap
+                .streaming_search_with(adapters, &self.base_dn, Scope::Subtree, filter, return_attr)
+                .await
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] page_search error: {e:?}"), ""))?;
+            let mut result = vec![];
+            while let Some(entry) = search.next().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] page_search next() error: {e:?}"), ""))? {
+                let entry = SearchEntry::construct(entry);
+                result.push(entry.clone());
+            }
+            let result = result.into_iter().map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect();
             Ok(result)
         }
 
@@ -1039,7 +1057,17 @@ mod tests {
     async fn search() -> TardisResult<()> {
         let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
-        let result = ldap.search("(&(objectClass=inetOrgPerson)(cn=*130*))", &vec!["dn", "cn", "displayName"]).await?;
+        let _result = ldap.search("(&(objectClass=inetOrgPerson)(cn=*130*))", &vec!["dn", "cn", "displayName"]).await?;
+        // assert_eq!(result.len(), 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn page_search() -> TardisResult<()> {
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        ldap.bind(LDAP_USER, LDAP_PW).await?;
+        let _result = ldap.page_search(50,"objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
         Ok(())
     }
