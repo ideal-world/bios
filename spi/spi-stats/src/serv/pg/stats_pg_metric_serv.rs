@@ -404,15 +404,12 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
         return serde_json::Value::Object(leaf_node);
     }
     let mut node = Map::new();
+    let dimension_key = curr_select_dimension_keys.get(0).unwrap();
     result
         .iter()
-        .group_by(|record| {
-            let dimension_key = curr_select_dimension_keys.get(0).unwrap();
-            record.get(dimension_key).unwrap()
-        })
-        .into_iter()
-        .for_each(|(key, group)| {
-            let key = if key.is_f64() {
+        .into_group_map_by(|record| {
+            let key = record.get(dimension_key).unwrap();
+            if key.is_f64() {
                 key.as_f64().unwrap().to_string()
             } else if key.is_i64() {
                 key.as_i64().unwrap().to_string()
@@ -424,7 +421,10 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
                 "".to_string()
             } else {
                 key.as_str().unwrap().to_string()
-            };
+            }
+        })
+        .into_iter()
+        .for_each(|(key, group)| {
             let sub = package_groups(
                 curr_select_dimension_keys[1..].to_vec(),
                 select_measure_keys,

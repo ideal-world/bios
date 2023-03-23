@@ -1,7 +1,15 @@
 [cs]
-[cs.iam]
-[cs.iam.rbum]
+[csm.iam.rbum]
 set_cate_sys_code_node_len = 4
+[csm.auth]
+[csm.spi-cache]
+[csm.spi-kv]
+[csm.spi-log]
+[csm.spi-object]
+[csm.spi-reldb]
+[csm.spi-search]
+[csm.spi-stats]
+[csm.spi-plugin]
 
 [fw]
 [fw.app]
@@ -11,6 +19,7 @@ desc = "BIOS All Services"
 version = "0.1.0"
 default_lang = "zh-cn"
 
+[fw.web_server.modules.auth]
 [fw.web_server.modules.spi-cache]
 [fw.web_server.modules.spi-kv]
 [fw.web_server.modules.spi-log]
