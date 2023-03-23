@@ -676,6 +676,7 @@ impl IamAccountServ {
             ("tag", funs.conf::<IamConfig>().search_tag.clone()),
             ("key", account_id.to_string()),
             ("title", account_resp.name.clone()),
+            ("kind", "".to_string()),
             ("content", format!("{},{:?}", account_resp.name, account_certs,)),
             ("owner", ctx.owner.clone()),
             ("own_paths", ctx.own_paths.clone()),
@@ -699,7 +700,7 @@ impl IamAccountServ {
             search_body.insert("create_time", utc_now);
         }
         //add search
-        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await?;
+        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
         Ok(())
     }
 }
