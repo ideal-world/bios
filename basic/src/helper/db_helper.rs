@@ -1,18 +1,18 @@
 use tardis::{db::sea_orm, serde_json};
 
-pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) -> Option<sea_orm::Value> {
+pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) -> Option<Vec<sea_orm::Value>> {
     match json_value {
         serde_json::Value::Null => None,
-        serde_json::Value::Bool(val) => Some(sea_orm::Value::from(*val)),
-        serde_json::Value::Number(val) if val.is_i64() => Some(sea_orm::Value::from(val.as_i64())),
-        serde_json::Value::Number(val) if val.is_u64() => Some(sea_orm::Value::from(val.as_u64())),
-        serde_json::Value::Number(val) if val.is_f64() => Some(sea_orm::Value::from(val.as_f64())),
-        serde_json::Value::Object(_) => Some(sea_orm::Value::from(json_value.clone())),
+        serde_json::Value::Bool(val) => Some(vec![sea_orm::Value::from(*val)]),
+        serde_json::Value::Number(val) if val.is_i64() => Some(vec![sea_orm::Value::from(val.as_i64())]),
+        serde_json::Value::Number(val) if val.is_u64() => Some(vec![sea_orm::Value::from(val.as_u64())]),
+        serde_json::Value::Number(val) if val.is_f64() => Some(vec![sea_orm::Value::from(val.as_f64())]),
+        serde_json::Value::Object(_) => Some(vec![sea_orm::Value::from(json_value.clone())]),
         serde_json::Value::String(val) => {
             if like_by_str {
-                Some(sea_orm::Value::from(format!("{val}%")))
+                Some(vec![sea_orm::Value::from(format!("{val}%"))])
             } else {
-                Some(sea_orm::Value::from(val))
+                Some(vec![sea_orm::Value::from(val)])
             }
         }
         serde_json::Value::Array(val) => {
@@ -28,11 +28,12 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
                 serde_json::Value::Object(_) => sea_orm::sea_query::ArrayType::Json,
                 _ => return None,
             };
-            let val = val.iter().map(|json| json_to_sea_orm_value(json, like_by_str)).collect::<Vec<Option<sea_orm::Value>>>();
-            if val.iter().any(|v| v.is_none()) {
+            let vals = val.iter().map(|json| json_to_sea_orm_value(json, like_by_str)).collect::<Vec<Option<Vec<sea_orm::Value>>>>();
+            if vals.iter().any(|v| v.is_none()) {
                 return None;
             }
-            Some(sea_orm::Value::Array(dt, Some(Box::new(val.into_iter().map(|v| v.unwrap()).collect()))))
+            let vals = vals.into_iter().flat_map(|v| v.unwrap().into_iter()).collect::<Vec<sea_orm::Value>>();
+            Some(vals)
         }
         _ => None,
     }

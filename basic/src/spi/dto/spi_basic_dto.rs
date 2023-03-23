@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi;
+use tardis::{web::poem_openapi, serde_json::Value};
 
 use crate::spi::spi_enumeration::SpiQueryOpKind;
 
@@ -9,5 +9,5 @@ pub struct SpiQueryCondReq {
     #[oai(validator(min_length = "2"))]
     pub field: String,
     pub op: SpiQueryOpKind,
-    pub value: String,
+    pub value: Value,
 }

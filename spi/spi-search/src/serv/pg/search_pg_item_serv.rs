@@ -1,4 +1,7 @@
-use bios_basic::spi::{spi_enumeration::SpiQueryOpKind, spi_funs::SpiBsInstExtractor};
+use bios_basic::{
+    helper::db_helper,
+    spi::{spi_enumeration::SpiQueryOpKind, spi_funs::SpiBsInstExtractor},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -237,14 +240,31 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == SpiQueryOpKind::Like);
+            if value.is_none() || ext_item.op != SpiQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
+                return Err(funs.err().not_found(
+                    "item",
+                    "search",
+                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
+                    "404-spi-search-op-not-legal",
+                ));
+            }
+            let mut value = value.unwrap();
             if ext_item.op == SpiQueryOpKind::In {
-                sql_vals.push(Value::from(ext_item.value.to_string()));
-                where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len()));
-            } else if ext_item.op == SpiQueryOpKind::Like {
-                sql_vals.push(Value::from(format!("{}%", ext_item.value)));
-                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len()));
+                if value.len() == 1 {
+                    where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
+                } else {
+                    where_fragments.push(format!(
+                        "ext -> '{}' ?| array[{}]",
+                        ext_item.field,
+                        (0..value.len()).into_iter().map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                    ));
+                }
+                for val in value {
+                    sql_vals.push(val);
+                }
             } else {
-                sql_vals.push(Value::from(ext_item.value.to_string()));
+                sql_vals.push(value.pop().unwrap());
                 where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len()));
             }
         }
