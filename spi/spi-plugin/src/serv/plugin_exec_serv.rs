@@ -24,6 +24,7 @@ impl PluginExecServ {
                     headers.push((attr.name.to_string(), attr.value.to_string()));
                 });
             }
+            headers.push(("Content-Type".to_string(), spi_api.content_type.to_string()));
             let headers = Some(headers);
             info!("url: {}", url);
             match spi_api.http_method {
