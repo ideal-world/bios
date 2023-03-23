@@ -15,6 +15,8 @@ pub struct SearchItemAddReq {
     #[oai(validator(pattern = r"^[a-z0-9-_]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
+    pub kind: String,
+    #[oai(validator(min_length = "2"))]
     pub key: TrimString,
     #[oai(validator(min_length = "2"))]
     pub title: String,
@@ -32,6 +34,8 @@ pub struct SearchItemAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemModifyReq {
+    #[oai(validator(min_length = "2"))]
+    pub kind: Option<String>, 
     #[oai(validator(min_length = "2"))]
     pub title: Option<String>,
     // #[oai(validator(min_length = "2"))]
@@ -132,6 +136,7 @@ pub struct SearchItemQueryReq {
     pub q: Option<String>,
     // Fuzzy search scope
     pub q_scope: Option<SearchItemSearchQScopeKind>,
+    pub kinds: Option<Vec<String>>,
     #[oai(validator(min_length = "2"))]
     // Match keys, support prefix match
     pub keys: Option<Vec<TrimString>>,
@@ -191,6 +196,8 @@ pub struct SearchItemSearchPageReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchResp {
+    #[oai(validator(min_length = "2"))]
+    pub kind: String,
     #[oai(validator(min_length = "2"))]
     pub key: String,
     #[oai(validator(min_length = "2"))]
