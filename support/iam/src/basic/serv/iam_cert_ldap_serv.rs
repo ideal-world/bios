@@ -1067,7 +1067,7 @@ mod tests {
     async fn page_search() -> TardisResult<()> {
         let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
-        let _result = ldap.page_search(50,"objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
+        let _result = ldap.page_search(50, "objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
         Ok(())
     }

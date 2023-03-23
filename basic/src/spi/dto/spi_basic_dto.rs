@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tardis::{web::poem_openapi, serde_json::Value};
+use tardis::{serde_json::Value, web::poem_openapi};
 
 use crate::spi::spi_enumeration::SpiQueryOpKind;
 

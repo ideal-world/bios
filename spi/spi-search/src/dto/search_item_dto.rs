@@ -35,7 +35,7 @@ pub struct SearchItemAddReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemModifyReq {
     #[oai(validator(min_length = "2"))]
-    pub kind: Option<String>, 
+    pub kind: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub title: Option<String>,
     // #[oai(validator(min_length = "2"))]
