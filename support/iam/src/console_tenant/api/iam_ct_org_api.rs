@@ -76,7 +76,9 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Platform Cate Org/查询平台组织节点
+    /// Find Platform Cate Org
+    ///
+    /// 查询平台组织节点
     #[oai(path = "/platform/cate", method = "get")]
     async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -85,7 +87,7 @@ impl IamCtOrgApi {
             ..ctx.0
         };
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &mock_ctx).await?;
-        let result = IamSetServ::get_tree(
+        let mut result = IamSetServ::get_tree(
             &set_id,
             &mut RbumSetTreeFilterReq {
                 fetch_cate_item: false,
@@ -97,10 +99,13 @@ impl IamCtOrgApi {
             &mock_ctx,
         )
         .await?;
+        result.main.retain(|m| m.rel.is_none());
         TardisResp::ok(result)
     }
 
-    /// Import Platform Org/导入平台组织
+    /// Import Platform Org
+    ///
+    /// 导入平台组织
     #[oai(path = "/binding/node/:id", method = "post")]
     async fn bind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

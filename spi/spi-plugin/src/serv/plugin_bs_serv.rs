@@ -36,7 +36,7 @@ impl PluginBsServ {
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq { ..Default::default() },
                 rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: false,
+                    rel_by_from: true,
                     tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Item),
                     rel_item_id: Some(app_tenant_id.to_owned()),
@@ -213,10 +213,11 @@ impl PluginBsServ {
 
     pub fn get_parent_own_paths(own_paths: &str) -> TardisResult<Vec<String>> {
         if own_paths.is_empty() {
-            return Ok(vec![]);
+            return Ok(vec!["".to_string()]);
         }
         let mut paths = own_paths.split('/').map(|s| s.to_string()).collect::<Vec<String>>();
         paths.reverse();
+        paths.push("".to_string());
         Ok(paths)
     }
 }
