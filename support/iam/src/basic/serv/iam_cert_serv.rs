@@ -1066,18 +1066,20 @@ impl IamCertServ {
         let schedule_url = funs.conf::<IamConfig>().schedule_url.clone();
 
         if let Some(sync_cron) = req.account_sync_cron.clone() {
-            funs.web_client()
-                .put_obj_to_str(
-                    &format!("{schedule_url}/ci/schedule/jobs"),
-                    &HashMap::from([
-                        ("code", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
-                        ("cron", sync_cron),
-                        ("callback_url", format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,)),
-                    ]),
-                    headers.clone(),
-                )
-                .await
-                .unwrap();
+            if !sync_cron.is_empty() {
+                funs.web_client()
+                    .put_obj_to_str(
+                        &format!("{schedule_url}/ci/schedule/jobs"),
+                        &HashMap::from([
+                            ("code", funs.conf::<IamConfig>().third_integration_schedule_code.clone()),
+                            ("cron", sync_cron),
+                            ("callback_url", format!("{}/ci/cert/sync", funs.conf::<IamConfig>().iam_base_url,)),
+                        ]),
+                        headers.clone(),
+                    )
+                    .await
+                    .unwrap();
+            }
         }
 
         //将来切换到spi-kv里
