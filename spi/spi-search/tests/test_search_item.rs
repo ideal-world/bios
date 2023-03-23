@@ -20,6 +20,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item",
             &json!({
                 "tag":"feed",
+                "kind": "req",
                 "key": "001",
                 "title": "搜索",
                 "content": "在xxx。",
@@ -48,6 +49,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item",
             &json!({
                 "tag":"feed",
+                "kind": "req",
                 "key": "002",
                 "title": "新增全局账号逻辑",
                 "content": "账号登录 登录名：默认提示：用户名/手机号/邮箱，输入类型不限，最多输入30个字 密码：默认提示：密码，输入类型不限，最多输入30个字； 登录：1、点击判断用户名和密码是否已填写，如果没有则在每个必填项下提示：****不能为空；2、判断校验是否正确，没有则提示：用户名或密码不正确；3、没有选择租户，则按登录平台逻辑进行处理；则继续判断该账号是否全局账号，非全局账号则提示：请选择租户登录；是全局账号并校验成功则登录平台；4、选择租户后，密码校验成功后登录对应的租户",
@@ -66,6 +68,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             "/ci/item",
             &json!({
                 "tag":"feed",
+                "kind": "task",
                 "key": "003",
                 "title": "新增知识管理优化",
                 "content": "整个知识库优化 1、支持库支持压缩包、文件的上传/下载 点击单个文件下，右侧显示按钮，如下图，上传文件：点击可选择文件进行上传；新建文档/表格/文件夹/图集：点击在该文件夹下新建内容",
@@ -268,6 +271,39 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(search_result.total_size, 2);
     assert_eq!(search_result.records[0].key, "002");
     assert_eq!(search_result.records[1].key, "003");
+
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{
+                    "app":"003"
+                },
+                "query":{
+                    "kinds": ["req","task"]
+                },
+                "page":{"number":1,"size":10}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 3);
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{
+                    "app":"003"
+                },
+                "query":{
+                    "kinds": ["task"]
+                },
+                "page":{"number":1,"size":10}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 1);
 
     //  Search with auth
     let search_result: TardisPage<SearchItemSearchResp> = client

@@ -18,7 +18,8 @@ pub async fn init_table_and_conn(
         mgr,
         Some(tag),
         "search",
-        r#"key character varying NOT NULL PRIMARY KEY,
+        r#"kind character varying NOT NULL,
+    key character varying NOT NULL PRIMARY KEY,
     title character varying NOT NULL,
     title_tsv tsvector,
     content_tsv tsvector,
@@ -29,6 +30,7 @@ pub async fn init_table_and_conn(
     ext jsonb NOT NULL,
     visit_keys jsonb"#,
         vec![
+            ("kind", "btree"),
             ("key", "btree"),
             ("title_tsv", "gin"),
             ("content_tsv", "gin"),

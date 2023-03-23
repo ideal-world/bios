@@ -20,6 +20,7 @@ use super::search_pg_initializer;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let mut params = Vec::new();
+    params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));
     params.push(Value::from(add_req.title.as_str()));
     params.push(Value::from(add_req.title.as_str()));
@@ -43,10 +44,10 @@ pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &Ta
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (key, title, title_tsv, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
+    (kind, key, title, title_tsv, content_tsv, owner, own_paths, create_time, update_time, ext, visit_keys)
 VALUES
-    ($1, $2, to_tsvector('public.chinese_zh', $3), to_tsvector('public.chinese_zh', $4), $5, $6, $7, $8, $9, {})"#,
-            if add_req.visit_keys.is_some() { "$10" } else { "null" },
+    ($1, $2, $3, to_tsvector('public.chinese_zh', $4), to_tsvector('public.chinese_zh', $5), $6, $7, $8, $9, $10, {})"#,
+            if add_req.visit_keys.is_some() { "$11" } else { "null" },
         ),
         params,
     )
@@ -64,6 +65,10 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
 
     let mut sql_sets: Vec<String> = Vec::new();
 
+    if let Some(kind) = &modify_req.kind {
+        sql_sets.push(format!("kind = ${}", params.len() + 1));
+        params.push(Value::from(kind));
+    };
     if let Some(title) = &modify_req.title {
         sql_sets.push(format!("title = ${}", params.len() + 1));
         sql_sets.push(format!("title_tsv = to_tsvector('public.chinese_zh', ${})", params.len() + 1));
@@ -189,6 +194,17 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         where_fragments.push(format!("(visit_keys IS NULL OR ({}))", where_visit_keys_fragments.join(" AND ")));
     }
 
+    if let Some(kinds) = &search_req.query.kinds {
+        if !kinds.is_empty() {
+            where_fragments.push(format!(
+                "kind LIKE ANY (ARRAY[{}])",
+                (0..kinds.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
+            ));
+            for kind in kinds {
+                sql_vals.push(Value::from(format!("{kind}%")));
+            }
+        }
+    }
     if let Some(keys) = &search_req.query.keys {
         if !keys.is_empty() {
             where_fragments.push(format!(
@@ -295,7 +311,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let result = conn
         .query_all(
             format!(
-                r#"SELECT key, title, owner, own_paths, create_time, update_time, ext, count(*) OVER() AS total{}
+                r#"SELECT kind, key, title, owner, own_paths, create_time, update_time, ext, count(*) OVER() AS total{}
 FROM {table_name}{}
 WHERE 
     {}
@@ -324,6 +340,7 @@ WHERE
                 total_size = item.try_get("", "total").unwrap();
             }
             SearchItemSearchResp {
+                kind: item.try_get("", "kind").unwrap(),
                 key: item.try_get("", "key").unwrap(),
                 title: item.try_get("", "title").unwrap(),
                 owner: item.try_get("", "owner").unwrap(),
