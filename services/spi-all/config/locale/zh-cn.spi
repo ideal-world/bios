@@ -23,4 +23,5 @@
 404-spi-stats-metric-fact-not-exist	指标对应的事实配置不存在
 404-spi-stats-metric-dim-not-exist	指标对应的维度配置不存在
 404-spi-stats-metric-op-not-legal	指标操作不合法
+404-spi-search-op-not-legal	搜索操作不合法
 404-spi-search-item-not-exist	搜索内容不存在

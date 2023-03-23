@@ -100,8 +100,7 @@ impl StatsDataTypeKind {
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
     ) -> Option<(String, sea_orm::Value)> {
         let value = db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
-        value.as_ref()?;
-        let value = value.unwrap();
+        let mut value = value.unwrap();
         if multi_values && (time_window_fun.is_some() || op != &SpiQueryOpKind::In)
             || self == &StatsDataTypeKind::Int && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
             || self == &StatsDataTypeKind::Float && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
@@ -112,14 +111,15 @@ impl StatsDataTypeKind {
         {
             None
         } else if multi_values {
-            Some((format!("{column_name} @> array[${param_idx}::varchar]"), value))
+            // TODO Not supported yet
+            None
         } else if let Some(time_window_fun) = time_window_fun {
             Some((
                 format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
-                value,
+                value.pop().unwrap(),
             ))
         } else {
-            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value))
+            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
         }
     }
 
@@ -133,8 +133,7 @@ impl StatsDataTypeKind {
         fun: Option<&StatsQueryAggFunKind>,
     ) -> Option<(String, sea_orm::Value)> {
         let value = db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
-        value.as_ref()?;
-        let value = value.unwrap();
+        let mut value = value.unwrap();
         if multi_values && (fun.is_some() || op != &SpiQueryOpKind::In)
             || self == &StatsDataTypeKind::Int && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
             || self == &StatsDataTypeKind::Float && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
@@ -144,11 +143,12 @@ impl StatsDataTypeKind {
         {
             None
         } else if multi_values {
-            Some((format!("{column_name} @> array[${param_idx}::varchar]"), value))
+            // TODO Not supported yet
+            None
         } else if let Some(fun) = fun {
-            Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), value))
+            Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), value.pop().unwrap()))
         } else {
-            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value))
+            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
         }
     }
 
