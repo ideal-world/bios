@@ -13,7 +13,7 @@ pub struct StatsConfDimAddReq {
     /// The primary key or encoding passed in from the external system
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub key: String,
-    /// The name of the dimension
+    /// The name of the dimension 
     #[oai(validator(min_length = "2"))]
     pub show_name: String,
     /// Whether it is a stable dataset,

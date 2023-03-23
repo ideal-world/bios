@@ -175,7 +175,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             .unwrap_or(false)
         || query_req._where.as_ref().map(|or_wheres| or_wheres.iter().any(|and_wheres| and_wheres.iter().any(|where_| !conf_info.contains_key(&where_.code)))).unwrap_or(false)
     {
-        return Err(funs.err().not_found("metric", "query", "The query some dimension does not exist.", "404-spi-stats-metric-dim-not-exist"));
+        return Err(funs.err().not_found("metric", "query", "The query some dimension or measures does not exist.", "404-spi-stats-metric-dim-mea-not-exist"));
     }
 
     let mut params = vec![
