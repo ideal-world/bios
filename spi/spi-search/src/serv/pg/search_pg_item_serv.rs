@@ -179,11 +179,10 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 continue;
             }
             if scope_values.len() == 1 {
-                where_visit_keys_fragments.push(format!("visit_keys -> '{}' ? ${}", scope_key, sql_vals.len() + 1));
+                where_visit_keys_fragments.push(format!("visit_keys -> '{scope_key}' ? ${}", sql_vals.len() + 1));
             } else {
                 where_visit_keys_fragments.push(format!(
-                    "visit_keys -> '{}' ?| array[{}]",
-                    scope_key,
+                    "(visit_keys -> '{scope_key}' IS NULL OR visit_keys -> '{scope_key}' ?| array[{}])",
                     (0..scope_values.len()).into_iter().map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                 ));
             }
@@ -311,12 +310,13 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let result = conn
         .query_all(
             format!(
-                r#"SELECT kind, key, title, owner, own_paths, create_time, update_time, ext, count(*) OVER() AS total{}
+                r#"SELECT kind, key, title, owner, own_paths, create_time, update_time, ext{}{}
 FROM {table_name}{}
 WHERE 
     {}
     {}
 {}"#,
+                if search_req.page.fetch_total { ", count(*) OVER() AS total" } else { "" },
                 select_fragments,
                 from_fragments,
                 where_fragments.join(" AND "),
@@ -336,7 +336,7 @@ WHERE
     let result = result
         .into_iter()
         .map(|item| {
-            if total_size == 0 {
+            if search_req.page.fetch_total && total_size == 0 {
                 total_size = item.try_get("", "total").unwrap();
             }
             SearchItemSearchResp {

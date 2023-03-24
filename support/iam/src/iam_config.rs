@@ -50,10 +50,7 @@ pub struct IamConfig {
     pub init_menu_json_path: String,
     pub ldap: IamLdapConfig,
 
-    pub schedule_url: String,
-    pub search_url: String,
-    pub search_tag: String,
-    pub kv_url: String,
+    pub spi: IamSpiConfig,
     pub iam_base_url: String,
 }
 
@@ -73,6 +70,28 @@ impl Default for IamLdapConfig {
             dc: "bios".to_string(),
             bind_dn: "CN=ldapadmin,DC=bios".to_string(),
             bind_password: "KDi234!ds".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct IamSpiConfig {
+    pub schedule_url: String,
+    pub search_url: String,
+    pub search_tag: String,
+    pub kv_url: String,
+
+    pub owner: String,
+}
+impl Default for IamSpiConfig {
+    fn default() -> Self {
+        IamSpiConfig {
+            schedule_url: "".to_string(),
+            search_url: "".to_string(),
+            search_tag: "".to_string(),
+            kv_url: "".to_string(),
+            owner: "".to_string(),
         }
     }
 }
@@ -104,11 +123,8 @@ impl Default for IamConfig {
             sms_path: "/cc/msg/vcode".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
-            schedule_url: "".to_string(),
-            search_url: "".to_string(),
-            search_tag: "iam_account".to_string(),
-            kv_url: "".to_string(),
-            iam_base_url: "".to_string(),
+            iam_base_url: "http://localhost:8080/iam".to_string(),
+            spi: Default::default(),
         }
     }
 }

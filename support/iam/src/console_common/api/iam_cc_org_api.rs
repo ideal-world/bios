@@ -24,7 +24,12 @@ impl IamCcOrgApi {
     #[oai(path = "/tree", method = "get")]
     async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_org_code_by_tenant(&funs, &ctx.0)?, true, &funs, &ctx.0).await?;
+        let code = if ctx.0.own_paths.is_empty() {
+            IamSetServ::get_default_org_code_by_system()
+        } else {
+            IamSetServ::get_default_org_code_by_tenant(&funs, &ctx.0)?
+        };
+        let set_id = IamSetServ::get_set_id_by_code(&code, true, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(
             &set_id,
             &mut RbumSetTreeFilterReq {

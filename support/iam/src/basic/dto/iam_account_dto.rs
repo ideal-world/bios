@@ -220,7 +220,11 @@ impl IamAccountExtSysResp {
         IamAccountExtSysResp {
             user_name: resp.get_simple_attr(&config.account_field_map.field_user_name).unwrap_or_default(),
             display_name: resp.get_simple_attr(&config.account_field_map.field_display_name).unwrap_or_default(),
-            account_id: resp.get_simple_attr(&config.account_unique_id).unwrap_or_default(),
+            account_id: if config.account_unique_id != "dn" {
+                resp.get_simple_attr(&config.account_unique_id).unwrap_or_default()
+            } else {
+                resp.dn.clone()
+            },
             mobile: resp.get_simple_attr(&config.account_field_map.field_mobile).unwrap_or_default(),
         }
     }

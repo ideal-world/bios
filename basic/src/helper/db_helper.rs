@@ -19,7 +19,7 @@ pub fn json_to_sea_orm_value(json_value: &serde_json::Value, like_by_str: bool) 
             if val.is_empty() {
                 return None;
             }
-            let dt = match val.first().unwrap() {
+            let _dt = match val.first().unwrap() {
                 serde_json::Value::Bool(_) => sea_orm::sea_query::ArrayType::Bool,
                 serde_json::Value::Number(n) if n.is_i64() => sea_orm::sea_query::ArrayType::BigInt,
                 serde_json::Value::Number(n) if n.is_u64() => sea_orm::sea_query::ArrayType::BigInt,

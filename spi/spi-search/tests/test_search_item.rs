@@ -90,7 +90,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "tag":"feed2",
                 "ctx":{},
                 "query":{},
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -103,7 +103,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "tag":"feed",
                 "ctx":{},
                 "query":{},
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -122,7 +122,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "q": "新增"
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -140,7 +140,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "q": "类型 & 上传"
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -156,7 +156,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "q": "类型 | 上传"
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -174,7 +174,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "q": "类型 | 上传",
                     "q_scope": "title_content",
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -198,7 +198,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         "value":"1.3"
                     }]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -220,7 +220,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         "value":["acc01"]
                     }]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -242,7 +242,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         "value":["acc01","acc02"]
                     }]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -264,7 +264,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                         "value":"2022-10-30T14:23:20.000Z"
                     }]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -283,7 +283,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "kinds": ["req","task"]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -299,7 +299,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "kinds": ["task"]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -316,7 +316,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 },
                 "query":{
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -342,7 +342,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "field":"end_time",
                     "order":"asc"
                 }],
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -368,11 +368,38 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "field":"end_time",
                     "order":"desc"
                 }],
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
     assert_eq!(search_result.total_size, 2);
+    assert_eq!(search_result.records[0].key, "002");
+    assert_eq!(search_result.records[1].key, "003");
+    // with out total
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{
+                    "app":"003"
+                },
+                "query":{
+                    "ext": [{
+                        "field":"end_time",
+                        "op":"<=",
+                        "value":"2022-10-30T14:23:20.000Z"
+                    }]
+                },
+                "sort":[{
+                    "field":"end_time",
+                    "order":"desc"
+                }],
+                "page":{"number":1,"size":10,"fetch_total":false}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 0);
     assert_eq!(search_result.records[0].key, "002");
     assert_eq!(search_result.records[1].key, "003");
 
@@ -407,7 +434,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "field":"rank_content",
                     "order":"desc"
                 }],
-                "page":{"number":2,"size":1}
+                "page":{"number":2,"size":1,"fetch_total":true}
             }),
         )
         .await;
@@ -424,7 +451,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "keys": ["001","0xxx"]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
@@ -439,7 +466,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "query":{
                     "keys": ["001"]
                 },
-                "page":{"number":1,"size":10}
+                "page":{"number":1,"size":10,"fetch_total":true}
             }),
         )
         .await;
