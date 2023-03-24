@@ -17,7 +17,16 @@ impl PluginExecServ {
         let result;
         if let Some(spi_api) = &spi_api {
             let spi_bs = PluginBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
-            let url = Self::build_url(&format!("{}/{}", &spi_bs.conn_uri, &spi_api.path_and_query), exec_req.body.clone(), funs)?;
+            let url = Self::build_url(
+                &format!(
+                    "{}{}{}",
+                    &spi_bs.conn_uri,
+                    if spi_api.path_and_query.starts_with('/') { "" } else { "/" },
+                    &spi_api.path_and_query
+                ),
+                exec_req.body.clone(),
+                funs,
+            )?;
             let mut headers: Vec<(String, String)> = exec_req.header.unwrap_or_default().iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
             if let Some(rel) = spi_bs.rel {
                 rel.attrs.iter().for_each(|attr| {
@@ -25,6 +34,7 @@ impl PluginExecServ {
                 });
             }
             headers.push(("Content-Type".to_string(), spi_api.content_type.to_string()));
+            headers.push(("Callback-Url".to_string(), spi_api.callback.to_string()));
             let headers = Some(headers);
             info!("url: {}", url);
             match spi_api.http_method {
@@ -37,12 +47,11 @@ impl PluginExecServ {
                 crate::plugin_enumeration::PluginApiMethodKind::POST => {
                     result = funs.web_client().post_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body.clone())?, headers.clone()).await?;
                 }
-
                 crate::plugin_enumeration::PluginApiMethodKind::DELETE => {
                     result = funs.web_client().delete(url.as_str(), headers.clone()).await?;
                 }
                 crate::plugin_enumeration::PluginApiMethodKind::PATCH => {
-                    result = funs.web_client().patch_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body)?, headers).await?;
+                    result = funs.web_client().patch_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body)?, headers.clone()).await?;
                 }
             }
             if spi_api.save_message {
