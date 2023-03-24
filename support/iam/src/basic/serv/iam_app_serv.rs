@@ -10,7 +10,7 @@ use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use bios_basic::rbum::dto::rbum_filer_dto::RbumItemRelFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
@@ -24,6 +24,7 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
@@ -176,6 +177,7 @@ impl IamAppServ {
         //refresh ctx
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
         IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
+        Self::add_or_modify_app_kv(&app_id, funs, &ctx).await.unwrap();
 
         Ok(app_id)
     }
@@ -213,6 +215,7 @@ impl IamAppServ {
                 }
             }
         }
+        Self::add_or_modify_app_kv(id, funs, ctx).await.unwrap();
         Ok(())
     }
 
@@ -255,5 +258,26 @@ impl IamAppServ {
 
     pub async fn find_name_by_ids(filter: IamAppFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
         IamAppServ::find_items(&filter, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
+    }
+
+    async fn add_or_modify_app_kv(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let names = Self::find_name_by_ids(
+            IamAppFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    own_paths: Some(ctx.own_paths.clone()),
+                    with_sub_own_paths: true,
+                    ids: Some(vec![app_id.to_string()]),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        SpiKvClient::add_or_modify_item(app_id, names.first().unwrap(), funs, ctx).await?;
+
+        Ok(())
     }
 }

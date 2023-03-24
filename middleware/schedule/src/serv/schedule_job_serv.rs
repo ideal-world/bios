@@ -29,9 +29,13 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
     let log_url = funs.conf::<ScheduleConfig>().log_url.clone();
     let kv_url = funs.conf::<ScheduleConfig>().kv_url.clone();
     let code = add_or_modify.code.0.clone();
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
     )]);
     if let Some(_uuid) = scheds.get(&add_or_modify.code.0.clone()) {
         self::delete(&add_or_modify.code.0, funs, ctx).await?;
@@ -85,7 +89,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         .await
         .unwrap();
     if let Some(_uuid) = scheds.get(code) {
-        funs.web_client().delete_to_void(&format!("{}/ci/item?key={}", kv_url, format!("{KV_KEY_CODE}{code}")), headers.clone()).await.unwrap();
+        funs.web_client().delete_to_void(&format!("{}/ci/item?key={}", kv_url, format_args!("{KV_KEY_CODE}{code}")), headers.clone()).await.unwrap();
         ScheduleTaskServ::delete(code).await?;
     }
     Ok(())
@@ -103,7 +107,7 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
             &format!(
                 "{}/ci/item/match?key_prefix={}&page_number={}&page_size={}",
                 kv_url,
-                format!("{}{}", KV_KEY_CODE, code.unwrap_or("".to_string())),
+                format_args!("{}{}", KV_KEY_CODE, code.unwrap_or("".to_string())),
                 page_number,
                 page_size
             ),
