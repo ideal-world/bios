@@ -29,9 +29,13 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
     let log_url = funs.conf::<ScheduleConfig>().log_url.clone();
     let kv_url = funs.conf::<ScheduleConfig>().kv_url.clone();
     let code = add_or_modify.code.0.clone();
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
     )]);
     if let Some(_uuid) = scheds.get(&add_or_modify.code.0.clone()) {
         self::delete(&add_or_modify.code.0, funs, ctx).await?;

@@ -1063,9 +1063,12 @@ impl IamCertServ {
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
         )]);
-        let schedule_url = funs.conf::<IamConfig>().schedule_url.clone();
+        let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
 
         if let Some(sync_cron) = req.account_sync_cron.clone() {
+            if schedule_url.is_empty() {
+                return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", ""));
+            };
             if !sync_cron.is_empty() {
                 funs.web_client()
                     .put_obj_to_str(
