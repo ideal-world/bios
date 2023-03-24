@@ -9,8 +9,9 @@ use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{serde_json, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -678,34 +679,28 @@ impl IamAccountServ {
         }
         if !search_url.is_empty() {
             let utc_now = Utc::now().to_string();
-            let mut search_body = HashMap::from([
-                ("tag", funs.conf::<IamConfig>().spi.search_tag.clone()),
-                ("key", account_id.to_string()),
-                ("title", account_resp.name.clone()),
-                ("kind", funs.conf::<IamConfig>().spi.search_tag.clone()),
-                ("content", format!("{},{:?}", account_resp.name, account_certs,)),
-                ("owner", funs.conf::<IamConfig>().spi.owner.clone()),
-                ("update_time", utc_now.clone()),
-                (
-                    "ext",
-                    TardisFuns::json.obj_to_string(&HashMap::from([
-                        ("status", account_resp.disabled.to_string()),
-                        ("create_time", account_resp.create_time.to_string()),
-                    ]))?,
-                ),
-                (
-                    "visit_keys",
-                    TardisFuns::json.obj_to_string(&HashMap::from([
-                        ("apps", TardisFuns::json.obj_to_string(&account_app_ids)?),
-                        ("groups", TardisFuns::json.obj_to_string(&account_resp.orgs)?),
-                    ]))?,
-                ),
-            ]);
+            let mut search_body = json!({
+                "tag": funs.conf::<IamConfig>().spi.search_tag.clone(),
+                "key": account_id.to_string(),
+                "title": account_resp.name.clone(),
+                "kind": funs.conf::<IamConfig>().spi.search_tag.clone(),
+                "content": format!("{},{:?}", account_resp.name, account_certs,),
+                "owner": funs.conf::<IamConfig>().spi.owner.clone(),
+                "update_time": utc_now.clone(),
+                "ext":{
+                    "status": account_resp.disabled.to_string(),
+                    "create_time": account_resp.create_time.to_string()
+                },
+                "visit_keys":{
+                    "apps": account_app_ids,
+                    "groups": account_resp.orgs
+                },
+            });
             if !is_modify {
-                search_body.insert("create_time", utc_now);
+                search_body.as_object_mut().unwrap().insert("create_time".to_string(), serde_json::Value::from(utc_now));
             }
             if !ctx.own_paths.is_empty() {
-                search_body.insert("own_paths", ctx.own_paths.clone());
+                search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(ctx.own_paths.clone()));
             }
             //add search
             funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
