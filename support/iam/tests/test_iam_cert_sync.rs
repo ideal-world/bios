@@ -9,7 +9,9 @@ use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::iam_constants;
 use bios_iam::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
-use ldap3::log::info;
+use ldap3::log::{error, info};
+use std::thread::sleep;
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 
 pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisContext, tenant2_admin_context: &TardisContext) -> () {
@@ -51,20 +53,8 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .unwrap();
     assert_eq!(account_page.total_size, 1);
 
-    // IamCertServ::add_or_modify_sync_third_integration_config(
-    //     IamThirdIntegrationSyncAddReq {
-    //         account_sync_from: IamCertExtKind::Ldap,
-    //         account_sync_cron: Some(),
-    //         account_way_to_add: None,
-    //         account_way_to_delete: None,
-    //     },
-    //     &funs,
-    //     admin_ctx,
-    // )
-    // .await
-    // .unwrap();
     info!("【exec manual sync】");
-    IamCertLdapServ::iam_sync_ldap_user_to_iam(
+    let error_msg = IamCertLdapServ::iam_sync_ldap_user_to_iam(
         IamThirdIntegrationConfigDto {
             account_sync_from: IamCertExtKind::Ldap,
             account_sync_cron: None,
@@ -76,12 +66,90 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     )
     .await
     .unwrap();
+    error!("exec manual sync error_msg: {}", error_msg);
 
-    let account_page = IamAccountServ::paginate_detail_items(
+    let account_page = IamAccountServ::paginate_account_summary_aggs(
         &IamAccountFilterReq {
             basic: Default::default(),
             ..Default::default()
         },
+        true,
+        true,
+        1,
+        50,
+        None,
+        None,
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+
+    info!("【exec manual sync 2】");
+    let error_msg = IamCertLdapServ::iam_sync_ldap_user_to_iam(
+        IamThirdIntegrationConfigDto {
+            account_sync_from: IamCertExtKind::Ldap,
+            account_sync_cron: None,
+            account_way_to_add: WayToAdd::default(),
+            account_way_to_delete: WayToDelete::default(),
+        },
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+    error!("exec manual sync 2 error_msg: {}", error_msg);
+    let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
+
+    assert_eq!(account_ldap_cert.len() as u64, LDAP_ACCOUNT_NUB);
+    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 1);
+
+    info!("【delete ldap conf and cert】");
+    IamCertServ::delete_cert_and_conf_by_conf_id(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
+    let account_page = IamAccountServ::paginate_account_summary_aggs(
+        &IamAccountFilterReq {
+            basic: Default::default(),
+            ..Default::default()
+        },
+        true,
+        true,
+        1,
+        50,
+        None,
+        None,
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+
+    let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
+    assert!(account_ldap_cert.is_empty());
+
+    let _ldap_cert_conf_id_2 = IamCertLdapServ::add_cert_conf(&conf_ldap_add_or_modify_req, None, &funs, admin_ctx).await.unwrap();
+
+    info!("【exec manual sync 3】");
+
+    let error_msg = IamCertLdapServ::iam_sync_ldap_user_to_iam(
+        IamThirdIntegrationConfigDto {
+            account_sync_from: IamCertExtKind::Ldap,
+            account_sync_cron: None,
+            account_way_to_add: WayToAdd::default(),
+            account_way_to_delete: WayToDelete::default(),
+        },
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+    error!("exec manual sync 3 error_msg: {}", error_msg);
+    let account_page = IamAccountServ::paginate_account_summary_aggs(
+        &IamAccountFilterReq {
+            basic: Default::default(),
+            ..Default::default()
+        },
+        true,
+        true,
         1,
         50,
         None,
@@ -92,7 +160,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
     println!("================={:?}", account_page.records);
-    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 1);
+    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB * 2 + 1);
 
     funs.commit().await.unwrap();
 }
