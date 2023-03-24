@@ -95,13 +95,15 @@ pub async fn modify(tag: &str, key: &str, modify_req: &mut SearchItemModifyReq, 
         params.push(Value::from(update_time));
     };
     if let Some(ext) = &modify_req.ext {
-        let mut ext = ext.clone();
-        if !modify_req.ext_override.unwrap_or(false) {
-            let storage_ext = get_ext(tag, key, &table_name, &conn, funs).await?;
-            merge(&mut ext, storage_ext);
-        }
         sql_sets.push(format!("ext = ${}", params.len() + 1));
-        params.push(Value::from(ext.clone()));
+        let ext = ext.clone();
+        if !modify_req.ext_override.unwrap_or(false) {
+            let mut storage_ext = get_ext(tag, key, &table_name, &conn, funs).await?;
+            merge(&mut storage_ext, ext);
+            params.push(Value::from(storage_ext.clone()));
+        } else {
+            params.push(Value::from(ext.clone()));
+        }
     };
     if let Some(visit_keys) = &modify_req.visit_keys {
         sql_sets.push(format!("visit_keys = ${}", params.len() + 1));
