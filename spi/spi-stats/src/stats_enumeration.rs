@@ -112,7 +112,7 @@ impl StatsDataTypeKind {
             None
         } else if multi_values {
             // TODO Not supported yet
-            None
+            todo!();
         } else if let Some(time_window_fun) = time_window_fun {
             Some((
                 format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
@@ -144,7 +144,7 @@ impl StatsDataTypeKind {
             None
         } else if multi_values {
             // TODO Not supported yet
-            None
+            todo!();
         } else if let Some(fun) = fun {
             Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), value.pop().unwrap()))
         } else {

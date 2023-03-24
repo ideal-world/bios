@@ -89,7 +89,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         .await
         .unwrap();
     if let Some(_uuid) = scheds.get(code) {
-        funs.web_client().delete_to_void(&format!("{}/ci/item?key={}", kv_url, format!("{KV_KEY_CODE}{code}")), headers.clone()).await.unwrap();
+        funs.web_client().delete_to_void(&format!("{}/ci/item?key={}", kv_url, format_args!("{KV_KEY_CODE}{code}")), headers.clone()).await.unwrap();
         ScheduleTaskServ::delete(code).await?;
     }
     Ok(())
@@ -107,7 +107,7 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
             &format!(
                 "{}/ci/item/match?key_prefix={}&page_number={}&page_size={}",
                 kv_url,
-                format!("{}{}", KV_KEY_CODE, code.unwrap_or("".to_string())),
+                format_args!("{}{}", KV_KEY_CODE, code.unwrap_or("".to_string())),
                 page_number,
                 page_size
             ),
