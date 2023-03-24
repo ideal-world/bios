@@ -20,6 +20,7 @@ use crate::{
     iam_constants,
 };
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind::Enabled;
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumScopeLevelKind};
 use bios_basic::rbum::{
     dto::{
@@ -619,14 +620,11 @@ impl IamCertLdapServ {
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(ctx.own_paths.clone()),
-                    with_sub_own_paths: false,
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
-                kind: Some(IamCertExtKind::Ldap.to_string()),
-                supplier: None,
-                status: None,
-                rel_rbum_kind: None,
-                rel_rbum_id: None,
+                status: Some(Enabled),
+                rel_rbum_cert_conf_ids: Some(vec![cert_conf_id.clone()]),
                 ..Default::default()
             },
             None,
@@ -662,6 +660,7 @@ impl IamCertLdapServ {
                     tardis::log::error!("{}", err_msg);
                     msg = format!("{msg}{err_msg}\n");
                     funs.rollback().await?;
+                    ldap_id_to_account_map.remove(&local_ldap_id);
                     continue;
                 }
                 let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
@@ -704,8 +703,6 @@ impl IamCertLdapServ {
                         tardis::log::error!("{}", err_msg);
                         msg = format!("{msg}{err_msg}\n");
                     }
-                } else {
-                    continue;
                 };
 
                 ldap_id_to_account_map.remove(&local_ldap_id);
