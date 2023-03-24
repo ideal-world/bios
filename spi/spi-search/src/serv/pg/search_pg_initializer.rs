@@ -39,7 +39,7 @@ pub async fn init_table_and_conn(
             ("own_paths", "btree"),
             ("create_time", "btree"),
             ("update_time", "btree"),
-            ("visit_keys", "btree"),
+            ("visit_keys", "gin"),
         ],
         None,
         Some("update_time"),

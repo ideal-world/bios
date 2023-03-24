@@ -91,6 +91,8 @@ pub struct SearchItemSearchReq {
     pub ctx: SearchItemSearchCtxReq,
     // Search conditions
     pub query: SearchItemQueryReq,
+    // Sort
+    // When the record set is very large, it will seriously affect the performance, it is not recommended to use.
     pub sort: Option<Vec<SearchItemSearchSortReq>>,
     pub page: SearchItemSearchPageReq,
 }
@@ -192,6 +194,9 @@ impl SearchItemSearchSortKind {
 pub struct SearchItemSearchPageReq {
     pub number: u32,
     pub size: u16,
+    // Get the total number of matching records.
+    // When the record set is very large, it will seriously affect the performance. It is not recommended to open it.
+    pub fetch_total: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
