@@ -77,11 +77,72 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
 
-    let account_page = IamAccountServ::paginate_detail_items(
+    let account_page = IamAccountServ::paginate_account_summary_aggs(
         &IamAccountFilterReq {
             basic: Default::default(),
             ..Default::default()
         },
+        true,
+        true,
+        1,
+        50,
+        None,
+        None,
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+    info!("【delete ldap conf and cert】");
+    let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
+
+    assert_eq!(account_ldap_cert.len() as u64, LDAP_ACCOUNT_NUB);
+    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 1);
+    IamCertServ::delete_cert_and_conf_by_conf_id(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
+    let account_page = IamAccountServ::paginate_account_summary_aggs(
+        &IamAccountFilterReq {
+            basic: Default::default(),
+            ..Default::default()
+        },
+        true,
+        true,
+        1,
+        50,
+        None,
+        None,
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+
+    let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
+    assert!(account_ldap_cert.is_empty());
+
+    let _ldap_cert_conf_id_2 = IamCertLdapServ::add_cert_conf(&conf_ldap_add_or_modify_req, None, &funs, admin_ctx).await.unwrap();
+
+    info!("【exec manual sync 2】");
+
+    IamCertLdapServ::iam_sync_ldap_user_to_iam(
+        IamThirdIntegrationConfigDto {
+            account_sync_from: IamCertExtKind::Ldap,
+            account_sync_cron: None,
+            account_way_to_add: WayToAdd::default(),
+            account_way_to_delete: WayToDelete::default(),
+        },
+        &funs,
+        admin_ctx,
+    )
+    .await
+    .unwrap();
+
+    let account_page = IamAccountServ::paginate_account_summary_aggs(
+        &IamAccountFilterReq {
+            basic: Default::default(),
+            ..Default::default()
+        },
+        true,
+        true,
         1,
         50,
         None,
@@ -92,7 +153,6 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
     println!("================={:?}", account_page.records);
-    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 1);
 
     funs.commit().await.unwrap();
 }

@@ -111,7 +111,7 @@ pub fn gen_test_ldap_conf() -> IamCertConfLdapAddOrModifyReq {
         credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap()),
         base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
         port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
-        account_unique_id: "cn".to_string(),
+        account_unique_id: "dn".to_string(),
         account_field_map: AccountFieldMap {
             search_base_filter: Some("objectClass=person".to_string()),
             field_user_name: "cn".to_string(),
