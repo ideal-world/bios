@@ -696,8 +696,8 @@ impl IamAccountServ {
                 (
                     "visit_keys",
                     TardisFuns::json.obj_to_string(&HashMap::from([
-                        ("apps", TardisFuns::json.obj_to_string(&account_app_ids)),
-                        ("groups", TardisFuns::json.obj_to_string(&account_resp.orgs)),
+                        ("apps", TardisFuns::json.obj_to_string(&account_app_ids)?),
+                        ("groups", TardisFuns::json.obj_to_string(&account_resp.orgs)?),
                     ]))?,
                 ),
             ]);
