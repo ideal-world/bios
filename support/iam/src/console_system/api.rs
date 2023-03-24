@@ -5,3 +5,4 @@ pub mod iam_cs_org_api;
 pub mod iam_cs_res_api;
 pub mod iam_cs_role_api;
 pub mod iam_cs_tenant_api;
+pub mod iam_init_spi_data_api;
