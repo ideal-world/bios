@@ -360,10 +360,15 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         ORDER BY fact.key,fact.ct DESC
         LIMIT {conf_limit}
     ) _
-    GROUP BY ROLLUP({sql_part_groups})
+    {}
     {sql_part_havings}
     {sql_part_orders}
-    {query_limit}"#
+    {query_limit}"#,
+        if sql_part_groups.is_empty() {
+            "".to_string()
+        } else {
+            format!("GROUP BY ROLLUP({sql_part_groups})")
+        }
     );
 
     let result = conn
