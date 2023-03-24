@@ -635,7 +635,7 @@ impl IamAccountServ {
         }
     }
 
-    // 全局搜索埋点方法
+    // account 全局搜索埋点方法
     async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_resp = IamAccountServ::get_account_detail_aggs(
             account_id,
@@ -655,52 +655,61 @@ impl IamAccountServ {
         .await?;
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
-        let search_url = funs.conf::<IamConfig>().search_url.clone();
-        let kv_url = funs.conf::<IamConfig>().kv_url.clone();
+        let search_url = funs.conf::<IamConfig>().spi.search_url.clone();
+        let kv_url = funs.conf::<IamConfig>().spi.kv_url.clone();
+        let spi_ctx = TardisContext {
+            owner: funs.conf::<IamConfig>().spi.owner.clone(),
+            ..ctx.clone()
+        };
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
         )]);
-
-        //add kv
-        funs.web_client()
-            .put_obj_to_str(
-                &format!("{kv_url}/ci/item"),
-                &HashMap::from([("key", account_id), ("value", &account_resp.name)]),
-                headers.clone(),
-            )
-            .await
-            .unwrap();
-        let utc_now = Utc::now().to_string();
-        let mut search_body = HashMap::from([
-            ("tag", funs.conf::<IamConfig>().search_tag.clone()),
-            ("key", account_id.to_string()),
-            ("title", account_resp.name.clone()),
-            ("kind", funs.conf::<IamConfig>().search_tag.clone()),
-            ("content", format!("{},{:?}", account_resp.name, account_certs,)),
-            ("owner", ctx.owner.clone()),
-            ("own_paths", ctx.own_paths.clone()),
-            ("update_time", utc_now.clone()),
-            (
-                "ext",
-                TardisFuns::json.obj_to_string(&HashMap::from([
-                    ("status", account_resp.disabled.to_string()),
-                    ("create_time", account_resp.create_time.to_string()),
-                ]))?,
-            ),
-            (
-                "visit_keys",
-                TardisFuns::json.obj_to_string(&HashMap::from([
-                    ("apps", TardisFuns::json.obj_to_string(&account_app_ids)),
-                    ("groups", TardisFuns::json.obj_to_string(&account_resp.orgs)),
-                ]))?,
-            ),
-        ]);
-        if !is_modify {
-            search_body.insert("create_time", utc_now);
+        if !kv_url.is_empty() {
+            //add kv
+            funs.web_client()
+                .put_obj_to_str(
+                    &format!("{kv_url}/ci/item"),
+                    &HashMap::from([("key", account_id), ("value", &account_resp.name)]),
+                    headers.clone(),
+                )
+                .await
+                .unwrap();
         }
-        //add search
-        funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
+        if !search_url.is_empty() {
+            let utc_now = Utc::now().to_string();
+            let mut search_body = HashMap::from([
+                ("tag", funs.conf::<IamConfig>().spi.search_tag.clone()),
+                ("key", account_id.to_string()),
+                ("title", account_resp.name.clone()),
+                ("kind", funs.conf::<IamConfig>().spi.search_tag.clone()),
+                ("content", format!("{},{:?}", account_resp.name, account_certs,)),
+                ("owner", funs.conf::<IamConfig>().spi.owner.clone()),
+                ("update_time", utc_now.clone()),
+                (
+                    "ext",
+                    TardisFuns::json.obj_to_string(&HashMap::from([
+                        ("status", account_resp.disabled.to_string()),
+                        ("create_time", account_resp.create_time.to_string()),
+                    ]))?,
+                ),
+                (
+                    "visit_keys",
+                    TardisFuns::json.obj_to_string(&HashMap::from([
+                        ("apps", TardisFuns::json.obj_to_string(&account_app_ids)),
+                        ("groups", TardisFuns::json.obj_to_string(&account_resp.orgs)),
+                    ]))?,
+                ),
+            ]);
+            if !is_modify {
+                search_body.insert("create_time", utc_now);
+            }
+            if !ctx.own_paths.is_empty() {
+                search_body.insert("own_paths", ctx.own_paths.clone());
+            }
+            //add search
+            funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
+        }
         Ok(())
     }
 }
