@@ -665,7 +665,8 @@ impl IamAccountServ {
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
         )]);
-        if !kv_url.is_empty() {
+        #[cfg(feature = "spi_kv_features")]
+        {
             //add kv
             funs.web_client()
                 .put_obj_to_str(
@@ -676,7 +677,8 @@ impl IamAccountServ {
                 .await
                 .unwrap();
         }
-        if !search_url.is_empty() {
+        #[cfg(feature = "spi_search_features")]
+        {
             let utc_now = Utc::now().to_string();
             let mut search_body = HashMap::from([
                 ("tag", funs.conf::<IamConfig>().spi.search_tag.clone()),
