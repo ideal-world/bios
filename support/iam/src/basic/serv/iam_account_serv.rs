@@ -637,7 +637,7 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_resp = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
