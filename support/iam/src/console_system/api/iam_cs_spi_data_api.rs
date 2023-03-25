@@ -14,13 +14,13 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_constants;
 
-pub struct IamInitSpiDataApi;
+pub struct IamCsSpiDataApi;
 
 /// System Console Tenant API
 #[poem_openapi::OpenApi(prefix_path = "/cs/init/data", tag = "bios_basic::ApiTag::System")]
-impl IamInitSpiDataApi {
+impl IamCsSpiDataApi {
     /// Do Init Data
-    #[oai(path = "/", method = "post")]
+    #[oai(path = "/", method = "put")]
     async fn init_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -28,7 +28,7 @@ impl IamInitSpiDataApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    pub async fn do_init_spi_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn do_init_spi_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv_feature")]
         {
             //app kv
