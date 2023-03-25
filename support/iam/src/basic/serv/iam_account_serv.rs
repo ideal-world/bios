@@ -666,7 +666,7 @@ impl IamAccountServ {
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
         )]);
-        #[cfg(feature = "spi_kv_features")]
+        #[cfg(feature = "spi_kv_feature")]
         {
             //add kv
             funs.web_client()
@@ -678,7 +678,7 @@ impl IamAccountServ {
                 .await
                 .unwrap();
         }
-        #[cfg(feature = "spi_search_features")]
+        #[cfg(feature = "spi_search_feature")]
         {
             let utc_now = Utc::now().to_string();
             let mut search_body = json!({

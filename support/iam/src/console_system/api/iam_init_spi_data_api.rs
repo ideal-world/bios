@@ -29,7 +29,7 @@ impl IamInitSpiDataApi {
         TardisResp::ok(Void {})
     }
     pub async fn do_init_spi_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        #[cfg(feature = "spi_kv_features")]
+        #[cfg(feature = "spi_kv_feature")]
         {
             //app kv
             let mut next = true;
