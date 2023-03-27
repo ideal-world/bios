@@ -113,12 +113,16 @@ impl IamCsCertApi {
 
     /// Force Delete Cert And Cert-Conf By Conf Id
     #[oai(path = "/conf/force/:id", method = "delete")]
-    async fn delete_cert_and_conf(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_cert_and_conf(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::delete_cert_and_conf_by_conf_id(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
 
     ///Add Or Modify Sync Config

@@ -451,7 +451,7 @@ impl IamSetServ {
                     from_rbum_id: set_id,
                     to_rbum_item_id: cate_id.to_string(),
                     to_own_paths: "".to_string(),
-                    to_is_outside: false,
+                    to_is_outside: true,
                     ext: None,
                 },
                 attrs: vec![],

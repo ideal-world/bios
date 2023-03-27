@@ -48,20 +48,7 @@ pub struct IamCertLdapServ;
 impl IamCertLdapServ {
     //ldap only can be one recode in each tenant
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        //验证cert conf配置是否正确
-        let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
-        let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
-            funs.err().bad_request(
-                "IamCertLdap",
-                "add",
-                &format!("add cert conf err: ldap conf parameter error,and err:{e}"),
-                "400-iam--ldap-cert-add-parameter-incorrect",
-            )
-        })?;
-        if ldap_client.bind(&ldap_auth_info.principal, &ldap_auth_info.credentials).await?.is_none() {
-            ldap_client.unbind().await?;
-            return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
-        }
+        Self::validate_cert_conf(add_req, funs).await?;
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
@@ -97,6 +84,7 @@ impl IamCertLdapServ {
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        Self::validate_cert_conf(modify_req, funs).await?;
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -124,6 +112,25 @@ impl IamCertLdapServ {
             ctx,
         )
         .await
+    }
+
+    //验证cert conf配置是否正确
+    pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
+        let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
+        let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
+            funs.err().bad_request(
+                "IamCertLdap",
+                "add",
+                &format!("add cert conf err: ldap conf parameter error,and err:{e}"),
+                "400-iam--ldap-cert-add-parameter-incorrect",
+            )
+        })?;
+        if ldap_client.bind(&ldap_auth_info.principal, &ldap_auth_info.credentials).await?.is_none() {
+            ldap_client.unbind().await?;
+            return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
+        }
+        ldap_client.unbind().await?;
+        Ok(())
     }
 
     pub async fn get_cert_conf_by_ctx(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamCertConfLdapResp>> {
@@ -1116,6 +1123,7 @@ pub struct AccountFieldMap {
     // without the outermost parentheses.
     // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
     // this field can be &(objectCategory=group)
+    // default : objectClass=person
     pub search_base_filter: Option<String>,
     pub field_user_name: String,
     pub field_display_name: String,

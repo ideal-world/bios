@@ -150,6 +150,15 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         .collect::<Vec<StatsConfInfo>>();
     // Add default dimension
     conf_info.push(StatsConfInfo {
+        col_key: "key".to_string(),
+        show_name: "主键".to_string(),
+        col_kind: StatsFactColKind::Measure,
+        dim_multi_values: Some(false),
+        mes_data_type: Some(StatsDataTypeKind::String),
+        dim_data_type: None,
+        query_limit: conf_info.get(0).unwrap().query_limit,
+    });
+    conf_info.push(StatsConfInfo {
         col_key: "ct".to_string(),
         show_name: "创建时间".to_string(),
         col_kind: StatsFactColKind::Dimension,
@@ -349,7 +358,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         r#"SELECT {sql_part_outer_selects}
     FROM (
         SELECT
-            DISTINCT ON (fact.key) fact.key, {sql_part_inner_selects}
+            DISTINCT ON (fact.key) fact.key AS _key, {sql_part_inner_selects}
         FROM {fact_inst_table_name} fact
         LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
         WHERE
@@ -357,7 +366,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             AND del.key IS NULL
             AND fact.ct >= $2 AND fact.ct <= $3
             {sql_part_wheres}
-        ORDER BY fact.key,fact.ct DESC
+        ORDER BY _key,fact.ct DESC
         LIMIT {conf_limit}
     ) _
     {}
