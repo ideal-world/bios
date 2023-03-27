@@ -48,7 +48,7 @@ pub struct IamCertLdapServ;
 impl IamCertLdapServ {
     //ldap only can be one recode in each tenant
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        Self::validate_cert_conf(add_req, funs, ctx).await?;
+        Self::validate_cert_conf(add_req, funs).await?;
         RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
@@ -84,7 +84,7 @@ impl IamCertLdapServ {
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        Self::validate_cert_conf(modify_req, funs, ctx).await?;
+        Self::validate_cert_conf(modify_req, funs).await?;
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -115,7 +115,7 @@ impl IamCertLdapServ {
     }
 
     //验证cert conf配置是否正确
-    pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
         let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
             funs.err().bad_request(
