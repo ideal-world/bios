@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::chrono::Utc;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::serde_json::json;
@@ -637,7 +636,7 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_resp = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
@@ -666,7 +665,8 @@ impl IamAccountServ {
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
         )]);
-        if !kv_url.is_empty() {
+        #[cfg(feature = "spi_kv")]
+        {
             //add kv
             funs.web_client()
                 .put_obj_to_str(
@@ -677,8 +677,8 @@ impl IamAccountServ {
                 .await
                 .unwrap();
         }
-        if !search_url.is_empty() {
-            let utc_now = Utc::now().to_string();
+        #[cfg(feature = "spi_search")]
+        {
             let mut search_body = json!({
                 "tag": funs.conf::<IamConfig>().spi.search_tag.clone(),
                 "key": account_id.to_string(),
@@ -686,10 +686,10 @@ impl IamAccountServ {
                 "kind": funs.conf::<IamConfig>().spi.search_tag.clone(),
                 "content": format!("{},{:?}", account_resp.name, account_certs,),
                 "owner": funs.conf::<IamConfig>().spi.owner.clone(),
-                "update_time": utc_now.clone(),
+                "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
-                    "status": account_resp.disabled.to_string(),
-                    "create_time": account_resp.create_time.to_string()
+                    "status": account_resp.disabled,
+                    "create_time": account_resp.create_time.to_rfc3339()
                 },
                 "visit_keys":{
                     "apps": account_app_ids,
@@ -697,7 +697,7 @@ impl IamAccountServ {
                 },
             });
             if !is_modify {
-                search_body.as_object_mut().unwrap().insert("create_time".to_string(), serde_json::Value::from(utc_now));
+                search_body.as_object_mut().unwrap().insert("create_time".to_string(), serde_json::Value::from(account_resp.create_time.to_rfc3339()));
             }
             if !ctx.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(ctx.own_paths.clone()));
