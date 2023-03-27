@@ -1123,6 +1123,7 @@ pub struct AccountFieldMap {
     // without the outermost parentheses.
     // For example, the complete search filter is: (&(objectCategory=group)(|(cn=Test*)(cn=Admin*))),
     // this field can be &(objectCategory=group)
+    // default : objectClass=person
     pub search_base_filter: Option<String>,
     pub field_user_name: String,
     pub field_display_name: String,
