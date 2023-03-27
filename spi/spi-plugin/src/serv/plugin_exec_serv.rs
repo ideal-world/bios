@@ -53,7 +53,12 @@ impl PluginExecServ {
                     result = funs.web_client().post_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body.clone())?, headers.clone()).await?;
                 }
                 crate::plugin_enumeration::PluginApiMethodKind::DELETE => {
-                    result = funs.web_client().delete(url.as_str(), headers.clone()).await?;
+                    let delete_result = funs.web_client().delete_to_void(url.as_str(), headers.clone()).await?;
+                    result = TardisHttpResponse {
+                        code: delete_result.code,
+                        headers: delete_result.headers,
+                        body: Some("".to_string()),
+                    }
                 }
                 crate::plugin_enumeration::PluginApiMethodKind::PATCH => {
                     result = funs.web_client().patch_str_to_str(url.as_str(), &TardisFuns::json.obj_to_string(&exec_req.body)?, headers.clone()).await?;
