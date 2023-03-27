@@ -1,18 +1,19 @@
 use crate::test_basic;
 use crate::test_basic::LDAP_ACCOUNT_NUB;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
-use bios_iam::basic::dto::iam_cert_dto::{IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
+use bios_iam::basic::dto::iam_cert_dto::IamThirdIntegrationConfigDto;
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
+use bios_iam::iam_config::IamConfig;
 use bios_iam::iam_constants;
 use bios_iam::iam_enumeration::{IamCertExtKind, WayToAdd, WayToDelete};
 use ldap3::log::{error, info};
-use std::thread::sleep;
 use std::time::Duration;
 use tardis::basic::dto::TardisContext;
+use tardis::tokio::time::sleep;
 
 pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisContext, tenant2_admin_context: &TardisContext) -> () {
     let mut funs = iam_constants::get_tardis_inst();
@@ -106,6 +107,14 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
 
     info!("【delete ldap conf and cert】");
     IamCertServ::delete_cert_and_conf_by_conf_id(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
+    sleep(Duration::from_secs(1)).await;
+    if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(admin_ctx).unwrap() {
+        let mut is_finish = false;
+        while is_finish {
+            sleep(Duration::from_millis(100)).await;
+            is_finish = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id.parse::<i64>().unwrap(), funs.cache()).await.unwrap();
+        }
+    }
     let account_page = IamAccountServ::paginate_account_summary_aggs(
         &IamAccountFilterReq {
             basic: Default::default(),
