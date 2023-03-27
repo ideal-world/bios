@@ -17,7 +17,7 @@ tardis = { workspace = true, features = [
     "conf-remote",
     "reldb-mysql",
 ] }
-bios-iam = { path = "../../support/iam", features = ["spi_search_feature", "spi_kv_feature"] }
+bios-iam = { path = "../../support/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../support/auth" }
 
 bios-basic = { path = "../../basic", features = ["test"] }

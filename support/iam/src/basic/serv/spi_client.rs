@@ -1,2 +1,2 @@
-#[cfg(feature = "spi_kv_feature")]
+#[cfg(feature = "spi_kv")]
 pub mod spi_kv_client;

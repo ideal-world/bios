@@ -18,8 +18,8 @@ path = "src/lib.rs"
 default = ["ldap_server", "ldap_client"]
 ldap_server = ["ldap3_proto", "tardis/future", "tokio-util"]
 ldap_client = ["ldap3"]
-spi_kv_feature = []
-spi_search_feature = []
+spi_kv = []
+spi_search = []
 
 
 [dependencies]
