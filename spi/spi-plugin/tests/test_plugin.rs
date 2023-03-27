@@ -217,7 +217,7 @@ async fn init_data() -> TardisResult<()> {
                 content_type: "".to_string(),
                 timeout: 0,
                 ext: "".to_string(),
-                http_method: PluginApiMethodKind::GET,
+                http_method: PluginApiMethodKind::DELETE,
                 kind: "".to_string(),
                 path_and_query: "ci/spi/plugin/test/exec/:msg".to_string(),
                 save_message: true,

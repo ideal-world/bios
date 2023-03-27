@@ -35,11 +35,14 @@ impl PluginExecApi {
     }
 
     /// Put Plugin exec
-    #[oai(path = "/test/exec/:msg", method = "get")]
-    async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
+    #[oai(path = "/test/exec/:msg", method = "delete")]
+    async fn test_exec(&self, msg: Path<String>, _ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<PluginExecReq> {
         for (k, v) in request.headers() {
             info!("{}: {}", k, v.to_str().unwrap());
         }
-        TardisResp::ok(msg.0)
+        TardisResp::ok(PluginExecReq {
+            body: Some(tardis::serde_json::Value::String(msg.0)),
+            header: None,
+        })
     }
 }
