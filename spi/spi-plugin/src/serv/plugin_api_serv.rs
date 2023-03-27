@@ -153,11 +153,12 @@ impl PluginApiServ {
         }
     }
 
-    pub async fn get_by_code(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<PluginApiDetailResp>> {
+    pub async fn get_by_code(rbum_kind_id: &str, code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<PluginApiDetailResp>> {
         let resp = Self::find_one_detail_item(
             &PluginApiFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    rbum_kind_id: Some(rbum_kind_id.to_string()),
                     ..Default::default()
                 },
                 code: Some(code.to_string()),
