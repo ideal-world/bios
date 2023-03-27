@@ -242,6 +242,27 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["act_hours__sum"], 80);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 160);
 
+    // test simple one dimension with key count
+    let resp: StatsQueryMetricsResp = client
+        .put(
+            "/ci/metric",
+            &json!({
+                "from":"req",
+                "select":[{"code":"key","fun":"count"},{"code":"plan_hours","fun":"sum"}],
+                "group":[{"code":"source"}],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time":"2023-02-01T12:00:00.000Z"
+            }),
+        )
+        .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names.len(), 3);
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()[""]["key__count"], 10);
+    assert_eq!(resp.group.as_object().unwrap()[""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["key__count"], 8);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 160);
+
     // test simple two dimensions
     let resp: StatsQueryMetricsResp = client
         .put(
