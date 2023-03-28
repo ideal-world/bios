@@ -269,7 +269,7 @@ impl IamSetServ {
             .await?;
             if let Some(set_rel) = set_rel {
                 let new_resp = RbumSetTreeMainResp {
-                    rel: Some(set_rel.id.clone()),
+                    rel: Some(set_rel.from_rbum_id.clone()),
                     ..r.clone()
                 };
                 r = new_resp;
@@ -280,7 +280,7 @@ impl IamSetServ {
                 let mut set_filter = filter.clone();
                 set_filter.sys_codes = None;
                 let mut tenant_resp = RbumSetServ::get_tree(&set_rel.from_rbum_id, &set_filter, funs, &mock_ctx).await?;
-                let resp_root_node: Vec<RbumSetTreeMainResp> = tenant_resp
+                let mut resp_tenant_node: Vec<RbumSetTreeMainResp> = tenant_resp
                     .main
                     .clone()
                     .iter()
@@ -291,16 +291,17 @@ impl IamSetServ {
                     })
                     .collect();
                 tenant_resp.main.retain(|r_main| r_main.pid.is_some());
-                result_main.extend(resp_root_node);
-                result_main.extend(tenant_resp.main.clone());
-                result_main = result_main
-                    .iter()
-                    .map(|rm| {
-                        let mut r = rm.clone();
-                        r.ext = set_rel.from_rbum_id.clone();
-                        r
-                    })
-                    .collect();
+                resp_tenant_node.extend(tenant_resp.main.clone());
+                result_main.extend(
+                    resp_tenant_node
+                        .iter()
+                        .map(|rm| {
+                            let mut r = rm.clone();
+                            r.ext = set_rel.from_rbum_id.clone();
+                            r
+                        })
+                        .collect::<Vec<RbumSetTreeMainResp>>(),
+                );
                 if set_filter.fetch_cate_item {
                     let ext_resp = tenant_resp.ext.unwrap();
                     resp_items.extend(ext_resp.items);

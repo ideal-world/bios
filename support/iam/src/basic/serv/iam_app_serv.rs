@@ -26,7 +26,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 #[cfg(feature = "spi_kv")]
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
-use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
@@ -280,7 +280,13 @@ impl IamAppServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_item(app_id, names.first().unwrap(), funs, ctx).await?;
+        SpiKvClient::add_or_modify_item(
+            &format!("{}:{app_id}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone()),
+            names.first().unwrap(),
+            funs,
+            ctx,
+        )
+        .await?;
 
         Ok(())
     }
