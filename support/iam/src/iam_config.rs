@@ -79,8 +79,11 @@ impl Default for IamLdapConfig {
 pub struct IamSpiConfig {
     pub schedule_url: String,
     pub search_url: String,
-    pub search_tag: String,
+    pub search_account_tag: String,
     pub kv_url: String,
+    pub kv_tenant_prefix: String,
+    pub kv_account_prefix: String,
+    pub kv_app_prefix: String,
 
     pub owner: String,
 }
@@ -89,8 +92,11 @@ impl Default for IamSpiConfig {
         IamSpiConfig {
             schedule_url: "".to_string(),
             search_url: "".to_string(),
-            search_tag: "".to_string(),
+            search_account_tag: "iam_account".to_string(),
             kv_url: "".to_string(),
+            kv_tenant_prefix: "iam_tenant".to_string(),
+            kv_account_prefix: "iam_account".to_string(),
+            kv_app_prefix: "iam_app".to_string(),
             owner: "".to_string(),
         }
     }
