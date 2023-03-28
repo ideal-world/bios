@@ -691,16 +691,22 @@ impl IamAccountServ {
                     "status": account_resp.disabled,
                     "create_time": account_resp.create_time.to_rfc3339()
                 },
-                "visit_keys":{
-                    "apps": account_app_ids,
-                    "groups": account_resp.orgs
-                },
             });
             if !is_modify {
                 search_body.as_object_mut().unwrap().insert("create_time".to_string(), serde_json::Value::from(account_resp.create_time.to_rfc3339()));
             }
-            if !ctx.own_paths.is_empty() {
-                search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(ctx.own_paths.clone()));
+            if !account_resp.own_paths.is_empty() {
+                search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
+            }
+            if !(account_app_ids.is_empty() && account_resp.orgs.is_empty() && account_resp.own_paths.is_empty()) {
+                search_body.as_object_mut().unwrap().insert(
+                    "visit_keys".to_string(),
+                    json!({
+                        "apps": account_app_ids,
+                        "groups": account_resp.orgs,
+                        "tenants" : [ account_resp.own_paths ]
+                    }),
+                );
             }
             //add search
             funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
