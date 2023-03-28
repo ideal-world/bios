@@ -107,7 +107,7 @@ pub struct SearchItemSearchCtxReq {
     pub tenant: Option<String>,
     pub roles: Option<Vec<String>>,
     pub groups: Option<Vec<String>>,
-    pub cond_by_or: Option<bool>
+    pub cond_by_or: Option<bool>,
 }
 
 impl SearchItemSearchCtxReq {
