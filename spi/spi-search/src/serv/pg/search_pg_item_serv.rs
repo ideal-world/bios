@@ -192,7 +192,10 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 sql_vals.push(Value::from(scope_value));
             }
         }
-        where_fragments.push(format!("(visit_keys IS NULL OR ({}))", where_visit_keys_fragments.join(" AND ")));
+        where_fragments.push(format!(
+            "(visit_keys IS NULL OR ({}))",
+            where_visit_keys_fragments.join(if search_req.ctx.cond_by_or.unwrap_or(false) { " OR " } else { " AND " })
+        ));
     }
 
     if let Some(kinds) = &search_req.query.kinds {
