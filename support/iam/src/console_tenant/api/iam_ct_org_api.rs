@@ -23,10 +23,14 @@ pub struct IamCtOrgApi;
 impl IamCtOrgApi {
     /// Add Org Cate
     #[oai(path = "/cate", method = "post")]
-    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        let set_id = if let Some(set_id) = set_id.0 {
+            set_id
+        } else {
+            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
+        };
         let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
@@ -47,9 +51,13 @@ impl IamCtOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        let set_id = if let Some(set_id) = set_id.0 {
+            set_id
+        } else {
+            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
+        };
         let result = IamSetServ::get_tree(
             &set_id,
             &mut RbumSetTreeFilterReq {
@@ -115,34 +123,16 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Org Item
-    #[oai(path = "/item", method = "put")]
-    #[deprecated]
-    async fn add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
-        let result = IamSetServ::add_set_item(
-            &IamSetItemAddReq {
-                set_id,
-                set_cate_id: add_req.set_cate_id.clone().unwrap_or_default(),
-                sort: add_req.sort,
-                rel_rbum_item_id: add_req.rel_rbum_item_id.to_string(),
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        funs.commit().await?;
-        TardisResp::ok(result)
-    }
-
     /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]
-    async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
+    async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        let set_id = if let Some(set_id) = set_id.0 {
+            set_id
+        } else {
+            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
+        };
         let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
         let mut result = vec![];
         for s in split {
@@ -166,9 +156,13 @@ impl IamCtOrgApi {
 
     /// Find Org Items
     #[oai(path = "/item", method = "get")]
-    async fn find_items(&self, cate_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
+    async fn find_items(&self, cate_id: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        let set_id = if let Some(set_id) = set_id.0 {
+            set_id
+        } else {
+            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
+        };
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
