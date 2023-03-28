@@ -141,7 +141,9 @@ impl IamCsCertApi {
         TardisResp::ok(result)
     }
 
-    ///Manual sync/手动触发第三方集成同步
+    ///Manual sync
+    ///
+    /// 手动触发第三方集成同步
     #[oai(path = "/sync", method = "post")]
     async fn third_integration_sync(&self, account_sync_from: Json<IamCertExtKind>, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let funs = iam_constants::get_tardis_inst();
