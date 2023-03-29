@@ -120,9 +120,9 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// new userpwd-cert password by account_id\
-    /// only used for userpwd-cert status is Pending \
-    /// and user is global account
+    /// new userpwd-cert password by account_id
+    ///
+    /// only used for userpwd-cert status is Pending and user is global account
     #[oai(path = "/cert/userpwd/reset", method = "put")]
     async fn new_password_for_pending_status(&self, account_id: Query<String>, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -286,7 +286,8 @@ impl IamCpCertLdapApi {
         TardisResp::ok(resp)
     }
 
-    /// bind username password cert by ldap \
+    /// bind username password cert by ldap
+    ///
     /// if ak param is None then create new userpwd cert \
     /// else bind with ldap cert
     /// name-password -ldap login

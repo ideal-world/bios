@@ -24,8 +24,9 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+#[cfg(feature = "spi_kv")]
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
-use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
@@ -177,6 +178,7 @@ impl IamAppServ {
         //refresh ctx
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
         IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
+        #[cfg(feature = "spi_kv")]
         Self::add_or_modify_app_kv(&app_id, funs, &ctx).await.unwrap();
 
         Ok(app_id)
@@ -215,6 +217,7 @@ impl IamAppServ {
                 }
             }
         }
+        #[cfg(feature = "spi_kv")]
         Self::add_or_modify_app_kv(id, funs, ctx).await.unwrap();
         Ok(())
     }
@@ -260,6 +263,7 @@ impl IamAppServ {
         IamAppServ::find_items(&filter, None, None, funs, ctx).await.map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
+    #[cfg(feature = "spi_kv")]
     async fn add_or_modify_app_kv(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let names = Self::find_name_by_ids(
             IamAppFilterReq {
@@ -276,7 +280,13 @@ impl IamAppServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_item(app_id, names.first().unwrap(), funs, ctx).await?;
+        SpiKvClient::add_or_modify_item(
+            &format!("{}:{app_id}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone()),
+            names.first().unwrap(),
+            funs,
+            ctx,
+        )
+        .await?;
 
         Ok(())
     }

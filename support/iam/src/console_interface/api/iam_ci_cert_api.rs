@@ -51,7 +51,8 @@ impl IamCiCertManageApi {
 
 #[poem_openapi::OpenApi(prefix_path = "/ci/cert", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertApi {
-    /// find cert by kind and supplier,
+    /// find cert by kind and supplier
+    ///
     /// if kind is none,query default kind(UserPwd)
     #[oai(path = "/:account_id", method = "get")]
     async fn get_cert_by_kind_supplier(
@@ -82,7 +83,9 @@ impl IamCiCertApi {
         TardisResp::ok(cert)
     }
 
-    ///Auto sync/定时任务触发第三方集成同步
+    ///Auto sync
+    ///
+    /// 定时任务触发第三方集成同步
     #[oai(path = "/sync", method = "get")]
     async fn third_integration_sync(&self, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();

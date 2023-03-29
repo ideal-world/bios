@@ -106,13 +106,13 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(result[1].info, "002系统的数据库信息");
     assert_eq!(result[1].value.as_str().unwrap(), "postgres://xxxx002");
 
-    let result: TardisPage<KvItemSummaryResp> = client.get("/ci/item/match?key_perfix=db_info&page_number=1&page_size=10").await;
+    let result: TardisPage<KvItemSummaryResp> = client.get("/ci/item/match?key_prefix=db_info&page_number=1&page_size=10").await;
     assert_eq!(result.total_size, 2);
     assert_eq!(result.records[1].key, "db_info:002");
     assert_eq!(result.records[1].info, "002系统的数据库信息");
     assert_eq!(result.records[1].value.get("url").unwrap().as_str().unwrap(), "postgres://xxxx002");
 
-    let result: TardisPage<KvItemSummaryResp> = client.get("/ci/item/match?key_perfix=db_info&extract=url&page_number=1&page_size=10").await;
+    let result: TardisPage<KvItemSummaryResp> = client.get("/ci/item/match?key_prefix=db_info&extract=url&page_number=1&page_size=10").await;
     assert_eq!(result.total_size, 2);
     assert_eq!(result.records[1].key, "db_info:002");
     assert_eq!(result.records[1].info, "002系统的数据库信息");
@@ -215,7 +215,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
 
-    let result: TardisPage<KvTagFindResp> = client.get("/ci/scene/tags?key_perfix=feed:&page_number=1&page_size=10").await;
+    let result: TardisPage<KvTagFindResp> = client.get("/ci/scene/tags?key_prefix=feed:&page_number=1&page_size=10").await;
     assert_eq!(result.total_size, 2);
     assert_eq!(result.records[1].key, "feed:kind");
     assert_eq!(result.records[1].items[1].code, "task");

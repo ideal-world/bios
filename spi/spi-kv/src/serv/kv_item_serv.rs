@@ -104,11 +104,11 @@ pub async fn add_or_modify_tag(add_or_modify_req: &mut KvTagAddOrModifyReq, funs
     }
 }
 
-pub async fn find_tags(key_perfix: String, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvTagFindResp>> {
-    let key_perfix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_perfix);
+pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvTagFindResp>> {
+    let key_prefix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_prefix);
     match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(key_perfix, None, page_number, page_size, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(key_prefix, None, page_number, page_size, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
     .map(|items| TardisPage {

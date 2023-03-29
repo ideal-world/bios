@@ -28,8 +28,9 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+#[cfg(feature = "spi_kv")]
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
-use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager};
+use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamSetKind};
@@ -242,6 +243,7 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
+        #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(&tenant_id, funs, &tenant_ctx).await.unwrap();
         Ok((tenant_id, pwd))
     }
@@ -341,7 +343,7 @@ impl IamTenantServ {
                 IamCertLdapServ::add_cert_conf(cert_conf_by_ladp, Some(id.to_string()), funs, ctx).await?;
             }
         }
-
+        #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await.unwrap();
         Ok(())
     }
@@ -424,10 +426,16 @@ impl IamTenantServ {
         .await
         .map(|r| r.into_iter().map(|r| format!("{},{}", r.id, r.name)).collect())
     }
-
+    #[cfg(feature = "spi_kv")]
     async fn add_or_modify_tenant_kv(tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let names = IamTenantServ::find_name_by_ids(vec![tenant_id.to_string()], funs, ctx).await?;
-        SpiKvClient::add_or_modify_item(tenant_id, names.first().unwrap(), funs, ctx).await?;
+        SpiKvClient::add_or_modify_item(
+            &format!("{}:{tenant_id}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone()),
+            names.first().unwrap(),
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(())
     }
 }
