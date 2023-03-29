@@ -92,18 +92,18 @@ impl KvCiItemApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Tags By key perfix
+    /// Find Tags By key prefix
     #[oai(path = "/scene/tags", method = "get")]
     async fn find_tags(
         &self,
-        key_perfix: Query<String>,
+        key_prefix: Query<String>,
         page_number: Query<u32>,
         page_size: Query<u16>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<TardisPage<KvTagFindResp>> {
         let funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::find_tags(key_perfix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let resp = kv_item_serv::find_tags(key_prefix.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 }
