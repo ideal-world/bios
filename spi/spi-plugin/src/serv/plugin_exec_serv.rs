@@ -22,16 +22,15 @@ impl PluginExecServ {
         let result;
         if let Some(spi_api) = &spi_api {
             let spi_bs = PluginBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
-            let url = Self::build_url(
-                &format!(
-                    "{}{}{}",
-                    &spi_bs.conn_uri,
-                    if spi_api.path_and_query.starts_with('/') { "" } else { "/" },
-                    &spi_api.path_and_query
-                ),
-                exec_req.body.clone(),
-                funs,
-            )?;
+            let url = format!(
+                "{}{}",
+                &spi_bs.conn_uri,
+                Self::build_url(
+                    &format!("{}{}", if spi_api.path_and_query.starts_with('/') { "" } else { "/" }, &spi_api.path_and_query),
+                    exec_req.body.clone(),
+                    funs,
+                )?
+            );
             let mut headers: Vec<(String, String)> = exec_req.header.unwrap_or_default().iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
             if let Some(rel) = spi_bs.rel {
                 rel.attrs.iter().for_each(|attr| {
@@ -94,7 +93,7 @@ impl PluginExecServ {
                 })
                 .collect::<Vec<&str>>()
                 .join("/");
-            if is_ok {
+            if !new_path.contains(':') && is_ok {
                 return Ok(new_path);
             }
         }
