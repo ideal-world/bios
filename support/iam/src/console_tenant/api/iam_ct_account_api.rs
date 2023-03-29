@@ -78,6 +78,7 @@ impl IamCtAccountApi {
         role_id: Query<Option<String>>,
         app_id: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
+        status: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -100,6 +101,7 @@ impl IamCtAccountApi {
                     ids: id.0.map(|id| vec![id]),
                     name: name.0,
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
+                    enabled: status.0,
                     ..Default::default()
                 },
                 rel,

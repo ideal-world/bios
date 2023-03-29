@@ -680,16 +680,18 @@ impl IamAccountServ {
         #[cfg(feature = "spi_search")]
         {
             let mut search_body = json!({
-                "tag": funs.conf::<IamConfig>().spi.search_tag.clone(),
+                "tag": funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 "key": account_id.to_string(),
                 "title": account_resp.name.clone(),
-                "kind": funs.conf::<IamConfig>().spi.search_tag.clone(),
+                "kind": funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 "content": format!("{},{:?}", account_resp.name, account_certs,),
                 "owner": funs.conf::<IamConfig>().spi.owner.clone(),
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
-                    "status": account_resp.disabled,
-                    "create_time": account_resp.create_time.to_rfc3339()
+                    "status": !account_resp.disabled,
+                    "create_time": account_resp.create_time.to_rfc3339(),
+                    "certs":account_resp.certs,
+                    "icon":account_resp.icon
                 },
             });
             if !is_modify {
