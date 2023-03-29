@@ -117,6 +117,8 @@ impl RbumCrudOperation<rbum_set::ActiveModel, RbumSetAddReq, RbumSetModifyReq, R
         .await?;
         let key = &format!("{}{}", funs.rbum_conf_cache_key_set_code_(), result.code);
         funs.cache().del(key).await?;
+        let key = &format!("{}{}", funs.rbum_conf_cache_key_set_id_(), result.id);
+        funs.cache().del(key).await?;
         Ok(None)
     }
 
@@ -410,6 +412,31 @@ impl RbumSetServ {
         {
             funs.cache().set_ex(key, &rbum_set.id, funs.rbum_conf_cache_key_set_code_expire_sec()).await?;
             Ok(Some(rbum_set.id))
+        } else {
+            Ok(None)
+        }
+    }
+    pub async fn get_code_ctx_by_set_id(set_id: &str, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<Option<String>> {
+        let key = &format!("{}{}", funs.rbum_conf_cache_key_set_id_(), set_id);
+        let mock_ctx = TardisContext { own_paths: "".to_string(), ..ctx };
+        if let Some(cached_id) = funs.cache().get(key).await? {
+            Ok(Some(cached_id))
+        } else if let Some(rbum_set) = Self::find_one_rbum(
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![set_id.to_string()]),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?
+        {
+            funs.cache().set_ex(key, &rbum_set.code, funs.rbum_conf_cache_key_set_id_expire_sec()).await?;
+            Ok(Some(rbum_set.code))
         } else {
             Ok(None)
         }
