@@ -30,3 +30,5 @@ bios-spi-plugin = { path = "../../spi/spi-plugin" }
 bios-spi-reldb = { path = "../../spi/spi-reldb" }
 bios-spi-search = { path = "../../spi/spi-search" }
 bios-spi-stats = { path = "../../spi/spi-stats" }
+
+bios-mw-schedule={path="../../middleware/schedule"}
