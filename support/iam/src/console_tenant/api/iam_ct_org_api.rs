@@ -107,7 +107,12 @@ impl IamCtOrgApi {
             &mock_ctx,
         )
         .await?;
-        result.main.retain(|m| m.rel.is_none());
+        //去掉租户自己的节点
+        result.main.retain(|r|r.ext.is_empty());
+        //去掉已经绑定的节点，以及子集
+        if let Some(pareant_node) = result.main.clone().iter().find(|m| m.rel.is_some()){
+            result.main.retain(|r|!r.sys_code.starts_with(&pareant_node.sys_code.clone()))
+        };
         TardisResp::ok(result)
     }
 
