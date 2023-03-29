@@ -1,5 +1,5 @@
 [package]
-name = "schedule"
+name = "bios-mw-schedule"
 version.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -11,7 +11,7 @@ readme.workspace = true
 publish.workspace = true
 
 [lib]
-name = "schedule"
+name = "bios_mw_schedule"
 path = "src/lib.rs"
 
 [features]
