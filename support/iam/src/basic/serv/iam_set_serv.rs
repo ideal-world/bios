@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp};
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
@@ -100,7 +100,7 @@ impl IamSetServ {
 
     pub async fn try_get_rel_ctx_by_set_id(set_id: Option<String>, funs: &TardisFunsInst, mut ctx: TardisContext) -> TardisResult<TardisContext> {
         if let Some(set_id) = set_id {
-            let code = RbumSetServ::get_code_ctx_by_set_id(&set_id, funs, ctx.clone())
+            let code = Self::get_code_ctx_by_set_id(&set_id, funs, ctx.clone())
                 .await?
                 .ok_or_else(|| funs.err().not_found("iam_set", "get_rel_ctx", &format!("not found set by set_id {set_id}"), "404-rbum-set-id-not-exist"))?;
             let splits = code.split(':').collect::<Vec<_>>();
@@ -110,6 +110,28 @@ impl IamSetServ {
             Ok(ctx)
         } else {
             Ok(ctx)
+        }
+    }
+
+    pub async fn get_code_ctx_by_set_id(set_id: &str, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<Option<String>> {
+        let mock_ctx = TardisContext { own_paths: "".to_string(), ..ctx };
+        if let Some(rbum_set) = RbumSetServ::find_one_rbum(
+            &RbumSetFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![set_id.to_string()]),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            &mock_ctx,
+        )
+        .await?
+        {
+            Ok(Some(rbum_set.code))
+        } else {
+            Ok(None)
         }
     }
 

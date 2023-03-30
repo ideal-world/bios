@@ -23,9 +23,6 @@ pub struct RbumConfig {
     // set_code -> set_id
     pub cache_key_set_code_: String,
     pub cache_key_set_code_expire_sec: usize,
-    // set_id -> set_code
-    pub cache_key_set_id_: String,
-    pub cache_key_set_id_expire_sec: usize,
     // rbum_item_id -> nil expired
     pub cache_key_cert_locked_: String,
     // rbum_item_id -> error times by cycle
@@ -47,8 +44,6 @@ impl Default for RbumConfig {
             cache_key_cert_code_expire_sec: 60 * 60 * 24,
             cache_key_set_code_: "rbum:cache:set:code:".to_string(),
             cache_key_set_code_expire_sec: 60 * 60 * 24,
-            cache_key_set_id_: "rbum:cache:set:id:".to_string(),
-            cache_key_set_id_expire_sec: 60 * 60 * 24,
             cache_key_cert_locked_: "rbum:cert:locked:".to_string(),
             cache_key_cert_err_times_: "rbum:cert:err_times:".to_string(),
             event_domains: HashMap::from([("rbum_".to_string(), "cud".to_string())]),
@@ -94,8 +89,6 @@ pub trait RbumConfigApi {
     fn rbum_conf_cache_key_cert_code_expire_sec(&self) -> usize;
     fn rbum_conf_cache_key_set_code_(&self) -> String;
     fn rbum_conf_cache_key_set_code_expire_sec(&self) -> usize;
-    fn rbum_conf_cache_key_set_id_(&self) -> String;
-    fn rbum_conf_cache_key_set_id_expire_sec(&self) -> usize;
     fn rbum_conf_cache_key_cert_locked_(&self) -> String;
     fn rbum_conf_cache_key_cert_err_times_(&self) -> String;
     fn rbum_conf_match_event(&self, table_name: &str, operate: &str) -> bool;
@@ -140,14 +133,6 @@ impl RbumConfigApi for TardisFunsInst {
 
     fn rbum_conf_cache_key_set_code_expire_sec(&self) -> usize {
         RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_set_code_expire_sec)
-    }
-
-    fn rbum_conf_cache_key_set_id_(&self) -> String {
-        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_set_id_.to_string())
-    }
-
-    fn rbum_conf_cache_key_set_id_expire_sec(&self) -> usize {
-        RbumConfigManager::get_config(self.module_code(), |conf| conf.cache_key_set_id_expire_sec)
     }
 
     fn rbum_conf_cache_key_cert_locked_(&self) -> String {
