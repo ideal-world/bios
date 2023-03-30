@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
+use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
@@ -142,6 +142,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::Ext9));
         if let Some(icon) = &filter.icon {
             query.and_where(Expr::col(iam_account::Column::Icon).eq(icon.as_str()));
+        }
+        if let Some(set_rel) = &filter.set_rel {
+            Self::package_set_rel(query, Alias::new("rbum_set_rel"), set_rel);
         }
         Ok(())
     }
