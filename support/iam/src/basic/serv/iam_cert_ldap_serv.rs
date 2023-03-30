@@ -115,6 +115,7 @@ impl IamCertLdapServ {
     }
 
     //验证cert conf配置是否正确
+    // todo 完善验证 验证ldap字段是否正确
     pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
         let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {

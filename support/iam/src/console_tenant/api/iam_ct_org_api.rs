@@ -1,24 +1,26 @@
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumRelFilterReq, RbumSetTreeFilterReq};
 use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisResp, Void};
 
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq, IamSetTreeResp};
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamSetKind;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
 
 pub struct IamCtOrgApi;
 
 /// Tenant Console Org API
 ///
 /// Note: the current org only supports tenant level.
+/// Transferring to another tenant or platform's set_id will result in permission escalation
 #[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtOrgApi {
     /// Add Org Cate
@@ -26,22 +28,20 @@ impl IamCtOrgApi {
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = if let Some(set_id) = set_id.0 {
-            set_id
-        } else {
-            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
-        };
-        let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx.0).await?;
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
 
     /// Modify Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "put")]
-    async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -51,13 +51,10 @@ impl IamCtOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = if let Some(set_id) = set_id.0 {
-            set_id
-        } else {
-            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
-        };
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::get_tree(
             &set_id,
             &mut RbumSetTreeFilterReq {
@@ -68,7 +65,7 @@ impl IamCtOrgApi {
                 ..Default::default()
             },
             &funs,
-            &ctx.0,
+            &ctx,
         )
         .await?;
         TardisResp::ok(result)
@@ -76,10 +73,11 @@ impl IamCtOrgApi {
 
     /// Delete Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
-    async fn delete_cate(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_cate(&self, id: Path<String>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::delete_set_cate(&id.0, &funs, &ctx.0).await?;
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -88,7 +86,7 @@ impl IamCtOrgApi {
     ///
     /// 查询平台组织节点
     #[oai(path = "/platform/cate", method = "get")]
-    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -108,17 +106,18 @@ impl IamCtOrgApi {
         )
         .await?;
         //去掉租户自己的节点
-        result.main.retain(|r|r.ext.is_empty());
+        result.main.retain(|r| r.ext.is_empty());
         //去掉已经绑定的节点，以及子集
-        if let Some(pareant_node) = result.main.clone().iter().find(|m| m.rel.is_some()){
-            result.main.retain(|r|!r.sys_code.starts_with(&pareant_node.sys_code.clone()))
+        if let Some(parent_node) = result.main.clone().iter().find(|m| m.rel.is_some()) {
+            result.main.retain(|r| !r.sys_code.starts_with(&parent_node.sys_code.clone()))
         };
         TardisResp::ok(result)
     }
 
     /// Import Platform Org
     ///
-    /// 导入平台组织
+    /// 导入平台组织,支持换绑
+    /// 如果原解绑的节点下有属于平台的节点，解绑的时候需要拷贝一份去租户端，并且保留平台的节点
     #[oai(path = "/binding/node/:id", method = "post")]
     async fn bind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -128,16 +127,43 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
+    #[oai(path = "/binding/node/", method = "delete")]
+    async fn unbind_cate_with_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        //删除原来的关联
+        let old_rel = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                basic: Default::default(),
+                tag: Some(IamRelKind::IamOrgRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Set),
+                from_rbum_id: Some(set_id.clone()),
+                from_rbum_scope_levels: None,
+                to_rbum_item_id: None,
+                to_rbum_item_scope_levels: None,
+                to_own_paths: Some("".to_string()),
+                ext_eq: None,
+                ext_like: None,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        if let Some(old_rel) = old_rel {
+            IamSetServ::unbind_cate_with_platform(old_rel, &funs, &ctx.0).await?;
+        }
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]
     async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = if let Some(set_id) = set_id.0 {
-            set_id
-        } else {
-            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
-        };
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let split = add_req.rel_rbum_item_id.split(',').collect::<Vec<_>>();
         let mut result = vec![];
         for s in split {
@@ -150,7 +176,7 @@ impl IamCtOrgApi {
                         rel_rbum_item_id: s.to_string(),
                     },
                     &funs,
-                    &ctx.0,
+                    &ctx,
                 )
                 .await?,
             );
@@ -163,21 +189,19 @@ impl IamCtOrgApi {
     #[oai(path = "/item", method = "get")]
     async fn find_items(&self, cate_id: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let set_id = if let Some(set_id) = set_id.0 {
-            set_id
-        } else {
-            IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?
-        };
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx.0).await?;
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 
     /// Delete Org Item By Org Item Id
     #[oai(path = "/item/:id", method = "delete")]
-    async fn delete_item(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn delete_item(&self, id: Path<String>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::delete_set_item(&id.0, &funs, &ctx.0).await?;
+        let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
+        IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
