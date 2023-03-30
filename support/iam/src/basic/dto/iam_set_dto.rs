@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_set_dto::{RbumSetTreeExtResp, RbumSetTreeMainResp};
 use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::web::poem_openapi;
@@ -46,8 +47,6 @@ pub struct IamSetItemWithDefaultSetAddReq {
     pub set_cate_id: Option<String>,
     pub sort: i64,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
-    pub set_id: Option<String>,
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rel_rbum_item_id: String,
 }
@@ -62,4 +61,12 @@ pub struct IamSetItemAddReq {
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub rel_rbum_item_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct IamSetTreeResp {
+    pub main: Vec<RbumSetTreeMainResp>,
+    pub ext: Option<RbumSetTreeExtResp>,
+    pub rel: Option<String>,
 }

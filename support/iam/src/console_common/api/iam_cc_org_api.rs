@@ -4,7 +4,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
+use crate::basic::dto::iam_set_dto::IamSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -22,7 +22,7 @@ impl IamCcOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let code = if ctx.0.own_paths.is_empty() {
             IamSetServ::get_default_org_code_by_system()
