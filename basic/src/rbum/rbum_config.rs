@@ -20,6 +20,7 @@ pub struct RbumConfig {
     pub cache_key_cert_vcode_expire_sec: usize,
     pub cache_key_cert_code_: String,
     pub cache_key_cert_code_expire_sec: usize,
+    // set_code -> set_id
     pub cache_key_set_code_: String,
     pub cache_key_set_code_expire_sec: usize,
     // rbum_item_id -> nil expired
