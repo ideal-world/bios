@@ -292,6 +292,30 @@ impl IamSetServ {
 
         //from set_cate to find set
         for mut r in resp.main.clone() {
+            if let Some(set_rel) = RbumRelServ::find_one_rbum(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    tag: Some(IamRelKind::IamOrgRel.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Set),
+                    to_rbum_item_id: Some(r.id.to_string()),
+                    to_own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            {
+                let new_resp = RbumSetTreeMainResp {
+                    rel: Some(set_rel.from_rbum_id.clone()),
+                    ..r.clone()
+                };
+                r = new_resp
+            };
             let set_rel = RbumRelServ::find_one_rbum(
                 &RbumRelFilterReq {
                     basic: RbumBasicFilterReq {
@@ -300,9 +324,6 @@ impl IamSetServ {
                     },
                     tag: Some(IamRelKind::IamOrgRel.to_string()),
                     from_rbum_kind: Some(RbumRelFromKind::Set),
-                    from_rbum_id: None,
-                    from_rbum_scope_levels: None,
-                    to_rbum_item_scope_levels: None,
                     to_rbum_item_id: Some(r.id.to_string()),
                     to_own_paths: Some("".to_string()),
                     ..Default::default()
@@ -312,11 +333,6 @@ impl IamSetServ {
             )
             .await?;
             if let Some(set_rel) = set_rel {
-                let new_resp = RbumSetTreeMainResp {
-                    rel: Some(set_rel.from_rbum_id.clone()),
-                    ..r.clone()
-                };
-                r = new_resp;
                 let mock_ctx = TardisContext {
                     own_paths: set_rel.own_paths.clone(),
                     ..ctx.clone()

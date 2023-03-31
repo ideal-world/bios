@@ -76,10 +76,10 @@ impl IamCtAccountApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
-        role_ids: Query<Option<Vec<String>>>,
+        role_ids: Query<Option<String>>,
         app_id: Query<Option<String>>,
-        app_ids: Query<Option<Vec<String>>>,
-        cate_ids: Query<Option<Vec<String>>>,
+        app_ids: Query<Option<String>>,
+        cate_ids: Query<Option<String>>,
         with_sub: Query<Option<bool>>,
         status: Query<Option<bool>>,
         page_number: Query<u32>,
@@ -90,23 +90,30 @@ impl IamCtAccountApi {
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let rel = role_ids.0.map(|role_ids| RbumItemRelFilterReq {
-            rel_by_from: true,
-            tag: Some(IamRelKind::IamAccountRole.to_string()),
-            from_rbum_kind: Some(RbumRelFromKind::Item),
-            rel_item_ids: Some(role_ids),
-            own_paths: Some(ctx.own_paths.clone()),
-            ..Default::default()
+        let rel = role_ids.0.map(|role_ids| {
+            let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
+            RbumItemRelFilterReq {
+                rel_by_from: true,
+                tag: Some(IamRelKind::IamAccountRole.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_ids: Some(role_ids),
+                own_paths: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            }
         });
-        let rel2 = app_ids.0.map(|app_ids| RbumItemRelFilterReq {
-            rel_by_from: true,
-            tag: Some(IamRelKind::IamAccountApp.to_string()),
-            from_rbum_kind: Some(RbumRelFromKind::Item),
-            rel_item_ids: Some(app_ids),
-            own_paths: Some(ctx.own_paths.clone()),
-            ..Default::default()
+        let rel2 = app_ids.0.map(|app_ids| {
+            let app_ids = app_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
+            RbumItemRelFilterReq {
+                rel_by_from: true,
+                tag: Some(IamRelKind::IamAccountApp.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_ids: Some(app_ids),
+                own_paths: Some(ctx.own_paths.clone()),
+                ..Default::default()
+            }
         });
         let set_rel = if let Some(cate_ids) = cate_ids.0 {
+            let cate_ids = cate_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
             let set_cate_vec = IamSetServ::find_set_cate(
                 &RbumSetCateFilterReq {
                     basic: RbumBasicFilterReq {
@@ -126,7 +133,6 @@ impl IamCtAccountApi {
             Some(RbumSetItemRelFilterReq {
                 set_ids_and_cate_codes: Some(set_cate_vec.into_iter().map(|sc| (sc.rel_rbum_set_id, sc.sys_code)).collect()),
                 with_sub_set_cate_codes: false,
-                rel_item_ids: None,
                 ..Default::default()
             })
         } else {
