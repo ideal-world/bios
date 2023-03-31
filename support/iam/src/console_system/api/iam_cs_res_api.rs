@@ -13,7 +13,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetTreeResp};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq};
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -223,7 +223,7 @@ impl IamCsResApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_tree(
