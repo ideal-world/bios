@@ -16,7 +16,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::tokio::time::sleep;
 
 pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisContext, tenant2_admin_context: &TardisContext) -> () {
-    let mut funs = iam_constants::get_tardis_inst();
+    let funs = iam_constants::get_tardis_inst();
     //不能开启事务 iam_sync_ldap_user_to_iam 这个方法里有自己的事务
     info!("【test ldap conf curd】");
     let ldap_cert_conf = IamCertLdapServ::get_cert_conf_by_ctx(&funs, admin_ctx).await.unwrap();

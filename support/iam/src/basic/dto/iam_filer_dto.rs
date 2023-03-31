@@ -3,7 +3,7 @@ use std::default::Default;
 use serde::{Deserialize, Serialize};
 use tardis::web::poem_openapi;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumSetItemRelFilterReq};
 
 use crate::iam_enumeration::{IamResKind, IamRoleKind};
 
@@ -13,6 +13,7 @@ pub struct IamAccountFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel2: Option<RbumItemRelFilterReq>,
+    pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
 }
 

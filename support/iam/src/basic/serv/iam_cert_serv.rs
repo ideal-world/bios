@@ -972,6 +972,7 @@ impl IamCertServ {
                 basic: Default::default(),
                 rel: None,
                 rel2: None,
+                set_rel: None,
                 icon: None,
             },
             funs,

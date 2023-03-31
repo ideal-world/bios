@@ -16,7 +16,7 @@ use crate::process::task_processor::TaskProcessor;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{
     RbumBasicFilterReq, RbumCertConfFilterReq, RbumCertFilterReq, RbumItemAttrFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumKindAttrFilterReq, RbumKindFilterReq,
-    RbumSetItemFilterReq,
+    RbumSetItemFilterReq, RbumSetItemRelFilterReq,
 };
 use crate::rbum::dto::rbum_item_attr_dto::{RbumItemAttrAddReq, RbumItemAttrDetailResp, RbumItemAttrModifyReq, RbumItemAttrSummaryResp, RbumItemAttrsAddOrModifyReq};
 use crate::rbum::dto::rbum_item_dto::{RbumItemAddReq, RbumItemDetailResp, RbumItemKernelAddReq, RbumItemKernelModifyReq, RbumItemSummaryResp};
@@ -559,7 +559,26 @@ where
         query.distinct();
         Ok(query)
     }
-
+    fn package_set_rel(query: &mut SelectStatement, rel_table: Alias, rbum_set_rel_filter_req: &RbumSetItemRelFilterReq) {
+        query.join_as(
+            JoinType::InnerJoin,
+            rbum_set_item::Entity,
+            rel_table.clone(),
+            Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+        );
+        if let Some(set_ids_and_cate_codes) = rbum_set_rel_filter_req.set_ids_and_cate_codes.clone() {
+            let mut condition = Condition::any();
+            for set_id in set_ids_and_cate_codes.keys() {
+                let expr = Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumSetId)).eq(set_id.to_string()).and(if rbum_set_rel_filter_req.with_sub_set_cate_codes {
+                    Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", set_ids_and_cate_codes.get(set_id).unwrap()))
+                } else {
+                    Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumSetCateCode)).eq(set_ids_and_cate_codes.get(set_id).unwrap().to_string())
+                });
+                condition = condition.add(expr);
+            }
+            query.cond_where(condition);
+        }
+    }
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>;
 
     async fn peek_item(id: &str, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<SummaryResp> {

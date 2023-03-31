@@ -10,7 +10,6 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
-use bios_iam::basic::serv::iam_rel_serv::IamRelServ;
 use bios_iam::basic::serv::iam_set_serv::IamSetServ;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::{RBUM_SCOPE_LEVEL_GLOBAL, RBUM_SCOPE_LEVEL_PRIVATE, RBUM_SCOPE_LEVEL_TENANT};
