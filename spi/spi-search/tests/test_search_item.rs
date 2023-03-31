@@ -173,7 +173,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                     "apps":["003"]
                 },
                 "query":{
-                    "q": "类型 | 上传",
+                    "q": "类型 ｜ 上传",
                     "q_scope": "title_content",
                 },
                 "page":{"number":1,"size":10,"fetch_total":true}
