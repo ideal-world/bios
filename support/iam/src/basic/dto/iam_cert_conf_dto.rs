@@ -115,6 +115,7 @@ pub struct IamCertConfLdapAddOrModifyReq {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
     pub is_tls: bool,
+    pub timeout: Option<u64>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub principal: TrimString,
     #[oai(validator(min_length = "2", max_length = "2000"))]
@@ -138,6 +139,7 @@ pub struct IamCertConfLdapResp {
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub conn_uri: String,
     pub is_tls: bool,
+    pub timeout: u64,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub principal: String,
     #[oai(validator(min_length = "2", max_length = "2000"))]
