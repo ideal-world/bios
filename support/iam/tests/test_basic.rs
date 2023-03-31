@@ -2,7 +2,7 @@ use std::env;
 use tardis::basic::field::TrimString;
 
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
-use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, OrgFieldMap};
+use bios_iam::basic::serv::iam_cert_ldap_serv::AccountFieldMap;
 use tardis::basic::result::TardisResult;
 use tardis::testcontainers::clients::Cli;
 use tardis::testcontainers::core::{ExecCommand, WaitFor};
