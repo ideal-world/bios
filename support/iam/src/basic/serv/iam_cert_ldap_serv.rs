@@ -118,7 +118,15 @@ impl IamCertLdapServ {
     // todo 完善验证 验证ldap字段是否正确
     pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
-        let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, ldap_auth_info.timeout,&ldap_auth_info.base_dn).await.map_err(|e| {
+        let mut ldap_client = LdapClient::new(
+            &add_req.conn_uri,
+            ldap_auth_info.port,
+            ldap_auth_info.is_tls,
+            ldap_auth_info.timeout,
+            &ldap_auth_info.base_dn,
+        )
+        .await
+        .map_err(|e| {
             funs.err().bad_request(
                 "IamCertLdap",
                 "add",
@@ -328,7 +336,7 @@ impl IamCertLdapServ {
         if let Some(account_id) = Self::get_cert_rel_account_by_dn(dn, &cert_conf_id, funs, ctx).await? {
             return Ok((account_id, dn.to_string()));
         }
-        let mut ldap_client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls,cert_conf.timeout, &cert_conf.base_dn).await?;
+        let mut ldap_client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, cert_conf.timeout, &cert_conf.base_dn).await?;
         if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
@@ -880,7 +888,7 @@ impl IamCertLdapServ {
     async fn get_ldap_client(tenant_id: Option<String>, supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
         let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, tenant_id, funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
-        let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls,cert_conf.timeout, &cert_conf.base_dn).await?;
+        let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, cert_conf.timeout, &cert_conf.base_dn).await?;
         Ok((client, cert_conf, cert_conf_id))
     }
 
@@ -947,7 +955,7 @@ pub(crate) mod ldap {
             } else {
                 LdapConnSettings::new()
             };
-            setting=setting.set_conn_timeout(Duration::from_secs(time_out));
+            setting = setting.set_conn_timeout(Duration::from_secs(time_out));
             let url = if &url[url.len() - 1..] == "/" {
                 format!("{}:{port}", &url[..url.len() - 1])
             } else {

@@ -78,7 +78,6 @@ impl IamCsAccountApi {
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         role_ids: Query<Option<String>>,
-        app_ids: Query<Option<String>>,
         cate_ids: Query<Option<String>>,
         status: Query<Option<bool>>,
         tenant_id: Query<Option<String>>,
@@ -98,17 +97,6 @@ impl IamCsAccountApi {
                 tag: Some(IamRelKind::IamAccountRole.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 rel_item_ids: Some(role_ids),
-                ..Default::default()
-            }
-        });
-        let rel2 = app_ids.0.map(|app_ids| {
-            let app_ids = app_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
-            RbumItemRelFilterReq {
-                rel_by_from: true,
-                tag: Some(IamRelKind::IamAccountApp.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Item),
-                rel_item_ids: Some(app_ids),
-                own_paths: Some(ctx.own_paths.clone()),
                 ..Default::default()
             }
         });
@@ -148,7 +136,6 @@ impl IamCsAccountApi {
                     ..Default::default()
                 },
                 rel,
-                rel2,
                 set_rel,
                 ..Default::default()
             },
