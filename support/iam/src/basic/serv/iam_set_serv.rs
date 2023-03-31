@@ -207,10 +207,9 @@ impl IamSetServ {
         RbumSetCateServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
-    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
-        let resp = RbumSetServ::get_tree(set_id, filter, funs, ctx).await?;
-        Self::find_rel_set_cate(set_id, resp, filter, funs, ctx).await
+        RbumSetServ::get_tree(set_id, filter, funs, ctx).await
     }
     // find set_cate 对应的set_id,返回set_id下面set_cate
     // 返回的节点里面，如果有通过关联关系而来的cate（不属于此set_id的），会在ext中标识它真正的set_id
@@ -388,7 +387,7 @@ impl IamSetServ {
         }
         Ok(result)
     }
-    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let tree_with_account = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
@@ -405,11 +404,7 @@ impl IamSetServ {
         let tree_ext = tree_with_account.ext.as_ref().unwrap();
         let account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
         if account_rel_sys_codes.is_empty() {
-            return Ok(IamSetTreeResp {
-                main: vec![],
-                ext: None,
-                rel: None,
-            });
+            return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
         Self::get_tree(
             set_id,
