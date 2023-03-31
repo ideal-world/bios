@@ -31,7 +31,7 @@ pub struct PluginBsServ;
 
 impl PluginBsServ {
     pub async fn add_or_modify_plugin_rel_agg(bs_id: &str, app_tenant_id: &str, add_req: &mut PluginBsAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        if ctx.own_paths.contains(app_tenant_id) {
+        if !ctx.own_paths.contains(app_tenant_id) {
             return Err(funs.err().unauthorized(
                 "spi_bs",
                 "add_or_modify_plugin_rel_agg",
