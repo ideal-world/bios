@@ -181,7 +181,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 continue;
             }
             if scope_values.len() == 1 {
-                where_visit_keys_fragments.push(format!("visit_keys -> '{scope_key}' ? ${}", sql_vals.len() + 1));
+                where_visit_keys_fragments.push(format!("visit_keys -> '{scope_key}' IS NULL OR visit_keys -> '{scope_key}' ? ${}", sql_vals.len() + 1));
             } else {
                 where_visit_keys_fragments.push(format!(
                     "(visit_keys -> '{scope_key}' IS NULL OR visit_keys -> '{scope_key}' ?| array[{}])",
