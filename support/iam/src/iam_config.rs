@@ -90,10 +90,10 @@ pub struct IamSpiConfig {
 impl Default for IamSpiConfig {
     fn default() -> Self {
         IamSpiConfig {
-            schedule_url: "".to_string(),
-            search_url: "".to_string(),
+            schedule_url: "http://127.0.0.1:8080/schedule".to_string(),
+            search_url: "http://127.0.0.1:8080/spi-search".to_string(),
             search_account_tag: "iam_account".to_string(),
-            kv_url: "".to_string(),
+            kv_url: "http://127.0.0.1:8080/spi-kv".to_string(),
             kv_tenant_prefix: "iam_tenant".to_string(),
             kv_account_prefix: "iam_account".to_string(),
             kv_app_prefix: "iam_app".to_string(),
