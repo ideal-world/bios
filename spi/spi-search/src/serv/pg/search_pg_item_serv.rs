@@ -152,6 +152,17 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     let mut sql_vals: Vec<Value> = vec![];
 
     if let Some(q) = &search_req.query.q {
+        let q = q
+            .chars()
+            // Fixed like `syntax error in tsquery: "吴 林"`
+            .filter(|c| !c.is_whitespace())
+            .map(|c| match c {
+                '｜' => '|',
+                '＆' => '&',
+                '！' => '!',
+                _ => c,
+            })
+            .collect::<String>();
         sql_vals.push(Value::from(q.as_str()));
         from_fragments = format!(", to_tsquery('public.chinese_zh', ${}) AS query", sql_vals.len());
         match search_req.query.q_scope.as_ref().unwrap_or(&SearchItemSearchQScopeKind::Title) {
