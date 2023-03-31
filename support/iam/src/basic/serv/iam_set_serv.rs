@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_rel_agg_dto::RbumRelAggAddReq;
 use bios_basic::rbum::dto::rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp};
-use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq};
+use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeMainResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
 use bios_basic::rbum::helper::rbum_scope_helper;
@@ -196,6 +196,15 @@ impl IamSetServ {
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await
+    }
+    pub async fn find_set_cate(
+        filter: &RbumSetCateFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<Vec<RbumSetCateSummaryResp>> {
+        RbumSetCateServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
     pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {

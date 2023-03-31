@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::default::Default;
 
 use serde::{Deserialize, Serialize};
@@ -168,6 +169,7 @@ pub struct RbumItemRelFilterReq {
     pub tag: Option<String>,
     pub from_rbum_kind: Option<RbumRelFromKind>,
     pub rel_item_id: Option<String>,
+    pub rel_item_ids: Option<Vec<String>>,
     pub ext_eq: Option<String>,
     pub ext_like: Option<String>,
     pub own_paths: Option<String>,
@@ -177,6 +179,15 @@ pub trait RbumItemFilterFetcher {
     fn basic(&self) -> &RbumBasicFilterReq;
     fn rel(&self) -> &Option<RbumItemRelFilterReq>;
     fn rel2(&self) -> &Option<RbumItemRelFilterReq>;
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+pub struct RbumSetItemRelFilterReq {
+    //同时根据set_id cate_code 二元组限制
+    pub set_ids_and_cate_codes: Option<HashMap<String, String>>,
+    pub with_sub_set_cate_codes: bool,
+    pub rel_item_ids: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
