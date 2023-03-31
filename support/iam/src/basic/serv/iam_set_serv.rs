@@ -211,8 +211,10 @@ impl IamSetServ {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
         RbumSetServ::get_tree(set_id, filter, funs, ctx).await
     }
+    //todo bugfix
     // find set_cate 对应的set_id,返回set_id下面set_cate
     // 返回的节点里面，如果有通过关联关系而来的cate（不属于此set_id的），会在ext中标识它真正的set_id
+    #[allow(dead_code)]
     async fn find_rel_set_cate(set_id: &str, resp: RbumSetTreeResp, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
         let mut result_main: Vec<RbumSetTreeMainResp> = vec![];
         let mut resp_items = HashMap::new();

@@ -371,6 +371,7 @@ impl IamTenantServ {
                 supplier: ldap_conf.kind.clone(),
                 conn_uri: ldap_conf.conn_uri.clone(),
                 is_tls: conf.is_tls,
+                timeout: conf.timeout,
                 principal: conf.principal.clone(),
                 credentials: "".to_string(),
                 base_dn: conf.base_dn,
