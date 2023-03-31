@@ -132,12 +132,10 @@ impl SearchItemSearchCtxReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemQueryReq {
     // Fuzzy search content
-    #[oai(validator(min_length = "2"))]
     pub q: Option<String>,
     // Fuzzy search scope
     pub q_scope: Option<SearchItemSearchQScopeKind>,
     pub kinds: Option<Vec<String>>,
-    #[oai(validator(min_length = "2"))]
     // Match keys, support prefix match
     pub keys: Option<Vec<TrimString>>,
     #[oai(validator(min_length = "2"))]
