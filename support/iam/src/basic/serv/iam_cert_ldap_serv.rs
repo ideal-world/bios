@@ -1067,11 +1067,12 @@ mod tests {
     const LDAP_BASE_DN: &str = "ou=x,dc=x,dc=x";
     const LDAP_USER: &str = "cn=admin";
     const LDAP_PW: &str = "123456";
+    const LDAP_TIME_OUT: u64 = 5;
 
     #[tokio::test]
     #[ignore]
     async fn bind() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         let result = ldap.bind(LDAP_USER, LDAP_PW).await?;
         assert!(result.is_some());
         Ok(())
@@ -1080,7 +1081,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn search() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         let _result = ldap.search("(&(objectClass=inetOrgPerson)(cn=*130*))", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
@@ -1090,7 +1091,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn page_search() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         let _result = ldap.page_search(50, "objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
@@ -1100,7 +1101,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn unbind() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         ldap.unbind().await?;
         Ok(())
