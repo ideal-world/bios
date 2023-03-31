@@ -24,12 +24,16 @@ pub struct IamCsSpiDataApi;
 impl IamCsSpiDataApi {
     /// Do Init Data
     #[oai(path = "/", method = "put")]
-    async fn init_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn init_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         Self::do_init_spi_data(&funs, &ctx.0).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
     }
     async fn do_init_spi_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
