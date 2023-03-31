@@ -162,7 +162,7 @@ impl IamCertConfLdapResp {
             format!(
                 "(&({})(|({}=*{}*)({}=*{}*)))",
                 self.account_field_map.search_base_filter.clone().unwrap(),
-                self.account_unique_id,
+                self.account_field_map.field_user_name,
                 user_or_display_name,
                 self.account_field_map.field_display_name,
                 user_or_display_name
@@ -171,7 +171,7 @@ impl IamCertConfLdapResp {
             // such as `(|(cn=*test*)(displayName=*test*))`
             format!(
                 "(|({}=*{}*)({}=*{}*))",
-                self.account_unique_id, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
+                self.account_field_map.field_user_name, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
             )
         }
     }

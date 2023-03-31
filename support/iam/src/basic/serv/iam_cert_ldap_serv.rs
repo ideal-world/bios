@@ -975,7 +975,7 @@ pub(crate) mod ldap {
         }
 
         pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {
-            trace!("[Iam.Ldap] bind_by_dn: dn={dn}");
+            trace!("[Iam.Ldap] bind_by_dn dn:{dn}");
             let result = self.ldap.simple_bind(dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), ""))?.success().map(|_| ());
             if let Some(err) = result.err() {
                 warn!("[Iam.Ldap] ldap bind error: {:?}", err);
@@ -1065,9 +1065,19 @@ mod tests {
     const LDAP_PORT: u16 = 389;
     const LDAP_TLS: bool = false;
     const LDAP_BASE_DN: &str = "ou=x,dc=x,dc=x";
-    const LDAP_USER: &str = "cn=admin";
+    const LDAP_USER_DN: &str = "cn=admin,ou=x,dc=x,dc=x";
+    const LDAP_USER: &str = "admin";
     const LDAP_PW: &str = "123456";
     const LDAP_TIME_OUT: u64 = 5;
+
+    #[tokio::test]
+    #[ignore]
+    async fn bind_by_dn() -> TardisResult<()> {
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
+        let result = ldap.bind_by_dn(LDAP_USER_DN, LDAP_PW).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
 
     #[tokio::test]
     #[ignore]
