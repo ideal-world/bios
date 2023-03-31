@@ -20,8 +20,8 @@ impl Default for ScheduleConfig {
             rbum: RbumConfig::default(),
             app_key: AppKeyConfig::default(),
             spi_app_id: "".to_string(),
-            kv_url: "".to_string(),
-            log_url: "".to_string(),
+            kv_url: "http://127.0.0.1:8080/spi-kv".to_string(),
+            log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             cache_key_job_changed_info: "spi:job:changed:info:".to_string(),
             cache_key_job_changed_timer_sec: 30,
         }
