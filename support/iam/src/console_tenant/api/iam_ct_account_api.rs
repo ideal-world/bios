@@ -72,16 +72,17 @@ impl IamCtAccountApi {
 
     /// Find Accounts
     #[oai(path = "/", method = "get")]
+    #[allow(clippy::too_many_arguments)]
     async fn paginate(
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
         role_ids: Query<Option<String>>,
-        app_id: Query<Option<String>>,
         app_ids: Query<Option<String>>,
         cate_ids: Query<Option<String>>,
-        with_sub: Query<Option<bool>>,
         status: Query<Option<bool>>,
+        app_id: Query<Option<String>>,
+        with_sub: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
