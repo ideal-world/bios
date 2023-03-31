@@ -52,7 +52,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     )
     .await
     .unwrap();
-    assert_eq!(account_page.total_size, 1);
+    assert_eq!(account_page.total_size, 2);
 
     info!("【exec manual sync】");
     let error_msg = IamCertLdapServ::iam_sync_ldap_user_to_iam(
@@ -103,7 +103,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
 
     assert_eq!(account_ldap_cert.len() as u64, LDAP_ACCOUNT_NUB);
-    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 1);
+    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 2);
 
     info!("【delete ldap conf and cert】");
     IamCertServ::delete_cert_and_conf_by_conf_id(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
@@ -169,7 +169,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
     println!("================={:?}", account_page.records);
-    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB * 2 + 1);
+    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB * 2 + 2);
 
     funs.commit().await.unwrap();
 }
