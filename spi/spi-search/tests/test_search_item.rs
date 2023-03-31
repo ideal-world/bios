@@ -119,7 +119,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "q": "新增"
@@ -137,7 +137,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "q": "类型 & 上传"
@@ -153,7 +153,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "q": "类型 | 上传"
@@ -170,7 +170,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "q": "类型 | 上传",
@@ -191,7 +191,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -213,7 +213,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -235,7 +235,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -257,7 +257,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -280,7 +280,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "kinds": ["req","task"]
@@ -296,7 +296,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "kinds": ["task"]
@@ -314,7 +314,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                 },
@@ -331,7 +331,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -357,7 +357,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -384,7 +384,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003"
+                    "apps":["003"]
                 },
                 "query":{
                     "ext": [{
@@ -412,8 +412,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &json!({
                 "tag":"feed",
                 "ctx":{
-                    "app":"003",
-                    "tenant":"001",
+                    "apps":["003"],
+                    "tenants":["001"],
                     "roles":["root","sys"]
                 },
                 "query":{
