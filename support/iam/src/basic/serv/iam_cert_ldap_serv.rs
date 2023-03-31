@@ -118,7 +118,15 @@ impl IamCertLdapServ {
     // todo 完善验证 验证ldap字段是否正确
     pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
-        let mut ldap_client = LdapClient::new(&add_req.conn_uri, ldap_auth_info.port, ldap_auth_info.is_tls, &ldap_auth_info.base_dn).await.map_err(|e| {
+        let mut ldap_client = LdapClient::new(
+            &add_req.conn_uri,
+            ldap_auth_info.port,
+            ldap_auth_info.is_tls,
+            ldap_auth_info.timeout,
+            &ldap_auth_info.base_dn,
+        )
+        .await
+        .map_err(|e| {
             funs.err().bad_request(
                 "IamCertLdap",
                 "add",
@@ -126,7 +134,7 @@ impl IamCertLdapServ {
                 "400-iam--ldap-cert-add-parameter-incorrect",
             )
         })?;
-        if ldap_client.bind(&ldap_auth_info.principal, &ldap_auth_info.credentials).await?.is_none() {
+        if ldap_client.bind_by_dn(&ldap_auth_info.principal, &ldap_auth_info.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
         }
@@ -157,6 +165,7 @@ impl IamCertLdapServ {
                 supplier: resp.supplier,
                 conn_uri: resp.conn_uri,
                 is_tls: info.is_tls,
+                timeout: info.timeout,
                 principal: info.principal,
                 credentials: info.credentials,
                 base_dn: info.base_dn,
@@ -181,6 +190,7 @@ impl IamCertLdapServ {
                     supplier: resp.supplier,
                     conn_uri: resp.conn_uri,
                     is_tls: info.is_tls,
+                    timeout: info.timeout,
                     principal: info.principal,
                     credentials: info.credentials,
                     base_dn: info.base_dn,
@@ -326,8 +336,8 @@ impl IamCertLdapServ {
         if let Some(account_id) = Self::get_cert_rel_account_by_dn(dn, &cert_conf_id, funs, ctx).await? {
             return Ok((account_id, dn.to_string()));
         }
-        let mut ldap_client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, &cert_conf.base_dn).await?;
-        if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
+        let mut ldap_client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, cert_conf.timeout, &cert_conf.base_dn).await?;
+        if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
         };
@@ -391,7 +401,7 @@ impl IamCertLdapServ {
         ctx: &TardisContext,
     ) -> TardisResult<Vec<IamAccountExtSysResp>> {
         let (mut ldap_client, cert_conf, _) = Self::get_ldap_client(tenant_id, code, funs, ctx).await?;
-        if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
+        if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("rbum_cert", "search_accounts", "ldap admin validation error", "401-rbum-cert-valid-error"));
         };
@@ -603,7 +613,7 @@ impl IamCertLdapServ {
     pub async fn iam_sync_ldap_user_to_iam(sync_config: IamThirdIntegrationConfigDto, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut msg = "".to_string();
         let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
-        if ldap_client.bind(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
+        if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
         }
@@ -878,7 +888,7 @@ impl IamCertLdapServ {
     async fn get_ldap_client(tenant_id: Option<String>, supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(LdapClient, IamCertConfLdapResp, String)> {
         let cert_conf_id = IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(), supplier, tenant_id, funs).await?;
         let cert_conf = Self::get_cert_conf(&cert_conf_id, funs, ctx).await?;
-        let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, &cert_conf.base_dn).await?;
+        let client = LdapClient::new(&cert_conf.conn_uri, cert_conf.port, cert_conf.is_tls, cert_conf.timeout, &cert_conf.base_dn).await?;
         Ok((client, cert_conf, cert_conf_id))
     }
 
@@ -925,11 +935,13 @@ impl IamCertLdapServ {
 
 pub(crate) mod ldap {
     use std::collections::HashMap;
+    use std::time::Duration;
 
     use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry};
     use serde::{Deserialize, Serialize};
     use tardis::basic::{error::TardisError, result::TardisResult};
+    use tardis::log::trace;
 
     pub struct LdapClient {
         ldap: Ldap,
@@ -937,12 +949,13 @@ pub(crate) mod ldap {
     }
 
     impl LdapClient {
-        pub async fn new(url: &str, port: u16, tls: bool, base_dn: &str) -> TardisResult<LdapClient> {
-            let setting = if tls {
+        pub async fn new(url: &str, port: u16, tls: bool, time_out: u64, base_dn: &str) -> TardisResult<LdapClient> {
+            let mut setting = if tls {
                 LdapConnSettings::new().set_starttls(true).set_no_tls_verify(true)
             } else {
                 LdapConnSettings::new()
             };
+            setting = setting.set_conn_timeout(Duration::from_secs(time_out));
             let url = if &url[url.len() - 1..] == "/" {
                 format!("{}:{port}", &url[..url.len() - 1])
             } else {
@@ -958,16 +971,22 @@ pub(crate) mod ldap {
 
         pub async fn bind(&mut self, cn: &str, pw: &str) -> TardisResult<Option<String>> {
             let dn = format!("cn={},{}", cn, self.base_dn);
-            let result = self.ldap.simple_bind(&dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), ""))?.success().map(|_| ());
+            self.bind_by_dn(&dn, pw).await
+        }
+
+        pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {
+            trace!("[Iam.Ldap] bind_by_dn: dn={dn}");
+            let result = self.ldap.simple_bind(dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), ""))?.success().map(|_| ());
             if let Some(err) = result.err() {
                 warn!("[Iam.Ldap] ldap bind error: {:?}", err);
                 Ok(None)
             } else {
-                Ok(Some(dn))
+                Ok(Some(dn.to_string()))
             }
         }
 
         pub async fn search(&mut self, filter: &str, return_attr: &Vec<&str>) -> TardisResult<Vec<LdapSearchResp>> {
+            trace!("[Iam.Ldap] search filter: {filter} base_dn: {}", self.base_dn);
             let (rs, _) = self
                 .ldap
                 .search(&self.base_dn, Scope::Subtree, filter, return_attr)
@@ -980,6 +999,7 @@ pub(crate) mod ldap {
         }
 
         pub async fn page_search(&mut self, page_size: i32, filter: &str, return_attr: &Vec<&str>) -> TardisResult<Vec<LdapSearchResp>> {
+            trace!("[Iam.Ldap] page_search filter: {filter} base_dn: {}", self.base_dn);
             let adapters: Vec<Box<dyn Adapter<_, _>>> = vec![Box::new(EntriesOnly::new()), Box::new(PagedResults::new(page_size))];
             let mut search = self
                 .ldap
@@ -1047,11 +1067,12 @@ mod tests {
     const LDAP_BASE_DN: &str = "ou=x,dc=x,dc=x";
     const LDAP_USER: &str = "cn=admin";
     const LDAP_PW: &str = "123456";
+    const LDAP_TIME_OUT: u64 = 5;
 
     #[tokio::test]
     #[ignore]
     async fn bind() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         let result = ldap.bind(LDAP_USER, LDAP_PW).await?;
         assert!(result.is_some());
         Ok(())
@@ -1060,7 +1081,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn search() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         let _result = ldap.search("(&(objectClass=inetOrgPerson)(cn=*130*))", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
@@ -1070,7 +1091,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn page_search() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         let _result = ldap.page_search(50, "objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
@@ -1080,7 +1101,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn unbind() -> TardisResult<()> {
-        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_BASE_DN).await?;
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         ldap.unbind().await?;
         Ok(())
@@ -1092,6 +1113,9 @@ struct IamCertLdapServerAuthInfo {
     // server_uri is in RbumCertConf's conn_uri
     pub port: u16,
     pub is_tls: bool,
+    // sec
+    pub timeout: u64,
+    // such as: "cn=ldap_server,cn=ldap_servers,cn=config"
     pub principal: String,
     pub credentials: String,
     pub base_dn: String,
@@ -1107,6 +1131,7 @@ impl From<IamCertConfLdapAddOrModifyReq> for IamCertLdapServerAuthInfo {
         IamCertLdapServerAuthInfo {
             port: v.port.unwrap_or(if v.is_tls { 636 } else { 389 }),
             is_tls: v.is_tls,
+            timeout: v.timeout.unwrap_or(5),
             principal: v.principal.to_string(),
             credentials: v.credentials.to_string(),
             base_dn: v.base_dn.to_string(),

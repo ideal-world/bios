@@ -682,13 +682,16 @@ impl IamAccountServ {
         }
         #[cfg(feature = "spi_search")]
         {
+            let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
+            let key = account_id.to_string();
             let mut search_body = json!({
-                "tag": funs.conf::<IamConfig>().spi.search_account_tag.clone(),
-                "key": account_id.to_string(),
+                "tag": tag,
+                "key": key,
                 "title": account_resp.name.clone(),
                 "kind": funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 "content": format!("{},{:?}", account_resp.name, account_certs,),
                 "owner": funs.conf::<IamConfig>().spi.owner.clone(),
+                "create_time":account_resp.create_time.to_rfc3339(),
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": !account_resp.disabled,
@@ -697,9 +700,7 @@ impl IamAccountServ {
                     "icon":account_resp.icon
                 },
             });
-            if !is_modify {
-                search_body.as_object_mut().unwrap().insert("create_time".to_string(), serde_json::Value::from(account_resp.create_time.to_rfc3339()));
-            }
+
             if !account_resp.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
@@ -714,7 +715,12 @@ impl IamAccountServ {
                 );
             }
             //add search
-            funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
+            if is_modify {
+                search_body.as_object_mut().unwrap().insert("ext_override".to_string(), serde_json::Value::from(true));
+                funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/{key}"), &search_body, headers.clone()).await.unwrap();
+            } else {
+                funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
+            }
         }
         Ok(())
     }

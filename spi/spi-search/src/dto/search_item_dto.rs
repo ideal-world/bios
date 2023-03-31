@@ -99,12 +99,9 @@ pub struct SearchItemSearchReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct SearchItemSearchCtxReq {
-    #[oai(validator(min_length = "2"))]
-    pub account: Option<String>,
-    #[oai(validator(min_length = "2"))]
-    pub app: Option<String>,
-    #[oai(validator(min_length = "2"))]
-    pub tenant: Option<String>,
+    pub accounts: Option<Vec<String>>,
+    pub apps: Option<Vec<String>>,
+    pub tenants: Option<Vec<String>>,
     pub roles: Option<Vec<String>>,
     pub groups: Option<Vec<String>>,
     pub cond_by_or: Option<bool>,
@@ -113,14 +110,14 @@ pub struct SearchItemSearchCtxReq {
 impl SearchItemSearchCtxReq {
     pub fn to_sql(&self) -> HashMap<&str, Vec<String>> {
         let mut sqls = HashMap::new();
-        if let Some(account) = &self.account {
-            sqls.insert("accounts", vec![account.clone()]);
+        if let Some(accounts) = &self.accounts {
+            sqls.insert("accounts", accounts.clone());
         }
-        if let Some(app) = &self.app {
-            sqls.insert("apps", vec![app.clone()]);
+        if let Some(apps) = &self.apps {
+            sqls.insert("apps", apps.clone());
         }
-        if let Some(tenant) = &self.tenant {
-            sqls.insert("tenants", vec![tenant.clone()]);
+        if let Some(tenants) = &self.tenants {
+            sqls.insert("tenants", tenants.clone());
         }
         if let Some(roles) = &self.roles {
             sqls.insert("roles", roles.clone());
