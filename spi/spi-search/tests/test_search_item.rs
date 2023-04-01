@@ -76,7 +76,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "own_paths":"t001/a002",
                 "create_time":"2022-09-26T23:23:59.000Z",
                 "update_time": "2022-09-27T01:20:20.000Z",
-                "ext":{"start_time":"2022-09-25T14:23:20.000Z","end_time":"2022-09-30T14:23:20.000Z","rel_accounts":["acc03","acc04"],"version":"1.3"},
+                "ext":{"start_time":"2022-09-25T14:23:20.000Z","end_time":"2022-09-30T14:23:20.000Z","rel_accounts":["acc03","acc04"],"version":"1.3","int":1,"bool":false,"float":1.1},
                 "visit_keys":{"apps":["003"],"tenants":["001"],"roles":["sys","admin"]}
             }),
         )
@@ -273,6 +273,36 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(search_result.total_size, 2);
     assert_eq!(search_result.records[0].key, "002");
     assert_eq!(search_result.records[1].key, "003");
+    // search ext with some types
+    let search_result: TardisPage<SearchItemSearchResp> = client
+        .put(
+            "/ci/item/search",
+            &json!({
+                "tag":"feed",
+                "ctx":{
+                    "apps":["003"]
+                },
+                "query":{
+                    "ext": [{
+                        "field":"int",
+                        "op":"=",
+                        "value":1
+                    },{
+                        "field":"bool",
+                        "op":"=",
+                        "value":false
+                    },{
+                        "field":"float",
+                        "op":"=",
+                        "value":1.1
+                    }]
+                },
+                "page":{"number":1,"size":10,"fetch_total":true}
+            }),
+        )
+        .await;
+    assert_eq!(search_result.total_size, 1);
+    assert_eq!(search_result.records[0].key, "003");
 
     let search_result: TardisPage<SearchItemSearchResp> = client
         .put(

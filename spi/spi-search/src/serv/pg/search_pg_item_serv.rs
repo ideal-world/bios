@@ -295,8 +295,34 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     sql_vals.push(val);
                 }
             } else {
-                sql_vals.push(value.pop().unwrap());
-                where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len()));
+                let value = value.pop().unwrap();
+                if let Value::Bool(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::TinyInt(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::SmallInt(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Int(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::BigInt(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::TinyUnsigned(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::SmallUnsigned(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Unsigned(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::BigUnsigned(_) = value {
+                    // TODO
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Float(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Double(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else {
+                    where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                }
+                sql_vals.push(value);
             }
         }
     }
