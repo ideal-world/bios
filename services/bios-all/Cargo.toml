@@ -12,11 +12,7 @@ publish.workspace = true
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = [
-    "web-server",
-    "conf-remote",
-    "reldb-mysql",
-] }
+tardis = { workspace = true, features = ["web-server", "conf-remote"] }
 bios-iam = { path = "../../support/iam", features = ["spi_search", "spi_kv"] }
 bios-auth = { path = "../../support/auth" }
 
@@ -30,4 +26,4 @@ bios-spi-reldb = { path = "../../spi/spi-reldb" }
 bios-spi-search = { path = "../../spi/spi-search" }
 bios-spi-stats = { path = "../../spi/spi-stats" }
 
-bios-mw-schedule={path="../../middleware/schedule"}
+bios-mw-schedule = { path = "../../middleware/schedule" }
