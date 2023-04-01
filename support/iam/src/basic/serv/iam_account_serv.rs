@@ -683,6 +683,13 @@ impl IamAccountServ {
         {
             let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
             let key = account_id.to_string();
+            let raw_roles = Self::find_simple_rel_roles(&account_resp.id, true, Some(true), None, funs, ctx).await?;
+            let mut account_roles: Vec<RbumRelBoneResp> = vec![];
+            for role in raw_roles {
+                if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                    account_roles.push(role)
+                }
+            }
             let mut search_body = json!({
                 "tag": tag,
                 "key": key,
@@ -694,13 +701,14 @@ impl IamAccountServ {
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": !account_resp.disabled,
+                    "roles": account_roles,
+                    "groups": account_resp.orgs,
+                    "apps": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
                     "icon":account_resp.icon
                 },
             });
-            #[allow(clippy::map_clone)]
-            let account_roles = account_resp.roles.keys().map(|k| k.clone()).collect::<Vec<String>>();
             if !account_resp.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
