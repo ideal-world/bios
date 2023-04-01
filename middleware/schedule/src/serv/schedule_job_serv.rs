@@ -48,7 +48,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
                 ("content", "add job"),
                 ("key", &code),
                 ("op", "add"),
-                ("ts", &Utc::now().format("%a, %d %b %Y %T GMT").to_string()),
+                ("ts", &Utc::now().to_rfc3339()),
             ]),
             headers.clone(),
         )
@@ -82,7 +82,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
                 ("content", "delete job"),
                 ("key", code),
                 ("op", "d"),
-                ("ts", &Utc::now().format("%a, %d %b %Y %T GMT").to_string()),
+                ("ts", &Utc::now().to_rfc3339()),
             ]),
             headers.clone(),
         )
@@ -160,10 +160,10 @@ pub(crate) async fn find_task(
         (page_size * 2)
     );
     if let Some(ts_start) = ts_start {
-        url += &format!("&ts_start={}", ts_start.format("%a, %d %b %Y %T GMT"));
+        url += &format!("&ts_start={}", ts_start.to_rfc3339());
     }
     if let Some(ts_end) = ts_end {
-        url += &format!("&ts_end={}", ts_end.format("%a, %d %b %Y %T GMT"));
+        url += &format!("&ts_end={}", ts_end.to_rfc3339());
     }
     let resp = funs.web_client().get::<TardisPage<ScheduleTaskLogFindResp>>(&url, headers).await.unwrap();
     if resp.code != 200 {
@@ -261,11 +261,11 @@ impl ScheduleTaskServ {
                     .post_obj_to_str(
                         &format!("{log_url}/ci/item"),
                         &HashMap::from([
-                            ("tag", "schedule:tesk"),
+                            ("tag", "schedule:task"),
                             ("content", ""),
                             ("key", &code),
                             ("op", "exec-start"),
-                            ("ts", &Utc::now().format("%a, %d %b %Y %T GMT").to_string()),
+                            ("ts", &Utc::now().to_rfc3339()),
                         ]),
                         headers.clone(),
                     )
@@ -276,11 +276,11 @@ impl ScheduleTaskServ {
                     .post_obj_to_str(
                         &format!("{log_url}/ci/item"),
                         &HashMap::from([
-                            ("tag", "schedule:tesk"),
+                            ("tag", "schedule:task"),
                             ("content", task_msg.body.unwrap().as_str()),
                             ("key", &code),
                             ("op", "exec-end"),
-                            ("ts", &Utc::now().format("%a, %d %b %Y %T GMT").to_string()),
+                            ("ts", &Utc::now().to_rfc3339()),
                         ]),
                         headers,
                     )

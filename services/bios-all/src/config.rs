@@ -10,6 +10,7 @@ use bios_spi_stats::stats_config::StatsConfig;
 use tardis::serde::{Deserialize, Serialize};
 
 use bios_iam::iam_config::IamConfig;
+use bios_mw_schedule::schedule_config::ScheduleConfig;
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -24,4 +25,5 @@ pub struct BiosConfig {
     pub reldb: ReldbConfig,
     pub search: SearchConfig,
     pub stats: StatsConfig,
+    pub schedule: ScheduleConfig,
 }
