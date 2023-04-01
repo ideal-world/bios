@@ -10,7 +10,7 @@ mod initializer;
 ///
 #[tokio::main]
 async fn main() -> TardisResult<()> {
-    // env::set_var("RUST_LOG", "debug,tardis=trace,sqlx=off,bios=trace,hyper::proto=off,sqlparser::parser=off");
+    // env::set_var("RUST_LOG", "debug,tardis=trace,sqlx=off,bios=bios-serv-all,hyper::proto=off,sqlparser::parser=off");
     TardisFuns::init("config").await?;
     let web_server = TardisFuns::web_server();
     initializer::init(web_server).await?;
