@@ -62,7 +62,7 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         )
         .await
         .unwrap();
-    ScheduleTaskServ::add(&log_url, add_or_modify).await?;
+    ScheduleTaskServ::add(&log_url, add_or_modify, &funs.conf::<ScheduleConfig>().clone()).await?;
     Ok(())
 }
 
@@ -215,7 +215,7 @@ pub(crate) async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRe
                 while let Some(changed_key) = res_iter.next_item().await {
                     if let Some(job_cache) = cache_client.get(&changed_key).await.unwrap() {
                         let job_json: ScheduleJobAddOrModifyReq = TardisFuns::json.str_to_obj(&job_cache).unwrap();
-                        ScheduleTaskServ::add(&log_url, job_json).await.unwrap();
+                        ScheduleTaskServ::add(&log_url, job_json, &config).await.unwrap();
                     } else {
                         ScheduleTaskServ::delete(&changed_key).await.unwrap();
                     }
@@ -230,7 +230,7 @@ pub(crate) async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRe
 pub struct ScheduleTaskServ;
 
 impl ScheduleTaskServ {
-    pub async fn add(log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq) -> TardisResult<()> {
+    pub async fn add(log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
         let mut scheds = SCHED.write().await;
         if let Some(_uuid) = scheds.get(&add_or_modify.code.0.clone()) {
             Self::delete(&add_or_modify.code.0).await?;
@@ -241,7 +241,7 @@ impl ScheduleTaskServ {
         let ctx = TardisContext {
             own_paths: "".to_string(),
             ak: "".to_string(),
-            owner: "".to_string(),
+            owner: config.spi_app_id.clone(),
             roles: vec![],
             groups: vec![],
             ..Default::default()
