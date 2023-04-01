@@ -684,10 +684,10 @@ impl IamAccountServ {
             let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
             let key = account_id.to_string();
             let raw_roles = Self::find_simple_rel_roles(&account_resp.id, true, Some(true), None, funs, ctx).await?;
-            let mut account_roles: Vec<RbumRelBoneResp> = vec![];
+            let mut account_roles: Vec<String> = vec![];
             for role in raw_roles {
                 if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                    account_roles.push(role)
+                    account_roles.push(role.rel_id)
                 }
             }
             let mut search_body = json!({
