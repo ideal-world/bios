@@ -17,6 +17,7 @@
 404-iam-cert-kind-not-exist	凭证类型不存在
 404-iam-cert-oauth-kind-not-exist	凭证类型不存在
 404-iam-cert-set-cate-kind-not-exist	菜单类型不存在
+404-iam-cert-phone-not-exist	手机凭证不存在
 401-iam-cert-valid	凭证激活错误
 401-iam-cert-code-not-exist	凭证编码不存在
 400-iam-cert-ak-len-incorrect	凭证名长度不正确

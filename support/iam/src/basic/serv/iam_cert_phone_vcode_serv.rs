@@ -293,9 +293,9 @@ impl IamCertPhoneVCodeServ {
             &mock_ctx,
         )
         .await?
-            > 0
+            == 0
         {
-            return Err(funs.err().unauthorized("iam_cert_phone_vcode", "activate", "phone already exist", "401-iam-cert-valid"));
+            return Err(funs.err().not_found("iam_cert_phone_vcode", "activate", "phone not fond", "404-iam-cert-phone-not-exist"));
         }
 
         let vcode = Self::get_vcode();
