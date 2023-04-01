@@ -21,7 +21,6 @@ spi-pg = ["tardis/reldb-postgres"]
 [dependencies]
 serde.workspace = true
 async-trait.workspace = true
-lazy_static.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 
