@@ -193,6 +193,7 @@ pub(crate) async fn find_task(
     })
 }
 
+#[allow(dead_code)]
 pub(crate) async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let cache_client = funs.cache();
     let config = funs.conf::<ScheduleConfig>().clone();

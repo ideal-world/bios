@@ -72,7 +72,13 @@ impl IamCsSpiDataApi {
                         }
                         i += 1;
                         for app in page.records {
-                            SpiKvClient::add_or_modify_item(&app.id, &app.name.clone(), &funs, &task_ctx).await?;
+                            SpiKvClient::add_or_modify_key_name(
+                                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone(), app.id),
+                                &app.name.clone(),
+                                &funs,
+                                &task_ctx,
+                            )
+                            .await?;
                         }
                     }
                     //tenant kv
@@ -103,7 +109,13 @@ impl IamCsSpiDataApi {
                         }
                         i += 1;
                         for tenant in page.records {
-                            SpiKvClient::add_or_modify_item(&tenant.id, &tenant.name.clone(), &funs, &task_ctx).await?;
+                            SpiKvClient::add_or_modify_key_name(
+                                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone(), tenant.name),
+                                &tenant.name.clone(),
+                                &funs,
+                                &task_ctx,
+                            )
+                            .await?;
                         }
                     }
                     //account kv
