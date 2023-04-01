@@ -701,7 +701,7 @@ impl IamAccountServ {
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": !account_resp.disabled,
-                    "roles": account_roles,
+                    "role_id": account_roles,
                     "dept_id": account_resp.orgs,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
