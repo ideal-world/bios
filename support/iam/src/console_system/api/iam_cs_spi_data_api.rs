@@ -67,7 +67,7 @@ impl IamCsSpiDataApi {
                             &task_ctx,
                         )
                         .await?;
-                        if page.total_size / 100 <= i as u64 {
+                        if page.total_size / 100 < i as u64 {
                             next = false;
                         }
                         i += 1;
@@ -98,7 +98,7 @@ impl IamCsSpiDataApi {
                             &task_ctx,
                         )
                         .await?;
-                        if page.total_size / 100 <= i as u64 {
+                        if page.total_size / 100 < i as u64 {
                             next = false;
                         }
                         i += 1;
@@ -129,7 +129,7 @@ impl IamCsSpiDataApi {
                             &task_ctx,
                         )
                         .await?;
-                        if page.total_size / 100 <= i as u64 {
+                        if page.total_size / 100 < i as u64 {
                             next = false;
                         }
                         i += 1;
