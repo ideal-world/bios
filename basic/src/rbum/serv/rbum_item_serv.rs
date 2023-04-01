@@ -8,7 +8,7 @@ use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::{self, IdenStatic};
-use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
+use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON, Type};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -514,6 +514,13 @@ where
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
                     query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).eq(rel_item_id.to_string()));
                 }
+                if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
+                    if rel_item_ids.len() == 1 {
+                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).eq(rel_item_ids.first().unwrap().to_string()));
+                    } else if !rel_item_ids.is_empty() {
+                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).is_in(rel_item_ids));
+                    }
+                }
             } else {
                 if rbum_item_rel_filter_req.is_left {
                     query.join_as(
@@ -532,6 +539,13 @@ where
                 }
                 if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
                     query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).eq(rel_item_id.to_string()));
+                }
+                if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
+                    if rel_item_ids.len() == 1 {
+                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).eq(rel_item_ids.first().unwrap().to_string()));
+                    } else if !rel_item_ids.is_empty() {
+                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).is_in(rel_item_ids));
+                    }
                 }
             }
             if let Some(tag) = &rbum_item_rel_filter_req.tag {
