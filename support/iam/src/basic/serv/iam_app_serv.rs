@@ -280,7 +280,7 @@ impl IamAppServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_item(
+        SpiKvClient::add_or_modify_key_name(
             &format!("{}:{app_id}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone()),
             names.first().unwrap(),
             funs,

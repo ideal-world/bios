@@ -141,7 +141,7 @@ impl IamCertLdapServ {
         let result = ldap_client
             .page_search(
                 5,
-                &ldap_auth_info.account_field_map.search_base_filter.unwrap_or("objectClass=Person".to_string()),
+                &ldap_auth_info.account_field_map.search_base_filter.unwrap_or("objectClass=person".to_string()),
                 &vec![
                     "dn",
                     &ldap_auth_info.account_field_map.field_user_name,
