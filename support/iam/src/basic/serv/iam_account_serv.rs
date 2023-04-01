@@ -699,22 +699,18 @@ impl IamAccountServ {
                     "icon":account_resp.icon
                 },
             });
-
+            #[allow(clippy::map_clone)]
+            let account_roles = account_resp.roles.keys().map(|k| k.clone()).collect::<Vec<String>>();
             if !account_resp.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
             if account_app_ids.is_empty() && account_resp.orgs.is_empty() && account_resp.own_paths.is_empty() {
-                search_body.as_object_mut().unwrap().insert(
-                    "visit_keys".to_string(),
-                    json!({
-                        "roles": account_resp.roles
-                    }),
-                );
+                search_body.as_object_mut().unwrap().insert("visit_keys".to_string(), json!({ "roles": account_roles }));
             } else {
                 search_body.as_object_mut().unwrap().insert(
                     "visit_keys".to_string(),
                     json!({
-                        "roles": account_resp.roles,
+                        "roles": account_roles,
                         "apps": account_app_ids,
                         "groups": account_resp.orgs,
                         "tenants" : [ account_resp.own_paths ]
