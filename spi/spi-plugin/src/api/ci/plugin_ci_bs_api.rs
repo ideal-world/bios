@@ -112,6 +112,14 @@ impl PluginCiBsApi {
         TardisResp::ok(result)
     }
 
+    /// Get Plugin Service Rel App/Tenant Support empty
+    #[oai(path = "/:id/rel/:app_tenant_id/empty", method = "get")]
+    async fn get_empty_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<PluginBsInfoResp> {
+        let funs = request.tardis_fun_inst();
+        let result = PluginBsServ::get_bs(&id.0, &app_tenant_id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
     /// Get Plugin Service Rel App/Tenant
     #[oai(path = "/:id/rel/:app_tenant_id", method = "get")]
     async fn get_bs_rel_agg(&self, id: Path<String>, app_tenant_id: Path<String>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<PluginBsInfoResp> {
