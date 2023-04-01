@@ -261,7 +261,7 @@ impl ScheduleTaskServ {
                     .post_obj_to_str(
                         &format!("{log_url}/ci/item"),
                         &HashMap::from([
-                            ("tag", "schedule:tesk"),
+                            ("tag", "schedule:task"),
                             ("content", ""),
                             ("key", &code),
                             ("op", "exec-start"),
@@ -276,7 +276,7 @@ impl ScheduleTaskServ {
                     .post_obj_to_str(
                         &format!("{log_url}/ci/item"),
                         &HashMap::from([
-                            ("tag", "schedule:tesk"),
+                            ("tag", "schedule:task"),
                             ("content", task_msg.body.unwrap().as_str()),
                             ("key", &code),
                             ("op", "exec-end"),
