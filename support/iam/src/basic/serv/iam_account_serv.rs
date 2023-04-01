@@ -707,7 +707,7 @@ impl IamAccountServ {
                 search_body.as_object_mut().unwrap().insert(
                     "visit_keys".to_string(),
                     json!({
-                        "roles": account_resp.roles,
+                        "roles": account_resp.roles
                     }),
                 );
             } else {
