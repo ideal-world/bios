@@ -8,7 +8,7 @@ use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::sea_query::*;
 use tardis::db::sea_orm::*;
 use tardis::db::sea_orm::{self, IdenStatic};
-use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON, Type};
+use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
