@@ -685,31 +685,34 @@ impl IamCertLdapServ {
             funs.begin().await?;
             let local_ldap_id = cert.ak;
             if let Some(iam_account_ext_sys_resp) = ldap_id_to_account_map.get(&local_ldap_id) {
-                //并集 两边都有相
+                //并集 两边都有相同的账号
+
                 //更新用户名
-                let modify_result = IamAccountServ::modify_account_agg(
-                    &cert.rel_rbum_id,
-                    &IamAccountAggModifyReq {
-                        name: Some(TrimString(iam_account_ext_sys_resp.display_name.clone())),
-                        scope_level: None,
-                        disabled: None,
-                        icon: None,
-                        role_ids: None,
-                        org_cate_ids: None,
-                        exts: None,
-                    },
-                    &funs,
-                    ctx,
-                )
-                .await;
-                if modify_result.is_err() {
-                    let err_msg = format!("modify user name id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
-                    tardis::log::error!("{}", err_msg);
-                    msg = format!("{msg}{err_msg}\n");
-                    funs.rollback().await?;
-                    ldap_id_to_account_map.remove(&local_ldap_id);
-                    continue;
-                }
+                // let modify_result = IamAccountServ::modify_account_agg(
+                //     &cert.rel_rbum_id,
+                //     &IamAccountAggModifyReq {
+                //         name: Some(TrimString(iam_account_ext_sys_resp.display_name.clone())),
+                //         scope_level: None,
+                //         disabled: None,
+                //         icon: None,
+                //         role_ids: None,
+                //         org_cate_ids: None,
+                //         exts: None,
+                //     },
+                //     &funs,
+                //     ctx,
+                // )
+                // .await;
+                // if modify_result.is_err() {
+                //     let err_msg = format!("modify user name id:{} failed:{}", cert.rel_rbum_id, modify_result.err().unwrap());
+                //     tardis::log::error!("{}", err_msg);
+                //     msg = format!("{msg}{err_msg}\n");
+                //     funs.rollback().await?;
+                //     ldap_id_to_account_map.remove(&local_ldap_id);
+                //     continue;
+                // }
+
+                // 如果有手机号配置那么就更新手机号
                 let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
                 if let Some(phone_cert) = RbumCertServ::find_one_rbum(
                     &RbumCertFilterReq {
