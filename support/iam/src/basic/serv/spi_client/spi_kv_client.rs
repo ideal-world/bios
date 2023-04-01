@@ -33,4 +33,30 @@ impl SpiKvClient {
             .unwrap();
         Ok(())
     }
+
+    pub async fn add_or_modify_key_name(key: &str, name: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let kv_url = funs.conf::<IamConfig>().spi.kv_url.clone();
+        if kv_url.is_empty() {
+            return Ok(());
+        }
+        let spi_ctx = TardisContext {
+            owner: funs.conf::<IamConfig>().spi.owner.clone(),
+            ..ctx.clone()
+        };
+        let headers = Some(vec![(
+            "Tardis-Context".to_string(),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+        )]);
+
+        //add kv
+        funs.web_client()
+            .put_obj_to_str(
+                &format!("{kv_url}/ci/scene/key-name"),
+                &HashMap::from([("key", key.to_string()), ("name", name.to_string())]),
+                headers.clone(),
+            )
+            .await
+            .unwrap();
+        Ok(())
+    }
 }

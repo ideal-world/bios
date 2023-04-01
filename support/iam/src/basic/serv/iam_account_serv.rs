@@ -36,6 +36,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
+use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
 
@@ -659,7 +660,6 @@ impl IamAccountServ {
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let search_url = funs.conf::<IamConfig>().spi.search_url.clone();
-        let kv_url = funs.conf::<IamConfig>().spi.kv_url.clone();
         let spi_ctx = TardisContext {
             owner: funs.conf::<IamConfig>().spi.owner.clone(),
             ..ctx.clone()
@@ -671,14 +671,13 @@ impl IamAccountServ {
         #[cfg(feature = "spi_kv")]
         {
             //add kv
-            funs.web_client()
-                .put_obj_to_str(
-                    &format!("{kv_url}/ci/item"),
-                    &HashMap::from([("key", account_id), ("value", &account_resp.name)]),
-                    headers.clone(),
-                )
-                .await
-                .unwrap();
+            SpiKvClient::add_or_modify_key_name(
+                &format!("{}:{}", funs.conf::<IamConfig>().spi.kv_account_prefix.clone(), account_id),
+                &account_resp.name,
+                funs,
+                ctx,
+            )
+            .await?;
         }
         #[cfg(feature = "spi_search")]
         {
