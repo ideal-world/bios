@@ -15,8 +15,6 @@ serde.workspace = true
 tardis = { workspace = true, features = [
     "web-server",
     "conf-remote",
-    "reldb-postgres",
-    "test",
 ] }
 bios-basic = { path = "../../basic", features = ["test"] }
 bios-spi-cache = { path = "../../spi/spi-cache" }
