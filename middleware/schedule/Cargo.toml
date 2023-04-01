@@ -20,7 +20,6 @@ spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde.workspace = true
-async-trait.workspace = true
 lazy_static.workspace = true
 tokio-cron-scheduler = "*"
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
