@@ -696,14 +696,14 @@ impl IamAccountServ {
                 "title": account_resp.name.clone(),
                 "kind": funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 "content": format!("{},{:?}", account_resp.name, account_certs,),
-                "owner": funs.conf::<IamConfig>().spi.owner.clone(),
+                "owner": account_resp.owner,
                 "create_time":account_resp.create_time.to_rfc3339(),
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": !account_resp.disabled,
                     "roles": account_roles,
-                    "groups": account_resp.orgs,
-                    "apps": account_app_ids,
+                    "dept_id": account_resp.orgs,
+                    "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
                     "icon":account_resp.icon
