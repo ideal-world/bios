@@ -33,7 +33,7 @@ impl IamCaAccountApi {
         &self,
         id: Query<Option<String>>,
         name: Query<Option<String>>,
-        role_id: Query<Option<String>>,
+        role_ids: Query<Option<String>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -41,13 +41,16 @@ impl IamCaAccountApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<IamAccountSummaryAggResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let rel2 = role_id.0.map(|role_id| RbumItemRelFilterReq {
-            rel_by_from: true,
-            tag: Some(IamRelKind::IamAccountRole.to_string()),
-            from_rbum_kind: Some(RbumRelFromKind::Item),
-            rel_item_id: Some(role_id),
-            own_paths: Some(ctx.0.clone().own_paths),
-            ..Default::default()
+        let rel2 = role_ids.0.map(|role_ids| {
+            let role_ids = role_ids.split(',').map(|r| r.to_string()).collect::<Vec<_>>();
+            RbumItemRelFilterReq {
+                rel_by_from: true,
+                tag: Some(IamRelKind::IamAccountRole.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Item),
+                rel_item_ids: Some(role_ids),
+                own_paths: Some(ctx.0.clone().own_paths),
+                ..Default::default()
+            }
         });
         let result = IamAccountServ::paginate_account_summary_aggs(
             &IamAccountFilterReq {

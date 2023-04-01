@@ -115,7 +115,6 @@ impl IamCertLdapServ {
     }
 
     //验证cert conf配置是否正确
-    // todo 完善验证 验证ldap字段是否正确
     pub async fn validate_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let ldap_auth_info = IamCertLdapServerAuthInfo::from((*add_req).clone());
         let mut ldap_client = LdapClient::new(
@@ -137,6 +136,36 @@ impl IamCertLdapServ {
         if ldap_client.bind_by_dn(&ldap_auth_info.principal, &ldap_auth_info.credentials).await?.is_none() {
             ldap_client.unbind().await?;
             return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
+        }
+        ldap_client.with_limit(1)?;
+        let result = ldap_client
+            .page_search(
+                5,
+                &ldap_auth_info.account_field_map.search_base_filter.unwrap_or("objectClass=Person".to_string()),
+                &vec![
+                    "dn",
+                    &ldap_auth_info.account_field_map.field_user_name,
+                    &ldap_auth_info.account_field_map.field_display_name,
+                ],
+            )
+            .await?;
+        if let Some(result) = result.first() {
+            if result.get_simple_attr(&ldap_auth_info.account_field_map.field_user_name).is_none() {
+                return Err(funs.err().bad_request(
+                    "ldap_conf",
+                    "validate",
+                    &format!("ldap not have user_name field:{}", ldap_auth_info.account_field_map.field_user_name),
+                    "404-iam-ldap-user_name-valid-error",
+                ));
+            };
+            if result.get_simple_attr(&ldap_auth_info.account_field_map.field_display_name).is_none() {
+                return Err(funs.err().bad_request(
+                    "ldap_conf",
+                    "validate",
+                    &format!("ldap not have display_name field:{}", ldap_auth_info.account_field_map.field_display_name),
+                    "404-iam-ldap-display_name-valid-error",
+                ));
+            }
         }
         ldap_client.unbind().await?;
         Ok(())
@@ -938,7 +967,7 @@ pub(crate) mod ldap {
     use std::time::Duration;
 
     use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
-    use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry};
+    use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry, SearchOptions};
     use serde::{Deserialize, Serialize};
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
@@ -975,7 +1004,7 @@ pub(crate) mod ldap {
         }
 
         pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {
-            trace!("[Iam.Ldap] bind_by_dn: dn={dn}");
+            trace!("[Iam.Ldap] bind_by_dn dn:{dn}");
             let result = self.ldap.simple_bind(dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), ""))?.success().map(|_| ());
             if let Some(err) = result.err() {
                 warn!("[Iam.Ldap] ldap bind error: {:?}", err);
@@ -1013,6 +1042,12 @@ pub(crate) mod ldap {
             }
             let result = result.into_iter().map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect();
             Ok(result)
+        }
+
+        /// only used for once
+        pub fn with_limit(&mut self, limit: i32) -> TardisResult<()> {
+            self.ldap.with_search_options(self.ldap.search_opts.clone().unwrap_or(SearchOptions::new()).sizelimit(limit));
+            Ok(())
         }
 
         pub async fn get_by_dn(&mut self, dn: &str, return_attr: &Vec<&str>) -> TardisResult<Option<LdapSearchResp>> {
@@ -1065,9 +1100,19 @@ mod tests {
     const LDAP_PORT: u16 = 389;
     const LDAP_TLS: bool = false;
     const LDAP_BASE_DN: &str = "ou=x,dc=x,dc=x";
-    const LDAP_USER: &str = "cn=admin";
+    const LDAP_USER_DN: &str = "cn=admin,ou=x,dc=x,dc=x";
+    const LDAP_USER: &str = "admin";
     const LDAP_PW: &str = "123456";
     const LDAP_TIME_OUT: u64 = 5;
+
+    #[tokio::test]
+    #[ignore]
+    async fn bind_by_dn() -> TardisResult<()> {
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
+        let result = ldap.bind_by_dn(LDAP_USER_DN, LDAP_PW).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
 
     #[tokio::test]
     #[ignore]
@@ -1094,6 +1139,19 @@ mod tests {
         let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
         ldap.bind(LDAP_USER, LDAP_PW).await?;
         let _result = ldap.page_search(50, "objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
+        // assert_eq!(result.len(), 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn page_search_with_limit() -> TardisResult<()> {
+        let mut ldap = LdapClient::new(LDAP_URL, LDAP_PORT, LDAP_TLS, LDAP_TIME_OUT, LDAP_BASE_DN).await?;
+        ldap.bind(LDAP_USER, LDAP_PW).await?;
+        ldap.with_limit(1)?;
+        let result = ldap.page_search(50, "objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
+        assert_eq!(result.len(), 1);
+        let result = ldap.page_search(50, "objectClass=person", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
         Ok(())
     }
