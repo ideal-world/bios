@@ -7,7 +7,7 @@ use tardis::{
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemAddReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9:]+$"))]
     pub tag: String,
     #[oai(validator(min_length = "2"))]
     pub content: String,
@@ -22,7 +22,7 @@ pub struct LogItemAddReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindReq {
-    #[oai(validator(pattern = r"^[a-z0-9]+$"))]
+    #[oai(validator(pattern = r"^[a-z0-9:]+$"))]
     pub tag: String,
     pub keys: Option<Vec<TrimString>>,
     pub ops: Option<Vec<String>>,
