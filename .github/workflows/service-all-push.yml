@@ -8,6 +8,7 @@ on:
       - "support/auth/**"
       - "services/**"
       - "spi/**"
+      - "middleware/**"
       - "Cargo.toml"
       - ".github/workflows/service-all-push.yml"
 
