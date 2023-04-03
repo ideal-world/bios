@@ -198,6 +198,7 @@ impl IamCertPhoneVCodeServ {
     }
 
     pub async fn send_bind_phone(phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
         if RbumCertServ::count_rbums(
             &RbumCertFilterReq {
                 ak: Some(phone.to_string()),

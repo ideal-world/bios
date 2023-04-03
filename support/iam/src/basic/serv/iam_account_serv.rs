@@ -657,6 +657,11 @@ impl IamAccountServ {
             ctx,
         )
         .await?;
+        if IamAccountServ::is_global_account(account_id, funs, ctx).await? {
+        } else {
+            let string = IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths);
+            IamSetServ::find_flat_set_items();
+        }
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let search_url = funs.conf::<IamConfig>().spi.search_url.clone();

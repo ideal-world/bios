@@ -198,12 +198,12 @@ impl RbumSetServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel: None,
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
                 sys_codes: filter.sys_codes.clone(),
                 sys_code_query_kind: filter.sys_code_query_kind.clone(),
                 sys_code_query_depth: filter.sys_code_query_depth,
                 cate_exts: filter.cate_exts.clone(),
+                ..Default::default()
             },
             None,
             None,
@@ -561,6 +561,9 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
             .from(rbum_set_cate::Entity);
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
             query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).eq(rel_rbum_set_id.to_string()));
+        }
+        if let Some(rel_rbum_set_ids) = &filter.rel_rbum_set_ids {
+            query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).is_in(rel_rbum_set_ids));
         }
         if let Some(sys_codes) = &filter.sys_codes {
             let query_kind = filter.sys_code_query_kind.clone().unwrap_or(RbumSetCateLevelQueryKind::Current);

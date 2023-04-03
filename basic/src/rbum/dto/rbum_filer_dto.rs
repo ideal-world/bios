@@ -136,6 +136,7 @@ pub struct RbumSetCateFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
     pub rel_rbum_set_id: Option<String>,
+    pub rel_rbum_set_ids: Option<Vec<String>>,
     pub sys_codes: Option<Vec<String>>,
     pub sys_code_query_kind: Option<RbumSetCateLevelQueryKind>,
     pub sys_code_query_depth: Option<i16>,
