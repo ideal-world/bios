@@ -14,7 +14,7 @@ use crate::{
     dto::auth_dto::{AuthContext, AuthReq, AuthResp},
 };
 
-use super::auth_res_serv;
+use super::{auth_mgr_serv, auth_res_serv};
 
 pub(crate) async fn auth(req: &mut AuthReq) -> TardisResult<AuthResp> {
     trace!("[Auth] Request auth: {:?}", req);
@@ -26,7 +26,7 @@ pub(crate) async fn auth(req: &mut AuthReq) -> TardisResult<AuthResp> {
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     match ident(req, config, cache_client).await {
-        Ok(ident) => match do_auth(&ident) {
+        Ok(ident) => match do_auth(&ident).await {
             Ok(_) => Ok(AuthResp::ok(Some(&ident), config)),
             Err(e) => Ok(AuthResp::err(e, config)),
         },
@@ -94,11 +94,11 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
-            iam_app_id: if own_paths.len() > 1 { Some(own_paths[1].to_string()) } else { None },
-            iam_tenant_id: if context.own_paths.is_empty() { None } else { Some(own_paths[0].to_string()) },
-            iam_account_id: Some(context.owner),
-            iam_roles: Some(context.roles),
-            iam_groups: Some(context.groups),
+            app_id: if own_paths.len() > 1 { Some(own_paths[1].to_string()) } else { None },
+            tenant_id: if context.own_paths.is_empty() { None } else { Some(own_paths[0].to_string()) },
+            account_id: Some(context.owner),
+            roles: Some(context.roles),
+            groups: Some(context.groups),
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
         })
@@ -117,13 +117,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 "401-auth-req-ak-not-exist",
             ));
         }
-        let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.auth_head_date_format) {
+        let req_head_time = if let Ok(date_time) = Utc.datetime_from_str(req_date, &config.head_date_format) {
             date_time.timestamp_millis()
         } else {
             return Err(TardisError::bad_request("[Auth] bad date format", "401-auth-req-date-incorrect"));
         };
         let now = Utc::now().timestamp_millis();
-        if now - req_head_time > config.auth_head_date_interval_millsec {
+        if now - req_head_time > config.head_date_interval_millsec as i64 {
             return Err(TardisError::unauthorized(
                 "[Auth] The request has already been made or the client's time is incorrect. Please try again.",
                 "401-auth-req-date-incorrect",
@@ -161,11 +161,11 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
-            iam_app_id: if app_id.is_empty() { None } else { Some(app_id) },
-            iam_tenant_id: Some(cache_tenant_id),
-            iam_account_id: None,
-            iam_roles: None,
-            iam_groups: None,
+            app_id: if app_id.is_empty() { None } else { Some(app_id) },
+            tenant_id: Some(cache_tenant_id),
+            account_id: None,
+            roles: None,
+            groups: None,
             own_paths: Some(own_paths),
             ak: Some(ak_authorization.to_string()),
         })
@@ -174,64 +174,74 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
         Ok(AuthContext {
             rbum_uri,
             rbum_action,
-            iam_app_id: None,
-            iam_tenant_id: None,
-            iam_account_id: None,
-            iam_roles: None,
-            iam_groups: None,
+            app_id: None,
+            tenant_id: None,
+            account_id: None,
+            roles: None,
+            groups: None,
             own_paths: None,
             ak: None,
         })
     }
 }
 
-pub fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
-    let mathced_res = auth_res_serv::match_res(&ctx.rbum_action, &ctx.rbum_uri)?;
-    if mathced_res.is_empty() {
+pub async fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
+    let matched_res = auth_res_serv::match_res(&ctx.rbum_action, &ctx.rbum_uri)?;
+    if matched_res.is_empty() {
         // No authentication required
         return Ok(());
     }
-    for mathced_res in mathced_res {
-        if let Some(mathed_accounts) = mathced_res.auth.accounts {
-            if let Some(req_account_id) = &ctx.iam_account_id {
-                if mathed_accounts.contains(&format!("#{req_account_id}#")) {
+    for matched_res in matched_res {
+        // Check double auth
+        if matched_res.need_double_auth {
+            if let Some(req_account_id) = &ctx.account_id {
+                if !auth_mgr_serv::has_double_auth(req_account_id).await? {
+                    return Err(TardisError::forbidden("[Auth] Secondary confirmation is required", "401-auth-req-need-double-auth"));
+                }
+            } else {
+                return Err(TardisError::forbidden("[Auth] Secondary confirmation is required", "401-auth-req-need-double-auth"));
+            }
+        }
+        // Check auth
+        if let Some(matched_accounts) = matched_res.auth.accounts {
+            if let Some(req_account_id) = &ctx.account_id {
+                if matched_accounts.contains(&format!("#{req_account_id}#")) {
                     return Ok(());
                 }
             }
         }
-        if let Some(mathed_roles) = mathced_res.auth.roles {
-            if let Some(iam_roles) = &ctx.iam_roles {
+        if let Some(matched_roles) = matched_res.auth.roles {
+            if let Some(iam_roles) = &ctx.roles {
                 for iam_role in iam_roles {
-                    if mathed_roles.contains(&format!("#{iam_role}#")) {
+                    if matched_roles.contains(&format!("#{iam_role}#")) {
                         return Ok(());
                     }
                 }
             }
         }
-        if let Some(mathed_groups) = mathced_res.auth.groups {
-            if let Some(iam_groups) = &ctx.iam_groups {
+        if let Some(matched_groups) = matched_res.auth.groups {
+            if let Some(iam_groups) = &ctx.groups {
                 for iam_group in iam_groups {
-                    if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(&mathed_groups) {
+                    if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(&matched_groups) {
                         return Ok(());
                     }
                 }
             }
         }
-        if let Some(mathed_apps) = mathced_res.auth.apps {
-            if let Some(iam_app_id) = &ctx.iam_app_id {
-                if mathed_apps.contains(&format!("#{iam_app_id}#")) {
+        if let Some(matched_apps) = matched_res.auth.apps {
+            if let Some(iam_app_id) = &ctx.app_id {
+                if matched_apps.contains(&format!("#{iam_app_id}#")) {
                     return Ok(());
                 }
             }
         }
-        if let Some(mathed_tenants) = mathced_res.auth.tenants {
-            if let Some(iam_tenant_id) = &ctx.iam_tenant_id {
-                if mathed_tenants.contains(&format!("#{iam_tenant_id}#")) {
+        if let Some(matched_tenants) = matched_res.auth.tenants {
+            if let Some(iam_tenant_id) = &ctx.tenant_id {
+                if matched_tenants.contains(&format!("#{iam_tenant_id}#")) {
                     return Ok(());
                 }
             }
         }
     }
-    //todo change to forbidden function
-    Err(TardisError::custom("403", "[Auth] Permission denied", "401-auth-req-permission-denied"))
+    Err(TardisError::forbidden("[Auth] Permission denied", "401-auth-req-permission-denied"))
 }

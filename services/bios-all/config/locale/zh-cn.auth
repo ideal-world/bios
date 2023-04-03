@@ -2,3 +2,4 @@
 401-auth-req-token-not-exist	请求的Token不合法
 401-auth-req-token-or-app-not-exist	请求的Token或对应的应用不合法
 401-auth-req-permission-denied	请求权限不合法
+401-auth-req-need-double-auth	需要二次确认

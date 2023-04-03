@@ -50,7 +50,7 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     Ok(uri_items)
 }
 
-pub fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) -> TardisResult<()> {
+pub fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo, need_crypto: bool, need_double_auth: bool) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
     info!("[Auth] Add resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
@@ -65,7 +65,7 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) -> Tard
         }
         res_container_node = res_container_node.get_child_mut(&res_item);
         if res_item == "$" {
-            res_container_node.insert_leaf(&res_action, &res_action, res_uri, auth_info);
+            res_container_node.insert_leaf(&res_action, &res_action, res_uri, auth_info, need_crypto, need_double_auth);
         }
     }
     Ok(())

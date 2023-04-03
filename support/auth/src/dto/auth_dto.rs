@@ -18,6 +18,7 @@ pub struct AuthReq {
     pub host: String,
     pub port: u16,
     pub headers: HashMap<String, String>,
+    pub body: Option<String>
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -49,9 +50,9 @@ impl AuthResp {
                 let ctx = TardisContext {
                     own_paths: ctx.own_paths.as_deref().unwrap_or_default().to_string(),
                     ak: ctx.ak.as_deref().unwrap_or_default().to_string(),
-                    owner: ctx.iam_account_id.as_deref().unwrap_or_default().to_string(),
-                    roles: if let Some(roles) = &ctx.iam_roles { roles.clone() } else { vec![] },
-                    groups: if let Some(groups) = &ctx.iam_groups { groups.clone() } else { vec![] },
+                    owner: ctx.account_id.as_deref().unwrap_or_default().to_string(),
+                    roles: if let Some(roles) = &ctx.roles { roles.clone() } else { vec![] },
+                    groups: if let Some(groups) = &ctx.groups { groups.clone() } else { vec![] },
                     ext: Default::default(),
                 };
                 TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap())
@@ -80,11 +81,11 @@ impl AuthResp {
 pub struct AuthContext {
     pub rbum_uri: String,
     pub rbum_action: String,
-    pub iam_app_id: Option<String>,
-    pub iam_tenant_id: Option<String>,
-    pub iam_account_id: Option<String>,
-    pub iam_roles: Option<Vec<String>>,
-    pub iam_groups: Option<Vec<String>>,
+    pub app_id: Option<String>,
+    pub tenant_id: Option<String>,
+    pub account_id: Option<String>,
+    pub roles: Option<Vec<String>>,
+    pub groups: Option<Vec<String>>,
     pub own_paths: Option<String>,
     pub ak: Option<String>,
 }
@@ -130,7 +131,7 @@ impl ResContainerNode {
         self.children.as_mut().unwrap().remove(key);
     }
 
-    pub fn insert_leaf(&mut self, key: &str, res_action: &str, res_uri: &str, auth_info: &ResAuthInfo) {
+    pub fn insert_leaf(&mut self, key: &str, res_action: &str, res_uri: &str, auth_info: &ResAuthInfo, need_crypto: bool, need_double_auth: bool) {
         self.children.as_mut().unwrap().insert(
             key.to_string(),
             ResContainerNode {
@@ -139,6 +140,8 @@ impl ResContainerNode {
                     action: res_action.to_string(),
                     uri: res_uri.to_string(),
                     auth: auth_info.clone(),
+                    need_crypto,
+                    need_double_auth,
                 }),
             },
         );
@@ -154,6 +157,8 @@ pub struct ResContainerLeafInfo {
     pub action: String,
     pub uri: String,
     pub auth: ResAuthInfo,
+    pub need_crypto: bool,
+    pub need_double_auth: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -163,4 +168,9 @@ pub struct ResAuthInfo {
     pub groups: Option<String>,
     pub apps: Option<String>,
     pub tenants: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct MgrDoubleAuthReq {
+    pub account_id: String,
 }
