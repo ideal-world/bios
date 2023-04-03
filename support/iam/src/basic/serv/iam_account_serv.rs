@@ -683,38 +683,42 @@ impl IamAccountServ {
         {
             let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
             let key = account_id.to_string();
+            let raw_roles = Self::find_simple_rel_roles(&account_resp.id, true, Some(true), None, funs, ctx).await?;
+            let mut account_roles: Vec<String> = vec![];
+            for role in raw_roles {
+                if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
+                    account_roles.push(role.rel_id)
+                }
+            }
             let mut search_body = json!({
                 "tag": tag,
                 "key": key,
                 "title": account_resp.name.clone(),
                 "kind": funs.conf::<IamConfig>().spi.search_account_tag.clone(),
                 "content": format!("{},{:?}", account_resp.name, account_certs,),
-                "owner": funs.conf::<IamConfig>().spi.owner.clone(),
+                "owner": account_resp.owner,
                 "create_time":account_resp.create_time.to_rfc3339(),
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": !account_resp.disabled,
+                    "role_id": account_roles,
+                    "dept_id": account_resp.orgs,
+                    "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
                     "icon":account_resp.icon
                 },
             });
-
             if !account_resp.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
             if account_app_ids.is_empty() && account_resp.orgs.is_empty() && account_resp.own_paths.is_empty() {
-                search_body.as_object_mut().unwrap().insert(
-                    "visit_keys".to_string(),
-                    json!({
-                        "roles": account_resp.roles
-                    }),
-                );
+                search_body.as_object_mut().unwrap().insert("visit_keys".to_string(), json!({ "roles": account_roles }));
             } else {
                 search_body.as_object_mut().unwrap().insert(
                     "visit_keys".to_string(),
                     json!({
-                        "roles": account_resp.roles,
+                        "roles": account_roles,
                         "apps": account_app_ids,
                         "groups": account_resp.orgs,
                         "tenants" : [ account_resp.own_paths ]
