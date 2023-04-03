@@ -562,9 +562,6 @@ impl RbumCrudOperation<rbum_set_cate::ActiveModel, RbumSetCateAddReq, RbumSetCat
         if let Some(rel_rbum_set_id) = &filter.rel_rbum_set_id {
             query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).eq(rel_rbum_set_id.to_string()));
         }
-        if let Some(rel_rbum_set_ids) = &filter.rel_rbum_set_ids {
-            query.and_where(Expr::col((rbum_set_cate::Entity, rbum_set_cate::Column::RelRbumSetId)).is_in(rel_rbum_set_ids));
-        }
         if let Some(sys_codes) = &filter.sys_codes {
             let query_kind = filter.sys_code_query_kind.clone().unwrap_or(RbumSetCateLevelQueryKind::Current);
             if sys_codes.is_empty() {

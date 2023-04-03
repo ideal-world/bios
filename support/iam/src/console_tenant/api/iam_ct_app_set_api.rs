@@ -139,7 +139,7 @@ impl IamCtAppSetApi {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items_with_none_set_cate_id(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 
