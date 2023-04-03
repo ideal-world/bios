@@ -6,11 +6,41 @@ use tardis::{basic::result::TardisResult, tokio::time::sleep, TardisFuns};
 pub async fn test_init() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=1##get", "{\"accounts\":\"#acc1#\"}").await?;
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=2##get", "{\"accounts\":\"#acc2#\"}").await?;
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=3##get", "{\"accounts\":\"#acc3#\"}").await?;
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=4##get", "{\"accounts\":\"#acc4#\"}").await?;
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=5##get", "{\"accounts\":\"#acc5#\"}").await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=1##get",
+            "{\"objs\":{\"accounts\":\"#acc1#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=2##get",
+            "{\"objs\":{\"accounts\":\"#acc2#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=3##get",
+            "{\"objs\":{\"accounts\":\"#acc3#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=4##get",
+            "{\"objs\":{\"accounts\":\"#acc4#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=5##get",
+            "{\"objs\":{\"accounts\":\"#acc5#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
 
     auth_initializer::init_data().await?;
 
@@ -30,8 +60,20 @@ pub async fn test_init() -> TardisResult<()> {
     );
 
     cache_client.hdel(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=1##get").await?;
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=6##get", "{\"accounts\":\"#acc6#\"}").await?;
-    cache_client.hset(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=7##get", "{\"accounts\":\"#acc7#\"}").await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=6##get",
+            "{\"objs\":{\"accounts\":\"#acc6#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=7##get",
+            "{\"objs\":{\"accounts\":\"#acc7#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+        )
+        .await?;
     cache_client.set(&format!("{}iam-res://iam-serv/p1?a=1##get", config.cache_key_res_changed_info), "").await?;
     cache_client.set(&format!("{}iam-res://iam-serv/p1?a=6##get", config.cache_key_res_changed_info), "").await?;
     cache_client.set(&format!("{}iam-res://iam-serv/p1?a=7##get", config.cache_key_res_changed_info), "").await?;
