@@ -733,8 +733,6 @@ impl IamAccountServ {
                 "ext":{
                     "status": !account_resp.disabled,
                     "role_id": account_roles,
-                    "dept_id": account_resp.orgs,
-                    "roles": account_roles,
                     "dept_id": account_resp_dept_id,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
