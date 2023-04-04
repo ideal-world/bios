@@ -7,7 +7,7 @@ use crate::serv::auth_mgr_serv;
 pub struct MgrApi;
 
 /// Management API
-#[poem_openapi::OpenApi(prefix_path = "/mgr")]
+#[poem_openapi::OpenApi(prefix_path = "/auth/mgr")]
 impl MgrApi {
     /// Fetch Cached Resources
     #[oai(path = "/cache/res", method = "get")]
