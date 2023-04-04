@@ -44,6 +44,9 @@ util/gh-pages/lints.json
 # rustfmt backups
 *.rs.bk
 
+# node
+node_modules
+
 # IDE
 *.iml
 .vscode

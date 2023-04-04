@@ -20,6 +20,7 @@ pub async fn request<T: Serialize + DeserializeOwned>(method: &str, url: &str, b
     let resp = JsFuture::from(window.fetch_with_request(&request)).await?;
     let resp: Response = resp.dyn_into().unwrap();
     let resp = JsFuture::from(resp.json()?).await?;
+    // TODO 404 process
     let resp = serde_wasm_bindgen::from_value::<TardisResp<T>>(resp)?;
     if resp.is_ok() {
         Ok(resp.data)

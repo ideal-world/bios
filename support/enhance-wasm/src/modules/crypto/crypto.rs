@@ -100,3 +100,12 @@ pub struct EncryptResp {
     pub body: String,
     pub key: String,
 }
+
+
+
+pub(crate) fn test(text:&str) -> Result<String, JsValue> {
+    let sm_obj = TardisCryptoSm2 {};
+    let pri_key = sm_obj.new_private_key()?;
+    let pub_key = sm_obj.new_public_key(&pri_key)?;
+    Ok(pub_key.encrypt(text)?)
+}

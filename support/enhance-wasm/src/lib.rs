@@ -18,6 +18,11 @@ pub fn decrypt(encrypt_body: &str, encrypt_key: &str) -> Result<String, JsValue>
     modules::crypto::crypto::decrypt(encrypt_body, encrypt_key)
 }
 
+#[wasm_bindgen]
+pub fn test(text: &str) -> Result<String, JsValue> {
+    modules::crypto::crypto::test(text)
+}
+
 // TODO double auth
 
 // TODO APIs
