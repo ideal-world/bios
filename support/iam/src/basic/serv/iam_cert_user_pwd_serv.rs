@@ -206,6 +206,7 @@ impl IamCertUserPwdServ {
         }
     }
 
+    //todo 统一reset_sk_for_pending_status方法
     pub async fn reset_sk(modify_req: &IamCertUserPwdRestReq, rel_iam_item_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
@@ -220,6 +221,23 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+            if cert.status == RbumCertStatusKind::Pending {
+                RbumCertServ::modify_rbum(
+                    &cert.id,
+                    &mut RbumCertModifyReq {
+                        ak: None,
+                        sk: None,
+                        ext: None,
+                        start_time: None,
+                        end_time: None,
+                        conn_uri: None,
+                        status: RbumCertStatusKind::Enabled.into(),
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+            };
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(funs.err().not_found(
