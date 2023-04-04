@@ -66,27 +66,27 @@ impl SearchItemVisitKeysReq {
         let mut sqls = HashMap::new();
         if let Some(accounts) = &self.accounts {
             sqls.insert("accounts".to_string(), accounts.clone());
-        }else{
+        } else {
             sqls.insert("accounts".to_string(), vec!["".to_string()]);
         }
         if let Some(apps) = &self.apps {
             sqls.insert("apps".to_string(), apps.clone());
-        }else{
+        } else {
             sqls.insert("apps".to_string(), vec!["".to_string()]);
         }
         if let Some(tenants) = &self.tenants {
             sqls.insert("tenants".to_string(), tenants.clone());
-        }else{
+        } else {
             sqls.insert("tenants".to_string(), vec!["".to_string()]);
         }
         if let Some(roles) = &self.roles {
             sqls.insert("roles".to_string(), roles.clone());
-        }else{
+        } else {
             sqls.insert("roles".to_string(), vec!["".to_string()]);
         }
         if let Some(groups) = &self.groups {
             sqls.insert("groups".to_string(), groups.clone());
-        }else{
+        } else {
             sqls.insert("groups".to_string(), vec!["".to_string()]);
         }
         TardisFuns::json.obj_to_json(&sqls).unwrap()

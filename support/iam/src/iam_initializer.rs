@@ -30,7 +30,7 @@ use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
-use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
+use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_cert_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
 use crate::console_interface::api::iam_ci_cert_api;
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
@@ -62,6 +62,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     #[cfg(feature = "ldap_client")]
                     iam_cc_account_api::IamCcAccountLdapApi,
                     iam_cc_role_api::IamCcRoleApi,
+                    iam_cc_cert_api::IamCaCertApi,
                     iam_cc_org_api::IamCcOrgApi,
                     iam_cc_res_api::IamCcResApi,
                     iam_cc_system_api::IamCcSystemApi,
