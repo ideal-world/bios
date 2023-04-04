@@ -36,6 +36,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
+#[cfg(feature = "spi_kv")]
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
