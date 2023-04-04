@@ -31,6 +31,18 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
+    info!("【test_cc_cert】 : test_single_level : Test Rename Account ak");
+    assert_eq!(
+        IamCertUserPwdServ::rename_ak_if_duplicate("星航", &funs, context).await.unwrap().to_string(),
+        "星航".to_string(),
+    );
+    let rename_test_ak = &ak[..ak.len() - 1];
+    assert_eq!(
+        IamCertUserPwdServ::rename_ak_if_duplicate(rename_test_ak, &funs, context).await.unwrap().to_string(),
+        rename_test_ak.to_string(),
+    );
+    assert_eq!(IamCertUserPwdServ::rename_ak_if_duplicate(ak, &funs, context).await.unwrap().to_string(), format!("{ak}_1"),);
+
     info!("【test_cc_cert】 : test_single_level : Rest Password");
     let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(
         IamCertKernelKind::UserPwd.to_string().as_str(),
@@ -143,7 +155,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     IamCertServ::add_3th_kind_cert(
         &mut IamThirdPartyCertExtAddReq {
             ak: "GitlabUserId".to_string(),
-            supplier: "gitlab".to_string(),
+            supplier: Some("gitlab".to_string()),
             sk: Some("ssssssssss".to_string()),
             ext: None,
         },
