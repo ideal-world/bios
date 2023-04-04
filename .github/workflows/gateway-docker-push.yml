@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "gateway/apisix/**"
-      - ".github/workflows/gateway-docker.yml"
+      - ".github/workflows/gateway-docker-push.yml"
 
 jobs:
   push_to_registry:
