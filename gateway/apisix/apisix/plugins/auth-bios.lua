@@ -25,6 +25,7 @@ local schema = {
         with_consumer = {type = "boolean", default = false},
 
         head_key_context = { type = "string", default = "Tardis-Context" },
+        head_key_crypto = { type = "string", default = "Tardis-Crypto" },
 
         cors_allow_origin = { type = "string", default = "*" },
         cors_allow_methods = { type = "string", default = "*" },
@@ -82,7 +83,8 @@ function _M.access(conf, ctx)
     if uri == nil or uri=='' then
         uri="/"
     end
-    local req_body={
+
+    local forward_body={
         scheme  = core.request.get_scheme(ctx),
         method  = core.request.get_method(),
         host    = core.request.get_host(ctx),
@@ -91,10 +93,15 @@ function _M.access(conf, ctx)
         headers = core.request.headers(ctx),
         query   = core.request.get_uri_args(ctx),
     }
-    core.log.info("auth-bios req_body:", core.json.encode(req_body));
+    -- TODO Test
+    if forward_body.headers[conf.head_key_crypto] ~= nil then
+        req_body = core.request.get_body(ctx)
+        forward_body.body = req_body
+    end
+    core.log.trace("auth-bios forward_body:", core.json.encode(forward_body));
     local params = {
-        method = "POST",
-        body = core.json.encode(req_body),
+        method = "PUT",
+        body = core.json.encode(forward_body),
         headers = {
             ["Content-Type"] = "application/json",
         },
@@ -108,9 +115,9 @@ function _M.access(conf, ctx)
     end
 
     local host_end_idx = string.find(string.sub(conf.host, -2), "/")
-    local endpoint = conf.host .. "/auth/auth/apisix"
+    local endpoint = conf.host .. "/auth/auth"
     if host_end_idx then
-        endpoint = conf.host .. "auth/auth/apisix"
+        endpoint = conf.host .. "auth/auth"
     end
 
 
@@ -125,23 +132,23 @@ function _M.access(conf, ctx)
         return 403
     end
 
-    core.log.info("auth service response body:",res.body);
-    local body, err = core.json.decode(res.body)
+    core.log.trace("auth service response body:",res.body);
+    local forward_resp, err = core.json.decode(res.body)
 
-    if not body then
+    if not forward_resp then
         core.log.error("invalid response body: ", res.body, " err: ", err)
         cors(conf)
         return 503
     end
 
-    if body.code ~='200' then
-        core.log.error("invalid auth service return code: ", body.code,
-                " err:", body.msg)
+    if forward_resp.code ~= '200' then
+        core.log.error("invalid auth service return code: ", forward_resp.code,
+                " err:", forward_resp.msg)
         cors(conf)
         return 502
     end
 
-    local result = body.data
+    local result = forward_resp.data
 
     if not result.allow then
         local status_code = 403
@@ -155,11 +162,16 @@ function _M.access(conf, ctx)
                     and core.json.encode(result.reason)
                     or result.reason
         end
+        if result.body ~= nil then
+            -- TODO 
+            core.request.set_body_data(result.body)
+        end
+
         cors(conf)
         return status_code, { code = status_code .. '-gateway-cert-error',  message = reason }
     else
         if result.headers then
-            core.log.info("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
+            core.log.trace("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
             core.request.set_header(ctx,conf.head_key_context,result.headers[conf.head_key_context])
         end
     end

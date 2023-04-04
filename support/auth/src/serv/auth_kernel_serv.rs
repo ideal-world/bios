@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use tardis::chrono::{TimeZone, Utc};
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
@@ -7,27 +9,31 @@ use tardis::{
     TardisFuns,
 };
 
+use crate::dto::auth_kernel_dto::ResContainerLeafInfo;
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    dto::auth_dto::{AuthContext, AuthReq, AuthResp},
+    dto::auth_kernel_dto::{AuthContext, AuthReq, AuthResp},
 };
 
-use super::{auth_mgr_serv, auth_res_serv};
+use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
 pub(crate) async fn auth(req: &mut AuthReq) -> TardisResult<AuthResp> {
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
-        Ok(true) => return Ok(AuthResp::ok(None, config)),
+        Ok(true) => return Ok(AuthResp::ok(None, None, None, config)),
         Err(e) => return Ok(AuthResp::err(e, config)),
         _ => {}
     }
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     match ident(req, config, cache_client).await {
         Ok(ident) => match do_auth(&ident).await {
-            Ok(_) => Ok(AuthResp::ok(Some(&ident), config)),
+            Ok(res_container_leaf_info) => match decrypt(&req.headers, &req.body, config, &res_container_leaf_info).await {
+                Ok((body, headers)) => Ok(AuthResp::ok(Some(&ident), body, headers, config)),
+                Err(e) => Ok(AuthResp::err(e, config)),
+            },
             Err(e) => Ok(AuthResp::err(e, config)),
         },
         Err(e) => Ok(AuthResp::err(e, config)),
@@ -185,14 +191,14 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     }
 }
 
-pub async fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
+pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafInfo>> {
     let matched_res = auth_res_serv::match_res(&ctx.rbum_action, &ctx.rbum_uri)?;
     if matched_res.is_empty() {
         // No authentication required
-        return Ok(());
+        return Ok(None);
     }
     for matched_res in matched_res {
-        // Check double auth
+        // Check need double auth
         if matched_res.need_double_auth {
             if let Some(req_account_id) = &ctx.account_id {
                 if !auth_mgr_serv::has_double_auth(req_account_id).await? {
@@ -203,45 +209,65 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<()> {
             }
         }
         // Check auth
-        if let Some(matched_accounts) = matched_res.auth.accounts {
-            if let Some(req_account_id) = &ctx.account_id {
-                if matched_accounts.contains(&format!("#{req_account_id}#")) {
-                    return Ok(());
-                }
-            }
-        }
-        if let Some(matched_roles) = matched_res.auth.roles {
-            if let Some(iam_roles) = &ctx.roles {
-                for iam_role in iam_roles {
-                    if matched_roles.contains(&format!("#{iam_role}#")) {
-                        return Ok(());
+        if let Some(auth) = &matched_res.auth {
+            if let Some(matched_accounts) = &auth.accounts {
+                if let Some(req_account_id) = &ctx.account_id {
+                    if matched_accounts.contains(&format!("#{req_account_id}#")) {
+                        return Ok(Some(matched_res));
                     }
                 }
             }
-        }
-        if let Some(matched_groups) = matched_res.auth.groups {
-            if let Some(iam_groups) = &ctx.groups {
-                for iam_group in iam_groups {
-                    if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(&matched_groups) {
-                        return Ok(());
+            if let Some(matched_roles) = &auth.roles {
+                if let Some(iam_roles) = &ctx.roles {
+                    for iam_role in iam_roles {
+                        if matched_roles.contains(&format!("#{iam_role}#")) {
+                            return Ok(Some(matched_res));
+                        }
                     }
                 }
             }
-        }
-        if let Some(matched_apps) = matched_res.auth.apps {
-            if let Some(iam_app_id) = &ctx.app_id {
-                if matched_apps.contains(&format!("#{iam_app_id}#")) {
-                    return Ok(());
+            if let Some(matched_groups) = &auth.groups {
+                if let Some(iam_groups) = &ctx.groups {
+                    for iam_group in iam_groups {
+                        if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(&matched_groups) {
+                            return Ok(Some(matched_res));
+                        }
+                    }
                 }
             }
-        }
-        if let Some(matched_tenants) = matched_res.auth.tenants {
-            if let Some(iam_tenant_id) = &ctx.tenant_id {
-                if matched_tenants.contains(&format!("#{iam_tenant_id}#")) {
-                    return Ok(());
+            if let Some(matched_apps) = &auth.apps {
+                if let Some(iam_app_id) = &ctx.app_id {
+                    if matched_apps.contains(&format!("#{iam_app_id}#")) {
+                        return Ok(Some(matched_res));
+                    }
                 }
             }
+            if let Some(matched_tenants) = &auth.tenants {
+                if let Some(iam_tenant_id) = &ctx.tenant_id {
+                    if matched_tenants.contains(&format!("#{iam_tenant_id}#")) {
+                        return Ok(Some(matched_res));
+                    }
+                }
+            }
+        } else {
+            return Ok(Some(matched_res));
         }
     }
     Err(TardisError::forbidden("[Auth] Permission denied", "401-auth-req-permission-denied"))
+}
+
+pub async fn decrypt(
+    headers: &HashMap<String, String>,
+    body: &Option<String>,
+    config: &AuthConfig,
+    res_container_leaf_info: &Option<ResContainerLeafInfo>,
+) -> TardisResult<(Option<String>, Option<HashMap<String, String>>)> {
+    if let Some(res_container_leaf_info) = res_container_leaf_info {
+        // Check need crypto
+        if res_container_leaf_info.need_crypto_req || res_container_leaf_info.need_crypto_resp {
+            let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, res_container_leaf_info.need_crypto_req, res_container_leaf_info.need_crypto_resp, config).await?;
+            return Ok((body, headers));
+        }
+    }
+    Ok((None, None))
 }

@@ -17,7 +17,7 @@ pub fn test_res() -> TardisResult<()> {
         ("POST", "iam-res://iam-serv/p1", r###"{"roles":"#role1#"}"###),
     ];
     for (res_action, res_uri, auth_info) in init_res_data {
-        auth_res_serv::add_res(res_action, res_uri, &TardisFuns::json.str_to_obj(auth_info)?, false, false)?;
+        auth_res_serv::add_res(res_action, res_uri, Some(TardisFuns::json.str_to_obj(auth_info)?), false, false, false)?;
     }
 
     assert_eq!(auth_res_serv::match_res("get", "iam-res://iam-serv")?.len(), 1);
