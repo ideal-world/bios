@@ -304,10 +304,21 @@ impl IamCertUserPwdServ {
         Ok(())
     }
 
+    //todo 限定conf
     pub async fn rename_ak_if_duplicate(ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TrimString> {
-        let count_duplicate_ak = RbumCertServ::count_rbums(
+        // \_ sql 转义-> _
+        let mut count_duplicate_ak = RbumCertServ::count_rbums(
             &RbumCertFilterReq {
-                ak_like: Some(TrimString(ak.to_string()).to_string()),
+                ak_like: Some(TrimString(format!(r"{ak}\_",)).to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        count_duplicate_ak += RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                ak: Some(ak.to_string()),
                 ..Default::default()
             },
             funs,
@@ -317,7 +328,7 @@ impl IamCertUserPwdServ {
         if count_duplicate_ak > 0 {
             let string = RbumCertServ::find_rbums(
                 &RbumCertFilterReq {
-                    ak_like: Some(TrimString(ak.to_string()).to_string()),
+                    ak_like: Some(TrimString(format!(r"{ak}\_",)).to_string()),
                     ..Default::default()
                 },
                 None,
@@ -329,15 +340,15 @@ impl IamCertUserPwdServ {
             .first()
             .map(|r| r.ak.clone())
             .unwrap_or_else(|| "".to_string());
-            let vec_str: Vec<&str> = string.split(':').collect();
+            let vec_str: Vec<&str> = string.split('_').collect();
             if vec_str.len() != 2 {
-                Ok(format!("{ak}:{count_duplicate_ak}").into())
+                Ok(format!("{ak}_{count_duplicate_ak}").into())
             } else {
                 let parse_u32 = vec_str[vec_str.len() - 1].parse::<u32>();
                 if let Ok(count) = parse_u32 {
-                    Ok(format!("{}:{}", ak, count + 1).into())
+                    Ok(format!("{}_{}", ak, count + 1).into())
                 } else {
-                    Ok(format!("{}:{}", ak, count_duplicate_ak + 1).into())
+                    Ok(format!("{}_{}", ak, count_duplicate_ak + 1).into())
                 }
             }
         } else {
