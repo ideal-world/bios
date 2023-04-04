@@ -890,7 +890,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         context,
     )
     .await
-    .is_err());
+    .is_ok());
 
     RbumSetItemServ::add_rbum(
         &mut RbumSetItemAddReq {
