@@ -6,7 +6,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 use tardis::TardisFuns;
 
-use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumKindAttrFilterReq, RbumKindFilterReq};
 use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrAddReq, RbumKindAttrModifyReq};
 use bios_basic::rbum::dto::rbum_kind_dto::{RbumKindAddReq, RbumKindModifyReq};
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumScopeLevelKind, RbumWidgetTypeKind};
@@ -55,6 +55,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("Db".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -70,6 +71,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("db_db".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -85,6 +87,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("D-b".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -100,6 +103,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("db".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -112,7 +116,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
     .await?;
 
     info!("【test_rbum_kind】 : Test Get : RbumKindServ::get_rbum");
-    let rbum = RbumKindServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await?;
+    let rbum = RbumKindServ::get_rbum(&id, &RbumKindFilterReq::default(), &funs, context).await?;
     assert_eq!(rbum.id, id);
     assert_eq!(rbum.code, "db");
     assert_eq!(rbum.name, "关系型数据库");
@@ -122,6 +126,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
         &id,
         &mut RbumKindModifyReq {
             name: Some(TrimString("关系型数据库_new".to_string())),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -135,8 +140,11 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_kind】 : Test Find : RbumKindServ::paginate_rbums");
     let rbums = RbumKindServ::paginate_rbums(
-        &RbumBasicFilterReq {
-            scope_level: Some(RbumScopeLevelKind::L2),
+        &RbumKindFilterReq {
+            basic: RbumBasicFilterReq {
+                scope_level: Some(RbumScopeLevelKind::L2),
+                ..Default::default()
+            },
             ..Default::default()
         },
         1,
@@ -154,7 +162,7 @@ async fn test_rbum_kind(context: &TardisContext) -> TardisResult<()> {
 
     info!("【test_rbum_kind】 : Test Delete : RbumKindServ::delete_rbum");
     RbumKindServ::delete_rbum(&id, &funs, context).await?;
-    assert!(RbumKindServ::get_rbum(&id, &RbumBasicFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumKindServ::get_rbum(&id, &RbumKindFilterReq::default(), &funs, context).await.is_err());
 
     funs.rollback().await?;
 
@@ -170,6 +178,7 @@ async fn test_rbum_kind_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
