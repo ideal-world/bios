@@ -659,6 +659,37 @@ impl IamAccountServ {
         .await?;
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
+        let mut account_resp_dept_id = vec![];
+
+        let mut set_ids = vec![];
+        if IamAccountServ::is_global_account(account_id, funs, ctx).await? {
+            let tenants = IamTenantServ::find_items(
+                &IamTenantFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?;
+            for t in tenants {
+                set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &t.id), true, funs, ctx).await?);
+            }
+        } else {
+            set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await?);
+        };
+        for set_id in set_ids {
+            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), true, funs, ctx).await?;
+            account_resp_dept_id.extend(set_items.iter().map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
+        }
+
         let search_url = funs.conf::<IamConfig>().spi.search_url.clone();
         let spi_ctx = TardisContext {
             owner: funs.conf::<IamConfig>().spi.owner.clone(),
@@ -702,7 +733,7 @@ impl IamAccountServ {
                 "ext":{
                     "status": !account_resp.disabled,
                     "role_id": account_roles,
-                    "dept_id": account_resp.orgs,
+                    "dept_id": account_resp_dept_id,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
@@ -720,7 +751,7 @@ impl IamAccountServ {
                     json!({
                         "roles": account_roles,
                         "apps": account_app_ids,
-                        "groups": account_resp.orgs,
+                        "groups": account_resp_dept_id,
                         "tenants" : [ account_resp.own_paths ]
                     }),
                 );

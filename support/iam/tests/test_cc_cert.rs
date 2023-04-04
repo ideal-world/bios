@@ -1,6 +1,6 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper;
-use bios_iam::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq};
+use bios_iam::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamThirdPartyCertExtAddReq};
 use bios_iam::basic::dto::iam_cert_dto::{IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -141,13 +141,13 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
     info!("【test_cc_cert】 : test_single_level : Add Ext Cert - Gitlab");
     assert!(IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_info.account_id, vec!["gitlab".to_string()], &funs, context).await.is_err());
     IamCertServ::add_3th_kind_cert(
-        &mut IamCertExtAddReq {
+        &mut IamThirdPartyCertExtAddReq {
             ak: "GitlabUserId".to_string(),
+            supplier: "gitlab".to_string(),
             sk: Some("ssssssssss".to_string()),
             ext: None,
         },
         &account_info.account_id,
-        "gitlab",
         &funs,
         context,
     )

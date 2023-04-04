@@ -198,12 +198,12 @@ impl RbumSetServ {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                rel: None,
                 rel_rbum_set_id: Some(rbum_set_id.to_string()),
                 sys_codes: filter.sys_codes.clone(),
                 sys_code_query_kind: filter.sys_code_query_kind.clone(),
                 sys_code_query_depth: filter.sys_code_query_depth,
                 cate_exts: filter.cate_exts.clone(),
+                ..Default::default()
             },
             None,
             None,
