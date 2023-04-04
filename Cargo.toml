@@ -4,6 +4,7 @@ members = [
     "basic",
     "support/iam",
     "support/auth",
+    "support/enhance-wasm",
     "spi/*",
     "middleware/*",
     "services/*",
@@ -30,12 +31,34 @@ codegen-units = 1
 opt-level = "z"
 
 [workspace.dependencies]
+# basic
 serde = { version = "1", features = ["derive"] }
 async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
+
+# tardis
 tardis = { version = "0.1.0-beta1" }
 
-[workspace.dev-dependencies]
-tardis = { version = "0.1.0-beta1", features = ["test"] }
+# crypto
+base64 = { version = "0.21" }
+hex = { version = "0.4" }
+libsm = { version = "0.5" }
+num-bigint = { version = "0.4.3" }
+getrandom = { version = "^0.2", features = ["js"] }
+
+# wasm
+wasm-bindgen = { version = "0", features = ["serde-serialize"] }
+wasm-bindgen-futures = { version = "0" }
+serde-wasm-bindgen = { version = "0" }
+js-sys = { version = "0" }
+web-sys = { version = "0", features = [
+    'Headers',
+    'Request',
+    'RequestInit',
+    'RequestMode',
+    'Response',
+    'Window',
+] }
+wasm-bindgen-test = { version = "0" }
