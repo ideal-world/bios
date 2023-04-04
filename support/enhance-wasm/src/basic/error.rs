@@ -23,7 +23,7 @@ impl Display for TardisError {
 }
 
 impl TardisError {
-    fn error(code: &str, msg: &str, locale_code: &str) -> TardisError {
+    fn error(code: &str, msg: &str, _locale_code: &str) -> TardisError {
         TardisError {
             code: code.to_string(),
             message: msg.to_string(),
