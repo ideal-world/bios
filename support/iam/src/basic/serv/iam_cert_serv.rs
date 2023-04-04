@@ -22,7 +22,7 @@ use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
 };
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertManageAddReq, IamCertManageModifyReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdPartyCertExtAddReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
@@ -483,13 +483,13 @@ impl IamCertServ {
         Ok(())
     }
 
-    pub async fn add_3th_kind_cert(add_req: &mut IamCertExtAddReq, account_id: &str, cert_supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_3th_kind_cert(add_req: &mut IamThirdPartyCertExtAddReq, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: TrimString(add_req.ak.trim().to_string()),
                 sk: add_req.sk.as_ref().map(|sk| TrimString(sk.trim().to_string())),
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
-                supplier: Some(cert_supplier.to_string()),
+                supplier: add_req.supplier.clone(),
                 vcode: None,
                 ext: add_req.ext.clone(),
                 start_time: None,

@@ -10,7 +10,7 @@ use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertSummaryResp, RbumCertSummaryW
 use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
-use crate::basic::dto::iam_cert_dto::{IamCertExtAddReq, IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq};
+use crate::basic::dto::iam_cert_dto::{IamCertUserPwdRestReq, IamThirdIntegrationConfigDto, IamThirdIntegrationSyncAddReq, IamThirdPartyCertExtAddReq};
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
@@ -59,26 +59,27 @@ impl IamCsCertApi {
         TardisResp::ok(rbum_certs)
     }
 
-    /// TODO 移动至 ci 并且名称修改
     /// Add Gitlab Cert
+    #[deprecated(since = "1.4.3", note = "move to: Put ci/cert/third-kind")]
     #[oai(path = "/gitlab", method = "put")]
     async fn add_gitlab_cert(
         &self,
         account_id: Query<String>,
         tenant_id: Query<Option<String>>,
-        mut add_req: Json<IamCertExtAddReq>,
+        mut add_req: Json<IamThirdPartyCertExtAddReq>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, "gitlab", &funs, &ctx).await?;
+        add_req.0.supplier = Some("gitlab".to_string());
+        IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
 
-    // TODO 移动至 ci 并且名称修改
     /// Get Gitlab Certs By Account Id
+    #[deprecated(since = "1.4.3", note = "move to: Get ci/cert/third-kind")]
     #[oai(path = "/gitlab", method = "get")]
     async fn get_gitlab_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
