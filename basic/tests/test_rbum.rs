@@ -34,7 +34,6 @@ mod test_scope;
 #[tokio::test]
 async fn test_rbum() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,test_iam_serv=trace,sqlx::query=off");
-
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
     let ctx = init_test_data().await?;
@@ -71,6 +70,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         &mut RbumKindAddReq {
             code: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
             name: TrimString(RBUM_KIND_SCHEME_IAM_TENANT.to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -86,6 +86,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         &mut RbumKindAddReq {
             code: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
             name: TrimString(RBUM_KIND_SCHEME_IAM_APP.to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -101,6 +102,7 @@ pub async fn init_test_data() -> TardisResult<TardisContext> {
         &mut RbumKindAddReq {
             code: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
             name: TrimString(RBUM_KIND_SCHEME_IAM_ACCOUNT.to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,

@@ -46,6 +46,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -61,6 +62,7 @@ async fn test_rbum_rel(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -437,6 +439,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -452,6 +455,7 @@ async fn test_rbum_rel_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -669,6 +673,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -684,6 +689,7 @@ async fn test_rbum_rel_env(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -849,6 +855,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -901,6 +908,7 @@ async fn test_rbum_rel_use(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,

@@ -39,6 +39,7 @@ async fn test_rbum_item(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -188,6 +189,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -356,6 +358,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
         &mut RbumKindAddReq {
             code: TrimString("account".to_string()),
             name: TrimString("账号".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -644,6 +647,7 @@ async fn test_rbum_item_with_none_owner_name(context: &TardisContext) -> TardisR
         &mut RbumKindAddReq {
             code: TrimString("reldb".to_string()),
             name: TrimString("关系型数据库".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
