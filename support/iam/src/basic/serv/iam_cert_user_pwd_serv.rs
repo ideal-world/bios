@@ -298,7 +298,6 @@ impl IamCertUserPwdServ {
             ctx,
         )
         .await?;
-        println!("{ak}:{count_duplicate_ak}");
         count_duplicate_ak += RbumCertServ::count_rbums(
             &RbumCertFilterReq {
                 ak: Some(ak.to_string()),
@@ -308,7 +307,6 @@ impl IamCertUserPwdServ {
             ctx,
         )
         .await?;
-        println!("{ak}:{count_duplicate_ak}");
         if count_duplicate_ak > 0 {
             let string = RbumCertServ::find_rbums(
                 &RbumCertFilterReq {
