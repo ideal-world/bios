@@ -10,6 +10,7 @@ pub struct AuthConfig {
     pub head_key_app: String,
     pub head_key_protocol: String,
     pub head_key_context: String,
+    pub head_key_crypto: String,
     pub head_date_format: String,
     pub head_date_interval_millsec: u32,
 
@@ -25,8 +26,6 @@ pub struct AuthConfig {
     pub cors_allow_origin: String,
     pub cors_allow_methods: String,
     pub cors_allow_headers: String,
-
-    pub double_auth_exp_sec: u32,
 }
 
 impl Default for AuthConfig {
@@ -39,6 +38,7 @@ impl Default for AuthConfig {
             head_key_app: "Bios-App".to_string(),
             head_key_protocol: "Bios-Proto".to_string(),
             head_key_context: "Tardis-Context".to_string(),
+            head_key_crypto: "Tardis-Crypto".to_string(),
             head_date_format: "%a, %d %b %Y %T GMT".to_string(),
             head_date_interval_millsec: 10000,
             cache_key_token_info: "iam:cache:token:info:".to_string(),
@@ -52,7 +52,6 @@ impl Default for AuthConfig {
             cors_allow_origin: "*".to_string(),
             cors_allow_methods: "*".to_string(),
             cors_allow_headers: "*".to_string(),
-            double_auth_exp_sec: 300,
         }
     }
 }

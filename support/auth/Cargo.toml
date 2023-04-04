@@ -18,7 +18,12 @@ path = "src/lib.rs"
 serde.workspace = true
 itertools.workspace = true
 lazy_static.workspace = true
-tardis = { workspace = true, features = ["cache", "crypto", "web-server"] }
+tardis = { workspace = true, features = [
+    "cache",
+    "crypto",
+    "crypto-with-sm",
+    "web-server",
+] }
 
 [dev-dependencies]
 tardis = { workspace = true, features = ["test", "web-client"] }

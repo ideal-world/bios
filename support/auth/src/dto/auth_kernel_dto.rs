@@ -18,7 +18,7 @@ pub struct AuthReq {
     pub host: String,
     pub port: u16,
     pub headers: HashMap<String, String>,
-    pub body: Option<String>
+    pub body: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -27,6 +27,7 @@ pub struct AuthResp {
     pub status_code: u16,
     pub reason: Option<String>,
     pub headers: HashMap<String, String>,
+    pub body: Option<String>,
 }
 
 impl AuthResp {
@@ -42,8 +43,11 @@ impl AuthResp {
         ])
     }
 
-    pub(crate) fn ok(ctx: Option<&AuthContext>, config: &AuthConfig) -> Self {
+    pub(crate) fn ok(ctx: Option<&AuthContext>, resp_body: Option<String>, resp_headers: Option<HashMap<String, String>>, config: &AuthConfig) -> Self {
         let mut headers = Self::init_common_header(config);
+        if let Some(resp_headers) = resp_headers {
+            headers.extend(resp_headers);
+        }
         headers.insert(
             config.head_key_context.to_string(),
             if let Some(ctx) = ctx {
@@ -65,6 +69,7 @@ impl AuthResp {
             status_code: 200,
             reason: None,
             headers,
+            body: resp_body,
         }
     }
 
@@ -74,6 +79,7 @@ impl AuthResp {
             status_code: e.code.parse().unwrap_or(500),
             reason: Some(e.message),
             headers: AuthResp::init_common_header(config),
+            body: None,
         }
     }
 }
@@ -131,7 +137,16 @@ impl ResContainerNode {
         self.children.as_mut().unwrap().remove(key);
     }
 
-    pub fn insert_leaf(&mut self, key: &str, res_action: &str, res_uri: &str, auth_info: &ResAuthInfo, need_crypto: bool, need_double_auth: bool) {
+    pub fn insert_leaf(
+        &mut self,
+        key: &str,
+        res_action: &str,
+        res_uri: &str,
+        auth_info: Option<ResAuthInfo>,
+        need_crypto_req: bool,
+        need_crypto_resp: bool,
+        need_double_auth: bool,
+    ) {
         self.children.as_mut().unwrap().insert(
             key.to_string(),
             ResContainerNode {
@@ -139,8 +154,9 @@ impl ResContainerNode {
                 leaf_info: Some(ResContainerLeafInfo {
                     action: res_action.to_string(),
                     uri: res_uri.to_string(),
-                    auth: auth_info.clone(),
-                    need_crypto,
+                    auth: auth_info,
+                    need_crypto_req,
+                    need_crypto_resp,
                     need_double_auth,
                 }),
             },
@@ -156,8 +172,9 @@ impl ResContainerNode {
 pub struct ResContainerLeafInfo {
     pub action: String,
     pub uri: String,
-    pub auth: ResAuthInfo,
-    pub need_crypto: bool,
+    pub auth: Option<ResAuthInfo>,
+    pub need_crypto_req: bool,
+    pub need_crypto_resp: bool,
     pub need_double_auth: bool,
 }
 
@@ -168,9 +185,4 @@ pub struct ResAuthInfo {
     pub groups: Option<String>,
     pub apps: Option<String>,
     pub tenants: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct MgrDoubleAuthReq {
-    pub account_id: String,
 }

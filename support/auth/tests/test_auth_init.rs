@@ -10,35 +10,35 @@ pub async fn test_init() -> TardisResult<()> {
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=1##get",
-            "{\"objs\":{\"accounts\":\"#acc1#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc1#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=2##get",
-            "{\"objs\":{\"accounts\":\"#acc2#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc2#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=3##get",
-            "{\"objs\":{\"accounts\":\"#acc3#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc3#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=4##get",
-            "{\"objs\":{\"accounts\":\"#acc4#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc4#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=5##get",
-            "{\"objs\":{\"accounts\":\"#acc5#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
 
@@ -64,14 +64,14 @@ pub async fn test_init() -> TardisResult<()> {
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=6##get",
-            "{\"objs\":{\"accounts\":\"#acc6#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=7##get",
-            "{\"objs\":{\"accounts\":\"#acc7#\"}\",\"need_crypto\":false,\"need_double_auth\":false}",
+            r###"{"auth":{"accounts":"#acc7#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client.set(&format!("{}iam-res://iam-serv/p1?a=1##get", config.cache_key_res_changed_info), "").await?;
