@@ -1,4 +1,4 @@
-use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamOauth2AkSkResp};
+use crate::basic::dto::iam_cert_dto::{IamCertAkSkAddReq, IamCertAkSkResp, IamOauth2AkSkResp, IamThirdPartyCertExtAddReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::console_interface::serv::iam_ci_cert_aksk_serv::IamCiCertAkSkServ;
@@ -16,10 +16,11 @@ pub struct IamCiCertManageApi;
 pub struct IamCiCertApi;
 
 /// # Interface Console Manage Cert API
-/// Allow management of aksk (an authentication method between applications)
+///
+/// Allow Management Of aksk (an authentication method between applications)
 #[poem_openapi::OpenApi(prefix_path = "/ci/manage", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertManageApi {
-    /// add aksk cert
+    /// Add aksk Cert
     #[oai(path = "/aksk", method = "put")]
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamCertAkSkResp> {
         let funs = iam_constants::get_tardis_inst();
@@ -51,7 +52,7 @@ impl IamCiCertManageApi {
 
 #[poem_openapi::OpenApi(prefix_path = "/ci/cert", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiCertApi {
-    /// find cert by kind and supplier
+    /// Find Cert By Kind And Supplier
     ///
     /// if kind is none,query default kind(UserPwd)
     #[oai(path = "/:account_id", method = "get")]
@@ -83,7 +84,39 @@ impl IamCiCertApi {
         TardisResp::ok(cert)
     }
 
-    ///Auto sync
+    /// Add Third-kind Cert
+    #[oai(path = "/third-kind", method = "put")]
+    async fn add_third_cert(
+        &self,
+        account_id: Query<String>,
+        tenant_id: Query<Option<String>>,
+        mut add_req: Json<IamThirdPartyCertExtAddReq>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Get Third-kind Certs By Account Id
+    #[oai(path = "/third-kind", method = "get")]
+    async fn get_third_cert(
+        &self,
+        account_id: Query<String>,
+        supplier: Query<String>,
+        tenant_id: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let funs = iam_constants::get_tardis_inst();
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx).await?;
+        TardisResp::ok(rbum_cert)
+    }
+
+    ///Auto Sync
     ///
     /// 定时任务触发第三方集成同步
     #[oai(path = "/sync", method = "get")]
