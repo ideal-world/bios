@@ -111,6 +111,7 @@ async fn test_rbum_set_cate(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("app".to_string()),
             name: TrimString("APP".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
@@ -740,6 +741,7 @@ async fn test_rbum_set_item(context: &TardisContext) -> TardisResult<()> {
         &mut RbumKindAddReq {
             code: TrimString("account".to_string()),
             name: TrimString("Account".to_string()),
+            module: None,
             note: None,
             icon: None,
             sort: None,
