@@ -229,7 +229,7 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             if let Some(matched_groups) = &auth.groups {
                 if let Some(iam_groups) = &ctx.groups {
                     for iam_group in iam_groups {
-                        if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(&matched_groups) {
+                        if Regex::new(&format!(r"#{iam_group}.*#"))?.is_match(matched_groups) {
                             return Ok(Some(matched_res));
                         }
                     }

@@ -29,6 +29,8 @@ pub struct IamConfig {
     pub cache_key_account_info_: String,
     // role_id -> iam_role
     pub cache_key_role_info_: String,
+    pub cache_key_double_auth_info: String,
+    pub cache_key_double_auth_expire_sec: usize,
     //  -> [res_uri##action, {st,et,accounts,roles,groups,apps,tenants}]
     pub cache_key_res_info: String,
     // time_stamp -> res_uri##action
@@ -111,6 +113,9 @@ impl Default for IamConfig {
             cache_key_account_rel_: "iam:cache:account:rel:".to_string(),
             cache_key_account_info_: "iam:cache:account:info:".to_string(),
             cache_key_role_info_: "iam:cache:role:info:".to_string(),
+            // ..:<account_id>
+            cache_key_double_auth_info: "iam:cache:double_auth:info:".to_string(),
+            cache_key_double_auth_expire_sec: 600,
             cache_key_res_info: "iam:res:info".to_string(),
             cache_key_res_changed_info_: "iam:res:changed:info:".to_string(),
             cache_key_res_changed_expire_sec: 300,
