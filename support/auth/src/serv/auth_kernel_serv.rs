@@ -198,7 +198,7 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
         return Ok(None);
     }
     for matched_res in matched_res {
-        // Check need double auth
+        // Determine if the most precisely matched resource requires double authentication
         if matched_res.need_double_auth {
             if let Some(req_account_id) = &ctx.account_id {
                 if !auth_mgr_serv::has_double_auth(req_account_id).await? {
@@ -263,11 +263,16 @@ pub async fn decrypt(
     res_container_leaf_info: &Option<ResContainerLeafInfo>,
 ) -> TardisResult<(Option<String>, Option<HashMap<String, String>>)> {
     if let Some(res_container_leaf_info) = res_container_leaf_info {
-        // Check need crypto
+        // The interface configuration specifies that the encryption must be done
         if res_container_leaf_info.need_crypto_req || res_container_leaf_info.need_crypto_resp {
             let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, res_container_leaf_info.need_crypto_req, res_container_leaf_info.need_crypto_resp, config).await?;
             return Ok((body, headers));
         }
+    }
+    // Or, the interface configuration does not require encryption, but the request comes with encrypted headers. (Content consultation mechanism)
+    if headers.contains_key(&config.head_key_crypto) {
+        let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, true, true, config).await?;
+        return Ok((body, headers));
     }
     Ok((None, None))
 }
