@@ -33,7 +33,7 @@ bios.init_by_conf({
             "uri": "im/cs/**",
             "need_crypto_req": true,
             "need_crypto_resp": true,
-            "need_double_auth": true
+            "need_double_auth": false
         }
     ]
 });

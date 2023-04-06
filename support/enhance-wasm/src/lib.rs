@@ -42,3 +42,23 @@ pub fn response(body: &str, headers: JsValue, set_latest_authed: bool) -> Result
     }
     modules::crypto_process::decrypt(body, headers)
 }
+
+#[wasm_bindgen]
+pub fn crypto_encrypt(body: &str, method: &str, uri: &str) -> Result<JsValue, JsValue> {
+    modules::crypto_process::encrypt(body, method, uri)
+}
+
+#[wasm_bindgen]
+pub fn crypto_decrypt(encrypt_body: &str, headers: JsValue) -> Result<String, JsValue> {
+    modules::crypto_process::decrypt(encrypt_body, headers)
+}
+
+#[wasm_bindgen]
+pub fn double_auth_set_latest_authed() -> Result<(), JsValue> {
+    modules::double_auth_process::set_latest_authed()
+}
+
+#[wasm_bindgen]
+pub fn double_auth_need_auth(method: &str, uri: &str) -> Result<bool, JsValue> {
+    modules::double_auth_process::need_auth(method, uri)
+}

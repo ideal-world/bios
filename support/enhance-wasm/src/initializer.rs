@@ -15,6 +15,7 @@ pub(crate) async fn init_by_url(service_url: &str) -> Result<(), JsValue> {
     } else {
         format!("{service_url}/")
     };
+    web_sys::console::log_1(&format!("[BIOS] Init by url: {service_url}.").into());
     let config = http::request::<Config>("GET", &format!("{service_url}apis"), "", HashMap::new()).await?.unwrap();
     do_init(config)?;
     let mut serv_url = SERV_URL.write().unwrap();
@@ -23,6 +24,7 @@ pub(crate) async fn init_by_url(service_url: &str) -> Result<(), JsValue> {
 }
 
 pub(crate) fn init_by_conf(config: JsValue) -> Result<(), JsValue> {
+    web_sys::console::log_1(&format!("[BIOS] Init by config: {config:?}.").into());
     let config = serde_wasm_bindgen::from_value::<Config>(config).map_err(|e| JsValue::try_from(JsError::new(&format!("[Init] Deserialize error:{e}"))).unwrap())?;
     do_init(config)?;
     Ok(())

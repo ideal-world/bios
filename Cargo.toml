@@ -62,5 +62,6 @@ web-sys = { version = "0", features = [
     'RequestMode',
     'Response',
     'Window',
+    'console'
 ] }
 wasm-bindgen-test = { version = "0" }
