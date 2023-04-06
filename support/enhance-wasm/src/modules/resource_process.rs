@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{constants::RES_CONTAINER, mini_tardis::basic::TardisResult};
 
 pub(crate) fn add_res(res_action: &str, res_uri: &str, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
+    web_sys::console::log_1(&format!("[BIOS.RES] Add res [{res_action}] {res_uri}.").into());
     let res_action = res_action.to_lowercase();
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;

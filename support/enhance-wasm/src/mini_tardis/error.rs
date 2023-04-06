@@ -141,6 +141,6 @@ impl<P> From<PoisonError<RwLockWriteGuard<'_, P>>> for TardisError {
 
 impl From<TardisError> for JsValue {
     fn from(error: TardisError) -> Self {
-        JsValue::try_from(JsError::new(&format!("[HTTP]:[{}]{}", error.code, error.message))).unwrap()
+        JsValue::try_from(JsError::new(&format!("[Tardis.Http]:[{}]{}", error.code, error.message))).unwrap()
     }
 }
