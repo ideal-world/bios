@@ -5,6 +5,7 @@ import * as bios from "bios-enhance-wasm";
 bios.init_by_conf({
     "global_api_mode": false,
     "pub_key": "02fbba662032fd384079b7824c07ec8eeaac615187e27ce6a58fcd1597105c1065",
+    "double_auth_exp_sec": 60,
     "apis": [
         {
             "action": "get",
@@ -37,8 +38,14 @@ bios.init_by_conf({
     ]
 });
 
-console.log("no need encrypt = "+ bios.crypto_encrypt("hello world", "post", "im/cs/xxxx"));
-console.log("request & response need encrypt = "+ JSON.stringify(bios.crypto_encrypt("hello world", "get", "im/cs/xxxx")));
-console.log("request need encrypt = "+ JSON.stringify(bios.crypto_encrypt("hello world", "get", "im/ct/need_crypto_req/xxxx")));
-console.log("response need encrypt = "+ JSON.stringify(bios.crypto_encrypt("hello world", "get", "im/ct/need_crypto_resp/xxxx")));
+// crypto process
+console.log("no need encrypt = " + bios.crypto_encrypt("hello world", "post", "im/cs/xxxx"));
+console.log("request & response need encrypt = " + JSON.stringify(bios.crypto_encrypt("hello world", "get", "im/cs/xxxx")));
+console.log("request need encrypt = " + JSON.stringify(bios.crypto_encrypt("hello world", "get", "im/ct/need_crypto_req/xxxx")));
+console.log("response need encrypt = " + JSON.stringify(bios.crypto_encrypt("hello world", "get", "im/ct/need_crypto_resp/xxxx")));
+
+// double auth
+console.log("need double auth = " + bios.double_auth_need_auth());
+bios.double_auth_set_latest_authed();
+console.log("need double auth = " + bios.double_auth_need_auth());
 

@@ -26,3 +26,13 @@ pub fn crypto_encrypt(body: &str, method: &str, uri: &str) -> Result<JsValue, Js
 pub fn crypto_decrypt(encrypt_body: &str, encrypt_key: &str) -> Result<String, JsValue> {
     modules::crypto_process::decrypt(encrypt_body, encrypt_key)
 }
+
+#[wasm_bindgen]
+pub fn double_auth_set_latest_authed() -> Result<(), JsValue> {
+    modules::double_auth::set_latest_authed()
+}
+
+#[wasm_bindgen]
+pub fn double_auth_need_auth() -> Result<bool, JsValue> {
+    modules::double_auth::need_auth()
+}

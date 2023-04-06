@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::{JsError, JsValue};
 
 use crate::{
-    constants::{GLOBAL_API_MODE, SERV_URL},
+    constants::{DOUBLE_AUTH_CACHE_EXP_SEC, GLOBAL_API_MODE, SERV_URL},
     mini_tardis::http,
     modules::{crypto_process, res_process},
 };
@@ -33,6 +33,10 @@ fn do_init(config: Config) -> Result<(), JsValue> {
         let mut global_api_mode = GLOBAL_API_MODE.write().unwrap();
         *global_api_mode = true;
     }
+    if config.double_auth_exp_sec != 0 {
+        let mut double_auth_exp_sec = DOUBLE_AUTH_CACHE_EXP_SEC.write().unwrap();
+        *double_auth_exp_sec = (0.0, config.double_auth_exp_sec);
+    }
     for api in config.apis {
         res_process::add_res(&api.action, &api.uri, api.need_crypto_req, api.need_crypto_resp, api.need_double_auth)?;
     }
@@ -44,6 +48,7 @@ fn do_init(config: Config) -> Result<(), JsValue> {
 struct Config {
     pub global_api_mode: bool,
     pub pub_key: String,
+    pub double_auth_exp_sec: u32,
     pub apis: Vec<Api>,
 }
 
