@@ -1,3 +1,4 @@
+use constants::STRICT_SECURITY_MODE;
 use wasm_bindgen::prelude::*;
 mod constants;
 mod initializer;
@@ -18,21 +19,26 @@ pub fn init_by_conf(config: JsValue) -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub fn crypto_encrypt(body: &str, method: &str, uri: &str) -> Result<JsValue, JsValue> {
-    modules::crypto_process::encrypt(body, method, uri)
+pub fn strict_security_mode() -> Result<bool, JsValue> {
+    Ok(*STRICT_SECURITY_MODE.read().unwrap())
 }
 
 #[wasm_bindgen]
-pub fn crypto_decrypt(encrypt_body: &str, encrypt_key: &str) -> Result<String, JsValue> {
-    modules::crypto_process::decrypt(encrypt_body, encrypt_key)
+pub fn request(method: &str, uri: &str, body: &str, headers: JsValue) -> Result<JsValue, JsValue> {
+    if modules::double_auth_process::need_auth(method, uri)? {
+        return Ok(JsValue::NULL);
+    }
+    if *STRICT_SECURITY_MODE.read().unwrap() {
+        modules::global_api_process::mix(method, uri, body, headers)
+    } else {
+        modules::crypto_process::encrypt(method, body, uri)
+    }
 }
 
 #[wasm_bindgen]
-pub fn double_auth_set_latest_authed() -> Result<(), JsValue> {
-    modules::double_auth::set_latest_authed()
-}
-
-#[wasm_bindgen]
-pub fn double_auth_need_auth() -> Result<bool, JsValue> {
-    modules::double_auth::need_auth()
+pub fn response(body: &str, headers: JsValue, set_latest_authed: bool) -> Result<String, JsValue> {
+    if set_latest_authed {
+        modules::double_auth_process::set_latest_authed()?;
+    }
+    modules::crypto_process::decrypt(body, headers)
 }
