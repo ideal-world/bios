@@ -37,8 +37,8 @@ fancy-regex.workspace = true
 tardis = { workspace = true, optional = true }
 
 [dev-dependencies]
-tardis.workspace = true
+tardis = { workspace = true, features = ["test"] }
 
 [[test]]
 name = "test_rbum"
-required-features = ["default", "with-mq"]
+required-features = ["default", "with-mq", "test"]
