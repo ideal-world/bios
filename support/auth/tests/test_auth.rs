@@ -6,6 +6,7 @@ use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};
 mod init_cache_container;
+mod test_auth_encrypt;
 mod test_auth_init;
 mod test_auth_match;
 mod test_auth_req;
@@ -32,5 +33,6 @@ async fn test_auth() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     test_auth_req::test_req().await?;
+    test_auth_encrypt::test_encrypt().await?;
     Ok(())
 }
