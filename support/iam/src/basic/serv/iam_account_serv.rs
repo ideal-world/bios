@@ -121,11 +121,11 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(())
     }
     async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::async_add_or_modify_account_search(id.to_string(), false, funs, ctx.clone()).await?;
+        IamAccountServ::add_or_modify_account_search(id, false, funs, ctx).await?;
         Ok(())
     }
     async fn before_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, funs, ctx.clone()).await?;
+        IamAccountServ::add_or_modify_account_search(id, true, funs, ctx).await?;
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
