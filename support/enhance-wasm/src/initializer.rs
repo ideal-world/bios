@@ -5,7 +5,7 @@ use wasm_bindgen::{JsError, JsValue};
 
 use crate::{
     constants::{DOUBLE_AUTH_CACHE_EXP_SEC, SERV_URL, STRICT_SECURITY_MODE},
-    mini_tardis::http,
+    mini_tardis::{basic::TardisResult, http, log},
     modules::{crypto_process, resource_process},
 };
 
@@ -15,7 +15,7 @@ pub(crate) async fn init_by_url(service_url: &str) -> Result<(), JsValue> {
     } else {
         format!("{service_url}/")
     };
-    web_sys::console::log_1(&format!("[BIOS] Init by url: {service_url}.").into());
+    log::log(&format!("[BIOS] Init by url: {service_url}."));
     let config = http::request::<Config>("GET", &format!("{service_url}apis"), "", HashMap::new()).await?.unwrap();
     do_init(config)?;
     let mut serv_url = SERV_URL.write().unwrap();
@@ -24,13 +24,13 @@ pub(crate) async fn init_by_url(service_url: &str) -> Result<(), JsValue> {
 }
 
 pub(crate) fn init_by_conf(config: JsValue) -> Result<(), JsValue> {
-    web_sys::console::log_1(&format!("[BIOS] Init by config: {config:?}.").into());
+    log::log(&format!("[BIOS] Init by config: {config:?}."));
     let config = serde_wasm_bindgen::from_value::<Config>(config).map_err(|e| JsValue::try_from(JsError::new(&format!("[Init] Deserialize error:{e}"))).unwrap())?;
     do_init(config)?;
     Ok(())
 }
 
-fn do_init(config: Config) -> Result<(), JsValue> {
+pub(crate) fn do_init(config: Config) -> TardisResult<()> {
     if config.strict_security_mode {
         let mut strict_security_mode = STRICT_SECURITY_MODE.write().unwrap();
         *strict_security_mode = true;
@@ -47,7 +47,7 @@ fn do_init(config: Config) -> Result<(), JsValue> {
 }
 
 #[derive(Serialize, Deserialize, Default)]
-struct Config {
+pub(crate) struct Config {
     pub strict_security_mode: bool,
     pub pub_key: String,
     pub double_auth_exp_sec: u32,
@@ -55,7 +55,7 @@ struct Config {
 }
 
 #[derive(Serialize, Deserialize, Default)]
-struct Api {
+pub(crate) struct Api {
     pub action: String,
     pub uri: String,
     pub need_crypto_req: bool,

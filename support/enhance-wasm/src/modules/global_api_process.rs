@@ -1,21 +1,20 @@
 use std::collections::HashMap;
 
-use js_sys::Date;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::{JsError, JsValue};
 
+use crate::mini_tardis::time;
+
 use super::crypto_process;
 
-pub(crate) fn mix(method: &str, uri: &str, body: &str, headers: JsValue) -> Result<JsValue, JsValue> {
-    let headers = serde_wasm_bindgen::from_value::<HashMap<String, String>>(headers)
-        .map_err(|e| JsValue::try_from(JsError::new(&format!("[BIOS.GlobalApi] Deserialize headers error:{e}"))).unwrap())?;
+pub fn mix(method: &str, uri: &str, body: &str, headers: HashMap<String, String>) -> Result<JsValue, JsValue> {
     let mix_body = MixRequestBody {
         method: method.to_string(),
         uri: uri.to_string(),
         body: body.to_string(),
         headers,
-        ts: Date::now(),
+        ts: time::now(),
     };
     let mix_body = mix_body
         .serialize(&Serializer::json_compatible())
@@ -33,7 +32,7 @@ pub(crate) fn mix(method: &str, uri: &str, body: &str, headers: JsValue) -> Resu
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub(crate) struct MixRequestBody {
+pub struct MixRequestBody {
     pub method: String,
     pub uri: String,
     pub body: String,
@@ -42,7 +41,7 @@ pub(crate) struct MixRequestBody {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub(crate) struct MixRequest {
+pub struct MixRequest {
     pub method: String,
     pub uri: String,
     pub body: String,
