@@ -98,10 +98,17 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
         Ok(Some(iam_app))
     }
 
+    async fn after_add_item(id: &str, _: &mut IamAppAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_app_kv(id, funs, ctx).await?;
+        Ok(())
+    }
     async fn after_modify_item(id: &str, modify_req: &mut IamAppModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
         }
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_app_kv(id, funs, ctx).await.unwrap();
         Ok(())
     }
 
@@ -178,8 +185,6 @@ impl IamAppServ {
         //refresh ctx
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(tenant_ctx.clone())?;
         IamCertServ::package_tardis_account_context_and_resp(&tenant_ctx.owner, &ctx.own_paths, "".to_string(), None, funs, &ctx).await?;
-        #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_app_kv(&app_id, funs, &ctx).await.unwrap();
 
         Ok(app_id)
     }
@@ -217,8 +222,6 @@ impl IamAppServ {
                 }
             }
         }
-        #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_app_kv(id, funs, ctx).await.unwrap();
         Ok(())
     }
 

@@ -113,10 +113,17 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         Ok(Some(iam_tenant))
     }
 
+    async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
+        Ok(())
+    }
     async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.unwrap_or(false) {
             IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, false, funs, ctx).await?;
         }
+        #[cfg(feature = "spi_kv")]
+        Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
         Ok(())
     }
 
@@ -243,8 +250,7 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
-        #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_tenant_kv(&tenant_id, funs, &tenant_ctx).await.unwrap();
+
         Ok((tenant_id, pwd))
     }
 
@@ -343,8 +349,6 @@ impl IamTenantServ {
                 IamCertLdapServ::add_cert_conf(cert_conf_by_ladp, Some(id.to_string()), funs, ctx).await?;
             }
         }
-        #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_tenant_kv(id, funs, ctx).await.unwrap();
         Ok(())
     }
 
