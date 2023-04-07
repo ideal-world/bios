@@ -115,7 +115,7 @@ impl Default for IamConfig {
             cache_key_role_info_: "iam:cache:role:info:".to_string(),
             // ..:<account_id>
             cache_key_double_auth_info: "iam:cache:double_auth:info:".to_string(),
-            cache_key_double_auth_expire_sec: 600,
+            cache_key_double_auth_expire_sec: 300,
             cache_key_res_info: "iam:res:info".to_string(),
             cache_key_res_changed_info_: "iam:res:changed:info:".to_string(),
             cache_key_res_changed_expire_sec: 300,

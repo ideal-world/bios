@@ -255,6 +255,20 @@ impl IamIdentCacheServ {
 
         Ok(())
     }
+
+    pub async fn add_double_auth(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("add double auth: account_id={}", account_id);
+
+        funs.cache()
+            .set_ex(
+                format!("{}{}", funs.conf::<IamConfig>().cache_key_double_auth_info, account_id).as_str(),
+                "",
+                funs.conf::<IamConfig>().cache_key_double_auth_expire_sec,
+            )
+            .await?;
+
+        Ok(())
+    }
 }
 
 pub struct IamResCacheServ;
@@ -373,7 +387,6 @@ struct IamCacheResRelAddOrModifyDto {
     pub apps: String,
     pub tenants: String,
 }
-
 
 pub struct IamCacheResRelAddOrModifyReq {
     pub st: Option<i64>,

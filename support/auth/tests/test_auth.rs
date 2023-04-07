@@ -16,10 +16,11 @@ async fn test_auth() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,bios_auth=trace");
 
     test_auth_res::test_res()?;
-    test_auth_match::test_match().await?;
 
     let docker = testcontainers::clients::Cli::default();
     let _x = init_cache_container::init(&docker).await?;
+
+    test_auth_match::test_match().await?;
 
     test_auth_init::test_init().await?;
 

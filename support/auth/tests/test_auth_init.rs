@@ -42,6 +42,14 @@ pub async fn test_init() -> TardisResult<()> {
         )
         .await?;
 
+        cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/need_double_auth?a=1##get",
+            r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":true}"###,
+        )
+        .await?;
+
     auth_initializer::init_data().await?;
 
     assert_eq!(
