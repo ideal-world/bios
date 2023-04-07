@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
@@ -39,6 +40,7 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 #[cfg(feature = "spi_kv")]
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
+use crate::iam_constants;
 use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::iam_app_serv::IamAppServ;
@@ -118,11 +120,19 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
         Ok(())
     }
-
+    async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamAccountServ::async_add_or_modify_account_search(id.to_string(), false, funs, ctx.clone()).await?;
+        Ok(())
+    }
+    async fn before_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, funs, ctx.clone()).await?;
+        Ok(())
+    }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
         if id == ctx.owner {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "account invalid", "409-iam-current-can-not-account-delete"));
         }
+        IamAccountServ::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(None)
     }
 
@@ -226,8 +236,6 @@ impl IamAccountServ {
             }
         }
         IamAttrServ::add_or_modify_account_attr_values(&account_id, add_req.exts.clone(), funs, ctx).await?;
-
-        Self::add_or_modify_account_search(&account_id, false, funs, ctx).await.unwrap();
         Ok(account_id)
     }
 
@@ -288,7 +296,6 @@ impl IamAccountServ {
         if let Some(exts) = &modify_req.exts {
             IamAttrServ::add_or_modify_account_attr_values(id, exts.clone(), funs, ctx).await?;
         }
-        Self::add_or_modify_account_search(id, false, funs, ctx).await.unwrap();
         Ok(())
     }
 
@@ -640,6 +647,30 @@ impl IamAccountServ {
         }
     }
 
+    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+        TaskProcessor::execute_task(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move || async move {
+                let funs = iam_constants::get_tardis_inst();
+                Self::add_or_modify_account_search(&account_id, is_modify, &funs, &ctx).await
+            },
+            funs,
+        )
+        .await
+    }
+
+    pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+        TaskProcessor::execute_task(
+            &funs.conf::<IamConfig>().cache_key_async_task_status,
+            move || async move {
+                let funs = iam_constants::get_tardis_inst();
+                Self::delete_account_search(&account_id, &funs, &ctx).await
+            },
+            funs,
+        )
+        .await
+    }
+
     // account 全局搜索埋点方法
     pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_resp = IamAccountServ::get_account_detail_aggs(
@@ -764,6 +795,28 @@ impl IamAccountServ {
             } else {
                 funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
             }
+        }
+        Ok(())
+    }
+    // account 全局搜索删除埋点方法
+    pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        #[cfg(feature = "spi_search")]
+        {
+            let search_url = funs.conf::<IamConfig>().spi.search_url.clone();
+            let spi_ctx = TardisContext {
+                owner: funs.conf::<IamConfig>().spi.owner.clone(),
+                ..ctx.clone()
+            };
+            let headers = Some(vec![(
+                "Tardis-Context".to_string(),
+                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+            )]);
+
+            let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
+            let key = account_id.to_string();
+
+            //delete search
+            funs.web_client().delete_to_void(&format!("{search_url}/ci/item/{tag}/{key}"), headers.clone()).await?;
         }
         Ok(())
     }
