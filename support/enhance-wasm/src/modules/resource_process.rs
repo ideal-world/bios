@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{constants::RES_CONTAINER, mini_tardis::basic::TardisResult};
+use crate::{
+    constants::RES_CONTAINER,
+    mini_tardis::{basic::TardisResult, log},
+};
 
-pub(crate) fn add_res(res_action: &str, res_uri: &str, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
-    web_sys::console::log_1(&format!("[BIOS.RES] Add res [{res_action}] {res_uri}.").into());
+pub fn add_res(res_action: &str, res_uri: &str, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
+    log::log(&format!("[BIOS.RES] Add res [{res_action}] {res_uri}."));
     let res_action = res_action.to_lowercase();
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;
@@ -25,7 +28,7 @@ pub(crate) fn add_res(res_action: &str, res_uri: &str, need_crypto_req: bool, ne
     Ok(())
 }
 
-pub(crate) fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
+pub fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
     let res_action = res_action.to_lowercase();
     let mut res_items = parse_uri(res_uri)?;
     // remove $ node;
@@ -74,7 +77,7 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     Ok(res_uri)
 }
 
-pub(crate) struct ResContainerNode {
+pub struct ResContainerNode {
     children: Option<HashMap<String, ResContainerNode>>,
     leaf_info: Option<ResContainerLeafInfo>,
 }
@@ -126,7 +129,7 @@ impl ResContainerNode {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct ResContainerLeafInfo {
+pub struct ResContainerLeafInfo {
     pub need_crypto_req: bool,
     pub need_crypto_resp: bool,
     pub need_double_auth: bool,

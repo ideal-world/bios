@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use constants::STRICT_SECURITY_MODE;
+use serde::Serialize;
+use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 mod constants;
 mod initializer;
@@ -7,6 +11,11 @@ mod modules;
 
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    console_error_panic_hook::set_once();
+}
 
 #[wasm_bindgen]
 pub async fn init_by_url(service_url: &str) -> Result<(), JsValue> {
@@ -29,9 +38,12 @@ pub fn request(method: &str, uri: &str, body: &str, headers: JsValue) -> Result<
         return Ok(JsValue::NULL);
     }
     if *STRICT_SECURITY_MODE.read().unwrap() {
+        let headers = serde_wasm_bindgen::from_value::<HashMap<String, String>>(headers)
+        .map_err(|e| JsValue::try_from(JsError::new(&format!("[BIOS.GlobalApi] Deserialize headers error:{e}"))).unwrap())?;
         modules::global_api_process::mix(method, uri, body, headers)
     } else {
-        modules::crypto_process::encrypt(method, body, uri)
+        let resp = modules::crypto_process::encrypt(method, uri, body)?;
+        Ok(resp.serialize(&Serializer::json_compatible())?)
     }
 }
 
@@ -40,25 +52,30 @@ pub fn response(body: &str, headers: JsValue, set_latest_authed: bool) -> Result
     if set_latest_authed {
         modules::double_auth_process::set_latest_authed()?;
     }
-    modules::crypto_process::decrypt(body, headers)
+    let headers = serde_wasm_bindgen::from_value::<HashMap<String, String>>(headers)
+        .map_err(|e| JsValue::try_from(JsError::new(&format!("[BIOS.Crypto] Deserialize headers error:{e}"))).unwrap())?;
+    Ok(modules::crypto_process::decrypt(body, headers)?)
 }
 
 #[wasm_bindgen]
-pub fn crypto_encrypt(body: &str, method: &str, uri: &str) -> Result<JsValue, JsValue> {
-    modules::crypto_process::encrypt(body, method, uri)
+pub fn crypto_encrypt(method: &str, uri: &str, body: &str) -> Result<JsValue, JsValue> {
+    let resp = modules::crypto_process::encrypt(method, uri, body);
+    Ok(resp.serialize(&Serializer::json_compatible())?)
 }
 
 #[wasm_bindgen]
 pub fn crypto_decrypt(encrypt_body: &str, headers: JsValue) -> Result<String, JsValue> {
-    modules::crypto_process::decrypt(encrypt_body, headers)
+    let headers = serde_wasm_bindgen::from_value::<HashMap<String, String>>(headers)
+        .map_err(|e| JsValue::try_from(JsError::new(&format!("[BIOS.Crypto] Deserialize headers error:{e}"))).unwrap())?;
+    Ok(modules::crypto_process::decrypt(encrypt_body, headers)?)
 }
 
 #[wasm_bindgen]
 pub fn double_auth_set_latest_authed() -> Result<(), JsValue> {
-    modules::double_auth_process::set_latest_authed()
+    Ok(modules::double_auth_process::set_latest_authed()?)
 }
 
 #[wasm_bindgen]
 pub fn double_auth_need_auth(method: &str, uri: &str) -> Result<bool, JsValue> {
-    modules::double_auth_process::need_auth(method, uri)
+    Ok(modules::double_auth_process::need_auth(method, uri)?)
 }

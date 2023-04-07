@@ -7,6 +7,8 @@ use crate::{
     modules::resource_process::ResContainerNode,
 };
 
+pub const TARDIS_CRYPTO: &str = "Tardis-Crypto";
+
 lazy_static! {
     pub(crate) static ref SERV_URL: RwLock<String> = RwLock::new(String::new());
     pub(crate) static ref STRICT_SECURITY_MODE: RwLock<bool> = RwLock::new(false);
