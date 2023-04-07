@@ -3,7 +3,7 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -747,12 +747,13 @@ impl IamAccountServ {
             let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();
             let key = account_id.to_string();
             let raw_roles = Self::find_simple_rel_roles(&account_resp.id, true, Some(true), None, funs, ctx).await?;
-            let mut account_roles: Vec<String> = vec![];
+            let mut roles_set = HashSet::new();
             for role in raw_roles {
                 if !IamRoleServ::is_disabled(&role.rel_id, funs).await? {
-                    account_roles.push(role.rel_id)
+                    roles_set.insert(role.rel_id);
                 }
             }
+            let account_roles = roles_set.into_iter().collect_vec();
             let mut search_body = json!({
                 "tag": tag,
                 "key": key,
@@ -776,12 +777,10 @@ impl IamAccountServ {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
             if account_app_ids.is_empty() && account_resp.orgs.is_empty() && account_resp.own_paths.is_empty() {
-                search_body.as_object_mut().unwrap().insert("visit_keys".to_string(), json!({ "roles": account_roles }));
             } else {
                 search_body.as_object_mut().unwrap().insert(
                     "visit_keys".to_string(),
                     json!({
-                        "roles": account_roles,
                         "apps": account_app_ids,
                         "groups": account_resp_dept_id,
                         "tenants" : [ account_resp.own_paths ]
