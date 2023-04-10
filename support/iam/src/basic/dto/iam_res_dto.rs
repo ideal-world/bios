@@ -31,6 +31,10 @@ pub struct IamResAddReq {
     pub action: Option<String>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
+
+    pub crypto_req: bool,
+    pub crypto_resp: bool,
+    pub double_auth: bool,
     pub disabled: Option<bool>,
 }
 
@@ -61,6 +65,9 @@ pub struct IamResModifyReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub crypto_req: Option<bool>,
+    pub crypto_resp: Option<bool>,
+    pub double_auth: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
@@ -83,6 +90,9 @@ pub struct IamResSummaryResp {
     pub method: String,
     pub hide: bool,
     pub action: String,
+    pub crypto_req: bool,
+    pub crypto_resp: bool,
+    pub double_auth: bool,
 }
 
 impl IamResSummaryResp {
@@ -114,6 +124,9 @@ pub struct IamResDetailResp {
     pub method: String,
     pub hide: bool,
     pub action: String,
+    pub crypto_req: bool,
+    pub crypto_resp: bool,
+    pub double_auth: bool,
 }
 
 impl IamResDetailResp {

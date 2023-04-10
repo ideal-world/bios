@@ -586,6 +586,9 @@ async fn add_res<'a>(
                 action: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
+                crypto_req: false,
+                crypto_resp: false,
+                double_auth: false,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -609,6 +612,9 @@ async fn add_res<'a>(
                 action: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
+                crypto_req: false,
+                crypto_resp: false,
+                double_auth: false,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),
