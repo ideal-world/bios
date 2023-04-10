@@ -35,18 +35,28 @@ fn init_fd_key() -> TardisResult<()> {
 
 pub fn encrypt(method: &str, uri: &str, body: &str) -> TardisResult<EncryptResp> {
     let matched_res = resource_process::match_res(method, uri)?;
-    // After matched multiple resources, the final selection of which resource is decided by the logic of the back-end service, the front-end does not know.
-    // Therefore, the scope of encryption is enlarged, and encryption is performed whenever one of the matched multiple resources needs to be encrypted.
-    let resp = if matched_res.iter().any(|f| f.need_crypto_req && f.need_crypto_resp) {
-        do_encrypt(body, true, true)?
-    } else if matched_res.iter().any(|f| f.need_crypto_req) {
-        do_encrypt(body, true, false)?
-    } else if matched_res.iter().any(|f| f.need_crypto_resp) {
-        do_encrypt(body, false, true)?
-    } else {
+    let resp = if matched_res.is_empty() {
         EncryptResp {
             body: body.to_string(),
             additional_headers: HashMap::new(),
+        }
+    } else if matched_res.len() == 1 {
+        let matched_res = matched_res.first().unwrap();
+        do_encrypt(body, matched_res.need_crypto_req, matched_res.need_crypto_resp)?
+    } else {
+        // After matched multiple resources, the final selection of which resource is decided by the logic of the back-end service, the front-end does not know.
+        // Therefore, the scope of encryption is enlarged, and encryption is performed whenever one of the matched multiple resources needs to be encrypted.
+        if matched_res.iter().any(|f| f.need_crypto_req && f.need_crypto_resp) {
+            do_encrypt(body, true, true)?
+        } else if matched_res.iter().any(|f| f.need_crypto_req) {
+            do_encrypt(body, true, false)?
+        } else if matched_res.iter().any(|f| f.need_crypto_resp) {
+            do_encrypt(body, false, true)?
+        } else {
+            EncryptResp {
+                body: body.to_string(),
+                additional_headers: HashMap::new(),
+            }
         }
     };
     Ok(resp)
@@ -63,11 +73,12 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
             .encrypt_cbc(body, &sm4_key, &sm4_iv)
             .map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: body encrypt error:{e}"), ""))?;
 
-        let fd_pub_key = ENCRYPT_FD_SM2_KEYS.read().unwrap();
-        let fd_pub_key = &fd_pub_key.as_ref().unwrap().0;
+        let fd_keys = ENCRYPT_FD_SM2_KEYS.read().unwrap();
+        let fd_pub_key = &fd_keys.as_ref().unwrap().0;
 
+        let sign_body = crypto::sm::digest(&encrypt_body)?;
         let encrypt_key = serv_pub_key
-            .encrypt(&format!("{sm4_key} {sm4_iv} {fd_pub_key}"))
+            .encrypt(&format!("{sign_body} {sm4_key} {sm4_iv} {fd_pub_key}"))
             .map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: key encrypt error:{e}"), ""))?;
         (encrypt_body, encrypt_key)
     } else if need_crypto_req {
@@ -77,12 +88,14 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
             .encrypt_cbc(body, &sm4_key, &sm4_iv)
             .map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: body encrypt error:{e}"), ""))?;
 
-        let encrypt_key =
-            serv_pub_key.encrypt(&format!("{sm4_key} {sm4_iv}")).map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: key encrypt error:{e}"), ""))?;
+        let sign_body = crypto::sm::digest(&encrypt_body)?;
+        let encrypt_key = serv_pub_key
+            .encrypt(&format!("{sign_body} {sm4_key} {sm4_iv}"))
+            .map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: key encrypt error:{e}"), ""))?;
         (encrypt_body, encrypt_key)
     } else {
-        let fd_pub_key = ENCRYPT_FD_SM2_KEYS.read().unwrap();
-        let fd_pub_key = &fd_pub_key.as_ref().unwrap().0;
+        let fd_keys = ENCRYPT_FD_SM2_KEYS.read().unwrap();
+        let fd_pub_key = &fd_keys.as_ref().unwrap().0;
 
         let encrypt_key =
             serv_pub_key.encrypt(&format!("{fd_pub_key}")).map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: key encrypt error:{e}"), ""))?;
@@ -105,14 +118,19 @@ pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<Str
 }
 
 pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
-    let fd_pri_key = ENCRYPT_FD_SM2_KEYS.read().unwrap();
-    let fd_pri_key = &fd_pri_key.as_ref().unwrap().1;
+    let fd_keys = ENCRYPT_FD_SM2_KEYS.read().unwrap();
+    let fd_pri_key = &fd_keys.as_ref().unwrap().1;
 
     let encrypt_key = crypto::base64::decode(encrypt_key)?;
     let key = fd_pri_key.decrypt(&encrypt_key)?;
     let key = key.split(" ").collect::<Vec<&str>>();
-    let sm4_key = key[0];
-    let sm4_iv = key[1];
+    let sm3_digest = key[0];
+    let sm4_key = key[1];
+    let sm4_iv = key[2];
+
+    if sm3_digest != crypto::sm::digest(body)? {
+        return Err(TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted response: body digest error."), ""));
+    }
 
     let body =
         TardisCryptoSm4 {}.decrypt_cbc(body, sm4_key, sm4_iv).map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted response: body decrypt error:{e}"), ""))?;
@@ -196,7 +214,7 @@ mod tests {
     fn test_crypto_req_and_resp(mock_serv_pri_key: &TardisCryptoSm2PrivateKey, sm2: &TardisCryptoSm2) {
         // Encrypt
         let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
-        let encrypt_req = encrypt("Get", "im/ct/all/sepc/xxx", mock_req_body).unwrap();
+        let encrypt_req = encrypt("Get", "im/ct/all/spec/xxx", mock_req_body).unwrap();
         let encrypt_body = encrypt_req.body;
         let key = &encrypt_req.additional_headers[TARDIS_CRYPTO];
 
@@ -205,19 +223,24 @@ mod tests {
         // 1. Decrypt request key by service private key
         let key = mock_serv_pri_key.decrypt(&crypto::base64::decode(key).unwrap()).unwrap();
         let key = key.split(" ").collect::<Vec<&str>>();
-        assert_eq!(key.len(), 3);
-        let sm4_key = key[0];
-        let sm4_iv = key[1];
-        let fd_pub_key = sm2.new_public_key_from_public_key(key[2]).unwrap();
-        // 2. Decrypt request body by frontend sm4 key & iv
+        assert_eq!(key.len(), 4);
+        let sm3_digest = key[0];
+        let sm4_key = key[1];
+        let sm4_iv = key[2];
+        // 2. Check request body digest by frontend sm3
+        assert_eq!(crypto::sm::digest(&encrypt_body).unwrap(), sm3_digest);
+        let fd_pub_key = sm2.new_public_key_from_public_key(key[3]).unwrap();
+        // 3. Decrypt request body by frontend sm4 key & iv
         assert_eq!(TardisCryptoSm4 {}.decrypt_cbc(&encrypt_body, sm4_key, sm4_iv).unwrap(), mock_req_body);
-        // 3. Encrypt response body by service sm4 key & iv
+        // 4. Encrypt response body by service sm4 key & iv
         let sm4_key = crypto::key::rand_16_hex().unwrap();
         let sm4_iv = crypto::key::rand_16_hex().unwrap();
         let mock_resp_body = "开放平台 天然具备了开放、生态化的能力，可解决跨业务群/跨企业共享需求，可用于接入各领域中台的能力，由其提供统一规范的共享能力支撑。并且开放平台仅为一层比较“薄”的共享能力封装，它也可以接入非中台化的后台系统或是二方/三方的服务，也就是说 如果只为实现企业数字化能力共享的话可以没有中台，企业现有的IT系统都可以直接注册到开放平台，这在一定程度规避了中台建设非渐进式，投入高、风险大的问题。";
         let encrypt_body = TardisCryptoSm4 {}.encrypt_cbc(&mock_resp_body, &sm4_key, &sm4_iv).unwrap();
-        // 4. Encrypt response key by frontend public key
-        let key = crypto::base64::encode(&fd_pub_key.encrypt(&format!("{} {}", sm4_key, sm4_iv)).unwrap());
+        // 4. Digest response body by service sm3
+        let sign_body = crypto::sm::digest(&encrypt_body).unwrap();
+        // 5. Encrypt response key by frontend public key
+        let key = crypto::base64::encode(&fd_pub_key.encrypt(&format!("{sign_body} {sm4_key} {sm4_iv}")).unwrap());
         // ------------------------------------------------
 
         assert_eq!(decrypt(&encrypt_body, HashMap::from([(TARDIS_CRYPTO.to_string(), key)])).unwrap(), mock_resp_body);
@@ -235,10 +258,13 @@ mod tests {
         // 1. Decrypt request key by service private key
         let key = mock_serv_pri_key.decrypt(&crypto::base64::decode(key).unwrap()).unwrap();
         let key = key.split(" ").collect::<Vec<&str>>();
-        assert_eq!(key.len(), 2);
-        let sm4_key = key[0];
-        let sm4_iv = key[1];
-        // 2. Decrypt request body by frontend sm4 key & iv
+        assert_eq!(key.len(), 3);
+        let sm3_digest = key[0];
+        let sm4_key = key[1];
+        let sm4_iv = key[2];
+        // 2. Check request body digest by frontend sm3
+        assert_eq!(crypto::sm::digest(&encrypt_body).unwrap(), sm3_digest);
+        // 3. Decrypt request body by frontend sm4 key & iv
         assert_eq!(TardisCryptoSm4 {}.decrypt_cbc(&encrypt_body, sm4_key, sm4_iv).unwrap(), mock_req_body);
         // ------------------------------------------------
     }
@@ -260,8 +286,10 @@ mod tests {
         let sm4_iv = crypto::key::rand_16_hex().unwrap();
         let mock_resp_body = "开放平台 天然具备了开放、生态化的能力，可解决跨业务群/跨企业共享需求，可用于接入各领域中台的能力，由其提供统一规范的共享能力支撑。并且开放平台仅为一层比较“薄”的共享能力封装，它也可以接入非中台化的后台系统或是二方/三方的服务，也就是说 如果只为实现企业数字化能力共享的话可以没有中台，企业现有的IT系统都可以直接注册到开放平台，这在一定程度规避了中台建设非渐进式，投入高、风险大的问题。";
         let encrypt_body = TardisCryptoSm4 {}.encrypt_cbc(&mock_resp_body, &sm4_key, &sm4_iv).unwrap();
-        // 3. Encrypt response key by frontend public key
-        let key = crypto::base64::encode(&fd_pub_key.encrypt(&format!("{} {}", sm4_key, sm4_iv)).unwrap());
+        // 3. Digest response body by service sm3
+        let sign_body = crypto::sm::digest(&encrypt_body).unwrap();
+        // 4. Encrypt response key by frontend public key
+        let key = crypto::base64::encode(&fd_pub_key.encrypt(&format!("{sign_body} {sm4_key} {sm4_iv}")).unwrap());
         // ------------------------------------------------
 
         assert_eq!(decrypt(&encrypt_body, HashMap::from([(TARDIS_CRYPTO.to_string(), key)])).unwrap(), mock_resp_body);
