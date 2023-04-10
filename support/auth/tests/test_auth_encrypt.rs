@@ -5,13 +5,16 @@ use bios_auth::{
     auth_constants::DOMAIN_CODE,
     dto::auth_kernel_dto::{AuthReq, AuthResp},
 };
-use tardis::chrono::{Duration, Utc};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
     serde_json::Value,
     web::{web_client::TardisWebClient, web_resp::TardisResp},
     TardisFuns,
+};
+use tardis::{
+    chrono::{Duration, Utc},
+    crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey},
 };
 
 async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers: Vec<(&str, &str)>, pub_key: &str, need_crypto_req: bool, need_crypto_resp: bool) -> AuthResp {
@@ -26,8 +29,8 @@ async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers
 
         let data = TardisFuns::crypto.sm4.encrypt_cbc(&body, &sm4_key, &sm4_iv).unwrap();
 
-        // let pub_key = pub_key.encrypt(&format!("{sm4_key} {sm4_iv}")).unwrap();
-        headers.push((&config.head_key_crypto, &TardisFuns::crypto.base64.encode(&format!("{sm4_key} {sm4_iv} {pub_key}"))));
+        let sm4_encrypt = pub_key.encrypt(&format!("{sm4_key} {sm4_iv}", )).unwrap();
+        headers.push((&config.head_key_crypto, &TardisFuns::crypto.base64.encode(&format!("{sm4_encrypt}"))));
         data
     } else {
         body.to_string()
@@ -66,14 +69,17 @@ async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers
     //todo need_crypto_resp
     result.data.unwrap()
 }
-async fn init_get_pub_key() -> TardisResult<String> {
+async fn init_get_pub_key() -> TardisResult<(String, TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey)> {
     //frontend init sm2
-    let pri_key = TardisFuns::crypto.sm2.new_private_key()?;
-    let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key)?;
+    let pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
+    let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key).unwrap();
 
     let web_client = TardisWebClient::init(1).unwrap();
     let result: TardisResp<String> = web_client.get(&format!("https://localhost:8080/{DOMAIN_CODE}/auth/crypto/key"), None).await.unwrap().body.unwrap();
-    result.data.unwrap()
+    (result.data.unwrap(), pri_key, pub_key)
 }
 
-pub async fn test_encrypt() -> TardisResult<()> {}
+pub async fn test_encrypt() -> TardisResult<()> {
+    let ()=init_get_pub_key();
+    Ok(())
+}

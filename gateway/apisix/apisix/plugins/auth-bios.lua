@@ -62,11 +62,6 @@ local function cors(conf)
 end
 
 local function request_uri(method, endpoint, body, conf, ctx)
-    -- TODO Test
-    if body.headers[conf.head_key_crypto] ~= nil then
-        local req_body = core.request.get_body(ctx)
-        body.body = req_body
-    end
     core.log.trace("auth-bios forward_body:", core.json.encode(body));
     local params = {
         method = method,
@@ -224,20 +219,42 @@ function _M.access(conf, ctx)
     end
 end
 
-function _M.body_filter(_, ctx)
-    local conf = ctx.body_transformer_conf
-    if conf.response then
+function _M.header_filter(conf, ctx)
+    local head_key_crypto = core.request.header(ctx, conf.head_key_crypto)
+    if head_key_crypto then
         local body = core.response.hold_body_chunk(ctx)
-        if ngx.arg[2] == false and not body then
-            return
-        end
-
-        local result = request_uri('PUT', '/auth/crypto', body, conf, ctx)
+        local request_body = {
+            headers = core.request.headers(ctx),
+            body = req_body
+        }
+        local result = request_uri('PUT', '/auth/crypto', request_body, conf, ctx)
 
         if not result then
             core.log.error("failed to  response body: ", body)
             return
         end
+        core.log.error("header_filter.response: ", core.json.encode(result))
+        if not ctx.crypto_body then
+            ctx.crypto_body = result.body
+        end
+
+        core.response.set_header(ctx, conf.head_key_crypto, result[conf.head_key_crypto])
+    end
+end
+
+function _M.body_filter(_, ctx)
+    local crypto_body = ctx.crypto_body
+    if conf.response then
+        local body = core.response.hold_body_chunk(ctx)
+        if ngx.arg[2] == false and not body then
+            return
+        end
+        -- TODO Test
+        if body.headers[conf.head_key_crypto] ~= nil then
+            local req_body = core.request.get_body(ctx)
+            body.body = req_body
+        end
+
 
         ngx.arg[1] = result
     end
