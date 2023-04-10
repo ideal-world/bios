@@ -5,7 +5,7 @@ local type   = type
 local schema = {
     type = "object",
     properties = {
-        host = {type = "string"},
+        host = { type = "string" },
         ssl_verify = {
             type = "boolean",
             default = true,
@@ -17,20 +17,17 @@ local schema = {
             default = 3000,
             description = "timeout in milliseconds",
         },
-        keepalive = {type = "boolean", default = true},
-        keepalive_timeout = {type = "integer", minimum = 1000, default = 60000},
-        keepalive_pool = {type = "integer", minimum = 1, default = 5},
-        with_route = {type = "boolean", default = false},
-        with_service = {type = "boolean", default = false},
-        with_consumer = {type = "boolean", default = false},
-
+        keepalive = { type = "boolean", default = true },
+        keepalive_timeout = { type = "integer", minimum = 1000, default = 60000 },
+        keepalive_pool = { type = "integer", minimum = 1, default = 5 },
+        with_route = { type = "boolean", default = false },
+        with_service = { type = "boolean", default = false },
+        with_consumer = { type = "boolean", default = false },
         head_key_context = { type = "string", default = "Tardis-Context" },
         head_key_crypto = { type = "string", default = "Tardis-Crypto" },
-
         cors_allow_origin = { type = "string", default = "*" },
         cors_allow_methods = { type = "string", default = "*" },
         cors_allow_headers = { type = "string", default = "*" },
-
         exclude_prefix_paths = {
             type = "array",
             items = {
@@ -38,9 +35,8 @@ local schema = {
             },
             default = {}
         },
-
     },
-    required = {"host"}
+    required = { "host" }
 }
 
 
@@ -56,7 +52,6 @@ function _M.check_schema(conf)
     return core.schema.check(schema, conf)
 end
 
-
 local function cors(conf)
     core.response.set_header("Access-Control-Allow-Origin", conf.cors_allow_origin)
     core.response.set_header("Access-Control-Allow-Methods", conf.cors_allow_methods)
@@ -66,12 +61,64 @@ local function cors(conf)
     core.response.set_header("Content-Type", "application/json")
 end
 
+local function request_uri(method, endpoint, body, conf, ctx)
+    -- TODO Test
+    if body.headers[conf.head_key_crypto] ~= nil then
+        local req_body = core.request.get_body(ctx)
+        body.body = req_body
+    end
+    core.log.trace("auth-bios forward_body:", core.json.encode(body));
+    local params = {
+        method = method,
+        body = core.json.encode(body),
+        headers = {
+            ["Content-Type"] = "application/json",
+        },
+        keepalive = conf.keepalive,
+        ssl_verify = conf.ssl_verify
+    }
+
+    if conf.keepalive then
+        params.keepalive_timeout = conf.keepalive_timeout
+        params.keepalive_pool = conf.keepalive_pool
+    end
+
+    local httpc = http.new()
+    httpc:set_timeout(conf.timeout)
+
+    local res, req_err = httpc:request_uri(endpoint, params)
+    if not res then
+        core.log.error("failed auth service, err: ", req_err)
+        cors(conf)
+        return nil, 403
+    end
+
+    core.log.trace("auth service response body:", res.body);
+    local forward_resp, err = core.json.decode(res.body)
+
+    if not forward_resp then
+        core.log.error("invalid response body: ", res.body, " err: ", err)
+        cors(conf)
+        return nil, 503
+    end
+
+    if forward_resp.code ~= '200' then
+        core.log.error("invalid auth service return code: ", forward_resp.code,
+            " err:", forward_resp.msg)
+        cors(conf)
+        return nil, 502
+    end
+
+    local result = forward_resp.data
+    return result
+end
+
 function _M.access(conf, ctx)
     local path = ngx.var.request_uri
     for _, prefix_path in pairs(conf.exclude_prefix_paths) do
-       if string.sub(path, 1, string.len(prefix_path)) == prefix_path then
-           return 200
-       end
+        if string.sub(path, 1, string.len(prefix_path)) == prefix_path then
+            return 200
+        end
     end
 
     if ctx.var.request_method == "OPTIONS" then
@@ -79,12 +126,12 @@ function _M.access(conf, ctx)
         return 200
     end
 
-    local uri=ctx.var.uri
-    if uri == nil or uri=='' then
-        uri="/"
+    local uri = ctx.var.uri
+    if uri == nil or uri == '' then
+        uri = "/"
     end
 
-    local forward_body={
+    local forward_body = {
         scheme  = core.request.get_scheme(ctx),
         method  = core.request.get_method(),
         host    = core.request.get_host(ctx),
@@ -132,7 +179,7 @@ function _M.access(conf, ctx)
         return 403
     end
 
-    core.log.trace("auth service response body:",res.body);
+    core.log.trace("auth service response body:", res.body);
     local forward_resp, err = core.json.decode(res.body)
 
     if not forward_resp then
@@ -143,7 +190,7 @@ function _M.access(conf, ctx)
 
     if forward_resp.code ~= '200' then
         core.log.error("invalid auth service return code: ", forward_resp.code,
-                " err:", forward_resp.msg)
+            " err:", forward_resp.msg)
         cors(conf)
         return 502
     end
@@ -159,23 +206,41 @@ function _M.access(conf, ctx)
         local reason = nil
         if result.reason then
             reason = type(result.reason) == "table"
-                    and core.json.encode(result.reason)
-                    or result.reason
+                and core.json.encode(result.reason)
+                or result.reason
         end
         if result.body ~= nil then
-            -- TODO 
+            -- TODO
             core.request.set_body_data(result.body)
         end
 
         cors(conf)
-        return status_code, { code = status_code .. '-gateway-cert-error',  message = reason }
+        return status_code, { code = status_code .. '-gateway-cert-error', message = reason }
     else
         if result.headers then
             core.log.trace("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
-            core.request.set_header(ctx,conf.head_key_context,result.headers[conf.head_key_context])
+            core.request.set_header(ctx, conf.head_key_context, result.headers[conf.head_key_context])
         end
     end
 end
 
+function _M.body_filter(_, ctx)
+    local conf = ctx.body_transformer_conf
+    if conf.response then
+        local body = core.response.hold_body_chunk(ctx)
+        if ngx.arg[2] == false and not body then
+            return
+        end
+
+        local result = request_uri('PUT', '/auth/crypto', body, conf, ctx)
+
+        if not result then
+            core.log.error("failed to  response body: ", body)
+            return
+        end
+
+        ngx.arg[1] = result
+    end
+end
 
 return _M
