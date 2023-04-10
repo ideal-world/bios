@@ -17,6 +17,7 @@ pub struct AuthConfig {
     pub cache_key_token_info: String,
     pub cache_key_account_info: String,
     pub cache_key_aksk_info: String,
+    pub cache_key_crypto_key: String,
     pub cache_key_double_auth_info: String,
 
     pub cache_key_res_info: String,
@@ -32,7 +33,7 @@ impl Default for AuthConfig {
     fn default() -> Self {
         AuthConfig {
             head_key_token: "Bios-Token".to_string(),
-            head_key_ak_authorization: "Bios-Ak-Authorization".to_string(),
+            head_key_ak_authorization: "Bios-Authorization".to_string(),
             /// Special: need use UTC Time
             head_key_date_flag: "Bios-Date".to_string(),
             head_key_app: "Bios-App".to_string(),
@@ -44,6 +45,7 @@ impl Default for AuthConfig {
             cache_key_token_info: "iam:cache:token:info:".to_string(),
             cache_key_account_info: "iam:cache:account:info:".to_string(),
             cache_key_aksk_info: "iam:cache:aksk:info:".to_string(),
+            cache_key_crypto_key: "auth:crypto:key:".to_string(),
             // ..:<account_id>
             cache_key_double_auth_info: "iam:cache:double_auth:info:".to_string(),
             cache_key_res_info: "iam:res:info".to_string(),
