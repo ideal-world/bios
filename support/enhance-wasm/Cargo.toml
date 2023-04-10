@@ -13,12 +13,18 @@ publish.workspace = true
 [lib]
 name = "bios_enhance_wasm"
 path = "src/lib.rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = "s"
 
 [dependencies]
 serde.workspace = true
 lazy_static.workspace = true
 
+console_error_panic_hook.workspace = true
+# TODO
+wee_alloc.workspace = true
 wasm-bindgen.workspace = true
 serde-wasm-bindgen.workspace = true
 wasm-bindgen-futures.workspace = true

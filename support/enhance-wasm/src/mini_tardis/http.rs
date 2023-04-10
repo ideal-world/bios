@@ -5,7 +5,7 @@ use wasm_bindgen::{JsCast, JsError, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
-use crate::basic::basic::TardisResp;
+use super::basic::TardisResp;
 
 pub async fn request<T: Serialize + DeserializeOwned>(method: &str, url: &str, body: &str, headers: HashMap<String, String>) -> Result<Option<T>, JsValue> {
     let mut opts = RequestInit::new();
@@ -19,12 +19,14 @@ pub async fn request<T: Serialize + DeserializeOwned>(method: &str, url: &str, b
     let window = web_sys::window().unwrap();
     let resp = JsFuture::from(window.fetch_with_request(&request)).await?;
     let resp: Response = resp.dyn_into().unwrap();
+    if resp.status() > 300 {
+        return Err(JsValue::try_from(JsError::new(&format!("[Tardis.Http] [{}]", resp.status()))).unwrap());
+    }
     let resp = JsFuture::from(resp.json()?).await?;
-    // TODO 404 process
-    let resp = serde_wasm_bindgen::from_value::<TardisResp<T>>(resp)?;
+    let resp = serde_wasm_bindgen::from_value::<TardisResp<T>>(resp).map_err(|e| JsValue::try_from(JsError::new(&format!("[HTTP] Deserialize error:{e}"))).unwrap())?;
     if resp.is_ok() {
         Ok(resp.data)
     } else {
-        Err(JsValue::try_from(JsError::new(&format!("[HTTP]:[{}]{}", resp.code, resp.msg))).unwrap())
+        Err(JsValue::try_from(JsError::new(&format!("[Tardis.Http] [{}]{}", resp.code, resp.msg))).unwrap())
     }
 }
