@@ -14,7 +14,7 @@ use tardis::{
     TardisFuns,
 };
 
-async fn mock_req(method: &str, path: &str, body: Value, mut headers: Vec<(&str, &str)>, pub_key: &str, need_crypto_req: bool, need_crypto_resp: bool) -> AuthResp {
+async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers: Vec<(&str, &str)>, pub_key: &str, need_crypto_req: bool, need_crypto_resp: bool) -> AuthResp {
     let web_client = TardisWebClient::init(1).unwrap();
     info!(">>>>[Request]| path:{}, query:{}, headers:{:#?}", path, query, headers);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
@@ -26,8 +26,8 @@ async fn mock_req(method: &str, path: &str, body: Value, mut headers: Vec<(&str,
 
         let data = TardisFuns::crypto.sm4.encrypt_cbc(&body, &sm4_key, &sm4_iv).unwrap();
 
-        let pub_key = pub_key.encrypt(&format!("{sm4_key} {sm4_iv}")).unwrap();
-        headers.push((&config.head_key_crypto, &TardisFuns::crypto.base64.encode(&pub_key)));
+        // let pub_key = pub_key.encrypt(&format!("{sm4_key} {sm4_iv}")).unwrap();
+        headers.push((&config.head_key_crypto, &TardisFuns::crypto.base64.encode(&format!("{sm4_key} {sm4_iv} {pub_key}"))));
         data
     } else {
         body.to_string()
