@@ -20,7 +20,7 @@
 ----
 # step1: create bridge network
 docker network create -d bridge gateway_net
-# step2: Start etcd.
+# step2: Start etcd
 docker run -d \
   --name etcd \
   --network  gateway_net \
@@ -28,7 +28,7 @@ docker run -d \
   -e ETCD_ADVERTISE_CLIENT_URLS=http://127.0.0.1:2379 \
   bitnami/etcd:latest
 
-# step3: Start APISIX.
+# step3: Start APISIX
 docker run -d \
   --name bios-gateway \
   --network gateway_net \

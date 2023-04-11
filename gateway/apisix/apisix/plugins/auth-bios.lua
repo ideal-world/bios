@@ -84,7 +84,7 @@ function _M.access(conf, ctx)
         uri="/"
     end
 
-    local forward_body={
+    local forward_body = {
         scheme  = core.request.get_scheme(ctx),
         method  = core.request.get_method(),
         host    = core.request.get_host(ctx),
@@ -98,10 +98,11 @@ function _M.access(conf, ctx)
         req_body = core.request.get_body(ctx)
         forward_body.body = req_body
     end
-    core.log.trace("auth-bios forward_body:", core.json.encode(forward_body));
+    local forward_body_str = core.json.encode(forward_body);
+    core.log.debug("auth-bios forward_body:", forward_body_str);
     local params = {
         method = "PUT",
-        body = core.json.encode(forward_body),
+        body = forward_body_str,
         headers = {
             ["Content-Type"] = "application/json",
         },
@@ -115,9 +116,9 @@ function _M.access(conf, ctx)
     end
 
     local host_end_idx = string.find(string.sub(conf.host, -2), "/")
-    local endpoint = conf.host .. "/auth/auth"
+    local endpoint = conf.host .. "/auth"
     if host_end_idx then
-        endpoint = conf.host .. "auth/auth"
+        endpoint = conf.host .. "auth"
     end
 
 
@@ -132,7 +133,7 @@ function _M.access(conf, ctx)
         return 403
     end
 
-    core.log.trace("auth service response body:",res.body);
+    core.log.debug("auth service response body:",res.body);
     local forward_resp, err = core.json.decode(res.body)
 
     if not forward_resp then
@@ -162,16 +163,11 @@ function _M.access(conf, ctx)
                     and core.json.encode(result.reason)
                     or result.reason
         end
-        if result.body ~= nil then
-            -- TODO 
-            core.request.set_body_data(result.body)
-        end
-
         cors(conf)
         return status_code, { code = status_code .. '-gateway-cert-error',  message = reason }
     else
         if result.headers then
-            core.log.trace("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
+            core.log.debug("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
             core.request.set_header(ctx,conf.head_key_context,result.headers[conf.head_key_context])
         end
     end
