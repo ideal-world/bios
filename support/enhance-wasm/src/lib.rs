@@ -9,24 +9,32 @@ mod modules;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[wasm_bindgen(start)]
-pub fn init_panic_hook() {
-    console_error_panic_hook::set_once();
+#[wasm_bindgen]
+pub async fn init(service_url: &str, config: JsValue) -> Result<(), JsValue> {
+   let strict_security_mode = if config == JsValue::NULL {
+        initializer::init(service_url, None).await?
+    } else {
+        initializer::init(service_url, Some(mini_tardis::serde::jsvalue_to_obj(config)?)).await?
+    };
+    if !strict_security_mode{
+        console_error_panic_hook::set_once();
+    }
+    Ok(())
 }
 
 #[wasm_bindgen]
-pub async fn init_by_url(service_url: &str) -> Result<(), JsValue> {
-    initializer::init_by_url(service_url).await
+pub fn set_latest_double_authed() -> Result<(), JsValue> {
+    Ok(modules::double_auth_process::set_latest_authed()?)
 }
 
 #[wasm_bindgen]
-pub fn init_by_conf(config: JsValue) -> Result<(), JsValue> {
-    initializer::init_by_conf(config)
+pub fn set_token(token: &str) -> Result<(), JsValue> {
+    Ok(modules::logout_process::set_token(token)?)
 }
 
 #[wasm_bindgen]
-pub fn strict_security_mode() -> Result<bool, JsValue> {
-    Ok(*STRICT_SECURITY_MODE.read().unwrap())
+pub fn remove_token() -> Result<(), JsValue> {
+    Ok(modules::logout_process::remove_token()?)
 }
 
 #[wasm_bindgen]
@@ -61,23 +69,11 @@ pub fn response(body: &str, headers: JsValue, set_latest_authed: bool) -> Result
 }
 
 #[wasm_bindgen]
-pub fn crypto_encrypt(method: &str, uri: &str, body: &str) -> Result<JsValue, JsValue> {
-    let resp = modules::crypto_process::encrypt(method, uri, body);
-    Ok(mini_tardis::serde::obj_to_jsvalue(&resp)?)
+pub fn encrypt(text: &str) -> Result<String, JsValue> {
+    Ok(modules::crypto_process::simple_encrypt(text)?)
 }
 
 #[wasm_bindgen]
-pub fn crypto_decrypt(encrypt_body: &str, headers: JsValue) -> Result<String, JsValue> {
-    let headers = mini_tardis::serde::jsvalue_to_obj(headers)?;
-    Ok(modules::crypto_process::decrypt(encrypt_body, headers)?)
-}
-
-#[wasm_bindgen]
-pub fn double_auth_set_latest_authed() -> Result<(), JsValue> {
-    Ok(modules::double_auth_process::set_latest_authed()?)
-}
-
-#[wasm_bindgen]
-pub fn double_auth_need_auth(method: &str, uri: &str) -> Result<bool, JsValue> {
-    Ok(modules::double_auth_process::need_auth(method, uri)?)
+pub fn decrypt(encrypt_text: &str) -> Result<String, JsValue> {
+    Ok(modules::crypto_process::simple_decrypt(encrypt_text)?)
 }
