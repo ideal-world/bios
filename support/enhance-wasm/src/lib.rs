@@ -11,12 +11,12 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub async fn init(service_url: &str, config: JsValue) -> Result<(), JsValue> {
-   let strict_security_mode = if config == JsValue::NULL {
+    let strict_security_mode = if config == JsValue::UNDEFINED {
         initializer::init(service_url, None).await?
     } else {
         initializer::init(service_url, Some(mini_tardis::serde::jsvalue_to_obj(config)?)).await?
     };
-    if !strict_security_mode{
+    if !strict_security_mode {
         console_error_panic_hook::set_once();
     }
     Ok(())
@@ -29,12 +29,17 @@ pub fn set_latest_double_authed() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub fn set_token(token: &str) -> Result<(), JsValue> {
-    Ok(modules::logout_process::set_token(token)?)
+    Ok(modules::token_process::set_token(token)?)
 }
 
 #[wasm_bindgen]
 pub fn remove_token() -> Result<(), JsValue> {
-    Ok(modules::logout_process::remove_token()?)
+    Ok(modules::token_process::remove_token()?)
+}
+
+#[wasm_bindgen]
+pub fn get_token() -> Result<String, JsValue> {
+    Ok(modules::token_process::get_token()?)
 }
 
 #[wasm_bindgen]
