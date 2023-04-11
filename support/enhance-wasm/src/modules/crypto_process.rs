@@ -236,7 +236,7 @@ mod tests {
         let sm4_key = crypto::key::rand_16_hex().unwrap();
         let sm4_iv = crypto::key::rand_16_hex().unwrap();
         let mock_resp_body = "开放平台 天然具备了开放、生态化的能力，可解决跨业务群/跨企业共享需求，可用于接入各领域中台的能力，由其提供统一规范的共享能力支撑。并且开放平台仅为一层比较“薄”的共享能力封装，它也可以接入非中台化的后台系统或是二方/三方的服务，也就是说 如果只为实现企业数字化能力共享的话可以没有中台，企业现有的IT系统都可以直接注册到开放平台，这在一定程度规避了中台建设非渐进式，投入高、风险大的问题。";
-        let encrypt_body = TardisCryptoSm4 {}.encrypt_cbc(&mock_resp_body, &sm4_key, &sm4_iv).unwrap();
+        let encrypt_body = TardisCryptoSm4 {}.encrypt_cbc(mock_resp_body, &sm4_key, &sm4_iv).unwrap();
         // 4. Digest response body by service sm3
         let sign_body = crypto::sm::digest(&encrypt_body).unwrap();
         // 5. Encrypt response key by frontend public key

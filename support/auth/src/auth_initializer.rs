@@ -21,6 +21,10 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     init_api(web_server).await
 }
 
+pub async fn crypto_init() -> TardisResult<()> {
+    auth_crypto_serv::init().await
+}
+
 pub async fn init_data() -> TardisResult<()> {
     let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
