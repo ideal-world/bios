@@ -41,18 +41,21 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        initializer::do_init(Config {
-            strict_security_mode: false,
-            pub_key: mock_serv_pub_key.serialize().unwrap(),
-            double_auth_exp_sec: 1,
-            apis: vec![Api {
-                action: "get".to_string(),
-                uri: "im/ct/all/**".to_string(),
-                need_double_auth: true,
-                need_crypto_req: false,
-                need_crypto_resp: false,
-            }],
-        })
+        initializer::do_init(
+            "",
+            &Config {
+                strict_security_mode: false,
+                pub_key: mock_serv_pub_key.serialize().unwrap(),
+                double_auth_exp_sec: 1,
+                apis: vec![Api {
+                    action: "get".to_string(),
+                    uri: "im/ct/all/**".to_string(),
+                    need_double_auth: true,
+                    need_crypto_req: false,
+                    need_crypto_resp: false,
+                }],
+            },
+        )
         .unwrap();
 
         assert!(need_auth("GET", "im/ct/all/ddd").unwrap());

@@ -5,7 +5,6 @@ use std::num::{ParseIntError, TryFromIntError};
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
-use wasm_bindgen::{JsError, JsValue};
 
 pub static ERROR_DEFAULT_CODE: &str = "-1";
 
@@ -136,11 +135,5 @@ impl<P> From<PoisonError<RwLockReadGuard<'_, P>>> for TardisError {
 impl<P> From<PoisonError<RwLockWriteGuard<'_, P>>> for TardisError {
     fn from(error: PoisonError<RwLockWriteGuard<'_, P>>) -> Self {
         TardisError::conflict(&format!("[Tardis.Basic] {error}"), "")
-    }
-}
-
-impl From<TardisError> for JsValue {
-    fn from(error: TardisError) -> Self {
-        JsValue::try_from(JsError::new(&format!("[Tardis.Http]:[{}]{}", error.code, error.message))).unwrap()
     }
 }
