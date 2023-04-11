@@ -225,12 +225,12 @@ function _M.header_filter(conf, ctx)
         local body = core.response.hold_body_chunk(ctx)
         local request_body = {
             headers = core.request.headers(ctx),
-            body = req_body
+            body = body
         }
         local result = request_uri('PUT', '/auth/crypto', request_body, conf, ctx)
 
         if not result then
-            core.log.error("failed to  response body: ", body)
+            core.log.error("failed to crypto body: ", body)
             return
         end
         core.log.error("header_filter.response: ", core.json.encode(result))
@@ -244,7 +244,7 @@ end
 
 function _M.body_filter(_, ctx)
     local crypto_body = ctx.crypto_body
-    if conf.response then
+    if crypto_body then
         local body = core.response.hold_body_chunk(ctx)
         if ngx.arg[2] == false and not body then
             return
@@ -256,7 +256,7 @@ function _M.body_filter(_, ctx)
         end
 
 
-        ngx.arg[1] = result
+        ngx.arg[1] = crypto_body
     end
 end
 
