@@ -20,8 +20,18 @@ lazy_static! {
 }
 
 pub(crate) async fn init() -> TardisResult<()> {
-    let pri_key = TardisFuns::crypto.sm2.new_private_key()?;
-    let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key)?;
+    let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let (pri_key, pub_key) = if let Some(pri_key) = cache_client.get(&config.cache_key_crypto_key).await? {
+        let pri_key = TardisFuns::crypto.sm2.new_private_key_from_str(&pri_key)?;
+        let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key)?;
+        (pri_key, pub_key)
+    } else {
+        let pri_key = TardisFuns::crypto.sm2.new_private_key()?;
+        let pub_key = TardisFuns::crypto.sm2.new_public_key(&pri_key)?;
+        cache_client.set(&config.cache_key_crypto_key, &pri_key.serialize()?).await?;
+        (pri_key, pub_key)
+    };
     let mut sm_keys = SM2_KEYS.write().await;
     *sm_keys = Some((pub_key, pri_key));
     Ok(())
@@ -61,6 +71,32 @@ pub(crate) async fn decrypt_req(
     let input_keys = input_keys.split(' ').collect::<Vec<&str>>();
 
     if need_crypto_req && need_crypto_resp {
+        if input_keys.len() != 4 {
+            return Err(TardisError::bad_request(
+                &format!("[Auth] Encrypted request: {} field in header is illegal.", config.head_key_crypto),
+                "401-auth-req-crypto-error",
+            ));
+        }
+        let body = body.as_ref().ok_or_else(|| TardisError::bad_request("[Auth] Encrypted request: body is empty.", "401-auth-req-crypto-error"))?;
+
+        let input_sm3_digest = input_keys[0];
+        let input_sm4_key = input_keys[1];
+        let input_sm4_iv = input_keys[2];
+        let input_pub_key = input_keys[3];
+
+        if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
+            return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
+        }
+
+        let data = TardisFuns::crypto
+            .sm4
+            .decrypt_cbc(body, input_sm4_key, input_sm4_iv)
+            .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: key decrypt error:{e}"), "401-auth-req-crypto-error"))?;
+        Ok((
+            Some(data),
+            Some(HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(input_pub_key))])),
+        ))
+    } else if need_crypto_req {
         if input_keys.len() != 3 {
             return Err(TardisError::bad_request(
                 &format!("[Auth] Encrypted request: {} field in header is illegal.", config.head_key_crypto),
@@ -69,32 +105,17 @@ pub(crate) async fn decrypt_req(
         }
         let body = body.as_ref().ok_or_else(|| TardisError::bad_request("[Auth] Encrypted request: body is empty.", "401-auth-req-crypto-error"))?;
 
-        let input_sm2_key = input_keys[0];
-        let input_sm2_iv = input_keys[1];
-        let input_pub_key = input_keys[2];
+        let input_sm3_digest = input_keys[0];
+        let input_sm4_key = input_keys[1];
+        let input_sm4_iv = input_keys[2];
 
-        let data = TardisFuns::crypto
-            .sm4
-            .decrypt_cbc(body, input_sm2_key, input_sm2_iv)
-            .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: key decrypt error:{e}"), "401-auth-req-crypto-error"))?;
-        Ok((
-            Some(data),
-            Some(HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(input_pub_key))])),
-        ))
-    } else if need_crypto_req {
-        if input_keys.len() < 2 {
-            return Err(TardisError::bad_request(
-                &format!("[Auth] Encrypted request: {} field in header is illegal.", config.head_key_crypto),
-                "401-auth-req-crypto-error",
-            ));
+        if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
+            return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
         }
-        let body = body.as_ref().ok_or_else(|| TardisError::bad_request("[Auth] Encrypted request: body is empty.", "401-auth-req-crypto-error"))?;
 
-        let input_sm2_key = input_keys[0];
-        let input_sm2_iv = input_keys[1];
         let data = TardisFuns::crypto
             .sm4
-            .decrypt_cbc(body, input_sm2_key, input_sm2_iv)
+            .decrypt_cbc(body, input_sm4_key, input_sm4_iv)
             .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: body decrypt error:{e}"), "401-auth-req-crypto-error"))?;
         Ok((Some(data), None))
     } else {
@@ -139,8 +160,10 @@ pub(crate) async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncry
         .encrypt_cbc(&req.body, &sm4_key, &sm4_iv)
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted response: body encrypt error:{e}"), "401-auth-req-crypto-error"))?;
 
+    let sign_data = TardisFuns::crypto.digest.sm3(&data)?;
+
     let pub_key = pub_key
-        .encrypt(&format!("{sm4_key} {sm4_iv}"))
+        .encrypt(&format!("{sign_data} {sm4_key} {sm4_iv}"))
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted response: key encrypt error:{e}"), "401-auth-req-crypto-error"))?;
     Ok(AuthEncryptResp {
         headers: HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(&pub_key))]),

@@ -37,11 +37,16 @@ pub mod sm {
         sm2::ecc::Point,
         sm2::encrypt::{DecryptCtx, EncryptCtx},
         sm2::signature::SigCtx,
+        sm3::hash::Sm3Hash,
         sm4::{Cipher, Mode},
     };
     use num_bigint::BigUint;
 
     use crate::mini_tardis::{basic::TardisResult, error::TardisError};
+
+    pub fn digest(data: &str) -> TardisResult<String> {
+        Ok(hex::encode(Sm3Hash::new(data.as_bytes()).get_hash()))
+    }
 
     pub struct TardisCryptoSm4;
 
