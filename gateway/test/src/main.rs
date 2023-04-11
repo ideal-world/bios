@@ -36,12 +36,34 @@ async fn main() -> TardisResult<()> {
             },
             None,
         )
-        .await?.body.unwrap();
+        .await?
+        .body
+        .unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(&resp.code, "c001");
     assert_eq!(&resp.description, "测试001");
     assert!(!resp.done);
 
+    let header: Vec<(String, String)> = vec![("Tardis-Crypto".to_string(), "".to_string())];
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client()
+        .post(
+            &format!("{gateway_url}/test/echo/2"),
+            &TestAddReq {
+                code: TrimString("c001".to_string()),
+                description: "测试001".to_string(),
+                done: false,
+            },
+            Some(header),
+        )
+        .await?
+        .body
+        .unwrap();
+    let resp = resp.data.unwrap();
+    assert_eq!(&resp.code, "c001");
+    assert_eq!(&resp.description, "测试001");
+    assert!(!resp.done);
+
+    log::info!("\r\n=============\r\nTest Success\r\n=============");
     Ok(())
 }
 
@@ -55,7 +77,11 @@ impl AuthApi {
     async fn auth(&self, req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
         let req = req.0;
         if req.path == "/test/echo/1" {
+            assert!(req.body.is_none());
             println!("======TODO======");
+        }
+        if req.path == "/test/echo/2" {
+            assert!(req.body.is_some())
         }
         let mut headers = req.headers;
         headers.insert(

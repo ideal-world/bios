@@ -137,7 +137,7 @@ function _M.access(conf, ctx)
     }
     -- TODO Test
     if forward_body.headers[conf.head_key_crypto] ~= nil then
-        req_body = core.request.get_body(ctx)
+        local req_body = core.request.get_body(ctx)
         forward_body.body = req_body
     end
     local forward_body_str = core.json.encode(forward_body);
@@ -221,11 +221,11 @@ function _M.access(conf, ctx)
 end
 
 function _M.header_filter(conf, ctx)
-    local head_key_crypto = core.request.header(ctx, conf.head_key_crypto)
+    local head_key_crypto = core.response.header(ctx, conf.head_key_crypto)
     if head_key_crypto then
         local body = core.response.hold_body_chunk(ctx)
         local request_body = {
-            headers = core.request.headers(ctx),
+            headers = core.response.headers(ctx),
             body = body
         }
         local result = request_uri('PUT', '/auth/crypto', request_body, conf, ctx)
