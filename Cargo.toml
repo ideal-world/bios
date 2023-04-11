@@ -2,11 +2,12 @@
 
 members = [
     "basic",
+    "spi/*",
+    "gateway/test",
+    "middleware/*",
     "support/iam",
     "support/auth",
     "support/enhance-wasm",
-    "spi/*",
-    "middleware/*",
     "services/*",
 ]
 
@@ -38,6 +39,7 @@ async-trait = { version = "0.1" }
 lazy_static = { version = "1" }
 itertools = { version = "0" }
 fancy-regex = { version = "0" }
+run_script = { version = "0.10" }
 
 # tardis
 tardis = { version = "0.1.0-beta1" }

@@ -127,6 +127,7 @@ function _M.access(conf, ctx)
     end
 
     local forward_body = {
+    local forward_body = {
         scheme  = core.request.get_scheme(ctx),
         method  = core.request.get_method(),
         host    = core.request.get_host(ctx),
@@ -140,10 +141,11 @@ function _M.access(conf, ctx)
         req_body = core.request.get_body(ctx)
         forward_body.body = req_body
     end
-    core.log.trace("auth-bios forward_body:", core.json.encode(forward_body));
+    local forward_body_str = core.json.encode(forward_body);
+    core.log.debug("auth-bios forward_body:", forward_body_str);
     local params = {
         method = "PUT",
-        body = core.json.encode(forward_body),
+        body = forward_body_str,
         headers = {
             ["Content-Type"] = "application/json",
         },
@@ -157,9 +159,9 @@ function _M.access(conf, ctx)
     end
 
     local host_end_idx = string.find(string.sub(conf.host, -2), "/")
-    local endpoint = conf.host .. "/auth/auth"
+    local endpoint = conf.host .. "/auth"
     if host_end_idx then
-        endpoint = conf.host .. "auth/auth"
+        endpoint = conf.host .. "auth"
     end
 
 

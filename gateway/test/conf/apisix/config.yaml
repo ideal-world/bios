@@ -1,0 +1,11 @@
+apisix:
+  admin_key:
+    - name: admin
+      key: edd1c9f034335f136f87ad84b6acecs1 
+      role: admin
+
+plugins:                       
+  - auth-bios
+
+nginx_config:
+  error_log_level: "debug"
