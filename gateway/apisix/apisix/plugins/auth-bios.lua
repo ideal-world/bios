@@ -127,7 +127,6 @@ function _M.access(conf, ctx)
     end
 
     local forward_body = {
-    local forward_body = {
         scheme  = core.request.get_scheme(ctx),
         method  = core.request.get_method(),
         host    = core.request.get_host(ctx),
