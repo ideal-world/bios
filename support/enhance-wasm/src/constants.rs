@@ -12,6 +12,7 @@ use crate::{
 };
 
 pub const TARDIS_CRYPTO: &str = "Tardis-Crypto";
+pub const TARDIS_TOKEN: &str = "tardis_token";
 
 lazy_static! {
     pub(crate) static ref SERV_URL: RwLock<String> = RwLock::new(String::new());

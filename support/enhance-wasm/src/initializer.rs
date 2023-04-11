@@ -6,10 +6,11 @@ use wasm_bindgen::JsValue;
 use crate::{
     constants::{DOUBLE_AUTH_CACHE_EXP_SEC, SERV_URL, STRICT_SECURITY_MODE, TOKEN_INFO},
     mini_tardis::{basic::TardisResult, http, log},
-    modules::{crypto_process, resource_process},
+    modules::{crypto_process, resource_process, token_process},
 };
 
 pub(crate) async fn init(service_url: &str, config: Option<Config>) -> Result<bool, JsValue> {
+    token_process::init()?;
     let service_url = if service_url.ends_with("/") {
         service_url.to_string()
     } else {
