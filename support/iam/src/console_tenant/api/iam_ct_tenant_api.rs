@@ -4,7 +4,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use crate::basic::dto::iam_filter_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAggDetailResp, IamTenantAggModifyReq};
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;

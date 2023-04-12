@@ -6,7 +6,7 @@ use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_filer_dto::IamResFilterReq;
+use bios_iam::basic::dto::iam_filter_dto::IamResFilterReq;
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::IamRoleAddReq;
 use bios_iam::basic::serv::iam_res_serv::IamResServ;

@@ -4,7 +4,7 @@ use tardis::basic::result::TardisResult;
 use tardis::log::info;
 
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use bios_iam::basic::dto::iam_filter_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantModifyReq;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
 use bios_iam::iam_constants;
