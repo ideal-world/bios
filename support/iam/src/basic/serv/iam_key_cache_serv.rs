@@ -274,14 +274,20 @@ impl IamIdentCacheServ {
 pub struct IamResCacheServ;
 
 impl IamResCacheServ {
-    pub async fn add_res(item_code: &str, action: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_res(item_code: &str, action: &str, crypto_req: bool, crypto_resp: bool, double_auth: bool, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add res: uri_mixed={}", uri_mixed);
+        let add_res_dto= IamCacheResRelAddOrModifyDto {
+            need_crypto_req: crypto_req,
+            need_crypto_resp: crypto_resp,
+            need_double_auth: double_auth,
+            ..Default::default()
+        };
         funs.cache()
             .hset(
                 &funs.conf::<IamConfig>().cache_key_res_info,
                 &uri_mixed,
-                &TardisFuns::json.obj_to_string(&IamCacheResRelAddOrModifyDto::default())?,
+                &TardisFuns::json.obj_to_string(&add_res_dto)?,
             )
             .await?;
         Self::add_change_trigger(&uri_mixed, funs).await
@@ -300,28 +306,48 @@ impl IamResCacheServ {
             return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none", "409-iam-cache-res-date-not-none"));
         }
         let mut res_dto = IamCacheResRelAddOrModifyDto {
-            accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
-            roles: format!("#{}#", add_or_modify_req.roles.join("#")),
-            groups: format!("#{}#", add_or_modify_req.groups.join("#")),
-            apps: format!("#{}#", add_or_modify_req.apps.join("#")),
-            tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            auth: IamCacheResAuth {
+                accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
+                roles: format!("#{}#", add_or_modify_req.roles.join("#")),
+                groups: format!("#{}#", add_or_modify_req.groups.join("#")),
+                apps: format!("#{}#", add_or_modify_req.apps.join("#")),
+                tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            },
+            need_crypto_req: false,
+            need_crypto_resp: false,
+            need_double_auth: false,
         };
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add or modify res rel: uri_mixed={}", uri_mixed);
         let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
         if let Some(rels) = rels {
             let old_res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
-            res_dto.accounts = format!("{}{}", res_dto.accounts, old_res_dto.accounts);
-            res_dto.roles = format!("{}{}", res_dto.roles, old_res_dto.roles);
-            res_dto.groups = format!("{}{}", res_dto.groups, old_res_dto.groups);
-            res_dto.apps = format!("{}{}", res_dto.apps, old_res_dto.apps);
-            res_dto.tenants = format!("{}{}", res_dto.tenants, old_res_dto.tenants);
+            res_dto.auth.accounts = format!("{}{}", res_dto.auth.accounts, old_res_dto.auth.accounts);
+            res_dto.auth.roles = format!("{}{}", res_dto.auth.roles, old_res_dto.auth.roles);
+            res_dto.auth.groups = format!("{}{}", res_dto.auth.groups, old_res_dto.auth.groups);
+            res_dto.auth.apps = format!("{}{}", res_dto.auth.apps, old_res_dto.auth.apps);
+            res_dto.auth.tenants = format!("{}{}", res_dto.auth.tenants, old_res_dto.auth.tenants);
+            if let Some(need_crypto_req) = add_or_modify_req.need_crypto_req {
+                res_dto.need_crypto_req = need_crypto_req
+            } else {
+                res_dto.need_crypto_req = old_res_dto.need_crypto_req
+            }
+            if let Some(need_crypto_resp) = add_or_modify_req.need_crypto_resp {
+                res_dto.need_crypto_resp = need_crypto_resp
+            } else {
+                res_dto.need_crypto_resp = old_res_dto.need_crypto_resp
+            }
+            if let Some(need_double_auth) = add_or_modify_req.need_double_auth {
+                res_dto.need_double_auth = need_double_auth
+            } else {
+                res_dto.need_double_auth = old_res_dto.need_double_auth
+            }
         }
-        res_dto.accounts = res_dto.accounts.replace("##", "#");
-        res_dto.roles = res_dto.roles.replace("##", "#");
-        res_dto.groups = res_dto.groups.replace("##", "#");
-        res_dto.apps = res_dto.apps.replace("##", "#");
-        res_dto.tenants = res_dto.tenants.replace("##", "#");
+        res_dto.auth.accounts = res_dto.auth.accounts.replace("##", "#");
+        res_dto.auth.roles = res_dto.auth.roles.replace("##", "#");
+        res_dto.auth.groups = res_dto.auth.groups.replace("##", "#");
+        res_dto.auth.apps = res_dto.auth.apps.replace("##", "#");
+        res_dto.auth.tenants = res_dto.auth.tenants.replace("##", "#");
         funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
     }
@@ -333,19 +359,19 @@ impl IamResCacheServ {
         if let Some(rels) = rels {
             let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
             for account in &delete_req.accounts {
-                res_dto.accounts = res_dto.accounts.replace(&format!("#{account}#"), "#");
+                res_dto.auth.accounts = res_dto.auth.accounts.replace(&format!("#{account}#"), "#");
             }
             for role in &delete_req.roles {
-                res_dto.roles = res_dto.roles.replace(&format!("#{role}#"), "#");
+                res_dto.auth.roles = res_dto.auth.roles.replace(&format!("#{role}#"), "#");
             }
             for group in &delete_req.groups {
-                res_dto.groups = res_dto.groups.replace(&format!("#{group}#"), "#");
+                res_dto.auth.groups = res_dto.auth.groups.replace(&format!("#{group}#"), "#");
             }
             for app in &delete_req.apps {
-                res_dto.apps = res_dto.apps.replace(&format!("#{app}#"), "#");
+                res_dto.auth.apps = res_dto.auth.apps.replace(&format!("#{app}#"), "#");
             }
             for tenant in &delete_req.tenants {
-                res_dto.tenants = res_dto.tenants.replace(&format!("#{tenant}#"), "#");
+                res_dto.auth.tenants = res_dto.auth.tenants.replace(&format!("#{tenant}#"), "#");
             }
             funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
             return Self::add_change_trigger(&uri_mixed, funs).await;
@@ -381,6 +407,14 @@ impl IamResCacheServ {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 struct IamCacheResRelAddOrModifyDto {
+    pub auth: IamCacheResAuth,
+    pub need_crypto_req: bool,
+    pub need_crypto_resp: bool,
+    pub need_double_auth: bool,
+}
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
+struct IamCacheResAuth {
     pub accounts: String,
     pub roles: String,
     pub groups: String,
@@ -396,6 +430,9 @@ pub struct IamCacheResRelAddOrModifyReq {
     pub groups: Vec<String>,
     pub apps: Vec<String>,
     pub tenants: Vec<String>,
+    pub need_crypto_req: Option<bool>,
+    pub need_crypto_resp: Option<bool>,
+    pub need_double_auth: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]

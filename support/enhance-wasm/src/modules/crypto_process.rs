@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    constants::{ENCRYPT_FD_SM2_KEYS, ENCRYPT_SERV_PUB_KEY, TARDIS_CRYPTO},
+    constants::{ENCRYPT_FD_SM2_KEYS, ENCRYPT_FD_SM4_KEY, ENCRYPT_SERV_PUB_KEY, TARDIS_CRYPTO},
     mini_tardis::{
         basic::TardisResult,
         crypto::{
@@ -28,8 +28,11 @@ fn init_fd_key() -> TardisResult<()> {
     let sm_obj = TardisCryptoSm2 {};
     let pri_key = sm_obj.new_private_key()?;
     let pub_key = sm_obj.new_public_key(&pri_key)?;
-    let mut sm_keys = ENCRYPT_FD_SM2_KEYS.write().unwrap();
-    *sm_keys = Some((pub_key.serialize()?, pri_key));
+    let mut sm2_keys = ENCRYPT_FD_SM2_KEYS.write().unwrap();
+    *sm2_keys = Some((pub_key.serialize()?, pri_key));
+
+    let mut sm4_key = ENCRYPT_FD_SM4_KEY.write().unwrap();
+    *sm4_key = (crypto::key::rand_16_hex()?, crypto::key::rand_16_hex()?);
     Ok(())
 }
 
@@ -137,6 +140,16 @@ pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
     Ok(body)
 }
 
+pub fn simple_encrypt(text: &str) -> TardisResult<String> {
+    let sm4_key = ENCRYPT_FD_SM4_KEY.read().unwrap();
+    crypto::sm::TardisCryptoSm4.encrypt_cbc(text, &sm4_key.0, &sm4_key.1)
+}
+
+pub fn simple_decrypt(encrypted_text: &str) -> TardisResult<String> {
+    let sm4_key = ENCRYPT_FD_SM4_KEY.read().unwrap();
+    crypto::sm::TardisCryptoSm4.decrypt_cbc(encrypted_text, &sm4_key.0, &sm4_key.1)
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct EncryptResp {
     pub body: String,
@@ -165,41 +178,44 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        initializer::do_init(Config {
-            strict_security_mode: false,
-            pub_key: mock_serv_pub_key.serialize().unwrap(),
-            double_auth_exp_sec: 0,
-            apis: vec![
-                Api {
-                    action: "get".to_string(),
-                    uri: "im/ct/all/**".to_string(),
-                    need_crypto_req: true,
-                    need_crypto_resp: true,
-                    need_double_auth: false,
-                },
-                Api {
-                    action: "GET".to_string(),
-                    uri: "im/ct/req/**".to_string(),
-                    need_crypto_req: true,
-                    need_crypto_resp: false,
-                    need_double_auth: false,
-                },
-                Api {
-                    action: "POST".to_string(),
-                    uri: "im/ct/resp/**".to_string(),
-                    need_crypto_req: false,
-                    need_crypto_resp: true,
-                    need_double_auth: false,
-                },
-                Api {
-                    action: "get".to_string(),
-                    uri: "im/ct/all/spec/**".to_string(),
-                    need_crypto_req: false,
-                    need_crypto_resp: false,
-                    need_double_auth: false,
-                },
-            ],
-        })
+        initializer::do_init(
+            "",
+            &Config {
+                strict_security_mode: false,
+                pub_key: mock_serv_pub_key.serialize().unwrap(),
+                double_auth_exp_sec: 0,
+                apis: vec![
+                    Api {
+                        action: "get".to_string(),
+                        uri: "im/ct/all/**".to_string(),
+                        need_crypto_req: true,
+                        need_crypto_resp: true,
+                        need_double_auth: false,
+                    },
+                    Api {
+                        action: "GET".to_string(),
+                        uri: "im/ct/req/**".to_string(),
+                        need_crypto_req: true,
+                        need_crypto_resp: false,
+                        need_double_auth: false,
+                    },
+                    Api {
+                        action: "POST".to_string(),
+                        uri: "im/ct/resp/**".to_string(),
+                        need_crypto_req: false,
+                        need_crypto_resp: true,
+                        need_double_auth: false,
+                    },
+                    Api {
+                        action: "get".to_string(),
+                        uri: "im/ct/all/spec/**".to_string(),
+                        need_crypto_req: false,
+                        need_crypto_resp: false,
+                        need_double_auth: false,
+                    },
+                ],
+            },
+        )
         .unwrap();
 
         // Init
