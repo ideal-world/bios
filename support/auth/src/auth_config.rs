@@ -39,7 +39,7 @@ impl Default for AuthConfig {
             head_key_app: "Bios-App".to_string(),
             head_key_protocol: "Bios-Proto".to_string(),
             head_key_context: "Tardis-Context".to_string(),
-            head_key_crypto: "Tardis-Crypto".to_string(),
+            head_key_crypto: "Bios-Crypto".to_string(),
             head_date_format: "%a, %d %b %Y %T GMT".to_string(),
             head_date_interval_millsec: 10000,
             cache_key_token_info: "iam:cache:token:info:".to_string(),

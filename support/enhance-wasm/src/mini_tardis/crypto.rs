@@ -82,6 +82,20 @@ pub mod sm {
             Ok(TardisCryptoSm2PrivateKey { pri_key: sk })
         }
 
+        pub fn from(private_key: &str) -> TardisResult<Self> {
+            let sk = SigCtx::new()
+                .load_seckey(&hex::decode(private_key)?)
+                .map_err(|error| TardisError::format_error(&format!("[Tardis.Crypto] SM2 load sk error:{error}"), "406-tardis-crypto-sm2-sk-error"))?;
+            Ok(TardisCryptoSm2PrivateKey { pri_key: sk })
+        }
+    
+        pub fn serialize(&self) -> TardisResult<String> {
+            let sk = SigCtx::new()
+                .serialize_seckey(&self.pri_key)
+                .map_err(|error| TardisError::format_error(&format!("[Tardis.Crypto] SM2 serialize sk error:{error}"), "406-tardis-crypto-sm2-sk-error"))?;
+            Ok(hex::encode(sk))
+        }
+
         pub fn decrypt(&self, encrypted_data: &str) -> TardisResult<String> {
             let encrypted_data = hex::decode(encrypted_data)?;
             // https://github.com/citahub/libsm/issues/46
