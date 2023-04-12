@@ -1,4 +1,4 @@
-use crate::basic::dto::iam_app_dto::IamAppAggModifyReq;
+use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppAggModifyReq};
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP};
@@ -16,6 +16,16 @@ pub struct IamCiAppApi;
 /// Allow Management Of aksk (an authentication method between applications)
 #[poem_openapi::OpenApi(prefix_path = "/ci/app", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiAppApi {
+    /// Add App
+    #[oai(path = "/app", method = "post")]
+    async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
+
     /// Modify Current App
     ///
     /// When code = 202, the return value is the asynchronous task id
@@ -30,43 +40,5 @@ impl IamCiAppApi {
         } else {
             TardisResp::ok(None)
         }
-    }
-
-    /// Batch add Role Rel Account
-    #[oai(path = "/role/:id/account/batch/:account_ids", method = "put")]
-    async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let app_id = IamAppServ::get_id_by_ctx(&ctx.0, &funs)?;
-        let split = account_ids.0.split(',').collect::<Vec<_>>();
-        for s in split {
-            IamAppServ::add_rel_account(&app_id, s, true, &funs, &ctx.0).await?;
-            IamRoleServ::add_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Batch delete Role Rel Account
-    #[oai(path = "/role/:id/account/batch/:account_ids", method = "delete")]
-    async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let split = account_ids.0.split(',').collect::<Vec<_>>();
-        for s in split {
-            IamRoleServ::delete_rel_account(&id.0, s, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Delete Role Rel Account
-    #[oai(path = "/role/:id/account/:account_id", method = "delete")]
-    async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamRoleServ::delete_rel_account(&id.0, &account_id.0, Some(RBUM_SCOPE_LEVEL_APP), &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
     }
 }
