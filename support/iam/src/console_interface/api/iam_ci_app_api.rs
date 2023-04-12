@@ -17,7 +17,7 @@ pub struct IamCiAppApi;
 #[poem_openapi::OpenApi(prefix_path = "/ci/app", tag = "bios_basic::ApiTag::Interface")]
 impl IamCiAppApi {
     /// Add App
-    #[oai(path = "/app", method = "post")]
+    #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamAppAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
