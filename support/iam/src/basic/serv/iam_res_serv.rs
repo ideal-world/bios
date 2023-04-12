@@ -74,6 +74,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             method: Set(add_req.method.as_ref().unwrap_or(&TrimString("*".to_string())).to_string()),
             hide: Set(add_req.hide.unwrap_or(false)),
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
+            crypto_req: Set(add_req.crypto_req),
+            crypto_resp: Set(add_req.crypto_resp),
+            double_auth: Set(add_req.double_auth),
             ..Default::default()
         })
     }
@@ -98,7 +101,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         )
         .await?;
         if res.kind == IamResKind::Api {
-            IamResCacheServ::add_res(&res.code, &res.method, funs).await?;
+            IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
         }
         Ok(())
     }
@@ -135,6 +138,15 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if let Some(action) = &modify_req.action {
             iam_res.action = Set(action.to_string());
         }
+        if let Some(crypto_req) = modify_req.crypto_req {
+            iam_res.crypto_req = Set(crypto_req);
+        }
+        if let Some(crypto_resp) = modify_req.crypto_resp {
+            iam_res.crypto_resp = Set(crypto_resp);
+        }
+        if let Some(double_auth) = modify_req.double_auth {
+            iam_res.double_auth = Set(double_auth);
+        }
         Ok(Some(iam_res))
     }
 
@@ -157,7 +169,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 if disabled {
                     IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
                 } else {
-                    IamResCacheServ::add_res(&res.code, &res.method, funs).await?;
+                    IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
                 }
             }
         }
@@ -200,6 +212,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::Method));
         query.column((iam_res::Entity, iam_res::Column::Hide));
         query.column((iam_res::Entity, iam_res::Column::Action));
+        query.column((iam_res::Entity, iam_res::Column::CryptoReq));
+        query.column((iam_res::Entity, iam_res::Column::CryptoResp));
+        query.column((iam_res::Entity, iam_res::Column::DoubleAuth));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_res::Column::Kind).eq(kind.to_int()));
         }
@@ -535,6 +550,9 @@ impl IamMenuServ {
                     action: None,
                     scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
+                    crypto_req: false,
+                    crypto_resp: false,
+                    double_auth: false,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
@@ -561,6 +579,9 @@ impl IamMenuServ {
                     action: None,
                     scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
+                    crypto_req: false,
+                    crypto_resp: false,
+                    double_auth: false,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
