@@ -1,5 +1,6 @@
 use crate::{
-    constants::{self, CONFIG},
+    constants::{self, SESSION_CONFIG, STABLE_CONFIG},
+    initializer,
     mini_tardis::{basic::TardisResult, time},
 };
 
@@ -7,19 +8,23 @@ use super::resource_process;
 
 pub fn set_latest_authed() -> TardisResult<()> {
     let double_auth_exp_sec = {
-        let config = CONFIG.read().unwrap();
+        let config = STABLE_CONFIG.read().unwrap();
         config.as_ref().unwrap().double_auth_exp_sec
     };
-    constants::conf_by_double_auth_last_time(time::now() + (double_auth_exp_sec * 1000) as f64)
+    let mut config_container = SESSION_CONFIG.write().unwrap();
+    let session_config = config_container.as_mut().unwrap();
+    session_config.double_auth_last_time = time::now() + (double_auth_exp_sec * 1000) as f64;
+    initializer::change_behavior(session_config, false)
 }
 
 pub fn need_auth(method: &str, uri: &str) -> TardisResult<bool> {
     let method = method.to_lowercase();
-    let config = CONFIG.read().unwrap();
-    let config = config.as_ref().unwrap();
-    if config.double_auth_last_time > time::now() {
+    let config = SESSION_CONFIG.read().unwrap();
+    if config.as_ref().unwrap().double_auth_last_time > time::now() {
         Ok(false)
     } else {
+        let config = STABLE_CONFIG.read().unwrap();
+        let config = config.as_ref().unwrap();
         if let Some(info) = resource_process::match_res(&config.res_container, &method, uri)?.first() {
             Ok(info.need_double_auth)
         } else {
@@ -33,7 +38,6 @@ mod tests {
     use std::{thread::sleep, time::Duration};
 
     use crate::{
-        constants,
         initializer::{self, Api, ServConfig},
         mini_tardis::crypto::sm::TardisCryptoSm2,
         modules::double_auth_process::set_latest_authed,
@@ -47,7 +51,6 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        constants::remove_config().unwrap();
         initializer::do_init(
             "",
             &ServConfig {

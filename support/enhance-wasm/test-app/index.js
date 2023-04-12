@@ -4,7 +4,7 @@ import * as bios from "bios-enhance-wasm";
 // pri key : 4a0d660b70a8ee0a46c6ebf8482b158d321e59fab2d15c3fdd89ddaea24144aa
 // pub key : 02fbba662032fd384079b7824c07ec8eeaac615187e27ce6a58fcd1597105c1065
 await bios.init('', {
-    "strict_security_mode": false,
+    "strict_security_mode": true,
     "pub_key": "02fbba662032fd384079b7824c07ec8eeaac615187e27ce6a58fcd1597105c1065",
     "double_auth_exp_sec": 60,
     "apis": [
