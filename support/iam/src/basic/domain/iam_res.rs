@@ -18,6 +18,12 @@ pub struct Model {
     pub hide: bool,
     // 资源动作 例如：*、list、create、update、delete
     pub action: String,
+    // 请求是否加密
+    pub crypto_req: bool,
+    // 相应是否加密
+    pub crypto_resp: bool,
+    // 是否需要二次认证
+    pub double_auth: bool,
 
     pub own_paths: String,
 }
@@ -41,6 +47,9 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Method).not_null().string())
             .col(ColumnDef::new(Column::Hide).not_null().boolean())
             .col(ColumnDef::new(Column::Action).not_null().string())
+            .col(ColumnDef::new(Column::CryptoReq).not_null().boolean())
+            .col(ColumnDef::new(Column::CryptoResp).not_null().boolean())
+            .col(ColumnDef::new(Column::DoubleAuth).not_null().boolean())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string());
         if db == DatabaseBackend::MySql {
             builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");

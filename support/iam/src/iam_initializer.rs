@@ -31,7 +31,7 @@ use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
 use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
-use crate::console_interface::api::iam_ci_cert_api;
+use crate::console_interface::api::{iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
     iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_tenant_api,
@@ -105,7 +105,13 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ca_role_api::IamCaRoleApi,
                     iam_ca_res_api::IamCaResApi,
                 ),
-                (iam_ci_cert_api::IamCiCertApi, iam_ci_cert_api::IamCiCertManageApi),
+                (
+                    iam_ci_cert_api::IamCiCertManageApi,
+                    iam_ci_cert_api::IamCiCertApi,
+                    iam_ci_app_api::IamCiAppApi,
+                    iam_ci_res_api::IamCiResApi,
+                    iam_ci_role_api::IamCiRoleApi,
+                ),
             ),
         )
         .await;
@@ -586,6 +592,9 @@ async fn add_res<'a>(
                 action: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
+                crypto_req: false,
+                crypto_resp: false,
+                double_auth: false,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -609,6 +618,9 @@ async fn add_res<'a>(
                 action: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
+                crypto_req: false,
+                crypto_resp: false,
+                double_auth: false,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),
