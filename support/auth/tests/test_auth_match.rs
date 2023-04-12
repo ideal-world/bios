@@ -1,4 +1,6 @@
 use bios_auth::{
+    auth_config::AuthConfig,
+    auth_constants::DOMAIN_CODE,
     dto::auth_kernel_dto::AuthContext,
     serv::{auth_kernel_serv, auth_res_serv},
 };
@@ -336,6 +338,76 @@ pub async fn test_match() -> TardisResult<()> {
     })
     .await
     .is_ok());
+
+    let cache_client = TardisFuns::cache_by_module_or_default(DOMAIN_CODE);
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+
+    // match account and double auth
+    let account_id1 = "acc1";
+    let account_id2 = "acc_2";
+    auth_res_serv::add_res(
+        "GET",
+        "iam-res://iam-serv/cp/**",
+        Some(TardisFuns::json.str_to_obj(r###"{"accounts":"#acc1#acc_2#"}"###)?),
+        false,
+        false,
+        true,
+    )?;
+    assert!(auth_kernel_serv::do_auth(&AuthContext {
+        rbum_uri: "iam-res://pbulic".to_string(),
+        rbum_action: "get".to_string(),
+        app_id: None,
+        tenant_id: None,
+        account_id: Some(account_id1.to_string()),
+        roles: None,
+        groups: None,
+        own_paths: None,
+        ak: None,
+    })
+    .await
+    .is_ok());
+
+    assert!(auth_kernel_serv::do_auth(&AuthContext {
+        rbum_uri: "iam-res://iam-serv/cp/changeName".to_string(),
+        rbum_action: "get".to_string(),
+        app_id: None,
+        tenant_id: None,
+        account_id: Some(account_id1.to_string()),
+        roles: None,
+        groups: None,
+        own_paths: None,
+        ak: None,
+    })
+    .await
+    .is_err());
+
+    cache_client.set_ex(&format!("{}{}", config.cache_key_double_auth_info, account_id1), "", 100).await?;
+    assert!(auth_kernel_serv::do_auth(&AuthContext {
+        rbum_uri: "iam-res://iam-serv/cp/changeName".to_string(),
+        rbum_action: "get".to_string(),
+        app_id: None,
+        tenant_id: None,
+        account_id: Some(account_id1.to_string()),
+        roles: None,
+        groups: None,
+        own_paths: None,
+        ak: None,
+    })
+    .await
+    .is_ok());
+    assert!(auth_kernel_serv::do_auth(&AuthContext {
+        rbum_uri: "iam-res://iam-serv/cp/changeName".to_string(),
+        rbum_action: "get".to_string(),
+        app_id: None,
+        tenant_id: None,
+        account_id: Some(account_id2.to_string()),
+        roles: None,
+        groups: None,
+        own_paths: None,
+        ak: None,
+    })
+    .await
+    .is_err());
 
     Ok(())
 }

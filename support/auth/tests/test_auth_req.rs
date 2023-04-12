@@ -289,5 +289,23 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(ctx.roles, vec!["r002", "r001"]);
     assert_eq!(ctx.groups, vec!["g002", "g001"]);
 
+    // request double auth by account
+    // cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
+    // cache_client
+    //     .hset(
+    //         &format!("{}accountxxx", config.cache_key_account_info),
+    //         "",
+    //         "{\"own_paths\":\"\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+    //     )
+    //     .await?;
+    // let resp = mock_req("GET", "/iam/api/need_double_auth", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx")]).await;
+    // assert!(resp.allow);
+    // assert_eq!(resp.status_code, 200);
+    // let ctx = decode_context(&resp.headers);
+    // assert_eq!(ctx.own_paths, "");
+    // assert_eq!(ctx.owner, "account1");
+    // assert_eq!(ctx.roles, vec!["r001"]);
+    // assert_eq!(ctx.groups, vec!["g001"]);
+
     Ok(())
 }
