@@ -5,20 +5,20 @@ use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
-use tardis::TardisFuns;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
+use tardis::TardisFuns;
 
-pub struct IamCiSystemApi;
+pub struct IamCiResApi;
 
 /// # Interface Console Manage Cert API
 ///
 /// Allow Management Of aksk (an authentication method between applications)
-#[poem_openapi::OpenApi(prefix_path = "/ci/system", tag = "bios_basic::ApiTag::Interface")]
-impl IamCiSystemApi {
-    #[oai(path = "/res", method = "post")]
+#[poem_openapi::OpenApi(prefix_path = "/ci/res", tag = "bios_basic::ApiTag::Interface")]
+impl IamCiResApi {
+    #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamResAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -29,7 +29,7 @@ impl IamCiSystemApi {
     }
 
     /// Add Res Cate
-    #[oai(path = "/res/cate", method = "post")]
+    #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
