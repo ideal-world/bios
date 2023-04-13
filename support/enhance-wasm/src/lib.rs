@@ -78,12 +78,14 @@ pub fn on_response_success(method: &str, uri: &str, body: JsValue) -> Result<(),
             if let Ok(body) = js_sys::Reflect::get(&body, &"token".into()) {
                 let token = body.as_string().unwrap();
                 modules::token_process::set_token(&token)?;
+                modules::double_auth_process::remove_latest_authed()?;
             } else {
                 return Err(JsValue::try_from(JsError::new(&format!("Body format error."))).unwrap());
             }
         }
         2 => {
             modules::token_process::remove_token()?;
+            modules::double_auth_process::remove_latest_authed()?;
         }
         3 => {
             modules::double_auth_process::set_latest_authed()?;
