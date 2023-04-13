@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    constants::{BIOS_CRYPTO, CONFIG},
+    constants::{BIOS_CRYPTO, STABLE_CONFIG},
     mini_tardis::{
         basic::TardisResult,
         crypto::{
@@ -22,14 +22,15 @@ pub fn init_fd_sm2_keys() -> TardisResult<(String, TardisCryptoSm2PrivateKey)> {
     Ok((pub_key.serialize()?, pri_key))
 }
 
-pub fn init_fd_sm4_key() -> TardisResult<(String, String)> {
-    Ok((crypto::key::rand_16_hex()?, crypto::key::rand_16_hex()?))
+pub fn init_fd_sm4_key(seed: &str) -> TardisResult<(String, String)> {
+    let key = crypto::key::rand_16_hex_by_str(&crypto::sm::digest(seed)?)?;
+    Ok((key.clone(), key))
 }
 
 pub fn encrypt(method: &str, uri: &str, body: &str) -> TardisResult<EncryptResp> {
     let method = method.to_lowercase();
     let matched_res = {
-        let config = CONFIG.read().unwrap();
+        let config = STABLE_CONFIG.read().unwrap();
         let res_container = &config.as_ref().unwrap().res_container;
         resource_process::match_res(res_container, &method, uri)?
     };
@@ -61,7 +62,7 @@ pub fn encrypt(method: &str, uri: &str, body: &str) -> TardisResult<EncryptResp>
 }
 
 pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> TardisResult<EncryptResp> {
-    let config = CONFIG.read().unwrap();
+    let config = STABLE_CONFIG.read().unwrap();
     let config = config.as_ref().unwrap();
     let serv_pub_key = &config.serv_pub_key;
 
@@ -115,7 +116,7 @@ pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<Str
 }
 
 pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
-    let config = CONFIG.read().unwrap();
+    let config = STABLE_CONFIG.read().unwrap();
     let fd_pri_key = &config.as_ref().unwrap().fd_sm2_pri_key;
 
     let encrypt_key = crypto::base64::decode(encrypt_key)?;
@@ -135,13 +136,13 @@ pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
 }
 
 pub fn simple_encrypt(text: &str) -> TardisResult<String> {
-    let config = CONFIG.read().unwrap();
+    let config = STABLE_CONFIG.read().unwrap();
     let sm4_key = &config.as_ref().unwrap().fd_sm4_key;
     crypto::sm::TardisCryptoSm4.encrypt_cbc(text, &sm4_key.0, &sm4_key.1)
 }
 
 pub fn simple_decrypt(encrypted_text: &str) -> TardisResult<String> {
-    let config = CONFIG.read().unwrap();
+    let config = STABLE_CONFIG.read().unwrap();
     let sm4_key = &config.as_ref().unwrap().fd_sm4_key;
     crypto::sm::TardisCryptoSm4.decrypt_cbc(encrypted_text, &sm4_key.0, &sm4_key.1)
 }
@@ -157,7 +158,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        constants::{self, BIOS_CRYPTO},
+        constants::BIOS_CRYPTO,
         initializer::{self, Api, ServConfig},
         mini_tardis::crypto::{
             self,
@@ -172,7 +173,6 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        constants::remove_config().unwrap();
         initializer::do_init(
             "",
             &ServConfig {

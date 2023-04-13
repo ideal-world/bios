@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    constants::{self, Config, CONFIG},
-    mini_tardis::{basic::TardisResult, crypto, http, log},
+    constants::{self, SessionConfig, StableConfig},
+    mini_tardis::{self, basic::TardisResult, crypto, error, http, log},
     modules::{
         crypto_process,
         resource_process::{self, ResContainerNode},
@@ -12,12 +12,6 @@ use crate::{
 };
 
 pub(crate) async fn init(service_url: &str, serv_config: Option<ServConfig>) -> TardisResult<bool> {
-    constants::init()?;
-
-    if !constants::is_conf_unset()? {
-        return Ok(CONFIG.read().unwrap().as_ref().unwrap().strict_security_mode);
-    }
-
     let service_url = if service_url.ends_with("/") {
         service_url.to_string()
     } else {
@@ -30,26 +24,96 @@ pub(crate) async fn init(service_url: &str, serv_config: Option<ServConfig>) -> 
         log::log(&format!("[BIOS] Init by url: {service_url}."));
         http::request::<ServConfig>("GET", &format!("{service_url}auth/apis"), None, HashMap::new()).await?.unwrap()
     };
-    do_init(&service_url, &serv_config)
+    do_init(&service_url, &serv_config)?;
+    Ok(serv_config.strict_security_mode)
 }
 
-pub(crate) fn do_init(service_url: &str, serv_config: &ServConfig) -> TardisResult<bool> {
+pub(crate) fn do_init(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> {
+    init_config(&service_url, &serv_config)?;
+    init_behavior(serv_config.strict_security_mode)?;
+    Ok(())
+}
+
+fn init_behavior(strict_security_mode: bool) -> TardisResult<()> {
+    error::set_hide_error_detail(strict_security_mode);
+    #[cfg(target_arch = "wasm32")]
+    {
+        if constants::get_strict_security_mode()? {
+            crate::mini_tardis::channel::init(
+                constants::BIOS_SESSION_CONFIG,
+                |_| {
+                    let config_container = crate::constants::SESSION_CONFIG.read().unwrap();
+                    if let Some(config) = config_container.as_ref() {
+                        mini_tardis::channel::send(crate::constants::BIOS_SESSION_CONFIG, config).unwrap();
+                    }
+                },
+                |session_config| {
+                    let session_config = mini_tardis::serde::jsvalue_to_obj::<crate::constants::SessionConfig>(session_config).unwrap();
+                    crate::constants::init_session_config(session_config).unwrap();
+                },
+            )?;
+            if let Ok(Some(storage)) = web_sys::window().unwrap().session_storage() {
+                if let Ok(Some(session_config)) = storage.get(constants::BIOS_SESSION_CONFIG) {
+                    let session_config = crypto_process::simple_decrypt(&session_config)?;
+                    let session_config = mini_tardis::serde::str_to_obj::<crate::constants::SessionConfig>(&session_config)?;
+                    return crate::constants::init_session_config(session_config);
+                }
+            }
+        } else {
+            if let Ok(Some(storage)) = web_sys::window().unwrap().local_storage() {
+                if let Ok(Some(session_config)) = storage.get(constants::BIOS_SESSION_CONFIG) {
+                    let session_config = crypto_process::simple_decrypt(&session_config)?;
+                    let session_config = mini_tardis::serde::str_to_obj::<crate::constants::SessionConfig>(&session_config)?;
+                    return crate::constants::init_session_config(session_config);
+                }
+            }
+        }
+    }
+    crate::constants::init_session_config(crate::constants::SessionConfig {
+        token: None,
+        double_auth_last_time: 0.0,
+    })
+}
+
+pub(crate) fn change_behavior(session_config: &SessionConfig, only_storage: bool) -> TardisResult<()> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if constants::get_strict_security_mode()? {
+            if let Ok(Some(storage)) = web_sys::window().unwrap().session_storage() {
+                storage.set(
+                    constants::BIOS_SESSION_CONFIG,
+                    &crypto_process::simple_encrypt(&mini_tardis::serde::obj_to_str(session_config)?)?,
+                )?;
+            }
+            if !only_storage {
+                crate::mini_tardis::channel::send(constants::BIOS_SESSION_CONFIG, session_config)?;
+            }
+        } else {
+            if let Ok(Some(storage)) = web_sys::window().unwrap().local_storage() {
+                storage.set(
+                    constants::BIOS_SESSION_CONFIG,
+                    &crypto_process::simple_encrypt(&mini_tardis::serde::obj_to_str(session_config)?)?,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn init_config(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> {
     let mut res_container = ResContainerNode::new();
     for api in &serv_config.apis {
         resource_process::add_res(&mut res_container, &api.action, &api.uri, api.need_crypto_req, api.need_crypto_resp, api.need_double_auth)?;
     }
     let fd_sm2_keys = crypto_process::init_fd_sm2_keys()?;
-    let config = Config {
-        strict_security_mode: serv_config.strict_security_mode,
+    let config = StableConfig {
         serv_url: service_url.to_string(),
-        token: None,
-        double_auth_last_time: 0.0,
-        double_auth_exp_sec: serv_config.double_auth_exp_sec,
         res_container: res_container,
+        double_auth_exp_sec: serv_config.double_auth_exp_sec,
         serv_pub_key: crypto::sm::TardisCryptoSm2PublicKey::from_public_key_str(&serv_config.pub_key)?,
         fd_sm2_pub_key: fd_sm2_keys.0,
         fd_sm2_pri_key: fd_sm2_keys.1,
-        fd_sm4_key: crypto_process::init_fd_sm4_key()?,
+        fd_sm4_key: crypto_process::init_fd_sm4_key(service_url)?,
         login_req_method: serv_config.login_req_method.to_lowercase(),
         login_req_paths: serv_config.login_req_paths.iter().map(|i| if i.starts_with("/") { i.clone() } else { format!("/{}", i) }).collect::<Vec<String>>(),
         logout_req_method: serv_config.logout_req_method.to_lowercase(),
@@ -65,9 +129,8 @@ pub(crate) fn do_init(service_url: &str, serv_config: &ServConfig) -> TardisResu
             format!("/{}", &serv_config.double_auth_req_path)
         },
     };
-    let strict_security_mode = config.strict_security_mode;
-    constants::set_config(config)?;
-    Ok(strict_security_mode)
+    constants::init_stable_config(serv_config.strict_security_mode, config)?;
+    Ok(())
 }
 
 #[derive(Serialize, Deserialize, Default)]
