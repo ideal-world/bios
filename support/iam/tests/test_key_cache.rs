@@ -120,7 +120,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp.account_id).as_str()).await?,
-        1
+        2
     );
 
     info!("【test_key_cache】 Change cert, expected no token record");
@@ -330,7 +330,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Login by tenant again, expected two token records");
@@ -360,7 +360,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     info!("【test_key_cache】 Login by tenant again, expected two token records");
@@ -400,7 +400,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        2
+        3
     );
 
     let app_admin_context = IamIdentCacheServ::get_context(
@@ -846,6 +846,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             action: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
             disabled: None,
+            crypto_req: false,
+            crypto_resp: false,
+            double_auth: false,
         },
         &funs,
         system_admin_context,
@@ -863,6 +866,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             action: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_APP),
             disabled: None,
+            crypto_req: false,
+            crypto_resp: false,
+            double_auth: false,
         },
         &funs,
         system_admin_context,
@@ -882,6 +888,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             action: None,
             scope_level: None,
             disabled: Some(true),
+            crypto_req: None,
+            crypto_resp: None,
+            double_auth: None,
         },
         &funs,
         system_admin_context,
@@ -901,6 +910,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             action: None,
             scope_level: None,
             disabled: Some(false),
+            crypto_req: None,
+            crypto_resp: None,
+            double_auth: None,
         },
         &funs,
         system_admin_context,

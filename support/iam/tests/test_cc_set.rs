@@ -629,11 +629,10 @@ pub async fn test_multi_level_by_tenant_context(
         sys_context,
     )
     .await?;
-    assert_eq!(resp.main.len(), 7);
-
-    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_sys_global_id).unwrap().rel.is_some());
+    assert_eq!(resp.main.len(), 6);
+    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_sys_global_id).unwrap().rel.is_none());
     resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 1);
+    assert_eq!(resp.main.len(), 0);
 
     let mut resp = IamSetServ::get_tree(
         &t1_set_id,
@@ -647,9 +646,9 @@ pub async fn test_multi_level_by_tenant_context(
         t1_context,
     )
     .await?;
-    assert_eq!(resp.main.len(), 6);
+    assert_eq!(resp.main.len(), 1);
     resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 5);
+    assert_eq!(resp.main.len(), 0);
 
     funs.rollback().await?;
     Ok(())

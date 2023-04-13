@@ -165,7 +165,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
             "/ca/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
-                    code: TrimString("role_xxx".to_string()),
+                    code: Some(TrimString("role_xxx".to_string())),
                     name: TrimString("自定义角色1".to_string()),
                     scope_level: Some(RBUM_SCOPE_LEVEL_APP),
                     disabled: None,
