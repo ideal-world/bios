@@ -374,7 +374,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
             "/cs/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
-                    code: TrimString("audit_admin".to_string()),
+                    code: Some(TrimString("audit_admin".to_string())),
                     name: TrimString("审计管理员".to_string()),
                     // 必须设置成全局作用域（1）
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
@@ -553,6 +553,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
+                    crypto_req: false,
+                    crypto_resp: false,
+                    double_auth: false,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -577,6 +580,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
+                    crypto_req: false,
+                    crypto_resp: false,
+                    double_auth: false,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -599,6 +605,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
+                    crypto_req: false,
+                    crypto_resp: false,
+                    double_auth: false,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -626,6 +635,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
+                    crypto_req: false,
+                    crypto_resp: false,
+                    double_auth: false,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_apis_id.to_string(),
@@ -646,6 +658,9 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 action: None,
                 scope_level: None,
                 disabled: None,
+                crypto_req: None,
+                crypto_resp: None,
+                double_auth: None,
             },
         )
         .await;
@@ -684,7 +699,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
             "/cs/role",
             &IamRoleAggAddReq {
                 role: IamRoleAddReq {
-                    code: TrimString("test_role".to_string()),
+                    code: Some(TrimString("test_role".to_string())),
                     name: TrimString("测试角色".to_string()),
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
