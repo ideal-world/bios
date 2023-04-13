@@ -4,7 +4,7 @@ use super::crypto_process;
 use crate::mini_tardis::{self, basic::TardisResult, time};
 use serde::{Deserialize, Serialize};
 
-pub fn mix(method: &str, uri: &str, body: &str, mut headers: HashMap<String, String>) -> TardisResult<MixRequest> {
+pub fn mix(method: &str, uri: &str, body: &str, headers: HashMap<String, String>) -> TardisResult<MixRequest> {
     let mix_body = MixRequestBody {
         method: method.to_lowercase(),
         uri: uri.to_string(),
@@ -14,12 +14,11 @@ pub fn mix(method: &str, uri: &str, body: &str, mut headers: HashMap<String, Str
     };
     let mix_body = mini_tardis::serde::obj_to_str(&mix_body)?;
     let resp = crypto_process::do_encrypt(&mix_body, true, true)?;
-    headers.extend(resp.additional_headers);
     let resp = MixRequest {
         method: "post".to_string(),
         uri: "apis".to_string(),
         body: resp.body,
-        headers,
+        headers: resp.additional_headers,
     };
     Ok(resp)
 }
@@ -63,7 +62,6 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        constants::remove_config().unwrap();
         initializer::do_init(
             "",
             &ServConfig {
@@ -85,7 +83,7 @@ mod tests {
         let resp = mix("PUT", "iam/ct/xxx", mock_req_body, HashMap::from([("Test-Key".to_string(), "xxx".to_string())])).unwrap();
         assert_eq!(resp.method, "post");
         assert_eq!(resp.uri, "apis");
-        assert_eq!(resp.headers.len(), 2);
+        assert_eq!(resp.headers.len(), 1);
 
         // Mock serv process
         // ------------------------------------------------

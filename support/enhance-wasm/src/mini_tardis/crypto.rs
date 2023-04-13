@@ -30,6 +30,10 @@ pub mod key {
         rand::rngs::OsRng::default().fill_bytes(&mut key);
         Ok(hex::encode(key))
     }
+
+    pub fn rand_16_hex_by_str(str: &str) -> TardisResult<String> {
+        Ok(hex::encode(str)[..16].to_string())
+    }
 }
 
 pub mod sm {
@@ -88,7 +92,7 @@ pub mod sm {
                 .map_err(|error| TardisError::format_error(&format!("[Tardis.Crypto] SM2 load sk error:{error}"), "406-tardis-crypto-sm2-sk-error"))?;
             Ok(TardisCryptoSm2PrivateKey { pri_key: sk })
         }
-    
+
         pub fn serialize(&self) -> TardisResult<String> {
             let sk = SigCtx::new()
                 .serialize_seckey(&self.pri_key)

@@ -1,11 +1,12 @@
+use super::basic::TardisResult;
+use lazy_static::lazy_static;
+use serde::Serialize;
+use std::sync::RwLock;
 use wasm_bindgen::{JsCast, JsValue};
 
-use serde::Serialize;
-
-use crate::constants::INST;
-
-use super::basic::TardisResult;
-
+lazy_static! {
+    static ref INST: RwLock<f64> = RwLock::new(crate::mini_tardis::time::now());
+}
 pub fn send<T: Serialize>(key: &str, obj: &T) -> TardisResult<()> {
     let data = crate::mini_tardis::serde::obj_to_jsvalue(obj)?;
     let send_data = crate::mini_tardis::serde::str_to_jsvalue("{}").unwrap();

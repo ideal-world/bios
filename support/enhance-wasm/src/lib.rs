@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use constants::{BIOS_TOKEN, CONFIG};
+use constants::{BIOS_TOKEN, STABLE_CONFIG};
 use modules::global_api_process::MixRequest;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
@@ -35,7 +35,7 @@ pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValu
     if let Some(token) = modules::token_process::get_token()? {
         headers.insert(BIOS_TOKEN.to_string(), token);
     }
-    let mix_req = if constants::conf_by_strict_security_mode()? {
+    let mix_req = if constants::get_strict_security_mode()? {
         modules::global_api_process::mix(method, uri, &body, headers)?
     } else {
         let resp = modules::crypto_process::encrypt(method, uri, &body)?;
@@ -61,7 +61,7 @@ pub fn on_before_response(body: JsValue, headers: JsValue) -> Result<String, JsV
 pub fn on_response_success(method: &str, uri: &str, body: JsValue) -> Result<(), JsValue> {
     let uri = if uri.starts_with("/") { uri.to_string() } else { format!("/{uri}") };
     let spec_opt = {
-        let config = CONFIG.read().unwrap();
+        let config = STABLE_CONFIG.read().unwrap();
         let config = config.as_ref().unwrap();
         if config.login_req_method.to_lowercase() == method.to_lowercase() && config.login_req_paths.iter().any(|u| uri.starts_with(u)) {
             1
@@ -110,7 +110,7 @@ mod tests {
     use wasm_bindgen_test::wasm_bindgen_test;
 
     use crate::{
-        constants::{self, BIOS_CRYPTO, BIOS_TOKEN},
+        constants::{BIOS_CRYPTO, BIOS_TOKEN},
         decrypt, encrypt,
         initializer::{self, Api, ServConfig},
         mini_tardis::{
@@ -130,7 +130,6 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        constants::remove_config().unwrap();
         initializer::do_init(
             "",
             &ServConfig {
@@ -265,7 +264,6 @@ mod tests {
         let sm2 = TardisCryptoSm2 {};
         let mock_serv_pri_key = sm2.new_private_key().unwrap();
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
-        constants::remove_config().unwrap();
         initializer::do_init(
             "",
             &ServConfig {
