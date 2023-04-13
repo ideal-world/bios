@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use bios_auth::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
-    dto::auth_kernel_dto::{AuthReq, AuthResp},
+    dto::{
+        auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp},
+        auth_kernel_dto::{AuthReq, AuthResp},
+    },
 };
 use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey};
 use tardis::{
@@ -14,17 +17,7 @@ use tardis::{
     TardisFuns,
 };
 
-async fn mock_req(
-    method: &str,
-    path: &str,
-    query: &str,
-    body: &str,
-    mut headers: Vec<(&str, &str)>,
-    serv_pub_key: &str,
-    front_pub_key: &str,
-    need_crypto_req: bool,
-    need_crypto_resp: bool,
-) -> AuthResp {
+async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers: Vec<(&str, &str)>, serv_pub_key: &str, front_pub_key: &str, need_crypto_req: bool) -> AuthResp {
     let web_client = TardisWebClient::init(1).unwrap();
     info!(">>>>[Request]| path:{}, query:{}, headers:{:#?}", path, query, headers);
     let base64_encrypt;
@@ -78,6 +71,41 @@ async fn mock_req(
     info!("<<<<[Request]|path:{}, query:{}, headers:{:#?}, result:{:#?}", path, query, headers, result);
     result.data.unwrap()
 }
+
+async fn mock_encrypt_resp(body: &str, mut headers: HashMap<String, String>, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
+    let web_client = TardisWebClient::init(1).unwrap();
+    info!(">>>>[Response]| headers:{:#?}", headers);
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let result: TardisResp<AuthEncryptResp> = web_client
+        .put(
+            &format!("https://localhost:8080/{DOMAIN_CODE}/auth/crypto"),
+            &AuthEncryptReq {
+                headers: headers.clone(),
+                body: body.to_string(),
+            },
+            None,
+        )
+        .await
+        .unwrap()
+        .body
+        .unwrap();
+    info!("<<<<[Response]| headers:{:#?}, result:{:#?}", headers, result);
+    let result = result.data.unwrap();
+    let decode_base64 = TardisFuns::crypto.base64.decode(result.headers.get(&config.head_key_crypto).unwrap()).unwrap();
+    let decrypt_key = front_pri_key.decrypt(&decode_base64).unwrap();
+    let splits: Vec<_> = decrypt_key.split(' ').collect();
+    if splits.len() != 3 {
+        panic!("splits:{:?}", splits);
+    }
+
+    let sign_data = splits[0];
+    let sm4_key = splits[1];
+    let sm4_iv = splits[2];
+    let gen_sign_data = TardisFuns::crypto.digest.sm3(&result.body).unwrap();
+    assert_eq!(sign_data, gen_sign_data);
+    let data = TardisFuns::crypto.sm4.decrypt_cbc(&result.body, &sm4_key, &sm4_iv).unwrap();
+    data
+}
 async fn init_get_pub_key(sm2: &TardisCryptoSm2) -> TardisResult<(TardisCryptoSm2PublicKey, TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey)> {
     //frontend init sm2
     let pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
@@ -89,6 +117,7 @@ async fn init_get_pub_key(sm2: &TardisCryptoSm2) -> TardisResult<(TardisCryptoSm
 }
 
 pub async fn test_encrypt() -> TardisResult<()> {
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let sm2 = TardisCryptoSm2 {};
     let (serve_pub_key, front_pri_key, front_pub_key) = init_get_pub_key(&sm2).await.unwrap();
 
@@ -101,7 +130,6 @@ pub async fn test_encrypt() -> TardisResult<()> {
         serve_pub_key.serialize().unwrap().as_ref(),
         front_pub_key.serialize().unwrap().as_str(),
         true,
-        false,
     )
     .await;
     assert!(!resp.allow);
@@ -116,13 +144,16 @@ pub async fn test_encrypt() -> TardisResult<()> {
         serve_pub_key.serialize().unwrap().as_ref(),
         front_pub_key.serialize().unwrap().as_str(),
         true,
-        false,
     )
     .await;
     assert!(resp.allow);
     assert_eq!(resp.body, Some("AAAA".to_string()));
+    print!("{:?}", resp.headers);
+    assert!(resp.headers.get(&config.head_key_crypto).is_some());
 
-    //todo
+    let mock_resp_body = "!@#$%^&*()AZXdfds测试内容_~/n";
+    let return_resp_body = mock_encrypt_resp(mock_resp_body, resp.headers, &front_pri_key).await;
+    assert_eq!(return_resp_body, mock_resp_body);
 
     Ok(())
 }
