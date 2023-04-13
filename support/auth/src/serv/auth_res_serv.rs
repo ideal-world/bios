@@ -14,6 +14,8 @@ use crate::helper::auth_common_helper;
 
 lazy_static! {
     static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
+    //todo
+    static ref RES_: RwLock<Option<ResContainerNode>> = RwLock::new(None);
 }
 
 pub fn get_res_json() -> TardisResult<Value> {

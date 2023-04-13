@@ -186,3 +186,18 @@ pub struct ResAuthInfo {
     pub apps: Option<String>,
     pub tenants: Option<String>,
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MixRequest {
+    pub body: String,
+    pub headers: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MixRequestBody {
+    pub method: String,
+    pub uri: String,
+    pub body: String,
+    pub headers: HashMap<String, String>,
+    pub ts: f64,
+}

@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::ResContainerLeafInfo;
+use crate::dto::auth_kernel_dto::{MixRequest, MixRequestBody, ResContainerLeafInfo};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
@@ -275,4 +275,26 @@ pub async fn decrypt(
         return Ok((body, headers));
     }
     Ok((None, None))
+}
+
+pub(crate) async fn parse_mix_req(req: MixRequest) -> TardisResult<()> {
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &Some(req.body), true, true, config).await?;
+    let body = body.ok_or_else(|| TardisError::bad_request(&format!("[MixReq] encypt body can't be empty"), "401-parse_mix_req-parse-error"))?;
+
+    let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
+    let req_url = TardisFuns::uri.format(&mix_body.uri)?;
+    let url = url::Url::parse(mix_body)?;
+    auth(&mut AuthReq {
+        scheme: "http".to_string(),
+        path: url.path(),
+        query: url.query(),
+        method: mix_body.method,
+        host: "".to_string(),
+        port: 80,
+        headers: mix_body.headers,
+        body: Some(mix_body.body),
+    },true)
+    .await?;
+    Ok(())
 }
