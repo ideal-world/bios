@@ -13,9 +13,11 @@ use serde::{Deserialize, Serialize};
 
 pub const BIOS_CRYPTO: &str = "Bios-Crypto";
 pub const BIOS_TOKEN: &str = "Bios-Token";
-pub const BIOS_SESSION_CONFIG: &str = "tardis_config";
+pub const BIOS_SESSION_CONFIG: &str = "Bios_config";
+pub const BIOS_SERV_URL_CONFIG: &str = "Bios_serv_url";
 
 static STRICT_SECURITY_MODE: RwLock<bool> = RwLock::new(false);
+pub(crate) static SIMPLE_SM4_SEED_CONFIG: RwLock<(String, String)> = RwLock::new((String::new(), String::new()));
 
 lazy_static! {
     pub(crate) static ref STABLE_CONFIG: RwLock<Option<StableConfig>> = RwLock::new(None);
@@ -35,7 +37,13 @@ pub(crate) fn init_session_config(config: SessionConfig) -> TardisResult<()> {
     let mut session_config = SESSION_CONFIG.write().unwrap();
     *session_config = Some(config);
     Ok(())
-} 
+}
+
+pub(crate) fn init_simple_sm_config(seed: (String, String)) -> TardisResult<()> {
+    let mut seed_config = SIMPLE_SM4_SEED_CONFIG.write().unwrap();
+    *seed_config = seed;
+    Ok(())
+}
 
 pub(crate) fn get_strict_security_mode() -> TardisResult<bool> {
     let strict_security_mode = STRICT_SECURITY_MODE.read().unwrap();
@@ -43,13 +51,11 @@ pub(crate) fn get_strict_security_mode() -> TardisResult<bool> {
 }
 
 pub(crate) struct StableConfig {
-    pub serv_url: String,
     pub double_auth_exp_sec: u32,
     pub res_container: ResContainerNode,
     pub serv_pub_key: TardisCryptoSm2PublicKey,
     pub fd_sm2_pub_key: String,
     pub fd_sm2_pri_key: TardisCryptoSm2PrivateKey,
-    pub fd_sm4_key: (String, String),
     pub login_req_method: String,
     pub login_req_paths: Vec<String>,
     pub logout_req_method: String,
