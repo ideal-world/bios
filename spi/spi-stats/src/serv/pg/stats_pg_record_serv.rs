@@ -483,6 +483,6 @@ async fn fact_get_latest_record_raw(
     ctx: &TardisContext,
 ) -> TardisResult<Option<tardis::db::sea_orm::QueryResult>> {
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
-    let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1"), vec![Value::from(dim_record_key)]).await?;
+    let result = conn.query_one(&format!("SELECT * FROM {table_name} WHERE key = $1 ORDER BY ct DESC"), vec![Value::from(dim_record_key)]).await?;
     Ok(result)
 }
