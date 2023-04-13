@@ -19,7 +19,7 @@ use crate::{
 
 use super::{auth_crypto_serv, auth_mgr_serv, auth_res_serv};
 
-pub(crate) async fn auth(req: &mut AuthReq) -> TardisResult<AuthResp> {
+pub(crate) async fn auth(req: &mut AuthReq,is_mix_req:bool) -> TardisResult<AuthResp> {
     trace!("[Auth] Request auth: {:?}", req);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     match check(req) {
@@ -284,17 +284,28 @@ pub(crate) async fn parse_mix_req(req: MixRequest) -> TardisResult<()> {
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let req_url = TardisFuns::uri.format(&mix_body.uri)?;
-    let url = url::Url::parse(mix_body)?;
-    auth(&mut AuthReq {
-        scheme: "http".to_string(),
-        path: url.path(),
-        query: url.query(),
-        method: mix_body.method,
-        host: "".to_string(),
-        port: 80,
-        headers: mix_body.headers,
-        body: Some(mix_body.body),
-    },true)
+    let url = tardis::url::Url::parse(&mix_body.uri)?;
+    let query = url.query().unwrap_or("").split('&').collect::<Vec<&str>>();
+    let query = query
+        .into_iter()
+        .map(|q| {
+            let q = q.split('=').collect::<Vec<&str>>();
+            (q[0].to_string(), q[1].to_string())
+        })
+        .collect::<HashMap<String, String>>();
+    auth(
+        &mut AuthReq {
+            scheme: "http".to_string(),
+            path: url.path().to_string(),
+            query,
+            method: mix_body.method,
+            host: "".to_string(),
+            port: 80,
+            headers: mix_body.headers,
+            body: Some(mix_body.body),
+        },
+        true,
+    )
     .await?;
     Ok(())
 }
