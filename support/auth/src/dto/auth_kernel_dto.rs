@@ -178,6 +178,28 @@ pub struct ResContainerLeafInfo {
     pub need_double_auth: bool,
 }
 
+#[derive(Serialize, Deserialize, Default)]
+pub(crate) struct ServConfig {
+    pub strict_security_mode: bool,
+    // pub pub_key: String,
+    pub double_auth_exp_sec: u32,
+    pub apis: Vec<Api>,
+    pub login_req_method: String,
+    pub login_req_paths: Vec<String>,
+    pub logout_req_method: String,
+    pub logout_req_path: String,
+    pub double_auth_req_method: String,
+    pub double_auth_req_path: String,
+}
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub(crate) struct Api {
+    pub action: String,
+    pub uri: String,
+    pub need_crypto_req: bool,
+    pub need_crypto_resp: bool,
+    pub need_double_auth: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ResAuthInfo {
     pub accounts: Option<String>,

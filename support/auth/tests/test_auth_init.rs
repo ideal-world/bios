@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bios_auth::{auth_config::AuthConfig, auth_constants::DOMAIN_CODE, auth_initializer, serv::auth_res_serv};
-use tardis::{basic::result::TardisResult, tokio::time::sleep, TardisFuns};
+use tardis::{basic::result::TardisResult,  tokio::time::sleep, TardisFuns};
 
 pub async fn test_init() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
@@ -51,6 +51,10 @@ pub async fn test_init() -> TardisResult<()> {
             .unwrap(),
         "iam-res://iam-serv/p1?a=1"
     );
+    let apis = auth_res_serv::get_apis_json()?["apis"].as_array().unwrap().clone();
+    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=1").collect::<Vec<_>>();
+    assert!(url.len() == 1);
+
     assert_eq!(
         auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"]["a=5"]["children"]["$"]["children"]["get"]
             ["leaf_info"]["uri"]
@@ -58,6 +62,8 @@ pub async fn test_init() -> TardisResult<()> {
             .unwrap(),
         "iam-res://iam-serv/p1?a=5"
     );
+    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=5").collect::<Vec<_>>();
+    assert!(url.len() == 1);
 
     cache_client.hdel(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=1##get").await?;
     cache_client
@@ -81,6 +87,9 @@ pub async fn test_init() -> TardisResult<()> {
     sleep(Duration::from_secs(2)).await;
 
     assert!(auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"].get("a=1").is_none());
+    let apis = auth_res_serv::get_apis_json()?["apis"].as_array().unwrap().clone();
+    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=1").collect::<Vec<_>>();
+    assert!(url.is_empty());
     assert_eq!(
         auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"]["a=6"]["children"]["$"]["children"]["get"]
             ["leaf_info"]["uri"]
@@ -88,6 +97,8 @@ pub async fn test_init() -> TardisResult<()> {
             .unwrap(),
         "iam-res://iam-serv/p1?a=6"
     );
+    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=6").collect::<Vec<_>>();
+    assert!(url.len() == 1);
     assert_eq!(
         auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"]["a=7"]["children"]["$"]["children"]["get"]
             ["leaf_info"]["uri"]
@@ -95,6 +106,16 @@ pub async fn test_init() -> TardisResult<()> {
             .unwrap(),
         "iam-res://iam-serv/p1?a=7"
     );
+    let url = apis
+        .iter()
+        .filter(|a| {
+            a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=7"
+                && !a["need_crypto_req"].as_bool().unwrap()
+                && !a["need_crypto_resp"].as_bool().unwrap()
+                && !a["need_double_auth"].as_bool().unwrap()
+        })
+        .collect::<Vec<_>>();
+    assert!(url.len() == 1);
 
     Ok(())
 }
