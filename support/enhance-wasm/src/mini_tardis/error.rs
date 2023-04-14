@@ -4,7 +4,15 @@ use std::convert::Infallible;
 use std::num::{ParseIntError, TryFromIntError};
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
-use std::sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use wasm_bindgen::{JsError, JsValue};
+
+static HIDE_ERROR_DETAIL: RwLock<bool> = RwLock::new(false);
+
+pub fn set_hide_error_detail(is_hide: bool) {
+    let mut hide_error_detail = HIDE_ERROR_DETAIL.write().unwrap();
+    *hide_error_detail = is_hide;
+}
 
 pub static ERROR_DEFAULT_CODE: &str = "-1";
 
@@ -135,5 +143,25 @@ impl<P> From<PoisonError<RwLockReadGuard<'_, P>>> for TardisError {
 impl<P> From<PoisonError<RwLockWriteGuard<'_, P>>> for TardisError {
     fn from(error: PoisonError<RwLockWriteGuard<'_, P>>) -> Self {
         TardisError::conflict(&format!("[Tardis.Basic] {error}"), "")
+    }
+}
+
+impl From<TardisError> for JsValue {
+    fn from(error: TardisError) -> Self {
+        if *HIDE_ERROR_DETAIL.read().unwrap() {
+            JsValue::try_from(JsError::new(&format!("Abnormal operation"))).unwrap()
+        } else {
+            JsValue::try_from(JsError::new(&format!("[{}]{}", error.code, error.message))).unwrap()
+        }
+    }
+}
+
+impl From<JsValue> for TardisError {
+    fn from(error: JsValue) -> Self {
+        if *HIDE_ERROR_DETAIL.read().unwrap() {
+            TardisError::wrap("Abnormal operation", "")
+        } else {
+            TardisError::wrap(&format!("{error:?}"), "")
+        }
     }
 }

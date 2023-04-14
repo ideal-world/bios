@@ -1,11 +1,59 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>Hello wasm-pack!</title>
-  </head>
-  <body>
-    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-    <script src="./bootstrap.js"></script>
-  </body>
+
+<head>
+  <meta charset="utf-8">
+  <title>BIOS Enhance Wasm</title>
+</head>
+
+<body>
+  <p>
+    1. Init:
+    <button id="InitNonSecurityMode">Init Non Strict Security Mode</button> or
+    <button id="InitSecurityMode">Init Strict Security Mode</button>
+  </p>
+  <p><h3 id="mode">-------------------- ↑↑ Please Init first ↑↑ --------------------</h3></p>
+  <p>
+    2. Browser uri crypto example:
+    <br />
+    <input id="uriExample" value="/doc/files/f0ddw32dfID2#desc" style="min-width: 800px;" />
+    <br />
+    <button id="uriEncrypt">Uri Encrypt</button>
+    <button id="uriDecrypt">Uri Decrypt</button>
+  </p>
+  <p>
+    3. API transmission crypto example:
+    <br />
+    <textarea id="bodyExample"
+      style="min-width: 800px;min-height: 50px;">中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。</textarea>
+    <br />
+    <button id="apiNonCrypto">Non Crypto</button>
+    <button id="apiReqCrypto">Request Crypto</button>
+    <button id="apiRespCrypto">Response Crypto</button>
+    <button id="apiReqRespCrypto">Request & Response Crypto</button>
+  </p>
+  <p>
+    4. Login example:
+    <br />
+    <button id="login">Mock Login</button>
+    <button id="logout">Mock Logout</button>
+  </p>
+  <p>
+    5. Double Auth example:
+    <br />
+    <button id="needDoubleAuth">Need Double Auth</button>
+    <button id="doubleAuth">Mock Double Auth</button>
+  </p>
+  <p>
+    6. Crypto performance test:
+    <br />
+    <button id="performanceTest">Performance Test</button>
+  </p>
+  <p>
+  <p>-------------------- OUTPUT --------------------</p>
+  <div id="output" style="width: 800px;min-height: 400px;word-wrap:break-word;word-break:break-all;"></div>
+  </p>
+  <script src="./bootstrap.js"></script>
+</body>
+
 </html>

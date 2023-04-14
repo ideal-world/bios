@@ -2,20 +2,13 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    constants::RES_CONTAINER,
-    mini_tardis::{basic::TardisResult, log},
-};
+use crate::mini_tardis::{basic::TardisResult, log};
 
-pub fn add_res(res_action: &str, res_uri: &str, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
+pub fn add_res(res_container: &mut ResContainerNode, res_action: &str, res_uri: &str, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
     log::log(&format!("[BIOS.RES] Add res [{res_action}] {res_uri}."));
     let res_action = res_action.to_lowercase();
     let res_items = parse_uri(res_uri)?;
-    let mut res_container = RES_CONTAINER.write()?;
-    if res_container.is_none() {
-        *res_container = Some(ResContainerNode::new());
-    }
-    let mut res_container_node = res_container.as_mut().unwrap();
+    let mut res_container_node = res_container;
     for res_item in res_items.into_iter() {
         if !res_container_node.has_child(&res_item) {
             res_container_node.insert_child(&res_item);
@@ -28,14 +21,13 @@ pub fn add_res(res_action: &str, res_uri: &str, need_crypto_req: bool, need_cryp
     Ok(())
 }
 
-pub fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
+pub fn match_res(res_container: &ResContainerNode, res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContainerLeafInfo>> {
     let res_action = res_action.to_lowercase();
     let mut res_items = parse_uri(res_uri)?;
     // remove $ node;
     res_items.remove(res_items.len() - 1);
     let mut matched_uris = vec![];
-    let res_container = RES_CONTAINER.read()?;
-    do_match_res(&res_action, res_container.as_ref().unwrap(), &res_items, false, &mut matched_uris);
+    do_match_res(&res_action, res_container, &res_items, false, &mut matched_uris);
     Ok(matched_uris)
 }
 
@@ -72,11 +64,13 @@ fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &
 }
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
+    let res_uri = if let Some(res_uri) = res_uri.strip_prefix("/") { res_uri } else { res_uri };
     let mut res_uri = res_uri.split("/").map(|i| i.to_string()).collect::<Vec<String>>();
     res_uri.push("$".to_string());
     Ok(res_uri)
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ResContainerNode {
     children: Option<HashMap<String, ResContainerNode>>,
     leaf_info: Option<ResContainerLeafInfo>,

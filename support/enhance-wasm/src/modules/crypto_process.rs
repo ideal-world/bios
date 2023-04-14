@@ -1,43 +1,40 @@
 use std::collections::HashMap;
 
 use crate::{
-    constants::{ENCRYPT_FD_SM2_KEYS, ENCRYPT_FD_SM4_KEY, ENCRYPT_SERV_PUB_KEY, TARDIS_CRYPTO},
+    constants::{BIOS_CRYPTO, SIMPLE_SM4_SEED_CONFIG, STABLE_CONFIG},
+    initializer::init_simple_sm_config_by_window,
     mini_tardis::{
         basic::TardisResult,
         crypto::{
             self,
-            sm::{TardisCryptoSm2, TardisCryptoSm4},
+            sm::{TardisCryptoSm2, TardisCryptoSm2PrivateKey, TardisCryptoSm4},
         },
         error::TardisError,
-        log,
     },
 };
 use serde::{Deserialize, Serialize};
 
 use super::resource_process;
 
-pub fn init(pub_key: &str) -> TardisResult<()> {
-    log::log(&format!("[BIOS.Crypto] Init keys."));
-    let mut serv_pub_key = ENCRYPT_SERV_PUB_KEY.write().unwrap();
-    *serv_pub_key = Some(TardisCryptoSm2 {}.new_public_key_from_public_key(&pub_key)?);
-
-    init_fd_key()
-}
-
-fn init_fd_key() -> TardisResult<()> {
+pub fn init_fd_sm2_keys() -> TardisResult<(String, TardisCryptoSm2PrivateKey)> {
     let sm_obj = TardisCryptoSm2 {};
     let pri_key = sm_obj.new_private_key()?;
     let pub_key = sm_obj.new_public_key(&pri_key)?;
-    let mut sm2_keys = ENCRYPT_FD_SM2_KEYS.write().unwrap();
-    *sm2_keys = Some((pub_key.serialize()?, pri_key));
+    Ok((pub_key.serialize()?, pri_key))
+}
 
-    let mut sm4_key = ENCRYPT_FD_SM4_KEY.write().unwrap();
-    *sm4_key = (crypto::key::rand_16_hex()?, crypto::key::rand_16_hex()?);
-    Ok(())
+pub fn init_fd_sm4_key(seed: &str) -> TardisResult<(String, String)> {
+    let key = crypto::key::rand_16_hex_by_str(&crypto::sm::digest(seed)?)?;
+    Ok((key.clone(), key))
 }
 
 pub fn encrypt(method: &str, uri: &str, body: &str) -> TardisResult<EncryptResp> {
-    let matched_res = resource_process::match_res(method, uri)?;
+    let method = method.to_lowercase();
+    let matched_res = {
+        let config = STABLE_CONFIG.read().unwrap();
+        let res_container = &config.as_ref().unwrap().res_container;
+        resource_process::match_res(res_container, &method, uri)?
+    };
     let resp = if matched_res.is_empty() {
         EncryptResp {
             body: body.to_string(),
@@ -66,8 +63,9 @@ pub fn encrypt(method: &str, uri: &str, body: &str) -> TardisResult<EncryptResp>
 }
 
 pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> TardisResult<EncryptResp> {
-    let serv_pub_key = ENCRYPT_SERV_PUB_KEY.read().unwrap();
-    let serv_pub_key = serv_pub_key.as_ref().unwrap();
+    let config = STABLE_CONFIG.read().unwrap();
+    let config = config.as_ref().unwrap();
+    let serv_pub_key = &config.serv_pub_key;
 
     let (body, encrypt_key) = if need_crypto_req && need_crypto_resp {
         let sm4_key = crypto::key::rand_16_hex()?;
@@ -76,8 +74,7 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
             .encrypt_cbc(body, &sm4_key, &sm4_iv)
             .map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: body encrypt error:{e}"), ""))?;
 
-        let fd_keys = ENCRYPT_FD_SM2_KEYS.read().unwrap();
-        let fd_pub_key = &fd_keys.as_ref().unwrap().0;
+        let fd_pub_key = &config.fd_sm2_pub_key;
 
         let sign_body = crypto::sm::digest(&encrypt_body)?;
         let encrypt_key = serv_pub_key
@@ -97,8 +94,7 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
             .map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: key encrypt error:{e}"), ""))?;
         (encrypt_body, encrypt_key)
     } else {
-        let fd_keys = ENCRYPT_FD_SM2_KEYS.read().unwrap();
-        let fd_pub_key = &fd_keys.as_ref().unwrap().0;
+        let fd_pub_key = &config.fd_sm2_pub_key;
 
         let encrypt_key =
             serv_pub_key.encrypt(&format!("{fd_pub_key}")).map_err(|e| TardisError::bad_request(&format!("[BIOS.Crypto] Encrypted request: key encrypt error:{e}"), ""))?;
@@ -107,12 +103,12 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
     let encrypt_key = crypto::base64::encode(&encrypt_key);
     Ok(EncryptResp {
         body,
-        additional_headers: HashMap::from([(TARDIS_CRYPTO.to_string(), encrypt_key)]),
+        additional_headers: HashMap::from([(BIOS_CRYPTO.to_string(), encrypt_key)]),
     })
 }
 
 pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<String> {
-    if let Some(encrypt_key) = headers.get(TARDIS_CRYPTO) {
+    if let Some(encrypt_key) = headers.get(BIOS_CRYPTO) {
         let resp = do_decrypt(body, encrypt_key)?;
         return Ok(resp);
     } else {
@@ -121,8 +117,8 @@ pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<Str
 }
 
 pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
-    let fd_keys = ENCRYPT_FD_SM2_KEYS.read().unwrap();
-    let fd_pri_key = &fd_keys.as_ref().unwrap().1;
+    let config = STABLE_CONFIG.read().unwrap();
+    let fd_pri_key = &config.as_ref().unwrap().fd_sm2_pri_key;
 
     let encrypt_key = crypto::base64::decode(encrypt_key)?;
     let key = fd_pri_key.decrypt(&encrypt_key)?;
@@ -141,13 +137,21 @@ pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
 }
 
 pub fn simple_encrypt(text: &str) -> TardisResult<String> {
-    let sm4_key = ENCRYPT_FD_SM4_KEY.read().unwrap();
-    crypto::sm::TardisCryptoSm4.encrypt_cbc(text, &sm4_key.0, &sm4_key.1)
+    let seed = {
+        let config = SIMPLE_SM4_SEED_CONFIG.read().unwrap();
+        (config.0.clone(), config.1.clone())
+    };
+    let seed = if seed.0.is_empty() { init_simple_sm_config_by_window()?.unwrap() } else { seed };
+    crypto::sm::TardisCryptoSm4.encrypt_cbc(text, &seed.0, &seed.1)
 }
 
 pub fn simple_decrypt(encrypted_text: &str) -> TardisResult<String> {
-    let sm4_key = ENCRYPT_FD_SM4_KEY.read().unwrap();
-    crypto::sm::TardisCryptoSm4.decrypt_cbc(encrypted_text, &sm4_key.0, &sm4_key.1)
+    let seed = {
+        let config = SIMPLE_SM4_SEED_CONFIG.read().unwrap();
+        (config.0.clone(), config.1.clone())
+    };
+    let seed = if seed.0.is_empty() { init_simple_sm_config_by_window()?.unwrap() } else { seed };
+    crypto::sm::TardisCryptoSm4.decrypt_cbc(encrypted_text, &seed.0, &seed.1)
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -161,16 +165,14 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        constants::TARDIS_CRYPTO,
-        initializer::{self, Api, Config},
+        constants::BIOS_CRYPTO,
+        initializer::{self, Api, ServConfig},
         mini_tardis::crypto::{
             self,
             sm::{TardisCryptoSm2, TardisCryptoSm2PrivateKey, TardisCryptoSm4},
         },
         modules::crypto_process::{decrypt, encrypt},
     };
-
-    use super::init;
 
     #[test]
     fn test_crypto() {
@@ -180,46 +182,49 @@ mod tests {
         let mock_serv_pub_key = sm2.new_public_key(&mock_serv_pri_key).unwrap();
         initializer::do_init(
             "",
-            &Config {
+            &ServConfig {
                 strict_security_mode: false,
                 pub_key: mock_serv_pub_key.serialize().unwrap(),
                 double_auth_exp_sec: 0,
                 apis: vec![
                     Api {
                         action: "get".to_string(),
-                        uri: "im/ct/all/**".to_string(),
+                        uri: "iam/ct/all/**".to_string(),
                         need_crypto_req: true,
                         need_crypto_resp: true,
                         need_double_auth: false,
                     },
                     Api {
                         action: "GET".to_string(),
-                        uri: "im/ct/req/**".to_string(),
+                        uri: "iam/ct/req/**".to_string(),
                         need_crypto_req: true,
                         need_crypto_resp: false,
                         need_double_auth: false,
                     },
                     Api {
                         action: "POST".to_string(),
-                        uri: "im/ct/resp/**".to_string(),
+                        uri: "iam/ct/resp/**".to_string(),
                         need_crypto_req: false,
                         need_crypto_resp: true,
                         need_double_auth: false,
                     },
                     Api {
                         action: "get".to_string(),
-                        uri: "im/ct/all/spec/**".to_string(),
+                        uri: "iam/ct/all/spec/**".to_string(),
                         need_crypto_req: false,
                         need_crypto_resp: false,
                         need_double_auth: false,
                     },
                 ],
+                login_req_method: "".to_string(),
+                login_req_paths: vec![],
+                logout_req_method: "".to_string(),
+                logout_req_path: "".to_string(),
+                double_auth_req_method: "".to_string(),
+                double_auth_req_path: "".to_string(),
             },
         )
         .unwrap();
-
-        // Init
-        init(&mock_serv_pub_key.serialize().unwrap()).unwrap();
 
         test_crypto_req_and_resp(&mock_serv_pri_key, &sm2);
         test_crypto_req(&mock_serv_pri_key);
@@ -230,9 +235,9 @@ mod tests {
     fn test_crypto_req_and_resp(mock_serv_pri_key: &TardisCryptoSm2PrivateKey, sm2: &TardisCryptoSm2) {
         // Encrypt
         let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
-        let encrypt_req = encrypt("Get", "im/ct/all/spec/xxx", mock_req_body).unwrap();
+        let encrypt_req = encrypt("Get", "iam/ct/all/spec/xxx", mock_req_body).unwrap();
         let encrypt_body = encrypt_req.body;
-        let key = &encrypt_req.additional_headers[TARDIS_CRYPTO];
+        let key = &encrypt_req.additional_headers[BIOS_CRYPTO];
 
         // Mock serv process
         // ------------------------------------------------
@@ -259,15 +264,15 @@ mod tests {
         let key = crypto::base64::encode(&fd_pub_key.encrypt(&format!("{sign_body} {sm4_key} {sm4_iv}")).unwrap());
         // ------------------------------------------------
 
-        assert_eq!(decrypt(&encrypt_body, HashMap::from([(TARDIS_CRYPTO.to_string(), key)])).unwrap(), mock_resp_body);
+        assert_eq!(decrypt(&encrypt_body, HashMap::from([(BIOS_CRYPTO.to_string(), key)])).unwrap(), mock_resp_body);
     }
 
     fn test_crypto_req(mock_serv_pri_key: &TardisCryptoSm2PrivateKey) {
         // Encrypt
         let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
-        let encrypt_req = encrypt("Get", "im/ct/req/xxx", mock_req_body).unwrap();
+        let encrypt_req = encrypt("Get", "iam/ct/req/xxx", mock_req_body).unwrap();
         let encrypt_body = encrypt_req.body;
-        let key = &encrypt_req.additional_headers[TARDIS_CRYPTO];
+        let key = &encrypt_req.additional_headers[BIOS_CRYPTO];
 
         // Mock serv process
         // ------------------------------------------------
@@ -288,9 +293,9 @@ mod tests {
     fn test_crypto_resp(mock_serv_pri_key: &TardisCryptoSm2PrivateKey, sm2: &TardisCryptoSm2) {
         // Encrypt
         let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
-        let encrypt_req = encrypt("post", "im/ct/resp/xxx", mock_req_body).unwrap();
+        let encrypt_req = encrypt("post", "iam/ct/resp/xxx", mock_req_body).unwrap();
         assert_eq!(encrypt_req.body, mock_req_body);
-        let key = &encrypt_req.additional_headers[TARDIS_CRYPTO];
+        let key = &encrypt_req.additional_headers[BIOS_CRYPTO];
 
         // Mock serv process
         // ------------------------------------------------
@@ -308,13 +313,13 @@ mod tests {
         let key = crypto::base64::encode(&fd_pub_key.encrypt(&format!("{sign_body} {sm4_key} {sm4_iv}")).unwrap());
         // ------------------------------------------------
 
-        assert_eq!(decrypt(&encrypt_body, HashMap::from([(TARDIS_CRYPTO.to_string(), key)])).unwrap(), mock_resp_body);
+        assert_eq!(decrypt(&encrypt_body, HashMap::from([(BIOS_CRYPTO.to_string(), key)])).unwrap(), mock_resp_body);
     }
 
     fn test_crypto_none() {
         // Encrypt
         let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
-        let encrypt_req = encrypt("delete", "im/ct/resp/xxx", mock_req_body).unwrap();
+        let encrypt_req = encrypt("delete", "iam/ct/resp/xxx", mock_req_body).unwrap();
         assert_eq!(encrypt_req.body, mock_req_body);
         assert!(encrypt_req.additional_headers.is_empty());
     }

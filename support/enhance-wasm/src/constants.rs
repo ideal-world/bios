@@ -1,39 +1,71 @@
 use std::sync::RwLock;
 
-use lazy_static::lazy_static;
-use wasm_bindgen::{JsError, JsValue};
-
 use crate::{
+    initializer,
     mini_tardis::{
+        basic::TardisResult,
         crypto::sm::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey},
-        error::TardisError,
     },
     modules::resource_process::ResContainerNode,
 };
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 
-pub const TARDIS_CRYPTO: &str = "Tardis-Crypto";
-pub const TARDIS_TOKEN: &str = "tardis_token";
+pub const BIOS_CRYPTO: &str = "Bios-Crypto";
+pub const BIOS_TOKEN: &str = "Bios-Token";
+pub const BIOS_SESSION_CONFIG: &str = "Bios_config";
+pub const BIOS_SERV_URL_CONFIG: &str = "Bios_serv_url";
+
+static STRICT_SECURITY_MODE: RwLock<bool> = RwLock::new(false);
+pub(crate) static SIMPLE_SM4_SEED_CONFIG: RwLock<(String, String)> = RwLock::new((String::new(), String::new()));
 
 lazy_static! {
-    pub(crate) static ref SERV_URL: RwLock<String> = RwLock::new(String::new());
-    pub(crate) static ref STRICT_SECURITY_MODE: RwLock<bool> = RwLock::new(false);
-    // token
-    pub(crate) static ref TOKEN_INFO: RwLock<Option<String>> = RwLock::new(None);
-    // last auth time, expire sec
-    pub(crate) static ref DOUBLE_AUTH_CACHE_EXP_SEC: RwLock<(f64, u32)> = RwLock::new((0.0, 0));
-    pub(crate) static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
-    pub(crate) static ref ENCRYPT_SERV_PUB_KEY: RwLock<Option<TardisCryptoSm2PublicKey>> = RwLock::new(None);
-    pub(crate) static ref ENCRYPT_FD_SM2_KEYS: RwLock<Option<(String, TardisCryptoSm2PrivateKey)>> = RwLock::new(None);
-    // Only use for simple crypto
-    pub(crate) static ref ENCRYPT_FD_SM4_KEY: RwLock<(String, String)> = RwLock::new((String::new(), String::new()));
+    pub(crate) static ref STABLE_CONFIG: RwLock<Option<StableConfig>> = RwLock::new(None);
+    pub(crate) static ref SESSION_CONFIG: RwLock<Option<SessionConfig>> = RwLock::new(None);
 }
 
-impl From<TardisError> for JsValue {
-    fn from(error: TardisError) -> Self {
-        if *STRICT_SECURITY_MODE.read().unwrap() {
-            JsValue::try_from(JsError::new(&format!("Abnormal operation"))).unwrap()
-        } else {
-            JsValue::try_from(JsError::new(&format!("[{}]{}", error.code, error.message))).unwrap()
-        }
-    }
+pub(crate) fn init_stable_config(strict_security_mode: bool, config: StableConfig) -> TardisResult<()> {
+    let mut config_container = STABLE_CONFIG.write().unwrap();
+    *config_container = Some(config);
+    let mut config_container = STRICT_SECURITY_MODE.write().unwrap();
+    *config_container = strict_security_mode;
+    Ok(())
+}
+
+pub(crate) fn init_session_config(config: SessionConfig) -> TardisResult<()> {
+    initializer::change_behavior(&config, true)?;
+    let mut session_config = SESSION_CONFIG.write().unwrap();
+    *session_config = Some(config);
+    Ok(())
+}
+
+pub(crate) fn init_simple_sm_config(seed: (String, String)) -> TardisResult<()> {
+    let mut seed_config = SIMPLE_SM4_SEED_CONFIG.write().unwrap();
+    *seed_config = seed;
+    Ok(())
+}
+
+pub(crate) fn get_strict_security_mode() -> TardisResult<bool> {
+    let strict_security_mode = STRICT_SECURITY_MODE.read().unwrap();
+    Ok(*strict_security_mode)
+}
+
+pub(crate) struct StableConfig {
+    pub double_auth_exp_sec: u32,
+    pub res_container: ResContainerNode,
+    pub serv_pub_key: TardisCryptoSm2PublicKey,
+    pub fd_sm2_pub_key: String,
+    pub fd_sm2_pri_key: TardisCryptoSm2PrivateKey,
+    pub login_req_method: String,
+    pub login_req_paths: Vec<String>,
+    pub logout_req_method: String,
+    pub logout_req_path: String,
+    pub double_auth_req_method: String,
+    pub double_auth_req_path: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct SessionConfig {
+    pub token: Option<String>,
+    pub double_auth_last_time: f64,
 }

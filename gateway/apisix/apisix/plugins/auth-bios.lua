@@ -25,7 +25,7 @@ local schema = {
         with_consumer = {type = "boolean", default = false},
 
         head_key_context = { type = "string", default = "Tardis-Context" },
-        head_key_crypto = { type = "string", default = "Tardis-Crypto" },
+        head_key_crypto = { type = "string", default = "Bios-Crypto" },
 
         cors_allow_origin = { type = "string", default = "*" },
         cors_allow_methods = { type = "string", default = "*" },
