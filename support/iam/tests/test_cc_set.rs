@@ -28,6 +28,7 @@ pub async fn test(
     test_multi_level_by_sys_context(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context).await?;
     test_multi_level_by_tenant_context(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context).await?;
     test_multi_level_by_app_context(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context).await?;
+    test_bind_platform_node(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context).await?;
     Ok(())
 }
 
