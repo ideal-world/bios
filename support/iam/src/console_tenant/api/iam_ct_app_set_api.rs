@@ -8,7 +8,7 @@ use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq, IamSetTreeResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
@@ -47,7 +47,7 @@ impl IamCtAppSetApi {
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     /// * ``only_related=true`` : Invalidate the parent_sys_code parameter when this parameter is turned on, it is used to query only the tree nodes with related resources(including children nodes)
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, only_related: Query<Option<bool>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;

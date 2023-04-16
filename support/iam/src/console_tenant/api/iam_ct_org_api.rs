@@ -11,7 +11,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq, IamSetTreeResp};
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
@@ -52,7 +52,7 @@ impl IamCtOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
@@ -87,7 +87,7 @@ impl IamCtOrgApi {
     ///
     /// 查询平台组织节点
     #[oai(path = "/platform/cate", method = "get")]
-    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
