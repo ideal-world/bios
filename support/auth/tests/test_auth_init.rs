@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bios_auth::{auth_config::AuthConfig, auth_constants::DOMAIN_CODE, auth_initializer, serv::auth_res_serv};
-use tardis::{basic::result::TardisResult,  tokio::time::sleep, TardisFuns};
+use tardis::{basic::result::TardisResult, tokio::time::sleep, TardisFuns};
 
 pub async fn test_init() -> TardisResult<()> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
@@ -42,11 +42,18 @@ pub async fn test_init() -> TardisResult<()> {
         )
         .await?;
 
-        cache_client
+    cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/need_double_auth?a=1##get",
             r###"{"auth":{"accounts":"#acc5#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":true}"###,
+        )
+        .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p1?a=6##get",
+            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
 
@@ -72,13 +79,15 @@ pub async fn test_init() -> TardisResult<()> {
     );
     let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=5").collect::<Vec<_>>();
     assert!(url.len() == 1);
+    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=6" && !a["need_crypto_req"].as_bool().unwrap()).collect::<Vec<_>>();
+    assert!(url.len() == 1);
 
     cache_client.hdel(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=1##get").await?;
     cache_client
         .hset(
             &config.cache_key_res_info,
             "iam-res://iam-serv/p1?a=6##get",
-            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
+            r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":true,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
     cache_client
@@ -105,8 +114,9 @@ pub async fn test_init() -> TardisResult<()> {
             .unwrap(),
         "iam-res://iam-serv/p1?a=6"
     );
-    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=6").collect::<Vec<_>>();
+    let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-res://iam-serv/p1?a=6" && a["need_crypto_req"].as_bool().unwrap()).collect::<Vec<_>>();
     assert!(url.len() == 1);
+
     assert_eq!(
         auth_res_serv::get_res_json()?["children"]["iam-res"]["children"]["iam-serv"]["children"]["p1"]["children"]["?"]["children"]["a=7"]["children"]["$"]["children"]["get"]
             ["leaf_info"]["uri"]

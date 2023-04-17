@@ -5,35 +5,45 @@ use bios_auth::{
     auth_constants::DOMAIN_CODE,
     dto::{
         auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp},
-        auth_kernel_dto::{AuthReq, AuthResp},
+        auth_kernel_dto::{AuthReq, AuthResp, MixRequest},
     },
 };
-use tardis::crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey};
 use tardis::{
     basic::result::TardisResult,
+    chrono,
     crypto::crypto_sm2_4::TardisCryptoSm2,
     log::info,
     web::{web_client::TardisWebClient, web_resp::TardisResp},
     TardisFuns,
 };
+use tardis::{
+    crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey},
+    serde_json::json,
+};
+
+fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str) -> (String, String) {
+    let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(&serv_pub_key).unwrap();
+
+    let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
+    let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
+
+    let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
+    let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
+
+    let sm4_encrypt = pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv} {front_pub_key}",)).unwrap();
+    let base64_encrypt = TardisFuns::crypto.base64.encode(&sm4_encrypt);
+    (data, base64_encrypt)
+}
 
 async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers: Vec<(&str, &str)>, serv_pub_key: &str, front_pub_key: &str, need_crypto_req: bool) -> AuthResp {
     let web_client = TardisWebClient::init(1).unwrap();
     info!(">>>>[Request]| path:{}, query:{}, headers:{:#?}", path, query, headers);
-    let base64_encrypt;
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let encrypt;
     let data = if need_crypto_req {
-        let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(&serv_pub_key).unwrap();
-
-        let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
-        let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
-
-        let data = TardisFuns::crypto.sm4.encrypt_cbc(body, &sm4_key, &sm4_iv).unwrap();
-        let sign_data = TardisFuns::crypto.digest.sm3(&data).unwrap();
-
-        let sm4_encrypt = pub_key.encrypt(&format!("{sign_data} {sm4_key} {sm4_iv} {front_pub_key}",)).unwrap();
-        base64_encrypt = TardisFuns::crypto.base64.encode(&sm4_encrypt);
-        headers.push((&config.head_key_crypto, base64_encrypt.as_str()));
+        let (data, base64_encrypt) = crypto_req(body, serv_pub_key, front_pub_key);
+        encrypt = base64_encrypt;
+        headers.push((&config.head_key_crypto, &encrypt));
         data
     } else {
         body.to_string()
@@ -72,7 +82,39 @@ async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers
     result.data.unwrap()
 }
 
-async fn mock_encrypt_resp(body: &str, mut headers: HashMap<String, String>, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
+pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers: Vec<(&str, &str)>, serv_pub_key: &str, front_pub_key: &str) -> AuthResp {
+    let web_client = TardisWebClient::init(1).unwrap();
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let mix_body = json!({
+        "method": method,
+        "uri": uri,
+        "body": body,
+        "headers": headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<String, String>>(),
+        "ts": chrono::Utc::now(),
+    });
+    info!(">>>>[Mix_Request]| method:{}, uri:{},body:{},headers:{:#?}", method, uri, mix_body, headers);
+    let mix_body = TardisFuns::json.obj_to_string(&mix_body).unwrap();
+    let (data, base64_encrypt) = crypto_req(&mix_body.to_string(), serv_pub_key, front_pub_key);
+    headers.push((&config.head_key_crypto, &base64_encrypt));
+
+    let result: TardisResp<AuthResp> = web_client
+        .post(
+            &format!("https://localhost:8080/{DOMAIN_CODE}/auth/apis"),
+            &MixRequest {
+                headers: headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<String, String>>(),
+                body: data,
+            },
+            None,
+        )
+        .await
+        .unwrap()
+        .body
+        .unwrap();
+    info!("<<<<[Mix_Request]| headers:{:#?}, result:{:#?}", headers, result);
+    result.data.unwrap()
+}
+
+async fn mock_encrypt_resp(body: &str, headers: HashMap<String, String>, front_pri_key: &TardisCryptoSm2PrivateKey) -> String {
     let web_client = TardisWebClient::init(1).unwrap();
     info!(">>>>[Response]| headers:{:#?}", headers);
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
@@ -103,9 +145,9 @@ async fn mock_encrypt_resp(body: &str, mut headers: HashMap<String, String>, fro
     let sm4_iv = splits[2];
     let gen_sign_data = TardisFuns::crypto.digest.sm3(&result.body).unwrap();
     assert_eq!(sign_data, gen_sign_data);
-    let data = TardisFuns::crypto.sm4.decrypt_cbc(&result.body, &sm4_key, &sm4_iv).unwrap();
-    data
+    TardisFuns::crypto.sm4.decrypt_cbc(&result.body, sm4_key, sm4_iv).unwrap()
 }
+
 async fn init_get_pub_key(sm2: &TardisCryptoSm2) -> TardisResult<(TardisCryptoSm2PublicKey, TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey)> {
     //frontend init sm2
     let pri_key = TardisFuns::crypto.sm2.new_private_key().unwrap();
@@ -151,9 +193,22 @@ pub async fn test_encrypt() -> TardisResult<()> {
     print!("{:?}", resp.headers);
     assert!(resp.headers.get(&config.head_key_crypto).is_some());
 
-    let mock_resp_body = "!@#$%^&*()AZXdfds测试内容_~/n";
-    let return_resp_body = mock_encrypt_resp(mock_resp_body, resp.headers, &front_pri_key).await;
-    assert_eq!(return_resp_body, mock_resp_body);
+    let mock_body = r###"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\"###;
+    let return_resp_body = mock_encrypt_resp(mock_body, resp.headers, &front_pri_key).await;
+    assert_eq!(return_resp_body, mock_body);
+
+    //todo
+    let mix_req = mock_req_mix_apis(
+        "PUT",
+        "iam/cs/add/account",
+        mock_body,
+        vec![("test", "head1")],
+        serve_pub_key.serialize().unwrap().as_ref(),
+        front_pub_key.serialize().unwrap().as_ref(),
+    )
+    .await;
+    print!("mix_req===={:?}", mix_req);
+    assert_eq!(mix_req.body.unwrap(), mock_body);
 
     Ok(())
 }

@@ -181,7 +181,7 @@ pub struct ResContainerLeafInfo {
 #[derive(Serialize, Deserialize, Default)]
 pub(crate) struct ServConfig {
     pub strict_security_mode: bool,
-    // pub pub_key: String,
+    pub pub_key: String,
     pub double_auth_exp_sec: u32,
     pub apis: Vec<Api>,
     pub login_req_method: String,
