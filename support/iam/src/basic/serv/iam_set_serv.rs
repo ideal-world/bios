@@ -210,7 +210,7 @@ impl IamSetServ {
     pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
         let resp = RbumSetServ::get_tree(set_id, filter, funs, ctx).await?;
-        Self::find_rel_set_cate(set_id,resp,filter,funs,ctx).await
+        Self::find_rel_set_cate(set_id, resp, filter, funs, ctx).await
     }
     //todo bugfix
     // find set_cate 对应的set_id,返回set_id下面set_cate
@@ -407,7 +407,11 @@ impl IamSetServ {
         let tree_ext = tree_with_account.ext.as_ref().unwrap();
         let account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
         if account_rel_sys_codes.is_empty() {
-            return Ok(IamSetTreeResp { main: vec![], ext: None, rel: None });
+            return Ok(IamSetTreeResp {
+                main: vec![],
+                ext: None,
+                rel: None,
+            });
         }
         Self::get_tree(
             set_id,
