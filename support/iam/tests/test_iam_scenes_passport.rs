@@ -112,9 +112,9 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
             },
         )
         .await;
-    let _: String = client
+    let _: Vec<String> = client
         .put(
-            "/ct/org/item",
+            "/ct/org/item/batch",
             &IamSetItemWithDefaultSetAddReq {
                 set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,
@@ -780,7 +780,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             account_unique_id: "cn".to_string(),
             account_field_map: AccountFieldMap {
                 search_base_filter: Some("objectClass=*".to_string()),
-                field_user_name: "displayName".to_string(),
+                field_user_name: "cn".to_string(),
                 field_display_name: "displayName".to_string(),
                 field_mobile: "mobile".to_string(),
                 field_email: "email".to_string(),
@@ -799,7 +799,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             //     field_dept_name_remarks: "".to_string(),
             //     field_parent_dept_id_remarks: "".to_string(),
             // },
-            timeout: todo!(),
+            timeout: Some(60),
         },
         None,
         &funs,
@@ -872,7 +872,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
                     account_unique_id: "cn".to_string(),
                     account_field_map: AccountFieldMap {
                         search_base_filter: Some("objectClass=*".to_string()),
-                        field_user_name: "displayName".to_string(),
+                        field_user_name: "cn".to_string(),
                         field_display_name: "displayName".to_string(),
                         field_mobile: "mobile".to_string(),
                         field_email: "email".to_string(),

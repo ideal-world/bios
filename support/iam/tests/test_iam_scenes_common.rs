@@ -59,19 +59,19 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                 account_self_reg: None,
                 cert_conf_by_oauth2: None,
                 cert_conf_by_ldap: Some(IamCertConfLdapAddOrModifyReq {
-                    supplier: TrimString(LDAP_CODE.to_string()),
+                    supplier: Some(TrimString(LDAP_CODE.to_string())),
                     name: "githubLdap".to_string(),
                     conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
                     is_tls: false,
                     principal: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_CN").unwrap_or("".to_string())),
                     credentials: TrimString(env::var("TARDIS_FW.LDAP.ADMIN_PASSWORD").unwrap_or("".to_string())),
                     base_dn: env::var("TARDIS_FW.LDAP.BASE_DN").unwrap_or("".to_string()),
-                    enabled: true,
+                    // enabled: true,
                     port: Some(env::var("TARDIS_FW.LDAP.PORT").unwrap().parse().unwrap()),
                     account_unique_id: "cn".to_string(),
                     account_field_map: AccountFieldMap {
                         search_base_filter: Some("objectClass=*".to_string()),
-                        field_user_name: "displayName".to_string(),
+                        field_user_name: "cn".to_string(),
                         field_display_name: "displayName".to_string(),
                         field_mobile: "mobile".to_string(),
                         field_email: "email".to_string(),
@@ -80,16 +80,17 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
                         field_mobile_remarks: "".to_string(),
                         field_email_remarks: "".to_string(),
                     },
-                    org_unique_id: "ou".to_string(),
-                    org_field_map: OrgFieldMap {
-                        search_base_filter: Some("objectClass=*".to_string()),
-                        field_dept_id: "".to_string(),
-                        field_dept_name: "".to_string(),
-                        field_parent_dept_id: "".to_string(),
-                        field_dept_id_remarks: "".to_string(),
-                        field_dept_name_remarks: "".to_string(),
-                        field_parent_dept_id_remarks: "".to_string(),
-                    },
+                    timeout: Some(60)
+                    // org_unique_id: "ou".to_string(),
+                    // org_field_map: OrgFieldMap {
+                    //     search_base_filter: Some("objectClass=*".to_string()),
+                    //     field_dept_id: "".to_string(),
+                    //     field_dept_name: "".to_string(),
+                    //     field_parent_dept_id: "".to_string(),
+                    //     field_dept_id_remarks: "".to_string(),
+                    //     field_dept_name_remarks: "".to_string(),
+                    //     field_parent_dept_id_remarks: "".to_string(),
+                    // },
                 }),
             },
         )
@@ -110,9 +111,9 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
             },
         )
         .await;
-    let _: String = client
+    let _: Vec<String> = client
         .put(
-            "/ct/org/item",
+            "/ct/org/item/batch",
             &IamSetItemWithDefaultSetAddReq {
                 set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,
@@ -145,9 +146,9 @@ pub async fn test(sysadmin_name: &str, sysadmin_password: &str, client: &mut BIO
             },
         )
         .await;
-    let _: String = client
+    let _: Vec<String> = client
         .put(
-            "/ct/org/item",
+            "/ct/org/item/batch",
             &IamSetItemWithDefaultSetAddReq {
                 set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,

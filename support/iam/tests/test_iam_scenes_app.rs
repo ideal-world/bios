@@ -218,7 +218,7 @@ pub async fn app_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tardis
     let _: Void = client.put(&format!("/ca/role/{}/account/{}", role_id, account_id), &Void {}).await;
 
     // Find Accounts By Role Id
-    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ca/account?role_id={}&page_number=1&page_size=10", role_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ca/account?role_ids={}&page_number=1&page_size=10", role_id)).await;
     assert_eq!(accounts.total_size, 1);
     assert_eq!(accounts.records[0].name, "devops应用管理员");
     assert_eq!(accounts.records[0].certs.len(), 2);

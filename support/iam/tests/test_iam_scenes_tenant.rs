@@ -206,9 +206,9 @@ pub async fn tenant_console_org_mgr_page(tenant_admin_user_name: &str, tenant_ad
     let account_id = account.id.clone();
 
     // Add Org Item
-    let _: String = client
+    let _: Vec<String> = client
         .put(
-            "/ct/org/item",
+            "/ct/org/item/batch",
             &IamSetItemWithDefaultSetAddReq {
                 set_cate_id: Some(cate_node1_id.to_string()),
                 sort: 0,
@@ -539,7 +539,7 @@ pub async fn tenant_console_auth_mgr_page(client: &mut BIOSWebTestClient) -> Tar
     let _: Void = client.put(&format!("/ct/role/{}/account/{}", role_id, account_id), &Void {}).await;
 
     // Find Accounts By Role Id
-    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ct/account?role_id={}&with_sub=false&page_number=1&page_size=10", role_id)).await;
+    let accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/ct/account?role_ids={}&with_sub=false&page_number=1&page_size=10", role_id)).await;
     assert_eq!(accounts.total_size, 1);
     assert_eq!(accounts.records.get(0).unwrap().name, "测试管理员");
     let account = accounts.records.get(0).unwrap();

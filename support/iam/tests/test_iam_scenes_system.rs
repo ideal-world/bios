@@ -113,9 +113,9 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
             },
         )
         .await;
-    let _: String = client
+    let _: Vec<String> = client
         .put(
-            "/ct/org/item",
+            "/ct/org/item/batch",
             &IamSetItemWithDefaultSetAddReq {
                 set_cate_id: Some(cate_node_id.to_string()),
                 sort: 0,
@@ -210,7 +210,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
     // Find Accounts By Role Id
     let accounts: TardisPage<IamAccountSummaryAggResp> = client
         .get(&format!(
-            "/cs/account?role_id={}&tenant_id={}&with_sub=true&page_number=1&page_size=10",
+            "/cs/account?role_ids={}&tenant_id={}&with_sub=true&page_number=1&page_size=10",
             sys_admin_role_id, tenant_id
         ))
         .await;
@@ -778,7 +778,7 @@ pub async fn sys_console_auth_mgr_page(res_menu_id: &str, client: &mut BIOSWebTe
     let _: Void = client.put(&format!("/cs/role/{}/account/{}", test_role_id, account_id), &Void {}).await;
 
     // Find Rel Account By Role Id
-    let rel_accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?role_id={}&page_number=1&page_size=10", test_role_id)).await;
+    let rel_accounts: TardisPage<IamAccountSummaryAggResp> = client.get(&format!("/cs/account?role_ids={}&page_number=1&page_size=10", test_role_id)).await;
     assert_eq!(rel_accounts.total_size, 1);
     assert_eq!(rel_accounts.records.get(0).unwrap().id, account_id);
 
