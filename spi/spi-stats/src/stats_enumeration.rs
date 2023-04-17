@@ -264,10 +264,10 @@ impl StatsQueryTimeWindowKind {
         } else {
             match self {
                 StatsQueryTimeWindowKind::Date => column_name.to_string(),
-                StatsQueryTimeWindowKind::Hour => format!("date_part('hour',timezone('UTC', {column_name}))"),
-                StatsQueryTimeWindowKind::Day => format!("date_part('day',timezone('UTC', {column_name}))"),
-                StatsQueryTimeWindowKind::Month => format!("date_part('month',timezone('UTC', {column_name}))"),
-                StatsQueryTimeWindowKind::Year => format!("date_part('year',timezone('UTC', {column_name}))"),
+                StatsQueryTimeWindowKind::Hour => format!("date_part('hour', {column_name})"),
+                StatsQueryTimeWindowKind::Day => format!("date_part('day', {column_name})"),
+                StatsQueryTimeWindowKind::Month => format!("date_part('month', {column_name})"),
+                StatsQueryTimeWindowKind::Year => format!("date_part('year', {column_name})"),
             }
         }
     }
