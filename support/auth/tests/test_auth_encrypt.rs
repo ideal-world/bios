@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use bios_auth::{
     auth_config::AuthConfig,
@@ -90,7 +91,7 @@ pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers:
         "uri": uri,
         "body": body,
         "headers": headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<String, String>>(),
-        "ts": chrono::Utc::now(),
+        "ts":SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
     });
     info!(">>>>[Mix_Request]| method:{}, uri:{},body:{},headers:{:#?}", method, uri, mix_body, headers);
     let mix_body = TardisFuns::json.obj_to_string(&mix_body).unwrap();
@@ -200,7 +201,7 @@ pub async fn test_encrypt() -> TardisResult<()> {
     //todo
     let mix_req = mock_req_mix_apis(
         "PUT",
-        "iam/cs/add/account",
+        "http://localhost:8080/iam/cs/add/account",
         mock_body,
         vec![("test", "head1")],
         serve_pub_key.serialize().unwrap().as_ref(),
