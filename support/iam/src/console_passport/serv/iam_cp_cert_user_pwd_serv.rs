@@ -14,6 +14,7 @@ use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, I
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
+use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
 use crate::iam_enumeration::IamCertKernelKind;
@@ -90,6 +91,7 @@ impl IamCpCertUserPwdServ {
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
 
         let (_, _, _) = RbumCertServ::validate_by_spec_cert_conf(&user_pwd_cert.ak, sk, &rbum_cert_conf_id, false, &ctx.own_paths, funs).await?;
+        IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
         Ok(())
     }
 
