@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bios_basic::{helper::db_helper, spi::spi_enumeration::SpiQueryOpKind};
 use serde::{Deserialize, Serialize};
 use tardis::{
-    chrono::NaiveDate,
+    chrono::{DateTime, NaiveDate, Utc},
     db::sea_orm::{self, prelude::DateTimeWithTimeZone, DbErr, QueryResult, TryGetError, TryGetable},
     derive_more::Display,
     serde_json,
@@ -50,8 +50,8 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().unwrap() as i32),
             StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().unwrap() as f32),
             StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().unwrap()),
-            StatsDataTypeKind::Date => sea_orm::Value::from(json_value.as_str().unwrap().to_string()),
-            StatsDataTypeKind::DateTime => sea_orm::Value::from(json_value.as_str().unwrap().to_string()),
+            StatsDataTypeKind::Date => sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().unwrap(), "%Y-%m-%d").unwrap()),
+            StatsDataTypeKind::DateTime => sea_orm::Value::from(DateTime::parse_from_rfc3339(json_value.as_str().unwrap()).unwrap().with_timezone(&Utc)),
         }
     }
 

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    constants::{BIOS_CRYPTO, STABLE_CONFIG},
+    constants::{BIOS_CRYPTO, SIMPLE_SM4_SEED_CONFIG, STABLE_CONFIG},
+    initializer::init_simple_sm_config_by_window,
     mini_tardis::{
         basic::TardisResult,
         crypto::{
@@ -136,15 +137,21 @@ pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
 }
 
 pub fn simple_encrypt(text: &str) -> TardisResult<String> {
-    let config = STABLE_CONFIG.read().unwrap();
-    let sm4_key = &config.as_ref().unwrap().fd_sm4_key;
-    crypto::sm::TardisCryptoSm4.encrypt_cbc(text, &sm4_key.0, &sm4_key.1)
+    let seed = {
+        let config = SIMPLE_SM4_SEED_CONFIG.read().unwrap();
+        (config.0.clone(), config.1.clone())
+    };
+    let seed = if seed.0.is_empty() { init_simple_sm_config_by_window()?.unwrap() } else { seed };
+    crypto::sm::TardisCryptoSm4.encrypt_cbc(text, &seed.0, &seed.1)
 }
 
 pub fn simple_decrypt(encrypted_text: &str) -> TardisResult<String> {
-    let config = STABLE_CONFIG.read().unwrap();
-    let sm4_key = &config.as_ref().unwrap().fd_sm4_key;
-    crypto::sm::TardisCryptoSm4.decrypt_cbc(encrypted_text, &sm4_key.0, &sm4_key.1)
+    let seed = {
+        let config = SIMPLE_SM4_SEED_CONFIG.read().unwrap();
+        (config.0.clone(), config.1.clone())
+    };
+    let seed = if seed.0.is_empty() { init_simple_sm_config_by_window()?.unwrap() } else { seed };
+    crypto::sm::TardisCryptoSm4.decrypt_cbc(encrypted_text, &seed.0, &seed.1)
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]

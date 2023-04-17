@@ -30,14 +30,19 @@ pub(crate) async fn init(service_url: &str, serv_config: Option<ServConfig>) -> 
 
 pub(crate) fn do_init(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> {
     init_config(&service_url, &serv_config)?;
-    init_behavior(serv_config.strict_security_mode)?;
+    init_behavior(serv_config.strict_security_mode, service_url)?;
     Ok(())
 }
 
-fn init_behavior(strict_security_mode: bool) -> TardisResult<()> {
+fn init_behavior(strict_security_mode: bool, service_url: &str) -> TardisResult<()> {
     error::set_hide_error_detail(strict_security_mode);
     #[cfg(target_arch = "wasm32")]
     {
+        js_sys::Reflect::set(
+            &wasm_bindgen::JsValue::from(web_sys::window().unwrap()),
+            &wasm_bindgen::JsValue::from(constants::BIOS_SERV_URL_CONFIG),
+            &wasm_bindgen::JsValue::from(service_url),
+        )?;
         if constants::get_strict_security_mode()? {
             crate::mini_tardis::channel::init(
                 constants::BIOS_SESSION_CONFIG,
@@ -100,20 +105,35 @@ pub(crate) fn change_behavior(session_config: &SessionConfig, only_storage: bool
     Ok(())
 }
 
+// In some cases, some modules cannot get the initialized object data,
+// so the base data is written to window and read in the corresponding module to achieve data sharing.
+pub(crate) fn init_simple_sm_config_by_window() -> TardisResult<Option<(String, String)>> {
+    let service_url = js_sys::Reflect::get(
+        &wasm_bindgen::JsValue::from(web_sys::window().unwrap()),
+        &wasm_bindgen::JsValue::from(constants::BIOS_SERV_URL_CONFIG),
+    )?;
+    if let Some(service_url) = service_url.as_string() {
+        let seed = crypto_process::init_fd_sm4_key(&service_url)?;
+        constants::init_simple_sm_config(seed.clone())?;
+        Ok(Some(seed))
+    } else {
+        Ok(None)
+    }
+}
+
 fn init_config(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> {
+    constants::init_simple_sm_config(crypto_process::init_fd_sm4_key(service_url)?)?;
     let mut res_container = ResContainerNode::new();
     for api in &serv_config.apis {
         resource_process::add_res(&mut res_container, &api.action, &api.uri, api.need_crypto_req, api.need_crypto_resp, api.need_double_auth)?;
     }
     let fd_sm2_keys = crypto_process::init_fd_sm2_keys()?;
     let config = StableConfig {
-        serv_url: service_url.to_string(),
         res_container: res_container,
         double_auth_exp_sec: serv_config.double_auth_exp_sec,
         serv_pub_key: crypto::sm::TardisCryptoSm2PublicKey::from_public_key_str(&serv_config.pub_key)?,
         fd_sm2_pub_key: fd_sm2_keys.0,
         fd_sm2_pri_key: fd_sm2_keys.1,
-        fd_sm4_key: crypto_process::init_fd_sm4_key(service_url)?,
         login_req_method: serv_config.login_req_method.to_lowercase(),
         login_req_paths: serv_config.login_req_paths.iter().map(|i| if i.starts_with("/") { i.clone() } else { format!("/{}", i) }).collect::<Vec<String>>(),
         logout_req_method: serv_config.logout_req_method.to_lowercase(),

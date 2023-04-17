@@ -17,6 +17,13 @@ pub fn set_latest_authed() -> TardisResult<()> {
     initializer::change_behavior(session_config, false)
 }
 
+pub fn remove_latest_authed() -> TardisResult<()> {
+    let mut config_container = SESSION_CONFIG.write().unwrap();
+    let session_config = config_container.as_mut().unwrap();
+    session_config.double_auth_last_time = 0.0;
+    initializer::change_behavior(session_config, false)
+}
+
 pub fn need_auth(method: &str, uri: &str) -> TardisResult<bool> {
     let method = method.to_lowercase();
     let config = SESSION_CONFIG.read().unwrap();

@@ -1,5 +1,5 @@
 [package]
-name = "bios-enhance-wsam"
+name = "bios-enhance-wasm"
 version.workspace = true
 authors.workspace = true
 homepage.workspace = true
