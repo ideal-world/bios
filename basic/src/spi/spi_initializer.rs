@@ -27,7 +27,7 @@ pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisConte
         return Ok(ctx);
     }
     // Initialize spi component RBUM item table and indexs
-    funs.db().init(spi_bs::ActiveModel::init(TardisFuns::reldb().backend(), None)).await?;
+    funs.db().init(spi_bs::ActiveModel::init(TardisFuns::reldb().backend(), None, TardisFuns::reldb().compatible_type())).await?;
     // Initialize spi component RBUM domain data
     RbumDomainServ::add_rbum(
         &mut RbumDomainAddReq {
@@ -165,12 +165,14 @@ pub mod common_pg {
 
     pub async fn init(bs_cert: &SpiBsCertResp, ctx: &TardisContext, mgr: bool) -> TardisResult<SpiBsInst> {
         let ext = TardisFuns::json.str_to_json(&bs_cert.ext)?;
+        let compatible_type = TardisFuns::json.json_to_obj(ext.get("compatible_type").unwrap_or(&tardis::serde_json::Value::String("None".to_string())).clone())?;
         let client = TardisRelDBClient::init(
             &bs_cert.conn_uri,
             ext.get("max_connections").unwrap().as_u64().unwrap() as u32,
             ext.get("min_connections").unwrap().as_u64().unwrap() as u32,
             None,
             None,
+            compatible_type,
         )
         .await?;
         let mut ext = HashMap::new();
@@ -274,7 +276,7 @@ pub mod common_pg {
         if let Some(update_time_field) = update_time_field {
             conn.execute_one(
                 &format!(
-                    r###"CREATE OR REPLACE FUNCTION TARDIS_AUTO_UPDATE_ITME_{}()
+                    r###"CREATE OR REPLACE FUNCTION TARDIS_AUTO_UPDATE_TIME_{}()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.{} = now();
@@ -289,12 +291,12 @@ $$ language 'plpgsql';"###,
             .await?;
             conn.execute_one(
                 &format!(
-                    r###"CREATE OR REPLACE TRIGGER TARDIS_ATUO_UPDATE_TIME_ON
+                    r###"CREATE OR REPLACE TRIGGER TARDIS_AUTO_UPDATE_TIME_ON
     BEFORE UPDATE
     ON
         {}.{GLOBAL_STORAGE_FLAG}_{}{}
     FOR EACH ROW
-EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_ITME_{}();"###,
+EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
                     schema_name,
                     table_flag,
                     tag,

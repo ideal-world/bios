@@ -39,7 +39,7 @@ pub(crate) async fn init() -> TardisResult<()> {
 
 pub(crate) async fn fetch_public_key() -> TardisResult<String> {
     let sm_keys = SM2_KEYS.read().await;
-    Ok(sm_keys.as_ref().unwrap().0.serialize()?)
+    sm_keys.as_ref().unwrap().0.serialize()
 }
 
 pub(crate) async fn decrypt_req(
@@ -68,7 +68,7 @@ pub(crate) async fn decrypt_req(
         .1
         .decrypt(&input_keys)
         .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: decrypt error:{e}"), "401-auth-req-crypto-error"))?;
-    let input_keys = input_keys.split(" ").collect::<Vec<&str>>();
+    let input_keys = input_keys.split(' ').collect::<Vec<&str>>();
 
     if need_crypto_req && need_crypto_resp {
         if input_keys.len() != 4 {

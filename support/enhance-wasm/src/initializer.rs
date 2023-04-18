@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub(crate) async fn init(service_url: &str, serv_config: Option<ServConfig>) -> TardisResult<bool> {
-    let service_url = if service_url.ends_with("/") {
+    let service_url = if service_url.ends_with('/') {
         service_url.to_string()
     } else {
         format!("{service_url}/")
@@ -29,7 +29,7 @@ pub(crate) async fn init(service_url: &str, serv_config: Option<ServConfig>) -> 
 }
 
 pub(crate) fn do_init(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> {
-    init_config(&service_url, &serv_config)?;
+    init_config(service_url, serv_config)?;
     init_behavior(serv_config.strict_security_mode, service_url)?;
     Ok(())
 }

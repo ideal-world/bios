@@ -27,6 +27,10 @@ pub struct AuthConfig {
     pub cors_allow_origin: String,
     pub cors_allow_methods: String,
     pub cors_allow_headers: String,
+
+    pub strict_security_mode: bool,
+    pub double_auth_exp_sec: u32,
+    pub extra_api: ApiConfig,
 }
 
 impl Default for AuthConfig {
@@ -54,6 +58,40 @@ impl Default for AuthConfig {
             cors_allow_origin: "*".to_string(),
             cors_allow_methods: "*".to_string(),
             cors_allow_headers: "*".to_string(),
+            strict_security_mode: false,
+            double_auth_exp_sec: 300,
+            extra_api: ApiConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct ApiConfig {
+    pub login_req_method: String,
+    pub login_req_paths: Vec<String>,
+    pub logout_req_method: String,
+    pub logout_req_path: String,
+    pub double_auth_req_method: String,
+    pub double_auth_req_path: String,
+}
+impl Default for ApiConfig {
+    fn default() -> Self {
+        Self {
+            login_req_method: "put".to_string(),
+            login_req_paths: vec![
+                "/iam/cp/login/userpwd".to_string(),
+                "/iam/cp/login/oauth2".to_string(),
+                "/iam/cp/login/mailvcode/vcode".to_string(),
+                "/iam/cp/login/mailvcode".to_string(),
+                "/iam/cp/login/phonecode/vcode".to_string(),
+                "/iam/cp/login/phonevcode".to_string(),
+                "/iam/cp/ldap/login".to_string(),
+            ],
+            logout_req_method: "delete".to_string(),
+            logout_req_path: "/iam/cp/logout/".to_string(),
+            double_auth_req_method: "put".to_string(),
+            double_auth_req_path: "/iam/cp/validate/userpwd".to_string(),
         }
     }
 }

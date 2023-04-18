@@ -72,11 +72,7 @@ pub async fn init_data() -> TardisResult<()> {
                     let f = key.split("##").collect::<Vec<_>>();
                     if let Some(changed_value) = TardisFuns::cache_by_module_or_default(DOMAIN_CODE).hget(&config.cache_key_res_info, key).await.unwrap() {
                         let info = TardisFuns::json.str_to_json(&changed_value).unwrap();
-                        let auth = if let Some(auth) = info.get("auth") {
-                            Some(TardisFuns::json.json_to_obj(auth.clone()).unwrap())
-                        } else {
-                            None
-                        };
+                        let auth = info.get("auth").map(|auth| TardisFuns::json.json_to_obj(auth.clone()).unwrap());
                         let need_crypto_req = if let Some(need_crypto_req) = info.get("need_crypto_req") {
                             need_crypto_req.as_bool().unwrap()
                         } else {
