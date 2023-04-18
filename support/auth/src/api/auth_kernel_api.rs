@@ -27,6 +27,7 @@ impl AuthApi {
         trace!("[Auth] Response apis: {:?}", result);
         TardisResp::ok(result)
     }
+    
     /// fetch server config
     #[oai(path = "/apis", method = "get")]
     async fn fetch_server_config(&self) -> TardisApiResult<Value> {

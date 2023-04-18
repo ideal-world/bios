@@ -11,7 +11,6 @@ use bios_auth::{
 };
 use tardis::{
     basic::result::TardisResult,
-    chrono,
     crypto::crypto_sm2_4::TardisCryptoSm2,
     log::info,
     web::{web_client::TardisWebClient, web_resp::TardisResp},
@@ -164,6 +163,7 @@ pub async fn test_encrypt() -> TardisResult<()> {
     let sm2 = TardisCryptoSm2 {};
     let (serve_pub_key, front_pri_key, front_pub_key) = init_get_pub_key(&sm2).await.unwrap();
 
+    info!("【test crypto request】");
     let resp = mock_req(
         "POST",
         "/",
@@ -178,11 +178,15 @@ pub async fn test_encrypt() -> TardisResult<()> {
     assert!(!resp.allow);
     assert_eq!(resp.status_code, 400);
     assert_eq!(resp.reason.unwrap(), "[Auth] Request is not legal, missing [path]");
+
+    let mock_body = r###"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\"###;
+    let mock_resp_body = r###"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\内容内容"###;
+
     let resp = mock_req(
         "POST",
         "/iam",
         "",
-        "AAAA",
+        mock_body,
         vec![],
         serve_pub_key.serialize().unwrap().as_ref(),
         front_pub_key.serialize().unwrap().as_str(),
@@ -190,15 +194,34 @@ pub async fn test_encrypt() -> TardisResult<()> {
     )
     .await;
     assert!(resp.allow);
-    assert_eq!(resp.body, Some("AAAA".to_string()));
+    assert_eq!(resp.body, Some(mock_body.to_string()));
     print!("{:?}", resp.headers);
     assert!(resp.headers.get(&config.head_key_crypto).is_some());
 
-    let mock_body = r###"!@#$%^&*"()AZXdfds测试内容_~/n'//n/r/n'<>|\"###;
     let return_resp_body = mock_encrypt_resp(mock_body, resp.headers, &front_pri_key).await;
     assert_eq!(return_resp_body, mock_body);
 
-    //todo
+    let resp = mock_req(
+        "POST",
+        "/iam",
+        "",
+        mock_body,
+        vec![],
+        serve_pub_key.serialize().unwrap().as_ref(),
+        front_pub_key.serialize().unwrap().as_str(),
+        true,
+    )
+    .await;
+    assert!(resp.allow);
+    assert_eq!(resp.body, Some(mock_body.to_string()));
+    print!("{:?}", resp.headers);
+    assert!(resp.headers.get(&config.head_key_crypto).is_some());
+
+    let return_resp_body = mock_encrypt_resp(mock_body, resp.headers, &front_pri_key).await;
+    assert_eq!(return_resp_body, mock_body);
+
+    info!("【test mix apis】");
+
     let mix_req = mock_req_mix_apis(
         "PUT",
         "http://localhost:8080/iam/cs/add/account",
@@ -208,8 +231,24 @@ pub async fn test_encrypt() -> TardisResult<()> {
         front_pub_key.serialize().unwrap().as_ref(),
     )
     .await;
-    print!("mix_req===={:?}", mix_req);
     assert_eq!(mix_req.body.unwrap(), mock_body);
+
+    let return_resp_body = mock_encrypt_resp(mock_resp_body, mix_req.headers, &front_pri_key).await;
+    assert_eq!(return_resp_body, mock_resp_body);
+
+    let mix_req = mock_req_mix_apis(
+        "PUT",
+        "http://localhost:8080/iam/cs/add/account?p1=a1&p1=a2",
+        mock_body,
+        vec![("test", "head1")],
+        serve_pub_key.serialize().unwrap().as_ref(),
+        front_pub_key.serialize().unwrap().as_ref(),
+    )
+    .await;
+    assert_eq!(mix_req.body.unwrap(), mock_body);
+
+    let return_resp_body = mock_encrypt_resp(mock_resp_body, mix_req.headers, &front_pri_key).await;
+    assert_eq!(return_resp_body, mock_resp_body);
 
     Ok(())
 }

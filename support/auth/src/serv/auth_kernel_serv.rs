@@ -264,8 +264,7 @@ pub async fn decrypt(
     is_mix_req: bool,
 ) -> TardisResult<(Option<String>, Option<HashMap<String, String>>)> {
     if is_mix_req {
-        let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, false, true, config).await?;
-        return Ok((body, headers));
+        return Ok((body.clone(), Some(headers.clone())));
     }
     if let Some(res_container_leaf_info) = res_container_leaf_info {
         // The interface configuration specifies that the encryption must be done
@@ -285,18 +284,22 @@ pub async fn decrypt(
 pub(crate) async fn parse_mix_req(req: MixRequest) -> TardisResult<AuthResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &Some(req.body), true, true, config).await?;
-    let body = body.ok_or_else(|| TardisError::bad_request("[MixReq] encypto body can't be empty", "401-parse_mix_req-parse-error"))?;
+    let body = body.ok_or_else(|| TardisError::bad_request("[MixReq] decrypt body can't be empty", "401-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
     let url = tardis::url::Url::parse(&mix_body.uri)?;
-    let query = url.query().unwrap_or("").split('&').collect::<Vec<&str>>();
-    let query = query
-        .into_iter()
-        .map(|q| {
-            let q = q.split('=').collect::<Vec<&str>>();
-            (q[0].to_string(), q[1].to_string())
-        })
-        .collect::<HashMap<String, String>>();
+    let query = if let Some(url_query) = url.query() {
+        let query = url_query.split('&').collect::<Vec<&str>>();
+        query
+            .into_iter()
+            .map(|q| {
+                let q = q.split('=').collect::<Vec<&str>>();
+                (q[0].to_string(), q[1].to_string())
+            })
+            .collect::<HashMap<String, String>>()
+    } else {
+        HashMap::<String, String>::new()
+    };
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
     auth(

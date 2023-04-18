@@ -15,7 +15,6 @@ mod test_auth_res;
 #[tokio::test]
 async fn test_auth() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,bios_auth=trace");
-
     test_auth_res::test_res()?;
 
     let docker = testcontainers::clients::Cli::default();
