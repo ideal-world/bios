@@ -1,7 +1,7 @@
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
-use self::ldap::{LdapClient, LdapSearchTree};
+use self::ldap::{LdapClient, LdapTreeNode};
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
 use crate::basic::dto::iam_cert_dto::IamThirdIntegrationConfigDto;
@@ -149,8 +149,11 @@ impl IamCertLdapServ {
                 ],
             )
             .await?;
-        let ldap_search_tree = LdapSearchTree::from_iter(result).expect("cant parse ldap search result as a tree");
-        if let Some(first_attrs) = ldap_search_tree.first_user_attrs() {
+        let ldap_search_tree = result.into_iter().fold(LdapTreeNode::new_dc("com"), |mut tree, resp| {
+            tree.insert_by_dn(&resp.dn, resp.attrs).map_err(|e|format!("ldap search result dn:{} can not be inserted to tree {:?}, for reason: {}", resp.dn, tree, e)).unwrap();
+            tree
+        });
+        if let Some(first_attrs) = ldap_search_tree.get_first_cn_attrs() {
             if first_attrs.get(&ldap_auth_info.account_field_map.field_user_name).is_none() {
                 return Err(funs.err().bad_request(
                     "ldap_conf",
@@ -1092,94 +1095,159 @@ pub(crate) mod ldap {
         }
     }
 
-    pub enum LdapSearchTree {
-        Domain { dc: String, children: HashMap<String, LdapSearchTree>},
-        User { cn: String, attrs: HashMap<String, Vec<String>> },
+    #[derive(Debug, Clone)]
+    pub enum LdapNodeType<'a> {
+        Dc(&'a str),
+        Ou(&'a str),
+        Cn(&'a str),
     }
 
-    impl LdapSearchTree {
-        pub fn from_ldap_search_resp(ldap_search_resp: LdapSearchResp) -> Result<Self, String> {
-            use LdapSearchTree::*;
-            let LdapSearchResp { dn, attrs } = ldap_search_resp;
-            let (first_dn_seg, rest_dn_seg) = dn.split_once(",").ok_or("invalid dn".to_owned())?;
-            let first_node = if let Some(cn) = first_dn_seg.strip_prefix("cn=") {
-                User {
-                    cn: cn.to_owned(),
+    impl<'a> LdapNodeType<'a> {
+        pub fn parse(seg: &'a str) -> Option<Self> {
+            use LdapNodeType::*;
+            seg.strip_prefix("dc=").map(Dc).or_else(|| seg.strip_prefix("ou=").map(Ou)).or_else(|| seg.strip_prefix("cn=").map(Cn))
+        }
+
+        pub fn from_dn(seg: &'a str) -> Vec<Self> {
+            seg.split(',').filter_map(Self::parse).rev().collect()
+        }
+    }
+
+    /// ldap tree node
+    /// ```rust, no_run
+    /// let mut root = LdapTreeNode::new_dc("example");
+    /// let mut dc_test = LdapTreeNode::new_dc("dc=test"); // dc=test,dc=example
+    /// root.children.push(dc_test);
+    /// root.insert_by_dn("cn=name,ou=users,dc=test,dc=example", HashMap::new());
+    /// println!("{:#?}", root);
+    /// ```
+
+    #[derive(Debug, Clone)]
+    pub enum LdapTreeNode {
+        Dc {
+            dc: String,
+            children: Vec<LdapTreeNode>,
+            attrs: HashMap<String, Vec<String>>,
+        },
+        Ou {
+            ou: String,
+            children: Vec<LdapTreeNode>,
+            attrs: HashMap<String, Vec<String>>,
+        },
+        Cn {
+            cn: String,
+            attrs: HashMap<String, Vec<String>>,
+        },
+    }
+
+    impl LdapTreeNode {
+        /// create a new dc node
+        pub fn new_dc(dc: &str) -> Self {
+            LdapTreeNode::Dc {
+                dc: dc.to_owned(),
+                children: vec![],
+                attrs: HashMap::new(),
+            }
+        }
+        /// create a node from path and attrs
+        pub fn from_path(path: &[LdapNodeType], attrs: HashMap<String, Vec<String>>) -> Option<Self> {
+            use LdapNodeType::*;
+            match path {
+                [Dc(dc)] => Some(LdapTreeNode::Dc {
+                    dc: dc.to_string(),
+                    children: vec![],
                     attrs,
-                }
-            } else if let Some(dc) = dn.strip_prefix("dc=") {
-                Domain { dc: dc.to_owned(), children: HashMap::new() }
-            } else {
-                return Err("cant parse first segment".to_owned());
-            };
-
-            rest_dn_seg.split(',').map(str::trim).fold(Ok(first_node), |tree, seg| {
-                let tree = tree?;
-                seg.strip_prefix("dc=").ok_or(format!("invalid segment {seg}")).map(|dc| {
-                    let mut children = HashMap::new();
-                    children.insert(dc.to_owned(), tree);
-                    Domain { dc: dc.to_owned(), children }
-                })
-            })
-        }
-
-        pub fn merge(&mut self, another: &mut Self) -> Result<(), String> {
-            use LdapSearchTree::*;
-
-            match (self, another) {
-                (
-                    Domain {
-                        dc: dc_a,
-                        children: children_a,
-                    },
-                    Domain {
-                        dc: dc_b,
-                        children: children_b,
-                    },
-                ) => {
-                    if *dc_a == *dc_b {
-                        for (key, mut val_b) in children_b.drain() {
-                            if let Some(val_a) = children_a.get_mut(&key) {
-                                val_a.merge(&mut val_b)?;
-                            } else {
-                                children_a.insert(key.clone(), val_b);
-                            }
-                        }
-                        Ok(())
-                    } else {
-                        Err(format!("cant merge domain dc={dc_a} and domain dc={dc_b}"))
-                    }
-                }
-                (User { cn: cn_a, .. }, User { cn: cn_b, .. }) => {
-                    if *cn_a == *cn_b {
-                        Ok(())
-                    } else {
-                        Err(format!("cant merge user cn={cn_a} and domain cn={cn_b}"))
-                    }
-                }
-                _ => Err(format!("cant merge a user and a domain"))
+                }),
+                [Ou(ou)] => Some(LdapTreeNode::Ou {
+                    ou: ou.to_string(),
+                    children: vec![],
+                    attrs,
+                }),
+                [Cn(cn)] => Some(LdapTreeNode::Cn { cn: cn.to_string(), attrs }),
+                [Dc(dc), rest @ ..] => Some(LdapTreeNode::Dc {
+                    dc: dc.to_string(),
+                    children: vec![LdapTreeNode::from_path(rest, attrs)?],
+                    attrs: HashMap::new(),
+                }),
+                [Ou(ou), rest @ ..] => Some(LdapTreeNode::Ou {
+                    ou: ou.to_string(),
+                    children: vec![LdapTreeNode::from_path(rest, attrs)?],
+                    attrs: HashMap::new(),
+                }),
+                _ => None,
             }
         }
-        pub fn from_iter(container: impl IntoIterator<Item = LdapSearchResp>) -> Result<Self, String>{
-            let mut iter = container.into_iter();
-            let mut root = LdapSearchTree::from_ldap_search_resp(iter.next().ok_or("container is empty".to_owned())?)?;
-            for item in iter {
-                root.merge(&mut LdapSearchTree::from_ldap_search_resp(item)?)?
+        /// check if the node match the path (only check the first node)
+        /// ```rust, no_run
+        /// LdapTreeNode::Dc { dc: "example", .. }.is_match_path(&[Dc("example")]) == true
+        /// ```
+        pub fn is_match_path(&self, path: &[LdapNodeType]) -> bool {
+            use LdapNodeType::*;
+            match (self, path) {
+                (LdapTreeNode::Dc { dc, .. }, [Dc(dc2), ..]) => dc == dc2,
+                (LdapTreeNode::Ou { ou, .. }, [Ou(ou2), ..]) => ou == ou2,
+                (LdapTreeNode::Cn { cn, .. }, [Cn(cn2), ..]) => cn == cn2,
+                _ => false,
             }
-            Ok(root)
         }
-
-        pub fn first_user_attrs(&self) -> Option<&HashMap<String, Vec<String>>>{
+        /// insert a node by path
+        /// ```rust, no_run
+        /// let mut root = LdapTreeNode::new_dc("example");
+        /// root.insert_by_path(&[Dc("example"), Ou("ou1"), Cn("cn1")], HashMap::new());
+        /// ```
+        pub fn insert_by_path(&mut self, path: &[LdapNodeType], attrs: HashMap<String, Vec<String>>) -> Result<(), String> {
+            use LdapNodeType::*;
+            match (self, path) {
+                (LdapTreeNode::Dc { dc, children, .. }, [Dc(dc2), rest @ ..]) if dc == dc2 => {
+                    if let Some(child) = children.iter_mut().find(|c| c.is_match_path(rest)) {
+                        child.insert_by_path(rest, attrs)
+                    } else {
+                        children.extend(LdapTreeNode::from_path(rest, attrs));
+                        Ok(())
+                    }
+                }
+                (LdapTreeNode::Ou { ou, children, .. }, [Ou(ou2), rest @ ..]) if ou == ou2 => {
+                    if let Some(child) = children.iter_mut().find(|c| c.is_match_path(rest)) {
+                        child.insert_by_path(rest, attrs)
+                    } else {
+                        children.extend(LdapTreeNode::from_path(rest, attrs));
+                        Ok(())
+                    }
+                }
+                (LdapTreeNode::Cn { cn, .. }, [Cn(cn2), ..]) if cn == cn2 => {
+                    if path.len() == 1 {
+                        Ok(())
+                    } else {
+                        Err(format!("invalid path, which cn has a child node: {:?}", path))
+                    }
+                }
+                (node, path) => Err(format!("path not match: {:?} vs {:?}", node, path)),
+            }
+        }
+        /// insert a node by dn
+        /// ```rust, no_run
+        /// let mut root = LdapTreeNode::new_dc("example");
+        /// root.insert_by_dn("dc=example,ou=ou1,cn=cn1", HashMap::new());
+        /// ```
+        pub fn insert_by_dn(&mut self, dn: &str, attrs: HashMap<String, Vec<String>>) -> Result<(), String> {
+            let path = LdapNodeType::from_dn(dn);
+            self.insert_by_path(&path, attrs)
+        }
+        /// get the first cn node's attrs
+        /// ```rust, no_run
+        /// let mut root = LdapTreeNode::new_dc("example");
+        /// root.insert_by_dn("dc=example,ou=ou1,cn=cn1", HashMap::new());
+        /// root.get_first_cn_attrs();
+        /// ```
+        pub fn get_first_cn_attrs(&self) -> Option<HashMap<String, Vec<String>>> {
             match self {
-                LdapSearchTree::Domain { children , ..} => {
-                    children.values().nth(0)?.first_user_attrs()
-                },
-                LdapSearchTree::User { attrs, .. } => {
-                    Some(attrs)
-                },
+                LdapTreeNode::Dc { children, .. } => children.iter().find_map(LdapTreeNode::get_first_cn_attrs),
+                LdapTreeNode::Ou { children, .. } => children.iter().find_map(LdapTreeNode::get_first_cn_attrs),
+                LdapTreeNode::Cn { attrs, .. } => Some(attrs.clone()),
             }
         }
     }
+    
 }
 
 #[cfg(test)]
