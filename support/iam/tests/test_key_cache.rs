@@ -975,7 +975,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
 
     // ====================global account cache test===============================
     info!("【test_key_cache】 global account cache test, expected is_global is true");
-    let mut mock_ctx = TardisContext { ..Default::default() };
+    let mock_ctx = TardisContext { ..Default::default() };
     let account_id2 = IamAccountServ::add_account_agg(
         &IamAccountAggAddReq {
             id: None,

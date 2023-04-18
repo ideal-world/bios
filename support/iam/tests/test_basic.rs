@@ -58,7 +58,7 @@ pub struct LifeHold<'a> {
 pub async fn init(docker: &'_ Cli) -> TardisResult<LifeHold<'_>> {
     let ldap_container = get_ldap_container(docker).await;
 
-    TardisFuns::init("tests/config").await?;
+    TardisFuns::init(Some("tests/config")).await?;
     // TardisFuns::init("core/iam/tests/config").await?;
 
     Ok(LifeHold { ldap: ldap_container })

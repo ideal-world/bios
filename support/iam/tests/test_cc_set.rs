@@ -698,7 +698,7 @@ pub async fn test_bind_platform_node(
     _t2_a1_context: &TardisContext,
     _t2_a2_context: &TardisContext,
 ) -> TardisResult<()> {
-    let mut funs = iam_constants::get_tardis_inst();
+    let funs = iam_constants::get_tardis_inst();
     // funs.begin().await?;
 
     let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
@@ -737,7 +737,7 @@ pub async fn test_bind_platform_node(
     )
         .await?;
     info!("【test_cc_set】 : test_multi_level : bind platform node");
-    let new_set_cate_id = IamSetServ::add_set_cate(
+    let set_cate_xxx_sub_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
             name: TrimString("xxx公司_子部门".to_string()),
@@ -752,7 +752,7 @@ pub async fn test_bind_platform_node(
         sys_context,
     )
         .await?;
-    let new_sub_set_cate_id = IamSetServ::add_set_cate(
+    let set_cate_xxx_sub_sub_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
             name: TrimString("xxx公司_子部门_子部门".to_string()),
@@ -761,7 +761,7 @@ pub async fn test_bind_platform_node(
             icon: None,
             sort: None,
             ext: None,
-            rbum_parent_cate_id: Some(new_set_cate_id.clone()),
+            rbum_parent_cate_id: Some(set_cate_xxx_sub_id.clone()),
         },
         &funs,
         sys_context,
@@ -838,6 +838,40 @@ pub async fn test_bind_platform_node(
     assert_eq!(resp.main.len(), 4);
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 3);
+
+    IamSetServ::bind_cate_with_platform(&set_cate_xxx_sub_id, &funs, t1_context).await?;
+    let mut resp = IamSetServ::get_tree(
+        &sys_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: false,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        sys_context,
+    )
+        .await?;
+    assert_eq!(resp.main.len(), 5);
+    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_xxx_sub_id).unwrap().rel.is_some());
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 1);
+
+    let mut resp = IamSetServ::get_tree(
+        &t1_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: false,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        t1_context,
+    )
+        .await?;
+    assert_eq!(resp.main.len(), 2);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 1);
 
     // funs.rollback().await?;
     Ok(())

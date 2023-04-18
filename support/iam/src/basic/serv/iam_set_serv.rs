@@ -250,6 +250,7 @@ impl IamSetServ {
                 &RbumSetCateFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
+                        own_paths:Some(set_cate_rel.to_own_paths.clone()),
                         ids: Some(vec![set_cate_rel.to_rbum_item_id.clone()]),
                         ..Default::default()
                     },
@@ -629,7 +630,7 @@ impl IamSetServ {
         )
         .await?;
         if let Some(old_rel) = old_rel {
-            Self::unbind_cate_with_platform(old_rel, funs, ctx).await?;
+            RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
         };
         RbumRelServ::add_rel(
             &mut RbumRelAggAddReq {
