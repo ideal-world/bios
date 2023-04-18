@@ -155,7 +155,7 @@ impl IamCpCertApi {
     }
 
     /// Login by general oauth2
-    #[oai(path = "/login/:supplier", method = "put")]
+    #[oai(path = "/login/oauth2/:supplier", method = "put")]
     async fn login_or_register_by_oauth2(&self, supplier: Path<String>, login_req: Json<IamCpOAuth2LoginReq>) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;

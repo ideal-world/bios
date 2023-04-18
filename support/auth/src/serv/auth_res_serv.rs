@@ -1,19 +1,27 @@
-use std::sync::RwLock;
+use std::{collections::HashMap, sync::RwLock};
 
 use lazy_static::lazy_static;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
+    futures::executor::block_on,
     log::info,
     serde_json::Value,
     url::Url,
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{ResAuthInfo, ResContainerLeafInfo, ResContainerNode};
 use crate::helper::auth_common_helper;
+use crate::{
+    auth_config::AuthConfig,
+    auth_constants::DOMAIN_CODE,
+    dto::auth_kernel_dto::{Api, ResAuthInfo, ResContainerLeafInfo, ResContainerNode, ServConfig},
+};
+
+use super::auth_crypto_serv;
 
 lazy_static! {
     static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
+    static ref RES_APIS: RwLock<Option<HashMap<String, Api>>> = RwLock::new(None);
 }
 
 pub fn get_res_json() -> TardisResult<Value> {
@@ -22,6 +30,28 @@ pub fn get_res_json() -> TardisResult<Value> {
     } else {
         Ok(Value::Null)
     }
+}
+
+pub fn get_apis_json() -> TardisResult<Value> {
+    let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
+    let apis = if let Some(apis) = RES_APIS.read().unwrap().as_ref() {
+        apis.clone()
+    } else {
+        HashMap::new()
+    };
+    let pub_key = block_on(auth_crypto_serv::fetch_public_key())?;
+    TardisFuns::json.obj_to_json(&ServConfig {
+        strict_security_mode: config.strict_security_mode,
+        double_auth_exp_sec: config.double_auth_exp_sec,
+        pub_key,
+        apis: apis.into_values().collect(),
+        login_req_method: config.extra_api.login_req_method.clone(),
+        login_req_paths: config.extra_api.login_req_paths.clone(),
+        logout_req_method: config.extra_api.logout_req_method.clone(),
+        logout_req_path: config.extra_api.logout_req_path.clone(),
+        double_auth_req_method: config.extra_api.double_auth_req_method.clone(),
+        double_auth_req_path: config.extra_api.double_auth_req_path.clone(),
+    })
 }
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
@@ -55,8 +85,12 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
     info!("[Auth] Add resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;
+    let mut res_apis = RES_APIS.write()?;
     if res_container.is_none() {
         *res_container = Some(ResContainerNode::new());
+    }
+    if res_apis.is_none() {
+        *res_apis = Some(HashMap::new());
     }
     let mut res_container_node = res_container.as_mut().unwrap();
     for res_item in res_items.into_iter() {
@@ -66,6 +100,16 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
         res_container_node = res_container_node.get_child_mut(&res_item);
         if res_item == "$" {
             res_container_node.insert_leaf(&res_action, &res_action, res_uri, auth_info.clone(), need_crypto_req, need_crypto_resp, need_double_auth);
+            res_apis.as_mut().unwrap().insert(
+                res_uri.to_string(),
+                Api {
+                    action: res_action.clone(),
+                    uri: res_uri.to_string(),
+                    need_crypto_req,
+                    need_crypto_resp,
+                    need_double_auth,
+                },
+            );
         }
     }
     Ok(())
@@ -88,12 +132,15 @@ pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;
     let mut res_container_node = res_container.as_mut().unwrap();
+    let mut res_apis = RES_APIS.write()?;
+    let apis = res_apis.as_mut().unwrap();
     for res_item in res_items.iter() {
         if !res_container_node.has_child(res_item) {
             return Ok(());
         }
         res_container_node = res_container_node.get_child_mut(res_item);
     }
+    apis.remove(res_uri);
     res_container_node.remove_child(&res_action);
     remove_empty_node(res_container.as_mut().unwrap(), res_items);
     Ok(())

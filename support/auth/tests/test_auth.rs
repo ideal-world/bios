@@ -15,7 +15,6 @@ mod test_auth_res;
 #[tokio::test]
 async fn test_auth() -> TardisResult<()> {
     env::set_var("RUST_LOG", "debug,bios_auth=trace");
-
     test_auth_res::test_res()?;
 
     let docker = testcontainers::clients::Cli::default();
@@ -23,6 +22,7 @@ async fn test_auth() -> TardisResult<()> {
 
     test_auth_match::test_match().await?;
 
+    auth_initializer::crypto_init().await?;
     test_auth_init::test_init().await?;
 
     let web_server = TardisFuns::web_server();
@@ -33,7 +33,6 @@ async fn test_auth() -> TardisResult<()> {
     sleep(Duration::from_millis(500)).await;
 
     test_auth_req::test_req().await?;
-    auth_initializer::crypto_init().await?;
     test_auth_encrypt::test_encrypt().await?;
     Ok(())
 }
