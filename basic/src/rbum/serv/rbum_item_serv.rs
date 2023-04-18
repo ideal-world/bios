@@ -494,104 +494,117 @@ where
             ctx,
         )
         .await?;
-        fn package_rel(query: &mut SelectStatement, rel_table: Alias, rbum_item_rel_filter_req: &RbumItemRelFilterReq) {
-            if rbum_item_rel_filter_req.rel_by_from {
-                if rbum_item_rel_filter_req.is_left {
-                    query.join_as(
-                        JoinType::LeftJoin,
-                        rbum_rel::Entity,
-                        rel_table.clone(),
-                        Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
-                    );
-                } else {
-                    query.join_as(
-                        JoinType::InnerJoin,
-                        rbum_rel::Entity,
-                        rel_table.clone(),
-                        Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
-                    );
-                }
-                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).eq(rel_item_id.to_string()));
-                }
-                if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
-                    if rel_item_ids.len() == 1 {
-                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).eq(rel_item_ids.first().unwrap().to_string()));
-                    } else if !rel_item_ids.is_empty() {
-                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).is_in(rel_item_ids));
-                    }
-                }
-            } else {
-                if rbum_item_rel_filter_req.is_left {
-                    query.join_as(
-                        JoinType::LeftJoin,
-                        rbum_rel::Entity,
-                        rel_table.clone(),
-                        Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
-                    );
-                } else {
-                    query.join_as(
-                        JoinType::InnerJoin,
-                        rbum_rel::Entity,
-                        rel_table.clone(),
-                        Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
-                    );
-                }
-                if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
-                    query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).eq(rel_item_id.to_string()));
-                }
-                if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
-                    if rel_item_ids.len() == 1 {
-                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).eq(rel_item_ids.first().unwrap().to_string()));
-                    } else if !rel_item_ids.is_empty() {
-                        query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).is_in(rel_item_ids));
-                    }
-                }
-            }
-            if let Some(tag) = &rbum_item_rel_filter_req.tag {
-                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::Tag)).eq(tag.to_string()));
-            }
-            if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
-                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumKind)).eq(from_rbum_kind.to_int()));
-            }
-            if let Some(ext_eq) = &rbum_item_rel_filter_req.ext_eq {
-                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::Ext)).eq(ext_eq.to_string()));
-            }
-            if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
-                query.and_where(Expr::col((rel_table.clone(), rbum_rel::Column::Ext)).like(format!("%{ext_like}%").as_str()));
-            }
-            if let Some(own_paths) = &rbum_item_rel_filter_req.own_paths {
-                query.and_where(Expr::col((rel_table, rbum_rel::Column::OwnPaths)).eq(own_paths.to_string()));
-            }
-        }
+
         if let Some(rbum_item_rel_filter_req) = &filter.rel() {
-            package_rel(&mut query, Alias::new("rbum_rel1"), rbum_item_rel_filter_req);
+            Self::package_rel(&mut query, Alias::new("rbum_rel1"), rbum_item_rel_filter_req);
         }
         if let Some(rbum_item_rel_filter_req) = &filter.rel2() {
-            package_rel(&mut query, Alias::new("rbum_rel2"), rbum_item_rel_filter_req);
+            Self::package_rel(&mut query, Alias::new("rbum_rel2"), rbum_item_rel_filter_req);
         }
-        query.distinct();
+        // query.distinct();
         Ok(query)
     }
+
+    fn package_rel(query: &mut SelectStatement, rel_table: Alias, rbum_item_rel_filter_req: &RbumItemRelFilterReq) {
+        let mut binding = Query::select();
+        let sub_query = binding.from(rbum_rel::Entity);
+        if let Some(tag) = &rbum_item_rel_filter_req.tag {
+            sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Tag)).eq(tag.to_string()));
+        }
+        if let Some(from_rbum_kind) = &rbum_item_rel_filter_req.from_rbum_kind {
+            sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumKind)).eq(from_rbum_kind.to_int()));
+        }
+        if let Some(ext_eq) = &rbum_item_rel_filter_req.ext_eq {
+            sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Ext)).eq(ext_eq.to_string()));
+        }
+        if let Some(ext_like) = &rbum_item_rel_filter_req.ext_like {
+            sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::Ext)).like(format!("%{ext_like}%").as_str()));
+        }
+        if let Some(own_paths) = &rbum_item_rel_filter_req.own_paths {
+            sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::OwnPaths)).eq(own_paths.to_string()));
+        }
+        if rbum_item_rel_filter_req.rel_by_from {
+            if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(rel_item_id.to_string()));
+            }
+            if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
+                if rel_item_ids.len() == 1 {
+                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).eq(rel_item_ids.first().unwrap().to_string()));
+                } else if !rel_item_ids.is_empty() {
+                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId)).is_in(rel_item_ids));
+                }
+            }
+            sub_query.column((rbum_rel::Entity, rbum_rel::Column::FromRbumId));
+            sub_query.group_by_col((rbum_rel::Entity, rbum_rel::Column::FromRbumId));
+            if rbum_item_rel_filter_req.is_left {
+                query.join_subquery(
+                    JoinType::LeftJoin,
+                    sub_query.take(),
+                    rel_table.clone(),
+                    Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                );
+            } else {
+                query.join_subquery(
+                    JoinType::InnerJoin,
+                    sub_query.take(),
+                    rel_table.clone(),
+                    Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                );
+            }
+        } else {
+            if let Some(rel_item_id) = &rbum_item_rel_filter_req.rel_item_id {
+                sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(rel_item_id.to_string()));
+            }
+            if let Some(rel_item_ids) = &rbum_item_rel_filter_req.rel_item_ids {
+                if rel_item_ids.len() == 1 {
+                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).eq(rel_item_ids.first().unwrap().to_string()));
+                } else if !rel_item_ids.is_empty() {
+                    sub_query.and_where(Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).is_in(rel_item_ids));
+                }
+            }
+            sub_query.column((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId));
+            sub_query.group_by_col((rbum_rel::Entity, rbum_rel::Column::ToRbumItemId));
+            if rbum_item_rel_filter_req.is_left {
+                query.join_subquery(
+                    JoinType::LeftJoin,
+                    sub_query.take(),
+                    rel_table.clone(),
+                    Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                );
+            } else {
+                query.join_subquery(
+                    JoinType::InnerJoin,
+                    sub_query.take(),
+                    rel_table.clone(),
+                    Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                );
+            }
+        }
+    }
+
     fn package_set_rel(query: &mut SelectStatement, rel_table: Alias, rbum_set_rel_filter_req: &RbumSetItemRelFilterReq) {
-        query.join_as(
-            JoinType::InnerJoin,
-            rbum_set_item::Entity,
-            rel_table.clone(),
-            Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
-        );
+        let mut binding = Query::select();
+        let sub_query = binding.from(rbum_set_item::Entity);
         if let Some(set_ids_and_cate_codes) = rbum_set_rel_filter_req.set_ids_and_cate_codes.clone() {
             let mut condition = Condition::any();
             for set_id in set_ids_and_cate_codes.keys() {
-                let expr = Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumSetId)).eq(set_id.to_string()).and(if rbum_set_rel_filter_req.with_sub_set_cate_codes {
-                    Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", set_ids_and_cate_codes.get(set_id).unwrap()))
+                let expr = Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetId)).eq(set_id.to_string()).and(if rbum_set_rel_filter_req.with_sub_set_cate_codes {
+                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).like(format!("{}%", set_ids_and_cate_codes.get(set_id).unwrap()))
                 } else {
-                    Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumSetCateCode)).eq(set_ids_and_cate_codes.get(set_id).unwrap().to_string())
+                    Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumSetCateCode)).eq(set_ids_and_cate_codes.get(set_id).unwrap().to_string())
                 });
                 condition = condition.add(expr);
             }
-            query.cond_where(condition);
+            sub_query.cond_where(condition);
         }
+        sub_query.column((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId));
+        sub_query.group_by_col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId));
+        query.join_subquery(
+            JoinType::InnerJoin,
+            sub_query.take(),
+            rel_table.clone(),
+            Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+        );
     }
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>;
 

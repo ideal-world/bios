@@ -317,9 +317,9 @@ async fn create_inst_table(
                         index.push((format!("date_part('year',timezone('UTC', {}))", fact_col_conf.key), "btree"));
                     }
                     StatsDataTypeKind::Date => {
-                        index.push((format!("date_part('day',timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('month',timezone('UTC', {}))", fact_col_conf.key), "btree"));
-                        index.push((format!("date_part('year',timezone('UTC', {}))", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('day', {})", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('month', {})", fact_col_conf.key), "btree"));
+                        index.push((format!("date_part('year', {})", fact_col_conf.key), "btree"));
                     }
                     _ => {}
                 }

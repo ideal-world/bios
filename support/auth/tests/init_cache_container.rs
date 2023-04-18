@@ -14,7 +14,7 @@ pub struct LifeHold<'a> {
 pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     let redis_container = TardisTestContainer::redis_custom(docker);
     let port = redis_container.get_host_port_ipv4(6379);
-    let url = format!("redis://127.0.0.1:{}/0", port);
+    let url = format!("redis://127.0.0.1:{port}/0",);
     env::set_var("TARDIS_FW.CACHE.URL", url);
 
     TardisFuns::init("tests/config").await?;
