@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
-use tardis::config::config_dto::CompatibleType;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::sea_query::*;
@@ -18,25 +17,25 @@ pub async fn init(code: &str, config: RbumConfig) -> TardisResult<()> {
     TardisFuns::reldb_by_module_or_default(code).init_basic_tables().await?;
     let db_kind = TardisFuns::reldb_by_module_or_default(code).backend();
     let mut tx = TardisFuns::reldb_by_module_or_default(code).conn();
-    let compatible_type: CompatibleType = TardisFuns::reldb_by_module_or_default(code).compatible_type();
+    let compatible_type = TardisFuns::reldb_by_module_or_default(code).compatible_type();
     if TardisFuns::dict.get("__RBUM_INIT__", &tx).await?.is_some() {
         return Ok(());
     }
     tx.begin().await?;
     TardisFuns::dict.add("__RBUM_INIT__", "", "", &tx).await?;
-    tx.init(rbum_domain::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_kind::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_item::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_kind_attr::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_item_attr::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_rel::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_rel_attr::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_rel_env::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_cert_conf::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_cert::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_set::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_set_cate::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
-    tx.init(rbum_set_item::ActiveModel::init(db_kind, Some("update_time"), compatible_type)).await?;
+    tx.init(rbum_domain::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_kind::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_item::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_kind_attr::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_item_attr::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_rel::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_rel_attr::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_rel_env::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_cert_conf::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_cert::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_set::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_set_cate::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
+    tx.init(rbum_set_item::ActiveModel::init(db_kind, Some("update_time"), compatible_type.clone())).await?;
     tx.commit().await?;
     Ok(())
 }
