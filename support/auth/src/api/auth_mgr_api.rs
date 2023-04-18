@@ -2,7 +2,7 @@ use tardis::serde_json::Value;
 use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use crate::serv::auth_mgr_serv;
+use crate::serv::{auth_mgr_serv, auth_res_serv};
 
 pub struct MgrApi;
 
