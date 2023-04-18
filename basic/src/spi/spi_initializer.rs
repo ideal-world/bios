@@ -274,7 +274,7 @@ pub mod common_pg {
         if let Some(update_time_field) = update_time_field {
             conn.execute_one(
                 &format!(
-                    r###"CREATE OR REPLACE FUNCTION TARDIS_AUTO_UPDATE_ITME_{}()
+                    r###"CREATE OR REPLACE FUNCTION TARDIS_AUTO_UPDATE_TIME_{}()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.{} = now();
@@ -289,12 +289,12 @@ $$ language 'plpgsql';"###,
             .await?;
             conn.execute_one(
                 &format!(
-                    r###"CREATE OR REPLACE TRIGGER TARDIS_ATUO_UPDATE_TIME_ON
+                    r###"CREATE OR REPLACE TRIGGER TARDIS_AUTO_UPDATE_TIME_ON
     BEFORE UPDATE
     ON
         {}.{GLOBAL_STORAGE_FLAG}_{}{}
     FOR EACH ROW
-EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_ITME_{}();"###,
+EXECUTE PROCEDURE TARDIS_AUTO_UPDATE_TIME_{}();"###,
                     schema_name,
                     table_flag,
                     tag,
