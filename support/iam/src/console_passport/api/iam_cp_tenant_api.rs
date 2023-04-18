@@ -4,7 +4,7 @@ use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_filter_dto::IamTenantFilterReq;
+use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::IamTenantBoneResp;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;

@@ -6,7 +6,7 @@ use tardis::log::info;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
-use bios_iam::basic::dto::iam_filter_dto::IamTenantFilterReq;
+use bios_iam::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantModifyReq};
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;

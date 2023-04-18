@@ -14,7 +14,7 @@ use crate::{
         iam_account_dto::{IamAccountAggAddReq, IamAccountExtSysResp},
         iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfLdapResp},
         iam_cert_dto::IamCertLdapAddOrModifyReq,
-        iam_filter_dto::IamTenantFilterReq,
+        iam_filer_dto::IamTenantFilterReq,
     },
     iam_config::IamBasicConfigApi,
     iam_constants,
