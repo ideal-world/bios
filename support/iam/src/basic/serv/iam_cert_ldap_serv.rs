@@ -898,6 +898,7 @@ impl IamCertLdapServ {
                 icon: None,
                 exts: HashMap::new(),
                 status: Some(RbumCertStatusKind::Pending),
+                temporary: None,
             },
             funs,
             ctx,

@@ -31,6 +31,8 @@ pub struct IamAccountAggAddReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
+    pub temporary: Option<bool>,
+
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub exts: HashMap<String, String>,
@@ -45,6 +47,7 @@ pub struct IamAccountAddReq {
     pub name: TrimString,
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
+    pub temporary: Option<bool>,
 
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
@@ -109,6 +112,8 @@ pub struct IamAccountSummaryResp {
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
+    pub temporary: bool,
+
     pub icon: String,
 }
 
@@ -126,6 +131,8 @@ pub struct IamAccountDetailResp {
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
 
+    pub temporary: bool,
+
     pub icon: String,
 }
 
@@ -142,6 +149,7 @@ pub struct IamAccountSummaryAggResp {
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
     pub is_locked: bool,
+    pub temporary: bool,
     pub icon: String,
 
     pub roles: HashMap<String, String>,
@@ -162,7 +170,7 @@ pub struct IamAccountDetailAggResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
-
+    pub temporary: bool,
     pub icon: String,
 
     pub roles: HashMap<String, String>,
