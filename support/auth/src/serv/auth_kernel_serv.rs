@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{MixRequest, MixRequestBody, ResContainerLeafInfo};
+use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequest, MixRequestBody, ResContainerLeafInfo};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
@@ -281,9 +281,9 @@ pub async fn decrypt(
     Ok((None, None))
 }
 
-pub(crate) async fn parse_mix_req(req: MixRequest) -> TardisResult<AuthResp> {
+pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
-    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &Some(req.body), true, true, config).await?;
+    let (body, headers) = auth_crypto_serv::decrypt_req(&req.headers, &req.body, true, true, config).await?;
     let body = body.ok_or_else(|| TardisError::bad_request("[MixReq] decrypt body can't be empty", "401-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
@@ -302,12 +302,12 @@ pub(crate) async fn parse_mix_req(req: MixRequest) -> TardisResult<AuthResp> {
     };
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
-    auth(
+    let auth_resp = auth(
         &mut AuthReq {
             scheme: "http".to_string(),
             path: url.path().to_string(),
             query,
-            method: mix_body.method,
+            method: mix_body.method.clone(),
             host: "".to_string(),
             port: 80,
             headers,
@@ -315,5 +315,14 @@ pub(crate) async fn parse_mix_req(req: MixRequest) -> TardisResult<AuthResp> {
         },
         true,
     )
-    .await
+    .await?;
+    Ok(MixAuthResp {
+        url: mix_body.uri,
+        method: mix_body.method,
+        allow: auth_resp.allow,
+        status_code: auth_resp.status_code,
+        reason: auth_resp.reason,
+        headers: auth_resp.headers,
+        body: auth_resp.body,
+    })
 }
