@@ -5,7 +5,7 @@ local type   = type
 local schema = {
     type = "object",
     properties = {
-        host = {type = "string"},
+        host = { type = "string" },
         ssl_verify = {
             type = "boolean",
             default = true,
@@ -17,20 +17,17 @@ local schema = {
             default = 3000,
             description = "timeout in milliseconds",
         },
-        keepalive = {type = "boolean", default = true},
-        keepalive_timeout = {type = "integer", minimum = 1000, default = 60000},
-        keepalive_pool = {type = "integer", minimum = 1, default = 5},
-        with_route = {type = "boolean", default = false},
-        with_service = {type = "boolean", default = false},
-        with_consumer = {type = "boolean", default = false},
-
+        keepalive = { type = "boolean", default = true },
+        keepalive_timeout = { type = "integer", minimum = 1000, default = 60000 },
+        keepalive_pool = { type = "integer", minimum = 1, default = 5 },
+        with_route = { type = "boolean", default = false },
+        with_service = { type = "boolean", default = false },
+        with_consumer = { type = "boolean", default = false },
         head_key_context = { type = "string", default = "Tardis-Context" },
         head_key_crypto = { type = "string", default = "Bios-Crypto" },
-
         cors_allow_origin = { type = "string", default = "*" },
         cors_allow_methods = { type = "string", default = "*" },
         cors_allow_headers = { type = "string", default = "*" },
-
         exclude_prefix_paths = {
             type = "array",
             items = {
@@ -38,9 +35,8 @@ local schema = {
             },
             default = {}
         },
-
     },
-    required = {"host"}
+    required = { "host" }
 }
 
 
@@ -56,7 +52,6 @@ function _M.check_schema(conf)
     return core.schema.check(schema, conf)
 end
 
-
 local function cors(conf)
     core.response.set_header("Access-Control-Allow-Origin", conf.cors_allow_origin)
     core.response.set_header("Access-Control-Allow-Methods", conf.cors_allow_methods)
@@ -69,9 +64,9 @@ end
 function _M.access(conf, ctx)
     local path = ngx.var.request_uri
     for _, prefix_path in pairs(conf.exclude_prefix_paths) do
-       if string.sub(path, 1, string.len(prefix_path)) == prefix_path then
-           return 200
-       end
+        if string.sub(path, 1, string.len(prefix_path)) == prefix_path then
+            return 200
+        end
     end
 
     if ctx.var.request_method == "OPTIONS" then
@@ -79,9 +74,9 @@ function _M.access(conf, ctx)
         return 200
     end
 
-    local uri=ctx.var.uri
-    if uri == nil or uri=='' then
-        uri="/"
+    local uri = ctx.var.uri
+    if uri == nil or uri == '' then
+        uri = "/"
     end
 
     local forward_body = {
@@ -95,7 +90,7 @@ function _M.access(conf, ctx)
     }
     -- TODO Test
     if forward_body.headers[conf.head_key_crypto] ~= nil then
-        req_body = core.request.get_body(ctx)
+        local req_body = core.request.get_body()
         forward_body.body = req_body
     end
     local forward_body_str = core.json.encode(forward_body);
@@ -133,7 +128,7 @@ function _M.access(conf, ctx)
         return 403
     end
 
-    core.log.debug("auth service response body:",res.body);
+    core.log.debug("auth service response body:", res.body);
     local forward_resp, err = core.json.decode(res.body)
 
     if not forward_resp then
@@ -144,7 +139,7 @@ function _M.access(conf, ctx)
 
     if forward_resp.code ~= '200' then
         core.log.error("invalid auth service return code: ", forward_resp.code,
-                " err:", forward_resp.msg)
+            " err:", forward_resp.msg)
         cors(conf)
         return 502
     end
@@ -160,18 +155,17 @@ function _M.access(conf, ctx)
         local reason = nil
         if result.reason then
             reason = type(result.reason) == "table"
-                    and core.json.encode(result.reason)
-                    or result.reason
+                and core.json.encode(result.reason)
+                or result.reason
         end
         cors(conf)
-        return status_code, { code = status_code .. '-gateway-cert-error',  message = reason }
+        return status_code, { code = status_code .. '-gateway-cert-error', message = reason }
     else
         if result.headers then
             core.log.debug("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
-            core.request.set_header(ctx,conf.head_key_context,result.headers[conf.head_key_context])
+            core.request.set_header(ctx, conf.head_key_context, result.headers[conf.head_key_context])
         end
     end
 end
-
 
 return _M
