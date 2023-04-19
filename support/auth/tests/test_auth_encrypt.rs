@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bios_auth::dto::auth_kernel_dto::MixAuthResp;
 use bios_auth::{
     auth_config::AuthConfig,
     auth_constants::DOMAIN_CODE,
     dto::{
         auth_crypto_dto::{AuthEncryptReq, AuthEncryptResp},
-        auth_kernel_dto::{AuthReq, AuthResp, MixRequest},
+        auth_kernel_dto::{AuthReq, AuthResp},
     },
 };
+use tardis::basic::uri;
 use tardis::{
     basic::result::TardisResult,
     crypto::crypto_sm2_4::TardisCryptoSm2,
@@ -82,7 +84,7 @@ async fn mock_req(method: &str, path: &str, query: &str, body: &str, mut headers
     result.data.unwrap()
 }
 
-pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers: Vec<(&str, &str)>, serv_pub_key: &str, front_pub_key: &str) -> AuthResp {
+pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers: Vec<(&str, &str)>, serv_pub_key: &str, front_pub_key: &str) -> MixAuthResp {
     let web_client = TardisWebClient::init(1).unwrap();
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let mix_body = json!({
@@ -96,13 +98,30 @@ pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers:
     let mix_body = TardisFuns::json.obj_to_string(&mix_body).unwrap();
     let (data, base64_encrypt) = crypto_req(&mix_body.to_string(), serv_pub_key, front_pub_key);
     headers.push((&config.head_key_crypto, &base64_encrypt));
-
-    let result: TardisResp<AuthResp> = web_client
-        .post(
+    let url: Vec<&str> = uri.split('?').collect();
+    let hashmap_query = if url.len() != 2 {
+        HashMap::new()
+    } else {
+        url[1]
+            .split('&')
+            .map(|a| {
+                let split: Vec<_> = a.split('=').collect();
+                (split[0].to_string(), split[1].to_string())
+            })
+            .collect::<HashMap<_, _>>()
+    };
+    let result: TardisResp<MixAuthResp> = web_client
+        .put(
             &format!("https://localhost:8080/{DOMAIN_CODE}/auth/apis"),
-            &MixRequest {
+            &AuthReq {
+                scheme: "http".to_string(),
+                path: url[0].to_string(),
+                query: hashmap_query,
+                method: method.to_string(),
+                host: "".to_string(),
+                port: 80,
                 headers: headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<String, String>>(),
-                body: data,
+                body: Some(data),
             },
             None,
         )
@@ -224,7 +243,21 @@ pub async fn test_encrypt() -> TardisResult<()> {
 
     let mix_req = mock_req_mix_apis(
         "PUT",
-        "http://localhost:8080/iam/cs/add/account",
+        "/",
+        mock_body,
+        vec![("test", "head1")],
+        serve_pub_key.serialize().unwrap().as_ref(),
+        front_pub_key.serialize().unwrap().as_ref(),
+    )
+    .await;
+    print!("======={:?}", mix_req);
+    assert_eq!(mix_req.body, None);
+    assert!(!mix_req.allow);
+
+    let true_url1 = "/iam/cs/add/account";
+    let mix_req = mock_req_mix_apis(
+        "PUT",
+        true_url1,
         mock_body,
         vec![("test", "head1")],
         serve_pub_key.serialize().unwrap().as_ref(),
@@ -232,13 +265,15 @@ pub async fn test_encrypt() -> TardisResult<()> {
     )
     .await;
     assert_eq!(mix_req.body.unwrap(), mock_body);
+    assert_eq!(mix_req.url, true_url1);
 
     let return_resp_body = mock_encrypt_resp(mock_resp_body, mix_req.headers, &front_pri_key).await;
     assert_eq!(return_resp_body, mock_resp_body);
 
+    let true_url2 = "iam/cs/add/account?p1=a1&p1=a2";
     let mix_req = mock_req_mix_apis(
         "PUT",
-        "http://localhost:8080/iam/cs/add/account?p1=a1&p1=a2",
+        true_url2,
         mock_body,
         vec![("test", "head1")],
         serve_pub_key.serialize().unwrap().as_ref(),
@@ -246,6 +281,7 @@ pub async fn test_encrypt() -> TardisResult<()> {
     )
     .await;
     assert_eq!(mix_req.body.unwrap(), mock_body);
+    assert_eq!(mix_req.url, format!("/{}", true_url2));
 
     let return_resp_body = mock_encrypt_resp(mock_resp_body, mix_req.headers, &front_pri_key).await;
     assert_eq!(return_resp_body, mock_resp_body);

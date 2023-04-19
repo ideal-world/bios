@@ -29,7 +29,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
-use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
+use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_cert_manage_api, iam_ca_res_api, iam_ca_role_api};
 use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
 use crate::console_interface::api::{iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
@@ -103,6 +103,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ca_account_api::IamCaAccountApi,
                     iam_ca_app_api::IamCaAppApi,
                     iam_ca_role_api::IamCaRoleApi,
+                    iam_ca_cert_manage_api::IamCaCertManageApi,
                     iam_ca_res_api::IamCaResApi,
                 ),
                 (
@@ -186,6 +187,12 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant admin role", ""))?;
 
+    let role_tenant_audit_id = roles
+        .iter()
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE)
+        .map(|r| r.id.clone())
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found audit admin role", ""))?;
+
     let role_app_admin_id = roles
         .iter()
         .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
@@ -200,6 +207,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         kind_res_id,
         domain_iam_id,
         role_sys_admin_id,
+        role_tenant_audit_id,
         role_tenant_admin_id,
         role_app_admin_id,
     })?;
@@ -234,6 +242,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         kind_res_id: kind_res_id.to_string(),
         domain_iam_id: domain_iam_id.to_string(),
         role_sys_admin_id: "".to_string(),
+        role_tenant_audit_id: "".to_string(),
         role_tenant_admin_id: "".to_string(),
         role_app_admin_id: "".to_string(),
     })?;
@@ -340,6 +349,24 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 icon: None,
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                kind: Some(IamRoleKind::Tenant),
+            },
+            res_ids: Some(vec![set_menu_ct_id.clone(), set_api_ct_id.clone()]),
+        },
+        funs,
+        &ctx,
+    )
+    .await?;
+
+    let role_tenant_audit_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string())),
+                name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
+                icon: None,
+                sort: None,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
                 disabled: None,
                 kind: Some(IamRoleKind::Tenant),
             },
@@ -488,6 +515,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         domain_iam_id,
         role_sys_admin_id: role_sys_admin_id.clone(),
         role_tenant_admin_id,
+        role_tenant_audit_id,
         role_app_admin_id,
     })?;
 
@@ -593,9 +621,9 @@ async fn add_res<'a>(
                 action: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
-                crypto_req: false,
-                crypto_resp: false,
-                double_auth: false,
+                crypto_req: None,
+                crypto_resp: None,
+                double_auth: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -619,9 +647,9 @@ async fn add_res<'a>(
                 action: None,
                 scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                 disabled: None,
-                crypto_req: false,
-                crypto_resp: false,
-                double_auth: false,
+                crypto_req: Some(false),
+                crypto_resp: Some(false),
+                double_auth: Some(false),
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),

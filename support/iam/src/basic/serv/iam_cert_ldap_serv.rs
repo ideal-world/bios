@@ -1154,7 +1154,7 @@ mod tests {
         ldap.with_limit(1)?;
         let result = ldap.page_search(50, "objectClass=inetOrgPerson", &vec!["dn", "cn", "displayName"]).await?;
         assert_eq!(result.len(), 1);
-        let result = ldap.page_search(50, "objectClass=person", &vec!["dn", "cn", "displayName"]).await?;
+        let _result = ldap.page_search(50, "objectClass=person", &vec!["dn", "cn", "displayName"]).await?;
         // assert_eq!(result.len(), 1);
         Ok(())
     }

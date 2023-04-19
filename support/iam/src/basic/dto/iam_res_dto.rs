@@ -32,9 +32,9 @@ pub struct IamResAddReq {
 
     pub scope_level: Option<RbumScopeLevelKind>,
 
-    pub crypto_req: bool,
-    pub crypto_resp: bool,
-    pub double_auth: bool,
+    pub crypto_req: Option<bool>,
+    pub crypto_resp: Option<bool>,
+    pub double_auth: Option<bool>,
     pub disabled: Option<bool>,
 }
 

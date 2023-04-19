@@ -84,6 +84,17 @@ impl AuthResp {
     }
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MixAuthResp {
+    pub url: String,
+    pub method: String,
+    pub allow: bool,
+    pub status_code: u16,
+    pub reason: Option<String>,
+    pub headers: HashMap<String, String>,
+    pub body: Option<String>,
+}
+
 pub struct AuthContext {
     pub rbum_uri: String,
     pub rbum_action: String,
