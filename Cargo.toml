@@ -49,7 +49,6 @@ base64 = { version = "0.21" }
 hex = { version = "0.4" }
 libsm = { version = "0.5" }
 num-bigint = { version = "0.4.3" }
-getrandom = { version = "^0.2", features = ["js"] }
 
 # wasm
 console_error_panic_hook = { version = "0" }
