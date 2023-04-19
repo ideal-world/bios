@@ -166,7 +166,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
             ..Default::default()
         },
         1,
-        3,
+        4,
         Some(false),
         None,
         funs,
