@@ -25,7 +25,7 @@ pub(crate) async fn init(docker: &Cli) -> TardisResult<(String, Container<Generi
     runnable_image = runnable_image.with_network("host");
     runnable_image = runnable_image.with_container_name("apisix_test");
     let node = docker.run(runnable_image);
-    let url = format!("http://127.0.0.1:9080");
+    let url = "http://127.0.0.1:9080";
     // Init routes
     TardisFuns::web_client()
         .put_obj_to_str(
@@ -48,5 +48,5 @@ pub(crate) async fn init(docker: &Cli) -> TardisResult<(String, Container<Generi
             Some(vec![("X-API-KEY".to_string(), "edd1c9f034335f136f87ad84b6acecs1".to_string())]),
         )
         .await?;
-    Ok((url, node))
+    Ok((url.to_string(), node))
 }

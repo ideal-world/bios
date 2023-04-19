@@ -332,6 +332,7 @@ impl IamAccountServ {
         )
         .await?;
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, &mock_ctx).await?;
+        Self::add_or_modify_account_search(id, false, funs, ctx).await.unwrap();
         Ok(())
     }
 

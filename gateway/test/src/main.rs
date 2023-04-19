@@ -16,7 +16,7 @@ mod init_apisix;
 
 #[tokio::main]
 async fn main() -> TardisResult<()> {
-    env::set_var("RUST_LOG", "info");
+    env::set_var("RUST_LOG", "info,tardis=trace");
     // Prepare
     log::info!("Init http server");
     tokio::spawn(async move { start_serv().await });
@@ -63,6 +63,25 @@ async fn main() -> TardisResult<()> {
     assert_eq!(&resp.description, "测试002");
     assert!(!resp.done);
 
+    let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client()
+        .post(
+            &format!("{gateway_url}/apis"),
+            &TestAddReq {
+                code: TrimString("c001".to_string()),
+                description: "测试003".to_string(),
+                done: false,
+            },
+            Some(header),
+        )
+        .await?
+        .body
+        .unwrap();
+    let resp = resp.data.unwrap();
+    assert_eq!(&resp.code, "c001");
+    assert_eq!(&resp.description, "测试003");
+    assert!(!resp.done);
+
     log::info!("\r\n=============\r\nTest Success\r\n=============");
 
     Ok(())
@@ -91,6 +110,30 @@ impl AuthApi {
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
         );
         TardisResp::ok(AuthResp {
+            allow: true,
+            status_code: 200,
+            reason: None,
+            headers,
+            body: req.body,
+        })
+    }
+
+    /// Auth
+    #[oai(path = "/apis", method = "put")]
+    async fn apis(&self, req: Json<AuthReq>) -> TardisApiResult<MixAuthResp> {
+        let req = req.0;
+        let mut headers = req.headers;
+        if req.path == "/auth/apis" {
+            headers.insert("Bios-Crypto".to_string(), "".to_string());
+            assert!(req.body.is_some());
+        }
+        headers.insert(
+            "Tardis-Context".to_string(),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
+        );
+        TardisResp::ok(MixAuthResp {
+            url: "/test/echo/3".to_string(),
+            method: "POST".to_string(),
             allow: true,
             status_code: 200,
             reason: None,
@@ -134,6 +177,17 @@ pub struct AuthReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct AuthResp {
+    pub allow: bool,
+    pub status_code: u16,
+    pub reason: Option<String>,
+    pub headers: HashMap<String, String>,
+    pub body: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct MixAuthResp {
+    pub url: String,
+    pub method: String,
     pub allow: bool,
     pub status_code: u16,
     pub reason: Option<String>,

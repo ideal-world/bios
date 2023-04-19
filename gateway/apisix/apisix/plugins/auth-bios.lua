@@ -52,6 +52,23 @@ function _M.check_schema(conf)
     return core.schema.check(schema, conf)
 end
 
+local switch_map = {
+    GET = ngx.HTTP_GET,
+    POST = ngx.HTTP_POST,
+    PUT = ngx.HTTP_PUT,
+    HEAD = ngx.HTTP_HEAD,
+    DELETE = ngx.HTTP_DELETE,
+    OPTIONS = ngx.HTTP_OPTIONS,
+    MKCOL = ngx.HTTP_MKCOL,
+    COPY = ngx.HTTP_COPY,
+    MOVE = ngx.HTTP_MOVE,
+    PROPFIND = ngx.HTTP_PROPFIND,
+    LOCK = ngx.HTTP_LOCK,
+    UNLOCK = ngx.HTTP_UNLOCK,
+    PATCH = ngx.HTTP_PATCH,
+    TRACE = ngx.HTTP_TRACE,
+}
+
 local function cors(conf)
     core.response.set_header("Access-Control-Allow-Origin", conf.cors_allow_origin)
     core.response.set_header("Access-Control-Allow-Methods", conf.cors_allow_methods)
@@ -111,9 +128,13 @@ function _M.access(conf, ctx)
     end
 
     local host_end_idx = string.find(string.sub(conf.host, -2), "/")
-    local endpoint = conf.host .. "/auth"
+    local endpoint = conf.host .. "/"
     if host_end_idx then
-        endpoint = conf.host .. "auth"
+        endpoint = conf.host
+    end
+    endpoint = endpoint .. "auth"
+    if path == '/apis' then
+        endpoint = endpoint .. "/apis"
     end
 
 
@@ -164,6 +185,12 @@ function _M.access(conf, ctx)
         if result.headers then
             core.log.debug("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
             core.request.set_header(ctx, conf.head_key_context, result.headers[conf.head_key_context])
+        end
+        if result.url then
+            ctx.var.upstream_uri = result.url
+        end
+        if result.method then
+            ngx.req.set_method(switch_map[result.method])
         end
     end
 end
