@@ -29,7 +29,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
-use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_res_api, iam_ca_role_api};
+use crate::console_app::api::{iam_ca_account_api, iam_ca_app_api, iam_ca_cert_manage_api, iam_ca_res_api, iam_ca_role_api};
 use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_org_api, iam_cc_res_api, iam_cc_role_api, iam_cc_system_api, iam_cc_tenant_api};
 use crate::console_interface::api::{iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
@@ -103,6 +103,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ca_account_api::IamCaAccountApi,
                     iam_ca_app_api::IamCaAppApi,
                     iam_ca_role_api::IamCaRoleApi,
+                    iam_ca_cert_manage_api::IamCaCertManageApi,
                     iam_ca_res_api::IamCaResApi,
                 ),
                 (
