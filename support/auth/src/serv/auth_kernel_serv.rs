@@ -287,26 +287,13 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
     let body = body.ok_or_else(|| TardisError::bad_request("[MixReq] decrypt body can't be empty", "401-parse_mix_req-parse-error"))?;
 
     let mix_body = TardisFuns::json.str_to_obj::<MixRequestBody>(&body)?;
-    let url = tardis::url::Url::parse(&mix_body.uri)?;
-    let query = if let Some(url_query) = url.query() {
-        let query = url_query.split('&').collect::<Vec<&str>>();
-        query
-            .into_iter()
-            .map(|q| {
-                let q = q.split('=').collect::<Vec<&str>>();
-                (q[0].to_string(), q[1].to_string())
-            })
-            .collect::<HashMap<String, String>>()
-    } else {
-        HashMap::<String, String>::new()
-    };
     let mut headers = headers.unwrap_or_default();
     headers.extend(mix_body.headers);
     let auth_resp = auth(
         &mut AuthReq {
-            scheme: "http".to_string(),
-            path: url.path().to_string(),
-            query,
+            scheme: req.scheme,
+            path: req.path,
+            query: req.query,
             method: mix_body.method.clone(),
             host: "".to_string(),
             port: 80,
@@ -316,8 +303,13 @@ pub(crate) async fn parse_mix_req(req: AuthReq) -> TardisResult<MixAuthResp> {
         true,
     )
     .await?;
+    let url = if let Some(0) = mix_body.uri.find('/') {
+        mix_body.uri
+    } else {
+        format!("/{}", mix_body.uri)
+    };
     Ok(MixAuthResp {
-        url: mix_body.uri,
+        url,
         method: mix_body.method,
         allow: auth_resp.allow,
         status_code: auth_resp.status_code,
