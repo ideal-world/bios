@@ -39,7 +39,7 @@ impl Default for RbumConfig {
             mq_topic_event: "rbum::event".to_string(),
             mq_header_name_operator: "OP".to_string(),
             cache_key_cert_vcode_info_: "rbum:cache:cert:vcode:".to_string(),
-            cache_key_cert_vcode_expire_sec: 120,
+            cache_key_cert_vcode_expire_sec: 300,
             cache_key_cert_code_: "rbum:cache:cert:code:".to_string(),
             cache_key_cert_code_expire_sec: 60 * 60 * 24,
             cache_key_set_code_: "rbum:cache:set:code:".to_string(),

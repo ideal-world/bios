@@ -1082,6 +1082,9 @@ impl RbumCertServ {
     pub async fn change_sk(id: &str, original_sk: &str, input_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(id, filter, funs, ctx).await?;
         let stored_sk = Self::show_sk(id, filter, funs, ctx).await?;
+        if input_sk.contains(rbum_cert.ak.as_str()) {
+            return Err(funs.err().bad_request(&Self::get_obj_name(), "change_sk", "sk can not contain ak", "400-rbum-cert-sk-contains-ak"));
+        }
         let (new_sk, end_time) = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::peek_rbum(rel_rbum_cert_conf_id, &RbumCertConfFilterReq::default(), funs, ctx).await?;
             let original_sk = if rbum_cert_conf.sk_encrypted {

@@ -323,7 +323,7 @@ impl IamCertPhoneVCodeServ {
 
     fn get_vcode() -> String {
         let mut rand = tardis::rand::thread_rng();
-        let vcode: i32 = rand.gen_range(1000..9999);
+        let vcode: i32 = rand.gen_range(100000..999999);
         format!("{vcode}")
     }
 

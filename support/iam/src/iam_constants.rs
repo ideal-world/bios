@@ -21,6 +21,7 @@ pub const RBUM_SYSTEM_OWNER: &str = "_system_";
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT: &str = "bios";
 pub const RBUM_ITEM_NAME_SYS_ADMIN_ROLE: &str = "sys_admin";
 pub const RBUM_ITEM_NAME_TENANT_ADMIN_ROLE: &str = "tenant_admin";
+pub const RBUM_ITEM_NAME_TENANT_AUDIT_ROLE: &str = "tenant_audit";
 pub const RBUM_ITEM_NAME_APP_ADMIN_ROLE: &str = "app_admin";
 pub const RBUM_ITEM_NAME_APP_ADMIN_OM_ROLE: &str = "app_admin_om";
 pub const RBUM_ITEM_NAME_APP_ADMIN_DEVELOP_ROLE: &str = "app_admin_develop";

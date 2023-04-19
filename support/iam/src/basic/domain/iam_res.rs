@@ -24,6 +24,8 @@ pub struct Model {
     pub crypto_resp: bool,
     // 是否需要二次认证
     pub double_auth: bool,
+    // 二次认证消息
+    pub double_auth_msg: String,
 
     pub own_paths: String,
 }
@@ -50,6 +52,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::CryptoReq).not_null().boolean())
             .col(ColumnDef::new(Column::CryptoResp).not_null().boolean())
             .col(ColumnDef::new(Column::DoubleAuth).not_null().boolean())
+            .col(ColumnDef::new(Column::DoubleAuthMsg).not_null().string())
             .col(ColumnDef::new(Column::OwnPaths).not_null().string());
         if db == DatabaseBackend::MySql {
             builder.engine("InnoDB").character_set("utf8mb4").collate("utf8mb4_0900_as_cs");

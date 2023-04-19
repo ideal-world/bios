@@ -150,6 +150,7 @@ pub struct BasicInfo {
     pub domain_iam_id: String,
     pub role_sys_admin_id: String,
     pub role_tenant_admin_id: String,
+    pub role_tenant_audit_id: String,
     pub role_app_admin_id: String,
 }
 

@@ -185,6 +185,12 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .map(|r| r.id.clone())
         .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant admin role", ""))?;
 
+    let role_tenant_audit_id = roles
+        .iter()
+        .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE)
+        .map(|r| r.id.clone())
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found audit admin role", ""))?;
+
     let role_app_admin_id = roles
         .iter()
         .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_APP_ADMIN_ROLE)
@@ -199,6 +205,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         kind_res_id,
         domain_iam_id,
         role_sys_admin_id,
+        role_tenant_audit_id,
         role_tenant_admin_id,
         role_app_admin_id,
     })?;
@@ -233,6 +240,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         kind_res_id: kind_res_id.to_string(),
         domain_iam_id: domain_iam_id.to_string(),
         role_sys_admin_id: "".to_string(),
+        role_tenant_audit_id: "".to_string(),
         role_tenant_admin_id: "".to_string(),
         role_app_admin_id: "".to_string(),
     })?;
@@ -339,6 +347,24 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 icon: None,
                 sort: None,
                 scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
+                disabled: None,
+                kind: Some(IamRoleKind::Tenant),
+            },
+            res_ids: Some(vec![set_menu_ct_id.clone(), set_api_ct_id.clone()]),
+        },
+        funs,
+        &ctx,
+    )
+    .await?;
+
+    let role_tenant_audit_id = IamRoleServ::add_role_agg(
+        &mut IamRoleAggAddReq {
+            role: IamRoleAddReq {
+                code: Some(TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string())),
+                name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
+                icon: None,
+                sort: None,
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
                 disabled: None,
                 kind: Some(IamRoleKind::Tenant),
             },
@@ -487,6 +513,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
         domain_iam_id,
         role_sys_admin_id: role_sys_admin_id.clone(),
         role_tenant_admin_id,
+        role_tenant_audit_id,
         role_app_admin_id,
     })?;
 
