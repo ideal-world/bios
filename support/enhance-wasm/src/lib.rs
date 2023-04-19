@@ -14,7 +14,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub async fn init(service_url: &str, config: JsValue) -> Result<(), JsValue> {
-    let strict_security_mode = if config == JsValue::UNDEFINED {
+    let strict_security_mode = if config == JsValue::NULL {
         initializer::init(service_url, None).await?
     } else {
         initializer::init(service_url, Some(mini_tardis::serde::jsvalue_to_obj(config)?)).await?
