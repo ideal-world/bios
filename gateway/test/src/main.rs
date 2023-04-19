@@ -36,11 +36,34 @@ async fn main() -> TardisResult<()> {
             },
             None,
         )
-        .await?.body.unwrap();
+        .await?
+        .body
+        .unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(&resp.code, "c001");
     assert_eq!(&resp.description, "测试001");
     assert!(!resp.done);
+
+    let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client()
+        .post(
+            &format!("{gateway_url}/test/echo/2"),
+            &TestAddReq {
+                code: TrimString("c001".to_string()),
+                description: "测试002".to_string(),
+                done: false,
+            },
+            Some(header),
+        )
+        .await?
+        .body
+        .unwrap();
+    let resp = resp.data.unwrap();
+    assert_eq!(&resp.code, "c001");
+    assert_eq!(&resp.description, "测试002");
+    assert!(!resp.done);
+
+    log::info!("\r\n=============\r\nTest Success\r\n=============");
 
     Ok(())
 }
@@ -55,9 +78,14 @@ impl AuthApi {
     async fn auth(&self, req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
         let req = req.0;
         if req.path == "/test/echo/1" {
-            println!("======TODO======");
+            assert!(req.body.is_none());
         }
         let mut headers = req.headers;
+        if req.path == "/test/echo/2" {
+            assert!(req.body.is_some());
+            assert!(req.body.clone().unwrap().contains("测试002"));
+            headers.insert("Bios-Crypto".to_string(), "".to_string());
+        }
         headers.insert(
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
@@ -66,8 +94,8 @@ impl AuthApi {
             allow: true,
             status_code: 200,
             reason: None,
-            headers: headers,
-            body: req.body.clone(),
+            headers,
+            body: req.body,
         })
     }
 }
