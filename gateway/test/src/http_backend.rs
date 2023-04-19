@@ -29,7 +29,7 @@ pub struct TestApi;
 impl TestApi {
     #[oai(path = "/:id", method = "post")]
     async fn echo(&self, id: Path<i32>, add_req: Json<TestAddReq>) -> TardisApiResult<TestDetailResp> {
-        log::info!("-------echo----------");
+        log::info!("-------echo----------\r\nid:{}", id.0);
         TardisResp::ok(TestDetailResp {
             id: id.0,
             code: add_req.0.code.to_string(),

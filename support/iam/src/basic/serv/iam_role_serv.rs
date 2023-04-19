@@ -20,6 +20,7 @@ use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::basic::domain::iam_role;
 use crate::basic::dto::iam_filer_dto::IamRoleFilterReq;
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
+use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
@@ -294,6 +295,7 @@ impl IamRoleServ {
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
         IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(),true,funs,ctx.clone()).await?;
         Ok(())
     }
 
@@ -317,7 +319,7 @@ impl IamRoleServ {
             }
         }
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
-
+        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(),true,funs,ctx.clone()).await?;
         Ok(())
     }
 

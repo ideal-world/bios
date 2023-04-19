@@ -26,6 +26,7 @@ pub async fn init(service_url: &str, config: JsValue) -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
+/// uri: path?query eg. /iam/ct/xxx?q=1
 pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue) -> Result<JsValue, JsValue> {
     if modules::double_auth_process::need_auth(method, uri)? {
         return Err(JsValue::try_from(JsError::new(&format!("Need double auth."))).unwrap());
