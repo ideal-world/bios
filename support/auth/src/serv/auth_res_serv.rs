@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::RwLock};
 
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
@@ -100,16 +101,19 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
         res_container_node = res_container_node.get_child_mut(&res_item);
         if res_item == "$" {
             res_container_node.insert_leaf(&res_action, &res_action, res_uri, auth_info.clone(), need_crypto_req, need_crypto_resp, need_double_auth);
-            res_apis.as_mut().unwrap().insert(
-                res_uri.to_string(),
-                Api {
-                    action: res_action.clone(),
-                    uri: res_uri.to_string(),
-                    need_crypto_req,
-                    need_crypto_resp,
-                    need_double_auth,
-                },
-            );
+            let res_uris: Vec<&str> = res_uri.split("://").collect();
+            if res_uris.len() == 2 {
+                res_apis.as_mut().unwrap().insert(
+                    res_uri.to_string(),
+                    Api {
+                        action: res_action.clone(),
+                        uri: res_uris[1].to_string(),
+                        need_crypto_req,
+                        need_crypto_resp,
+                        need_double_auth,
+                    },
+                );
+            }
         }
     }
     Ok(())
