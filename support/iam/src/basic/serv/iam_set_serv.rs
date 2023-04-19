@@ -564,7 +564,7 @@ impl IamSetServ {
                     },
                     rel_rbum_item_disabled: Some(false),
                     rel_rbum_set_id: set_id.clone(),
-                    // rel_rbum_set_item_cate_code: Some("".to_string()),
+                    rel_rbum_set_item_cate_code: Some("".to_string()),
                     table_rbum_set_cate_is_left: Some(true),
                     rel_rbum_item_ids: item_id.map(|i| vec![i]),
                     ..Default::default()
