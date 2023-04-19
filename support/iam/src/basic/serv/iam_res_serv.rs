@@ -35,6 +35,7 @@ use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind};
 
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
+use super::iam_key_cache_serv::IamCacheResRelAddOrModifyReq;
 use super::iam_role_serv::IamRoleServ;
 
 pub struct IamResServ;
@@ -74,9 +75,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             method: Set(add_req.method.as_ref().unwrap_or(&TrimString("*".to_string())).to_string()),
             hide: Set(add_req.hide.unwrap_or(false)),
             action: Set(add_req.action.as_ref().unwrap_or(&"".to_string()).to_string()),
-            crypto_req: Set(add_req.crypto_req),
-            crypto_resp: Set(add_req.crypto_resp),
-            double_auth: Set(add_req.double_auth),
+            crypto_req: Set(add_req.crypto_req.unwrap_or(false)),
+            crypto_resp: Set(add_req.crypto_resp.unwrap_or(false)),
+            double_auth: Set(add_req.double_auth.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -119,7 +120,14 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamResModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_res::ActiveModel>> {
-        if modify_req.icon.is_none() && modify_req.sort.is_none() && modify_req.hide.is_none() && modify_req.action.is_none() {
+        if modify_req.icon.is_none()
+            && modify_req.sort.is_none()
+            && modify_req.hide.is_none()
+            && modify_req.action.is_none()
+            && modify_req.crypto_req.is_none()
+            && modify_req.crypto_resp.is_none()
+            && modify_req.double_auth.is_none()
+        {
             return Ok(None);
         }
         let mut iam_res = iam_res::ActiveModel {
@@ -151,20 +159,40 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut IamResModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(disabled) = modify_req.disabled {
-            let res = Self::peek_item(
-                id,
-                &IamResFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
+        let res = Self::peek_item(
+            id,
+            &IamResFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if modify_req.crypto_req.is_some() || modify_req.crypto_resp.is_some() || modify_req.double_auth.is_some() {
+            IamResCacheServ::add_or_modify_res_rel(
+                &res.code,
+                &res.method,
+                &IamCacheResRelAddOrModifyReq {
+                    st: None,
+                    et: None,
+                    accounts: vec![],
+                    roles: vec![],
+                    groups: vec![],
+                    apps: vec![],
+                    tenants: vec![],
+                    need_crypto_req: modify_req.crypto_req,
+                    need_crypto_resp: modify_req.crypto_resp,
+                    need_double_auth: modify_req.double_auth,
+                },
                 funs,
-                ctx,
             )
             .await?;
+        }
+        if let Some(disabled) = modify_req.disabled {
             if res.kind == IamResKind::Api {
                 if disabled {
                     IamResCacheServ::delete_res(&res.code, &res.method, funs).await?;
@@ -550,9 +578,9 @@ impl IamMenuServ {
                     action: None,
                     scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
-                    crypto_req: false,
-                    crypto_resp: false,
-                    double_auth: false,
+                    crypto_req: None,
+                    crypto_resp: None,
+                    double_auth: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
@@ -579,9 +607,9 @@ impl IamMenuServ {
                     action: None,
                     scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
-                    crypto_req: false,
-                    crypto_resp: false,
-                    double_auth: false,
+                    crypto_req: None,
+                    crypto_resp: None,
+                    double_auth: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),

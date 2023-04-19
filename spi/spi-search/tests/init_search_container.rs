@@ -29,7 +29,7 @@ pub async fn init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
     let url = format!("redis://127.0.0.1:{}/0", port);
     env::set_var("TARDIS_FW.CACHE.URL", url);
 
-    TardisFuns::init(&format!("{}tests/config", root_path)).await?;
+    TardisFuns::init(Some(&format!("{}tests/config", root_path))).await?;
 
     Ok(LifeHold {
         search: reldb_container,

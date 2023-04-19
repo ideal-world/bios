@@ -111,7 +111,7 @@ pub async fn mock_req_mix_apis(method: &str, uri: &str, body: &str, mut headers:
             .collect::<HashMap<_, _>>()
     };
     let result: TardisResp<MixAuthResp> = web_client
-        .post(
+        .put(
             &format!("https://localhost:8080/{DOMAIN_CODE}/auth/apis"),
             &AuthReq {
                 scheme: "http".to_string(),

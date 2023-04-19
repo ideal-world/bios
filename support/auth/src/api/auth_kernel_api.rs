@@ -21,7 +21,7 @@ impl AuthApi {
     }
 
     // mix apis
-    #[oai(path = "/apis", method = "post")]
+    #[oai(path = "/apis", method = "put")]
     async fn apis(&self, req: Json<AuthReq>) -> TardisApiResult<MixAuthResp> {
         let result = auth_kernel_serv::parse_mix_req(req.0).await?;
         trace!("[Auth] Response apis: {:?}", result);
