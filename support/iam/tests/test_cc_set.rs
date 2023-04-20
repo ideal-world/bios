@@ -703,9 +703,9 @@ pub async fn test_bind_platform_node(
 
     let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
     let t1_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, t1_context).await?;
-    let t2_set_id =IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, t2_context).await?;
+    let t2_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, t2_context).await?;
 
-    let set_cate_sys_global_id = IamSetServ::add_set_cate(
+    let set_cate_xxx_global_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
             bus_code: None,
@@ -719,9 +719,9 @@ pub async fn test_bind_platform_node(
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
 
-    let set_cate_sys_id = IamSetServ::add_set_cate(
+    let set_cate_sys_pri_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
             bus_code: None,
@@ -729,13 +729,13 @@ pub async fn test_bind_platform_node(
             icon: None,
             sort: None,
             ext: None,
-            rbum_parent_cate_id: Some(set_cate_sys_global_id.clone()),
+            rbum_parent_cate_id: Some(set_cate_xxx_global_id.clone()),
             scope_level: None,
         },
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
     info!("【test_cc_set】 : test_multi_level : bind platform node");
     let set_cate_xxx_sub_id = IamSetServ::add_set_cate(
         &sys_set_id,
@@ -746,12 +746,12 @@ pub async fn test_bind_platform_node(
             icon: None,
             sort: None,
             ext: None,
-            rbum_parent_cate_id: Some(set_cate_sys_global_id.clone()),
+            rbum_parent_cate_id: Some(set_cate_xxx_global_id.clone()),
         },
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
     let set_cate_xxx_sub_sub_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
@@ -766,7 +766,7 @@ pub async fn test_bind_platform_node(
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
 
     let new_t1_set_cate_id = IamSetServ::add_set_cate(
         &t1_set_id,
@@ -782,9 +782,9 @@ pub async fn test_bind_platform_node(
         &funs,
         t1_context,
     )
-        .await?;
+    .await?;
 
-    IamSetServ::bind_cate_with_platform(&set_cate_sys_global_id, &funs, t1_context).await?;
+    IamSetServ::bind_cate_with_platform(&set_cate_xxx_global_id, &funs, t1_context).await?;
     let set_cate_o = RbumRelServ::find_one_rbum(
         &RbumRelFilterReq {
             basic: RbumBasicFilterReq {
@@ -796,14 +796,14 @@ pub async fn test_bind_platform_node(
             from_rbum_id: Some(t1_set_id.clone()),
             from_rbum_scope_levels: None,
             to_rbum_item_scope_levels: None,
-            to_rbum_item_id: Some(set_cate_sys_global_id.clone()),
+            to_rbum_item_id: Some(set_cate_xxx_global_id.clone()),
             to_own_paths: Some("".to_string()),
             ..Default::default()
         },
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
     assert!(set_cate_o.is_some());
 
     let mut resp = IamSetServ::get_tree(
@@ -817,9 +817,9 @@ pub async fn test_bind_platform_node(
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
     assert_eq!(resp.main.len(), 5);
-    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_sys_global_id).unwrap().rel.is_some());
+    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_xxx_global_id).unwrap().rel.is_some());
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 1);
 
@@ -834,7 +834,7 @@ pub async fn test_bind_platform_node(
         &funs,
         t1_context,
     )
-        .await?;
+    .await?;
     assert_eq!(resp.main.len(), 4);
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 3);
@@ -851,7 +851,7 @@ pub async fn test_bind_platform_node(
         &funs,
         sys_context,
     )
-        .await?;
+    .await?;
     assert_eq!(resp.main.len(), 5);
     assert!(resp.main.clone().iter().find(|r| r.id == set_cate_xxx_sub_id).unwrap().rel.is_some());
     resp.main.retain(|r| !r.ext.is_empty());
@@ -868,11 +868,129 @@ pub async fn test_bind_platform_node(
         &funs,
         t1_context,
     )
-        .await?;
+    .await?;
     assert_eq!(resp.main.len(), 2);
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 1);
 
+    info!("【test_cc_set】 : test_multi_level : unbind test");
+    //删除原来的关联
+    let old_rel = RbumRelServ::find_one_rbum(
+        &RbumRelFilterReq {
+            basic: Default::default(),
+            tag: Some(IamRelKind::IamOrgRel.to_string()),
+            from_rbum_kind: Some(RbumRelFromKind::Set),
+            from_rbum_id: Some(t1_set_id.clone()),
+            from_rbum_scope_levels: None,
+            to_rbum_item_id: None,
+            to_rbum_item_scope_levels: None,
+            to_own_paths: Some("".to_string()),
+            ext_eq: None,
+            ext_like: None,
+        },
+        &funs,
+        &t1_context,
+    )
+    .await?;
+    assert!(old_rel.is_some());
+    IamSetServ::unbind_cate_with_platform(old_rel.unwrap(), &funs, &t1_context).await?;
+
+    let mut resp = IamSetServ::get_tree(
+        &t1_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: false,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        t1_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 2);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 0);
+
+    info!("【test_cc_set】 : test_multi_level : bind node and add rel");
+
+    let set_cate_t2_xxx_id = IamSetServ::add_set_cate(
+        &t2_set_id,
+        &IamSetCateAddReq {
+            bus_code: None,
+            name: TrimString("t2_xxx公司".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: None,
+            scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+        },
+        &funs,
+        t2_context,
+    )
+    .await?;
+    IamSetServ::bind_cate_with_platform(&set_cate_xxx_global_id, &funs, t2_context).await?;
+
+    // t2 cc查询第一层
+    let mut resp = IamSetServ::get_tree(
+        &t2_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        &t2_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 3);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 2);
+
+    // sys cc查询第一层 ->xxx
+    let mut resp = IamSetServ::get_tree(
+        &sys_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        &sys_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 1);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 0);
+
+    let sys_sys_code_xxx = &resp.main.first().unwrap().sys_code.clone();
+
+    // sys cc查询第二层 ->pri sub t2_xxx
+    let mut resp = IamSetServ::get_tree(
+        &sys_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_codes: Some(vec![sys_sys_code_xxx.to_string()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        &sys_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 3);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 1);
+
+
+
+    for x in &resp.main {
+        println!("mian==={:?}", x);
+    }
     // funs.rollback().await?;
     Ok(())
 }
