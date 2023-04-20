@@ -31,7 +31,11 @@ pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValu
     if modules::double_auth_process::need_auth(method, uri)? {
         return Err(JsValue::try_from(JsError::new(&format!("Need double auth."))).unwrap());
     }
-    let body = mini_tardis::serde::jsvalue_to_str(&body)?;
+    let body = if body == JsValue::NULL {
+        "".to_string()
+    } else {
+        mini_tardis::serde::jsvalue_to_str(&body)?
+    };
     let mut headers = mini_tardis::serde::jsvalue_to_obj::<HashMap<String, String>>(headers)?;
     if let Some(token) = modules::token_process::get_token()? {
         headers.insert(BIOS_TOKEN.to_string(), token);
