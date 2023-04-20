@@ -174,6 +174,8 @@ mod tests {
         modules::crypto_process::{decrypt, encrypt},
     };
 
+    use super::do_encrypt;
+
     #[test]
     fn test_crypto() {
         // Prepare
@@ -225,6 +227,10 @@ mod tests {
             },
         )
         .unwrap();
+
+        // empty_body also can be encrypt
+        let empty_body = do_encrypt("", true, true).unwrap();
+        assert!(!empty_body.body.is_empty());
 
         test_crypto_req_and_resp(&mock_serv_pri_key, &sm2);
         test_crypto_req(&mock_serv_pri_key);
