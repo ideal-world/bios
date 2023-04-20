@@ -108,6 +108,7 @@ function _M.access(conf, ctx)
     -- TODO Test
     if forward_body.headers[conf.head_key_crypto] ~= nil then
         local req_body = core.request.get_body()
+        local req_body = string.gsub(req_body, "\"", "")
         forward_body.body = req_body
     end
     local forward_body_str = core.json.encode(forward_body);
