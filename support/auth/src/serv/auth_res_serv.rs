@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::RwLock};
 
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
