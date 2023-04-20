@@ -193,6 +193,9 @@ function _M.access(conf, ctx)
         if result.method then
             ngx.req.set_method(switch_map[result.method])
         end
+        if result.body and result.body ~= ngx.null then
+            ngx.req.set_body_data(result.body)
+        end
     end
 end
 

@@ -275,7 +275,8 @@ pub async fn decrypt(
     }
     // Or, the interface configuration does not require encryption, but the request comes with encrypted headers. (Content consultation mechanism)
     if headers.contains_key(&config.head_key_crypto) {
-        let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, true, true, config).await?;
+        //todo Because the return encryption has not yet been implemented, it has been temporarily modified.todo need_crypto_resp ->true
+        let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, true, false, config).await?;
         return Ok((body, headers));
     }
     Ok((None, None))
