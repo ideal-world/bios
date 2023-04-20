@@ -109,6 +109,7 @@ function _M.access(conf, ctx)
         local req_body = core.request.get_body()
         -- No body request requires additional processing
         if req_body then
+            local req_body = string.gsub(req_body, "\"", "")
             forward_body.body = req_body
         end
     end
@@ -193,6 +194,9 @@ function _M.access(conf, ctx)
         end
         if result.method then
             ngx.req.set_method(switch_map[result.method])
+        end
+        if result.body and result.body ~= ngx.null then
+            ngx.req.set_body_data(result.body)
         end
     end
 end

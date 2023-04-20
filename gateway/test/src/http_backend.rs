@@ -37,4 +37,10 @@ impl TestApi {
             done: add_req.0.done,
         })
     }
+
+    #[oai(path = "/get/:id", method = "get")]
+    async fn get_echo(&self, id: Path<i32>) -> TardisApiResult<String> {
+        log::info!("-------echo----------\r\nid:{}", id.0);
+        TardisResp::ok(id.0.to_string())
+    }
 }
