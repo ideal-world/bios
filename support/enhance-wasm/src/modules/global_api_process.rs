@@ -9,7 +9,7 @@ pub fn mix(method: &str, uri: &str, body: &str, headers: HashMap<String, String>
         method: method.to_lowercase(),
         uri: uri.to_string(),
         body: body.to_string(),
-        headers: headers.clone(),
+        headers,
         ts: time::now(),
     };
     let mix_body = mini_tardis::serde::obj_to_str(&mix_body)?;
@@ -45,7 +45,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        constants::{self, BIOS_CRYPTO},
+        constants::BIOS_CRYPTO,
         initializer::{self, ServConfig},
         mini_tardis::crypto::{
             self,
@@ -91,7 +91,7 @@ mod tests {
         let key = resp.headers.get(BIOS_CRYPTO).unwrap();
         let encrypt_body = resp.body;
         let key = mock_serv_pri_key.decrypt(&crypto::base64::decode(key).unwrap()).unwrap();
-        let key = key.split(" ").collect::<Vec<&str>>();
+        let key = key.split(' ').collect::<Vec<&str>>();
         assert_eq!(key.len(), 4);
         let sm4_key = key[1];
         let sm4_iv = key[2];

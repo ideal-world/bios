@@ -1,5 +1,5 @@
 use crate::{
-    constants::{self, SESSION_CONFIG, STABLE_CONFIG},
+    constants::{SESSION_CONFIG, STABLE_CONFIG},
     initializer,
     mini_tardis::{basic::TardisResult, time},
 };
