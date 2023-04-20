@@ -29,7 +29,7 @@ pub async fn init(service_url: &str, config: JsValue) -> Result<(), JsValue> {
 /// uri: path?query eg. /iam/ct/xxx?q=1
 pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValue) -> Result<JsValue, JsValue> {
     if modules::double_auth_process::need_auth(method, uri)? {
-        return Err(JsValue::try_from(JsError::new(&format!("Need double auth."))).unwrap());
+        return Err(JsValue::try_from(JsError::new("Need double auth.")).unwrap());
     }
     let body = mini_tardis::serde::jsvalue_to_str(&body)?;
     let mut headers = mini_tardis::serde::jsvalue_to_obj::<HashMap<String, String>>(headers)?;
@@ -60,7 +60,7 @@ pub fn on_before_response(body: JsValue, headers: JsValue) -> Result<String, JsV
 
 #[wasm_bindgen]
 pub fn on_response_success(method: &str, uri: &str, body: JsValue) -> Result<(), JsValue> {
-    let uri = if uri.starts_with("/") { uri.to_string() } else { format!("/{uri}") };
+    let uri = if uri.starts_with('/') { uri.to_string() } else { format!("/{uri}") };
     let spec_opt = {
         let config = STABLE_CONFIG.read().unwrap();
         let config = config.as_ref().unwrap();
@@ -81,7 +81,7 @@ pub fn on_response_success(method: &str, uri: &str, body: JsValue) -> Result<(),
                 modules::token_process::set_token(&token)?;
                 modules::double_auth_process::remove_latest_authed()?;
             } else {
-                return Err(JsValue::try_from(JsError::new(&format!("Body format error."))).unwrap());
+                return Err(JsValue::try_from(JsError::new("Body format error.")).unwrap());
             }
         }
         2 => {

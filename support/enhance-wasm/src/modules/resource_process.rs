@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::mini_tardis::{basic::TardisResult, log};
+use crate::mini_tardis::basic::TardisResult;
 
 pub fn add_res(res_container: &mut ResContainerNode, res_action: &str, res_uri: &str, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
     // log::log(&format!("[BIOS.RES] Add res [{res_action}] {res_uri}."));
@@ -64,8 +64,8 @@ fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &
 }
 
 fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
-    let res_uri = if let Some(res_uri) = res_uri.strip_prefix("/") { res_uri } else { res_uri };
-    let mut res_uri = res_uri.split("/").map(|i| i.to_string()).collect::<Vec<String>>();
+    let res_uri = if let Some(res_uri) = res_uri.strip_prefix('/') { res_uri } else { res_uri };
+    let mut res_uri = res_uri.split('/').map(|i| i.to_string()).collect::<Vec<String>>();
     res_uri.push("$".to_string());
     Ok(res_uri)
 }

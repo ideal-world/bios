@@ -116,7 +116,7 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
 pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<String> {
     if let Some(encrypt_key) = headers.get(BIOS_CRYPTO) {
         let resp = do_decrypt(body, encrypt_key)?;
-        return Ok(resp);
+        Ok(resp);
     } else {
         Ok(body.to_string())
     }
