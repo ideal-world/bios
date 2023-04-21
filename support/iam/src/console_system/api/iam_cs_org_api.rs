@@ -2,7 +2,7 @@ use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamS
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamSetKind;
+use crate::iam_enumeration::{IamSetKind, IamRelKind};
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
@@ -77,6 +77,51 @@ impl IamCsOrgApi {
         funs.begin().await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Import tenant Org
+    ///
+    /// id -> set_cate_id
+    /// tenant_id -> tenant_id
+    /// 导入租户组织,不支持换绑
+    /// 如果平台绑定的节点下有其他节点，那么全部剪切到租户层，解绑的时候需要拷贝一份去平台，并且保留租户的节点
+    #[oai(path = "/binding/cate/:id/tenant/:tenant_id", method = "post")]
+    async fn bind_cate_with_platform(&self, id: Path<String>, tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamSetServ::bind_cate_with_tenant(&id.0, &tenant_id.0, IamRelKind::IamOrgRel, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    #[oai(path = "/binding/node/", method = "delete")]
+    async fn unbind_cate_with_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
+        //删除原来的关联
+        let old_rel = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                basic: Default::default(),
+                tag: Some(IamRelKind::IamOrgRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::Set),
+                from_rbum_id: Some(set_id.clone()),
+                from_rbum_scope_levels: None,
+                to_rbum_item_id: None,
+                to_rbum_item_scope_levels: None,
+                to_own_paths: Some("".to_string()),
+                ext_eq: None,
+                ext_like: None,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        if let Some(old_rel) = old_rel {
+            IamSetServ::unbind_cate_with_platform(old_rel, &funs, &ctx.0).await?;
+        }
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

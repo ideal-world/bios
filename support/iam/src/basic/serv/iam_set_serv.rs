@@ -613,6 +613,52 @@ impl IamSetServ {
         RbumSetItemServ::check_a_is_parent_or_sibling_of_b(account_id, app_id, set_id, funs, ctx).await
     }
 
+    pub async fn bind_cate_with_tenant(set_cate: &str, tenant_id: &str, rel_kind: IamRelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let old_rel = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                basic: Default::default(),
+                tag: Some(rel_kind.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                from_rbum_id: Some(set_cate.to_string()),
+                from_rbum_scope_levels: None,
+                to_rbum_item_id: None,
+                to_rbum_item_scope_levels: None,
+                to_own_paths: None,
+                ext_eq: None,
+                ext_like: None,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if let Some(old_rel) = old_rel {
+            return Err(funs.err().conflict("cate_rel", "bind", &format!("have old bind rel {:?}", old_rel), "409-iam-bind-conflict"));
+        }
+        RbumRelServ::add_rel(
+            &mut RbumRelAggAddReq {
+                rel: RbumRelAddReq {
+                    tag: rel_kind.to_string(),
+                    from_rbum_kind: RbumRelFromKind::SetCate,
+                    from_rbum_id: set_cate.to_string(),
+                    to_rbum_item_id: tenant_id.to_string(),
+                    to_own_paths: tenant_id.to_string(),
+                    note: None,
+                    to_is_outside: true,
+                    ext: None,
+                },
+                attrs: vec![],
+                envs: vec![],
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        //如果平台绑定的节点下有其他节点，那么全部剪切到租户层
+        
+        Self::copy_tree_to_new_set(tree, set_id, old_pid, new_pid, funs, ctx);
+        Ok(())
+    }
+
     /// 绑定租户的set_id to 平台 set_cate_id
     pub async fn bind_cate_with_platform(cate_id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;

@@ -115,48 +115,6 @@ impl IamCtOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Import Platform Org
-    ///
-    /// 导入平台组织,支持换绑
-    /// 如果原解绑的节点下有属于平台的节点，解绑的时候需要拷贝一份去租户端，并且保留平台的节点
-    #[oai(path = "/binding/node/:id", method = "post")]
-    async fn bind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamSetServ::bind_cate_with_platform(&id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    #[oai(path = "/binding/node/", method = "delete")]
-    async fn unbind_cate_with_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
-        //删除原来的关联
-        let old_rel = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                basic: Default::default(),
-                tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Set),
-                from_rbum_id: Some(set_id.clone()),
-                from_rbum_scope_levels: None,
-                to_rbum_item_id: None,
-                to_rbum_item_scope_levels: None,
-                to_own_paths: Some("".to_string()),
-                ext_eq: None,
-                ext_like: None,
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        if let Some(old_rel) = old_rel {
-            IamSetServ::unbind_cate_with_platform(old_rel, &funs, &ctx.0).await?;
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
 
     /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]
