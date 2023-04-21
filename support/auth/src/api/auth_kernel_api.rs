@@ -4,7 +4,7 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-use crate::dto::auth_kernel_dto::{AuthReq, AuthResp, MixRequest, MixAuthResp};
+use crate::dto::auth_kernel_dto::{AuthReq, AuthResp, MixAuthResp};
 use crate::serv::{auth_kernel_serv, auth_res_serv};
 
 pub struct AuthApi;
@@ -27,7 +27,7 @@ impl AuthApi {
         trace!("[Auth] Response apis: {:?}", result);
         TardisResp::ok(result)
     }
-    
+
     /// fetch server config
     #[oai(path = "/apis", method = "get")]
     async fn fetch_server_config(&self) -> TardisApiResult<Value> {

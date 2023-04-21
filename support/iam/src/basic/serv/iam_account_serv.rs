@@ -84,6 +84,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             ext7: Set("".to_string()),
             ext8: Set("".to_string()),
             ext9: Set("".to_string()),
+            temporary: Set(add_req.temporary.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -143,6 +144,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAccountFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
+        query.column((iam_account::Entity, iam_account::Column::Temporary));
         query.column((iam_account::Entity, iam_account::Column::Ext1Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext2Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext3Idx));
@@ -176,6 +178,7 @@ impl IamAccountServ {
                 scope_level: add_req.scope_level.clone(),
                 disabled: add_req.disabled,
                 icon: add_req.icon.clone(),
+                temporary: None,
             },
             funs,
             ctx,
@@ -413,6 +416,7 @@ impl IamAccountServ {
             update_time: account.update_time,
             scope_level: account.scope_level,
             disabled: account.disabled,
+            temporary: account.temporary,
             icon: account.icon,
             roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             apps,
@@ -477,6 +481,7 @@ impl IamAccountServ {
                 update_time: account.update_time,
                 scope_level: account.scope_level,
                 disabled: account.disabled,
+                temporary: account.temporary,
                 icon: account.icon,
                 roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
                 certs: IamCertServ::find_certs(

@@ -45,38 +45,38 @@ async fn main() -> TardisResult<()> {
     assert!(!resp.done);
 
     let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
-    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client()
-        .post(
-            &format!("{gateway_url}/test/echo/2"),
-            &TestAddReq {
+    //有加密头的请求会被替换"成空 ,所以不能传json串需要base64
+    let body = TardisFuns::crypto.base64.encode(
+        &TardisFuns::json
+            .obj_to_string(&TestAddReq {
                 code: TrimString("c001".to_string()),
                 description: "测试002".to_string(),
                 done: false,
-            },
-            Some(header),
-        )
-        .await?
-        .body
-        .unwrap();
+            })
+            .unwrap(),
+    );
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client().post(&format!("{gateway_url}/test/echo/2"), &body, Some(header)).await?.body.unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(&resp.code, "c001");
     assert_eq!(&resp.description, "测试002");
     assert!(!resp.done);
 
     let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
-    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client()
-        .post(
-            &format!("{gateway_url}/apis"),
-            &TestAddReq {
+    let resp: TardisResp<String> = TardisFuns::web_client().get(&format!("{gateway_url}/test/echo/get/3"), Some(header)).await?.body.unwrap();
+    let resp = resp.data.unwrap();
+    assert_eq!(resp, "3".to_string());
+
+    let body = TardisFuns::crypto.base64.encode(
+        &TardisFuns::json
+            .obj_to_string(&TestAddReq {
                 code: TrimString("c001".to_string()),
                 description: "测试003".to_string(),
                 done: false,
-            },
-            Some(header),
-        )
-        .await?
-        .body
-        .unwrap();
+            })
+            .unwrap(),
+    );
+    let header: Vec<(String, String)> = vec![("Bios-Crypto".to_string(), "".to_string())];
+    let resp: TardisResp<TestDetailResp> = TardisFuns::web_client().post(&format!("{gateway_url}/apis"), &body, Some(header)).await?.body.unwrap();
     let resp = resp.data.unwrap();
     assert_eq!(&resp.code, "c001");
     assert_eq!(&resp.description, "测试003");
@@ -95,14 +95,20 @@ impl AuthApi {
     /// Auth
     #[oai(path = "/", method = "put")]
     async fn auth(&self, req: Json<AuthReq>) -> TardisApiResult<AuthResp> {
-        let req = req.0;
+        let mut req = req.0;
         if req.path == "/test/echo/1" {
             assert!(req.body.is_none());
         }
         let mut headers = req.headers;
         if req.path == "/test/echo/2" {
             assert!(req.body.is_some());
-            assert!(req.body.clone().unwrap().contains("测试002"));
+            let req_body = TardisFuns::crypto.base64.decode(&req.body.clone().unwrap())?;
+            assert!(req_body.contains("测试002"));
+            req.body = Some(req_body);
+            headers.insert("Bios-Crypto".to_string(), "".to_string());
+        }
+        if req.path == "/test/echo/get/3" {
+            assert_eq!(req.body, None);
             headers.insert("Bios-Crypto".to_string(), "".to_string());
         }
         headers.insert(
@@ -121,18 +127,21 @@ impl AuthApi {
     /// Auth
     #[oai(path = "/apis", method = "put")]
     async fn apis(&self, req: Json<AuthReq>) -> TardisApiResult<MixAuthResp> {
-        let req = req.0;
+        let mut req = req.0;
         let mut headers = req.headers;
-        if req.path == "/auth/apis" {
-            headers.insert("Bios-Crypto".to_string(), "".to_string());
+        if req.path.contains("/apis") {
             assert!(req.body.is_some());
+            let req_body = TardisFuns::crypto.base64.decode(&req.body.clone().unwrap())?;
+            assert!(req_body.contains("测试003"));
+            req.body = Some(req_body);
+            headers.insert("Bios-Crypto".to_string(), "".to_string());
         }
         headers.insert(
             "Tardis-Context".to_string(),
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&TardisContext::default()).unwrap()),
         );
         TardisResp::ok(MixAuthResp {
-            url: "/test/echo/3".to_string(),
+            url: "/test/echo/4".to_string(),
             method: "POST".to_string(),
             allow: true,
             status_code: 200,

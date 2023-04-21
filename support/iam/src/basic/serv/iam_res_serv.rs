@@ -78,6 +78,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             crypto_req: Set(add_req.crypto_req.unwrap_or(false)),
             crypto_resp: Set(add_req.crypto_resp.unwrap_or(false)),
             double_auth: Set(add_req.double_auth.unwrap_or(false)),
+            double_auth_msg: Set(add_req.double_auth_msg.as_ref().unwrap_or(&"".to_string()).to_string()),
             ..Default::default()
         })
     }
@@ -154,6 +155,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         }
         if let Some(double_auth) = modify_req.double_auth {
             iam_res.double_auth = Set(double_auth);
+        }
+        if let Some(double_auth_msg) =  &modify_req.double_auth_msg {
+            iam_res.double_auth_msg = Set(double_auth_msg.to_string());
         }
         Ok(Some(iam_res))
     }
@@ -243,6 +247,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         query.column((iam_res::Entity, iam_res::Column::CryptoReq));
         query.column((iam_res::Entity, iam_res::Column::CryptoResp));
         query.column((iam_res::Entity, iam_res::Column::DoubleAuth));
+        query.column((iam_res::Entity, iam_res::Column::DoubleAuthMsg));
         if let Some(kind) = &filter.kind {
             query.and_where(Expr::col(iam_res::Column::Kind).eq(kind.to_int()));
         }
@@ -581,6 +586,7 @@ impl IamMenuServ {
                     crypto_req: None,
                     crypto_resp: None,
                     double_auth: None,
+                    double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),
@@ -610,6 +616,7 @@ impl IamMenuServ {
                     crypto_req: None,
                     crypto_resp: None,
                     double_auth: None,
+                    double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_menu_id.to_string(),

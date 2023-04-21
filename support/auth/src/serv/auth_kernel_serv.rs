@@ -9,7 +9,7 @@ use tardis::{
     TardisFuns,
 };
 
-use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequest, MixRequestBody, ResContainerLeafInfo};
+use crate::dto::auth_kernel_dto::{MixAuthResp, MixRequestBody, ResContainerLeafInfo};
 use crate::helper::auth_common_helper;
 use crate::{
     auth_config::AuthConfig,
@@ -275,7 +275,8 @@ pub async fn decrypt(
     }
     // Or, the interface configuration does not require encryption, but the request comes with encrypted headers. (Content consultation mechanism)
     if headers.contains_key(&config.head_key_crypto) {
-        let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, true, true, config).await?;
+        //todo Because the return encryption has not yet been implemented, it has been temporarily modified.todo need_crypto_resp ->true
+        let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, true, false, config).await?;
         return Ok((body, headers));
     }
     Ok((None, None))

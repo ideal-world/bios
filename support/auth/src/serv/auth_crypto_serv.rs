@@ -77,25 +77,31 @@ pub(crate) async fn decrypt_req(
                 "401-auth-req-crypto-error",
             ));
         }
-        let body = body.as_ref().ok_or_else(|| TardisError::bad_request("[Auth] Encrypted request: body is empty.", "401-auth-req-crypto-error"))?;
 
         let input_sm3_digest = input_keys[0];
         let input_sm4_key = input_keys[1];
         let input_sm4_iv = input_keys[2];
         let input_pub_key = input_keys[3];
 
-        if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
-            return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
-        }
+        if let Some(body) = body.as_ref() {
+            if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
+                return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
+            }
 
-        let data = TardisFuns::crypto
-            .sm4
-            .decrypt_cbc(body, input_sm4_key, input_sm4_iv)
-            .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: key decrypt error:{e}"), "401-auth-req-crypto-error"))?;
-        Ok((
-            Some(data),
-            Some(HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(input_pub_key))])),
-        ))
+            let data = TardisFuns::crypto
+                .sm4
+                .decrypt_cbc(body, input_sm4_key, input_sm4_iv)
+                .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: key decrypt error:{e}"), "401-auth-req-crypto-error"))?;
+            Ok((
+                Some(data),
+                Some(HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(input_pub_key))])),
+            ))
+        } else {
+            Ok((
+                None,
+                Some(HashMap::from([(config.head_key_crypto.to_string(), TardisFuns::crypto.base64.encode(input_pub_key))])),
+            ))
+        }
     } else if need_crypto_req {
         if input_keys.len() != 3 {
             return Err(TardisError::bad_request(
@@ -103,21 +109,23 @@ pub(crate) async fn decrypt_req(
                 "401-auth-req-crypto-error",
             ));
         }
-        let body = body.as_ref().ok_or_else(|| TardisError::bad_request("[Auth] Encrypted request: body is empty.", "401-auth-req-crypto-error"))?;
 
         let input_sm3_digest = input_keys[0];
         let input_sm4_key = input_keys[1];
         let input_sm4_iv = input_keys[2];
+        if let Some(body) = body.as_ref() {
+            if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
+                return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
+            }
 
-        if input_sm3_digest != TardisFuns::crypto.digest.sm3(body)? {
-            return Err(TardisError::bad_request("[Auth] Encrypted request: body digest error.", "401-auth-req-crypto-error"));
+            let data = TardisFuns::crypto
+                .sm4
+                .decrypt_cbc(body, input_sm4_key, input_sm4_iv)
+                .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: body decrypt error:{e}"), "401-auth-req-crypto-error"))?;
+            Ok((Some(data), None))
+        } else {
+            Ok((None, None))
         }
-
-        let data = TardisFuns::crypto
-            .sm4
-            .decrypt_cbc(body, input_sm4_key, input_sm4_iv)
-            .map_err(|e| TardisError::bad_request(&format!("[Auth] Encrypted request: body decrypt error:{e}"), "401-auth-req-crypto-error"))?;
-        Ok((Some(data), None))
     } else {
         if input_keys.len() != 1 {
             return Err(TardisError::bad_request(

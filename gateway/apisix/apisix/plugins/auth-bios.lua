@@ -105,10 +105,13 @@ function _M.access(conf, ctx)
         headers = core.request.headers(ctx),
         query   = core.request.get_uri_args(ctx),
     }
-    -- TODO Test
     if forward_body.headers[conf.head_key_crypto] ~= nil then
         local req_body = core.request.get_body()
-        forward_body.body = req_body
+        -- No body request requires additional processing
+        if req_body then
+            local req_body = string.gsub(req_body, "\"", "")
+            forward_body.body = req_body
+        end
     end
     local forward_body_str = core.json.encode(forward_body);
     core.log.debug("auth-bios forward_body:", forward_body_str);
@@ -191,6 +194,9 @@ function _M.access(conf, ctx)
         end
         if result.method then
             ngx.req.set_method(switch_map[result.method])
+        end
+        if result.body and result.body ~= ngx.null then
+            ngx.req.set_body_data(result.body)
         end
     end
 end

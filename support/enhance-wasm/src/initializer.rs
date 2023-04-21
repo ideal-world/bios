@@ -129,21 +129,21 @@ fn init_config(service_url: &str, serv_config: &ServConfig) -> TardisResult<()> 
     }
     let fd_sm2_keys = crypto_process::init_fd_sm2_keys()?;
     let config = StableConfig {
-        res_container: res_container,
+        res_container,
         double_auth_exp_sec: serv_config.double_auth_exp_sec,
         serv_pub_key: crypto::sm::TardisCryptoSm2PublicKey::from_public_key_str(&serv_config.pub_key)?,
         fd_sm2_pub_key: fd_sm2_keys.0,
         fd_sm2_pri_key: fd_sm2_keys.1,
         login_req_method: serv_config.login_req_method.to_lowercase(),
-        login_req_paths: serv_config.login_req_paths.iter().map(|i| if i.starts_with("/") { i.clone() } else { format!("/{}", i) }).collect::<Vec<String>>(),
+        login_req_paths: serv_config.login_req_paths.iter().map(|i| if i.starts_with('/') { i.clone() } else { format!("/{}", i) }).collect::<Vec<String>>(),
         logout_req_method: serv_config.logout_req_method.to_lowercase(),
-        logout_req_path: if serv_config.logout_req_path.starts_with("/") {
+        logout_req_path: if serv_config.logout_req_path.starts_with('/') {
             serv_config.logout_req_path.clone()
         } else {
             format!("/{}", &serv_config.logout_req_path)
         },
         double_auth_req_method: serv_config.double_auth_req_method.to_lowercase(),
-        double_auth_req_path: if serv_config.double_auth_req_path.starts_with("/") {
+        double_auth_req_path: if serv_config.double_auth_req_path.starts_with('/') {
             serv_config.double_auth_req_path.clone()
         } else {
             format!("/{}", &serv_config.double_auth_req_path)

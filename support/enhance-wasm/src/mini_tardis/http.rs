@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{de::DeserializeOwned, Serialize};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestCredentials, RequestInit, RequestMode, Response};
+use web_sys::{Request, RequestInit, RequestMode, Response};
 
 use super::{
     basic::{TardisResp, TardisResult},
@@ -15,7 +15,6 @@ pub async fn request<T: Serialize + DeserializeOwned>(method: &str, url: &str, b
     opts.method(method);
     opts.mode(RequestMode::Cors);
     opts.body(body);
-    opts.credentials(RequestCredentials::Include);
     let request = Request::new_with_str_and_init(&url, &opts)?;
     for (k, v) in &headers {
         request.headers().set(k, v)?;

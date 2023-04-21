@@ -166,7 +166,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
             ..Default::default()
         },
         1,
-        3,
+        4,
         Some(false),
         None,
         funs,
@@ -300,6 +300,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             org_node_ids: None,
             exts: Default::default(),
             status: None,
+            temporary: None,
         },
         funs,
         &ctx,
@@ -624,6 +625,7 @@ async fn add_res<'a>(
                 crypto_req: None,
                 crypto_resp: None,
                 double_auth: None,
+                double_auth_msg: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_menu_id.to_string(),
@@ -650,6 +652,7 @@ async fn add_res<'a>(
                 crypto_req: Some(false),
                 crypto_resp: Some(false),
                 double_auth: Some(false),
+                double_auth_msg: None,
             },
             set: IamSetItemAggAddReq {
                 set_cate_id: cate_api_id.to_string(),

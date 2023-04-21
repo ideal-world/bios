@@ -63,6 +63,12 @@ pub fn encrypt(method: &str, uri: &str, body: &str) -> TardisResult<EncryptResp>
 }
 
 pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> TardisResult<EncryptResp> {
+    if !need_crypto_req && !need_crypto_resp {
+        return Ok(EncryptResp {
+            body: body.to_string(),
+            additional_headers: HashMap::new(),
+        });
+    }
     let config = STABLE_CONFIG.read().unwrap();
     let config = config.as_ref().unwrap();
     let serv_pub_key = &config.serv_pub_key;
@@ -110,7 +116,7 @@ pub fn do_encrypt(body: &str, need_crypto_req: bool, need_crypto_resp: bool) -> 
 pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<String> {
     if let Some(encrypt_key) = headers.get(BIOS_CRYPTO) {
         let resp = do_decrypt(body, encrypt_key)?;
-        return Ok(resp);
+        Ok(resp)
     } else {
         Ok(body.to_string())
     }
@@ -174,6 +180,8 @@ mod tests {
         modules::crypto_process::{decrypt, encrypt},
     };
 
+    use super::do_encrypt;
+
     #[test]
     fn test_crypto() {
         // Prepare
@@ -215,6 +223,13 @@ mod tests {
                         need_crypto_resp: false,
                         need_double_auth: false,
                     },
+                    Api {
+                        action: "get".to_string(),
+                        uri: "iam/ct/none".to_string(),
+                        need_crypto_req: false,
+                        need_crypto_resp: false,
+                        need_double_auth: false,
+                    },
                 ],
                 login_req_method: "".to_string(),
                 login_req_paths: vec![],
@@ -225,6 +240,10 @@ mod tests {
             },
         )
         .unwrap();
+
+        // empty_body also can be encrypt
+        let empty_body = do_encrypt("", true, true).unwrap();
+        assert!(!empty_body.body.is_empty());
 
         test_crypto_req_and_resp(&mock_serv_pri_key, &sm2);
         test_crypto_req(&mock_serv_pri_key);
@@ -320,6 +339,11 @@ mod tests {
         // Encrypt
         let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
         let encrypt_req = encrypt("delete", "iam/ct/resp/xxx", mock_req_body).unwrap();
+        assert_eq!(encrypt_req.body, mock_req_body);
+        assert!(encrypt_req.additional_headers.is_empty());
+
+        let mock_req_body = "中台经过几年“滚雪球”的发展或是资本地运作，已是个“庞然大物”，是到了“减肥”，“减负”的时候。一言以避之：解构中台，让他融合到更大的IT能力共享架构中，把共享交给开放平台，把技术还给技术平台，让中台专注于领域服务及事件 。";
+        let encrypt_req = encrypt("get", "iam/ct/none", mock_req_body).unwrap();
         assert_eq!(encrypt_req.body, mock_req_body);
         assert!(encrypt_req.additional_headers.is_empty());
     }
