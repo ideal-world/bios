@@ -188,6 +188,38 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, false, &funs, context).await?;
     assert_eq!(items.len(), 0);
 
+    info!("【test_cc_set】 : test_single_level : copy_tree_to_new_set");
+    let another_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, another_context).await?;
+    let set_cate_id1 = IamSetServ::add_set_cate(
+        &another_set_id,
+        &mut IamSetCateAddReq {
+            bus_code: Some(TrimString("bc1".to_string())),
+            name: TrimString("another_xxx分公司".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: None,
+            scope_level: None,
+        },
+        &funs,
+        another_context,
+    )
+    .await?;
+
+    let cates: RbumSetTreeResp = RbumSetServ::get_tree(
+        &set_id,
+        &RbumSetTreeFilterReq {
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        funs,
+        &context,
+    )
+    .await?;
+    cates
+    Self::copy_tree_to_new_set(&cates.main.iter().collect::<Vec<&RbumSetTreeMainResp>>(), &tenant_set_id, None, None, funs, ctx).await?;
+
     funs.rollback().await?;
     Ok(())
 }
@@ -691,7 +723,8 @@ pub async fn test_multi_level_by_app_context(
     funs.rollback().await?;
     Ok(())
 }
-pub async fn test_bind_platform_node(
+
+pub async fn test_bind_platform_to_tenant_node(
     sys_context: &TardisContext,
     t1_context: &TardisContext,
     t2_context: &TardisContext,
@@ -985,8 +1018,6 @@ pub async fn test_bind_platform_node(
     assert_eq!(resp.main.len(), 3);
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 1);
-
-
 
     for x in &resp.main {
         println!("mian==={:?}", x);
