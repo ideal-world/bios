@@ -250,7 +250,7 @@ impl IamSetServ {
                 &RbumSetCateFilterReq {
                     basic: RbumBasicFilterReq {
                         with_sub_own_paths: true,
-                        own_paths:Some(set_cate_rel.to_own_paths.clone()),
+                        own_paths: Some(set_cate_rel.to_own_paths.clone()),
                         ids: Some(vec![set_cate_rel.to_rbum_item_id.clone()]),
                         ..Default::default()
                     },
@@ -264,7 +264,12 @@ impl IamSetServ {
                 let mut mock_filter = filter.clone();
                 mock_filter.sys_codes = Some(vec![set_cate_resp.sys_code.clone()]);
                 mock_filter.sys_code_query_kind = Some(RbumSetCateLevelQueryKind::Sub);
-                mock_filter.sys_code_query_depth = Some(99);
+                if filter.sys_codes.is_some() {
+                    mock_filter.sys_code_query_depth = Some(1);
+                } else {
+                    mock_filter.sys_code_query_depth = Some(99);
+                }
+
                 let mock_ctx = TardisContext {
                     own_paths: set_cate_rel.to_own_paths.clone(),
                     ..ctx.clone()
