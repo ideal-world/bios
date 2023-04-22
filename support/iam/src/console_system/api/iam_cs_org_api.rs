@@ -2,11 +2,13 @@ use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamS
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamSetKind, IamRelKind};
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumRelFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -87,7 +89,7 @@ impl IamCsOrgApi {
     /// tenant_id -> tenant_id
     /// 导入租户组织,不支持换绑
     /// 如果平台绑定的节点下有其他节点，那么全部剪切到租户层，解绑的时候需要拷贝一份去平台，并且保留租户的节点
-    #[oai(path = "/binding/cate/:id/tenant/:tenant_id", method = "post")]
+    #[oai(path = "/cate/:id/rel/tenant/:tenant_id", method = "post")]
     async fn bind_cate_with_platform(&self, id: Path<String>, tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
@@ -96,12 +98,11 @@ impl IamCsOrgApi {
         TardisResp::ok(Void {})
     }
 
-    #[oai(path = "/binding/node/", method = "delete")]
-    async fn unbind_cate_with_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    #[oai(path = "/cate/:id/rel", method = "delete")]
+    async fn unbind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
-        //删除原来的关联
         let old_rel = RbumRelServ::find_one_rbum(
             &RbumRelFilterReq {
                 basic: Default::default(),
