@@ -9,6 +9,14 @@ use crate::iam_enumeration::{IamResKind, IamRoleKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
+pub struct IamConfigFilterReq {
+    pub basic: RbumBasicFilterReq,
+    pub code: Option<String>,
+    pub rel_item_id: Option<String>,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(default)]
 pub struct IamAccountFilterReq {
     pub basic: RbumBasicFilterReq,
     pub rel: Option<RbumItemRelFilterReq>,
