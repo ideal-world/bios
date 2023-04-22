@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -17,9 +18,10 @@ use crate::basic::domain::iam_tenant;
 use crate::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfLdapResp, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use crate::basic::dto::iam_config_dto::IamConfigAggOrModifyReq;
-use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamConfigFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_tenant_dto::{
-    IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantConfigReq, IamTenantDetailResp, IamTenantModifyReq, IamTenantSummaryResp,
+    IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantConfigReq, IamTenantConfigResp, IamTenantDetailResp, IamTenantModifyReq,
+    IamTenantSummaryResp,
 };
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
@@ -358,7 +360,7 @@ impl IamTenantServ {
         Ok(())
     }
 
-    pub async fn modify_config_agg(id: &str, modify_req: &IamTenantConfigReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_tenant_config_agg(id: &str, modify_req: &IamTenantConfigReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         //option conf,fast return
         if modify_req.cert_conf_by_user_pwd.is_none()
             && modify_req.cert_conf_by_phone_vcode.is_none()
@@ -442,6 +444,62 @@ impl IamTenantServ {
             IamConfigServ::add_or_modify_batch(id, config.to_vec(), funs, ctx).await?;
         }
         Ok(())
+    }
+
+    pub async fn get_tenant_config_agg(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantConfigResp> {
+        let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_owned()), None, None, funs, ctx).await?;
+        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
+        let config = IamConfigServ::find_rbums(
+            &IamConfigFilterReq {
+                rel_item_id: Some(id.to_owned()),
+                ..Default::default()
+            },
+            Some(true),
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        let cert_conf_by_oauth2s = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect::<Vec<_>>();
+        let cert_conf_by_oauth2 = if !cert_conf_by_oauth2s.is_empty() {
+            let mut result = Vec::new();
+            for cert_conf in cert_conf_by_oauth2s {
+                result.push(IamCertOAuth2Serv::get_cert_conf(&cert_conf.id, funs, ctx).await?);
+            }
+            Some(result)
+        } else {
+            None
+        };
+        let mut vec1: Vec<IamCertConfLdapResp> = Vec::new();
+        for ldap_conf in cert_confs.iter().filter(|r| r.kind == IamCertExtKind::Ldap.to_string()) {
+            let conf = IamCertLdapServ::get_cert_conf(&ldap_conf.id, funs, ctx).await?;
+            vec1.push(IamCertConfLdapResp {
+                id: ldap_conf.id.clone(),
+                supplier: ldap_conf.kind.clone(),
+                conn_uri: ldap_conf.conn_uri.clone(),
+                is_tls: conf.is_tls,
+                timeout: conf.timeout,
+                principal: conf.principal.clone(),
+                credentials: "".to_string(),
+                base_dn: conf.base_dn,
+                port: conf.port,
+                account_unique_id: conf.account_unique_id,
+                account_field_map: conf.account_field_map,
+                // org_unique_id: conf.org_unique_id,
+                // org_field_map: conf.org_field_map,
+            })
+        }
+        let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };
+        let tenant_config = IamTenantConfigResp {
+            cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
+            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
+            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
+            config,
+            cert_conf_by_oauth2,
+            cert_conf_by_ldap,
+        };
+
+        Ok(tenant_config)
     }
 
     pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {

@@ -75,7 +75,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
         own_paths: tenant_id.clone(),
         ..Default::default()
     };
-    IamTenantServ::modify_config_agg(
+    IamTenantServ::modify_tenant_config_agg(
         &tenant_id,
         &mut IamTenantConfigReq {
             cert_conf_by_user_pwd: Some(IamCertConfUserPwdAddOrModifyReq {

@@ -119,12 +119,12 @@ pub struct IamTenantConfigReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamPlatformConfigDetailResp {
+pub struct IamTenantConfigResp {
     pub cert_conf_by_user_pwd: IamCertConfUserPwdResp,
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,
-    pub cert_conf_by_oauth2: Option<Vec<IamCertConfOAuth2AddOrModifyReq>>,
-    pub cert_conf_by_ldap: Option<IamCertConfLdapAddOrModifyReq>,
+    pub cert_conf_by_oauth2: Option<Vec<IamCertConfOAuth2Resp>>,
+    pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapResp>>,
     pub config: Vec<IamConfigSummaryResp>,
 }
 
