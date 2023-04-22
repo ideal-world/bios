@@ -6,7 +6,8 @@ use tardis::web::poem_openapi;
 
 use crate::iam_enumeration::{IamConfigDataTypeKind, IamConfigKind};
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct IamConfigAddReq {
     pub code: IamConfigKind,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -20,7 +21,8 @@ pub struct IamConfigAddReq {
     pub rel_item_id: String,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
 pub struct IamConfigModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<String>,
@@ -45,7 +47,8 @@ pub struct IamConfigAggOrModifyReq {
     pub code: IamConfigKind,
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct IamConfigSummaryResp {
     pub id: String,
     pub code: String,
@@ -64,7 +67,8 @@ pub struct IamConfigSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
-#[derive(poem_openapi::Object, sea_orm::FromQueryResult, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object, sea_orm::FromQueryResult))]
 pub struct IamConfigDetailResp {
     pub id: String,
     pub code: String,

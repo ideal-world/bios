@@ -90,6 +90,14 @@ impl RbumCrudOperation<iam_config::ActiveModel, IamConfigAddReq, IamConfigModify
         query
             .columns(vec![
                 (iam_config::Entity, iam_config::Column::Id),
+                (iam_config::Entity, iam_config::Column::Code),
+                (iam_config::Entity, iam_config::Column::Name),
+                (iam_config::Entity, iam_config::Column::Note),
+                (iam_config::Entity, iam_config::Column::Value1),
+                (iam_config::Entity, iam_config::Column::Value2),
+                (iam_config::Entity, iam_config::Column::Ext),
+                (iam_config::Entity, iam_config::Column::Disabled),
+                (iam_config::Entity, iam_config::Column::DataType),
                 (iam_config::Entity, iam_config::Column::RelItemId),
                 (iam_config::Entity, iam_config::Column::OwnPaths),
                 (iam_config::Entity, iam_config::Column::Owner),
