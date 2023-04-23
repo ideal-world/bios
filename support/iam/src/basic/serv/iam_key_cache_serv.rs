@@ -277,19 +277,13 @@ impl IamResCacheServ {
     pub async fn add_res(item_code: &str, action: &str, crypto_req: bool, crypto_resp: bool, double_auth: bool, funs: &TardisFunsInst) -> TardisResult<()> {
         let uri_mixed = Self::package_uri_mixed(item_code, action);
         log::trace!("add res: uri_mixed={}", uri_mixed);
-        let add_res_dto= IamCacheResRelAddOrModifyDto {
+        let add_res_dto = IamCacheResRelAddOrModifyDto {
             need_crypto_req: crypto_req,
             need_crypto_resp: crypto_resp,
             need_double_auth: double_auth,
             ..Default::default()
         };
-        funs.cache()
-            .hset(
-                &funs.conf::<IamConfig>().cache_key_res_info,
-                &uri_mixed,
-                &TardisFuns::json.obj_to_string(&add_res_dto)?,
-            )
-            .await?;
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&add_res_dto)?).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 

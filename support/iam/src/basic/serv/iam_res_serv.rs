@@ -156,7 +156,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if let Some(double_auth) = modify_req.double_auth {
             iam_res.double_auth = Set(double_auth);
         }
-        if let Some(double_auth_msg) =  &modify_req.double_auth_msg {
+        if let Some(double_auth_msg) = &modify_req.double_auth_msg {
             iam_res.double_auth_msg = Set(double_auth_msg.to_string());
         }
         Ok(Some(iam_res))

@@ -18,7 +18,7 @@ use bios_basic::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemServ;
 use bios_basic::rbum::serv::rbum_kind_serv::RbumKindServ;
 
-use crate::basic::domain::{iam_account, iam_app, iam_res, iam_role, iam_tenant};
+use crate::basic::domain::{iam_account, iam_app, iam_config, iam_res, iam_role, iam_tenant};
 use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq};
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
@@ -34,7 +34,7 @@ use crate::console_common::api::{iam_cc_account_api, iam_cc_app_api, iam_cc_org_
 use crate::console_interface::api::{iam_ci_app_api, iam_ci_cert_api, iam_ci_res_api, iam_ci_role_api};
 use crate::console_passport::api::{iam_cp_account_api, iam_cp_app_api, iam_cp_cert_api, iam_cp_tenant_api};
 use crate::console_system::api::{
-    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_tenant_api,
+    iam_cs_account_api, iam_cs_account_attr_api, iam_cs_cert_api, iam_cs_org_api, iam_cs_platform_api, iam_cs_res_api, iam_cs_role_api, iam_cs_spi_data_api, iam_cs_tenant_api,
 };
 use crate::console_tenant::api::{
     iam_ct_account_api, iam_ct_account_attr_api, iam_ct_app_api, iam_ct_app_set_api, iam_ct_cert_api, iam_ct_cert_manage_api, iam_ct_org_api, iam_ct_res_api, iam_ct_role_api,
@@ -81,6 +81,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_cs_account_attr_api::IamCsAccountAttrApi,
                     iam_cs_cert_api::IamCsCertApi,
                     iam_cs_cert_api::IamCsCertConfigLdapApi,
+                    iam_cs_platform_api::IamCsPlatformApi,
                     iam_cs_org_api::IamCsOrgApi,
                     iam_cs_org_api::IamCsOrgItemApi,
                     iam_cs_role_api::IamCsRoleApi,
@@ -134,6 +135,7 @@ pub async fn init_db(mut funs: TardisFunsInst) -> TardisResult<Option<(String, S
         funs.db().init(iam_role::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(iam_account::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         funs.db().init(iam_res::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
+        funs.db().init(iam_config::ActiveModel::init(db_kind, None, compatible_type.clone())).await?;
         let (name, password) = init_rbum_data(&funs).await?;
         Some((name, password))
     };
@@ -673,6 +675,7 @@ pub async fn truncate_data<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
     funs.db().execute(Table::truncate().table(iam_res::Entity)).await?;
     funs.db().execute(Table::truncate().table(iam_role::Entity)).await?;
     funs.db().execute(Table::truncate().table(iam_tenant::Entity)).await?;
+    funs.db().execute(Table::truncate().table(iam_config::Entity)).await?;
     funs.cache().flushdb().await?;
     Ok(())
 }

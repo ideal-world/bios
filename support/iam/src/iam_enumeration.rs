@@ -206,3 +206,54 @@ impl Default for WayToDelete {
         WayToDelete::DoNotDelete
     }
 }
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamConfigDataTypeKind {
+    // 月份
+    Month,
+    // 分钟
+    Minute,
+    // 小时
+    Hour,
+    // 天
+    Day,
+    // 时间周期
+    DatetimeRange,
+    // 时间段
+    TimeRange,
+    // ip段
+    Ips,
+}
+impl IamConfigDataTypeKind {
+    pub fn parse(kind: &str) -> TardisResult<IamConfigDataTypeKind> {
+        IamConfigDataTypeKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not config data type kind: {kind}"), "404-iam-config-data-type-not-exist"))
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamConfigKind {
+    /// 登陆时间限制
+    AccessTime,
+    /// 登陆Ip限制
+    AuthIp,
+    /// Token不活动失效 #分钟
+    TokenExpire,
+    /// 账号不活动锁定 #月
+    AccountInactivityLock,
+    /// 临时账号使用期限 #月
+    AccountTemporaryExpire,
+    /// 临时账号休眠期限 #月
+    AccountTemporarySleepExpire,
+    /// 临时账号休眠注销 #月
+    AccountTemporarySleepRemoveExpire,
+    /// 审计日志容量 #GB
+    AuditLogCapacity,
+    /// 在线人数限制 #人
+    MaxOnline,
+}
+
+impl IamConfigKind {
+    pub fn parse(kind: &str) -> TardisResult<IamConfigKind> {
+        IamConfigKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not config kind: {kind}"), "404-iam-config-kind-not-exist"))
+    }
+}

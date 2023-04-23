@@ -15,7 +15,7 @@ where
 
 impl<T: Serialize> TardisResp<T> {
     pub fn is_ok(&self) -> bool {
-        self.code.starts_with("2")
+        self.code.starts_with('2')
     }
 }
 

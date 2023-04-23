@@ -12,7 +12,7 @@ use bios_iam::basic::dto::iam_account_dto::IamAccountSelfModifyReq;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq, IamContextFetchReq};
 use bios_iam::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggAddReq;
+use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantConfigReq};
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
@@ -28,7 +28,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     funs.begin().await?;
 
     info!("【test_cp_all】 : Prepare : IamCsTenantServ::add_tenant");
-    let (tenant_id, tenant_admin_pwd) = IamTenantServ::add_tenant_agg(
+    let (tenant_id, tenant_admin_pwd, tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
         &IamTenantAggAddReq {
             name: TrimString("测试租户1".to_string()),
             icon: None,
@@ -37,7 +37,48 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             admin_username: TrimString("bios".to_string()),
             admin_name: TrimString("测试管理员".to_string()),
             admin_password: None,
-            cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
+            admin_phone: None,
+            admin_mail: None,
+            audit_username: TrimString("audit".to_string()),
+            audit_name: TrimString("审计管理员".to_string()),
+            audit_password: None,
+            audit_phone: None,
+            audit_mail: None,
+            // cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
+            //     ak_rule_len_min: 2,
+            //     ak_rule_len_max: 20,
+            //     sk_rule_len_min: 2,
+            //     sk_rule_len_max: 20,
+            //     sk_rule_need_num: false,
+            //     sk_rule_need_uppercase: false,
+            //     sk_rule_need_lowercase: false,
+            //     sk_rule_need_spec_char: false,
+            //     sk_lock_cycle_sec: 5,
+            //     sk_lock_err_times: 2,
+            //     sk_lock_duration_sec: 5,
+            //     repeatable: true,
+            //     expire_sec: 111,
+            // },
+            // cert_conf_by_phone_vcode: true,
+            // cert_conf_by_mail_vcode: true,
+            disabled: None,
+            account_self_reg: None,
+            cert_conf_by_oauth2: None,
+            cert_conf_by_ldap: None,
+        },
+        &funs,
+    )
+    .await?;
+    sleep(Duration::from_secs(1)).await;
+
+    let tenant_ctx = &TardisContext {
+        own_paths: tenant_id.clone(),
+        ..Default::default()
+    };
+    IamTenantServ::modify_tenant_config_agg(
+        &tenant_id,
+        &mut IamTenantConfigReq {
+            cert_conf_by_user_pwd: Some(IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: 2,
                 ak_rule_len_max: 20,
                 sk_rule_len_min: 2,
@@ -51,18 +92,17 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
                 sk_lock_duration_sec: 5,
                 repeatable: true,
                 expire_sec: 111,
-            },
-            cert_conf_by_phone_vcode: true,
-            cert_conf_by_mail_vcode: true,
-            disabled: None,
-            account_self_reg: None,
+            }),
+            cert_conf_by_phone_vcode: Some(true),
+            cert_conf_by_mail_vcode: Some(true),
             cert_conf_by_oauth2: None,
             cert_conf_by_ldap: None,
+            config: None,
         },
         &funs,
+        tenant_ctx,
     )
     .await?;
-    sleep(Duration::from_secs(1)).await;
 
     info!("【test_cp_all】 : Login by Username and Password, Password error");
     assert!(IamCpCertUserPwdServ::login_by_user_pwd(
