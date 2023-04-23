@@ -99,16 +99,15 @@ impl IamCsOrgApi {
     }
 
     #[oai(path = "/cate/:id/rel", method = "delete")]
-    async fn unbind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
         let old_rel = RbumRelServ::find_one_rbum(
             &RbumRelFilterReq {
                 basic: Default::default(),
                 tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Set),
-                from_rbum_id: Some(set_id.clone()),
+                from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                from_rbum_id: Some(id.0.clone()),
                 from_rbum_scope_levels: None,
                 to_rbum_item_id: None,
                 to_rbum_item_scope_levels: None,
@@ -121,7 +120,7 @@ impl IamCsOrgApi {
         )
         .await?;
         if let Some(old_rel) = old_rel {
-            IamSetServ::unbind_cate_with_platform(old_rel, &funs, &ctx.0).await?;
+            IamSetServ::unbind_cate_with_tenant(old_rel, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
         TardisResp::ok(Void {})

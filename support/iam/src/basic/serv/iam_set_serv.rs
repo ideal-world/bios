@@ -215,7 +215,7 @@ impl IamSetServ {
     //todo bugfix
     // find set_cate 对应的set_id,返回set_id下面set_cate
     // 返回的节点里面，如果有通过关联关系而来的cate（不属于此set_id的），会在ext中标识它真正的set_id
-    #[allow(dead_code)]
+    // #[allow(dead_code)]
     async fn find_rel_set_cate(set_id: &str, resp: RbumSetTreeResp, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
         let mut result_main: Vec<RbumSetTreeMainResp> = vec![];
         let mut resp_items = HashMap::new();
@@ -613,6 +613,7 @@ impl IamSetServ {
         RbumSetItemServ::check_a_is_parent_or_sibling_of_b(account_id, app_id, set_id, funs, ctx).await
     }
 
+    /// 绑定 平台 set_cate_id to 租户id
     pub async fn bind_cate_with_tenant(set_cate_id: &str, tenant_id: &str, kind: &IamSetKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let set_id = IamSetServ::get_default_set_id_by_ctx(kind, &funs, &ctx).await?;
         let tenant_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(kind, tenant_id), true, funs, ctx).await?;
@@ -693,118 +694,95 @@ impl IamSetServ {
                 ctx,
             )
             .await?;
-            Self::cut_tree_to_new_set(&platform_cates, &tenant_set_id, funs, ctx).await?;
+            let mock_ctx = TardisContext {
+                own_paths: tenant_id.to_owned(),
+                ..ctx.clone()
+            };
+            Self::cut_tree_to_new_set(&platform_cates, &tenant_set_id, Some(set_cate_id.to_owned()), None, funs, ctx, &mock_ctx).await?;
         }
 
         Ok(())
     }
 
-    /// 绑定租户的set_id to 平台 set_cate_id
-    pub async fn bind_cate_with_platform(cate_id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
-        //删除原来的关联
-        let old_rel = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                basic: Default::default(),
-                tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Set),
-                from_rbum_id: Some(set_id.clone()),
-                from_rbum_scope_levels: None,
-                to_rbum_item_id: None,
-                to_rbum_item_scope_levels: None,
-                to_own_paths: Some("".to_string()),
-                ext_eq: None,
-                ext_like: None,
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        if let Some(old_rel) = old_rel {
-            RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
-        };
-        RbumRelServ::add_rel(
-            &mut RbumRelAggAddReq {
-                rel: RbumRelAddReq {
-                    tag: IamRelKind::IamOrgRel.to_string(),
-                    note: None,
-                    from_rbum_kind: RbumRelFromKind::Set,
-                    from_rbum_id: set_id,
-                    to_rbum_item_id: cate_id.to_string(),
-                    to_own_paths: "".to_string(),
-                    to_is_outside: true,
-                    ext: None,
-                },
-                attrs: vec![],
-                envs: vec![],
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(())
-    }
-
-    /// 解绑 租户的set_id to 平台 set_cate_id
-    pub async fn unbind_cate_with_platform(old_rel: RbumRelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    /// 解绑的时候需要拷贝一份去平台，并且保留租户的节点 租户id to 平台 set_cate_id
+    pub async fn unbind_cate_with_tenant(old_rel: RbumRelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mock_ctx = TardisContext {
             own_paths: old_rel.to_own_paths,
             ..ctx.clone()
         };
-        let platform_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await?;
-        let tenant_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
-        if let Some(set_cate_resp) = RbumSetCateServ::find_one_rbum(
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ids: Some(vec![old_rel.to_rbum_item_id.clone()]),
-                    ..Default::default()
-                },
+        let curr_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
+        let old_rel_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await?;
+
+        let curr_tree: RbumSetTreeResp = RbumSetServ::get_tree(
+            &old_rel_set_id,
+            &RbumSetTreeFilterReq {
+                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 ..Default::default()
             },
             funs,
             &mock_ctx,
         )
-        .await?
-        {
-            let platform_cates: RbumSetTreeResp = RbumSetServ::get_tree(
-                &platform_set_id,
-                &RbumSetTreeFilterReq {
-                    sys_codes: Some(vec![set_cate_resp.sys_code.clone()]),
-                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-                    sys_code_query_depth: Some(99),
-                    ..Default::default()
-                },
-                funs,
-                &mock_ctx,
-            )
-            .await?;
-            Self::copy_tree_to_new_set(&platform_cates.main.iter().collect::<Vec<&RbumSetTreeMainResp>>(), &tenant_set_id, None, None, funs, ctx).await?;
-        }
+        .await?;
+        Self::copy_tree_to_new_set(&curr_tree, &curr_set_id, None, Some(old_rel.from_rbum_id.clone()), funs, ctx).await?;
+
         RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
         Ok(())
     }
 
-    pub async fn cut_tree_to_new_set<'a>(tree: &'a RbumSetTreeResp, set_id: &'a str, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> TardisResult<String> {
-        Self::copy_tree_to_new_set(&tree.main.iter().collect::<Vec<&RbumSetTreeMainResp>>(), set_id, None, None, funs, ctx).await?;
-        Ok("".to_string())
+    pub async fn cut_tree_to_new_set<'a>(
+        from_tree: &'a RbumSetTreeResp,
+        target_set_id: &'a str,
+        old_pid: Option<String>,
+        target_pid: Option<String>,
+        funs: &'a TardisFunsInst,
+        from_ctx: &'a TardisContext,
+        target_ctx: &'a TardisContext,
+    ) -> TardisResult<String> {
+        Self::copy_tree_to_new_set(from_tree, target_set_id, old_pid.clone(), target_pid, funs, target_ctx).await?;
+        Self::delete_tree(from_tree, old_pid, funs, from_ctx).await
+    }
+
+    pub fn delete_tree<'a>(delete_tree: &'a RbumSetTreeResp, pid: Option<String>, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
+        async move {
+            let mut cate_vec = delete_tree.main.to_owned();
+            let cate_item_vec = if let Some(ext) = &delete_tree.ext { ext.items.to_owned() } else { HashMap::new() };
+            cate_vec.retain(|cate| cate.pid == pid);
+            for r in cate_vec {
+                if let Some(set_items) = cate_item_vec.get(&r.id) {
+                    for set_item in set_items {
+                        // println!("delete...item======={:?}", set_item);
+                        Self::delete_set_item(&set_item.id, funs, ctx).await?;
+                    }
+                }
+
+                let mut next_floor_tree = delete_tree.to_owned();
+                next_floor_tree.main.retain(|c| c.sys_code.starts_with(&r.sys_code) && c.sys_code != r.sys_code);
+                Self::delete_tree(&next_floor_tree, Some(r.id.clone()), funs, ctx).await?;
+
+                // println!("delete...cate======={:?}", r);
+                Self::delete_set_cate(&r.id, funs, ctx).await?;
+            }
+            Ok("".to_string())
+        }
+        .boxed()
     }
 
     pub fn copy_tree_to_new_set<'a>(
         tree: &'a RbumSetTreeResp,
-        set_id: &'a str,
+        target_set_id: &'a str,
         old_pid: Option<String>,
-        new_pid: Option<String>,
+        target_pid: Option<String>,
         funs: &'a TardisFunsInst,
-        ctx: &'a TardisContext,
+        target_ctx: &'a TardisContext,
     ) -> BoxFuture<'a, TardisResult<String>> {
         async move {
             let mut cate_vec = tree.main.to_owned();
-            let mut cate_item_vec = if let Some(ext) = tree.ext { ext.items.to_owned() } else { HashMap::new() };
+            let cate_item_vec = if let Some(ext) = &tree.ext { ext.items.to_owned() } else { HashMap::new() };
             cate_vec.retain(|cate| cate.pid == old_pid);
             for r in cate_vec {
+                println!("add...tree======={:?}", r);
                 let new_cate_id = Self::add_set_cate(
-                    set_id,
+                    target_set_id,
                     &IamSetCateAddReq {
                         name: TrimString(r.name.clone()),
                         scope_level: Some(r.scope_level.clone()),
@@ -812,25 +790,29 @@ impl IamSetServ {
                         icon: None,
                         sort: None,
                         ext: None,
-                        rbum_parent_cate_id: new_pid.clone(),
+                        rbum_parent_cate_id: target_pid.clone(),
                     },
                     funs,
-                    ctx,
+                    target_ctx,
                 )
                 .await?;
                 if let Some(set_items) = cate_item_vec.get(&r.id) {
                     let mut sort = 1;
                     for set_item in set_items {
-                        //todo 需要判断会不会是有私有账号 私有账号无法被复制
+                        //只有全局账号可以跨租户
+                        if set_item.rel_rbum_item_scope_level != RbumScopeLevelKind::Root {
+                            continue;
+                        }
+                        println!("add...item======={:?}", set_item);
                         Self::add_set_item(
                             &IamSetItemAddReq {
-                                set_id: set_id.to_string(),
-                                set_cate_id: new_cate_id,
+                                set_id: target_set_id.to_string(),
+                                set_cate_id: new_cate_id.clone(),
                                 sort,
-                                rel_rbum_item_id: set_item.rel_rbum_item_id,
+                                rel_rbum_item_id: set_item.rel_rbum_item_id.clone(),
                             },
                             funs,
-                            ctx,
+                            target_ctx,
                         )
                         .await?;
                         sort += 1;
@@ -838,7 +820,7 @@ impl IamSetServ {
                 }
                 let mut next_floor_tree = tree.to_owned();
                 next_floor_tree.main.retain(|c| c.sys_code.starts_with(&r.sys_code) && c.sys_code != r.sys_code);
-                Self::copy_tree_to_new_set(&next_floor_tree, set_id, r.pid.clone(), Some(new_cate_id), funs, ctx).await?;
+                Self::copy_tree_to_new_set(&next_floor_tree, target_set_id, Some(r.id.clone()), Some(new_cate_id), funs, target_ctx).await?;
             }
             Ok("".to_string())
         }
