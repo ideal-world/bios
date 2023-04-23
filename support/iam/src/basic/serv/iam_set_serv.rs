@@ -225,92 +225,91 @@ impl IamSetServ {
         let mut resp_rel = None;
 
         //from set to find set_cate
-        let set_cate_rel = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Set),
-                from_rbum_id: Some(set_id.to_string()),
-                from_rbum_scope_levels: None,
-                to_rbum_item_scope_levels: None,
-                to_rbum_item_id: None,
-                to_own_paths: Some("".to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        if let Some(set_cate_rel) = set_cate_rel {
-            resp_rel = Some(set_cate_rel.to_rbum_item_id.clone());
-            if let Some(set_cate_resp) = RbumSetCateServ::find_one_rbum(
-                &RbumSetCateFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        own_paths: Some(set_cate_rel.to_own_paths.clone()),
-                        ids: Some(vec![set_cate_rel.to_rbum_item_id.clone()]),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?
-            {
-                let mut mock_filter = filter.clone();
-                mock_filter.sys_codes = Some(vec![set_cate_resp.sys_code.clone()]);
-                mock_filter.sys_code_query_kind = Some(RbumSetCateLevelQueryKind::Sub);
-                if filter.sys_codes.is_some() {
-                    mock_filter.sys_code_query_depth = Some(1);
-                } else {
-                    mock_filter.sys_code_query_depth = Some(99);
-                }
+        // let set_cate_rel = RbumRelServ::find_one_rbum(
+        //     &RbumRelFilterReq {
+        //         basic: RbumBasicFilterReq {
+        //             with_sub_own_paths: true,
+        //             ..Default::default()
+        //         },
+        //         tag: Some(IamRelKind::IamOrgRel.to_string()),
+        //         from_rbum_kind: Some(RbumRelFromKind::Set),
+        //         from_rbum_id: Some(set_id.to_string()),
+        //         from_rbum_scope_levels: None,
+        //         to_rbum_item_scope_levels: None,
+        //         to_rbum_item_id: None,
+        //         to_own_paths: Some("".to_string()),
+        //         ..Default::default()
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
+        // if let Some(set_cate_rel) = set_cate_rel {
+        //     resp_rel = Some(set_cate_rel.to_rbum_item_id.clone());
+        //     if let Some(set_cate_resp) = RbumSetCateServ::find_one_rbum(
+        //         &RbumSetCateFilterReq {
+        //             basic: RbumBasicFilterReq {
+        //                 with_sub_own_paths: true,
+        //                 own_paths: Some(set_cate_rel.to_own_paths.clone()),
+        //                 ids: Some(vec![set_cate_rel.to_rbum_item_id.clone()]),
+        //                 ..Default::default()
+        //             },
+        //             ..Default::default()
+        //         },
+        //         funs,
+        //         ctx,
+        //     )
+        //     .await?
+        //     {
+        //         let mut mock_filter = filter.clone();
+        //         mock_filter.sys_codes = Some(vec![set_cate_resp.sys_code.clone()]);
+        //         mock_filter.sys_code_query_kind = Some(RbumSetCateLevelQueryKind::Sub);
+        //         if filter.sys_codes.is_some() {
+        //             mock_filter.sys_code_query_depth = Some(1);
+        //         } else {
+        //             mock_filter.sys_code_query_depth = Some(99);
+        //         }
+        //
+        //         let mock_ctx = TardisContext {
+        //             own_paths: set_cate_rel.to_own_paths.clone(),
+        //             ..ctx.clone()
+        //         };
+        //         let set_id = Self::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await.unwrap();
+        //         let sys_resp = RbumSetServ::get_tree(&set_id, &mock_filter, funs, &mock_ctx).await.unwrap();
+        //
+        //         result_main.extend(
+        //             sys_resp
+        //                 .main
+        //                 .iter()
+        //                 .map(|rm| {
+        //                     let mut r = rm.clone();
+        //                     r.ext = json!({"set_id":set_id.clone(),"own_paths":set_cate_rel.to_own_paths}).to_string();
+        //                     r
+        //                 })
+        //                 .collect::<Vec<RbumSetTreeMainResp>>(),
+        //         );
+        //         if mock_filter.fetch_cate_item {
+        //             let ext_resp = resp.ext.clone().unwrap();
+        //             resp_items.extend(ext_resp.items);
+        //             resp_item_domains.extend(ext_resp.item_domains);
+        //             resp_item_kinds.extend(ext_resp.item_kinds);
+        //             resp_item_number_agg.extend(ext_resp.item_number_agg);
+        //         }
+        //     };
+        // }
 
-                let mock_ctx = TardisContext {
-                    own_paths: set_cate_rel.to_own_paths.clone(),
-                    ..ctx.clone()
-                };
-                let set_id = Self::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await.unwrap();
-                let sys_resp = RbumSetServ::get_tree(&set_id, &mock_filter, funs, &mock_ctx).await.unwrap();
-
-                result_main.extend(
-                    sys_resp
-                        .main
-                        .iter()
-                        .map(|rm| {
-                            let mut r = rm.clone();
-                            r.ext = json!({"set_id":set_id.clone(),"own_paths":set_cate_rel.to_own_paths}).to_string();
-                            r
-                        })
-                        .collect::<Vec<RbumSetTreeMainResp>>(),
-                );
-                if mock_filter.fetch_cate_item {
-                    let ext_resp = resp.ext.clone().unwrap();
-                    resp_items.extend(ext_resp.items);
-                    resp_item_domains.extend(ext_resp.item_domains);
-                    resp_item_kinds.extend(ext_resp.item_kinds);
-                    resp_item_number_agg.extend(ext_resp.item_number_agg);
-                }
-            };
-        }
-
-        //from set_cate to find set
+        //from set_cate to find tenant_id -> set_id
         for mut r in resp.main.clone() {
             if let Some(set_rel) = RbumRelServ::find_one_rbum(
                 &RbumRelFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some("".to_string()),
+                        own_paths: Some(ctx.own_paths.clone()),
                         with_sub_own_paths: true,
                         ..Default::default()
                     },
                     tag: Some(IamRelKind::IamOrgRel.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Set),
-                    to_rbum_item_id: Some(r.id.to_string()),
-                    to_own_paths: Some("".to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                    from_rbum_id: Some(r.id.to_string()),
                     ..Default::default()
                 },
                 funs,
@@ -319,35 +318,24 @@ impl IamSetServ {
             .await?
             {
                 let new_resp = RbumSetTreeMainResp {
-                    rel: Some(set_rel.from_rbum_id.clone()),
+                    rel: Some(set_rel.to_rbum_item_id.clone()),
                     ..r.clone()
                 };
-                r = new_resp
-            };
-            let set_rel = RbumRelServ::find_one_rbum(
-                &RbumRelFilterReq {
-                    basic: RbumBasicFilterReq {
-                        with_sub_own_paths: true,
-                        ..Default::default()
-                    },
-                    tag: Some(IamRelKind::IamOrgRel.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Set),
-                    to_rbum_item_id: Some(r.id.to_string()),
-                    to_own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            if let Some(set_rel) = set_rel {
+                r = new_resp;
+
                 let mock_ctx = TardisContext {
-                    own_paths: set_rel.own_paths.clone(),
+                    own_paths: set_rel.to_own_paths.clone(),
                     ..ctx.clone()
                 };
                 let mut set_filter = filter.clone();
-                set_filter.sys_codes = None;
-                let mut tenant_resp = RbumSetServ::get_tree(&set_rel.from_rbum_id, &set_filter, funs, &mock_ctx).await?;
+                if set_filter.sys_codes.is_some() {
+                    set_filter.sys_codes = Some(vec!["".to_string()]);
+                }
+                if set_filter.sys_codes.is_some() && set_filter.sys_code_query_depth == Some(1)&&set_filter.sys_code_query_kind == Some(RbumSetCateLevelQueryKind::CurrentAndSub){
+                    continue;
+                }
+                let rel_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &mock_ctx).await?;
+                let mut tenant_resp = RbumSetServ::get_tree(&rel_set_id, &set_filter, funs, &mock_ctx).await?;
                 let mut resp_tenant_node: Vec<RbumSetTreeMainResp> = tenant_resp
                     .main
                     .clone()
@@ -365,7 +353,7 @@ impl IamSetServ {
                         .iter()
                         .map(|rm| {
                             let mut r = rm.clone();
-                            r.ext = json!({"set_id":set_rel.from_rbum_id.clone(),"own_paths":set_rel.own_paths}).to_string();
+                            r.ext = json!({"set_id":rel_set_id.clone(),"own_paths":set_rel.to_own_paths.clone()}).to_string();
                             r
                         })
                         .collect::<Vec<RbumSetTreeMainResp>>(),

@@ -929,12 +929,12 @@ pub async fn test_bind_platform_to_tenant_node(
                 ..Default::default()
             },
             tag: Some(IamRelKind::IamOrgRel.to_string()),
-            from_rbum_kind: Some(RbumRelFromKind::Set),
-            from_rbum_id: Some(t1_set_id.clone()),
+            from_rbum_kind: Some(RbumRelFromKind::SetCate),
+            from_rbum_id: Some(set_cate_xxx_global_id.clone()),
             from_rbum_scope_levels: None,
             to_rbum_item_scope_levels: None,
-            to_rbum_item_id: Some(set_cate_xxx_global_id.clone()),
-            to_own_paths: Some("".to_string()),
+            to_rbum_item_id: Some(t1_context.own_paths.clone()),
+            to_own_paths: Some(t1_context.own_paths.clone()),
             ..Default::default()
         },
         &funs,
@@ -976,7 +976,7 @@ pub async fn test_bind_platform_to_tenant_node(
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 3);
 
-    // IamSetServ::bind_cate_with_platform(&set_cate_xxx_sub_id, &funs, t1_context).await?;
+    IamSetServ::bind_cate_with_tenant(&set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await?;
     let mut resp = IamSetServ::get_tree(
         &sys_set_id,
         &mut RbumSetTreeFilterReq {
