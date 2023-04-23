@@ -93,7 +93,7 @@ impl IamCsOrgApi {
     async fn bind_cate_with_platform(&self, id: Path<String>, tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::bind_cate_with_tenant(&id.0, &tenant_id.0, IamRelKind::IamOrgRel, &funs, &ctx.0).await?;
+        IamSetServ::bind_cate_with_tenant(&id.0, &tenant_id.0, &IamSetKind::Org, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
