@@ -208,6 +208,21 @@ impl Default for WayToDelete {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamAccountStatusKind {
+    // 激活
+    Active,
+    // 休眠
+    Dormant,
+    // 注销
+    Logout,
+}
+impl IamAccountStatusKind {
+    pub fn parse(kind: &str) -> TardisResult<IamAccountStatusKind> {
+        IamAccountStatusKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not account status type kind: {kind}"), "404-iam-account-status-not-exist"))
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamConfigDataTypeKind {
     // 月份
     Month,

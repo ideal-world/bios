@@ -13,7 +13,7 @@ pub struct Model {
     /// [config Kind](crate::iam_enumeration::IamConfigKind)
     pub code: String,
     pub name: String,
-    /// [data type Kind](crate::iam_enumeration::IamConfigTypeKind)
+    /// [data type Kind](crate::iam_enumeration::IamConfigKind)
     pub data_type: String,
     pub note: String,
     pub value1: String,

@@ -43,7 +43,7 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::iam_app_serv::IamAppServ;
 
@@ -77,6 +77,8 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(iam_account::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+            status: Set(add_req.status.as_ref().unwrap_or(&IamAccountStatusKind::Active).to_string()),
+            temporary: Set(add_req.temporary.unwrap_or(false)),
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -86,7 +88,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             ext7: Set("".to_string()),
             ext8: Set("".to_string()),
             ext9: Set("".to_string()),
-            temporary: Set(add_req.temporary.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -95,11 +96,20 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
+        let disabled = if modify_req.status.is_some() {
+            match modify_req.status.as_ref().unwrap() {
+                IamAccountStatusKind::Active => Some(false),
+                IamAccountStatusKind::Dormant => Some(true),
+                IamAccountStatusKind::Logout => Some(true),
+            }
+        } else {
+            None
+        };
         Ok(Some(RbumItemKernelModifyReq {
             code: None,
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),
-            disabled: modify_req.disabled,
+            disabled: modify_req.disabled.or(disabled),
         }))
     }
 
@@ -114,11 +124,14 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if let Some(icon) = &modify_req.icon {
             iam_account.icon = Set(icon.to_string());
         }
+        if let Some(status) = &modify_req.status {
+            iam_account.status = Set(status.to_string());
+        }
         Ok(Some(iam_account))
     }
 
     async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        if modify_req.disabled.is_some() || modify_req.scope_level.is_some() {
+        if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
         Ok(())
@@ -146,6 +159,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAccountFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
+        query.column((iam_account::Entity, iam_account::Column::Status));
         query.column((iam_account::Entity, iam_account::Column::Temporary));
         query.column((iam_account::Entity, iam_account::Column::Ext1Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext2Idx));
@@ -186,6 +200,7 @@ impl IamAccountServ {
                 disabled: add_req.disabled,
                 icon: add_req.icon.clone(),
                 temporary: None,
+                status: None,
             },
             funs,
             ctx,
@@ -291,6 +306,7 @@ impl IamAccountServ {
                 scope_level: modify_req.scope_level.clone(),
                 disabled: modify_req.disabled,
                 icon: modify_req.icon.clone(),
+                status: modify_req.status.clone(),
             },
             funs,
             ctx,
@@ -370,6 +386,7 @@ impl IamAccountServ {
                 icon: modify_req.icon.clone(),
                 disabled: modify_req.disabled,
                 scope_level: None,
+                status: None,
             },
             funs,
             &mock_ctx,
@@ -457,6 +474,9 @@ impl IamAccountServ {
             update_time: account.update_time,
             scope_level: account.scope_level,
             disabled: account.disabled,
+            is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
+            is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
+            status: account.status,
             temporary: account.temporary,
             icon: account.icon,
             roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
@@ -522,6 +542,9 @@ impl IamAccountServ {
                 update_time: account.update_time,
                 scope_level: account.scope_level,
                 disabled: account.disabled,
+                is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
+                is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
+                status: account.status,
                 temporary: account.temporary,
                 icon: account.icon,
                 roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
@@ -549,7 +572,6 @@ impl IamAccountServ {
                 .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
                 .collect(),
                 orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
-                is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id)).await?,
             });
         }
         Ok(TardisPage {

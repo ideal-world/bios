@@ -974,6 +974,7 @@ impl IamCertServ {
                 rel2: None,
                 set_rel: None,
                 icon: None,
+                status: None,
             },
             funs,
             &mock_ctx,

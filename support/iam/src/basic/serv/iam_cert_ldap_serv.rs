@@ -790,6 +790,7 @@ impl IamCertLdapServ {
                                 role_ids: None,
                                 org_cate_ids: None,
                                 exts: None,
+                                status: None,
                             },
                             &funs,
                             ctx,

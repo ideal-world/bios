@@ -10,6 +10,9 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
     pub icon: String,
+    // 状态
+    /// [data type Kind](crate::iam_enumeration::IamAccountStatusKind)
+    pub status: String,
     pub temporary: bool,
     // 索引扩展字段 idx 1-3
     pub ext1_idx: String,
@@ -40,6 +43,7 @@ impl TardisActiveModel for ActiveModel {
             .if_not_exists()
             .col(ColumnDef::new(Column::Id).not_null().string().primary_key())
             .col(ColumnDef::new(Column::Icon).not_null().string())
+            .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::Temporary).not_null().boolean())
             .col(ColumnDef::new(Column::Ext1Idx).not_null().string())
             .col(ColumnDef::new(Column::Ext2Idx).not_null().string())

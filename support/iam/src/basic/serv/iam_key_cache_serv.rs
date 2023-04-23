@@ -170,6 +170,17 @@ impl IamIdentCacheServ {
         Ok(())
     }
 
+    pub async fn exist_token_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        log::trace!("exist tokens: account_id={}", account_id);
+        let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
+        for (token, _) in tokens.iter() {
+            if funs.cache().exists(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     pub async fn add_contexts(account_info: &IamAccountInfoResp, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("add contexts: account_id={:?}", account_info);
         funs.cache()

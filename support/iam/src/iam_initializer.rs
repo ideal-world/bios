@@ -338,6 +338,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             role_ids: Some(vec![role_sys_admin_id.clone()]),
             org_cate_ids: None,
             exts: None,
+            status: None,
         },
         funs,
         &ctx,
