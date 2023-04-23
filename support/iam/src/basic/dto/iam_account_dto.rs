@@ -19,7 +19,7 @@ pub struct IamAccountAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub cert_user_name: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub cert_password: TrimString,
+    pub cert_password: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub cert_phone: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]

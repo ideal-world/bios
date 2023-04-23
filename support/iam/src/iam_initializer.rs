@@ -292,7 +292,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             id: Some(TrimString(default_account_id.clone())),
             name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
             cert_user_name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
-            cert_password: TrimString(pwd.clone()),
+            cert_password: Some(TrimString(pwd.clone())),
             cert_phone: None,
             cert_mail: None,
             icon: None,

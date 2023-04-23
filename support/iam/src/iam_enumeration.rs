@@ -217,6 +217,8 @@ pub enum IamConfigDataTypeKind {
     Hour,
     // 天
     Day,
+    // 数字
+    Number,
     // 时间周期
     DatetimeRange,
     // 时间段

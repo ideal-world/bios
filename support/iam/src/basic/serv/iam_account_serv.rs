@@ -3,12 +3,14 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
+use ldap3::log::info;
 use std::collections::{HashMap, HashSet};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{serde_json, TardisFuns, TardisFunsInst};
@@ -171,6 +173,11 @@ impl IamAccountServ {
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
         }
+        let pwd: String = if let Some(cert_password) = &add_req.cert_password {
+            cert_password.to_string()
+        } else {
+            IamCertServ::get_new_pwd()
+        };
         let account_id = IamAccountServ::add_item(
             &mut IamAccountAddReq {
                 id: add_req.id.clone(),
@@ -188,7 +195,7 @@ impl IamAccountServ {
             IamCertUserPwdServ::add_cert(
                 &IamCertUserPwdAddReq {
                     ak: add_req.cert_user_name.clone(),
-                    sk: add_req.cert_password.clone(),
+                    sk: TrimString(pwd.clone()),
                     status: add_req.status.clone(),
                 },
                 &account_id,
@@ -211,11 +218,45 @@ impl IamAccountServ {
                 )
                 .await?;
             }
+            let conf = funs.conf::<IamConfig>();
+            let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
+            match funs
+                .web_client()
+                .put_str_to_str(
+                    &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_path, cert_phone, pwd.clone()),
+                    "",
+                    Some(vec![(
+                        TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
+                        ctx_base64.to_string(),
+                    )]),
+                )
+                .await
+            {
+                Ok(_) => info!("send sms success"),
+                Err(_) => info!("send sms failed"),
+            }
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
+            let mut subject = funs.conf::<IamConfig>().mail_template_cert_random_pwd_title.clone();
+            let mut content = funs.conf::<IamConfig>().mail_template_cert_random_pwd_content.clone();
+            subject = subject.replace("{pwd}", &pwd.clone());
+            content = content.replace("{pwd}", &pwd);
+            TardisMailClient::send_quiet(
+                funs.module_code().to_string(),
+                TardisMailSendReq {
+                    subject,
+                    txt_body: content,
+                    html_body: None,
+                    to: vec![cert_mail.to_string()],
+                    reply_to: None,
+                    cc: None,
+                    bcc: None,
+                    from: None,
+                },
+            )?;
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {
