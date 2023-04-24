@@ -89,14 +89,12 @@ impl IamCiCertApi {
     async fn add_third_cert(
         &self,
         account_id: Query<String>,
-        tenant_id: Query<Option<String>>,
         mut add_req: Json<IamThirdPartyCertExtAddReq>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<Void> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx).await?;
+        IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -107,12 +105,10 @@ impl IamCiCertApi {
         &self,
         account_id: Query<String>,
         supplier: Query<String>,
-        tenant_id: Query<Option<String>>,
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx).await?;
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
         TardisResp::ok(rbum_cert)
     }
 
