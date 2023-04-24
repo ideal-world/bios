@@ -11,7 +11,7 @@ use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryK
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq, IamSetTreeResp};
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
@@ -52,7 +52,7 @@ impl IamCtOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
@@ -87,7 +87,7 @@ impl IamCtOrgApi {
     ///
     /// 查询平台组织节点
     #[oai(path = "/platform/cate", method = "get")]
-    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -115,48 +115,6 @@ impl IamCtOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Import Platform Org
-    ///
-    /// 导入平台组织,支持换绑
-    /// 如果原解绑的节点下有属于平台的节点，解绑的时候需要拷贝一份去租户端，并且保留平台的节点
-    #[oai(path = "/binding/node/:id", method = "post")]
-    async fn bind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamSetServ::bind_cate_with_platform(&id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    #[oai(path = "/binding/node/", method = "delete")]
-    async fn unbind_cate_with_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
-        //删除原来的关联
-        let old_rel = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                basic: Default::default(),
-                tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Set),
-                from_rbum_id: Some(set_id.clone()),
-                from_rbum_scope_levels: None,
-                to_rbum_item_id: None,
-                to_rbum_item_scope_levels: None,
-                to_own_paths: Some("".to_string()),
-                ext_eq: None,
-                ext_like: None,
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        if let Some(old_rel) = old_rel {
-            IamSetServ::unbind_cate_with_platform(old_rel, &funs, &ctx.0).await?;
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
 
     /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]

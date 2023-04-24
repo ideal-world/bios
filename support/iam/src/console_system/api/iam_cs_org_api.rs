@@ -1,12 +1,14 @@
-use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
+use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq, IamSetTreeResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamSetKind;
-use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use crate::iam_enumeration::{IamRelKind, IamSetKind};
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumRelFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -23,7 +25,7 @@ impl IamCsOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
@@ -77,6 +79,49 @@ impl IamCsOrgApi {
         funs.begin().await?;
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Import tenant Org
+    ///
+    /// id -> set_cate_id
+    /// tenant_id -> tenant_id
+    /// 导入租户组织,不支持换绑
+    /// 如果平台绑定的节点下有其他节点，那么全部剪切到租户层，解绑的时候需要拷贝一份去平台，并且保留租户的节点
+    #[oai(path = "/cate/:id/rel/tenant/:tenant_id", method = "post")]
+    async fn bind_cate_with_platform(&self, id: Path<String>, tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamSetServ::bind_cate_with_tenant(&id.0, &tenant_id.0, &IamSetKind::Org, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    #[oai(path = "/cate/:id/rel", method = "delete")]
+    async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let old_rel = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                basic: Default::default(),
+                tag: Some(IamRelKind::IamOrgRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                from_rbum_id: Some(id.0.clone()),
+                from_rbum_scope_levels: None,
+                to_rbum_item_id: None,
+                to_rbum_item_scope_levels: None,
+                to_own_paths: Some("".to_string()),
+                ext_eq: None,
+                ext_like: None,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        if let Some(old_rel) = old_rel {
+            IamSetServ::unbind_cate_with_tenant(old_rel, &funs, &ctx.0).await?;
+        }
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
