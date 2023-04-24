@@ -82,6 +82,7 @@ pub struct RbumCertSummaryWithSkResp {
     pub ak: String,
     pub sk: String,
     pub ext: String,
+    pub conn_uri: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub status: RbumCertStatusKind,

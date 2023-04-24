@@ -1,4 +1,4 @@
-use crate::test_basic::{LDAP_ACCOUNT_NUB, self};
+use crate::test_basic::{self, LDAP_ACCOUNT_NUB};
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfLdapAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::IamThirdIntegrationConfigDto;
