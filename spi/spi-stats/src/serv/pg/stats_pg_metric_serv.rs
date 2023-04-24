@@ -11,6 +11,7 @@ use tardis::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
+    log::info,
     serde_json::{self, Map},
     TardisFunsInst,
 };
@@ -211,6 +212,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 } else {
                     col_conf.mes_data_type.as_ref().unwrap()
                 };
+                info!("col_data_type={:?}", col_data_type);
                 if let Some((sql_part, value)) = col_data_type.to_pg_where(
                     col_conf.dim_multi_values.unwrap_or(false),
                     &format!("fact.{}", &and_where.code),
