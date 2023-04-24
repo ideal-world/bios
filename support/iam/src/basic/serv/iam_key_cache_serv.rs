@@ -2,6 +2,7 @@ use std::default::Default;
 use std::str::FromStr;
 
 use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::rbum_config::RbumConfigApi;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
@@ -20,7 +21,7 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamCertTokenKind, IamRelKind};
 
 pub struct IamIdentCacheServ;
 
@@ -179,6 +180,21 @@ impl IamIdentCacheServ {
             }
         }
         Ok(false)
+    }
+
+    pub async fn get_lock_state_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<IamAccountLockStateKind> {
+        log::trace!("get lock state: account_id={}", account_id);
+        let mut lock_state = IamAccountLockStateKind::default();
+        if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account_id)).await? {
+            lock_state = IamAccountLockStateKind::PasswordLocked;
+        }
+        Ok(lock_state)
+    }
+
+    pub async fn delete_lock_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("delete lock: account_id={}", account_id);
+        funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account_id)).await?;
+        Ok(())
     }
 
     pub async fn add_contexts(account_info: &IamAccountInfoResp, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {

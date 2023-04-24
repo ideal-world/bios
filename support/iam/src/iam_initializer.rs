@@ -1,4 +1,4 @@
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -301,7 +301,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             role_ids: None,
             org_node_ids: None,
             exts: Default::default(),
-            status: None,
+            status: Some(RbumCertStatusKind::Pending),
             temporary: None,
         },
         funs,

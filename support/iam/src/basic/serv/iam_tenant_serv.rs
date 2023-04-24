@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
@@ -303,7 +304,7 @@ impl IamTenantServ {
                 role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
-                status: None,
+                status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
             },
             funs,
@@ -330,7 +331,7 @@ impl IamTenantServ {
                 role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
-                status: None,
+                status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
             },
             funs,

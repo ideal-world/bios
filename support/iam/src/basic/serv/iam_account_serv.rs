@@ -651,6 +651,22 @@ impl IamAccountServ {
         .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
+    pub async fn find_account_online_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut online_accounts = vec![];
+        for id in ids {
+            online_accounts.push(format!("{},{}", id, IamIdentCacheServ::exist_token_by_account_id(&id, funs).await?.to_string()));
+        }
+        Ok(online_accounts)
+    }
+
+    pub async fn find_account_lock_state_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut online_accounts: Vec<String> = vec![];
+        for id in ids {
+            online_accounts.push(format!("{},{}", id, IamIdentCacheServ::get_lock_state_by_account_id(&id, funs).await?.to_string()));
+        }
+        Ok(online_accounts)
+    }
+
     pub async fn find_simple_rel_roles(
         account_id: &str,
         with_sub: bool,
@@ -669,7 +685,7 @@ impl IamAccountServ {
 
     pub async fn unlock_account(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Void> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
-        funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), id)).await?;
+        IamIdentCacheServ::delete_lock_by_account_id(id, funs).await?;
         Ok(Void {})
     }
 

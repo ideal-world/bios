@@ -56,6 +56,13 @@ impl IamCpCertApi {
         TardisResp::ok(ctx)
     }
 
+    #[oai(path = "/login/pwd/status", method = "get")]
+    async fn login_status(&self, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+        let funs = iam_constants::get_tardis_inst();
+        let status = IamCertServ::get_kernel_cert(&ctx.0.owner, &IamCertKernelKind::UserPwd, &funs, &ctx.0).await?.status;
+        TardisResp::ok(status.to_string())
+    }
+
     /// Login by Username and Password
     #[oai(path = "/login/userpwd", method = "put")]
     async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>) -> TardisApiResult<IamAccountInfoResp> {

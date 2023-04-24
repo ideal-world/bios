@@ -208,6 +208,23 @@ impl Default for WayToDelete {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamAccountLockStateKind {
+    // 未锁定
+    Unlocked,
+    // 密码锁定
+    PasswordLocked,
+    // 人工锁定
+    ManualLocked,
+    // 长期未登录锁定
+    LongTimeNoLoginLocked,
+}
+
+impl Default for IamAccountLockStateKind {
+    fn default() -> Self {
+        IamAccountLockStateKind::Unlocked
+    }
+}
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamAccountStatusKind {
     // 激活
     Active,

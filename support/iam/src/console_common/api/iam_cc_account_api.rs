@@ -106,6 +106,38 @@ impl IamCcAccountApi {
         let result = IamAccountServ::find_name_by_ids(ids, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
+
+    /// Find Account online By Ids
+    ///
+    /// Return format: ["<id>,<online -> true or false>"]
+    #[oai(path = "/online", method = "get")]
+    async fn find_account_online_by_ids(
+        &self,
+        // Account Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
+        let result = IamAccountServ::find_account_online_by_ids(ids, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
+
+    /// Find Account lock state By Ids
+    ///
+    /// Return format: ["<id>,<state>"]
+    #[oai(path = "/lock/state", method = "get")]
+    async fn find_account_lock_state_by_ids(
+        &self,
+        // Account Ids, multiple ids separated by ,
+        ids: Query<String>,
+        ctx: TardisContextExtractor,
+    ) -> TardisApiResult<Vec<String>> {
+        let funs = iam_constants::get_tardis_inst();
+        let ids = ids.0.split(',').map(|s| s.to_string()).collect();
+        let result = IamAccountServ::find_account_lock_state_by_ids(ids, &funs, &ctx.0).await?;
+        TardisResp::ok(result)
+    }
 }
 
 /// Common Console Account LDAP API

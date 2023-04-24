@@ -86,12 +86,7 @@ impl IamCiCertApi {
 
     /// Add Third-kind Cert
     #[oai(path = "/third-kind", method = "put")]
-    async fn add_third_cert(
-        &self,
-        account_id: Query<String>,
-        mut add_req: Json<IamThirdPartyCertExtAddReq>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<Void> {
+    async fn add_third_cert(&self, account_id: Query<String>, mut add_req: Json<IamThirdPartyCertExtAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx.0).await?;
@@ -101,12 +96,7 @@ impl IamCiCertApi {
 
     /// Get Third-kind Certs By Account Id
     #[oai(path = "/third-kind", method = "get")]
-    async fn get_third_cert(
-        &self,
-        account_id: Query<String>,
-        supplier: Query<String>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+    async fn get_third_cert(&self, account_id: Query<String>, supplier: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
         TardisResp::ok(rbum_cert)

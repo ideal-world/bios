@@ -9,7 +9,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
+use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountModifyReq};
 use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -17,7 +17,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
-use crate::iam_enumeration::IamCertKernelKind;
+use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind};
 
 pub struct IamCpCertUserPwdServ;
 
@@ -34,6 +34,19 @@ impl IamCpCertUserPwdServ {
             groups: vec![],
             ..Default::default()
         };
+        IamAccountServ::modify_item(
+            &rbum_item_id,
+            &mut IamAccountModifyReq {
+                name: None,
+                scope_level: None,
+                disabled: None,
+                status: Some(IamAccountStatusKind::Active),
+                icon: None,
+            },
+            funs,
+            &ctx,
+        )
+        .await?;
         IamCertUserPwdServ::modify_cert(
             &IamCertUserPwdModifyReq {
                 original_sk: pwd_new_req.original_sk.clone(),
