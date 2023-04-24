@@ -124,7 +124,7 @@ pub struct RbumSetTreeMainResp {
 
     pub scope_level: RbumScopeLevelKind,
     pub pid: Option<String>,
-    //关联的set_id
+    //关联的tenant_id
     pub rel: Option<String>,
 }
 

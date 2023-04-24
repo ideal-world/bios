@@ -5,6 +5,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetServ;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountAggAddReq};
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
+use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -835,8 +836,8 @@ pub async fn test_bind_platform_to_tenant_node(
     _t2_a1_context: &TardisContext,
     _t2_a2_context: &TardisContext,
 ) -> TardisResult<()> {
-    let funs = iam_constants::get_tardis_inst();
-    // funs.begin().await?;
+    let mut funs = iam_constants::get_tardis_inst();
+    funs.begin().await?;
 
     let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
     let t1_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, t1_context).await?;
@@ -873,7 +874,7 @@ pub async fn test_bind_platform_to_tenant_node(
         sys_context,
     )
     .await?;
-    info!("【test_cc_set】 : test_multi_level : bind platform node");
+    info!("【test_cc_set】 : test_bind : bind platform node");
     let set_cate_xxx_sub_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
@@ -958,7 +959,7 @@ pub async fn test_bind_platform_to_tenant_node(
     assert_eq!(resp.main.len(), 5);
     assert!(resp.main.clone().iter().find(|r| r.id == set_cate_xxx_global_id).unwrap().rel.is_some());
     resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 1);
+    assert_eq!(resp.main.len(), 4);
 
     let mut resp = IamSetServ::get_tree(
         &t1_set_id,
@@ -974,9 +975,32 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert_eq!(resp.main.len(), 4);
     resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 3);
+    assert_eq!(resp.main.len(), 0);
 
-    IamSetServ::bind_cate_with_tenant(&set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await?;
+    assert!(IamSetServ::bind_cate_with_tenant(&set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.is_err());
+    info!("【test_cc_set】 : test_bind : unbind test");
+    //删除原来的关联
+    let old_rel = RbumRelServ::find_one_rbum(
+        &RbumRelFilterReq {
+            basic: Default::default(),
+            tag: Some(IamRelKind::IamOrgRel.to_string()),
+            from_rbum_kind: Some(RbumRelFromKind::SetCate),
+            from_rbum_id: Some(set_cate_xxx_global_id),
+            from_rbum_scope_levels: None,
+            to_rbum_item_id: Some(t1_context.own_paths.clone()),
+            to_own_paths: Some(t1_context.own_paths.clone()),
+            ext_eq: None,
+            ext_like: None,
+            to_rbum_item_scope_levels: None,
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    assert!(old_rel.is_some());
+
+    IamSetServ::unbind_cate_with_tenant(old_rel.unwrap(), &funs, sys_context).await?;
+
     let mut resp = IamSetServ::get_tree(
         &sys_set_id,
         &mut RbumSetTreeFilterReq {
@@ -990,67 +1014,120 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
     assert_eq!(resp.main.len(), 5);
-    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_xxx_sub_id).unwrap().rel.is_some());
-    resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 1);
-
-    let mut resp = IamSetServ::get_tree(
-        &t1_set_id,
-        &mut RbumSetTreeFilterReq {
-            fetch_cate_item: false,
-            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-            sys_code_query_depth: Some(1),
-            ..Default::default()
-        },
-        &funs,
-        t1_context,
-    )
-    .await?;
-    assert_eq!(resp.main.len(), 2);
-    resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 1);
-
-    info!("【test_cc_set】 : test_multi_level : unbind test");
-    //删除原来的关联
-    let old_rel = RbumRelServ::find_one_rbum(
-        &RbumRelFilterReq {
-            basic: Default::default(),
-            tag: Some(IamRelKind::IamOrgRel.to_string()),
-            from_rbum_kind: Some(RbumRelFromKind::Set),
-            from_rbum_id: Some(t1_set_id.clone()),
-            from_rbum_scope_levels: None,
-            to_rbum_item_id: None,
-            to_rbum_item_scope_levels: None,
-            to_own_paths: Some("".to_string()),
-            ext_eq: None,
-            ext_like: None,
-        },
-        &funs,
-        &t1_context,
-    )
-    .await?;
-    assert!(old_rel.is_some());
-    IamSetServ::unbind_cate_with_tenant(old_rel.unwrap(), &funs, &t1_context).await?;
-
-    let mut resp = IamSetServ::get_tree(
-        &t1_set_id,
-        &mut RbumSetTreeFilterReq {
-            fetch_cate_item: false,
-            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-            sys_code_query_depth: Some(1),
-            ..Default::default()
-        },
-        &funs,
-        t1_context,
-    )
-    .await?;
-    assert_eq!(resp.main.len(), 2);
+    let set_cate_xxx_sub_id = &resp.main.iter().find(|r| r.name == "xxx公司_子部门").unwrap().id.clone();
     resp.main.retain(|r| !r.ext.is_empty());
     assert_eq!(resp.main.len(), 0);
 
-    info!("【test_cc_set】 : test_multi_level : bind node and add rel");
+    let mut resp = IamSetServ::get_tree(
+        &t1_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: false,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        t1_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 4);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 0);
 
-    let set_cate_t2_xxx_id = IamSetServ::add_set_cate(
+    info!("【test_cc_set】 : test_multi_level : rebind test");
+    IamSetServ::bind_cate_with_tenant(set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.unwrap();
+
+    let mut resp = IamSetServ::get_tree(
+        &sys_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: false,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 9);
+    assert!(resp.main.clone().iter().find(|r| r.id == *set_cate_xxx_sub_id).unwrap().rel.is_some());
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 5);
+
+    let mut resp = IamSetServ::get_tree(
+        &t1_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: false,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        t1_context,
+    )
+    .await?;
+    assert_eq!(resp.main.len(), 5);
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 0);
+
+    info!("【test_cc_set】 : test_bind : t2 bind node and add rel");
+
+    let set_cate_sys_xxx2_id = IamSetServ::add_set_cate(
+        &sys_set_id,
+        &IamSetCateAddReq {
+            bus_code: None,
+            name: TrimString("xxx2公司".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: None,
+            scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    let set_cate_sys_xxx2_sub_id = IamSetServ::add_set_cate(
+        &sys_set_id,
+        &IamSetCateAddReq {
+            bus_code: None,
+            name: TrimString("xxx2_sub公司".to_string()),
+            icon: None,
+            sort: None,
+            ext: None,
+            rbum_parent_cate_id: Some(set_cate_sys_xxx2_id.clone()),
+            scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    let g_account_id = IamAccountServ::add_item(
+        &mut IamAccountAddReq {
+            id: None,
+            name: TrimString("root".to_string()),
+            scope_level: Some(RbumScopeLevelKind::Root),
+            disabled: None,
+            icon: None,
+            temporary: None,
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    IamSetServ::add_set_item(
+        &IamSetItemAddReq {
+            set_id: sys_set_id.clone(),
+            set_cate_id: set_cate_sys_xxx2_sub_id.clone(),
+            sort: 1,
+            rel_rbum_item_id: g_account_id.clone(),
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+
+    let _set_cate_t2_xxx_id = IamSetServ::add_set_cate(
         &t2_set_id,
         &IamSetCateAddReq {
             bus_code: None,
@@ -1065,67 +1142,136 @@ pub async fn test_bind_platform_to_tenant_node(
         t2_context,
     )
     .await?;
-    // IamSetServ::bind_cate_with_platform(&set_cate_xxx_global_id, &funs, t2_context).await?;
 
-    // t2 cc查询第一层
+    assert!(IamSetServ::bind_cate_with_tenant(set_cate_xxx_sub_id, &t2_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.is_err());
+    IamSetServ::bind_cate_with_tenant(&set_cate_sys_xxx2_id, &t2_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.unwrap();
+
     let mut resp = IamSetServ::get_tree(
-        &t2_set_id,
+        &sys_set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
-            sys_codes: Some(vec![]),
-            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
             sys_code_query_depth: Some(1),
             ..Default::default()
         },
         &funs,
-        &t2_context,
+        sys_context,
     )
     .await?;
-    assert_eq!(resp.main.len(), 3);
+    assert_eq!(resp.main.len(), 12);
+    assert!(resp.main.clone().iter().find(|r| r.id == set_cate_sys_xxx2_id).unwrap().rel.is_some());
     resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 7);
+    let set_cate_sys_xxx2_sub_id = &resp.main.clone().iter().find(|r| r.name == "xxx2_sub公司").unwrap().id.clone();
+    assert_eq!(
+        resp.ext.unwrap().items.get(set_cate_sys_xxx2_sub_id).unwrap().first().unwrap().rel_rbum_item_id,
+        g_account_id.clone()
+    );
+
+    let resp = IamSetServ::get_tree(
+        &t2_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        t2_context,
+    )
+    .await?;
     assert_eq!(resp.main.len(), 2);
+    assert_eq!(
+        resp.ext.unwrap().items.get(set_cate_sys_xxx2_sub_id).unwrap().first().unwrap().rel_rbum_item_id,
+        g_account_id.clone()
+    );
 
     // sys cc查询第一层 ->xxx
     let mut resp = IamSetServ::get_tree(
         &sys_set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
+            sys_codes: Some(vec!["".to_string()]),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+
+    assert_eq!(resp.main.len(), 2);
+    let set_cate_sys_xxx2 = &resp.main.iter().find(|r| r.name == "xxx2公司").unwrap().clone();
+
+    resp.main.retain(|r| !r.ext.is_empty());
+    assert_eq!(resp.main.len(), 0);
+
+    // sys cc查询第二层 ->t2_xxx xxx2_sub
+    let query_ctx = IamCertServ::try_use_tenant_ctx(sys_context.clone(), set_cate_sys_xxx2.rel.clone())?;
+    let query_code = if query_ctx.own_paths.is_empty() {
+        IamSetServ::get_default_org_code_by_system()
+    } else {
+        IamSetServ::get_default_org_code_by_tenant(&funs, &query_ctx)?
+    };
+    let query_set_id = IamSetServ::get_set_id_by_code(&query_code, true, &funs, &query_ctx).await?;
+
+    let resp = IamSetServ::get_tree(
+        &query_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
             sys_codes: Some(vec![]),
             sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
             sys_code_query_depth: Some(1),
             ..Default::default()
         },
         &funs,
-        &sys_context,
+        &query_ctx,
     )
     .await?;
-    assert_eq!(resp.main.len(), 1);
-    resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 0);
 
-    let sys_sys_code_xxx = &resp.main.first().unwrap().sys_code.clone();
+    assert_eq!(resp.main.len(), 2);
+    let set_cate_sys_xxx2_sub_id = &resp.main.clone().iter().find(|r| r.name == "xxx2_sub公司").unwrap().id.clone();
+    assert_eq!(
+        resp.ext.unwrap().items.get(set_cate_sys_xxx2_sub_id).unwrap().first().unwrap().rel_rbum_item_id,
+        g_account_id.clone()
+    );
 
-    // sys cc查询第二层 ->pri sub t2_xxx
-    let mut resp = IamSetServ::get_tree(
-        &sys_set_id,
+    let set_cate_t2_xxx_id = &resp.main.clone().iter().find(|r| r.name == "t2_xxx公司").unwrap().id.clone();
+    let t2_xxx_own_paths = &resp.main.clone().iter().find(|r| r.name == "t2_xxx公司").unwrap().own_paths.clone();
+    let query_ctx = IamCertServ::try_use_tenant_ctx(sys_context.clone(), Some(t2_xxx_own_paths.to_owned()))?;
+    let query_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &query_ctx).await?;
+    IamSetServ::add_set_item(
+        &IamSetItemAddReq {
+            set_id: query_set_id.clone(),
+            set_cate_id: set_cate_t2_xxx_id.clone(),
+            sort: 1,
+            rel_rbum_item_id: g_account_id.clone(),
+        },
+        &funs,
+        &query_ctx,
+    )
+    .await?;
+
+    let resp = IamSetServ::get_tree(
+        &t2_set_id,
         &mut RbumSetTreeFilterReq {
             fetch_cate_item: true,
-            sys_codes: Some(vec![sys_sys_code_xxx.to_string()]),
-            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
             sys_code_query_depth: Some(1),
             ..Default::default()
         },
         &funs,
-        &sys_context,
+        t2_context,
     )
     .await?;
-    assert_eq!(resp.main.len(), 3);
-    resp.main.retain(|r| !r.ext.is_empty());
-    assert_eq!(resp.main.len(), 1);
+    assert_eq!(resp.main.len(), 2);
+    let set_cate_t2_xxx_id = &resp.main.clone().iter().find(|r| r.name == "t2_xxx公司").unwrap().id.clone();
+    assert_eq!(
+        resp.ext.unwrap().items.get(set_cate_t2_xxx_id).unwrap().first().unwrap().rel_rbum_item_id,
+        g_account_id.clone()
+    );
 
-    for x in &resp.main {
-        println!("mian==={:?}", x);
-    }
-    // funs.rollback().await?;
+    funs.rollback().await?;
     Ok(())
 }
