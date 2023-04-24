@@ -52,7 +52,7 @@ impl IamCtOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
@@ -83,11 +83,36 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
+    /// Current is bound by platform
+    #[oai(path = "/is_bound", method = "get")]
+    async fn is_bond_by_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.0.clone()
+        };
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                tag: Some(IamRelKind::IamOrgRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                to_rbum_item_id: Some(ctx.0.own_paths.to_owned()),
+                ..Default::default()
+            },
+            &funs,
+            &mock_ctx,
+        )
+        .await?
+        .is_some();
+        funs.commit().await?;
+        TardisResp::ok(result)
+    }
     /// Find Platform Cate Org
     ///
     /// 查询平台组织节点
+    #[deprecated]
     #[oai(path = "/platform/cate", method = "get")]
-    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
+    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
@@ -114,7 +139,6 @@ impl IamCtOrgApi {
         };
         TardisResp::ok(result)
     }
-
 
     /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]

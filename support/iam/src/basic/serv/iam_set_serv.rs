@@ -207,24 +207,22 @@ impl IamSetServ {
         RbumSetCateServ::find_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 
-    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+    pub async fn get_tree(set_id: &str, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         filter.rel_rbum_item_domain_ids = Some(vec![funs.iam_basic_domain_iam_id()]);
         let resp = RbumSetServ::get_tree(set_id, filter, funs, ctx).await?;
-        Self::find_rel_set_cate(set_id, resp, filter, funs, ctx).await
+        Self::find_rel_set_cate(resp, filter, funs, ctx).await
     }
-    //todo bugfix
+
     // find set_cate 对应的set_id,返回set_id下面set_cate
     // 返回的节点里面，如果有通过关联关系而来的cate（不属于此set_id的），会在ext中标识它真正的set_id
-    async fn find_rel_set_cate(set_id: &str, resp: RbumSetTreeResp, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+    async fn find_rel_set_cate(resp: RbumSetTreeResp, filter: &mut RbumSetTreeFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let mut result_main: Vec<RbumSetTreeMainResp> = vec![];
         let mut resp_items = HashMap::new();
         let mut resp_item_domains = HashMap::new();
         let mut resp_item_kinds = HashMap::new();
         let mut resp_item_number_agg = HashMap::new();
-        let mut resp_rel = None;
 
-
-        //from set_cate to find tenant_id -> set_id
+        //from set_cate to find tenant_id (set_id)
         for mut r in resp.main.clone() {
             if let Some(set_rel) = RbumRelServ::find_one_rbum(
                 &RbumRelFilterReq {
@@ -263,7 +261,7 @@ impl IamSetServ {
                     result_main.push(r);
                     continue;
                 }
-                let rel_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &mock_ctx).await?;
+                let rel_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await?;
                 let mut tenant_resp = RbumSetServ::get_tree(&rel_set_id, &set_filter, funs, &mock_ctx).await?;
                 let mut resp_tenant_node: Vec<RbumSetTreeMainResp> = tenant_resp
                     .main
@@ -282,7 +280,7 @@ impl IamSetServ {
                         .iter()
                         .map(|rm| {
                             let mut r = rm.clone();
-                            r.ext = json!({"set_id":rel_set_id.clone(),"own_paths":set_rel.to_own_paths.clone()}).to_string();
+                            r.ext = json!({"set_id":rel_set_id.clone(),"disable_import":true}).to_string();
                             r
                         })
                         .collect::<Vec<RbumSetTreeMainResp>>(),
@@ -298,11 +296,24 @@ impl IamSetServ {
             //把原来的resp.main完全拷贝到result_main中
             result_main.push(r);
         }
-        let mut result = IamSetTreeResp {
-            main: result_main,
-            ext: None,
-            rel: resp_rel,
-        };
+        // 向上查询 标识父级也不能显示绑定
+        for rm in result_main.clone() {
+            if rm.rel.is_some() {
+                let mut pid = rm.pid;
+                loop {
+                    if pid.is_none() {
+                        break;
+                    }
+                    if let Some(p_node) = result_main.iter_mut().find(|r| r.id == pid.clone().unwrap()) {
+                        p_node.ext = json!({"disable_import":true}).to_string();
+                        pid = p_node.pid.clone();
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        let mut result = RbumSetTreeResp { main: result_main, ext: None };
         if filter.fetch_cate_item {
             let mut ext_resp = resp.ext.clone().unwrap();
             ext_resp.items.extend(resp_items);
@@ -313,7 +324,8 @@ impl IamSetServ {
         }
         Ok(result)
     }
-    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamSetTreeResp> {
+
+    pub async fn get_tree_with_auth_by_account(set_id: &str, account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let tree_with_account = Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
@@ -330,11 +342,7 @@ impl IamSetServ {
         let tree_ext = tree_with_account.ext.as_ref().unwrap();
         let account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
         if account_rel_sys_codes.is_empty() {
-            return Ok(IamSetTreeResp {
-                main: vec![],
-                ext: None,
-                rel: None,
-            });
+            return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
         Self::get_tree(
             set_id,
@@ -528,141 +536,6 @@ impl IamSetServ {
 
     pub async fn check_scope(app_id: &str, account_id: &str, set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         RbumSetItemServ::check_a_is_parent_or_sibling_of_b(account_id, app_id, set_id, funs, ctx).await
-    }
-
-    /// 绑定 平台 set_cate_id to 租户id
-    pub async fn bind_cate_with_tenant(set_cate_id: &str, tenant_id: &str, kind: &IamSetKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let set_id = IamSetServ::get_default_set_id_by_ctx(kind, funs, ctx).await?;
-        let tenant_set_id = IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(kind, tenant_id), true, funs, ctx).await?;
-        let rel_kind: IamRelKind = match kind {
-            IamSetKind::Org => IamRelKind::IamOrgRel,
-            _ => {
-                return Err(funs.err().not_implemented(
-                    "cate",
-                    "bind",
-                    &format!("bind cate kind:{kind} is not implemented"),
-                    "501-bind-cate-kind-is-not-implemented",
-                ))
-            }
-        };
-        if let Some(old_rel) = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                tag: Some(rel_kind.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::SetCate),
-                from_rbum_id: Some(set_cate_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        {
-            return Err(funs.err().conflict(
-                "cate_rel",
-                "bind",
-                &format!("from_rbum_id:{} have old bind rel {:?}", set_cate_id, old_rel),
-                "409-iam-bind-conflict",
-            ));
-        };
-        if let Some(old_rel) = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                tag: Some(rel_kind.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::SetCate),
-                to_rbum_item_id: Some(tenant_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        {
-            return Err(funs.err().conflict(
-                "cate_rel",
-                "bind",
-                &format!("to_rbum_item_id:{tenant_id} have old bind rel {:?}", old_rel),
-                "409-iam-bind-conflict",
-            ));
-        };
-
-        RbumRelServ::add_rel(
-            &mut RbumRelAggAddReq {
-                rel: RbumRelAddReq {
-                    tag: rel_kind.to_string(),
-                    from_rbum_kind: RbumRelFromKind::SetCate,
-                    from_rbum_id: set_cate_id.to_string(),
-                    to_rbum_item_id: tenant_id.to_string(),
-                    to_own_paths: tenant_id.to_string(),
-                    note: None,
-                    to_is_outside: true,
-                    ext: None,
-                },
-                attrs: vec![],
-                envs: vec![],
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        //如果平台绑定的节点下有其他节点，那么全部剪切到租户层
-        if let Some(set_cate_resp) = RbumSetCateServ::find_one_rbum(
-            &RbumSetCateFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ids: Some(vec![set_cate_id.to_string()]),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-        {
-            let platform_cates: RbumSetTreeResp = RbumSetServ::get_tree(
-                &set_id,
-                &RbumSetTreeFilterReq {
-                    fetch_cate_item: true,
-                    sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
-                    sys_code_query_depth: Some(1),
-                    ..Default::default()
-                },
-                funs,
-                ctx,
-            )
-            .await?;
-            let mock_ctx = TardisContext {
-                own_paths: tenant_id.to_owned(),
-                ..ctx.clone()
-            };
-            Self::cut_tree_to_new_set(&platform_cates, &tenant_set_id, Some(set_cate_id.to_owned()), None, funs, ctx, &mock_ctx).await?;
-        }
-
-        Ok(())
-    }
-
-    /// 解绑的时候需要拷贝一份去平台，并且保留租户的节点 租户id to 平台 set_cate_id
-    pub async fn unbind_cate_with_tenant(old_rel: RbumRelDetailResp, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let mock_ctx = TardisContext {
-            own_paths: old_rel.to_own_paths,
-            ..ctx.clone()
-        };
-        let curr_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
-        let old_rel_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &mock_ctx).await?;
-
-        let curr_tree: RbumSetTreeResp = RbumSetServ::get_tree(
-            &old_rel_set_id,
-            &RbumSetTreeFilterReq {
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
-                ..Default::default()
-            },
-            funs,
-            &mock_ctx,
-        )
-        .await?;
-        Self::copy_tree_to_new_set(&curr_tree, &curr_set_id, None, Some(old_rel.from_rbum_id.clone()), funs, ctx).await?;
-
-        RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
-        Ok(())
     }
 
     pub async fn cut_tree_to_new_set<'a>(

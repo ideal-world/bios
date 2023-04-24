@@ -1,6 +1,7 @@
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq, IamSetTreeResp};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
+use crate::console_system::serv::iam_cs_org_serv::IamCsOrgServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumRelFilterReq, RbumSetTreeFilterReq};
@@ -25,7 +26,7 @@ impl IamCsOrgApi {
     /// * Without parameters: Query the whole tree
     /// * ``parent_sys_code=true`` : query only the next level. This can be used to query level by level when the tree is too large
     #[oai(path = "/tree", method = "get")]
-    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<IamSetTreeResp> {
+    async fn get_tree(&self, parent_sys_code: Query<Option<String>>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
@@ -83,7 +84,7 @@ impl IamCsOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Import tenant Org
+    /// Import Tenant Org
     ///
     /// id -> set_cate_id
     /// tenant_id -> tenant_id
@@ -93,11 +94,11 @@ impl IamCsOrgApi {
     async fn bind_cate_with_platform(&self, id: Path<String>, tenant_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamSetServ::bind_cate_with_tenant(&id.0, &tenant_id.0, &IamSetKind::Org, &funs, &ctx.0).await?;
+        IamCsOrgServ::bind_cate_with_tenant(&id.0, &tenant_id.0, &IamSetKind::Org, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-
+    /// Unbind Tenant Org
     #[oai(path = "/cate/:id/rel", method = "delete")]
     async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -120,8 +121,18 @@ impl IamCsOrgApi {
         )
         .await?;
         if let Some(old_rel) = old_rel {
-            IamSetServ::unbind_cate_with_tenant(old_rel, &funs, &ctx.0).await?;
+            IamCsOrgServ::unbind_cate_with_tenant(old_rel, &funs, &ctx.0).await?;
         }
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Query tenant IDs that have already been bound
+    #[oai(path = "/tenant/rel", method = "get")]
+    async fn find_rel_tenant_org(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamCsOrgServ::find_rel_tenant_org(&funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

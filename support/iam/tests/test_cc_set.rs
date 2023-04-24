@@ -6,6 +6,8 @@ use bios_basic::rbum::serv::rbum_set_serv::RbumSetServ;
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountAggAddReq};
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
+use bios_iam::console_system::api::iam_cs_org_api::IamCsOrgApi;
+use bios_iam::console_system::serv::iam_cs_org_serv::IamCsOrgServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -206,6 +208,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
             disabled: None,
             icon: None,
             temporary: None,
+            status: None,
         },
         &funs,
         context,
@@ -220,6 +223,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
             disabled: None,
             icon: None,
             temporary: None,
+            status: None,
         },
         &funs,
         context,
@@ -922,7 +926,7 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
 
-    IamSetServ::bind_cate_with_tenant(&set_cate_xxx_global_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await?;
+    IamCsOrgServ::bind_cate_with_tenant(&set_cate_xxx_global_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await?;
     let set_cate_o = RbumRelServ::find_one_rbum(
         &RbumRelFilterReq {
             basic: RbumBasicFilterReq {
@@ -958,7 +962,7 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert_eq!(resp.main.len(), 5);
     assert!(resp.main.clone().iter().find(|r| r.id == set_cate_xxx_global_id).unwrap().rel.is_some());
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 4);
 
     let mut resp = IamSetServ::get_tree(
@@ -974,10 +978,10 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
     assert_eq!(resp.main.len(), 4);
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 0);
 
-    assert!(IamSetServ::bind_cate_with_tenant(&set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.is_err());
+    assert!(IamCsOrgServ::bind_cate_with_tenant(&set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.is_err());
     info!("【test_cc_set】 : test_bind : unbind test");
     //删除原来的关联
     let old_rel = RbumRelServ::find_one_rbum(
@@ -985,7 +989,7 @@ pub async fn test_bind_platform_to_tenant_node(
             basic: Default::default(),
             tag: Some(IamRelKind::IamOrgRel.to_string()),
             from_rbum_kind: Some(RbumRelFromKind::SetCate),
-            from_rbum_id: Some(set_cate_xxx_global_id),
+            from_rbum_id: Some(set_cate_xxx_global_id.clone()),
             from_rbum_scope_levels: None,
             to_rbum_item_id: Some(t1_context.own_paths.clone()),
             to_own_paths: Some(t1_context.own_paths.clone()),
@@ -999,7 +1003,7 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert!(old_rel.is_some());
 
-    IamSetServ::unbind_cate_with_tenant(old_rel.unwrap(), &funs, sys_context).await?;
+    IamCsOrgServ::unbind_cate_with_tenant(old_rel.unwrap(), &funs, sys_context).await?;
 
     let mut resp = IamSetServ::get_tree(
         &sys_set_id,
@@ -1015,7 +1019,7 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert_eq!(resp.main.len(), 5);
     let set_cate_xxx_sub_id = &resp.main.iter().find(|r| r.name == "xxx公司_子部门").unwrap().id.clone();
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 0);
 
     let mut resp = IamSetServ::get_tree(
@@ -1031,11 +1035,11 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
     assert_eq!(resp.main.len(), 4);
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 0);
 
     info!("【test_cc_set】 : test_multi_level : rebind test");
-    IamSetServ::bind_cate_with_tenant(set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.unwrap();
+    IamCsOrgServ::bind_cate_with_tenant(set_cate_xxx_sub_id, &t1_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.unwrap();
 
     let mut resp = IamSetServ::get_tree(
         &sys_set_id,
@@ -1051,7 +1055,8 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert_eq!(resp.main.len(), 9);
     assert!(resp.main.clone().iter().find(|r| r.id == *set_cate_xxx_sub_id).unwrap().rel.is_some());
-    resp.main.retain(|r| !r.ext.is_empty());
+    assert!(resp.main.clone().iter().find(|r| r.id == *set_cate_xxx_global_id).unwrap().ext.contains("disable_import"));
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 5);
 
     let mut resp = IamSetServ::get_tree(
@@ -1067,7 +1072,7 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
     assert_eq!(resp.main.len(), 5);
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 0);
 
     info!("【test_cc_set】 : test_bind : t2 bind node and add rel");
@@ -1110,6 +1115,7 @@ pub async fn test_bind_platform_to_tenant_node(
             disabled: None,
             icon: None,
             temporary: None,
+            status: None,
         },
         &funs,
         sys_context,
@@ -1143,8 +1149,8 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
 
-    assert!(IamSetServ::bind_cate_with_tenant(set_cate_xxx_sub_id, &t2_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.is_err());
-    IamSetServ::bind_cate_with_tenant(&set_cate_sys_xxx2_id, &t2_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.unwrap();
+    assert!(IamCsOrgServ::bind_cate_with_tenant(set_cate_xxx_sub_id, &t2_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.is_err());
+    IamCsOrgServ::bind_cate_with_tenant(&set_cate_sys_xxx2_id, &t2_context.own_paths, &IamSetKind::Org, &funs, sys_context).await.unwrap();
 
     let mut resp = IamSetServ::get_tree(
         &sys_set_id,
@@ -1160,7 +1166,7 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert_eq!(resp.main.len(), 12);
     assert!(resp.main.clone().iter().find(|r| r.id == set_cate_sys_xxx2_id).unwrap().rel.is_some());
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 7);
     let set_cate_sys_xxx2_sub_id = &resp.main.clone().iter().find(|r| r.name == "xxx2_sub公司").unwrap().id.clone();
     assert_eq!(
@@ -1204,7 +1210,7 @@ pub async fn test_bind_platform_to_tenant_node(
     assert_eq!(resp.main.len(), 2);
     let set_cate_sys_xxx2 = &resp.main.iter().find(|r| r.name == "xxx2公司").unwrap().clone();
 
-    resp.main.retain(|r| !r.ext.is_empty());
+    resp.main.retain(|r| r.ext.contains("set_id"));
     assert_eq!(resp.main.len(), 0);
 
     // sys cc查询第二层 ->t2_xxx xxx2_sub
