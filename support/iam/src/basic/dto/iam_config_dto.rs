@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tardis::basic::field::TrimString;
+
 use tardis::chrono::{DateTime, Utc};
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi;
