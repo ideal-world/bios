@@ -274,7 +274,7 @@ impl IamTenantServ {
                     value1: Some(r.value1.clone()),
                     value2: Some(r.value2.clone()),
                     ext: Some(r.ext.clone()),
-                    disabled: Some(r.disabled.clone()),
+                    disabled: Some(r.disabled),
                     data_type: IamConfigDataTypeKind::parse(&r.data_type).unwrap(),
                     code: IamConfigKind::parse(&r.code).unwrap(),
                 })
