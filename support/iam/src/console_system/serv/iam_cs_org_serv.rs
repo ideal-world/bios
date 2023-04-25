@@ -22,7 +22,7 @@ pub struct IamCsOrgServ;
 
 impl IamCsOrgServ {
     pub async fn find_rel_tenant_org(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
-        let rel_vec = RbumRelServ::find_rels(
+        let rel_vec = RbumRelServ::find_rbums(
             &RbumRelFilterReq {
                 tag: Some(IamRelKind::IamOrgRel.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::SetCate),
@@ -34,8 +34,9 @@ impl IamCsOrgServ {
             ctx,
         )
         .await?;
-        Ok(rel_vec.into_iter().map(|r| r.rel.to_rbum_item_id).collect::<Vec<String>>())
+        Ok(rel_vec.into_iter().map(|r| r.to_rbum_item_id).collect::<Vec<String>>())
     }
+
     /// 绑定 平台 set_cate_id to 租户id
     pub async fn bind_cate_with_tenant(set_cate_id: &str, tenant_id: &str, kind: &IamSetKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let set_id = IamSetServ::get_default_set_id_by_ctx(kind, funs, ctx).await?;
