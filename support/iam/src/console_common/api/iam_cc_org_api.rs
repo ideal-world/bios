@@ -5,7 +5,6 @@ use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 
-
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
 
