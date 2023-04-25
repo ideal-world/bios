@@ -176,8 +176,7 @@ impl Oauth2GrantType {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
-#[derive(Default)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
 pub enum WayToAdd {
     ///同步账号同步凭证
     #[default]
@@ -186,10 +185,7 @@ pub enum WayToAdd {
     NoSynchronizeCert,
 }
 
-
-
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
-#[derive(Default)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
 pub enum WayToDelete {
     ///什么也不做
     #[default]
@@ -202,9 +198,7 @@ pub enum WayToDelete {
     DeleteAccount,
 }
 
-
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
-#[derive(Default)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
 pub enum IamAccountLockStateKind {
     // 未锁定
     #[default]
@@ -216,7 +210,6 @@ pub enum IamAccountLockStateKind {
     // 长期未登录锁定
     LongTimeNoLoginLocked,
 }
-
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamAccountStatusKind {
