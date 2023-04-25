@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 
-
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeMainResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
@@ -15,7 +14,7 @@ use bios_basic::rbum::serv::rbum_set_serv::{RbumSetCateServ, RbumSetItemServ, Rb
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::futures::future::BoxFuture;
+
 use tardis::futures::FutureExt;
 use tardis::serde_json::json;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -546,47 +545,66 @@ impl IamSetServ {
         funs: &'a TardisFunsInst,
         from_ctx: &'a TardisContext,
         target_ctx: &'a TardisContext,
-    ) -> TardisResult<String> {
+    ) -> TardisResult<()> {
         Self::copy_tree_to_new_set(from_tree, target_set_id, old_pid.clone(), target_pid, funs, target_ctx).await?;
         Self::delete_tree(from_tree, old_pid, funs, from_ctx).await
     }
 
-    pub fn delete_tree<'a>(delete_tree: &'a RbumSetTreeResp, pid: Option<String>, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
-        async move {
-            let mut cate_vec = delete_tree.main.to_owned();
-            let cate_item_vec = if let Some(ext) = &delete_tree.ext { ext.items.to_owned() } else { HashMap::new() };
-            cate_vec.retain(|cate| cate.pid == pid);
-            for r in cate_vec {
+    pub async fn delete_tree<'a>(delete_tree: &'a RbumSetTreeResp, pid: Option<String>, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> TardisResult<()> {
+        let mut stack = vec![];
+        stack.push(pid.clone());
+        let mut cate_vec = delete_tree.main.to_owned();
+        let mut cate_item_vec = if let Some(ext) = &delete_tree.ext { ext.items.to_owned() } else { HashMap::new() };
+        while !stack.is_empty() {
+            let mut loop_cate_vec = cate_vec.clone();
+            let loop_pid = stack.pop().unwrap();
+            loop_cate_vec.retain(|cate| cate.pid == loop_pid);
+            //have sub tree?
+            let have_next_node = !loop_cate_vec.is_empty();
+            if have_next_node && loop_pid.is_some() {
+                stack.push(loop_pid.clone());
+            }
+            for r in loop_cate_vec {
                 if let Some(set_items) = cate_item_vec.get(&r.id) {
                     for set_item in set_items {
                         Self::delete_set_item(&set_item.id, funs, ctx).await?;
                     }
+                    cate_item_vec.insert(r.id.clone(), vec![]);
                 }
 
-                let mut next_floor_tree = delete_tree.to_owned();
-                next_floor_tree.main.retain(|c| c.sys_code.starts_with(&r.sys_code) && c.sys_code != r.sys_code);
-                Self::delete_tree(&next_floor_tree, Some(r.id.clone()), funs, ctx).await?;
-
-                Self::delete_set_cate(&r.id, funs, ctx).await?;
+                stack.push(Some(r.id.clone()));
             }
-            Ok("".to_string())
+            if !have_next_node && loop_pid.is_some() && loop_pid != pid {
+                Self::delete_set_cate(&loop_pid.clone().unwrap(), funs, ctx).await?;
+                cate_vec.retain(|c| c.id != loop_pid.clone().unwrap());
+            }
         }
-        .boxed()
+
+        Ok(())
     }
 
-    pub fn copy_tree_to_new_set<'a>(
+    pub async fn copy_tree_to_new_set<'a>(
         tree: &'a RbumSetTreeResp,
         target_set_id: &'a str,
         old_pid: Option<String>,
         target_pid: Option<String>,
         funs: &'a TardisFunsInst,
         target_ctx: &'a TardisContext,
-    ) -> BoxFuture<'a, TardisResult<String>> {
-        async move {
-            let mut cate_vec = tree.main.to_owned();
-            let cate_item_vec = if let Some(ext) = &tree.ext { ext.items.to_owned() } else { HashMap::new() };
-            cate_vec.retain(|cate| cate.pid == old_pid);
-            for r in cate_vec {
+    ) -> TardisResult<()> {
+        let mut old_stack = vec![];
+        let mut target_stack = vec![];
+        old_stack.push(old_pid.clone());
+        target_stack.push(target_pid);
+
+        let cate_vec = tree.main.to_owned();
+        let cate_item_vec = if let Some(ext) = &tree.ext { ext.items.to_owned() } else { HashMap::new() };
+
+        while !old_stack.is_empty() {
+            let mut loop_cate_vec = cate_vec.clone();
+            let loop_pid = old_stack.pop().unwrap();
+            let loop_target_pid = target_stack.pop().unwrap();
+            loop_cate_vec.retain(|cate| cate.pid == loop_pid);
+            for r in loop_cate_vec {
                 let new_cate_id = Self::add_set_cate(
                     target_set_id,
                     &IamSetCateAddReq {
@@ -596,12 +614,14 @@ impl IamSetServ {
                         icon: None,
                         sort: None,
                         ext: None,
-                        rbum_parent_cate_id: target_pid.clone(),
+                        rbum_parent_cate_id: loop_target_pid.clone(),
                     },
                     funs,
                     target_ctx,
                 )
                 .await?;
+                old_stack.push(Some(r.id.clone()));
+                target_stack.push(Some(new_cate_id.clone()));
                 if let Some(set_items) = cate_item_vec.get(&r.id) {
                     let mut sort = 1;
                     for set_item in set_items {
@@ -623,12 +643,8 @@ impl IamSetServ {
                         sort += 1;
                     }
                 }
-                let mut next_floor_tree = tree.to_owned();
-                next_floor_tree.main.retain(|c| c.sys_code.starts_with(&r.sys_code) && c.sys_code != r.sys_code);
-                Self::copy_tree_to_new_set(&next_floor_tree, target_set_id, Some(r.id.clone()), Some(new_cate_id), funs, target_ctx).await?;
             }
-            Ok("".to_string())
         }
-        .boxed()
+        Ok(())
     }
 }

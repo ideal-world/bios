@@ -1121,6 +1121,22 @@ pub async fn test_bind_platform_to_tenant_node(
         sys_context,
     )
     .await?;
+
+    let t2_account_id1 = IamAccountServ::add_item(
+        &mut IamAccountAddReq {
+            id: None,
+            name: TrimString("t2_user_1".to_string()),
+            scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
+            disabled: None,
+            icon: None,
+            temporary: None,
+            status: None,
+        },
+        &funs,
+        t2_context,
+    )
+    .await?;
+
     IamSetServ::add_set_item(
         &IamSetItemAddReq {
             set_id: sys_set_id.clone(),
@@ -1258,6 +1274,17 @@ pub async fn test_bind_platform_to_tenant_node(
         &query_ctx,
     )
     .await?;
+    IamSetServ::add_set_item(
+        &IamSetItemAddReq {
+            set_id: query_set_id.clone(),
+            set_cate_id: set_cate_t2_xxx_id.clone(),
+            sort: 2,
+            rel_rbum_item_id: t2_account_id1.clone(),
+        },
+        &funs,
+        &query_ctx,
+    )
+    .await?;
 
     let resp = IamSetServ::get_tree(
         &t2_set_id,
@@ -1273,10 +1300,28 @@ pub async fn test_bind_platform_to_tenant_node(
     .await?;
     assert_eq!(resp.main.len(), 2);
     let set_cate_t2_xxx_id = &resp.main.clone().iter().find(|r| r.name == "t2_xxx公司").unwrap().id.clone();
-    assert_eq!(
-        resp.ext.unwrap().items.get(set_cate_t2_xxx_id).unwrap().first().unwrap().rel_rbum_item_id,
-        g_account_id.clone()
-    );
+    let cate_t2_items = resp.ext.unwrap().items.get(set_cate_t2_xxx_id).unwrap().clone();
+    assert!(cate_t2_items.iter().any(|r| r.rel_rbum_item_id == g_account_id));
+    assert!(cate_t2_items.iter().any(|r| r.rel_rbum_item_id == t2_account_id1));
+
+    let resp = IamSetServ::get_tree(
+        &sys_set_id,
+        &mut RbumSetTreeFilterReq {
+            fetch_cate_item: true,
+            sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
+            sys_code_query_depth: Some(1),
+            ..Default::default()
+        },
+        &funs,
+        sys_context,
+    )
+    .await?;
+    println!("resp.main.len()======{}", resp.main.len());
+    assert_eq!(resp.main.len(), 12);
+    let set_cate_t2_xxx_id = &resp.main.clone().iter().find(|r| r.name == "t2_xxx公司").unwrap().id.clone();
+    let cate_t2_items = resp.ext.unwrap().items.get(set_cate_t2_xxx_id).unwrap().clone();
+    assert!(cate_t2_items.iter().any(|r| r.rel_rbum_item_id == g_account_id));
+    assert!(cate_t2_items.iter().any(|r| r.rel_rbum_item_id == t2_account_id1));
 
     funs.rollback().await?;
     Ok(())
