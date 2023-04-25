@@ -107,38 +107,6 @@ impl IamCtOrgApi {
         funs.commit().await?;
         TardisResp::ok(result)
     }
-    /// Find Platform Cate Org
-    ///
-    /// 查询平台组织节点
-    #[deprecated]
-    #[oai(path = "/platform/cate", method = "get")]
-    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
-        let funs = iam_constants::get_tardis_inst();
-        let mock_ctx = TardisContext {
-            own_paths: "".to_string(),
-            ..ctx.0
-        };
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &mock_ctx).await?;
-        let mut result = IamSetServ::get_tree(
-            &set_id,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: false,
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-                sys_code_query_depth: Some(1),
-                ..Default::default()
-            },
-            &funs,
-            &mock_ctx,
-        )
-        .await?;
-        //去掉租户自己的节点
-        result.main.retain(|r| r.ext.is_empty());
-        //去掉已经绑定的节点，以及子集
-        if let Some(parent_node) = result.main.clone().iter().find(|m| m.rel.is_some()) {
-            result.main.retain(|r| !r.sys_code.starts_with(&parent_node.sys_code.clone()))
-        };
-        TardisResp::ok(result)
-    }
 
     /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]
