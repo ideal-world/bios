@@ -4,7 +4,9 @@ use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
 use ldap3::log::info;
+use ldap3::tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -137,11 +139,11 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(())
     }
     async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::add_or_modify_account_search(id, false, funs, ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.to_string(), false, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
     async fn before_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::add_or_modify_account_search(id, true, funs, ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
@@ -393,7 +395,7 @@ impl IamAccountServ {
         )
         .await?;
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, &mock_ctx).await?;
-        Self::add_or_modify_account_search(id, false, funs, ctx).await.unwrap();
+        Self::async_add_or_modify_account_search(id.to_string(), false, "".to_string(), funs, ctx.clone()).await.unwrap();
         Ok(())
     }
 
@@ -731,17 +733,21 @@ impl IamAccountServ {
             Ok(ctx.clone())
         }
     }
-
-    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
-        TaskProcessor::execute_task(
+    
+    // todo 
+    // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
+    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, logout_msg: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+        let r = TaskProcessor::execute_task(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
-                Self::add_or_modify_account_search(&account_id, is_modify, &funs, &ctx).await
+                Self::add_or_modify_account_search(&account_id, is_modify, &logout_msg, &funs, &ctx).await
             },
             funs,
         )
-        .await
+        .await?;
+        sleep(Duration::from_millis(100)).await;
+        Ok(r)
     }
 
     pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
@@ -757,8 +763,8 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_resp = IamAccountServ::get_account_detail_aggs(
+    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let account_resp: IamAccountDetailAggResp = IamAccountServ::get_account_detail_aggs(
             account_id,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
@@ -849,13 +855,14 @@ impl IamAccountServ {
                 "create_time":account_resp.create_time.to_rfc3339(),
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
-                    "status": !account_resp.disabled,
+                    "status": account_resp.status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
-                    "icon":account_resp.icon
+                    "icon":account_resp.icon,
+                    "logout_msg":logout_msg,
                 },
             });
             if !account_resp.own_paths.is_empty() {
