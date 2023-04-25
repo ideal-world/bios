@@ -15,7 +15,7 @@ pub async fn request<T: Serialize + DeserializeOwned>(method: &str, url: &str, b
     opts.method(method);
     opts.mode(RequestMode::Cors);
     opts.body(body);
-    let request = Request::new_with_str_and_init(&url, &opts)?;
+    let request = Request::new_with_str_and_init(url, &opts)?;
     for (k, v) in &headers {
         request.headers().set(k, v)?;
     }
@@ -31,6 +31,6 @@ pub async fn request<T: Serialize + DeserializeOwned>(method: &str, url: &str, b
     if resp.is_ok() {
         Ok(resp.data)
     } else {
-        return Err(TardisError::wrap(&format!("[Tardis.Http] [{}]{}", resp.code, resp.msg), ""));
+        Err(TardisError::wrap(&format!("[Tardis.Http] [{}]{}", resp.code, resp.msg), ""))
     }
 }

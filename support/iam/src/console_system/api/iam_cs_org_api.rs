@@ -99,7 +99,7 @@ impl IamCsOrgApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
-    
+
     /// Unbind Tenant Org
     #[oai(path = "/cate/:id/rel", method = "delete")]
     async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -131,12 +131,12 @@ impl IamCsOrgApi {
 
     /// Query tenant IDs that have already been bound
     #[oai(path = "/tenant/rel", method = "get")]
-    async fn find_rel_tenant_org(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn find_rel_tenant_org(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCsOrgServ::find_rel_tenant_org(&funs, &ctx.0).await?;
+        let result = IamCsOrgServ::find_rel_tenant_org(&funs, &ctx.0).await?;
         funs.commit().await?;
-        TardisResp::ok(Void {})
+        TardisResp::ok(result)
     }
 }
 /// System Console Org Item API

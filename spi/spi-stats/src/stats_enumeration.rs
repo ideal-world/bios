@@ -101,7 +101,7 @@ impl StatsDataTypeKind {
     ) -> Option<(String, sea_orm::Value)> {
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             let value = self.json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
-            Some(vec![sea_orm::Value::from(value)])
+            Some(vec![value])
         } else {
             db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like)
         };
@@ -139,7 +139,7 @@ impl StatsDataTypeKind {
     ) -> Option<(String, sea_orm::Value)> {
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             let value = self.json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
-            Some(vec![sea_orm::Value::from(value)])
+            Some(vec![value])
         } else {
             db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like)
         };
