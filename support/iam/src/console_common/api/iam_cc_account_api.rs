@@ -26,7 +26,7 @@ impl IamCcAccountApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
-        id: Query<Option<String>>,
+        ids: Query<Option<String>>,
         name: Query<Option<String>>,
         role_id: Query<Option<String>>,
         app_id: Query<Option<String>>,
@@ -57,7 +57,7 @@ impl IamCcAccountApi {
         let result = IamAccountServ::paginate_items(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: id.0.map(|id| vec![id]),
+                    ids: ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
                     name: name.0,
                     enabled: Some(true),
                     with_sub_own_paths: with_sub.0.unwrap_or(false),

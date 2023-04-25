@@ -75,7 +75,7 @@ impl IamCtAccountApi {
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
         &self,
-        id: Query<Option<String>>,
+        ids: Query<Option<String>>,
         name: Query<Option<String>>,
         role_ids: Query<Option<String>>,
         app_ids: Query<Option<String>>,
@@ -142,7 +142,7 @@ impl IamCtAccountApi {
         let result = IamAccountServ::paginate_account_summary_aggs(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: id.0.map(|id| vec![id]),
+                    ids: ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
                     name: name.0,
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     enabled: status.0,
