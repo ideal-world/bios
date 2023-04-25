@@ -73,6 +73,7 @@ impl IamCsOrgApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
+
     /// Delete Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -98,6 +99,7 @@ impl IamCsOrgApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
+    
     /// Unbind Tenant Org
     #[oai(path = "/cate/:id/rel", method = "delete")]
     async fn unbind_cate_with_tenant(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -112,7 +114,7 @@ impl IamCsOrgApi {
                 from_rbum_scope_levels: None,
                 to_rbum_item_id: None,
                 to_rbum_item_scope_levels: None,
-                to_own_paths: Some("".to_string()),
+                to_own_paths: None,
                 ext_eq: None,
                 ext_like: None,
             },

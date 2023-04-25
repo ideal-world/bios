@@ -44,6 +44,7 @@ impl IamCsOrgServ {
         .await?;
         Ok(rel_vec.into_iter().map(|r| r.rel.to_rbum_item_id).collect::<Vec<String>>())
     }
+    
     /// 绑定 平台 set_cate_id to 租户id
     pub async fn bind_cate_with_tenant(set_cate_id: &str, tenant_id: &str, kind: &IamSetKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let set_id = IamSetServ::get_default_set_id_by_ctx(kind, funs, ctx).await?;
