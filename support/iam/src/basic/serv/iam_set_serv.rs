@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetCateFilterReq, RbumSetFilterReq, RbumSetItemFilterReq, RbumSetTreeFilterReq};
 
-
 use bios_basic::rbum::dto::rbum_set_cate_dto::{RbumSetCateAddReq, RbumSetCateModifyReq, RbumSetCateSummaryResp};
 use bios_basic::rbum::dto::rbum_set_dto::{RbumSetAddReq, RbumSetPathResp, RbumSetTreeMainResp, RbumSetTreeResp};
 use bios_basic::rbum::dto::rbum_set_item_dto::{RbumSetItemAddReq, RbumSetItemDetailResp, RbumSetItemModifyReq};
@@ -583,28 +582,6 @@ impl IamSetServ {
 
         Ok(())
     }
-    // pub fn delete_tree<'a>(delete_tree: &'a RbumSetTreeResp, pid: Option<String>, funs: &'a TardisFunsInst, ctx: &'a TardisContext) -> BoxFuture<'a, TardisResult<String>> {
-    //     async move {
-    //         let mut cate_vec = delete_tree.main.to_owned();
-    //         let cate_item_vec = if let Some(ext) = &delete_tree.ext { ext.items.to_owned() } else { HashMap::new() };
-    //         cate_vec.retain(|cate| cate.pid == pid);
-    //         for r in cate_vec {
-    //             if let Some(set_items) = cate_item_vec.get(&r.id) {
-    //                 for set_item in set_items {
-    //                     Self::delete_set_item(&set_item.id, funs, ctx).await?;
-    //                 }
-    //             }
-
-    //             let mut next_floor_tree = delete_tree.to_owned();
-    //             next_floor_tree.main.retain(|c| c.sys_code.starts_with(&r.sys_code) && c.sys_code != r.sys_code);
-    //             Self::delete_tree(&next_floor_tree, Some(r.id.clone()), funs, ctx).await?;
-
-    //             Self::delete_set_cate(&r.id, funs, ctx).await?;
-    //         }
-    //         Ok("".to_string())
-    //     }
-    //     .boxed()
-    // }
 
     pub async fn copy_tree_to_new_set<'a>(
         tree: &'a RbumSetTreeResp,
@@ -670,62 +647,4 @@ impl IamSetServ {
         }
         Ok(())
     }
-
-    // pub fn copy_tree_to_new_set<'a>(
-    //     tree: &'a RbumSetTreeResp,
-    //     target_set_id: &'a str,
-    //     old_pid: Option<String>,
-    //     target_pid: Option<String>,
-    //     funs: &'a TardisFunsInst,
-    //     target_ctx: &'a TardisContext,
-    // ) -> BoxFuture<'a, TardisResult<String>> {
-    //     async move {
-    //         let mut cate_vec = tree.main.to_owned();
-    //         let cate_item_vec = if let Some(ext) = &tree.ext { ext.items.to_owned() } else { HashMap::new() };
-    //         cate_vec.retain(|cate| cate.pid == old_pid);
-    //         for r in cate_vec {
-    //             let new_cate_id = Self::add_set_cate(
-    //                 target_set_id,
-    //                 &IamSetCateAddReq {
-    //                     name: TrimString(r.name.clone()),
-    //                     scope_level: Some(r.scope_level.clone()),
-    //                     bus_code: None,
-    //                     icon: None,
-    //                     sort: None,
-    //                     ext: None,
-    //                     rbum_parent_cate_id: target_pid.clone(),
-    //                 },
-    //                 funs,
-    //                 target_ctx,
-    //             )
-    //             .await?;
-    //             if let Some(set_items) = cate_item_vec.get(&r.id) {
-    //                 let mut sort = 1;
-    //                 for set_item in set_items {
-    //                     //只有全局账号可以跨租户
-    //                     if set_item.rel_rbum_item_scope_level != RbumScopeLevelKind::Root {
-    //                         continue;
-    //                     }
-    //                     Self::add_set_item(
-    //                         &IamSetItemAddReq {
-    //                             set_id: target_set_id.to_string(),
-    //                             set_cate_id: new_cate_id.clone(),
-    //                             sort,
-    //                             rel_rbum_item_id: set_item.rel_rbum_item_id.clone(),
-    //                         },
-    //                         funs,
-    //                         target_ctx,
-    //                     )
-    //                     .await?;
-    //                     sort += 1;
-    //                 }
-    //             }
-    //             let mut next_floor_tree = tree.to_owned();
-    //             next_floor_tree.main.retain(|c| c.sys_code.starts_with(&r.sys_code) && c.sys_code != r.sys_code);
-    //             Self::copy_tree_to_new_set(&next_floor_tree, target_set_id, Some(r.id.clone()), Some(new_cate_id), funs, target_ctx).await?;
-    //         }
-    //         Ok("".to_string())
-    //     }
-    //     .boxed()
-    // }
 }
