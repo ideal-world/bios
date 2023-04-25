@@ -177,22 +177,22 @@ impl Oauth2GrantType {
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Default)]
 pub enum WayToAdd {
     ///同步账号同步凭证
+    #[default]
     SynchronizeCert,
     ///同步账号不凭证
     NoSynchronizeCert,
 }
 
-impl Default for WayToAdd {
-    fn default() -> Self {
-        WayToAdd::SynchronizeCert
-    }
-}
+
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Default)]
 pub enum WayToDelete {
     ///什么也不做
+    #[default]
     DoNotDelete,
     ///取消授权
     DeleteCert,
@@ -201,15 +201,13 @@ pub enum WayToDelete {
     ///同步删除账号凭证
     DeleteAccount,
 }
-impl Default for WayToDelete {
-    fn default() -> Self {
-        WayToDelete::DoNotDelete
-    }
-}
+
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Default)]
 pub enum IamAccountLockStateKind {
     // 未锁定
+    #[default]
     Unlocked,
     // 密码锁定
     PasswordLocked,
@@ -219,11 +217,7 @@ pub enum IamAccountLockStateKind {
     LongTimeNoLoginLocked,
 }
 
-impl Default for IamAccountLockStateKind {
-    fn default() -> Self {
-        IamAccountLockStateKind::Unlocked
-    }
-}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum IamAccountStatusKind {
     // 激活

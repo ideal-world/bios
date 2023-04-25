@@ -47,7 +47,7 @@ impl RbumCrudOperation<iam_config::ActiveModel, IamConfigAddReq, IamConfigModify
     async fn before_add_rbum(add_req: &mut IamConfigAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if Self::config_exist(&add_req.code, &add_req.rel_item_id, funs, ctx).await? {
             return Err(funs.err().conflict(
-                &Self::get_table_name(),
+                Self::get_table_name(),
                 "add",
                 &format!("{}.{} config already exists", add_req.code, add_req.rel_item_id),
                 "409-iam-config-exist",
@@ -174,7 +174,7 @@ impl IamConfigServ {
     }
 
     pub async fn config_exist(code: &IamConfigKind, rel_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        Ok(Self::exist_rbum(
+        Self::exist_rbum(
             &IamConfigFilterReq {
                 code: Some(code.to_string()),
                 rel_item_id: Some(rel_item_id.to_string()),
@@ -183,6 +183,6 @@ impl IamConfigServ {
             funs,
             ctx,
         )
-        .await?)
+        .await
     }
 }
