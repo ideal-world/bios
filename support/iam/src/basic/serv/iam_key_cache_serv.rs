@@ -80,6 +80,7 @@ impl IamIdentCacheServ {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
+            Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
         }
         Ok(())
@@ -294,6 +295,13 @@ impl IamIdentCacheServ {
             )
             .await?;
 
+        Ok(())
+    }
+    pub async fn delete_double_auth(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("delete double auth: account_id={}", account_id);
+        if (funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_double_auth_info, account_id).as_str()).await?).is_some() {
+            funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_double_auth_info, account_id).as_str()).await?;
+        }
         Ok(())
     }
 }
