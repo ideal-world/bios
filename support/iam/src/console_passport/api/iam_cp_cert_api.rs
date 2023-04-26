@@ -109,10 +109,10 @@ impl IamCpCertApi {
 
     /// Find Third-kind Certs By Current Account
     #[oai(path = "/cert/third-kind", method = "get")]
-    async fn get_third_cert(&self, tenant_id: Query<Option<String>>, supplier: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
+    async fn get_third_cert(&self, supplier: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&ctx.owner, vec![supplier.0], &funs, &ctx).await?;
+        // let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&ctx.0.owner, vec![supplier.0], &funs, &ctx.0).await?;
         TardisResp::ok(rbum_cert)
     }
 
