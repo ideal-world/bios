@@ -126,6 +126,7 @@ pub struct IamTenantConfigResp {
     pub cert_conf_by_oauth2: Option<Vec<IamCertConfOAuth2Resp>>,
     pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapResp>>,
     pub config: Vec<IamConfigSummaryResp>,
+    pub strict_security_mode: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
