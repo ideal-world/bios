@@ -7,7 +7,7 @@ use crate::iam_enumeration::{IamRelKind, IamSetKind};
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumRelFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
-use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use tardis::web::context_extractor::TardisContextExtractor;
@@ -179,9 +179,14 @@ impl IamCsOrgItemApi {
     #[oai(path = "/", method = "get")]
     async fn find_items(&self, cate_id: Query<Option<String>>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumSetItemDetailResp>> {
         let funs = iam_constants::get_tardis_inst();
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx).await?;
+        let scope_level = if tenant_id.is_none() || tenant_id.0.clone().unwrap().is_empty() {
+            None
+        } else {
+            Some(RbumScopeLevelKind::Root)
+        };
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, scope_level, false, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 
