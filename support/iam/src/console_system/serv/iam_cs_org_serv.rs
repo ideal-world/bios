@@ -6,7 +6,7 @@ use bios_basic::rbum::{
         rbum_set_dto::RbumSetTreeResp,
     },
     rbum_enumeration::{RbumRelFromKind, RbumSetCateLevelQueryKind},
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_rel_serv::RbumRelServ, rbum_set_serv::{RbumSetServ}},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_rel_serv::RbumRelServ, rbum_set_serv::RbumSetServ},
 };
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -144,6 +144,7 @@ impl IamCsOrgServ {
         let curr_tree: RbumSetTreeResp = RbumSetServ::get_tree(
             &old_rel_set_id,
             &RbumSetTreeFilterReq {
+                fetch_cate_item: true,
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 ..Default::default()
             },
