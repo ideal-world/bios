@@ -466,13 +466,13 @@ impl IamSetServ {
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
-                    scope_level,
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
                 rel_rbum_set_id: set_id.clone(),
                 rel_rbum_set_cate_ids: set_cate_id.map(|r| vec![r]),
                 rel_rbum_item_ids: item_id.map(|i| vec![i]),
+                rel_rbum_item_scope_level: scope_level,
                 ..Default::default()
             },
             None,
