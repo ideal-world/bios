@@ -1085,7 +1085,7 @@ impl IamCertServ {
 
         if let Some(sync_cron) = req.account_sync_cron.clone() {
             if schedule_url.is_empty() {
-                return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", ""));
+                return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
             };
             if !sync_cron.is_empty() {
                 funs.web_client()
