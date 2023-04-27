@@ -2,6 +2,7 @@ use bios_basic::spi::{
     spi_funs::SpiBsInstExtractor,
     spi_initializer::common_pg::{self, package_table_name},
 };
+use itertools::Itertools;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{DateTime, Utc},
@@ -229,6 +230,86 @@ pub(crate) async fn fact_records_delete(fact_conf_key: &str, fact_record_delete_
     }
     conn.commit().await?;
     Ok(())
+}
+
+pub(crate) async fn fact_records_delete_by_dim_key(
+    fact_conf_key: &str,
+    dim_conf_key: &str,
+    dim_record_key: Option<serde_json::Value>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<()> {
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
+    conn.begin().await?;
+    let _ = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, &conn, ctx)
+        .await?
+        .into_iter()
+        .find_or_first(|r| r.dim_rel_conf_dim_key.clone().unwrap_or("".to_string()) == dim_conf_key)
+        .ok_or_else(|| funs.err().not_found("fact_record", "delete_set", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?;
+    if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
+        return Err(funs.err().conflict("fact_record", "delete_set", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
+    }
+    let fact_record_delete_keys = self::find_fact_record_key(fact_conf_key.to_owned(), dim_conf_key.to_owned(), dim_record_key, &conn, funs, ctx).await?;
+    if fact_record_delete_keys.is_empty() {
+        return Ok(());
+    }
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}_del"), ctx);
+    for delete_key in fact_record_delete_keys {
+        conn.execute_one(
+            &format!(
+                r#"INSERT INTO {table_name}
+    (key)
+    VALUES
+    ($1)
+    "#,
+            ),
+            vec![Value::from(delete_key)],
+        )
+        .await?;
+    }
+    conn.commit().await?;
+    Ok(())
+}
+
+async fn find_fact_record_key(
+    fact_conf_key: String,
+    dim_conf_key: String,
+    dim_record_key: Option<serde_json::Value>,
+    conn: &TardisRelDBlConnection,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<Vec<String>> {
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx)
+        .await?
+        .ok_or_else(|| funs.err().not_found("fact_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
+    let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
+    let mut sql_where = vec!["1 = 1".to_string()];
+    let mut params: Vec<Value> = vec![];
+    if let Some(dim_record_key) = &dim_record_key {
+        sql_where.push("$1 = $2".to_owned());
+        params.push(dim_conf_key.clone().into());
+        params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false));
+    }
+    let result = conn
+        .query_all(
+            &format!(
+                r#"SELECT DISTINCT KEY
+FROM {table_name}
+WHERE 
+    {}
+"#,
+                sql_where.join(" AND "),
+            ),
+            params,
+        )
+        .await?;
+    let mut final_result = vec![];
+    for item in result {
+        let values = item.try_get_by("key")?;
+        final_result.push(values);
+    }
+    Ok(final_result)
 }
 
 pub(crate) async fn fact_records_clean(fact_conf_key: &str, before_ct: Option<DateTime<Utc>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

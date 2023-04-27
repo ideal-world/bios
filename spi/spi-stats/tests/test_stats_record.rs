@@ -342,6 +342,11 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
         "200"
     );
 
+    assert_eq!(
+        client.put_resp::<String, Void>("/ci/record/fact/req/dim/req_status/batch/remove", &"open".to_string()).await.code,
+        "200"
+    );
+
     // ============================ clean ============================
 
     assert_eq!(client.delete_resp("/ci/record/fact/req/batch/clean").await.code, "200");
