@@ -158,6 +158,7 @@ pub struct RbumSetItemFilterReq {
     pub rel_rbum_set_cate_ids: Option<Vec<String>>,
     pub rel_rbum_item_disabled: Option<bool>,
     pub rel_rbum_item_ids: Option<Vec<String>>,
+    pub rel_rbum_item_scope_level: Option<RbumScopeLevelKind>,
     pub rel_rbum_item_kind_ids: Option<Vec<String>>,
     pub rel_rbum_item_domain_ids: Option<Vec<String>>,
 }
