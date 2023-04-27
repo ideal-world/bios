@@ -15,7 +15,6 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
-use tardis::futures::FutureExt;
 use tardis::serde_json::json;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -458,6 +457,7 @@ impl IamSetServ {
         set_id: Option<String>,
         set_cate_id: Option<String>,
         item_id: Option<String>,
+        scope_level: Option<RbumScopeLevelKind>,
         with_sub: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -466,6 +466,7 @@ impl IamSetServ {
             &RbumSetItemFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: with_sub,
+                    scope_level,
                     ..Default::default()
                 },
                 rel_rbum_item_disabled: Some(false),
@@ -511,7 +512,7 @@ impl IamSetServ {
             )
             .await
         } else {
-            Self::find_set_items(set_id, set_cate_id, item_id, with_sub, funs, ctx).await
+            Self::find_set_items(set_id, set_cate_id, item_id, None, with_sub, funs, ctx).await
         }
     }
 
@@ -520,7 +521,7 @@ impl IamSetServ {
     }
 
     pub async fn find_flat_set_items(set_id: &str, item_id: &str, with_sub: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<HashMap<String, String>> {
-        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), with_sub, funs, ctx).await?;
+        let items = Self::find_set_items(Some(set_id.to_string()), None, Some(item_id.to_string()), None, with_sub, funs, ctx).await?;
         let items = items
             .into_iter()
             .map(|item| {
