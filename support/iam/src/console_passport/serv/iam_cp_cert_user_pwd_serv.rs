@@ -23,9 +23,22 @@ pub struct IamCpCertUserPwdServ;
 
 impl IamCpCertUserPwdServ {
     pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
-        let tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
+        let mut tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
-        let validate_resp = RbumCertServ::validate_by_spec_cert_conf(&pwd_new_req.ak.0, &pwd_new_req.original_sk.0, &rbum_cert_conf_id, true, &tenant_id, funs).await;
+        let validate_resp = RbumCertServ::validate_by_ak_and_basic_sk(
+            &pwd_new_req.ak.0,
+            &pwd_new_req.original_sk.0,
+            &RbumCertRelKind::Item,
+            true,
+            Some(tenant_id.clone()),
+            vec![
+                &IamCertKernelKind::UserPwd.to_string(),
+                &IamCertKernelKind::MailVCode.to_string(),
+                &IamCertKernelKind::PhoneVCode.to_string(),
+            ],
+            funs,
+        )
+        .await;
         let (_, _, rbum_item_id) = if validate_resp.is_ok() {
             validate_resp.unwrap()
         } else {
@@ -35,11 +48,12 @@ impl IamCpCertUserPwdServ {
                     validate_resp?;
                 }
             };
+            tenant_id = "".to_string();
             RbumCertServ::validate_by_ak_and_basic_sk(
                 &pwd_new_req.ak.0,
                 &pwd_new_req.original_sk.0,
                 &RbumCertRelKind::Item,
-                false,
+                true,
                 Some("".to_string()),
                 vec![
                     &IamCertKernelKind::UserPwd.to_string(),
