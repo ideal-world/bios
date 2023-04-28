@@ -6,7 +6,7 @@
 409-iam-tenant-can-not-delete	租户只能禁用不能删除
 401-iam-tenant-context-not-exist	请求中找不到租户信息
 409-iam-tenant-is-disabled	租户已禁用
-
+409-iam-bind-conflict	不能关联关系已存在的记录
 409-iam-app-can-not-delete	应用只能禁用不能删除
 401-iam-app-context-not-exist	请求中找不到应用信息
 
