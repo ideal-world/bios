@@ -278,7 +278,7 @@ async fn find_fact_record_key(
     let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
-    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, &conn, ctx)
+    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, conn, ctx)
         .await?
         .into_iter()
         .find_or_first(|r| r.dim_rel_conf_dim_key.clone().unwrap_or("".to_string()) == dim_conf_key)

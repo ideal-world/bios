@@ -23,7 +23,7 @@ use tardis::{
 };
 
 fn crypto_req(body: &str, serv_pub_key: &str, front_pub_key: &str, need_crypto_resp: bool) -> (String, String) {
-    let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(&serv_pub_key).unwrap();
+    let pub_key = TardisFuns::crypto.sm2.new_public_key_from_public_key(serv_pub_key).unwrap();
 
     let sm4_key = TardisFuns::crypto.key.rand_16_hex().unwrap();
     let sm4_iv = TardisFuns::crypto.key.rand_16_hex().unwrap();
