@@ -1,6 +1,6 @@
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
 use tardis::chrono::{DateTime, Utc};
-use tardis::serde_json::{Value};
+use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
