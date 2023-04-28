@@ -23,9 +23,10 @@ pub struct StatsQueryMetricsReq {
     /// Filter conditions, two-dimensional array, OR between groups, AND within groups
     #[oai(rename = "where")]
     pub _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
+    pub dimension_order: Option<Vec<StatsQueryDimensionOrderReq>>,
     /// Sort conditions
     /// The code and fun must exist in Select
-    pub order: Option<Vec<StatsQueryMetricsOrderReq>>,
+    pub metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
     /// Filter conditions after group
     /// The code and fun must exist in Select
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
@@ -67,6 +68,14 @@ pub struct StatsQueryMetricsOrderReq {
     /// Measure column key
     pub code: String,
     pub fun: StatsQueryAggFunKind,
+    /// Sort direction
+    pub asc: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsQueryDimensionOrderReq {
+    /// Dimension column key
+    pub code: String,
     /// Sort direction
     pub asc: bool,
 }
