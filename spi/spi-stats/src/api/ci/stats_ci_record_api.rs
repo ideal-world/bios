@@ -67,12 +67,12 @@ impl StatsCiRecordApi {
         &self,
         fact_key: Path<String>,
         dim_conf_key: Path<String>,
-        delete_req: Json<serde_json::Value>,
+        delete_req: Json<StatsDimRecordDeleteReq>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
         let funs = request.tardis_fun_inst();
-        stats_record_serv::fact_records_delete_by_dim_key(fact_key.0, dim_conf_key.0, Some(delete_req.0), &funs, &ctx.0).await?;
+        stats_record_serv::fact_records_delete_by_dim_key(fact_key.0, dim_conf_key.0, Some(delete_req.0.key), &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
 
