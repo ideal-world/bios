@@ -127,7 +127,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp.account_id).as_str()).await?,
-        2
+        1
     );
 
     info!("【test_key_cache】 Change cert, expected no token record");
