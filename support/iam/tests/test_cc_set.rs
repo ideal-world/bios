@@ -188,13 +188,13 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     IamSetServ::modify_set_item(&item_id1, &mut RbumSetItemModifyReq { sort: 10 }, &funs, context).await?;
 
     info!("【test_ca_set】 : test_single_level : Find Set Item");
-    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, false, &funs, context).await?;
+    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, None, false, &funs, context).await?;
     assert_eq!(items.len(), 1);
 
     info!("【test_ca_set】 : test_single_level : Delete Set Item By Id");
     assert!(IamSetServ::delete_set_item(&item_id1, &funs, another_context).await.is_err());
     IamSetServ::delete_set_item(&item_id1, &funs, context).await?;
-    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, false, &funs, context).await?;
+    let items = IamSetServ::find_set_items(None, Some(set_cate_id1.clone()), None, None, false, &funs, context).await?;
     assert_eq!(items.len(), 0);
 
     info!("【test_cc_set】 : test_single_level : copy_tree_to_new_set");

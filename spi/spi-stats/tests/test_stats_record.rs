@@ -353,7 +353,6 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
             .await
             .code,
         "200"
-        
     );
 
     // ============================ clean ============================

@@ -244,7 +244,7 @@ async fn add_listener(avatars: Vec<TrimString>, mgr: bool, http_client: &TestHtt
                 topic_code: TrimString("im".to_string()),
                 topic_sk: if mgr { Some("mt001".to_string()) } else { Some("ut001".to_string()) },
                 events: None,
-                avatars: avatars,
+                avatars,
                 subscribe_mode: !mgr,
             },
         )
