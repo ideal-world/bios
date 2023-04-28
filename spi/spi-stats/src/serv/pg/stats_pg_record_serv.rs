@@ -242,11 +242,6 @@ pub(crate) async fn fact_records_delete_by_dim_key(
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, _) = common_pg::init_conn(bs_inst).await?;
     conn.begin().await?;
-    let _ = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, &conn, ctx)
-        .await?
-        .into_iter()
-        .find_or_first(|r| r.dim_rel_conf_dim_key.clone().unwrap_or("".to_string()) == dim_conf_key)
-        .ok_or_else(|| funs.err().not_found("fact_record", "delete_set", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?;
     if !stats_pg_conf_fact_serv::online(fact_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("fact_record", "delete_set", "The fact config not online.", "409-spi-stats-fact-conf-not-online"));
     }
@@ -283,12 +278,17 @@ async fn find_fact_record_key(
     let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, conn, ctx)
         .await?
         .ok_or_else(|| funs.err().not_found("fact_record", "find", "The dimension config does not exist.", "404-spi-stats-dim-conf-not-exist"))?;
+    let fact_conf_col_key = stats_pg_conf_fact_col_serv::find_by_fact_conf_key(&fact_conf_key, &conn, ctx)
+        .await?
+        .into_iter()
+        .find_or_first(|r| r.dim_rel_conf_dim_key.clone().unwrap_or("".to_string()) == dim_conf_key)
+        .ok_or_else(|| funs.err().not_found("fact_record", "delete_set", "The fact config does not exist.", "404-spi-stats-fact-conf-not-exist"))?
+        .key;
     let table_name = package_table_name(&format!("stats_inst_fact_{fact_conf_key}"), ctx);
     let mut sql_where = vec!["1 = 1".to_string()];
     let mut params: Vec<Value> = vec![];
     if let Some(dim_record_key) = &dim_record_key {
-        sql_where.push("$1 = $2".to_owned());
-        params.push(dim_conf_key.clone().into());
+        sql_where.push(format!("{fact_conf_col_key} = $1"));
         params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false));
     }
     let result = conn
