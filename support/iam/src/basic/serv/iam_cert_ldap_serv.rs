@@ -943,6 +943,21 @@ impl IamCertLdapServ {
         .map(|r| r.id.to_string());
         Ok(result)
     }
+
+    pub async fn get_ldap_resp_by_cn(cn: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountExtSysResp>> {
+        let (mut ldap_client, cert_conf, _cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
+        if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
+            ldap_client.unbind().await?;
+            return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
+        }
+        let ldap_account: Vec<IamAccountExtSysResp> = ldap_client
+            .search(&format!("cn={}", cn), &cert_conf.package_account_return_attr_with(vec!["dn", "cn"]))
+            .await?
+            .into_iter()
+            .map(|r| IamAccountExtSysResp::form_ldap_search_resp(r, &cert_conf))
+            .collect();
+        Ok(ldap_account)
+    }
     ///# Examples
     ///
     ///```
