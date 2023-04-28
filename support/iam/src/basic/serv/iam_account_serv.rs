@@ -10,6 +10,7 @@ use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::cache::aio::tokio;
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
@@ -813,6 +814,9 @@ impl IamAccountServ {
         } else {
             set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await?);
         };
+        if !set_ids.is_empty() {
+            sleep(Duration::from_secs(5)).await;
+        }
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, funs, ctx).await?;
             account_resp_dept_id.extend(set_items.iter().map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
