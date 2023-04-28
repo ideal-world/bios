@@ -737,11 +737,27 @@ impl IamAccountServ {
     // todo
     // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
     pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, logout_msg: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+        let account_resp = IamAccountServ::get_account_detail_aggs(
+            &account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            funs,
+            &ctx,
+        )
+        .await?;
         let r = TaskProcessor::execute_task(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
-                Self::add_or_modify_account_search(&account_id, is_modify, &logout_msg, &funs, &ctx).await
+                Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx).await
             },
             funs,
         )
@@ -763,23 +779,14 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_resp: IamAccountDetailAggResp = IamAccountServ::get_account_detail_aggs(
-            account_id,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            true,
-            true,
-            funs,
-            ctx,
-        )
-        .await?;
+    pub async fn add_or_modify_account_search(
+        account_resp: IamAccountDetailAggResp,
+        is_modify: bool,
+        logout_msg: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let account_id = account_resp.id.as_str();
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];

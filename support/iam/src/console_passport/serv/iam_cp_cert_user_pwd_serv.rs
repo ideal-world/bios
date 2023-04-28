@@ -24,7 +24,7 @@ pub struct IamCpCertUserPwdServ;
 impl IamCpCertUserPwdServ {
     pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let mut tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
+        let mut rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let validate_resp = RbumCertServ::validate_by_ak_and_basic_sk(
             &pwd_new_req.ak.0,
             &pwd_new_req.original_sk.0,
@@ -49,6 +49,7 @@ impl IamCpCertUserPwdServ {
                 }
             };
             tenant_id = "".to_string();
+            rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
             RbumCertServ::validate_by_ak_and_basic_sk(
                 &pwd_new_req.ak.0,
                 &pwd_new_req.original_sk.0,
