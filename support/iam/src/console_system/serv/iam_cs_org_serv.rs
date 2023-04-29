@@ -144,6 +144,7 @@ impl IamCsOrgServ {
         let curr_tree: RbumSetTreeResp = RbumSetServ::get_tree(
             &old_rel_set_id,
             &RbumSetTreeFilterReq {
+                fetch_cate_item: true,
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 ..Default::default()
             },

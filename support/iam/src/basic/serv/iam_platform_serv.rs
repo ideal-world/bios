@@ -10,6 +10,7 @@ use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
+use crate::iam_config::IamConfig;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::iam_config_serv::IamConfigServ;
@@ -73,6 +74,7 @@ impl IamPlatformServ {
             cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
             cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
             config,
+            strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
         };
 
         Ok(platform)

@@ -943,6 +943,29 @@ impl IamCertLdapServ {
         .map(|r| r.id.to_string());
         Ok(result)
     }
+
+    pub async fn get_ldap_resp_by_cn(cn: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountExtSysResp>> {
+        let (mut ldap_client, cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), "", funs, ctx).await?;
+        if ldap_client.bind_by_dn(&cert_conf.principal, &cert_conf.credentials).await?.is_none() {
+            ldap_client.unbind().await?;
+            return Err(funs.err().unauthorized("ldap_cert_conf", "add", "validation error", "401-rbum-cert-valid-error"));
+        }
+        let ldap_accounts: Vec<IamAccountExtSysResp> = ldap_client
+            .search(&format!("cn={}", cn), &cert_conf.package_account_return_attr_with(vec!["dn", "cn"]))
+            .await?
+            .into_iter()
+            .map(|r| IamAccountExtSysResp::form_ldap_search_resp(r, &cert_conf))
+            .collect();
+        let mut result = vec![];
+        for account in &ldap_accounts {
+            let mut ldap_account = account.clone();
+            if let Some(account_id) = Self::get_cert_rel_account_by_dn(&account.account_id, &cert_conf_id, funs, ctx).await? {
+                ldap_account.account_id = account_id;
+            }
+            result.push(ldap_account);
+        }
+        Ok(result)
+    }
     ///# Examples
     ///
     ///```
@@ -995,7 +1018,9 @@ pub(crate) mod ldap {
             } else {
                 format!("{url}:{port}")
             };
-            let (conn, ldap) = LdapConnAsync::with_settings(setting, &url).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] connection error: {e:?}"), ""))?;
+            let (conn, ldap) = LdapConnAsync::with_settings(setting, &url)
+                .await
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] connection error: {e:?}"), "500-iam-connection-error"))?;
             ldap3::drive!(conn);
             Ok(LdapClient {
                 ldap,
@@ -1010,7 +1035,13 @@ pub(crate) mod ldap {
 
         pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {
             trace!("[Iam.Ldap] bind_by_dn dn:{dn}");
-            let result = self.ldap.simple_bind(dn, pw).await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), ""))?.success().map(|_| ());
+            let result = self
+                .ldap
+                .simple_bind(dn, pw)
+                .await
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] bind error: {e:?}"), "500-iam-ldap-bind-error"))?
+                .success()
+                .map(|_| ());
             if let Some(err) = result.err() {
                 warn!("[Iam.Ldap] ldap bind error: {:?}", err);
                 Ok(None)
@@ -1025,9 +1056,9 @@ pub(crate) mod ldap {
                 .ldap
                 .search(&self.base_dn, Scope::Subtree, filter, return_attr)
                 .await
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), "500-iam-ldap-search-error"))?
                 .success()
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?;
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), "500-iam-ldap-search-result-error"))?;
             let result = rs.into_iter().map(SearchEntry::construct).map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect();
             Ok(result)
         }
@@ -1039,9 +1070,11 @@ pub(crate) mod ldap {
                 .ldap
                 .streaming_search_with(adapters, &self.base_dn, Scope::Subtree, filter, return_attr)
                 .await
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] page_search error: {e:?}"), ""))?;
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] page_search error: {e:?}"), "500-iam-ldap-search-error"))?;
             let mut result = vec![];
-            while let Some(entry) = search.next().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] page_search next() error: {e:?}"), ""))? {
+            while let Some(entry) =
+                search.next().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] page_search next() error: {e:?}"), "500-iam-ldap-search-result-error"))?
+            {
                 let entry = SearchEntry::construct(entry);
                 result.push(entry.clone());
             }
@@ -1060,9 +1093,9 @@ pub(crate) mod ldap {
                 .ldap
                 .search(dn, Scope::Subtree, "objectClass=*", return_attr)
                 .await
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), "500-iam-ldap-search-error"))?
                 .success()
-                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), ""))?;
+                .map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] search error: {e:?}"), "500-iam-ldap-search-result-error"))?;
             let result = rs.into_iter().map(SearchEntry::construct).map(|r| LdapSearchResp { dn: r.dn, attrs: r.attrs }).collect::<Vec<LdapSearchResp>>();
             if let Some(result) = result.first() {
                 Ok(Some(result.clone()))
@@ -1072,7 +1105,7 @@ pub(crate) mod ldap {
         }
 
         pub async fn unbind(&mut self) -> TardisResult<()> {
-            self.ldap.unbind().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] unbind error: {e:?}"), ""))
+            self.ldap.unbind().await.map_err(|e| TardisError::internal_error(&format!("[Iam.Ldap] unbind error: {e:?}"), "500-iam-ldap-unbind-error"))
         }
     }
 

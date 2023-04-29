@@ -498,6 +498,7 @@ impl IamTenantServ {
             config,
             cert_conf_by_oauth2,
             cert_conf_by_ldap,
+            strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
         };
 
         Ok(tenant_config)

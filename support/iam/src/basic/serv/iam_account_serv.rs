@@ -10,6 +10,7 @@ use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
@@ -132,30 +133,27 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
+        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
     async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamAccountServ::async_add_or_modify_account_search(id.to_string(), false, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
-    async fn before_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
-        Ok(())
-    }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
         if id == ctx.owner {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "account invalid", "409-iam-current-can-not-account-delete"));
         }
-        IamAccountServ::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(None)
     }
 
-    async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
+        IamAccountServ::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
 
@@ -331,7 +329,7 @@ impl IamAccountServ {
         // TODO test
         if let Some(input_org_cate_ids) = &modify_req.org_cate_ids {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
-            let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), false, funs, ctx).await?;
+            let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), None, false, funs, ctx).await?;
             let mut stored_cate_ids: Vec<String> = stored_cates.iter().map(|r| r.rel_rbum_set_cate_id.clone().unwrap_or_default()).collect();
             stored_cate_ids.dedup();
             for input_org_cate_id in input_org_cate_ids {
@@ -737,11 +735,28 @@ impl IamAccountServ {
     // todo
     // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
     pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, logout_msg: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+        let account_resp = IamAccountServ::get_account_detail_aggs(
+            &account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            funs,
+            &ctx,
+        )
+        .await?;
         let r = TaskProcessor::execute_task(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
-                Self::add_or_modify_account_search(&account_id, is_modify, &logout_msg, &funs, &ctx).await
+                Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx).await
             },
             funs,
         )
@@ -763,29 +778,20 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_resp: IamAccountDetailAggResp = IamAccountServ::get_account_detail_aggs(
-            account_id,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            true,
-            true,
-            funs,
-            ctx,
-        )
-        .await?;
+    pub async fn add_or_modify_account_search(
+        account_resp: IamAccountDetailAggResp,
+        is_modify: bool,
+        logout_msg: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let account_id = account_resp.id.as_str();
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
 
         let mut set_ids = vec![];
-        if IamAccountServ::is_global_account(account_id, funs, ctx).await? {
+        if account_resp.own_paths.is_empty() {
             let tenants = IamTenantServ::find_items(
                 &IamTenantFilterReq {
                     basic: RbumBasicFilterReq {
@@ -808,8 +814,11 @@ impl IamAccountServ {
         } else {
             set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await?);
         };
+        if !set_ids.is_empty() {
+            sleep(Duration::from_secs(5)).await;
+        }
         for set_id in set_ids {
-            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), true, funs, ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, funs, ctx).await?;
             account_resp_dept_id.extend(set_items.iter().map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
         }
 

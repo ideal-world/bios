@@ -57,6 +57,7 @@ pub struct IamConfig {
 
     pub spi: IamSpiConfig,
     pub iam_base_url: String,
+    pub strict_security_mode: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -142,6 +143,7 @@ impl Default for IamConfig {
             third_integration_schedule_code: "iam:third:integration".to_string(),
             iam_base_url: "http://localhost:8080/iam".to_string(),
             spi: Default::default(),
+            strict_security_mode: false,
         }
     }
 }

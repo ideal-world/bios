@@ -110,6 +110,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 (
                     iam_ci_cert_api::IamCiCertManageApi,
                     iam_ci_cert_api::IamCiCertApi,
+                    iam_ci_cert_api::IamCiLdapCertApi,
                     iam_ci_app_api::IamCiAppApi,
                     iam_ci_res_api::IamCiResApi,
                     iam_ci_role_api::IamCiRoleApi,

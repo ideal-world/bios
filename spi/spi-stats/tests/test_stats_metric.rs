@@ -118,7 +118,7 @@ pub async fn test_metric_query_check(client: &mut TestHttpClient) -> TardisResul
                     "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                     "start_time":"2023-01-01T12:00:00.000Z",
                     "end_time":"2023-02-01T12:00:00.000Z",
-                    "order": [{"code":"act_hours", "fun":"max","asc": false}]
+                    "metrics_order": [{"code":"act_hours", "fun":"max","asc": false}]
                 }),
             )
             .await
@@ -356,7 +356,29 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z",
-                "order": [{"code":"act_hours","fun":"sum","asc": false}]
+                "metrics_order": [{"code":"act_hours","fun":"sum","asc": false}]
+            }),
+        )
+        .await;
+    assert_eq!(resp.from, "req");
+    assert_eq!(resp.show_names.len(), 4);
+    assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
+    assert_eq!(resp.group.as_object().unwrap().len(), 4);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-03"]["close"]["act_hours__sum"], 10);
+
+    // test dimensions with order
+    let resp: StatsQueryMetricsResp = client
+        .put(
+            "/ci/metric",
+            &json!({
+                "from":"req",
+                "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
+                "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
+                "start_time":"2023-01-01T12:00:00.000Z",
+                "end_time":"2023-02-01T12:00:00.000Z",
+                "dimension_order": [{"code":"status","asc": false}]
             }),
         )
         .await;
@@ -399,7 +421,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                 "start_time":"2023-01-01T12:00:00.000Z",
                 "end_time":"2023-02-01T12:00:00.000Z",
-                "order": [{"code":"act_hours","fun":"sum","asc": false}],
+                "dimension_order": [{"code":"status","asc": false}],
+                "metrics_order": [{"code":"act_hours","fun":"sum","asc": false}],
                 "having": [{"code":"act_hours","fun": "sum", "op":">", "value":30}],
                 "limit":2
             }),
