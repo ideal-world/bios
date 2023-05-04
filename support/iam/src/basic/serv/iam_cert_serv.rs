@@ -41,7 +41,7 @@ pub struct IamCertServ;
 
 impl IamCertServ {
     pub fn get_new_pwd() -> String {
-        TardisFuns::field.nanoid_len(10)
+        format!("{}0Pw$", TardisFuns::field.nanoid_len(6))
     }
 
     pub async fn init_default_ident_conf(
