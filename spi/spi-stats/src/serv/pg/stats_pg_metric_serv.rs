@@ -47,7 +47,7 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 ///       fact.status AS status
 ///     FROM
 ///         (
-///             SELECT 
+///             SELECT
 ///                 -- Built-in statement for deduplication
 ///                 DISTINCT ON (fact.key) fact.key,fact.*
 ///             FROM
@@ -362,16 +362,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
 
     // Package dimension order
     let sql_dimension_orders = if let Some(orders) = &query_req.dimension_order {
-        let sql_part_orders = orders
-            .iter()
-            .map(|order| {
-                format!(
-                    "fact.{} {}",
-                    order.code,
-                    if order.asc { "ASC" } else { "DESC" }
-                )
-            })
-            .collect::<Vec<String>>();
+        let sql_part_orders = orders.iter().map(|order| format!("fact.{} {}", order.code, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
         format!("ORDER BY {}", sql_part_orders.join(","))
     } else {
         "".to_string()
