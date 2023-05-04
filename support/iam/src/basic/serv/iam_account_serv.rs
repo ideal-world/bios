@@ -150,7 +150,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         } else {
             "".to_string()
         };
-        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, logout_msg, funs, ctx.clone()).await?;
         Ok(())
     }
 
