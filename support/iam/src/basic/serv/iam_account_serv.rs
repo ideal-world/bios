@@ -238,7 +238,7 @@ impl IamAccountServ {
             match funs
                 .web_client()
                 .put_str_to_str(
-                    &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_path, cert_phone, pwd.clone()),
+                    &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_pwd_path, cert_phone, pwd.clone()),
                     "",
                     Some(vec![(
                         TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
