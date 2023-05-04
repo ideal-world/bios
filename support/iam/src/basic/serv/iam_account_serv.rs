@@ -80,7 +80,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(iam_account::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
-            status: Set(add_req.status.as_ref().unwrap_or(&IamAccountStatusKind::Active).to_string()),
+            status: Set(add_req.status.as_ref().unwrap_or(&IamAccountStatusKind::Active).to_int()),
             temporary: Set(add_req.temporary.unwrap_or(false)),
             lock_status: Set(add_req.lock_status.as_ref().unwrap_or(&IamAccountLockStateKind::Unlocked).to_int()),
             ext1_idx: Set("".to_string()),
@@ -129,7 +129,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             iam_account.icon = Set(icon.to_string());
         }
         if let Some(status) = &modify_req.status {
-            iam_account.status = Set(status.to_string());
+            iam_account.status = Set(status.to_int());
         }
         if let Some(lock_status) = &modify_req.lock_status {
             iam_account.lock_status = Set(lock_status.to_int());

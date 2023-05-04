@@ -256,6 +256,34 @@ impl IamAccountStatusKind {
     pub fn parse(kind: &str) -> TardisResult<IamAccountStatusKind> {
         IamAccountStatusKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not account status type kind: {kind}"), "404-iam-account-status-not-exist"))
     }
+
+    pub fn from_int(s: i16) -> TardisResult<IamAccountStatusKind> {
+        match s {
+            0 => Ok(IamAccountStatusKind::Active),
+            1 => Ok(IamAccountStatusKind::Dormant),
+            2 => Ok(IamAccountStatusKind::Logout),
+            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> i16 {
+        match self {
+            IamAccountStatusKind::Active => 0,
+            IamAccountStatusKind::Dormant => 1,
+            IamAccountStatusKind::Logout => 2,
+        }
+    }
+}
+
+impl TryGetable for IamAccountStatusKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = i16::try_get(res, pre, col)?;
+        IamAccountStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implement")
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
