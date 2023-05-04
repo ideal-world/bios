@@ -46,7 +46,7 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
 use super::iam_app_serv::IamAppServ;
 
@@ -82,6 +82,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             status: Set(add_req.status.as_ref().unwrap_or(&IamAccountStatusKind::Active).to_string()),
             temporary: Set(add_req.temporary.unwrap_or(false)),
+            lock_status: Set(add_req.lock_status.as_ref().unwrap_or(&IamAccountLockStateKind::Unlocked).to_int()),
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -130,6 +131,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if let Some(status) = &modify_req.status {
             iam_account.status = Set(status.to_string());
         }
+        if let Some(lock_status) = &modify_req.lock_status {
+            iam_account.lock_status = Set(lock_status.to_int());
+        }
         Ok(Some(iam_account))
     }
 
@@ -137,9 +141,19 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
+        let logout_msg = if modify_req.status.is_some() && modify_req.status.as_ref().unwrap() == &IamAccountStatusKind::Logout {
+            if modify_req.is_auto.is_some() && modify_req.is_auto.unwrap() {
+                "The sleep is automatically deregistered when the sleep expires.".to_string()
+            } else {
+                "Manual cancellation.".to_string()
+            }
+        } else {
+            "".to_string()
+        };
         IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
+
     async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamAccountServ::async_add_or_modify_account_search(id.to_string(), false, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
@@ -161,6 +175,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         query.column((iam_account::Entity, iam_account::Column::Icon));
         query.column((iam_account::Entity, iam_account::Column::Status));
         query.column((iam_account::Entity, iam_account::Column::Temporary));
+        query.column((iam_account::Entity, iam_account::Column::LockStatus));
         query.column((iam_account::Entity, iam_account::Column::Ext1Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext2Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext3Idx));
@@ -201,6 +216,7 @@ impl IamAccountServ {
                 icon: add_req.icon.clone(),
                 temporary: None,
                 status: None,
+                lock_status: add_req.lock_status.clone(),
             },
             funs,
             ctx,
@@ -307,6 +323,8 @@ impl IamAccountServ {
                 disabled: modify_req.disabled,
                 icon: modify_req.icon.clone(),
                 status: modify_req.status.clone(),
+                is_auto: Some(false),
+                lock_status: None,
             },
             funs,
             ctx,
@@ -387,6 +405,8 @@ impl IamAccountServ {
                 disabled: modify_req.disabled,
                 scope_level: None,
                 status: None,
+                lock_status: None,
+                is_auto: None,
             },
             funs,
             &mock_ctx,
@@ -478,6 +498,7 @@ impl IamAccountServ {
             is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
             status: account.status,
             temporary: account.temporary,
+            lock_status: account.lock_status,
             icon: account.icon,
             roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             apps,
@@ -546,6 +567,7 @@ impl IamAccountServ {
                 is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
                 status: account.status,
                 temporary: account.temporary,
+                lock_status: account.lock_status,
                 icon: account.icon,
                 roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
                 certs: IamCertServ::find_certs(
@@ -659,12 +681,37 @@ impl IamAccountServ {
         Ok(online_accounts)
     }
 
-    pub async fn find_account_lock_state_by_ids(ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
-        let mut online_accounts: Vec<String> = vec![];
+    pub async fn find_account_lock_state_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut lock_accounts: Vec<String> = vec![];
+        let accounts = IamAccountServ::find_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(ids.clone()),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
         for id in ids {
-            online_accounts.push(format!("{},{}", id, IamIdentCacheServ::get_lock_state_by_account_id(&id, funs).await?));
+            let account = accounts.iter().find(|r| r.id == id);
+            if account.is_none() {
+                continue;
+            }
+            let lock_status = if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &id)).await? {
+                IamAccountLockStateKind::PasswordLocked
+            } else {
+                account.unwrap().lock_status.clone()
+            };
+            lock_accounts.push(format!("{},{}", id, lock_status.to_string()));
         }
-        Ok(online_accounts)
+        Ok(lock_accounts)
     }
 
     pub async fn find_simple_rel_roles(
@@ -686,6 +733,21 @@ impl IamAccountServ {
     pub async fn unlock_account(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Void> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
         IamIdentCacheServ::delete_lock_by_account_id(id, funs).await?;
+        Self::modify_item(
+            id,
+            &mut IamAccountModifyReq {
+                name: None,
+                scope_level: None,
+                disabled: None,
+                icon: None,
+                status: None,
+                is_auto: Some(false),
+                lock_status: Some(IamAccountLockStateKind::Unlocked),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(Void {})
     }
 
@@ -865,6 +927,7 @@ impl IamAccountServ {
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": account_resp.status,
+                    "lock_status": account_resp.lock_status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
                     "project_id": account_app_ids,

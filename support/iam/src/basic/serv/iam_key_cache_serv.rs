@@ -182,15 +182,6 @@ impl IamIdentCacheServ {
         Ok(false)
     }
 
-    pub async fn get_lock_state_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<IamAccountLockStateKind> {
-        log::trace!("get lock state: account_id={}", account_id);
-        let mut lock_state = IamAccountLockStateKind::default();
-        if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account_id)).await? {
-            lock_state = IamAccountLockStateKind::PasswordLocked;
-        }
-        Ok(lock_state)
-    }
-
     pub async fn delete_lock_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         log::trace!("delete lock: account_id={}", account_id);
         funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account_id)).await?;

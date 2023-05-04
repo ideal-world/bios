@@ -14,6 +14,8 @@ pub struct Model {
     /// [data type Kind](crate::iam_enumeration::IamAccountStatusKind)
     pub status: String,
     pub temporary: bool,
+    /// [data type Kind](crate::iam_enumeration::IamAccountLockStateKind)
+    pub lock_status: i16,
     // 索引扩展字段 idx 1-3
     pub ext1_idx: String,
     pub ext2_idx: String,
@@ -45,6 +47,7 @@ impl TardisActiveModel for ActiveModel {
             .col(ColumnDef::new(Column::Icon).not_null().string())
             .col(ColumnDef::new(Column::Status).not_null().string())
             .col(ColumnDef::new(Column::Temporary).not_null().boolean())
+            .col(ColumnDef::new(Column::LockStatus).not_null().small_integer())
             .col(ColumnDef::new(Column::Ext1Idx).not_null().string())
             .col(ColumnDef::new(Column::Ext2Idx).not_null().string())
             .col(ColumnDef::new(Column::Ext3Idx).not_null().string())

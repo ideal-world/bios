@@ -304,6 +304,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             exts: Default::default(),
             status: Some(RbumCertStatusKind::Pending),
             temporary: None,
+            lock_status: None,
         },
         funs,
         &ctx,

@@ -900,6 +900,7 @@ impl IamCertLdapServ {
                 exts: HashMap::new(),
                 status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
+                lock_status: None,
             },
             funs,
             ctx,

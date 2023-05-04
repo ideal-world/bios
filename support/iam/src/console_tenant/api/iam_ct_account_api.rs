@@ -9,13 +9,13 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind};
 
 pub struct IamCtAccountApi;
 
@@ -204,6 +204,72 @@ impl IamCtAccountApi {
         )
         .await?;
         TardisResp::ok(result)
+    }
+
+    /// Active account
+    #[oai(path = "/:id/active", method = "put")]
+    async fn active_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamAccountServ::modify_item(
+            &id.0,
+            &mut IamAccountModifyReq {
+                status: Some(IamAccountStatusKind::Active),
+                is_auto: Some(false),
+                name: None,
+                icon: None,
+                disabled: None,
+                scope_level: None,
+                lock_status: None,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Logout account
+    #[oai(path = "/:id/logout", method = "put")]
+    async fn logout_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamAccountServ::modify_item(
+            &id.0,
+            &mut IamAccountModifyReq {
+                status: Some(IamAccountStatusKind::Logout),
+                is_auto: Some(false),
+                name: None,
+                icon: None,
+                disabled: None,
+                scope_level: None,
+                lock_status: None,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(Void {})
+    }
+
+    ///lock account
+    #[oai(path = "/:id/lock", method = "put")]
+    async fn lock_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamAccountServ::modify_item(
+            &id.0,
+            &mut IamAccountModifyReq {
+                lock_status: Some(IamAccountLockStateKind::ManualLocked),
+                is_auto: None,
+                name: None,
+                icon: None,
+                disabled: None,
+                scope_level: None,
+                status: None,
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(Void {})
     }
 
     ///unlock account

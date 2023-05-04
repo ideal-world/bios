@@ -205,10 +205,42 @@ pub enum IamAccountLockStateKind {
     Unlocked,
     // 密码锁定
     PasswordLocked,
-    // 人工锁定
-    ManualLocked,
     // 长期未登录锁定
     LongTimeNoLoginLocked,
+    // 人工锁定
+    ManualLocked,
+}
+
+impl IamAccountLockStateKind {
+    pub fn from_int(s: i16) -> TardisResult<IamAccountLockStateKind> {
+        match s {
+            0 => Ok(IamAccountLockStateKind::Unlocked),
+            1 => Ok(IamAccountLockStateKind::PasswordLocked),
+            2 => Ok(IamAccountLockStateKind::LongTimeNoLoginLocked),
+            3 => Ok(IamAccountLockStateKind::ManualLocked),
+            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> i16 {
+        match self {
+            IamAccountLockStateKind::Unlocked => 0,
+            IamAccountLockStateKind::PasswordLocked => 1,
+            IamAccountLockStateKind::ManualLocked => 2,
+            IamAccountLockStateKind::LongTimeNoLoginLocked => 3,
+        }
+    }
+}
+
+impl TryGetable for IamAccountLockStateKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = i16::try_get(res, pre, col)?;
+        IamAccountLockStateKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implement")
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]

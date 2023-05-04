@@ -225,6 +225,7 @@ impl IamCertOAuth2Serv {
                 exts: HashMap::new(),
                 status: Some(Pending),
                 temporary: None,
+                lock_status: None,
             },
             funs,
             &mock_ctx,
