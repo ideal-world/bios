@@ -158,6 +158,7 @@ impl IamCertOAuth2Serv {
                     rel_rbum_kind: RbumCertRelKind::Item,
                     rel_rbum_id: account_id.to_string(),
                     is_outside: false,
+                    is_ignore_check_sk: false,
                 },
                 funs,
                 ctx,

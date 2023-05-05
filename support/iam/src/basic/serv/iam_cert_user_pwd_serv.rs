@@ -104,6 +104,7 @@ impl IamCertUserPwdServ {
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
                 sk: Some(add_req.sk.clone()),
+                is_ignore_check_sk: add_req.is_ignore_check_sk,
                 kind: None,
                 supplier: None,
                 vcode: None,

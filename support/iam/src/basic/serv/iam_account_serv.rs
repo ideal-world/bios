@@ -191,9 +191,11 @@ impl IamAccountServ {
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
         }
+        let mut is_ignore_check_sk = false;
         let pwd: String = if let Some(cert_password) = &add_req.cert_password {
             cert_password.to_string()
         } else {
+            is_ignore_check_sk = true;
             IamCertServ::get_new_pwd()
         };
         let account_id = IamAccountServ::add_item(
@@ -217,6 +219,7 @@ impl IamAccountServ {
                     ak: add_req.cert_user_name.clone(),
                     sk: TrimString(pwd.clone()),
                     status: add_req.status.clone(),
+                    is_ignore_check_sk,
                 },
                 &account_id,
                 Some(cert_conf.id),

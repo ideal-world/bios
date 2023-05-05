@@ -41,7 +41,7 @@ pub struct IamCertServ;
 
 impl IamCertServ {
     pub fn get_new_pwd() -> String {
-        format!("{}0Pw$", TardisFuns::field.nanoid_len(6))
+        TardisFuns::field.nanoid_len(10)
     }
 
     pub async fn init_default_ident_conf(
@@ -408,6 +408,7 @@ impl IamCertServ {
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: ctx.own_paths.to_string(),
                 is_outside: true,
+                is_ignore_check_sk: false,
             },
             funs,
             ctx,
@@ -501,6 +502,7 @@ impl IamCertServ {
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: account_id.to_string(),
                 is_outside: true,
+                is_ignore_check_sk: false,
             },
             funs,
             ctx,
