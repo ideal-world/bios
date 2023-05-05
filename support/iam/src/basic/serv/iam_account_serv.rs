@@ -205,7 +205,7 @@ impl IamAccountServ {
                 scope_level: add_req.scope_level.clone(),
                 disabled: add_req.disabled,
                 icon: add_req.icon.clone(),
-                temporary: None,
+                temporary: add_req.temporary.clone(),
                 status: None,
                 lock_status: add_req.lock_status.clone(),
             },
