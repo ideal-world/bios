@@ -194,6 +194,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_domain_iam_id(&self) -> String;
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
+    fn iam_basic_role_tenant_audit_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
 }
 
@@ -228,6 +229,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_tenant_admin_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_tenant_admin_id.clone())
+    }
+
+    fn iam_basic_role_tenant_audit_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_tenant_audit_id.clone())
     }
 
     fn iam_basic_role_app_admin_id(&self) -> String {

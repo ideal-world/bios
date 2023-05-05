@@ -329,7 +329,7 @@ impl IamTenantServ {
                 icon: None,
                 disabled: add_req.disabled,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
-                role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
+                role_ids: Some(vec![funs.iam_basic_role_tenant_audit_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
                 status: Some(RbumCertStatusKind::Pending),
