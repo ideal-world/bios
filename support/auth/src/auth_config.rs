@@ -89,7 +89,7 @@ impl Default for ApiConfig {
                 "/iam/cp/ldap/login".to_string(),
             ],
             logout_req_method: "delete".to_string(),
-            logout_req_path: "/iam/cp/logout/".to_string(),
+            logout_req_path: "/iam/cp/logout".to_string(),
             double_auth_req_method: "put".to_string(),
             double_auth_req_path: "/iam/cp/validate/userpwd".to_string(),
         }
