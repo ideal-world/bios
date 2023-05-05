@@ -141,21 +141,10 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
-        let logout_msg = if modify_req.status.is_some() && modify_req.status.as_ref().unwrap() == &IamAccountStatusKind::Logout {
-            if modify_req.is_auto.is_some() && modify_req.is_auto.unwrap() {
-                "The sleep is automatically deregistered when the sleep expires.".to_string()
-            } else {
-                "Manual cancellation.".to_string()
-            }
-        } else {
-            "".to_string()
-        };
-        IamAccountServ::async_add_or_modify_account_search(id.to_string(), true, logout_msg, funs, ctx.clone()).await?;
         Ok(())
     }
 
     async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::async_add_or_modify_account_search(id.to_string(), false, "".to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
@@ -413,7 +402,6 @@ impl IamAccountServ {
         )
         .await?;
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, &mock_ctx).await?;
-        Self::async_add_or_modify_account_search(id.to_string(), false, "".to_string(), funs, ctx.clone()).await.unwrap();
         Ok(())
     }
 
@@ -876,9 +864,6 @@ impl IamAccountServ {
         } else {
             set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await?);
         };
-        if !set_ids.is_empty() {
-            sleep(Duration::from_secs(5)).await;
-        }
         for set_id in set_ids {
             let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, funs, ctx).await?;
             account_resp_dept_id.extend(set_items.iter().map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
@@ -927,6 +912,7 @@ impl IamAccountServ {
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
                     "status": account_resp.status,
+                    "temporary":account_resp.temporary,
                     "lock_status": account_resp.lock_status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
@@ -940,17 +926,15 @@ impl IamAccountServ {
             if !account_resp.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
-            if account_app_ids.is_empty() && account_resp.orgs.is_empty() && account_resp.own_paths.is_empty() {
-            } else {
-                search_body.as_object_mut().unwrap().insert(
-                    "visit_keys".to_string(),
-                    json!({
-                        "apps": account_app_ids,
-                        "groups": account_resp_dept_id,
-                        "tenants" : [ account_resp.own_paths ]
-                    }),
-                );
-            }
+            search_body.as_object_mut().unwrap().insert(
+                "visit_keys".to_string(),
+                json!({
+                    "roles": account_roles,
+                    "apps": account_app_ids,
+                    "groups": account_resp_dept_id,
+                    "tenants" : [ account_resp.own_paths ]
+                }),
+            );
             //add search
             if is_modify {
                 search_body.as_object_mut().unwrap().insert("ext_override".to_string(), serde_json::Value::from(true));
@@ -961,6 +945,7 @@ impl IamAccountServ {
         }
         Ok(())
     }
+
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_search")]

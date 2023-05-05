@@ -241,6 +241,7 @@ impl IamCertOAuth2Serv {
             &mock_ctx,
         )
         .await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), &funs, mock_ctx.clone()).await?;
         Ok((account_id, oauth_token_info.access_token))
     }
 

@@ -290,7 +290,7 @@ impl IamTenantServ {
         } else {
             IamCertServ::get_new_pwd()
         };
-        IamAccountServ::add_account_agg(
+        let admin_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(tenant_admin_id.clone())),
                 name: add_req.admin_name.clone(),
@@ -318,10 +318,10 @@ impl IamTenantServ {
         } else {
             IamCertServ::get_new_pwd()
         };
-        IamAccountServ::add_account_agg(
+        let audit_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(tenant_audit_id.clone())),
-                name: add_req.admin_name.clone(),
+                name: add_req.audit_name.clone(),
                 cert_user_name: TrimString(add_req.audit_username.0.to_string()),
                 cert_password: Some(TrimString(audit_pwd.to_string())),
                 cert_phone: add_req.audit_phone.clone(),
@@ -340,6 +340,8 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
+        IamAccountServ::async_add_or_modify_account_search(admin_id, false, "".to_string(), &funs, tenant_ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(audit_id, false, "".to_string(), &funs, tenant_ctx).await?;
         Ok((tenant_id, admin_pwd, audit_pwd))
     }
 

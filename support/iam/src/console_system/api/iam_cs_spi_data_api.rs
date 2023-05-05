@@ -136,7 +136,7 @@ impl IamCsSpiDataApi {
                             &task_ctx,
                         )
                         .await?;
-                        IamAccountServ::add_or_modify_account_search(account_resp, false, "", &funs, &task_ctx).await?;
+                        IamAccountServ::add_or_modify_account_search(account_resp, true, "", &funs, &task_ctx).await?;
                     }
                     funs.commit().await?;
                     Ok(())

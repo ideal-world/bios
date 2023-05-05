@@ -16,6 +16,8 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
+use super::iam_account_serv::IamAccountServ;
+
 pub struct IamCertUserPwdServ;
 
 impl IamCertUserPwdServ {
@@ -195,6 +197,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
+            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, true, "".to_string(), &funs, ctx.clone()).await?;
             Ok(())
         } else {
             Err(funs.err().not_found(
