@@ -1173,12 +1173,13 @@ impl RbumCertServ {
                 "400-rbum-cert-conf-ak-rule-not-match",
             ));
         }
-        if rbum_cert_conf.sk_need && !rbum_cert_conf.sk_rule.is_empty() && !add_req.is_ignore_check_sk {
+        if rbum_cert_conf.sk_need && !rbum_cert_conf.sk_rule.is_empty() {
             let sk = add_req.sk.as_ref().ok_or_else(|| funs.err().bad_request(&Self::get_obj_name(), "add", "sk is required", "400-rbum-cert-sk-require"))?.to_string();
             if !Regex::new(&rbum_cert_conf.sk_rule)
                 .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
                 .is_match(&sk)
                 .unwrap_or(false)
+                && !add_req.is_ignore_check_sk
             {
                 return Err(funs.err().bad_request(
                     &Self::get_obj_name(),

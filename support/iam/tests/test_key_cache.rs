@@ -274,6 +274,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             temporary: None,
             lock_status: None,
         },
+        false,
         &funs,
         &tenant_admin_context,
     )
@@ -1007,6 +1008,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             temporary: None,
             lock_status: None,
         },
+        false,
         &funs,
         &mock_ctx,
     )
@@ -1098,6 +1100,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             temporary: None,
             lock_status: None,
         },
+        false,
         &funs,
         &TardisContext {
             own_paths: tenant_id.clone(),

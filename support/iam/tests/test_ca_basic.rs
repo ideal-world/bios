@@ -107,6 +107,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             temporary: None,
             lock_status: None,
         },
+        false,
         &funs,
         &tenant_context,
     )
@@ -130,6 +131,7 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             temporary: None,
             lock_status: None,
         },
+        false,
         &funs,
         &tenant_context,
     )

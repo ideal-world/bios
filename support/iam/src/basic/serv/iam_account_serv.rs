@@ -186,12 +186,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
 impl IamAccountServ {
     /// if add_req.status is None.default is RbumCertStatusKind::Enabled
-    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, is_ignore_check_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
         }
-        let mut is_ignore_check_sk = false;
+        let mut is_ignore_check_sk = is_ignore_check_sk;
         let pwd: String = if let Some(cert_password) = &add_req.cert_password {
             cert_password.to_string()
         } else {

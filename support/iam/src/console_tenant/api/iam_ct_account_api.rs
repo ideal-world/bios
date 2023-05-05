@@ -28,7 +28,7 @@ impl IamCtAccountApi {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamAccountServ::add_account_agg(&add_req.0, &funs, &ctx).await?;
+        let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(result.clone(), false, "".to_string(), &funs, ctx).await?;
         // TaskProcessor::get_notify_event_with_ctx(&funs, &ctx).await?;
         funs.commit().await?;

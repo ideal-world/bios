@@ -306,6 +306,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             temporary: None,
             lock_status: None,
         },
+        false,
         funs,
         &ctx,
     )
@@ -372,7 +373,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
                 icon: None,
                 sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
                 kind: Some(IamRoleKind::Tenant),
             },
