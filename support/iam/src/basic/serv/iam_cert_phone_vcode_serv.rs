@@ -39,7 +39,7 @@ impl IamCertPhoneVCodeServ {
                 sk_rule: None,
                 ext: None,
                 sk_need: Some(false),
-                sk_dynamic: None,
+                sk_dynamic: Some(true),
                 sk_encrypted: Some(false),
                 repeatable: None,
                 is_basic: Some(false),
