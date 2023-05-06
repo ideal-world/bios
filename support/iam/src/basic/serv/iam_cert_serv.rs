@@ -18,6 +18,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use super::iam_rel_serv::IamRelServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
@@ -35,13 +36,17 @@ use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
 
-use super::iam_rel_serv::IamRelServ;
-
 pub struct IamCertServ;
 
 impl IamCertServ {
     pub fn get_new_pwd() -> String {
-        TardisFuns::field.nanoid_len(10)
+        // todo 等待 bios_basic::field::nanoid_len(10) 支持自定义 alphabet
+        // TardisFuns::field.nanoid_len(10)
+        let alphabet: [char; 62] = [
+            '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+            'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        ];
+        nanoid::nanoid!(10, &alphabet)
     }
 
     pub async fn init_default_ident_conf(
