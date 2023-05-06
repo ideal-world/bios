@@ -198,7 +198,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
-            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, true, "".to_string(), &funs, ctx.clone()).await?;
+            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, true, "".to_string(), funs, ctx.clone()).await?;
             Ok(())
         } else {
             Err(funs.err().not_found(

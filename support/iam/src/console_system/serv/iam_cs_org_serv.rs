@@ -1,6 +1,6 @@
 use bios_basic::rbum::{
     dto::{
-        rbum_filer_dto::{RbumRelFilterReq, RbumSetTreeFilterReq},
+        rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetTreeFilterReq},
         rbum_rel_agg_dto::RbumRelAggAddReq,
         rbum_rel_dto::{RbumRelAddReq, RbumRelDetailResp},
         rbum_set_dto::RbumSetTreeResp,
@@ -14,7 +14,10 @@ use tardis::{
 };
 
 use crate::{
-    basic::serv::iam_set_serv::IamSetServ,
+    basic::{
+        dto::iam_set_dto::IamSetCateAddReq,
+        serv::{iam_cert_serv::IamCertServ, iam_set_serv::IamSetServ},
+    },
     iam_enumeration::{IamRelKind, IamSetKind},
 };
 
@@ -156,5 +159,34 @@ impl IamCsOrgServ {
 
         RbumRelServ::delete_rbum(&old_rel.id, funs, ctx).await?;
         Ok(())
+    }
+
+    pub async fn add_set_cate(tenant_id: Option<String>, add_req: &mut IamSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let mut tenant_id = tenant_id;
+        if let Some(pid) = add_req.rbum_parent_cate_id.clone() {
+            if let Some(set_rel) = RbumRelServ::find_one_rbum(
+                &RbumRelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(ctx.own_paths.clone()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    tag: Some(IamRelKind::IamOrgRel.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                    from_rbum_id: Some(pid),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            {
+                add_req.rbum_parent_cate_id = None;
+                tenant_id = Some(set_rel.to_own_paths);
+            }
+        };
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.clone(), tenant_id)?;
+        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, &ctx).await?;
+        IamSetServ::add_set_cate(&set_id, add_req, funs, &ctx).await
     }
 }
