@@ -237,7 +237,6 @@ impl IamCtAccountApi {
     /// Logout account
     #[oai(path = "/:id/logout", method = "put")]
     async fn logout_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let funs = iam_constants::get_tardis_inst();
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_item(

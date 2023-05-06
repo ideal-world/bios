@@ -919,7 +919,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), &funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), funs, ctx.clone()).await?;
         Ok(account_id)
     }
 

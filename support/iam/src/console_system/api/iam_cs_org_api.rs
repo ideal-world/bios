@@ -1,3 +1,6 @@
+use std::thread::sleep;
+use std::time::Duration;
+
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq, IamSetItemWithDefaultSetAddReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -47,12 +50,10 @@ impl IamCsOrgApi {
     }
     /// Add Org Cate
     #[oai(path = "/cate", method = "post")]
-    async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
+    async fn add_cate(&self, mut add_req: Json<IamSetCateAddReq>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx).await?;
+        let result = IamCsOrgServ::add_set_cate(tenant_id.0, &mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -82,6 +83,7 @@ impl IamCsOrgApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
+        sleep(Duration::from_millis(100));
         TardisResp::ok(Void {})
     }
 
