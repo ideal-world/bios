@@ -25,7 +25,6 @@ lazy_static! {
 }
 
 pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let scheds = SCHED.write().await;
     let log_url = funs.conf::<ScheduleConfig>().log_url.clone();
     let kv_url = funs.conf::<ScheduleConfig>().kv_url.clone();
     let code = add_or_modify.code.0.clone();
@@ -37,8 +36,10 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         "Tardis-Context".to_string(),
         TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
     )]);
-    if let Some(_uuid) = scheds.get(&add_or_modify.code.0.clone()) {
-        self::delete(&add_or_modify.code.0, funs, ctx).await?;
+    {
+        if let Some(_uuid) = SCHED.write().await.get(&add_or_modify.code.0.clone()) {
+            self::delete(&add_or_modify.code.0, funs, ctx).await?;
+        }
     }
     funs.web_client()
         .post_obj_to_str(
@@ -62,12 +63,11 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         )
         .await
         .unwrap();
-    ScheduleTaskServ::add(&log_url, add_or_modify, &funs.conf::<ScheduleConfig>().clone()).await?;
+    ScheduleTaskServ::add(&log_url, add_or_modify, funs.conf::<ScheduleConfig>()).await?;
     Ok(())
 }
 
 pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let scheds = SCHED.write().await;
     let log_url = funs.conf::<ScheduleConfig>().log_url.clone();
     let kv_url = funs.conf::<ScheduleConfig>().kv_url.clone();
     let headers = Some(vec![(
@@ -88,9 +88,11 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         )
         .await
         .unwrap();
-    if let Some(_uuid) = scheds.get(code) {
-        funs.web_client().delete_to_void(&format!("{}/ci/item?key={}", kv_url, format_args!("{KV_KEY_CODE}{code}")), headers.clone()).await.unwrap();
-        ScheduleTaskServ::delete(code).await?;
+    {
+        if let Some(_uuid) = SCHED.read().await.get(code) {
+            funs.web_client().delete_to_void(&format!("{}/ci/item?key={}", kv_url, format_args!("{KV_KEY_CODE}{code}")), headers.clone()).await.unwrap();
+            ScheduleTaskServ::delete(code).await?;
+        }
     }
     Ok(())
 }
@@ -231,9 +233,10 @@ pub struct ScheduleTaskServ;
 
 impl ScheduleTaskServ {
     pub async fn add(log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
-        let mut scheds = SCHED.write().await;
-        if let Some(_uuid) = scheds.get(&add_or_modify.code.0.clone()) {
-            Self::delete(&add_or_modify.code.0).await?;
+        {
+            if let Some(_uuid) = SCHED.read().await.get(&add_or_modify.code.0.clone()) {
+                Self::delete(&add_or_modify.code.0).await?;
+            }
         }
         let callback_url = add_or_modify.callback_url.clone();
         let log_url = log_url.to_string();
@@ -291,7 +294,9 @@ impl ScheduleTaskServ {
         })
         .unwrap();
         let uuid = sched.add(job).await.expect("job add expect is ok");
-        scheds.insert(add_or_modify.code.0.clone(), uuid);
+        {
+            SCHED.write().await.insert(add_or_modify.code.0.clone(), uuid);
+        }
         sched.set_shutdown_handler(Box::new(|| {
             Box::pin(async move {
                 info!("Shut down done");

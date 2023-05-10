@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use bios_basic::test::init_rbum_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
-use schedule::schedule_constants::DOMAIN_CODE;
-use schedule::schedule_initializer;
+use bios_mw_schedule::schedule_constants::DOMAIN_CODE;
+use bios_mw_schedule::schedule_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
