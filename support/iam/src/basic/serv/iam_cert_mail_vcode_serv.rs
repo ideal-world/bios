@@ -1,7 +1,6 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
 use tardis::rand::Rng;
 use tardis::TardisFunsInst;
 
@@ -19,8 +18,10 @@ use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-use crate::iam_config::{IamBasicConfigApi, IamConfig};
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
+
+use super::clients::mail_client::MailClient;
 
 pub struct IamCertMailVCodeServ;
 
@@ -128,24 +129,7 @@ impl IamCertMailVCodeServ {
 
     async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
-        let mut subject = funs.conf::<IamConfig>().mail_template_cert_activate_title.clone();
-        let mut content = funs.conf::<IamConfig>().mail_template_cert_activate_content.clone();
-        subject = subject.replace("{account_name}", &account_name).replace("{vcode}", vcode);
-        content = content.replace("{account_name}", &account_name).replace("{vcode}", vcode);
-
-        TardisMailClient::send_quiet(
-            funs.module_code().to_string(),
-            TardisMailSendReq {
-                subject,
-                txt_body: content,
-                html_body: None,
-                to: vec![mail.to_string()],
-                reply_to: None,
-                cc: None,
-                bcc: None,
-                from: None,
-            },
-        )?;
+        MailClient::send_cert_activate_vcode(mail, Some(account_name), &vcode, funs).await?;
         Ok(())
     }
 
@@ -217,23 +201,7 @@ impl IamCertMailVCodeServ {
         let vcode = Self::get_vcode();
         let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, ctx).await?.name;
         RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
-        let mut subject = funs.conf::<IamConfig>().mail_template_cert_activate_title.clone();
-        let mut content = funs.conf::<IamConfig>().mail_template_cert_activate_content.clone();
-        subject = subject.replace("{account_name}", &account_name).replace("{vcode}", &vcode);
-        content = content.replace("{account_name}", &account_name).replace("{vcode}", &vcode);
-        TardisMailClient::send_quiet(
-            funs.module_code().to_string(),
-            TardisMailSendReq {
-                subject,
-                txt_body: content,
-                html_body: None,
-                to: vec![mail.to_string()],
-                reply_to: None,
-                cc: None,
-                bcc: None,
-                from: None,
-            },
-        )?;
+        MailClient::send_cert_activate_vcode(mail, Some(account_name), &vcode, funs).await?;
         Ok(())
     }
 
@@ -281,23 +249,7 @@ impl IamCertMailVCodeServ {
     pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(mail, &vcode, own_paths, funs).await?;
-        let mut subject = funs.conf::<IamConfig>().mail_template_cert_login_title.clone();
-        let mut content = funs.conf::<IamConfig>().mail_template_cert_login_content.clone();
-        subject = subject.replace("{vcode}", &vcode);
-        content = content.replace("{vcode}", &vcode);
-        TardisMailClient::send_quiet(
-            funs.module_code().to_string(),
-            TardisMailSendReq {
-                subject,
-                txt_body: content,
-                html_body: None,
-                to: vec![mail.to_string()],
-                reply_to: None,
-                cc: None,
-                bcc: None,
-                from: None,
-            },
-        )?;
+        MailClient::send_vcode(mail, None, &vcode, funs).await?;
         Ok(())
     }
 

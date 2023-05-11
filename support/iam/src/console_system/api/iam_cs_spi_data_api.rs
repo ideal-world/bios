@@ -13,7 +13,7 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 #[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 
