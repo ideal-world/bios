@@ -500,6 +500,10 @@ impl IamCertLdapServ {
             Err(funs.err().not_found("user_pwd", "check_bind", "not found cert record", "404-rbum-*-obj-not-exist"))
         }
     }
+    pub async fn validate_by_ldap(sk: &str, supplier:&str,funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        &IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(),supplier , Some(ctx.own_paths), funs).await?,
+        let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?;
+    }
 
     pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
         let tenant_id = login_req.tenant_id.clone();

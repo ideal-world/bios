@@ -59,9 +59,10 @@ pub struct IamCertUserPwdRestReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct IamCertUserPwdValidateSkReq {
+pub struct IamCertGenericValidateSkReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
+    pub validate_type: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
