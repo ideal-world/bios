@@ -33,7 +33,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 #[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
@@ -342,8 +342,8 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(admin_id, false, "".to_string(), &funs, tenant_ctx.clone()).await?;
-        IamAccountServ::async_add_or_modify_account_search(audit_id, false, "".to_string(), &funs, tenant_ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(admin_id, false, "".to_string(), funs, tenant_ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(audit_id, false, "".to_string(), funs, tenant_ctx).await?;
         Ok((tenant_id, admin_pwd, audit_pwd))
     }
 

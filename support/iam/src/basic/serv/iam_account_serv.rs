@@ -32,6 +32,8 @@ use crate::basic::dto::iam_account_dto::{
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
+#[cfg(feature = "spi_kv")]
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -42,12 +44,12 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
+use super::clients::mail_client::MailClient;
+use super::clients::sms_client::SmsClient;
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -137,14 +139,14 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
         Ok(())
     }
 
-    async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(_id: &str, _: &mut IamAccountAddReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
@@ -205,7 +207,7 @@ impl IamAccountServ {
                 scope_level: add_req.scope_level.clone(),
                 disabled: add_req.disabled,
                 icon: add_req.icon.clone(),
-                temporary: add_req.temporary.clone(),
+                temporary: add_req.temporary,
                 status: None,
                 lock_status: add_req.lock_status.clone(),
             },
@@ -241,45 +243,15 @@ impl IamAccountServ {
                 )
                 .await?;
             }
-            let conf = funs.conf::<IamConfig>();
-            let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
-            match funs
-                .web_client()
-                .put_str_to_str(
-                    &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_pwd_path, cert_phone, pwd.clone()),
-                    "",
-                    Some(vec![(
-                        TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
-                        ctx_base64.to_string(),
-                    )]),
-                )
-                .await
-            {
-                Ok(_) => info!("send sms success"),
-                Err(_) => info!("send sms failed"),
-            }
+            // todo Add the ctx task queue
+            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, &ctx).await;
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
-            let mut subject = funs.conf::<IamConfig>().mail_template_cert_random_pwd_title.clone();
-            let mut content = funs.conf::<IamConfig>().mail_template_cert_random_pwd_content.clone();
-            subject = subject.replace("{pwd}", &pwd.clone());
-            content = content.replace("{pwd}", &pwd);
-            TardisMailClient::send_quiet(
-                funs.module_code().to_string(),
-                TardisMailSendReq {
-                    subject,
-                    txt_body: content,
-                    html_body: None,
-                    to: vec![cert_mail.to_string()],
-                    reply_to: None,
-                    cc: None,
-                    bcc: None,
-                    from: None,
-                },
-            )?;
+            // todo Add the ctx task queue
+            let _ = MailClient::send_pwd(cert_mail, &pwd, funs).await;
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {

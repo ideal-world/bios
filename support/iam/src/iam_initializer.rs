@@ -194,7 +194,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .iter()
         .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found audit admin role", ""))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant audit admin role", ""))?;
 
     let role_app_admin_id = roles
         .iter()
