@@ -158,7 +158,7 @@ impl IamCcAccountLdapApi {
         TardisResp::ok(result)
     }
 
-    /// Add Account by LDAP
+    /// Add Account by LDAP  安全审计日志--绑定5a账号
     #[oai(path = "/", method = "put")]
     async fn add_account_from_ldap(
         &self,

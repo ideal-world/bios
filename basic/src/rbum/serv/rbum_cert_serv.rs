@@ -995,6 +995,7 @@ impl RbumCertServ {
         }
     }
 
+    // 安全审计日志--密码锁定账号
     async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: i32, sk_lock_err_times: i16, sk_lock_duration_sec: i32, funs: &TardisFunsInst) -> TardisResult<()> {
         if sk_lock_cycle_sec == 0 || sk_lock_err_times == 0 || sk_lock_duration_sec == 0 {
             return Ok(());

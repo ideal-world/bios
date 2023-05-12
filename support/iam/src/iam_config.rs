@@ -85,6 +85,7 @@ impl Default for IamLdapConfig {
 pub struct IamSpiConfig {
     pub schedule_url: String,
     pub search_url: String,
+    pub log_url: String,
     pub search_account_tag: String,
     pub kv_url: String,
     pub kv_tenant_prefix: String,
@@ -98,6 +99,7 @@ impl Default for IamSpiConfig {
         IamSpiConfig {
             schedule_url: "http://127.0.0.1:8080/schedule".to_string(),
             search_url: "http://127.0.0.1:8080/spi-search".to_string(),
+            log_url: "http://127.0.0.1:8080/spi-log".to_string(),
             search_account_tag: "iam_account".to_string(),
             kv_url: "http://127.0.0.1:8080/spi-kv".to_string(),
             kv_tenant_prefix: "iam_tenant".to_string(),

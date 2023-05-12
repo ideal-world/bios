@@ -112,7 +112,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Role Rel Account
+    /// Add Role Rel Account  安全审计日志--增加账号租户角色为管理员
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -123,7 +123,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Batch Add Role Rel Account
+    /// Batch Add Role Rel Account  安全审计日志--增加账号租户角色为管理员
     #[oai(path = "/:id/account/batch/:account_id", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -137,7 +137,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Role Rel Account
+    /// Delete Role Rel Account  安全审计日志--移除账号租户角色为管理员
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -148,7 +148,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Batch delete Role Rel Account
+    /// Batch delete Role Rel Account  安全审计日志--移除账号租户角色为管理员
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
