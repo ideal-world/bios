@@ -22,15 +22,7 @@ pub async fn test(client: &mut TestHttpClient, funs: &TardisFunsInst, ctx: &Tard
             cron: "0/5 * * * * ? ".to_string(),
             callback_url: "http://localhost:8080/schedule/ci/schedule/test/exec/123".to_string(),
         },
-        &ScheduleConfig {
-            rbum: RbumConfig,
-            app_key: AppKeyConfig,
-            spi_app_id: String,
-            kv_url: String,
-            log_url: String,
-            cache_key_job_changed_info: String,
-            cache_key_job_changed_timer_sec: u32,
-        }
+        &ScheduleConfig::default()
     )
     .await?;
     ScheduleTaskServ::delete("test").await?;
