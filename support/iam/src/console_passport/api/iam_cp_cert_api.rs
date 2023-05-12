@@ -11,8 +11,8 @@ use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamCpUserPwdBindResp};
 use crate::basic::dto::iam_cert_dto::{
-    IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq,
-    IamCertUserPwdRestReq, IamCertUserPwdValidateSkReq, IamContextFetchReq,
+    IamCertGenericValidateSkReq, IamCertMailVCodeActivateReq, IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertPhoneVCodeBindReq, IamCertPwdNewReq, IamCertUserNameNewReq,
+    IamCertUserPwdModifyReq, IamCertUserPwdRestReq, IamContextFetchReq,
 };
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -172,10 +172,17 @@ impl IamCpCertApi {
     }
 
     /// Validate userpwd By Current Account
+    ///
     #[oai(path = "/validate/userpwd", method = "put")]
-    async fn validate_by_user_pwd(&self, req: Json<IamCertUserPwdValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn validate_by_user_pwd(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
-        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk, &funs, &IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?).await?;
+        IamCpCertUserPwdServ::generic_sk_validate(
+            &req.0.sk,
+            req.0.validate_type,
+            &funs,
+            &IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?,
+        )
+        .await?;
         TardisResp::ok(Void {})
     }
 

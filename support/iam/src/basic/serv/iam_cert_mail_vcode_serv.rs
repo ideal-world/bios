@@ -129,7 +129,7 @@ impl IamCertMailVCodeServ {
 
     async fn send_activation_mail(account_id: &str, mail: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
-        MailClient::send_cert_activate_vcode(mail, Some(account_name), &vcode, funs).await?;
+        MailClient::send_cert_activate_vcode(mail, Some(account_name), vcode, funs).await?;
         Ok(())
     }
 
