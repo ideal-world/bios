@@ -17,6 +17,10 @@ pub struct StatsQueryMetricsReq {
     pub from: String,
     /// List of fields
     pub select: Vec<StatsQueryMetricsSelectReq>,
+    /// Ignore distinct key
+    /// If true or null, the distinct key will not be counted
+    /// If false, the distinct key will be counted
+    pub ignore_distinct: Option<bool>,
     /// List of grouped fields,
     /// the order is related to the returned hierarchy and is handled internally using ROLLUP
     pub group: Vec<StatsQueryMetricsGroupReq>,
