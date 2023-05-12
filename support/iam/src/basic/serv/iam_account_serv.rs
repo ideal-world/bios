@@ -3,7 +3,7 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
-use ldap3::log::info;
+
 use ldap3::tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -13,7 +13,7 @@ use tardis::basic::result::TardisResult;
 
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
+
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{serde_json, TardisFuns, TardisFunsInst};
@@ -244,7 +244,7 @@ impl IamAccountServ {
                 .await?;
             }
             // todo Add the ctx task queue
-            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, &ctx).await;
+            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, ctx).await;
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {

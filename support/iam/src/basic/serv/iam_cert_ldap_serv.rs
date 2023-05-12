@@ -503,7 +503,7 @@ impl IamCertLdapServ {
     }
 
     pub async fn validate_by_ldap(sk: &str, supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        let (mut ldap_client, _cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), supplier, funs, &ctx).await?;
+        let (mut ldap_client, _cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), supplier, funs, ctx).await?;
         let certs = Self::get_ldap_cert_account_by_account(&ctx.owner, &cert_conf_id, funs, ctx).await?;
         if let Some(cert) = certs.first() {
             if ldap_client.bind_by_dn(&cert.ak, sk).await?.is_some() {

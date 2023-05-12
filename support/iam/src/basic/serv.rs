@@ -1,3 +1,4 @@
+pub mod clients;
 pub mod iam_account_serv;
 pub mod iam_app_serv;
 pub mod iam_attr_serv;
@@ -19,4 +20,3 @@ pub mod iam_role_serv;
 pub mod iam_set_serv;
 pub mod iam_tenant_serv;
 pub mod oauth2_spi;
-pub mod clients;

@@ -14,8 +14,8 @@ impl MailClient {
             subject = subject.replace("{account_name}", &account_name);
             content = content.replace("{account_name}", &account_name);
         }
-        subject = subject.replace("{vcode}", &vcode);
-        content = content.replace("{vcode}", &vcode);
+        subject = subject.replace("{vcode}", vcode);
+        content = content.replace("{vcode}", vcode);
         Self::send_mail(mail, subject, content, funs).await
     }
 
@@ -26,16 +26,16 @@ impl MailClient {
             subject = subject.replace("{account_name}", &account_name);
             content = content.replace("{account_name}", &account_name);
         }
-        subject = subject.replace("{vcode}", &vcode);
-        content = content.replace("{vcode}", &vcode);
+        subject = subject.replace("{vcode}", vcode);
+        content = content.replace("{vcode}", vcode);
         Self::send_mail(mail, subject, content, funs).await
     }
 
     pub async fn send_pwd(mail: &str, pwd: &str, funs: &TardisFunsInst) -> TardisResult<()> {
         let mut subject = funs.conf::<IamConfig>().mail_template_cert_random_pwd_title.clone();
         let mut content = funs.conf::<IamConfig>().mail_template_cert_random_pwd_content.clone();
-        subject = subject.replace("{pwd}", &pwd);
-        content = content.replace("{pwd}", &pwd);
+        subject = subject.replace("{pwd}", pwd);
+        content = content.replace("{pwd}", pwd);
         Self::send_mail(mail, subject, content, funs).await
     }
 
