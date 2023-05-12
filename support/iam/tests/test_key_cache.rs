@@ -127,7 +127,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp.account_id).as_str()).await?,
-        2
+        1
     );
 
     info!("【test_key_cache】 Change cert, expected no token record");
@@ -261,7 +261,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             id: None,
             name: TrimString("缓存应用管理员".to_string()),
             cert_user_name: TrimString("app_admin".to_string()),
-            cert_password: TrimString("123456".to_string()),
+            cert_password: Some(TrimString("123456".to_string())),
             cert_phone: None,
             cert_mail: None,
             icon: None,
@@ -272,7 +272,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             exts: Default::default(),
             status: None,
             temporary: None,
+            lock_status: None,
         },
+        false,
         &funs,
         &tenant_admin_context,
     )
@@ -338,7 +340,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        3
+        2
     );
 
     info!("【test_key_cache】 Login by tenant again, expected two token records");
@@ -368,7 +370,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        3
+        2
     );
 
     info!("【test_key_cache】 Login by tenant again, expected two token records");
@@ -408,7 +410,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         .contains("TokenDefault"));
     assert_eq!(
         funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(),).await?,
-        3
+        2
     );
 
     let app_admin_context = IamIdentCacheServ::get_context(
@@ -993,7 +995,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             id: None,
             name: TrimString("全局账号".to_string()),
             cert_user_name: TrimString("global".to_string()),
-            cert_password: TrimString("123456".to_string()),
+            cert_password: Some(TrimString("123456".to_string())),
             cert_phone: None,
             cert_mail: None,
             icon: None,
@@ -1004,7 +1006,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             exts: Default::default(),
             status: None,
             temporary: None,
+            lock_status: None,
         },
+        false,
         &funs,
         &mock_ctx,
     )
@@ -1083,7 +1087,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             id: None,
             name: TrimString("非全局账号".to_string()),
             cert_user_name: TrimString("not_global".to_string()),
-            cert_password: TrimString("123456".to_string()),
+            cert_password: Some(TrimString("123456".to_string())),
             cert_phone: None,
             cert_mail: None,
             icon: None,
@@ -1094,7 +1098,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
             exts: Default::default(),
             status: None,
             temporary: None,
+            lock_status: None,
         },
+        false,
         &funs,
         &TardisContext {
             own_paths: tenant_id.clone(),

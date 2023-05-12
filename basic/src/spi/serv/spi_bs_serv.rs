@@ -82,6 +82,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                 start_time: None,
                 end_time: None,
                 is_outside: false,
+                is_ignore_check_sk: false,
             },
             funs,
             ctx,

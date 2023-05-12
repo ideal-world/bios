@@ -14,6 +14,7 @@ pub struct IamPlatformConfigReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamPlatformConfigResp {
+    pub strict_security_mode: bool,
     pub cert_conf_by_user_pwd: IamCertConfUserPwdResp,
     pub cert_conf_by_phone_vcode: bool,
     pub cert_conf_by_mail_vcode: bool,

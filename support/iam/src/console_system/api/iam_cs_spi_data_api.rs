@@ -9,11 +9,11 @@ use tardis::web::poem_openapi;
 use tardis::web::web_resp::{TardisApiResult, TardisResp};
 use tardis::TardisFunsInst;
 
+#[cfg(feature = "spi_kv")]
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 
@@ -120,7 +120,23 @@ impl IamCsSpiDataApi {
                     )
                     .await?;
                     for account in list {
-                        IamAccountServ::add_or_modify_account_search(&account.id, false, &funs, &task_ctx).await?;
+                        let account_resp = IamAccountServ::get_account_detail_aggs(
+                            &account.id,
+                            &IamAccountFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    ignore_scope: true,
+                                    with_sub_own_paths: true,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            true,
+                            true,
+                            &funs,
+                            &task_ctx,
+                        )
+                        .await?;
+                        IamAccountServ::add_or_modify_account_search(account_resp, true, "", &funs, &task_ctx).await?;
                     }
                     funs.commit().await?;
                     Ok(())

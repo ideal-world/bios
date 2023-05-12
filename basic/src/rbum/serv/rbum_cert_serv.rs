@@ -724,7 +724,8 @@ impl RbumCertServ {
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf_id))
             .and_where(Expr::col(rbum_cert::Column::OwnPaths).eq(own_paths))
-            .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
+            // .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
+            .and_where(Expr::col(rbum_cert::Column::Status).ne(RbumCertStatusKind::Disabled.to_int()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()));
         let rbum_cert = funs.db().get_dto::<IdAndSkResp>(&query).await?;
         if let Some(rbum_cert) = rbum_cert {
@@ -840,7 +841,9 @@ impl RbumCertServ {
             .from(rbum_cert::Entity)
             .and_where(Expr::col(rbum_cert::Column::Ak).eq(ak))
             .and_where(Expr::col(rbum_cert::Column::RelRbumKind).eq(rel_rbum_kind.to_int()))
-            .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
+            // Exclude disabled state, have enabled and pending
+            // .and_where(Expr::col(rbum_cert::Column::Status).eq(RbumCertStatusKind::Enabled.to_int()))
+            .and_where(Expr::col(rbum_cert::Column::Status).ne(RbumCertStatusKind::Disabled.to_int()))
             .and_where(Expr::col(rbum_cert::Column::StartTime).lte(Utc::now().naive_utc()))
             //basic sk must have cert conf
             .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).ne(""));
@@ -851,9 +854,6 @@ impl RbumCertServ {
         if let Some(rbum_cert) = rbum_cert {
             if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), rbum_cert.rel_rbum_id)).await? {
                 return Err(funs.err().unauthorized(&Self::get_obj_name(), "valid_lock", "cert is locked", "401-rbum-cert-lock"));
-            }
-            if !ignore_end_time && rbum_cert.end_time < Utc::now() {
-                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired", "409-rbum-cert-sk-expire"));
             }
             if let Some(rbum_cert_conf_id) = Some(rbum_cert.rel_rbum_cert_conf_id) {
                 let cert_conf_peek_resp = funs
@@ -879,6 +879,9 @@ impl RbumCertServ {
                 };
                 if rbum_cert.sk == verify_input_sk {
                     funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), &rbum_cert.rel_rbum_id)).await?;
+                    if !ignore_end_time && rbum_cert.end_time < Utc::now() {
+                        return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "sk is expired", "409-rbum-cert-sk-expire"));
+                    }
                     Ok((rbum_cert.id, rel_rbum_kind.clone(), rbum_cert.rel_rbum_id))
                 } else if !cert_conf_peek_resp.is_basic {
                     Ok(Self::validate_by_non_basic_cert_conf_with_basic_sk(
@@ -961,9 +964,6 @@ impl RbumCertServ {
             )
             .await?
             .ok_or_else(|| funs.err().not_found(&Self::get_obj_name(), "valid", "not found basic cert conf", "404-rbum-cert-conf-not-exist"))?;
-        if !ignore_end_time && rbum_basic_cert_info_resp.end_time < Utc::now() {
-            return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "basic sk is expired", "409-rbum-cert-sk-expire"));
-        }
         let verify_input_sk = if rbum_basic_cert_info_resp.sk_encrypted {
             Self::encrypt_sk(input_sk, &rbum_basic_cert_info_resp.ak, &rbum_basic_cert_info_resp.rel_rbum_cert_conf_id)?
         } else {
@@ -972,6 +972,9 @@ impl RbumCertServ {
 
         if rbum_basic_cert_info_resp.sk == verify_input_sk {
             funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_err_times_(), rel_rbum_id)).await?;
+            if !ignore_end_time && rbum_basic_cert_info_resp.end_time < Utc::now() {
+                return Err(funs.err().conflict(&Self::get_obj_name(), "valid", "basic sk is expired", "409-rbum-cert-sk-expire"));
+            }
             Ok((rbum_basic_cert_info_resp.id, rbum_basic_cert_info_resp.rel_rbum_kind, rel_rbum_id.to_string()))
         } else {
             log::warn!(
@@ -1176,6 +1179,7 @@ impl RbumCertServ {
                 .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "add", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
                 .is_match(&sk)
                 .unwrap_or(false)
+                && !add_req.is_ignore_check_sk
             {
                 return Err(funs.err().bad_request(
                     &Self::get_obj_name(),

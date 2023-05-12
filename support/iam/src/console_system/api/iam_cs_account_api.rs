@@ -9,13 +9,15 @@ use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemRelFilte
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use crate::basic::dto::iam_account_dto::{AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
+use crate::basic::dto::iam_account_dto::{
+    AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp,
+};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
-use crate::iam_enumeration::IamRelKind;
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind};
 
 pub struct IamCsAccountApi;
 
@@ -28,7 +30,8 @@ impl IamCsAccountApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamAccountServ::add_account_agg(&add_req.0, &funs, &ctx).await?;
+        let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(result.clone(), false, "".to_string(), &funs, ctx).await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
@@ -40,6 +43,7 @@ impl IamCsAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
         if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
@@ -75,7 +79,7 @@ impl IamCsAccountApi {
     #[allow(clippy::too_many_arguments)]
     async fn paginate(
         &self,
-        id: Query<Option<String>>,
+        ids: Query<Option<String>>,
         name: Query<Option<String>>,
         role_ids: Query<Option<String>>,
         cate_ids: Query<Option<String>>,
@@ -129,7 +133,7 @@ impl IamCsAccountApi {
         let result = IamAccountServ::paginate_account_summary_aggs(
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: id.0.map(|id| vec![id]),
+                    ids: ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
                     name: name.0,
                     with_sub_own_paths: with_sub.0.unwrap_or(false),
                     enabled: status.0,
@@ -159,6 +163,7 @@ impl IamCsAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
+        IamAccountServ::async_delete_account_search(id.0, &funs, ctx.clone()).await?;
         funs.commit().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx)? {
             TardisResp::accepted(Some(task_id))
@@ -206,12 +211,93 @@ impl IamCsAccountApi {
         TardisResp::ok(result)
     }
 
+    /// Active account
+    #[oai(path = "/:id/active", method = "put")]
+    async fn active_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::modify_item(
+            &id.0,
+            &mut IamAccountModifyReq {
+                status: Some(IamAccountStatusKind::Active),
+                is_auto: Some(false),
+                name: None,
+                icon: None,
+                disabled: None,
+                scope_level: None,
+                lock_status: None,
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    /// Logout account
+    #[oai(path = "/:id/logout", method = "put")]
+    async fn logout_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::modify_item(
+            &id.0,
+            &mut IamAccountModifyReq {
+                status: Some(IamAccountStatusKind::Logout),
+                is_auto: Some(false),
+                name: None,
+                icon: None,
+                disabled: None,
+                scope_level: None,
+                lock_status: None,
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "Manual cancellation.".to_string(), &funs, ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
+    ///lock account
+    #[oai(path = "/:id/lock", method = "put")]
+    async fn lock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        IamAccountServ::modify_item(
+            &id.0,
+            &mut IamAccountModifyReq {
+                lock_status: Some(IamAccountLockStateKind::ManualLocked),
+                is_auto: None,
+                name: None,
+                icon: None,
+                disabled: None,
+                scope_level: None,
+                status: None,
+            },
+            &funs,
+            &ctx,
+        )
+        .await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
+
     ///Unlock account
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
-        let funs = iam_constants::get_tardis_inst();
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
         IamAccountServ::unlock_account(&id.0, &funs, &ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx).await?;
+        funs.commit().await?;
         TardisResp::ok(Void {})
     }
 }

@@ -63,7 +63,7 @@ pub struct IamTenantAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub admin_username: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub admin_password: Option<String>,
+    pub admin_password: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub admin_phone: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -74,7 +74,7 @@ pub struct IamTenantAggAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub audit_username: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub audit_password: Option<String>,
+    pub audit_password: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub audit_phone: Option<TrimString>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -126,6 +126,7 @@ pub struct IamTenantConfigResp {
     pub cert_conf_by_oauth2: Option<Vec<IamCertConfOAuth2Resp>>,
     pub cert_conf_by_ldap: Option<Vec<IamCertConfLdapResp>>,
     pub config: Vec<IamConfigSummaryResp>,
+    pub strict_security_mode: bool,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

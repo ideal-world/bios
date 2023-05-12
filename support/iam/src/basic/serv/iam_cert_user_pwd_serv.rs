@@ -16,6 +16,8 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
+use super::iam_account_serv::IamAccountServ;
+
 pub struct IamCertUserPwdServ;
 
 impl IamCertUserPwdServ {
@@ -102,6 +104,7 @@ impl IamCertUserPwdServ {
             &mut RbumCertAddReq {
                 ak: add_req.ak.clone(),
                 sk: Some(add_req.sk.clone()),
+                is_ignore_check_sk: add_req.is_ignore_check_sk,
                 kind: None,
                 supplier: None,
                 vcode: None,
@@ -142,6 +145,21 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+            RbumCertServ::modify_rbum(
+                &cert.id,
+                &mut RbumCertModifyReq {
+                    ak: None,
+                    sk: None,
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: RbumCertStatusKind::Enabled.into(),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(funs.err().not_found(
@@ -195,6 +213,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
+            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, true, "".to_string(), funs, ctx.clone()).await?;
             Ok(())
         } else {
             Err(funs.err().not_found(

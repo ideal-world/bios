@@ -1,4 +1,4 @@
-use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumScopeLevelKind};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
@@ -110,6 +110,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 (
                     iam_ci_cert_api::IamCiCertManageApi,
                     iam_ci_cert_api::IamCiCertApi,
+                    iam_ci_cert_api::IamCiLdapCertApi,
                     iam_ci_app_api::IamCiAppApi,
                     iam_ci_res_api::IamCiResApi,
                     iam_ci_role_api::IamCiRoleApi,
@@ -193,7 +194,7 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst, ctx: &TardisContext) -> Tard
         .iter()
         .find(|r| r.code == iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE)
         .map(|r| r.id.clone())
-        .ok_or_else(|| funs.err().not_found("iam", "init", "not found audit admin role", ""))?;
+        .ok_or_else(|| funs.err().not_found("iam", "init", "not found tenant audit admin role", ""))?;
 
     let role_app_admin_id = roles
         .iter()
@@ -292,7 +293,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             id: Some(TrimString(default_account_id.clone())),
             name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
             cert_user_name: TrimString(iam_constants::RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT.to_string()),
-            cert_password: TrimString(pwd.clone()),
+            cert_password: Some(TrimString(pwd.clone())),
             cert_phone: None,
             cert_mail: None,
             icon: None,
@@ -301,9 +302,11 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             role_ids: None,
             org_node_ids: None,
             exts: Default::default(),
-            status: None,
+            status: Some(RbumCertStatusKind::Pending),
             temporary: None,
+            lock_status: None,
         },
+        false,
         funs,
         &ctx,
     )
@@ -338,6 +341,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
             role_ids: Some(vec![role_sys_admin_id.clone()]),
             org_cate_ids: None,
             exts: None,
+            status: None,
         },
         funs,
         &ctx,
@@ -369,7 +373,7 @@ pub async fn init_rbum_data(funs: &TardisFunsInst) -> TardisResult<(String, Stri
                 name: TrimString(iam_constants::RBUM_ITEM_NAME_TENANT_AUDIT_ROLE.to_string()),
                 icon: None,
                 sort: None,
-                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_PRIVATE),
+                scope_level: Some(iam_constants::RBUM_SCOPE_LEVEL_TENANT),
                 disabled: None,
                 kind: Some(IamRoleKind::Tenant),
             },

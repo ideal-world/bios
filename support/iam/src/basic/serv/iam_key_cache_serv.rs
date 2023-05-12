@@ -2,6 +2,7 @@ use std::default::Default;
 use std::str::FromStr;
 
 use bios_basic::process::task_processor::TaskProcessor;
+use bios_basic::rbum::rbum_config::RbumConfigApi;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
@@ -79,6 +80,7 @@ impl IamIdentCacheServ {
         if let Some(token_info) = funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
             let iam_item_id = token_info.split(',').nth(1).unwrap_or("");
             funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await?;
+            Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
         }
         Ok(())
@@ -167,6 +169,23 @@ impl IamIdentCacheServ {
         }
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
+        Ok(())
+    }
+
+    pub async fn exist_token_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<bool> {
+        log::trace!("exist tokens: account_id={}", account_id);
+        let tokens = funs.cache().hgetall(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, account_id).as_str()).await?;
+        for (token, _) in tokens.iter() {
+            if funs.cache().exists(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str()).await? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    pub async fn delete_lock_by_account_id(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("delete lock: account_id={}", account_id);
+        funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account_id)).await?;
         Ok(())
     }
 
@@ -267,6 +286,13 @@ impl IamIdentCacheServ {
             )
             .await?;
 
+        Ok(())
+    }
+    pub async fn delete_double_auth(account_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        log::trace!("delete double auth: account_id={}", account_id);
+        if (funs.cache().get(format!("{}{}", funs.conf::<IamConfig>().cache_key_double_auth_info, account_id).as_str()).await?).is_some() {
+            funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_double_auth_info, account_id).as_str()).await?;
+        }
         Ok(())
     }
 }

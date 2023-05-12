@@ -13,8 +13,9 @@ use crate::rbum::rbum_enumeration::{RbumCertRelKind, RbumCertStatusKind};
 pub struct RbumCertAddReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak: TrimString,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
     pub sk: Option<TrimString>,
+    pub is_ignore_check_sk: bool,
     pub kind: Option<String>,
     pub supplier: Option<String>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
@@ -40,7 +41,7 @@ pub struct RbumCertAddReq {
 pub struct RbumCertModifyReq {
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ak: Option<TrimString>,
-    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
+    #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
     pub sk: Option<TrimString>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
@@ -82,6 +83,7 @@ pub struct RbumCertSummaryWithSkResp {
     pub ak: String,
     pub sk: String,
     pub ext: String,
+    pub conn_uri: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub status: RbumCertStatusKind,

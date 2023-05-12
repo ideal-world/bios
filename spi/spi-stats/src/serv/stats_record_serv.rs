@@ -5,7 +5,7 @@ use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::{DateTime, Utc};
-use tardis::serde_json::Value;
+use tardis::serde_json::{self, Value};
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
 
@@ -45,6 +45,20 @@ pub(crate) async fn fact_records_delete(fact_conf_key: String, fact_record_delet
     match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv::fact_records_delete(&fact_conf_key, &fact_record_delete_keys, funs, ctx).await,
+        kind_code => Err(funs.bs_not_implemented(kind_code)),
+    }
+}
+
+pub(crate) async fn fact_records_delete_by_dim_key(
+    fact_conf_key: String,
+    dim_conf_key: String,
+    dim_record_key: Option<serde_json::Value>,
+    funs: &TardisFunsInst,
+    ctx: &TardisContext,
+) -> TardisResult<()> {
+    match funs.init(ctx, true, stats_initializer::init_fun).await?.as_str() {
+        #[cfg(feature = "spi-pg")]
+        spi_constants::SPI_PG_KIND_CODE => pg::stats_pg_record_serv::fact_records_delete_by_dim_key(&fact_conf_key, &dim_conf_key, dim_record_key, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }

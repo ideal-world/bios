@@ -18,6 +18,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
+use super::iam_rel_serv::IamRelServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
     IamCertConfLdapAddOrModifyReq, IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq, IamCertConfTokenAddReq, IamCertConfUserPwdAddOrModifyReq,
@@ -33,15 +34,19 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
-use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
-
-use super::iam_rel_serv::IamRelServ;
+use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
 
 pub struct IamCertServ;
 
 impl IamCertServ {
     pub fn get_new_pwd() -> String {
-        TardisFuns::field.nanoid_len(10)
+        // todo 等待 bios_basic::field::nanoid_len(10) 支持自定义 alphabet
+        // TardisFuns::field.nanoid_len(10)
+        let alphabet: [char; 62] = [
+            '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
+            'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        ];
+        nanoid::nanoid!(10, &alphabet)
     }
 
     pub async fn init_default_ident_conf(
@@ -207,24 +212,26 @@ impl IamCertServ {
     }
 
     pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), rbum_scope_helper::get_max_level_id_by_context(ctx), funs).await?;
-        let kernel_cert = RbumCertServ::find_one_rbum(
+        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
+        let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), Some(ctx.clone().own_paths), funs).await?;
+        let kernel_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id]),
                 ..Default::default()
             },
             funs,
-            ctx,
+            &ctx,
         )
         .await?;
         if let Some(kernel_cert) = kernel_cert {
-            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &ctx).await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: kernel_cert.id,
                 ak: kernel_cert.ak,
                 sk: now_sk,
                 ext: kernel_cert.ext,
+                conn_uri: kernel_cert.conn_uri,
                 start_time: kernel_cert.start_time,
                 end_time: kernel_cert.end_time,
                 status: kernel_cert.status,
@@ -401,12 +408,13 @@ impl IamCertServ {
                 ext: Some(add_req.ext.as_ref().unwrap().to_string()),
                 start_time: None,
                 end_time: None,
-                conn_uri: None,
+                conn_uri: add_req.conn_uri.clone(),
                 status: RbumCertStatusKind::Enabled,
                 rel_rbum_cert_conf_id: None,
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: ctx.own_paths.to_string(),
                 is_outside: true,
+                is_ignore_check_sk: false,
             },
             funs,
             ctx,
@@ -424,7 +432,7 @@ impl IamCertServ {
                 sk: Some(TrimString(modify_req.sk.as_ref().unwrap().to_string())),
                 start_time: None,
                 end_time: None,
-                conn_uri: None,
+                conn_uri: modify_req.conn_uri.clone(),
                 status: None,
             },
             funs,
@@ -500,6 +508,7 @@ impl IamCertServ {
                 rel_rbum_kind: RbumCertRelKind::Item,
                 rel_rbum_id: account_id.to_string(),
                 is_outside: true,
+                is_ignore_check_sk: false,
             },
             funs,
             ctx,
@@ -565,13 +574,14 @@ impl IamCertServ {
                 ..Default::default()
             }
         };
-        let ext_cert = RbumCertServ::find_one_rbum(&rbum_cert_filter_req, funs, ctx).await?;
+        let ext_cert = RbumCertServ::find_one_detail_rbum(&rbum_cert_filter_req, funs, ctx).await?;
         if let Some(ext_cert) = ext_cert {
             Ok(RbumCertSummaryWithSkResp {
                 id: ext_cert.id,
                 ak: if is_ldap { IamCertLdapServ::dn_to_cn(&ext_cert.ak) } else { ext_cert.ak },
                 sk: "".to_string(),
                 ext: ext_cert.ext,
+                conn_uri: ext_cert.conn_uri,
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
                 status: ext_cert.status,
@@ -603,7 +613,7 @@ impl IamCertServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let ext_cert = RbumCertServ::find_one_rbum(
+        let ext_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(cert_supplier.clone()),
@@ -621,6 +631,7 @@ impl IamCertServ {
                 ak: ext_cert.ak,
                 sk: now_sk,
                 ext: ext_cert.ext,
+                conn_uri: ext_cert.conn_uri,
                 start_time: ext_cert.start_time,
                 end_time: ext_cert.end_time,
                 status: ext_cert.status,
@@ -671,7 +682,7 @@ impl IamCertServ {
         if let Some(rel) = rels.first() {
             mock_ctx.own_paths = rel.rel.own_paths.clone()
         }
-        let ext_cert = RbumCertServ::find_one_rbum(
+        let ext_cert = RbumCertServ::do_find_one_detail_rbum(
             &RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: Some(vec![id.into()]),
@@ -705,6 +716,7 @@ impl IamCertServ {
                 owner: ext_cert.owner,
                 create_time: ext_cert.create_time,
                 update_time: ext_cert.update_time,
+                conn_uri: ext_cert.conn_uri,
             })
         } else {
             Err(funs.err().not_found(
@@ -931,6 +943,9 @@ impl IamCertServ {
         )
         .await?;
         if account_agg.disabled {
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-rbum-cert-lock"));
+        }
+        if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
             return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-cert-lock"));
         }
         let account_info = IamAccountInfoResp {
@@ -974,6 +989,7 @@ impl IamCertServ {
                 rel2: None,
                 set_rel: None,
                 icon: None,
+                status: None,
             },
             funs,
             &mock_ctx,
@@ -1080,7 +1096,7 @@ impl IamCertServ {
 
         if let Some(sync_cron) = req.account_sync_cron.clone() {
             if schedule_url.is_empty() {
-                return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", ""));
+                return Err(funs.err().not_implemented("third_integration_config", "add_or_modify", "schedule is not impl!", "501-iam-schedule_not_impl_error"));
             };
             if !sync_cron.is_empty() {
                 funs.web_client()

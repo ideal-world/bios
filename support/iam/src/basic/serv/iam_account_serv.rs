@@ -3,12 +3,17 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
+
+use ldap3::tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
+
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{serde_json, TardisFuns, TardisFunsInst};
@@ -27,6 +32,8 @@ use crate::basic::dto::iam_account_dto::{
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
+#[cfg(feature = "spi_kv")]
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -37,12 +44,12 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
-use crate::iam_enumeration::{IamCertKernelKind, IamRelKind, IamSetKind};
+use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
+use super::clients::mail_client::MailClient;
+use super::clients::sms_client::SmsClient;
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -75,6 +82,9 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(iam_account::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
+            status: Set(add_req.status.as_ref().unwrap_or(&IamAccountStatusKind::Active).to_int()),
+            temporary: Set(add_req.temporary.unwrap_or(false)),
+            lock_status: Set(add_req.lock_status.as_ref().unwrap_or(&IamAccountLockStateKind::Unlocked).to_int()),
             ext1_idx: Set("".to_string()),
             ext2_idx: Set("".to_string()),
             ext3_idx: Set("".to_string()),
@@ -84,7 +94,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             ext7: Set("".to_string()),
             ext8: Set("".to_string()),
             ext9: Set("".to_string()),
-            temporary: Set(add_req.temporary.unwrap_or(false)),
             ..Default::default()
         })
     }
@@ -93,11 +102,20 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
+        let disabled = if modify_req.status.is_some() {
+            match modify_req.status.as_ref().unwrap() {
+                IamAccountStatusKind::Active => Some(false),
+                IamAccountStatusKind::Dormant => Some(true),
+                IamAccountStatusKind::Logout => Some(true),
+            }
+        } else {
+            None
+        };
         Ok(Some(RbumItemKernelModifyReq {
             code: None,
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),
-            disabled: modify_req.disabled,
+            disabled: modify_req.disabled.or(disabled),
         }))
     }
 
@@ -112,39 +130,43 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if let Some(icon) = &modify_req.icon {
             iam_account.icon = Set(icon.to_string());
         }
+        if let Some(status) = &modify_req.status {
+            iam_account.status = Set(status.to_int());
+        }
+        if let Some(lock_status) = &modify_req.lock_status {
+            iam_account.lock_status = Set(lock_status.to_int());
+        }
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
-        if modify_req.disabled.is_some() || modify_req.scope_level.is_some() {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+        if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
         Ok(())
     }
-    async fn after_add_item(id: &str, _: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::add_or_modify_account_search(id, false, funs, ctx).await?;
-        Ok(())
-    }
-    async fn before_modify_item(id: &str, _: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        IamAccountServ::add_or_modify_account_search(id, true, funs, ctx).await?;
+
+    async fn after_add_item(_id: &str, _: &mut IamAccountAddReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
         if id == ctx.owner {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", "account invalid", "409-iam-current-can-not-account-delete"));
         }
-        IamAccountServ::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(None)
     }
 
-    async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(id: &str, _: &Option<IamAccountDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
+        IamAccountServ::async_delete_account_search(id.to_string(), funs, ctx.clone()).await?;
         Ok(())
     }
 
     async fn package_ext_query(query: &mut SelectStatement, _: bool, filter: &IamAccountFilterReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
         query.column((iam_account::Entity, iam_account::Column::Icon));
+        query.column((iam_account::Entity, iam_account::Column::Status));
         query.column((iam_account::Entity, iam_account::Column::Temporary));
+        query.column((iam_account::Entity, iam_account::Column::LockStatus));
         query.column((iam_account::Entity, iam_account::Column::Ext1Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext2Idx));
         query.column((iam_account::Entity, iam_account::Column::Ext3Idx));
@@ -166,11 +188,18 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
 impl IamAccountServ {
     /// if add_req.status is None.default is RbumCertStatusKind::Enabled
-    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn add_account_agg(add_req: &IamAccountAggAddReq, is_ignore_check_sk: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let attrs = IamAttrServ::find_account_attrs(funs, ctx).await?;
         if attrs.iter().any(|i| i.required && !add_req.exts.contains_key(&i.name)) {
             return Err(funs.err().bad_request(&Self::get_obj_name(), "add", "missing required field", "400-iam-account-field-missing"));
         }
+        let mut is_ignore_check_sk = is_ignore_check_sk;
+        let pwd: String = if let Some(cert_password) = &add_req.cert_password {
+            cert_password.to_string()
+        } else {
+            is_ignore_check_sk = true;
+            IamCertServ::get_new_pwd()
+        };
         let account_id = IamAccountServ::add_item(
             &mut IamAccountAddReq {
                 id: add_req.id.clone(),
@@ -178,7 +207,9 @@ impl IamAccountServ {
                 scope_level: add_req.scope_level.clone(),
                 disabled: add_req.disabled,
                 icon: add_req.icon.clone(),
-                temporary: None,
+                temporary: add_req.temporary,
+                status: None,
+                lock_status: add_req.lock_status.clone(),
             },
             funs,
             ctx,
@@ -188,8 +219,9 @@ impl IamAccountServ {
             IamCertUserPwdServ::add_cert(
                 &IamCertUserPwdAddReq {
                     ak: add_req.cert_user_name.clone(),
-                    sk: add_req.cert_password.clone(),
+                    sk: TrimString(pwd.clone()),
                     status: add_req.status.clone(),
+                    is_ignore_check_sk,
                 },
                 &account_id,
                 Some(cert_conf.id),
@@ -211,11 +243,15 @@ impl IamAccountServ {
                 )
                 .await?;
             }
+            // todo Add the ctx task queue
+            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, ctx).await;
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
+            // todo Add the ctx task queue
+            let _ = MailClient::send_pwd(cert_mail, &pwd, funs).await;
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {
@@ -250,6 +286,9 @@ impl IamAccountServ {
                 scope_level: modify_req.scope_level.clone(),
                 disabled: modify_req.disabled,
                 icon: modify_req.icon.clone(),
+                status: modify_req.status.clone(),
+                is_auto: Some(false),
+                lock_status: None,
             },
             funs,
             ctx,
@@ -272,7 +311,7 @@ impl IamAccountServ {
         // TODO test
         if let Some(input_org_cate_ids) = &modify_req.org_cate_ids {
             let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, ctx).await?;
-            let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), false, funs, ctx).await?;
+            let stored_cates = IamSetServ::find_set_items(Some(set_id.clone()), None, Some(id.to_string()), None, false, funs, ctx).await?;
             let mut stored_cate_ids: Vec<String> = stored_cates.iter().map(|r| r.rel_rbum_set_cate_id.clone().unwrap_or_default()).collect();
             stored_cate_ids.dedup();
             for input_org_cate_id in input_org_cate_ids {
@@ -329,13 +368,15 @@ impl IamAccountServ {
                 icon: modify_req.icon.clone(),
                 disabled: modify_req.disabled,
                 scope_level: None,
+                status: None,
+                lock_status: None,
+                is_auto: None,
             },
             funs,
             &mock_ctx,
         )
         .await?;
         IamAttrServ::add_or_modify_account_attr_values(id, modify_req.exts.clone(), funs, &mock_ctx).await?;
-        Self::add_or_modify_account_search(id, false, funs, ctx).await.unwrap();
         Ok(())
     }
 
@@ -416,7 +457,11 @@ impl IamAccountServ {
             update_time: account.update_time,
             scope_level: account.scope_level,
             disabled: account.disabled,
+            is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
+            is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
+            status: account.status,
             temporary: account.temporary,
+            lock_status: account.lock_status,
             icon: account.icon,
             roles: roles.iter().filter(|r| r.rel_own_paths == ctx.own_paths).map(|r| (r.rel_id.to_string(), r.rel_name.to_string())).collect(),
             apps,
@@ -481,7 +526,11 @@ impl IamAccountServ {
                 update_time: account.update_time,
                 scope_level: account.scope_level,
                 disabled: account.disabled,
+                is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id.clone())).await?,
+                is_online: IamIdentCacheServ::exist_token_by_account_id(&account.id, funs).await?,
+                status: account.status,
                 temporary: account.temporary,
+                lock_status: account.lock_status,
                 icon: account.icon,
                 roles: Self::find_simple_rel_roles(&account.id, true, None, None, funs, ctx).await?.into_iter().map(|r| (r.rel_id, r.rel_name)).collect(),
                 certs: IamCertServ::find_certs(
@@ -508,7 +557,6 @@ impl IamAccountServ {
                 .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
                 .collect(),
                 orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
-                is_locked: funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &account.id)).await?,
             });
         }
         Ok(TardisPage {
@@ -588,6 +636,47 @@ impl IamAccountServ {
         .map(|r| r.into_iter().map(|r| format!("{},{},{}", r.id, r.name, r.icon)).collect())
     }
 
+    pub async fn find_account_online_by_ids(ids: Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut online_accounts = vec![];
+        for id in ids {
+            online_accounts.push(format!("{},{}", id, IamIdentCacheServ::exist_token_by_account_id(&id, funs).await?));
+        }
+        Ok(online_accounts)
+    }
+
+    pub async fn find_account_lock_state_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {
+        let mut lock_accounts: Vec<String> = vec![];
+        let accounts = IamAccountServ::find_items(
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(ids.clone()),
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            None,
+            None,
+            funs,
+            ctx,
+        )
+        .await?;
+        for id in ids {
+            let account = accounts.iter().find(|r| r.id == id);
+            if account.is_none() {
+                continue;
+            }
+            let lock_status = if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &id)).await? {
+                IamAccountLockStateKind::PasswordLocked
+            } else {
+                account.unwrap().lock_status.clone()
+            };
+            lock_accounts.push(format!("{},{}", id, lock_status.to_string()));
+        }
+        Ok(lock_accounts)
+    }
+
     pub async fn find_simple_rel_roles(
         account_id: &str,
         with_sub: bool,
@@ -606,7 +695,22 @@ impl IamAccountServ {
 
     pub async fn unlock_account(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Void> {
         RbumItemServ::check_ownership(id, funs, ctx).await?;
-        funs.cache().del(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), id)).await?;
+        IamIdentCacheServ::delete_lock_by_account_id(id, funs).await?;
+        Self::modify_item(
+            id,
+            &mut IamAccountModifyReq {
+                name: None,
+                scope_level: None,
+                disabled: None,
+                icon: None,
+                status: None,
+                is_auto: Some(false),
+                lock_status: Some(IamAccountLockStateKind::Unlocked),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         Ok(Void {})
     }
 
@@ -653,16 +757,37 @@ impl IamAccountServ {
         }
     }
 
-    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
-        TaskProcessor::execute_task(
+    // todo
+    // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
+    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, logout_msg: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+        let account_resp = IamAccountServ::get_account_detail_aggs(
+            &account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            funs,
+            &ctx,
+        )
+        .await?;
+        let r = TaskProcessor::execute_task(
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             move || async move {
                 let funs = iam_constants::get_tardis_inst();
-                Self::add_or_modify_account_search(&account_id, is_modify, &funs, &ctx).await
+                Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx).await
             },
             funs,
         )
-        .await
+        .await?;
+        sleep(Duration::from_millis(100)).await;
+        Ok(r)
     }
 
     pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
@@ -678,29 +803,20 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    pub async fn add_or_modify_account_search(account_id: &str, is_modify: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_resp = IamAccountServ::get_account_detail_aggs(
-            account_id,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            true,
-            true,
-            funs,
-            ctx,
-        )
-        .await?;
+    pub async fn add_or_modify_account_search(
+        account_resp: IamAccountDetailAggResp,
+        is_modify: bool,
+        logout_msg: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
+        let account_id = account_resp.id.as_str();
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
         let mut account_resp_dept_id = vec![];
 
         let mut set_ids = vec![];
-        if IamAccountServ::is_global_account(account_id, funs, ctx).await? {
+        if account_resp.own_paths.is_empty() {
             let tenants = IamTenantServ::find_items(
                 &IamTenantFilterReq {
                     basic: RbumBasicFilterReq {
@@ -724,7 +840,7 @@ impl IamAccountServ {
             set_ids.push(IamSetServ::get_set_id_by_code(&IamSetServ::get_default_code(&IamSetKind::Org, &account_resp.own_paths), true, funs, ctx).await?);
         };
         for set_id in set_ids {
-            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), true, funs, ctx).await?;
+            let set_items = IamSetServ::find_set_items(Some(set_id), None, Some(account_id.to_string()), None, true, funs, ctx).await?;
             account_resp_dept_id.extend(set_items.iter().map(|s| s.rel_rbum_set_cate_id.clone()).collect::<Vec<_>>());
         }
 
@@ -770,29 +886,30 @@ impl IamAccountServ {
                 "create_time":account_resp.create_time.to_rfc3339(),
                 "update_time": account_resp.update_time.to_rfc3339(),
                 "ext":{
-                    "status": !account_resp.disabled,
+                    "status": account_resp.status,
+                    "temporary":account_resp.temporary,
+                    "lock_status": account_resp.lock_status,
                     "role_id": account_roles,
                     "dept_id": account_resp_dept_id,
                     "project_id": account_app_ids,
                     "create_time": account_resp.create_time.to_rfc3339(),
                     "certs":account_resp.certs,
-                    "icon":account_resp.icon
+                    "icon":account_resp.icon,
+                    "logout_msg":logout_msg,
                 },
             });
             if !account_resp.own_paths.is_empty() {
                 search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
             }
-            if account_app_ids.is_empty() && account_resp.orgs.is_empty() && account_resp.own_paths.is_empty() {
-            } else {
-                search_body.as_object_mut().unwrap().insert(
-                    "visit_keys".to_string(),
-                    json!({
-                        "apps": account_app_ids,
-                        "groups": account_resp_dept_id,
-                        "tenants" : [ account_resp.own_paths ]
-                    }),
-                );
-            }
+            search_body.as_object_mut().unwrap().insert(
+                "visit_keys".to_string(),
+                json!({
+                    "roles": account_roles,
+                    "apps": account_app_ids,
+                    "groups": account_resp_dept_id,
+                    "tenants" : [ account_resp.own_paths ]
+                }),
+            );
             //add search
             if is_modify {
                 search_body.as_object_mut().unwrap().insert("ext_override".to_string(), serde_json::Value::from(true));
@@ -803,6 +920,7 @@ impl IamAccountServ {
         }
         Ok(())
     }
+
     // account 全局搜索删除埋点方法
     pub async fn delete_account_search(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_search")]

@@ -312,6 +312,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             rel_rbum_kind: RbumCertRelKind::Item,
             rel_rbum_id: context.owner.to_string(),
             is_outside: false,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -334,6 +335,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             rel_rbum_kind: RbumCertRelKind::Item,
             rel_rbum_id: context.owner.to_string(),
             is_outside: false,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -406,6 +408,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -428,6 +431,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -574,6 +578,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -598,6 +603,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -622,6 +628,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -646,6 +653,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -670,6 +678,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -693,6 +702,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -716,6 +726,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -739,6 +750,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -917,6 +929,7 @@ async fn test_rbum_cert_sk_dynamic(context: &TardisContext) -> TardisResult<()> 
             is_outside: false,
             kind: None,
             supplier: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,

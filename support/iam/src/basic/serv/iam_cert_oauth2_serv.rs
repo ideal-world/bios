@@ -158,6 +158,7 @@ impl IamCertOAuth2Serv {
                     rel_rbum_kind: RbumCertRelKind::Item,
                     rel_rbum_id: account_id.to_string(),
                     is_outside: false,
+                    is_ignore_check_sk: false,
                 },
                 funs,
                 ctx,
@@ -214,7 +215,7 @@ impl IamCertOAuth2Serv {
                 name: TrimString(client.get_account_name(oauth_token_info.clone(), funs).await?),
                 cert_user_name: IamCertUserPwdServ::rename_ak_if_duplicate(&TardisFuns::field.nanoid_len(8).to_lowercase(), funs, &mock_ctx).await?,
                 // FIXME 临时密码
-                cert_password: TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6))),
+                cert_password: Some(TrimString(format!("{}0Pw$", TardisFuns::field.nanoid_len(6)))),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
@@ -225,7 +226,9 @@ impl IamCertOAuth2Serv {
                 exts: HashMap::new(),
                 status: Some(Pending),
                 temporary: None,
+                lock_status: None,
             },
+            false,
             funs,
             &mock_ctx,
         )
@@ -240,6 +243,7 @@ impl IamCertOAuth2Serv {
             &mock_ctx,
         )
         .await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), funs, mock_ctx.clone()).await?;
         Ok((account_id, oauth_token_info.access_token))
     }
 

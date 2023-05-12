@@ -1,7 +1,9 @@
+use bios_basic::spi::dto::spi_basic_dto::SpiQueryCondReq;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
+    serde_json::Value,
     web::poem_openapi,
 };
 
@@ -12,20 +14,32 @@ pub struct LogItemAddReq {
     #[oai(validator(min_length = "2"))]
     pub content: String,
     #[oai(validator(min_length = "2"))]
+    pub kind: Option<TrimString>,
+    pub search_ext: Option<Value>,
+    #[oai(validator(min_length = "2"))]
     pub key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
     pub op: Option<String>,
     #[oai(validator(min_length = "2"))]
     pub rel_key: Option<TrimString>,
     pub ts: Option<DateTime<Utc>>,
+    #[oai(validator(min_length = "2"))]
+    pub owner: Option<String>,
+    #[oai(validator(min_length = "2"))]
+    pub own_paths: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct LogItemFindReq {
     #[oai(validator(pattern = r"^[a-z0-9_]+$"))]
     pub tag: String,
+    pub kinds: Option<Vec<TrimString>>,
     pub keys: Option<Vec<TrimString>>,
     pub ops: Option<Vec<String>>,
+    pub owners: Option<Vec<String>>,
+    pub own_paths: Option<Vec<String>>,
+    // Extended filtering conditions
+    pub search_ext: Option<Vec<SpiQueryCondReq>>,
     pub rel_keys: Option<Vec<TrimString>>,
     pub ts_start: Option<DateTime<Utc>>,
     pub ts_end: Option<DateTime<Utc>>,
@@ -37,6 +51,10 @@ pub struct LogItemFindReq {
 pub struct LogItemFindResp {
     #[oai(validator(min_length = "2"))]
     pub content: String,
+    pub kind: String,
+    pub search_ext: Value,
+    pub owner: String,
+    pub own_paths: String,
     pub key: String,
     pub op: String,
     pub rel_key: String,

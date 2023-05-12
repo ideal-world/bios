@@ -176,23 +176,19 @@ impl Oauth2GrantType {
     }
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
 pub enum WayToAdd {
     ///同步账号同步凭证
+    #[default]
     SynchronizeCert,
     ///同步账号不凭证
     NoSynchronizeCert,
 }
 
-impl Default for WayToAdd {
-    fn default() -> Self {
-        WayToAdd::SynchronizeCert
-    }
-}
-
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
 pub enum WayToDelete {
     ///什么也不做
+    #[default]
     DoNotDelete,
     ///取消授权
     DeleteCert,
@@ -201,9 +197,92 @@ pub enum WayToDelete {
     ///同步删除账号凭证
     DeleteAccount,
 }
-impl Default for WayToDelete {
-    fn default() -> Self {
-        WayToDelete::DoNotDelete
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString, Default)]
+pub enum IamAccountLockStateKind {
+    // 未锁定
+    #[default]
+    Unlocked,
+    // 密码锁定
+    PasswordLocked,
+    // 长期未登录锁定
+    LongTimeNoLoginLocked,
+    // 人工锁定
+    ManualLocked,
+}
+
+impl IamAccountLockStateKind {
+    pub fn from_int(s: i16) -> TardisResult<IamAccountLockStateKind> {
+        match s {
+            0 => Ok(IamAccountLockStateKind::Unlocked),
+            1 => Ok(IamAccountLockStateKind::PasswordLocked),
+            2 => Ok(IamAccountLockStateKind::LongTimeNoLoginLocked),
+            3 => Ok(IamAccountLockStateKind::ManualLocked),
+            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> i16 {
+        match self {
+            IamAccountLockStateKind::Unlocked => 0,
+            IamAccountLockStateKind::PasswordLocked => 1,
+            IamAccountLockStateKind::ManualLocked => 2,
+            IamAccountLockStateKind::LongTimeNoLoginLocked => 3,
+        }
+    }
+}
+
+impl TryGetable for IamAccountLockStateKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = i16::try_get(res, pre, col)?;
+        IamAccountLockStateKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implement")
+    }
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+pub enum IamAccountStatusKind {
+    // 激活
+    Active,
+    // 休眠
+    Dormant,
+    // 注销
+    Logout,
+}
+impl IamAccountStatusKind {
+    pub fn parse(kind: &str) -> TardisResult<IamAccountStatusKind> {
+        IamAccountStatusKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not account status type kind: {kind}"), "404-iam-account-status-not-exist"))
+    }
+
+    pub fn from_int(s: i16) -> TardisResult<IamAccountStatusKind> {
+        match s {
+            0 => Ok(IamAccountStatusKind::Active),
+            1 => Ok(IamAccountStatusKind::Dormant),
+            2 => Ok(IamAccountStatusKind::Logout),
+            _ => Err(TardisError::format_error(&format!("invalid IamResKind: {s}"), "406-rbum-*-enum-init-error")),
+        }
+    }
+
+    pub fn to_int(&self) -> i16 {
+        match self {
+            IamAccountStatusKind::Active => 0,
+            IamAccountStatusKind::Dormant => 1,
+            IamAccountStatusKind::Logout => 2,
+        }
+    }
+}
+
+impl TryGetable for IamAccountStatusKind {
+    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
+        let s = i16::try_get(res, pre, col)?;
+        IamAccountStatusKind::from_int(s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
+    }
+
+    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
+        panic!("not implement")
     }
 }
 
@@ -217,6 +296,8 @@ pub enum IamConfigDataTypeKind {
     Hour,
     // 天
     Day,
+    // 数字
+    Number,
     // 时间周期
     DatetimeRange,
     // 时间段

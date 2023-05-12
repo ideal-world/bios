@@ -196,7 +196,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
             } else {
                 where_visit_keys_fragments.push(format!(
                     "visit_keys -> '{scope_key}' ?| array[{}]",
-                    (0..scope_values.len()).into_iter().map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                    (0..scope_values.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                 ));
             }
             for scope_value in scope_values {
@@ -288,7 +288,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     where_fragments.push(format!(
                         "ext -> '{}' ?| array[{}]",
                         ext_item.field,
-                        (0..value.len()).into_iter().map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                        (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                     ));
                 }
                 for val in value {

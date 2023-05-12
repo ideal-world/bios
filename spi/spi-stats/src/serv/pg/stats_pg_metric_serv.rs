@@ -11,6 +11,7 @@ use tardis::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
+    log::info,
     serde_json::{self, Map},
     TardisFunsInst,
 };
@@ -39,28 +40,35 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 ///   (
 ///     -- Inner SQL, responsible for filtering, deduplication, and length limitation
 ///     SELECT
-///       -- Built-in statement for deduplication
-///       DISTINCT ON (fact.key) fact.key,
 ///       -- Query dimensions and measures
 ///       fact.act_hours AS act_hours,
 ///       fact.plan_hours AS plan_hours,
 ///       fact.ct AS ct,
 ///       fact.status AS status
 ///     FROM
-///       -- Query fact instance table
-///       xxx.starsys_stats_inst_fact_req fact
-///       -- Association instance delete table
-///       LEFT JOIN xxx.starsys_stats_inst_fact_req_del del ON del.key = fact.key
-///       AND del.ct >= '2023-01-01 12:00:00 +00:00'
-///       AND del.ct <= '2023-02-01 12:00:00 +00:00'
-///     WHERE
-///       -- Built-in statement for permission control
-///       fact.own_paths LIKE 't1/a1%'
-///       -- Built-in statement for filter deleted records
-///       AND del.key IS NULL
-///       -- Time filter
-///       AND fact.ct >= '2023-01-01 12:00:00 +00:00'
-///       AND fact.ct <= '2023-02-01 12:00:00 +00:00'
+///         (
+///             SELECT
+///                 -- Built-in statement for deduplication
+///                 DISTINCT ON (fact.key) fact.key,fact.*
+///             FROM
+///             -- Query fact instance table
+///             xxx.starsys_stats_inst_fact_req fact
+///             -- Association instance delete table
+///             LEFT JOIN xxx.starsys_stats_inst_fact_req_del del ON del.key = fact.key
+///             AND del.ct >= '2023-01-01 12:00:00 +00:00'
+///             AND del.ct <= '2023-02-01 12:00:00 +00:00'
+///             WHERE
+///                 -- Built-in statement for permission control
+///                 fact.own_paths LIKE 't1/a1%'
+///                 -- Built-in statement for filter deleted records
+///                 AND del.key IS NULL
+///                  -- Time filter
+///                 AND fact.ct >= '2023-01-01 12:00:00 +00:00'
+///                 AND fact.ct <= '2023-02-01 12:00:00 +00:00'
+///                 ORDER BY
+///                 -- Built-in statement for deduplication
+///                 fact.key, fact.ct DESC
+///         ) fact
 ///       -- Other filter conditions, optional
 ///       AND (
 ///         fact.act_hours > 10
@@ -68,8 +76,8 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 ///         OR fact.status = 'open'
 ///       )
 ///     ORDER BY
-///     -- Built-in statement for deduplication
-///       fact.key, fact.ct DESC
+///         -- Order of the dimension values
+///         fact.status DESC
 ///     LIMIT
 ///     -- built-in statement, the value is the limit length in the fact configuration
 ///       2000
@@ -173,7 +181,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code))
         || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension)
         || query_req
-            .order
+            .metrics_order
             .as_ref()
             .map(|orders| orders.iter().any(|order| !query_req.select.iter().any(|select| order.code == select.code && order.fun == select.fun)))
             .unwrap_or(false)
@@ -211,6 +219,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                 } else {
                     col_conf.mes_data_type.as_ref().unwrap()
                 };
+                info!("col_data_type={:?}", col_data_type);
                 if let Some((sql_part, value)) = col_data_type.to_pg_where(
                     col_conf.dim_multi_values.unwrap_or(false),
                     &format!("fact.{}", &and_where.code),
@@ -333,8 +342,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         "".to_string()
     };
 
-    // Package order
-    let sql_part_orders = if let Some(orders) = &query_req.order {
+    // Package metrics order
+    let sql_metrics_orders = if let Some(orders) = &query_req.metrics_order {
         let sql_part_orders = orders
             .iter()
             .map(|order| {
@@ -351,6 +360,14 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         "".to_string()
     };
 
+    // Package dimension order
+    let sql_dimension_orders = if let Some(orders) = &query_req.dimension_order {
+        let sql_part_orders = orders.iter().map(|order| format!("fact.{} {}", order.code, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
+        format!("ORDER BY {}", sql_part_orders.join(","))
+    } else {
+        "".to_string()
+    };
+
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
 
@@ -358,20 +375,25 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         r#"SELECT {sql_part_outer_selects}
     FROM (
         SELECT
-            DISTINCT ON (fact.key) fact.key AS _key, {sql_part_inner_selects}
-        FROM {fact_inst_table_name} fact
-        LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
-        WHERE
-            fact.own_paths LIKE $1
-            AND del.key IS NULL
-            AND fact.ct >= $2 AND fact.ct <= $3
+             {sql_part_inner_selects}
+             FROM(
+                SELECT DISTINCT ON (fact.key) fact.key AS _key,fact.*
+                FROM {fact_inst_table_name} fact
+                LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
+                WHERE
+                    fact.own_paths LIKE $1
+                    AND del.key IS NULL
+                    AND fact.ct >= $2 AND fact.ct <= $3
+                ORDER BY _key,fact.ct DESC
+             ) fact 
+             where 1 = 1
             {sql_part_wheres}
-        ORDER BY _key,fact.ct DESC
+            {sql_dimension_orders}
         LIMIT {conf_limit}
     ) _
     {}
     {sql_part_havings}
-    {sql_part_orders}
+    {sql_metrics_orders}
     {query_limit}"#,
         if sql_part_groups.is_empty() {
             "".to_string()

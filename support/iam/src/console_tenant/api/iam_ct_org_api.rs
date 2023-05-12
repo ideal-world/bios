@@ -83,79 +83,29 @@ impl IamCtOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Find Platform Cate Org
-    ///
-    /// 查询平台组织节点
-    #[oai(path = "/platform/cate", method = "get")]
-    async fn find_platform_cate(&self, ctx: TardisContextExtractor) -> TardisApiResult<RbumSetTreeResp> {
-        let funs = iam_constants::get_tardis_inst();
+    /// Current is bound by platform
+    #[oai(path = "/is_bound", method = "get")]
+    async fn is_bond_by_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<bool> {
         let mock_ctx = TardisContext {
             own_paths: "".to_string(),
-            ..ctx.0
+            ..ctx.0.clone()
         };
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &mock_ctx).await?;
-        let mut result = IamSetServ::get_tree(
-            &set_id,
-            &mut RbumSetTreeFilterReq {
-                fetch_cate_item: false,
-                sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Sub),
-                sys_code_query_depth: Some(1),
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        let result = RbumRelServ::find_one_rbum(
+            &RbumRelFilterReq {
+                tag: Some(IamRelKind::IamOrgRel.to_string()),
+                from_rbum_kind: Some(RbumRelFromKind::SetCate),
+                to_rbum_item_id: Some(ctx.0.own_paths.to_owned()),
                 ..Default::default()
             },
             &funs,
             &mock_ctx,
         )
-        .await?;
-        //去掉租户自己的节点
-        result.main.retain(|r| r.ext.is_empty());
-        //去掉已经绑定的节点，以及子集
-        if let Some(parent_node) = result.main.clone().iter().find(|m| m.rel.is_some()) {
-            result.main.retain(|r| !r.sys_code.starts_with(&parent_node.sys_code.clone()))
-        };
+        .await?
+        .is_some();
+        funs.commit().await?;
         TardisResp::ok(result)
-    }
-
-    /// Import Platform Org
-    ///
-    /// 导入平台组织,支持换绑
-    /// 如果原解绑的节点下有属于平台的节点，解绑的时候需要拷贝一份去租户端，并且保留平台的节点
-    #[oai(path = "/binding/node/:id", method = "post")]
-    async fn bind_cate_with_platform(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        IamSetServ::bind_cate_with_platform(&id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    #[oai(path = "/binding/node/", method = "delete")]
-    async fn unbind_cate_with_platform(&self, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = iam_constants::get_tardis_inst();
-        funs.begin().await?;
-        let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx.0).await?;
-        //删除原来的关联
-        let old_rel = RbumRelServ::find_one_rbum(
-            &RbumRelFilterReq {
-                basic: Default::default(),
-                tag: Some(IamRelKind::IamOrgRel.to_string()),
-                from_rbum_kind: Some(RbumRelFromKind::Set),
-                from_rbum_id: Some(set_id.clone()),
-                from_rbum_scope_levels: None,
-                to_rbum_item_id: None,
-                to_rbum_item_scope_levels: None,
-                to_own_paths: Some("".to_string()),
-                ext_eq: None,
-                ext_like: None,
-            },
-            &funs,
-            &ctx.0,
-        )
-        .await?;
-        if let Some(old_rel) = old_rel {
-            IamSetServ::unbind_cate_with_platform(old_rel, &funs, &ctx.0).await?;
-        }
-        funs.commit().await?;
-        TardisResp::ok(Void {})
     }
 
     /// Batch Add Org Item
@@ -192,7 +142,7 @@ impl IamCtOrgApi {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, false, &funs, &ctx).await?;
+        let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, None, false, &funs, &ctx).await?;
         TardisResp::ok(result)
     }
 

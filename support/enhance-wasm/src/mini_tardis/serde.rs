@@ -42,13 +42,13 @@ pub fn jsvalue_to_obj<T: DeserializeOwned>(obj: wasm_bindgen::JsValue) -> Tardis
 
 // #[cfg(target_arch = "wasm32")]
 pub fn jsvalue_to_str(obj: &wasm_bindgen::JsValue) -> TardisResult<String> {
-    let result = js_sys::JSON::stringify(&obj).map_err(|e| TardisError::bad_request(&format!("[Tardis.Serde] Serialize error:{e:?}"), ""))?;
+    let result = js_sys::JSON::stringify(obj).map_err(|e| TardisError::bad_request(&format!("[Tardis.Serde] Serialize error:{e:?}"), ""))?;
     let result = result.as_string().unwrap();
     Ok(result)
 }
 
 // #[cfg(target_arch = "wasm32")]
 pub fn str_to_jsvalue(obj: &str) -> TardisResult<wasm_bindgen::JsValue> {
-    let result = js_sys::JSON::parse(&obj).map_err(|e| TardisError::bad_request(&format!("[Tardis.Serde] Deserialize error:{e:?}"), ""))?;
+    let result = js_sys::JSON::parse(obj).map_err(|e| TardisError::bad_request(&format!("[Tardis.Serde] Deserialize error:{e:?}"), ""))?;
     Ok(result)
 }

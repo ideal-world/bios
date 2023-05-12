@@ -5,7 +5,7 @@ use tardis::web::poem_openapi;
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq, RbumSetItemRelFilterReq};
 
-use crate::iam_enumeration::{IamResKind, IamRoleKind};
+use crate::iam_enumeration::{IamAccountStatusKind, IamResKind, IamRoleKind};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
@@ -23,6 +23,7 @@ pub struct IamAccountFilterReq {
     pub rel2: Option<RbumItemRelFilterReq>,
     pub set_rel: Option<RbumSetItemRelFilterReq>,
     pub icon: Option<String>,
+    pub status: Option<IamAccountStatusKind>,
 }
 
 impl RbumItemFilterFetcher for IamAccountFilterReq {

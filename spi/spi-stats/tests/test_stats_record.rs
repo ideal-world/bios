@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bios_basic::test::test_http_client::TestHttpClient;
-use bios_spi_stats::dto::stats_record_dto::{StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
+use bios_spi_stats::dto::stats_record_dto::{StatsDimRecordDeleteReq, StatsFactRecordLoadReq, StatsFactRecordsLoadReq};
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::serde_json::{json, Value};
@@ -339,6 +339,19 @@ pub async fn test_fact_record(client: &mut TestHttpClient) -> TardisResult<()> {
 
     assert_eq!(
         client.put_resp::<Vec<String>, Void>("/ci/record/fact/req/batch/remove", &vec!["rec3".to_string()]).await.code,
+        "200"
+    );
+
+    let _ = &&&assert_eq!(
+        client
+            .put_resp::<StatsDimRecordDeleteReq, Void>(
+                "/ci/record/fact/req/dim/req_status/batch/remove",
+                &StatsDimRecordDeleteReq {
+                    key: tardis::serde_json::Value::String("open".to_string())
+                }
+            )
+            .await
+            .code,
         "200"
     );
 

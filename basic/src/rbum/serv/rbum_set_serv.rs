@@ -886,6 +886,9 @@ impl RbumCrudOperation<rbum_set_item::ActiveModel, RbumSetItemAddReq, RbumSetIte
         if let Some(rel_rbum_item_ids) = &filter.rel_rbum_item_ids {
             query.and_where(Expr::col((rbum_set_item::Entity, rbum_set_item::Column::RelRbumItemId)).is_in(rel_rbum_item_ids.clone()));
         }
+        if let Some(rel_rbum_item_scope_level) = &filter.rel_rbum_item_scope_level {
+            query.and_where(Expr::col((rel_item_table.clone(), rbum_item::Column::ScopeLevel)).eq(rel_rbum_item_scope_level.to_int()));
+        }
         if let Some(rel_rbum_item_disabled) = &filter.rel_rbum_item_disabled {
             query.and_where(Expr::col((rel_item_table.clone(), rbum_item::Column::Disabled)).eq(*rel_rbum_item_disabled));
         }

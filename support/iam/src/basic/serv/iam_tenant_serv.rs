@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
+use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
@@ -23,6 +24,8 @@ use crate::basic::dto::iam_tenant_dto::{
     IamTenantAddReq, IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantConfigReq, IamTenantConfigResp, IamTenantDetailResp, IamTenantModifyReq,
     IamTenantSummaryResp,
 };
+#[cfg(feature = "spi_kv")]
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
@@ -31,8 +34,6 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
@@ -273,7 +274,7 @@ impl IamTenantServ {
                     value1: Some(r.value1.clone()),
                     value2: Some(r.value2.clone()),
                     ext: Some(r.ext.clone()),
-                    disabled: Some(r.disabled.clone()),
+                    disabled: Some(r.disabled),
                     data_type: IamConfigDataTypeKind::parse(&r.data_type).unwrap(),
                     code: IamConfigKind::parse(&r.code).unwrap(),
                 })
@@ -289,12 +290,12 @@ impl IamTenantServ {
         } else {
             IamCertServ::get_new_pwd()
         };
-        IamAccountServ::add_account_agg(
+        let admin_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(tenant_admin_id.clone())),
                 name: add_req.admin_name.clone(),
                 cert_user_name: TrimString(add_req.admin_username.0.to_string()),
-                cert_password: TrimString(admin_pwd.to_string()),
+                cert_password: Some(TrimString(admin_pwd.to_string())),
                 cert_phone: add_req.admin_phone.clone(),
                 cert_mail: add_req.admin_mail.clone(),
                 icon: None,
@@ -303,9 +304,11 @@ impl IamTenantServ {
                 role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
-                status: None,
+                status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
+                lock_status: None,
             },
+            true,
             funs,
             &tenant_ctx,
         )
@@ -316,27 +319,31 @@ impl IamTenantServ {
         } else {
             IamCertServ::get_new_pwd()
         };
-        IamAccountServ::add_account_agg(
+        let audit_id = IamAccountServ::add_account_agg(
             &IamAccountAggAddReq {
                 id: Some(TrimString(tenant_audit_id.clone())),
-                name: add_req.admin_name.clone(),
+                name: add_req.audit_name.clone(),
                 cert_user_name: TrimString(add_req.audit_username.0.to_string()),
-                cert_password: TrimString(audit_pwd.to_string()),
+                cert_password: Some(TrimString(audit_pwd.to_string())),
                 cert_phone: add_req.audit_phone.clone(),
                 cert_mail: add_req.audit_mail.clone(),
                 icon: None,
                 disabled: add_req.disabled,
                 scope_level: Some(RBUM_SCOPE_LEVEL_TENANT),
-                role_ids: Some(vec![funs.iam_basic_role_tenant_admin_id()]),
+                role_ids: Some(vec![funs.iam_basic_role_tenant_audit_id()]),
                 org_node_ids: None,
                 exts: Default::default(),
-                status: None,
+                status: Some(RbumCertStatusKind::Pending),
                 temporary: None,
+                lock_status: None,
             },
+            true,
             funs,
             &tenant_ctx,
         )
         .await?;
+        IamAccountServ::async_add_or_modify_account_search(admin_id, false, "".to_string(), funs, tenant_ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(audit_id, false, "".to_string(), funs, tenant_ctx).await?;
         Ok((tenant_id, admin_pwd, audit_pwd))
     }
 
@@ -497,6 +504,7 @@ impl IamTenantServ {
             config,
             cert_conf_by_oauth2,
             cert_conf_by_ldap,
+            strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
         };
 
         Ok(tenant_config)

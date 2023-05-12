@@ -41,12 +41,15 @@ pub struct IamConfig {
     pub mail_template_cert_activate_content: String,
     pub mail_template_cert_login_title: String,
     pub mail_template_cert_login_content: String,
+    pub mail_template_cert_random_pwd_title: String,
+    pub mail_template_cert_random_pwd_content: String,
     pub phone_template_cert_activate_title: String,
     pub phone_template_cert_activate_content: String,
     pub phone_template_cert_login_title: String,
     pub phone_template_cert_login_content: String,
     pub sms_base_url: String,
     pub sms_path: String,
+    pub sms_pwd_path: String,
     pub third_integration_config_key: String,
     pub third_integration_schedule_code: String,
     pub init_menu_json_path: String,
@@ -54,6 +57,7 @@ pub struct IamConfig {
 
     pub spi: IamSpiConfig,
     pub iam_base_url: String,
+    pub strict_security_mode: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -123,6 +127,8 @@ impl Default for IamConfig {
             mail_template_cert_activate_content: "Your account [{account_name}] is activating email credentials, verification code: {vcode}".to_string(),
             mail_template_cert_login_title: "IAM Service Mail login verification".to_string(),
             mail_template_cert_login_content: "Your account is trying to login, verification code: {vcode}".to_string(),
+            mail_template_cert_random_pwd_title: "IAM Service Mail password verification".to_string(),
+            mail_template_cert_random_pwd_content: "Your account has just been created, verification password: {pwd}".to_string(),
             phone_template_cert_activate_title: "IAM Service Phone Credentials Activation".to_string(),
             phone_template_cert_activate_content: "Your account [{account_name}] is activating phone credentials, verification code: {vcode}".to_string(),
             phone_template_cert_login_title: "Your account is trying to login, verification code: {vcode}".to_string(),
@@ -131,11 +137,13 @@ impl Default for IamConfig {
             ldap: IamLdapConfig::default(),
             cache_key_async_task_status: "iam:cache:task:status".to_string(),
             sms_base_url: "http://reach:8080".to_string(),
-            sms_path: "/cc/msg/vcode".to_string(),
+            sms_path: "cc/msg/vcode".to_string(),
+            sms_pwd_path: "cc/msg/pwd".to_string(),
             third_integration_config_key: "iam:third:integration:config:key".to_string(),
             third_integration_schedule_code: "iam:third:integration".to_string(),
             iam_base_url: "http://localhost:8080/iam".to_string(),
             spi: Default::default(),
+            strict_security_mode: false,
         }
     }
 }
@@ -186,6 +194,7 @@ pub trait IamBasicConfigApi {
     fn iam_basic_domain_iam_id(&self) -> String;
     fn iam_basic_role_sys_admin_id(&self) -> String;
     fn iam_basic_role_tenant_admin_id(&self) -> String;
+    fn iam_basic_role_tenant_audit_id(&self) -> String;
     fn iam_basic_role_app_admin_id(&self) -> String;
 }
 
@@ -220,6 +229,10 @@ impl IamBasicConfigApi for TardisFunsInst {
 
     fn iam_basic_role_tenant_admin_id(&self) -> String {
         IamBasicInfoManager::get_config(|conf| conf.role_tenant_admin_id.clone())
+    }
+
+    fn iam_basic_role_tenant_audit_id(&self) -> String {
+        IamBasicInfoManager::get_config(|conf| conf.role_tenant_audit_id.clone())
     }
 
     fn iam_basic_role_app_admin_id(&self) -> String {

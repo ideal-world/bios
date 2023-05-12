@@ -99,7 +99,12 @@ impl StatsDataTypeKind {
         value: &serde_json::Value,
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
     ) -> Option<(String, sea_orm::Value)> {
-        let value = db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
+        let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
+            let value = self.json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
+            Some(vec![value])
+        } else {
+            db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like)
+        };
         let mut value = value.unwrap();
         if multi_values && (time_window_fun.is_some() || op != &SpiQueryOpKind::In)
             || self == &StatsDataTypeKind::Int && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
@@ -132,7 +137,12 @@ impl StatsDataTypeKind {
         value: &serde_json::Value,
         fun: Option<&StatsQueryAggFunKind>,
     ) -> Option<(String, sea_orm::Value)> {
-        let value = db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
+        let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
+            let value = self.json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
+            Some(vec![value])
+        } else {
+            db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like)
+        };
         let mut value = value.unwrap();
         if multi_values && (fun.is_some() || op != &SpiQueryOpKind::In)
             || self == &StatsDataTypeKind::Int && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)

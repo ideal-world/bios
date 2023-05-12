@@ -6,7 +6,7 @@
 409-iam-tenant-can-not-delete	租户只能禁用不能删除
 401-iam-tenant-context-not-exist	请求中找不到租户信息
 409-iam-tenant-is-disabled	租户已禁用
-
+409-iam-bind-conflict	不能关联关系已存在的记录
 409-iam-app-can-not-delete	应用只能禁用不能删除
 401-iam-app-context-not-exist	请求中找不到应用信息
 
@@ -26,6 +26,11 @@
 500-iam-cert-oauth-get-access-token-error	OAuth2认证获取AccessToken错误
 500-iam-cert-oauth-refresh-token-error	OAuth2认证刷新AccessToken错误
 500-iam-cert-oauth-get-user-error	OAuth2认证获取用户错误
+500-iam-connection-error	网络连接错误
+500-iam-ldap-bind-error	LDAP绑定错误
+500-iam-ldap-unbind-error	LDAP解绑错误
+500-iam-ldap-search-error	LDAP查询返回错误
+500-iam-ldap-search-result-error	LDAP查询返回错误
 
 404-iam-cache-context-not-exist	缓存上下文不存在
 409-iam-cache-res-date-not-none	当前不支持资源时间设置

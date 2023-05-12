@@ -79,7 +79,6 @@ impl PluginExecServ {
             let mut is_ok = true;
             let new_path = path
                 .split('/')
-                .into_iter()
                 .map(|r| {
                     if !r.starts_with(':') {
                         return r;

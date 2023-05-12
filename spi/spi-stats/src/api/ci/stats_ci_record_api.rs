@@ -61,6 +61,21 @@ impl StatsCiRecordApi {
         TardisResp::ok(Void {})
     }
 
+    /// Delete Fact Records
+    #[oai(path = "/fact/:fact_key/dim/:dim_conf_key/batch/remove", method = "put")]
+    async fn fact_records_delete_by_dim_key(
+        &self,
+        fact_key: Path<String>,
+        dim_conf_key: Path<String>,
+        delete_req: Json<StatsDimRecordDeleteReq>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Void> {
+        let funs = request.tardis_fun_inst();
+        stats_record_serv::fact_records_delete_by_dim_key(fact_key.0, dim_conf_key.0, Some(delete_req.0.key), &funs, &ctx.0).await?;
+        TardisResp::ok(Void {})
+    }
+
     /// Clean Fact Records
     ///
     /// Note:This operation will physically delete all fact records and cannot be recovered, please use caution!

@@ -540,7 +540,7 @@ where
                 query.join_subquery(
                     JoinType::LeftJoin,
                     sub_query.take(),
-                    rel_table.clone(),
+                    rel_table,
                     Expr::col((rbum_rel::Entity, rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                 );
             } else {
@@ -548,7 +548,7 @@ where
                     JoinType::InnerJoin,
                     sub_query.take(),
                     rel_table.clone(),
-                    Expr::col((rel_table.clone(), rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                    Expr::col((rel_table, rbum_rel::Column::FromRbumId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                 );
             }
         } else {
@@ -569,14 +569,14 @@ where
                     JoinType::LeftJoin,
                     sub_query.take(),
                     rel_table.clone(),
-                    Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                    Expr::col((rel_table, rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                 );
             } else {
                 query.join_subquery(
                     JoinType::InnerJoin,
                     sub_query.take(),
                     rel_table.clone(),
-                    Expr::col((rel_table.clone(), rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+                    Expr::col((rel_table, rbum_rel::Column::ToRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
                 );
             }
         }
@@ -603,7 +603,7 @@ where
             JoinType::InnerJoin,
             sub_query.take(),
             rel_table.clone(),
-            Expr::col((rel_table.clone(), rbum_set_item::Column::RelRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
+            Expr::col((rel_table, rbum_set_item::Column::RelRbumItemId)).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
     }
     async fn package_ext_query(query: &mut SelectStatement, is_detail: bool, filter: &ItemFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()>;
