@@ -20,7 +20,7 @@ pub struct IamCsRoleApi;
 /// System Console Role API
 #[poem_openapi::OpenApi(prefix_path = "/cs/role", tag = "bios_basic::ApiTag::System")]
 impl IamCsRoleApi {
-    /// Add Role
+    /// Add Role  安全审计日志--添加自定义角色
     #[oai(path = "/", method = "post")]
     async fn add(&self, tenant_id: Query<Option<String>>, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -32,7 +32,7 @@ impl IamCsRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Role By Role Id
+    /// Modify Role By Role Id  安全审计日志--编辑自定义角色名称、编辑自定义角色权限、编辑内置角色名称、编辑内置角色权限
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
@@ -101,7 +101,7 @@ impl IamCsRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Role By Role Id
+    /// Delete Role By Role Id  安全审计日志--删除自定义角色
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -112,7 +112,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Role Rel Account  安全审计日志--增加账号租户角色为管理员
+    /// Add Role Rel Account  安全审计日志--增加账号租户角色为管理员、添加角色人员
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -137,7 +137,7 @@ impl IamCsRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Role Rel Account  安全审计日志--移除账号租户角色为管理员
+    /// Delete Role Rel Account  安全审计日志--移除账号租户角色为管理员、移除角色人员
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
