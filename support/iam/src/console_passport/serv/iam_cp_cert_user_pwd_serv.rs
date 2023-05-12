@@ -145,7 +145,7 @@ impl IamCpCertUserPwdServ {
 
     pub async fn generic_sk_validate(sk: &str, supplier: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(supplier) = supplier {
-            IamCertLdapServ::validate_by_ldap(sk, supplier, funs, ctx).await?;
+            IamCertLdapServ::validate_by_ldap(sk, &supplier, funs, ctx).await?;
         } else {
             Self::validate_by_user_pwd(sk, funs, ctx).await?;
         }

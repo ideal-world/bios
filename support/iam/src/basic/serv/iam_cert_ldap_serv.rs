@@ -1,3 +1,4 @@
+use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryResp;
 use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
@@ -485,7 +486,7 @@ impl IamCertLdapServ {
         if userpwd_cert_exist {
             let mock_ctx = Self::generate_default_mock_ctx(supplier, tenant_id.clone(), funs).await;
             if let Some(account_id) = IamCpCertUserPwdServ::get_cert_rel_account_by_user_name(ak, &userpwd_cert_conf_id, funs, &mock_ctx).await? {
-                let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?;
+                let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?.first().map(|r| r.id.to_string());
                 if cert_id.is_some() {
                     Ok(true)
                 } else {
@@ -500,9 +501,20 @@ impl IamCertLdapServ {
             Err(funs.err().not_found("user_pwd", "check_bind", "not found cert record", "404-rbum-*-obj-not-exist"))
         }
     }
-    pub async fn validate_by_ldap(sk: &str, supplier:&str,funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
-        &IamCertServ::get_cert_conf_id_by_kind_supplier(&IamCertExtKind::Ldap.to_string(),supplier , Some(ctx.own_paths), funs).await?,
-        let cert_id = Self::get_ldap_cert_account_by_account(&account_id, &ldap_cert_conf_id, funs, &mock_ctx).await?;
+
+    pub async fn validate_by_ldap(sk: &str, supplier: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        let (mut ldap_client, _cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), supplier, funs, &ctx).await?;
+        let certs = Self::get_ldap_cert_account_by_account(&ctx.owner, &cert_conf_id, funs, ctx).await?;
+        if let Some(cert) = certs.first() {
+            if ldap_client.bind_by_dn(&cert.ak, sk).await?.is_some() {
+                Ok(true)
+            } else {
+                ldap_client.unbind().await?;
+                Ok(false)
+            }
+        } else {
+            Err(funs.err().not_found("ldap", "validate_sk", "not found cert record", "404-rbum-*-obj-not-exist"))
+        }
     }
 
     pub async fn bind_or_create_user_pwd_by_ldap(login_req: &IamCpUserPwdBindWithLdapReq, funs: &TardisFunsInst) -> TardisResult<(String, String)> {
@@ -934,8 +946,8 @@ impl IamCertLdapServ {
         Ok((client, cert_conf, cert_conf_id))
     }
 
-    async fn get_ldap_cert_account_by_account(account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<String>> {
-        let result = RbumCertServ::find_rbums(
+    async fn get_ldap_cert_account_by_account(account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<RbumCertSummaryResp>> {
+        RbumCertServ::find_rbums(
             &RbumCertFilterReq {
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id.to_string()]),
                 rel_rbum_id: Some(account_id.to_string()),
@@ -946,10 +958,7 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-        .await?
-        .first()
-        .map(|r| r.id.to_string());
-        Ok(result)
+        .await
     }
 
     pub async fn get_ldap_resp_by_cn(cn: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<IamAccountExtSysResp>> {
