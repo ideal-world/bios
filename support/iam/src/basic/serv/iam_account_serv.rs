@@ -747,6 +747,16 @@ impl IamAccountServ {
         }
     }
 
+    pub async fn is_global_account_context(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisContext> {
+        if Self::is_global_account(account_id, funs, ctx).await? {
+            let mut result = ctx.clone();
+            result.own_paths = "".to_string();
+            Ok(result)
+        } else {
+            Ok(ctx.clone())
+        }
+    }
+
     pub async fn new_context_if_account_is_global(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
         if Self::is_global_account(&ctx.owner, funs, ctx).await? {
             let mut result = ctx.clone();
