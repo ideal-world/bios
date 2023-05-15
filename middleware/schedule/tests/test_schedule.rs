@@ -14,7 +14,7 @@ mod test_schedule_item;
 #[tokio::test]
 async fn test_log() -> TardisResult<()> {
     // for debug
-    env::set_current_dir("middleware/schedule").unwrap();
+    // env::set_current_dir("middleware/schedule").unwrap();
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_rbum_test_container::init(&docker, None).await?;
     env::set_var("RUST_LOG", "debug,test_reldb=trace,sqlx::query=off");

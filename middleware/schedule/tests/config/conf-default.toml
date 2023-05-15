@@ -71,3 +71,9 @@ doc_urls = [["test env", "http://localhost:8080/"]]
 [fw.web_server.modules.spi-log]
 [fw.web_server.modules.schedule]
 
+[fw.cache]
+enabled = true
+type = "redis"
+
+[fw.db]
+enabled = true

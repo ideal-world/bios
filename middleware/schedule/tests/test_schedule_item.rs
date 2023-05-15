@@ -6,7 +6,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
-pub async fn test(client: &mut TestHttpClient, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+pub async fn test(client: &mut TestHttpClient, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -22,7 +22,7 @@ pub async fn test(client: &mut TestHttpClient, funs: &TardisFunsInst, ctx: &Tard
             cron: "0/5 * * * * ? ".to_string(),
             callback_url: "http://localhost:8080/schedule/ci/schedule/test/exec/123".to_string(),
         },
-        &ScheduleConfig::default()
+        &ScheduleConfig::default(),
     )
     .await?;
     ScheduleTaskServ::delete("test").await?;
