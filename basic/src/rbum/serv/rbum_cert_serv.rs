@@ -755,7 +755,7 @@ impl RbumCertServ {
                 input_sk.to_string()
             };
             let storage_sk = if cert_conf_peek_resp.sk_dynamic {
-                if let Some(cached_vcode) = Self::get_and_delete_vcode_in_cache(ak, own_paths, funs).await? {
+                if let Some(cached_vcode) = Self::get_vcode_in_cache(ak, own_paths, funs).await? {
                     cached_vcode
                 } else {
                     log::warn!(
