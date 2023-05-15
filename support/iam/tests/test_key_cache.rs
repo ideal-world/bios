@@ -887,7 +887,12 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 2);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.unwrap().contains(r#""need_double_auth":false"#));
+    assert!(funs
+        .cache()
+        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*"))
+        .await?
+        .unwrap()
+        .contains(r#""need_double_auth":false"#));
 
     info!("【test_key_cache】 Disable res, expected one res record");
     IamResServ::modify_item(
@@ -933,7 +938,12 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     assert_eq!(funs.cache().hlen(&funs.conf::<IamConfig>().cache_key_res_info).await?, exists_res_counter + 2);
-    assert!(funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*")).await?.unwrap().contains(r#"need_double_auth":false"#));
+    assert!(funs
+        .cache()
+        .hget(&funs.conf::<IamConfig>().cache_key_res_info, &IamResCacheServ::package_uri_mixed("iam/cs-2/**", "*"))
+        .await?
+        .unwrap()
+        .contains(r#"need_double_auth":false"#));
 
     info!("【test_key_cache】 Delete res, expected one res record");
     IamResServ::delete_item(&res_cs_id, &funs, system_admin_context).await?;
