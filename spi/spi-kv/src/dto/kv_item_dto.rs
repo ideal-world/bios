@@ -35,6 +35,20 @@ pub struct KvItemSummaryResp {
     pub update_time: DateTime<Utc>,
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+pub struct KvItemMatchReq {
+    pub key_prefix: String,
+    pub query_path: Option<String>,
+    pub query_values: Option<Value>,
+    pub extract: Option<String>,
+    pub create_time_start: Option<DateTime<Utc>>,
+    pub create_time_end: Option<DateTime<Utc>>,
+    pub update_time_start: Option<DateTime<Utc>>,
+    pub update_time_end: Option<DateTime<Utc>>,
+    pub page_number: u32,
+    pub page_size: u16,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct KvNameAddOrModifyReq {
     #[oai(validator(min_length = "2"))]
