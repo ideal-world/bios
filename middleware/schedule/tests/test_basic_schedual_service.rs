@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -13,13 +14,12 @@ use bios_spi_log::log_initializer;
 use tardis::{
     basic::result::TardisResult,
     rand::random,
-    testcontainers,
-    tokio::{self},
+    testcontainers, tokio,
     web::{
-        poem_openapi::{self},
+        poem_openapi,
         web_resp::{TardisApiResult, TardisResp, Void},
     },
-    TardisFuns, log::error,
+    TardisFuns,
 };
 
 pub struct TestEnv {
@@ -37,7 +37,7 @@ async fn test_basic_schedual_service() -> TardisResult<()> {
     let config = ScheduleConfig::default();
 
     test_add_delete(&config, &test_env).await;
-    test_random_add_delete(&config, &test_env).await;
+    test_random_ops(&config, &test_env).await;
     drop(container_hold);
     Ok(())
 }
@@ -61,48 +61,47 @@ async fn test_add_delete(config: &ScheduleConfig, test_env: &TestEnv) {
     ScheduleTaskServ::delete(code).await.expect("fail to delete schedule task");
 }
 
-async fn test_random_add_delete(config: &ScheduleConfig, test_env: &TestEnv) {
+async fn test_random_ops(config: &ScheduleConfig, test_env: &TestEnv) {
     test_env.counter.store(0, Ordering::SeqCst);
-    fn random_task(range_size: u8) -> ScheduleJobAddOrModifyReq {
+    let mut tasks = VecDeque::<String>::new();
+    const RANGE_SIZE: u8 = 32;
+
+    let random_code = || -> String { format!("task-{:02x}", random::<u8>() % RANGE_SIZE) };
+    let mut join_set = tokio::task::JoinSet::new();
+    let new_task = |code: &String| -> ScheduleJobAddOrModifyReq {
         // let period = random::<u8>() % 5 + 1;
         ScheduleJobAddOrModifyReq {
-            code: format!("task-{:02x}", random::<u8>() % range_size).into(),
+            code: code.clone().into(),
             cron: format!("1/{period} * * * * *", period = 2),
             callback_url: "https://localhost:8080/callback/inc".into(),
         }
+    };
+    let mut counter = 100;
+    while counter > 0 {
+        let is_delete = random::<u8>() % 3 == 0;
+        if is_delete {
+            tasks.pop_front().map(|code| join_set.spawn(async move { ScheduleTaskServ::delete(&code).await }));
+        } else {
+            if tasks.len() > (RANGE_SIZE as usize) / 2 {
+                continue;
+            }
+            let code = 'gen_code: loop {
+                let code = random_code();
+                if tasks.contains(&code) {
+                    continue 'gen_code;
+                }
+                break 'gen_code code;
+            };
+            let cfg: ScheduleConfig = config.clone();
+            tasks.push_back(code.clone());
+            join_set.spawn(async move { ScheduleTaskServ::add("https://127.0.0.1:8080/spi-log", new_task(&code), &cfg).await });
+        }
+        counter -= 1;
+        if counter == 0 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    fn random_delete(range_size: u8) -> String {
-        format!("task-{:02x}", random::<u8>() % range_size)
-    }
-    const RANGE_SIZE: u8 = 32;
-    // let mut join_set = tokio::task::JoinSet::new();
-    let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(1));
-    let mut counter = 0;
-    // loop {
-    //     if counter >= 50 {
-    //         break;
-    //     }
-    //     // 1/3 chance to add a new task
-    //     let is_add = random::<u8>() % 3 == 0;
-    //     if is_add {
-    //         let config = config.clone();
-    //         join_set.spawn(async move { 
-    //             let result = ScheduleTaskServ::add("https://127.0.0.1:8080/spi-log", random_task(RANGE_SIZE), &config).await ;
-    //             if let Err(e) = &result {
-    //                 error!("add error {e}")
-    //             }
-    //             result
-    //         });
-    //     } else {
-    //         join_set.spawn(async move { ScheduleTaskServ::delete(&random_delete(RANGE_SIZE)).await });
-    //     }
-    //     interval.tick().await;
-    //     counter += 1;
-    // }
-    // while let Some(Ok(_res)) = join_set.join_next().await {
-    //     //
-    // }
-    // tokio::time::sleep(Duration::from_secs(5)).await;
 }
 
 #[derive(Default)]
