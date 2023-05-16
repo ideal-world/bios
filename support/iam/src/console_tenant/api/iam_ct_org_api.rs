@@ -109,7 +109,7 @@ impl IamCtOrgApi {
     }
 
     /// Batch Add Org Item 安全审计日志--添加部门人员
-    #[oai(path = "/item/batch", method = "put")] 
+    #[oai(path = "/item/batch", method = "put")]
     async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
