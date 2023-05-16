@@ -305,7 +305,7 @@ impl OwnedScheduleTaskServ {
 
     /// genetate distributed lock key for a certain task
     fn gen_distributed_lock_key(code: &str) -> String {
-        format!("bios-mw-schedule:task:lock:{}", code)
+        format!("mw:schedule:task:lock:{}", code)
     }
     /// add schedule task
     pub async fn add(&self, log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
