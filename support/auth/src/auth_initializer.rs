@@ -32,6 +32,7 @@ pub async fn init_data() -> TardisResult<()> {
         "[Auth] Initializing full resource cache , interval [{}] secs fetch change resource cache.",
         config.cache_key_res_changed_timer_sec
     );
+    auth_res_serv::init_res()?;
     let mut cache_cmd = cache_client.cmd().await?;
     let mut res_iter: AsyncIter<'_, (String, String)> = cache_cmd.hscan(&config.cache_key_res_info).await?;
     while let Some((f, v)) = res_iter.next_item().await {

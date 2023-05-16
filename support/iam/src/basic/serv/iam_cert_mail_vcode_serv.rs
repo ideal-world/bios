@@ -1,6 +1,7 @@
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::log::info;
 use tardis::rand::Rng;
 use tardis::TardisFunsInst;
 
@@ -282,5 +283,16 @@ impl IamCertMailVCodeServ {
             Self::add_cert_conf(add_req, rel_iam_item_id, funs, ctx).await?
         };
         Ok(result)
+    }
+
+    pub async fn send_pwd(account_id: &str, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::PhoneVCode, funs, &ctx).await;
+        match resp {
+            Ok(cert) => {
+                let _ = MailClient::send_pwd(&cert.ak, pwd, funs).await;
+            }
+            Err(_) => info!("mail pwd not found"),
+        }
+        Ok(())
     }
 }
