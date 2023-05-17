@@ -19,7 +19,7 @@ pub struct IamTenantAddReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -37,7 +37,7 @@ pub struct IamTenantModifyReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -92,7 +92,7 @@ pub struct IamTenantAggAddReq {
 pub struct IamTenantAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub name: Option<TrimString>,
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
