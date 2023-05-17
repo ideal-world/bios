@@ -328,7 +328,7 @@ impl IamCertPhoneVCodeServ {
         match resp {
             Ok(cert) => {
                 let _ = SmsClient::send_pwd(&cert.ak, pwd, funs, ctx).await;
-            },
+            }
             Err(_) => info!("phone pwd not found"),
         }
         Ok(())
