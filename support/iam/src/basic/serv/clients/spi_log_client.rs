@@ -10,17 +10,23 @@ use crate::iam_config::IamConfig;
 
 pub struct SpiLogClient;
 
+pub struct LogContent {
+    op: String,
+    ext: Option<String>,
+    user_name: String,
+    name: String,
+    ip: String,
+}
+
 impl SpiLogClient {
     pub async fn add_item(
         tag: String,
-        content: String,
+        content: LogContent,
         kind: Option<String>,
-        search_ext: Option<Value>,
         key: Option<String>,
         op: Option<String>,
         rel_key: Option<String>,
         ts: Option<String>,
-        is_async: bool,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
@@ -57,14 +63,7 @@ impl SpiLogClient {
         if let Some(ts) = ts {
             body.insert("ts", ts);
         }
-        if is_async {
-            let web_client = funs.web_client();
-            tokio::spawn(async move {
-                web_client.post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await.unwrap();
-            });
-        } else {
-            funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await.unwrap();
-        }
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await.unwrap();
         Ok(())
     }
 }
