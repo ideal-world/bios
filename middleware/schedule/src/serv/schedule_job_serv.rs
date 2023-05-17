@@ -206,7 +206,6 @@ pub(crate) async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisRe
     }
     tardis::tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(config.cache_key_job_changed_timer_sec as u64));
-        let log_url = log_url.clone();
         loop {
             {
                 let mut cache_cmd = cache_client.cmd().await.unwrap();
