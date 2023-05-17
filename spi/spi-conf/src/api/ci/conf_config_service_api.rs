@@ -2,12 +2,12 @@ use tardis::web::{poem_openapi::{self, payload::Json}, context_extractor::Tardis
 
 use crate::dto::{conf_config_dto::*, conf_namespace_dto::*};
 
-pub struct ConfCiConfigServerApi;
+pub struct ConfCiConfigServiceApi;
 
 
 /// Interface Console config server API
 #[poem_openapi::OpenApi(prefix_path = "/ci/cs", tag = "bios_basic::ApiTag::Interface")]
-impl ConfCiConfigServerApi {
+impl ConfCiConfigServiceApi {
     #[oai(path = "/config", method = "get")]
     async fn get_config(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<String> {
         unimplemented!()
@@ -25,15 +25,15 @@ impl ConfCiConfigServerApi {
         unimplemented!()
     }
     #[oai(path = "/history", method = "get")]
-    async fn history(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigHistoryItem> {
+    async fn history(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigItem> {
         unimplemented!()
     }
     #[oai(path = "/history/previous", method = "get")]
-    async fn history_previous(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigHistoryItem> {
+    async fn history_previous(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigItem> {
         unimplemented!()
     }
     #[oai(path = "/history/configs", method = "get")]
-    async fn history_configs(&self, add_or_modify_req: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<ConfigHistoryItem>> {
+    async fn history_configs(&self, add_or_modify_req: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<ConfigItem>> {
         unimplemented!()
     }
 }

@@ -13,8 +13,8 @@ pub struct NamespaceDescriptor {
     namespace_id: NamespaceId,
 }
 
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+#[serde(default)]
 pub struct NamespaceAttribute {
     pub namespace: NamespaceId,
     pub namespace_show_name: String,
@@ -27,9 +27,12 @@ pub struct NamespaceItem {
     pub namespace: NamespaceId,
     pub namespace_show_name: String,
     pub namespace_desc: Option<String>,
+    /// quota / 容量,
+    /// refer to design of nacos,
+    /// see: https://github.com/alibaba/nacos/issues/4558
     pub quota: u32,
     pub config_count: u32,
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub tp: u32,
 }
 
@@ -39,7 +42,7 @@ pub enum NamesapceType {
     Global = 0,
     #[default]
     Private = 1,
-    Custom = 2
+    Custom = 2,
 }
 
 impl NamesapceType {
@@ -48,7 +51,7 @@ impl NamesapceType {
             0 => NamesapceType::Global,
             1 => NamesapceType::Private,
             2 => NamesapceType::Custom,
-            _ => NamesapceType::Private
+            _ => NamesapceType::Private,
         }
     }
     pub fn as_u32(&self) -> u32 {

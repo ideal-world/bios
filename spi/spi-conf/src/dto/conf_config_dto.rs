@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi::{self, __private::mime::Name};
+use tardis::web::poem_openapi;
 
 use super::conf_namespace_dto::NamespaceId;
 
@@ -35,15 +35,16 @@ pub struct ConfigPublishRequest {
     r#use: Option<String>,
     ///
     effect: Option<String>,
+    #[serde(rename = "type")]
     /// 配置类型
-    r#type: Option<String>,
+    tp: Option<String>,
     /// -
     schema: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
-pub struct ConfigHistoryItem {
+pub struct ConfigItem {
     // 	配置id
     id: String,
     //
