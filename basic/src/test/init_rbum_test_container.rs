@@ -34,7 +34,6 @@ pub async fn init(docker: &Cli, sql_init_path: Option<String>) -> TardisResult<L
     env::set_var("TARDIS_FW.MQ.URL", url);
 
     TardisFuns::init(Some("tests/config")).await?;
-
     Ok(LifeHold {
         reldb: reldb_container,
         redis: redis_container,
