@@ -18,8 +18,8 @@ fn new_task(code: &str) -> ScheduleJobAddOrModifyReq {
 
 #[tokio::test]
 async fn test_multi() -> TardisResult<()> {
-    std::env::set_current_dir("middleware/schedule").unwrap();
-    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO");
+    // std::env::set_current_dir("middleware/schedule").unwrap();
+    std::env::set_var("RUST_LOG", "info,sqlx=off,sea_orm=INFO,bios_mw_schedule=TRACE,tardis=off");
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_rbum_test_container::init(&docker, None).await?;
     let config = ScheduleConfig::default();
@@ -37,8 +37,8 @@ async fn test_multi() -> TardisResult<()> {
             serv.add(log_url, new_task(&code), &config).await.expect("fail to add schedule task");
         }
     }
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    // 10 * (5 / 2) == 20
+    tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
+    // 10 * (3 / 2 + 1) == 20
     // if every task is executed twice and only executed by one task serv, then the counter should be 20
     assert!(test_env.counter.load(Ordering::SeqCst) == 20);
     drop(container_hold);

@@ -304,8 +304,8 @@ impl OwnedScheduleTaskServ {
     }
 
     /// genetate distributed lock key for a certain task
-    fn gen_distributed_lock_key(code: &str) -> String {
-        format!("mw:schedule:task:lock:{}", code)
+    fn gen_distributed_lock_key(code: &str, config: &ScheduleConfig) -> String {
+        format!("{}{}", config.distributed_lock_key_prefix, code)
     }
     /// add schedule task
     pub async fn add(&self, log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
@@ -317,6 +317,7 @@ impl OwnedScheduleTaskServ {
         let callback_url = add_or_modify.callback_url.clone();
         let log_url = log_url.to_string();
         let code = add_or_modify.code.0.clone();
+        let lock_key = OwnedScheduleTaskServ::gen_distributed_lock_key(&code, config);
         let distributed_lock_expire_sec = config.distributed_lock_expire_sec;
         let ctx = TardisContext {
             own_paths: "".to_string(),
@@ -336,48 +337,59 @@ impl OwnedScheduleTaskServ {
             let log_url = log_url.clone();
             let code = code.clone();
             let headers = headers.clone();
-            let lock_key = OwnedScheduleTaskServ::gen_distributed_lock_key(&code);
+            let lock_key = lock_key.clone();
             Box::pin(async move {
                 let cache_client = TardisFuns::cache();
-                if let Ok(true) = cache_client.set_nx(&lock_key, "true").await {
-                    // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
-                    cache_client.expire(&lock_key, distributed_lock_expire_sec as usize).await.unwrap();
-                    trace!("executing schedule task {code}");
-                    // 1. write log exec start
-                    TardisFuns::web_client()
-                        .post_obj_to_str(
-                            &format!("{log_url}/ci/item"),
-                            &HashMap::from([
-                                ("tag", "schedule_task"),
-                                ("content", format!("schedule task {} exec start", code).as_str()),
-                                ("key", &code),
-                                ("op", "exec-start"),
-                                ("ts", &Utc::now().to_rfc3339()),
-                            ]),
-                            headers.clone(),
-                        )
-                        .await
-                        .unwrap();
-                    // 2. request webhook
-                    let task_msg = TardisFuns::web_client().get_to_str(callback_url.as_str(), headers.clone()).await.unwrap();
-                    // 3. write log exec end
-                    TardisFuns::web_client()
-                        .post_obj_to_str(
-                            &format!("{log_url}/ci/item"),
-                            &HashMap::from([
-                                ("tag", "schedule_task"),
-                                ("content", task_msg.body.unwrap().as_str()),
-                                ("key", &code),
-                                ("op", "exec-end"),
-                                ("ts", &Utc::now().to_rfc3339()),
-                            ]),
-                            headers,
-                        )
-                        .await
-                        .unwrap();
-                    trace!("executed schedule task {code}");
-                } else {
-                    trace!("schedule task {} is executed by other nodes, skip", code);
+                // about set and setnx, see:
+                // 1. https://redis.io/commands/set/
+                // 2. https://redis.io/commands/setnx/
+                // At Redis version 2.6.12, setnx command is regarded as deprecated. see: https://redis.io/commands/setnx/
+                // "executing" could be any string now, it's just a placeholder
+                match cache_client.set_nx(&lock_key, "executing").await {
+                    Ok(true) => {
+                        // safety: it's ok to unwrap in this closure, scheduler will restart this job when after panic
+                        cache_client.expire(&lock_key, distributed_lock_expire_sec as usize).await.unwrap();
+                        trace!("executing schedule task {code}");
+                        // 1. write log exec start
+                        TardisFuns::web_client()
+                            .post_obj_to_str(
+                                &format!("{log_url}/ci/item"),
+                                &HashMap::from([
+                                    ("tag", "schedule_task"),
+                                    ("content", format!("schedule task {} exec start", code).as_str()),
+                                    ("key", &code),
+                                    ("op", "exec-start"),
+                                    ("ts", &Utc::now().to_rfc3339()),
+                                ]),
+                                headers.clone(),
+                            )
+                            .await
+                            .unwrap();
+                        // 2. request webhook
+                        let task_msg = TardisFuns::web_client().get_to_str(callback_url.as_str(), headers.clone()).await.unwrap();
+                        // 3. write log exec end
+                        TardisFuns::web_client()
+                            .post_obj_to_str(
+                                &format!("{log_url}/ci/item"),
+                                &HashMap::from([
+                                    ("tag", "schedule_task"),
+                                    ("content", task_msg.body.unwrap().as_str()),
+                                    ("key", &code),
+                                    ("op", "exec-end"),
+                                    ("ts", &Utc::now().to_rfc3339()),
+                                ]),
+                                headers,
+                            )
+                            .await
+                            .unwrap();
+                        trace!("executed schedule task {code}");
+                    }
+                    Ok(false) => {
+                        trace!("schedule task {} is executed by other nodes, skip", code);
+                    }
+                    Err(e) => {
+                        error!("cannot set lock to schedule task {code}, error: {e}");
+                    }
                 }
             })
         })

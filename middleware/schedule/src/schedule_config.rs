@@ -14,6 +14,8 @@ pub struct ScheduleConfig {
     pub cache_key_job_changed_timer_sec: u32,
     /// The expire time of the distributed lock on a certain task, in seconds, defualt 1 seconds
     pub distributed_lock_expire_sec: u32,
+    /// The expire key prefix of the distributed lock, default "mw:schedual:task:lock:"
+    pub distributed_lock_key_prefix: String,
 }
 
 impl Default for ScheduleConfig {
@@ -27,6 +29,7 @@ impl Default for ScheduleConfig {
             cache_key_job_changed_info: "spi:job:changed:info:".to_string(),
             cache_key_job_changed_timer_sec: 30,
             distributed_lock_expire_sec: 1,
+            distributed_lock_key_prefix: "mw:schedual:task:lock:".to_string(),
         }
     }
 }

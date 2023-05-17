@@ -12,7 +12,6 @@ use crate::{api::ci::schedule_ci_job_api, schedule_constants::DOMAIN_CODE, serv:
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
-    rbum_initializer::init(funs.module_code(), RbumConfig::default()).await?;
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     schedule_job_serv::init(&funs, &ctx).await?;
