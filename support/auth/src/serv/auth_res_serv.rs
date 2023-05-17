@@ -80,6 +80,20 @@ fn parse_uri(res_uri: &str) -> TardisResult<Vec<String>> {
     Ok(uri_items)
 }
 
+pub fn init_res() -> TardisResult<()> {
+    let mut res_container = RES_CONTAINER.write()?;
+    let mut res_apis = RES_APIS.write()?;
+    if res_container.is_none() {
+        *res_container = Some(ResContainerNode::new());
+    }
+    if res_apis.is_none() {
+        *res_apis = Some(HashMap::new());
+    }
+    Ok(())
+}
+
+/// # add resource
+/// **attention!!**: Before calling this method, init_res() must be called first
 pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, need_crypto_req: bool, need_crypto_resp: bool, need_double_auth: bool) -> TardisResult<()> {
     let res_action = res_action.to_lowercase();
     info!("[Auth] Add resource [{}][{}]", res_action, res_uri);

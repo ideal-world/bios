@@ -212,7 +212,7 @@ impl IamCertServ {
     }
 
     pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
+        let ctx = IamAccountServ::is_global_account_context(account_id, funs, ctx).await?;
         let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), Some(ctx.clone().own_paths), funs).await?;
         let kernel_cert = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {

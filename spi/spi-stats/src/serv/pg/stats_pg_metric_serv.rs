@@ -377,14 +377,14 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         SELECT
              {sql_part_inner_selects}
              FROM(
-                SELECT DISTINCT ON (fact.key) fact.key AS _key,fact.*
+                SELECT {}fact.*
                 FROM {fact_inst_table_name} fact
                 LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
                 WHERE
                     fact.own_paths LIKE $1
                     AND del.key IS NULL
                     AND fact.ct >= $2 AND fact.ct <= $3
-                ORDER BY _key,fact.ct DESC
+                ORDER BY {}fact.ct DESC
              ) fact 
              where 1 = 1
             {sql_part_wheres}
@@ -395,6 +395,12 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     {sql_part_havings}
     {sql_metrics_orders}
     {query_limit}"#,
+        if query_req.ignore_distinct.unwrap_or(false) {
+            ""
+        } else {
+            "DISTINCT ON (fact.key) fact.key AS _key,"
+        },
+        if query_req.ignore_distinct.unwrap_or(false) { "" } else { "_key," },
         if sql_part_groups.is_empty() {
             "".to_string()
         } else {

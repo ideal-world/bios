@@ -118,6 +118,44 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(result.records[1].info, "002系统的数据库信息");
     assert_eq!(result.records[1].value.as_str().unwrap(), "postgres://xxxx002");
 
+    let result: TardisPage<KvItemSummaryResp> = client
+        .put(
+            "/ci/item/match",
+            &json!({
+                "key_prefix":"db_info",
+                "query_path":"$.url ? (@ == $url)",
+                "query_values": {
+                    "url": "postgres://xxxx002"
+                },
+                "extract":"url",
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(result.total_size, 1);
+    assert_eq!(result.records[0].key, "db_info:002");
+    assert_eq!(result.records[0].info, "002系统的数据库信息");
+    assert_eq!(result.records[0].value.as_str().unwrap(), "postgres://xxxx002");
+
+    let result: TardisPage<KvItemSummaryResp> = client
+        .put(
+            "/ci/item/match",
+            &json!({
+                "key_prefix":"db_info",
+                "query_path":"$.url ? (@ == $url)",
+                "query_values": {
+                    "url": "postgres://xxxx002"
+                },
+                "create_time_end": "2022-09-26T23:23:59.000Z",
+                "extract":"url",
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(result.total_size, 0);
+
     client.delete("/ci/item?key=db_info:001").await;
 
     let result: TardisResp<KvItemDetailResp> = client.get_resp("/ci/item/?key=db_info:001").await;

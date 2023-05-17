@@ -12,6 +12,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountModifyReq};
 use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
+use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
@@ -140,12 +141,21 @@ impl IamCpCertUserPwdServ {
         IamCertUserPwdServ::modify_cert(modify_req, id, &rbum_cert_conf_id, funs, &actual_ctx).await
     }
 
+    pub async fn generic_sk_validate(sk: &str, supplier: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if let Some(supplier) = supplier {
+            IamCertLdapServ::validate_by_ldap(sk, &supplier, funs, ctx).await?;
+        } else {
+            Self::validate_by_user_pwd(sk, funs, ctx).await?;
+        }
+        IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
+        Ok(())
+    }
+
     pub async fn validate_by_user_pwd(sk: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
 
         let (_, _, _) = RbumCertServ::validate_by_spec_cert_conf(&user_pwd_cert.ak, sk, &rbum_cert_conf_id, false, &ctx.own_paths, funs).await?;
-        IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
         Ok(())
     }
 

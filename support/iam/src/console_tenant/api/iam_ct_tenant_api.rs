@@ -22,7 +22,7 @@ impl IamCtTenantApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Current Tenant
+    /// Modify Current Tenant  安全审计日志--禁用租户、启用租户、编辑租户
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/", method = "put")]

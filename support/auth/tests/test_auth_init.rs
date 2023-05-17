@@ -56,6 +56,13 @@ pub async fn test_init() -> TardisResult<()> {
             r###"{"auth":{"accounts":"#acc6#"},"need_crypto_req":false,"need_crypto_resp":false,"need_double_auth":false}"###,
         )
         .await?;
+    cache_client
+        .hset(
+            &config.cache_key_res_info,
+            "iam-res://iam-serv/p2?a=1##get",
+            r###"{"auth":null,"need_crypto_req":true,"need_crypto_resp":true,"need_double_auth":true}"###,
+        )
+        .await?;
 
     auth_initializer::init_data().await?;
 
@@ -80,6 +87,17 @@ pub async fn test_init() -> TardisResult<()> {
     let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-serv/p1?a=5").collect::<Vec<_>>();
     assert!(url.len() == 1);
     let url = apis.iter().filter(|a| a["uri"].as_str().unwrap() == "iam-serv/p1?a=6" && !a["need_crypto_req"].as_bool().unwrap()).collect::<Vec<_>>();
+    assert!(url.len() == 1);
+
+    let url = apis
+        .iter()
+        .filter(|a| {
+            a["uri"].as_str().unwrap() == "iam-serv/p2?a=1"
+                && a["need_crypto_req"].as_bool().unwrap()
+                && a["need_crypto_resp"].as_bool().unwrap()
+                && a["need_double_auth"].as_bool().unwrap()
+        })
+        .collect::<Vec<_>>();
     assert!(url.len() == 1);
 
     cache_client.hdel(&config.cache_key_res_info, "iam-res://iam-serv/p1?a=1##get").await?;

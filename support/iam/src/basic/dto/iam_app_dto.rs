@@ -32,7 +32,7 @@ pub struct IamAppAddReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -47,7 +47,7 @@ pub struct IamAppAggModifyReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
@@ -64,7 +64,7 @@ pub struct IamAppModifyReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
 
-    #[oai(validator(min_length = "2", max_length = "255"))]
+    #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
     pub sort: Option<i64>,
     #[oai(validator(min_length = "2", max_length = "255"))]
