@@ -11,7 +11,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantSummaryResp};
-use crate::basic::serv::clients::spi_log_client::SpiLogClient;
+use crate::basic::serv::clients::spi_log_client::{LogContent, SpiLogClient};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
@@ -26,25 +26,25 @@ impl IamCsTenantApi {
     async fn add(&self, add_req: Json<IamTenantAggAddReq>, _ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs).await?;
+        let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs).await?.0;
         SpiLogClient::add_item(
             "system".to_string(),
-            json!({
-                "op": "添加租户",
-                "ext": &add_req.0.name,
-                "ip": ""
-            }).to_string(),
+            LogContent {
+                op: "添加租户".to_string(),
+                ext: Some(result.clone()),
+                ..Default::default()
+            },
             Some("req".to_string()),
-            Some(json!({})),
-            Some(result.0.clone()),
+            Some("添加租户".to_string()),
             Some("add".to_string()),
-            Some(result.0.clone()),
+            Some(result.clone()),
             Some(Utc::now().to_rfc3339()),
             &funs,
-            &_ctx.0
-        ).await?;
+            &_ctx.0,
+        )
+        .await?;
         funs.commit().await?;
-        TardisResp::ok(result.0)
+        TardisResp::ok(result)
     }
 
     /// Modify Tenant By Tenant Id 安全审计日志--禁用租户、启用租户、编辑租户
