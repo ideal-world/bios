@@ -381,7 +381,17 @@ impl IamResCacheServ {
         res_auth.apps = res_auth.apps.replace("##", "#");
         res_auth.tenants = res_auth.tenants.replace("##", "#");
 
-        res_dto.auth = Some(res_auth);
+        if (res_auth.accounts == "#" || res_auth.accounts == "##")
+            && (res_auth.roles == "#" || res_auth.roles == "##")
+            && (res_auth.groups == "#" || res_auth.groups == "##")
+            && (res_auth.apps == "#" || res_auth.apps == "##")
+            && (res_auth.tenants == "#" || res_auth.tenants == "##")
+        {
+            res_dto.auth = None;
+        } else {
+            res_dto.auth = Some(res_auth);
+        }
+
         funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
     }
