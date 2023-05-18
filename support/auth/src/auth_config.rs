@@ -31,6 +31,13 @@ pub struct AuthConfig {
     pub strict_security_mode: bool,
     pub double_auth_exp_sec: u32,
     pub extra_api: ApiConfig,
+
+    /// When the request is encrypted,
+    /// true: it is the default response and encryption is also required,
+    /// false: otherwise, encryption is not required
+    ///
+    /// 当请求是加密的时候,true:是默认响应也需要加密，false:反之不用加密
+    pub default_resp_crypto: bool,
 }
 
 impl Default for AuthConfig {
@@ -61,6 +68,7 @@ impl Default for AuthConfig {
             strict_security_mode: false,
             double_auth_exp_sec: 300,
             extra_api: ApiConfig::default(),
+            default_resp_crypto: false,
         }
     }
 }

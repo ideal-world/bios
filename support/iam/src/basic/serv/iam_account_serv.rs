@@ -3,7 +3,7 @@ use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
-use ldap3::log::info;
+
 use ldap3::tokio::time::sleep;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -13,7 +13,7 @@ use tardis::basic::result::TardisResult;
 
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
-use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
+
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
 use tardis::{serde_json, TardisFuns, TardisFunsInst};
@@ -32,6 +32,8 @@ use crate::basic::dto::iam_account_dto::{
 use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertPhoneVCodeAddReq, IamCertUserPwdAddReq};
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq, IamTenantFilterReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAddReq;
+#[cfg(feature = "spi_kv")]
+use crate::basic::serv::clients::spi_kv_client::SpiKvClient;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -42,12 +44,12 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
-#[cfg(feature = "spi_kv")]
-use crate::basic::serv::spi_client::spi_kv_client::SpiKvClient;
 use crate::iam_config::{IamBasicInfoManager, IamConfig};
 use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamCertKernelKind, IamRelKind, IamSetKind};
 
+use super::clients::mail_client::MailClient;
+use super::clients::sms_client::SmsClient;
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -241,45 +243,15 @@ impl IamAccountServ {
                 )
                 .await?;
             }
-            let conf = funs.conf::<IamConfig>();
-            let ctx_base64 = &TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?);
-            match funs
-                .web_client()
-                .put_str_to_str(
-                    &format!("{}/{}/{}/{}", conf.sms_base_url, conf.sms_pwd_path, cert_phone, pwd.clone()),
-                    "",
-                    Some(vec![(
-                        TardisFuns::fw_config().web_server.context_conf.context_header_name.to_string(),
-                        ctx_base64.to_string(),
-                    )]),
-                )
-                .await
-            {
-                Ok(_) => info!("send sms success"),
-                Err(_) => info!("send sms failed"),
-            }
+            // todo Add the ctx task queue
+            let _ = SmsClient::send_pwd(cert_phone, &pwd, funs, ctx).await;
         }
         if let Some(cert_mail) = &add_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
                 IamCertMailVCodeServ::add_cert(&IamCertMailVCodeAddReq { mail: cert_mail.to_string() }, &account_id, &cert_conf.id, funs, ctx).await?;
             }
-            let mut subject = funs.conf::<IamConfig>().mail_template_cert_random_pwd_title.clone();
-            let mut content = funs.conf::<IamConfig>().mail_template_cert_random_pwd_content.clone();
-            subject = subject.replace("{pwd}", &pwd.clone());
-            content = content.replace("{pwd}", &pwd);
-            TardisMailClient::send_quiet(
-                funs.module_code().to_string(),
-                TardisMailSendReq {
-                    subject,
-                    txt_body: content,
-                    html_body: None,
-                    to: vec![cert_mail.to_string()],
-                    reply_to: None,
-                    cc: None,
-                    bcc: None,
-                    from: None,
-                },
-            )?;
+            // todo Add the ctx task queue
+            let _ = MailClient::send_pwd(cert_mail, &pwd, funs).await;
         }
         if let Some(role_ids) = &add_req.role_ids {
             for role_id in role_ids {
@@ -772,6 +744,16 @@ impl IamAccountServ {
                 )
                 .await?;
             Ok(is_global)
+        }
+    }
+
+    pub async fn is_global_account_context(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisContext> {
+        if Self::is_global_account(account_id, funs, ctx).await? {
+            let mut result = ctx.clone();
+            result.own_paths = "".to_string();
+            Ok(result)
+        } else {
+            Ok(ctx.clone())
         }
     }
 

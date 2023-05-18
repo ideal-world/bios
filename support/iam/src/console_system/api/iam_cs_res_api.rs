@@ -70,7 +70,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Add Api Res To Res
+    /// Add Api Res To Res  安全审计日志--添加API
     #[oai(path = "/:id/res/:res_api_id", method = "put")]
     async fn add_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -108,7 +108,7 @@ impl IamCsResApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Api Res By Res Id
+    /// Delete Api Res By Res Id  安全审计日志--删除API
     #[oai(path = "/:id/res/:res_api_id", method = "delete")]
     async fn delete_rel_res(&self, id: Path<String>, res_api_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -242,7 +242,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Res By Res Id
+    /// Modify Res By Res Id  安全审计日志--编辑API
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

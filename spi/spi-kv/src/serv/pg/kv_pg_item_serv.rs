@@ -6,7 +6,7 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemSummaryResp};
+use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp};
 
 use super::kv_pg_initializer;
 
@@ -92,18 +92,48 @@ WHERE
     Ok(result)
 }
 
-pub async fn match_items(
-    key_prefix: String,
-    extract: Option<String>,
-    page_number: u32,
-    page_size: u16,
-    funs: &TardisFunsInst,
-    ctx: &TardisContext,
-) -> TardisResult<TardisPage<KvItemSummaryResp>> {
+pub async fn match_items(match_req: KvItemMatchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvItemSummaryResp>> {
+    let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
-    sql_vals.push(Value::from(format!("{key_prefix}%")));
-    sql_vals.push(Value::from(page_size));
-    sql_vals.push(Value::from((page_number - 1) * page_size as u32));
+    sql_vals.push(Value::from(format!("{}%", match_req.key_prefix)));
+    where_fragments.push(format!("k LIKE ${}", sql_vals.len()));
+
+    if let Some(query_path) = match_req.query_path {
+        let query_values = if let Some(query_values) = match_req.query_values {
+            query_values.to_string()
+        } else {
+            "".to_string()
+        };
+        where_fragments.push(format!(
+            "jsonb_path_exists(
+            v,
+            '{query_path}',
+            '{query_values}'
+          )"
+        ));
+    }
+
+    if let Some(create_time_start) = match_req.create_time_start {
+        sql_vals.push(Value::from(create_time_start));
+        where_fragments.push(format!("create_time >= ${}", sql_vals.len()));
+    }
+    if let Some(create_time_end) = match_req.create_time_end {
+        sql_vals.push(Value::from(create_time_end));
+        where_fragments.push(format!("create_time <= ${}", sql_vals.len()));
+    }
+
+    if let Some(update_time_start) = match_req.update_time_start {
+        sql_vals.push(Value::from(update_time_start));
+        where_fragments.push(format!("update_time >= ${}", sql_vals.len()));
+    }
+    if let Some(update_time_end) = match_req.update_time_end {
+        sql_vals.push(Value::from(update_time_end));
+        where_fragments.push(format!("update_time <= ${}", sql_vals.len()));
+    }
+
+    sql_vals.push(Value::from(match_req.page_size));
+    sql_vals.push(Value::from((match_req.page_number - 1) * match_req.page_size as u32));
+    let page_fragments = format!("LIMIT ${} OFFSET ${}", sql_vals.len() - 1, sql_vals.len());
 
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (conn, table_name) = kv_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
@@ -113,10 +143,16 @@ pub async fn match_items(
                 r#"SELECT k, v{} AS v, info, create_time, update_time, count(*) OVER() AS total
 FROM {}
 WHERE 
-    k LIKE $1
-LIMIT $2 OFFSET $3"#,
-                if let Some(extract) = extract { format!("->'{extract}'") } else { "".to_string() },
+    {}
+{}"#,
+                if let Some(extract) = match_req.extract {
+                    format!("->'{extract}'")
+                } else {
+                    "".to_string()
+                },
                 table_name,
+                where_fragments.join(" AND "),
+                page_fragments
             ),
             sql_vals,
         )
@@ -140,8 +176,8 @@ LIMIT $2 OFFSET $3"#,
         })
         .collect();
     Ok(TardisPage {
-        page_size: page_size as u64,
-        page_number: page_number as u64,
+        page_size: match_req.page_size as u64,
+        page_number: match_req.page_number as u64,
         total_size: total_size as u64,
         records: result,
     })

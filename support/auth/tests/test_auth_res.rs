@@ -2,6 +2,8 @@ use bios_auth::serv::auth_res_serv;
 use tardis::{basic::result::TardisResult, serde_json::json, TardisFuns};
 
 pub fn test_res() -> TardisResult<()> {
+    auth_res_serv::init_res()?;
+
     let init_res_data = vec![
         ("GET", "iam-res://iam-serv", r###"{"apps":"#app1#app2#","tenants":"#tenant1#"}"###),
         ("GET", "iam-res://*/**", r###"{"apps":"#app1#app2#","tenants":"#tenant1#"}"###),

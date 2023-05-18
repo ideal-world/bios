@@ -18,7 +18,7 @@ use tardis::{testcontainers, tokio, TardisFuns};
 mod test_kv_item;
 
 #[tokio::test]
-async fn test_log() -> TardisResult<()> {
+async fn test_kv() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let _x = init_rbum_test_container::init(&docker, None).await?;
 

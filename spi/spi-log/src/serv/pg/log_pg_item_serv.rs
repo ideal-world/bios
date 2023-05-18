@@ -1,9 +1,12 @@
-use bios_basic::spi::spi_funs::SpiBsInstExtractor;
+use bios_basic::{
+    helper::db_helper,
+    spi::{spi_enumeration::SpiQueryOpKind, spi_funs::SpiBsInstExtractor},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
     web::web_resp::TardisPage,
-    TardisFunsInst,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::dto::log_item_dto::{LogItemAddReq, LogItemFindReq, LogItemFindResp};
@@ -12,9 +15,17 @@ use super::log_pg_initializer;
 
 pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let mut params = vec![
+        Value::from(add_req.kind.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.key.as_ref().unwrap_or(&"".into()).to_string()),
         Value::from(add_req.op.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.content.as_str()),
+        Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
+        Value::from(if let Some(ext) = &add_req.ext {
+            ext.clone()
+        } else {
+            TardisFuns::json.str_to_json("{}")?
+        }),
         Value::from(add_req.rel_key.as_ref().unwrap_or(&"".into()).to_string()),
     ];
     if let Some(ts) = add_req.ts {
@@ -27,12 +38,12 @@ pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &Tardi
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (key, op, content, rel_key{})
+    (kind, key, op, content, owner, own_paths, ext, rel_key{})
 VALUES
-    ($1, $2, $3, $4{})
+    ($1, $2, $3, $4, $5, $6, $7,$8{})
 	"#,
             if add_req.ts.is_some() { ", ts" } else { "" },
-            if add_req.ts.is_some() { ", $5" } else { "" },
+            if add_req.ts.is_some() { ", $9" } else { "" },
         ),
         params,
     )
@@ -45,6 +56,39 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let mut where_fragments: Vec<String> = Vec::new();
     let mut sql_vals: Vec<Value> = vec![];
 
+    if let Some(kinds) = &find_req.kinds {
+        let place_holder = kinds
+            .iter()
+            .map(|kind| {
+                sql_vals.push(Value::from(kind.to_string()));
+                format!("${}", sql_vals.len())
+            })
+            .collect::<Vec<String>>()
+            .join(",");
+        where_fragments.push(format!("kind IN ({place_holder})"));
+    }
+    if let Some(owners) = &find_req.owners {
+        let place_holder = owners
+            .iter()
+            .map(|owner| {
+                sql_vals.push(Value::from(owner.to_string()));
+                format!("${}", sql_vals.len())
+            })
+            .collect::<Vec<String>>()
+            .join(",");
+        where_fragments.push(format!("owner IN ({place_holder})"));
+    }
+    if let Some(own_paths) = &find_req.own_paths {
+        let place_holder = own_paths
+            .iter()
+            .map(|own_paths| {
+                sql_vals.push(Value::from(own_paths.to_string()));
+                format!("${}", sql_vals.len())
+            })
+            .collect::<Vec<String>>()
+            .join(",");
+        where_fragments.push(format!("own_paths IN ({place_holder})"));
+    }
     if let Some(keys) = &find_req.keys {
         let place_holder = keys
             .iter()
@@ -86,6 +130,63 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         sql_vals.push(Value::from(ts_end));
         where_fragments.push(format!("ts <= ${}", sql_vals.len()));
     }
+    if let Some(ext) = &find_req.ext {
+        for ext_item in ext {
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == SpiQueryOpKind::Like);
+            if value.is_none() || ext_item.op != SpiQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
+                return Err(funs.err().not_found(
+                    "item",
+                    "log",
+                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
+                    "404-spi-log-op-not-legal",
+                ));
+            }
+            let mut value = value.unwrap();
+            if ext_item.op == SpiQueryOpKind::In {
+                if value.len() == 1 {
+                    where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
+                } else {
+                    where_fragments.push(format!(
+                        "ext -> '{}' ?| array[{}]",
+                        ext_item.field,
+                        (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                    ));
+                }
+                for val in value {
+                    sql_vals.push(val);
+                }
+            } else {
+                let value = value.pop().unwrap();
+                if let Value::Bool(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::TinyInt(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::SmallInt(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Int(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::BigInt(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::TinyUnsigned(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::SmallUnsigned(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Unsigned(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::BigUnsigned(_) = value {
+                    // TODO
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Float(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Double(_) = value {
+                    where_fragments.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                } else {
+                    where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
+                }
+                sql_vals.push(value);
+            }
+        }
+    }
     if where_fragments.is_empty() {
         where_fragments.push("1 = 1".to_string());
     }
@@ -99,7 +200,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, key, op, content, rel_key, count(*) OVER() AS total
+                r#"SELECT ts, key, op, content, kind, ext, owner, own_paths, rel_key, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -125,8 +226,12 @@ ORDER BY ts DESC
                 ts: item.try_get("", "ts").unwrap(),
                 key: item.try_get("", "key").unwrap(),
                 op: item.try_get("", "op").unwrap(),
+                ext: item.try_get("", "ext").unwrap(),
                 content: item.try_get("", "content").unwrap(),
                 rel_key: item.try_get("", "rel_key").unwrap(),
+                kind: item.try_get("", "kind").unwrap(),
+                owner: item.try_get("", "owner").unwrap(),
+                own_paths: item.try_get("", "own_paths").unwrap(),
             }
         })
         .collect::<Vec<LogItemFindResp>>();

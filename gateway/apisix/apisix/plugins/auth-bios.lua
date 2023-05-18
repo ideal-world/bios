@@ -53,6 +53,20 @@ function _M.check_schema(conf)
 end
 
 local switch_map = {
+    get = ngx.HTTP_GET,
+    post = ngx.HTTP_POST,
+    put = ngx.HTTP_PUT,
+    head = ngx.HTTP_HEAD,
+    delete = ngx.HTTP_DELETE,
+    options = ngx.HTTP_OPTIONS,
+    mkcol = ngx.HTTP_MKCOL,
+    copy = ngx.HTTP_COPY,
+    move = ngx.HTTP_MOVE,
+    propfind = ngx.HTTP_PROPFIND,
+    lock = ngx.HTTP_LOCK,
+    unlock = ngx.HTTP_UNLOCK,
+    patch = ngx.HTTP_PATCH,
+    trace = ngx.HTTP_TRACE,
     GET = ngx.HTTP_GET,
     POST = ngx.HTTP_POST,
     PUT = ngx.HTTP_PUT,

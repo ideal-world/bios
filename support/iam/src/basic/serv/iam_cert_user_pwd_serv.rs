@@ -17,6 +17,8 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::iam_account_serv::IamAccountServ;
+use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
+use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 
 pub struct IamCertUserPwdServ;
 
@@ -98,7 +100,7 @@ impl IamCertUserPwdServ {
         let status = if let Some(add_req_status) = &add_req.status {
             add_req_status.clone()
         } else {
-            RbumCertStatusKind::Enabled
+            RbumCertStatusKind::Pending
         };
         RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
@@ -145,6 +147,8 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::change_sk(&cert.id, &modify_req.original_sk.0, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
+            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
             RbumCertServ::modify_rbum(
                 &cert.id,
                 &mut RbumCertModifyReq {
@@ -240,6 +244,8 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
+            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
             if cert.status == RbumCertStatusKind::Pending {
                 RbumCertServ::modify_rbum(
                     &cert.id,
@@ -289,6 +295,8 @@ impl IamCertUserPwdServ {
         if let Some(cert) = cert {
             if cert.status.eq(&RbumCertStatusKind::Pending) {
                 RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
+                IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
+                IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
                 RbumCertServ::modify_rbum(
                     &cert.id,
                     &mut RbumCertModifyReq {
