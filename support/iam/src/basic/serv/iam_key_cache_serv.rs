@@ -26,23 +26,31 @@ use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
-    pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: i64, coexist_num: i16, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_token(
+        token: &str,
+        token_kind: &IamCertTokenKind,
+        rel_iam_item_id: &str,
+        renewal_expire_sec: Option<i64>,
+        expire_sec: i64,
+        coexist_num: i16,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
+        let token_value = if let Some(renewal_expire_sec) = renewal_expire_sec {
+            format!("{token_kind},{rel_iam_item_id},{}", renewal_expire_sec.to_string())
+        } else {
+            format!("{token_kind},{rel_iam_item_id}")
+        };
         log::trace!("add token: token={}", token);
         if expire_sec > 0 {
             funs.cache()
                 .set_ex(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{token_kind},{rel_iam_item_id}").as_str(),
+                    token_value.as_str(),
                     expire_sec as usize,
                 )
                 .await?;
         } else {
-            funs.cache()
-                .set(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{token_kind},{rel_iam_item_id}").as_str(),
-                )
-                .await?;
+            funs.cache().set(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(), token_value.as_str()).await?;
         }
         funs.cache()
             .hset(

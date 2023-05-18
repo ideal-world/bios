@@ -5,12 +5,15 @@ use bios_auth::{
     auth_constants::DOMAIN_CODE,
     dto::auth_kernel_dto::{AuthReq, AuthResp},
 };
-use tardis::chrono::{Duration, Utc};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     log::info,
     web::{web_client::TardisWebClient, web_resp::TardisResp},
     TardisFuns,
+};
+use tardis::{
+    chrono::{Duration, Utc},
+    tokio::time::sleep,
 };
 
 async fn mock_req(method: &str, path: &str, query: &str, headers: Vec<(&str, &str)>) -> AuthResp {
@@ -288,6 +291,37 @@ pub async fn test_req() -> TardisResult<()> {
     assert_eq!(ctx.owner, "account1");
     assert_eq!(ctx.roles, vec!["r002", "r001"]);
     assert_eq!(ctx.groups, vec!["g002", "g001"]);
+
+    // Verify the token renewal capability
+    cache_client.set_ex(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx,2", 1).await?;
+    cache_client
+        .hset(
+            &format!("{}accountxxx", config.cache_key_account_info),
+            "",
+            "{\"own_paths\":\"\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+        )
+        .await?;
+    let resp = mock_req("GET", "/iam/api/p1", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx")]).await;
+    assert!(resp.allow);
+    assert_eq!(resp.status_code, 200);
+    cache_client
+        .hset(
+            &format!("{}accountxxx", config.cache_key_account_info),
+            "",
+            "{\"own_paths\":\"\",\"owner\":\"account1\",\"roles\":[\"r001\"],\"groups\":[\"g001\"]}",
+        )
+        .await?;
+    let resp = mock_req("GET", "/iam/api/p1", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx")]).await;
+    assert!(resp.allow);
+    assert_eq!(resp.status_code, 200);
+    sleep(std::time::Duration::from_millis(1500)).await;
+    let resp = mock_req("GET", "/iam/api/p1", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx")]).await;
+    assert!(resp.allow);
+    assert_eq!(resp.status_code, 200);
+    sleep(std::time::Duration::from_millis(2000)).await;
+    let resp = mock_req("GET", "/iam/api/p1", "bb=y&aa=x", vec![("Bios-Token", "tokenxxx")]).await;
+    assert!(!resp.allow);
+    assert_eq!(resp.status_code, 401);
 
     // request double auth by account
     // cache_client.set(&format!("{}tokenxxx", config.cache_key_token_info), "default,accountxxx").await?;
