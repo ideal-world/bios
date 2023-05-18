@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
+use tardis::chrono::Utc;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -39,6 +40,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
 
+use super::clients::spi_log_client::{SpiLogClient, LogContent};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
@@ -122,6 +124,22 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
+        SpiLogClient::add_item(
+            "system".to_string(),
+            LogContent {
+                op: "添加租户".to_string(),
+                ext: Some(id.to_string()),
+                ..Default::default()
+            },
+            Some("req".to_string()),
+            Some(id.to_string()),
+            Some("add".to_string()),
+            None,
+            Some(Utc::now().to_rfc3339()),
+            &funs,
+            &ctx,
+        )
+        .await?;
         Ok(())
     }
     async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

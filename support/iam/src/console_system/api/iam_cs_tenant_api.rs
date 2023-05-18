@@ -27,22 +27,6 @@ impl IamCsTenantApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs).await?.0;
-        SpiLogClient::add_item(
-            "system".to_string(),
-            LogContent {
-                op: "添加租户".to_string(),
-                ext: Some(result.clone()),
-                ..Default::default()
-            },
-            Some("req".to_string()),
-            Some("添加租户".to_string()),
-            Some("add".to_string()),
-            Some(result.clone()),
-            Some(Utc::now().to_rfc3339()),
-            &funs,
-            &_ctx.0,
-        )
-        .await?;
         funs.commit().await?;
         TardisResp::ok(result)
     }
