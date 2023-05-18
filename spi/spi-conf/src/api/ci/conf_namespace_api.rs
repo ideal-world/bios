@@ -1,5 +1,5 @@
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
-use tardis::web::{poem_openapi::{self, payload::Json}, context_extractor::TardisContextExtractor, poem::Request, web_resp::{TardisApiResult, TardisResp}};
+use tardis::{web::{poem_openapi::{self, payload::Json}, context_extractor::TardisContextExtractor, poem::Request, web_resp::{TardisApiResult, TardisResp}}, log};
 
 use crate::dto::conf_namespace_dto::*;
 use crate::serv::*;
@@ -14,8 +14,10 @@ impl ConfCiNamespaceApi {
         unimplemented!()
     }
     #[oai(path = "/", method = "get")]
-    async fn get_namespace(&self, descriptor: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<NamespaceItem> {
-        unimplemented!()
+    async fn get_namespace(&self, mut descriptor: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<NamespaceItem> {
+        let funs = request.tardis_fun_inst();
+        let item = get_namespace(&mut descriptor.0, &funs, &ctx.0).await?;
+        TardisResp::ok(item)
     }
     #[oai(path = "/", method = "post")]
     async fn create_namespace(&self, mut attribute: Json<NamespaceAttribute>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {

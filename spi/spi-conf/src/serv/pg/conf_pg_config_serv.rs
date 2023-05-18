@@ -7,7 +7,7 @@ use tardis::{
 };
 
 use crate::dto::conf_config_dto::*;
-use crate::dto::conf_namespace_dto::*;
+
 
 use super::conf_pg_initializer;
 

@@ -17,17 +17,17 @@ pub async fn init_table_and_conn_namespace(
         mgr,
         None,
         "conf_namespace",
-        r#"id character varying NOT NULL PRIMARY KEY,
+        r#"id character varying PRIMARY KEY,
     show_name character varying NOT NULL,
-    desc text,
-    type smallint NOT NULL DEFAULT 0"#,
+    description text,
+    tp smallint NOT NULL DEFAULT 0"#,
         vec![("show_name", "btree")],
         None,
         None,
     )
     .await?;
     conn.execute_one(
-        format!("INSERT INTO {table_name} (id, show_name, desc) VALUES ('public', 'public', 'default public domain') ON CONFLICT (id) DO NOTHING").as_str(),
+        format!("INSERT INTO {table_name} (id, show_name, description) VALUES ('public', 'public', 'default public domain') ON CONFLICT (id) DO NOTHING").as_str(),
         vec![],
     )
     .await?;

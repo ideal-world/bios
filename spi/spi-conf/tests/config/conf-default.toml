@@ -1,6 +1,9 @@
 [cs]
 [csm.spi-reldb]
+[csm.spi-conf]
+
 [fw.web_server]
+enabled = true
 port = 8080
 tls_key = """
 -----BEGIN RSA PRIVATE KEY-----
