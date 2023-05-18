@@ -124,6 +124,40 @@ impl IamCertPhoneVCodeServ {
         Ok(id)
     }
 
+    ///不需要验证直接添加cert
+    pub async fn add_cert_skip_vcode(
+        add_req: &IamCertPhoneVCodeAddReq,
+        account_id: &str,
+        rel_rbum_cert_conf_id: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<String> {
+        let vcode = Self::get_vcode();
+        let id = RbumCertServ::add_rbum(
+            &mut RbumCertAddReq {
+                ak: TrimString(add_req.phone.to_string()),
+                sk: None,
+                kind: None,
+                supplier: None,
+                vcode: Some(TrimString(vcode.clone())),
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: RbumCertStatusKind::Enabled,
+                rel_rbum_cert_conf_id: Some(rel_rbum_cert_conf_id.to_string()),
+                rel_rbum_kind: RbumCertRelKind::Item,
+                rel_rbum_id: account_id.to_string(),
+                is_outside: false,
+                is_ignore_check_sk: false,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(id)
+    }
+
     pub async fn resend_activation_phone(account_id: &str, phone: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(phone, &vcode, &ctx.own_paths, funs).await?;

@@ -3,9 +3,10 @@ use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
+use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
-use crate::basic::dto::iam_cert_dto::IamThirdIntegrationConfigDto;
+use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamThirdIntegrationConfigDto};
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdBindWithLdapReq;
 use crate::console_passport::serv::iam_cp_cert_user_pwd_serv::IamCpCertUserPwdServ;
@@ -506,11 +507,13 @@ impl IamCertLdapServ {
         let (mut ldap_client, _cert_conf, cert_conf_id) = Self::get_ldap_client(Some(ctx.own_paths.clone()), supplier, funs, ctx).await?;
         let certs = Self::get_ldap_cert_account_by_account(&ctx.owner, &cert_conf_id, funs, ctx).await?;
         if let Some(cert) = certs.first() {
-            if ldap_client.bind_by_dn(&cert.ak, sk).await?.is_some() {
+            let result = ldap_client.bind_by_dn(&cert.ak, sk).await?;
+            if result.is_some() {
+                ldap_client.unbind().await?;
                 Ok(true)
             } else {
                 ldap_client.unbind().await?;
-                Ok(false)
+                Err(funs.err().unauthorized("ldap cert", "valid", "validation error", "401-rbum-cert-valid-error"))
             }
         } else {
             Err(funs.err().not_found("ldap", "validate_sk", "not found cert record", "404-rbum-*-obj-not-exist"))
@@ -741,8 +744,8 @@ impl IamCertLdapServ {
                         },
                         status: Some(RbumCertStatusKind::Enabled),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
-                        rel_rbum_id: Some(cert.rel_rbum_id),
-                        rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id]),
+                        rel_rbum_id: Some(cert.rel_rbum_id.clone()),
+                        rel_rbum_cert_conf_ids: Some(vec![phone_cert_conf_id.clone()]),
                         ..Default::default()
                     },
                     &funs,
@@ -770,7 +773,24 @@ impl IamCertLdapServ {
                         tardis::log::error!("{}", err_msg);
                         msg = format!("{msg}{err_msg}\n");
                     }
-                };
+                } else {
+                    //添加手机号
+                    if let Err(e) = IamCertPhoneVCodeServ::add_cert_skip_vcode(
+                        &IamCertPhoneVCodeAddReq {
+                            phone: TrimString(iam_account_ext_sys_resp.mobile.clone()),
+                        },
+                        cert.rel_rbum_id.as_str(),
+                        phone_cert_conf_id.as_str(),
+                        &funs,
+                        ctx,
+                    )
+                    .await
+                    {
+                        let err_msg = format!("add phone phone:{} failed:{}", iam_account_ext_sys_resp.mobile.clone(), e);
+                        tardis::log::error!("{}", err_msg);
+                        msg = format!("{msg}{err_msg}\n");
+                    }
+                }
 
                 ldap_id_to_account_map.remove(&local_ldap_id);
             } else {
@@ -832,7 +852,7 @@ impl IamCertLdapServ {
             funs.begin().await?;
             let add_result = match sync_config.account_way_to_add {
                 WayToAdd::SynchronizeCert => {
-                    Self::do_add_account(
+                    let result = Self::do_add_account(
                         &ldap_resp.account_id,
                         &ldap_resp.display_name,
                         &ldap_resp.user_name,
@@ -842,7 +862,27 @@ impl IamCertLdapServ {
                         &funs,
                         &mock_ctx,
                     )
-                    .await
+                    .await;
+                    if result.is_ok() {
+                        //添加手机号
+                        let phone_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), &funs).await?;
+                        if let Err(e) = IamCertPhoneVCodeServ::add_cert_skip_vcode(
+                            &IamCertPhoneVCodeAddReq {
+                                phone: TrimString(ldap_resp.mobile.clone()),
+                            },
+                            mock_ctx.owner.as_str(),
+                            phone_cert_conf_id.as_str(),
+                            &funs,
+                            ctx,
+                        )
+                        .await
+                        {
+                            let err_msg = format!("add phone phone:{} failed:{}", ldap_resp.mobile.clone(), e);
+                            tardis::log::error!("{}", err_msg);
+                            msg = format!("{msg}{err_msg}\n");
+                        }
+                    }
+                    result
                 }
                 WayToAdd::NoSynchronizeCert => {
                     Self::do_add_account(
