@@ -6,7 +6,9 @@ use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
-use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp};
+use crate::dto::kv_item_dto::{
+    KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
+};
 use crate::{kv_constants, kv_initializer};
 
 use super::pg;
@@ -35,17 +37,10 @@ pub async fn find_items(keys: Vec<String>, extract: Option<String>, funs: &Tardi
     }
 }
 
-pub async fn match_items(
-    key_prefix: String,
-    extract: Option<String>,
-    page_number: u32,
-    page_size: u16,
-    funs: &TardisFunsInst,
-    ctx: &TardisContext,
-) -> TardisResult<TardisPage<KvItemSummaryResp>> {
+pub async fn match_items(match_req: KvItemMatchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<KvItemSummaryResp>> {
     match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(key_prefix, extract, page_number, page_size, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(match_req, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
@@ -108,7 +103,19 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
     let key_prefix = format!("{}{}", kv_constants::KEY_PREFIX_BY_TAG, key_prefix);
     match funs.init(ctx, true, kv_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
-        spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::match_items(key_prefix, None, page_number, page_size, funs, ctx).await,
+        spi_constants::SPI_PG_KIND_CODE => {
+            pg::kv_pg_item_serv::match_items(
+                KvItemMatchReq {
+                    key_prefix: key_prefix,
+                    page_number: page_number,
+                    page_size: page_size,
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await
+        }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
     .map(|items| TardisPage {

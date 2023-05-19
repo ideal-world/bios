@@ -76,7 +76,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "kind":"req",
                 "key": "001",
                 "content": r#"{"content":"账号登录 登录名：默认提示：用户名/手机号/邮箱，输入类型不限，最多输入30个字 密码：默认提示：密码，输入类型不限，最多输入30个字； 登录：1、点击判断用户名和密码是否已填写，如果没有则在每个必填项下提示...","title":"新增全局账号逻辑","kind":"req","assign_to":"account002"}"#,
-                "search_ext": {"name":"测试","status":1,"apps":["app01"],"assign_to":"account002"},
+                "ext": {"name":"测试","status":1,"apps":["app01"],"assign_to":"account002"},
                 "owner":"account002",
                 "own_paths":"tenant001",
                 "op":"init",
@@ -200,7 +200,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "kinds":["req"],
                 "owners":["account002"],
                 "own_paths":["tenant001"],
-                "search_ext":[
+                "ext":[
                     {"field":"name","op":"like","value":"测试"},
                     {"field":"status","op":"=","value":1},
                     {"field":"apps","op":"in","value":["app01"]},

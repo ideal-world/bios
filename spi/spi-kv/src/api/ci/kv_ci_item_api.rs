@@ -6,7 +6,9 @@ use tardis::web::poem_openapi::param::Query;
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::kv_item_dto::{KvItemAddOrModifyReq, KvItemDetailResp, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp};
+use crate::dto::kv_item_dto::{
+    KvItemAddOrModifyReq, KvItemDetailResp, KvItemMatchReq, KvItemSummaryResp, KvNameAddOrModifyReq, KvNameFindResp, KvTagAddOrModifyReq, KvTagFindResp,
+};
 use crate::serv::kv_item_serv;
 
 pub struct KvCiItemApi;
@@ -44,9 +46,9 @@ impl KvCiItemApi {
         TardisResp::ok(resp)
     }
 
-    /// Find Items By key prefix
+    /// Match Items By key prefix
     #[oai(path = "/item/match", method = "get")]
-    async fn match_items(
+    async fn match_items_by_key_prefix(
         &self,
         key_prefix: Query<String>,
         extract: Query<Option<String>>,
@@ -56,7 +58,26 @@ impl KvCiItemApi {
         request: &Request,
     ) -> TardisApiResult<TardisPage<KvItemSummaryResp>> {
         let funs = request.tardis_fun_inst();
-        let resp = kv_item_serv::match_items(key_prefix.0, extract.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let resp = kv_item_serv::match_items(
+            KvItemMatchReq {
+                key_prefix: key_prefix.0,
+                extract: extract.0,
+                page_number: page_number.0,
+                page_size: page_size.0,
+                ..Default::default()
+            },
+            &funs,
+            &ctx.0,
+        )
+        .await?;
+        TardisResp::ok(resp)
+    }
+
+    /// Match Items
+    #[oai(path = "/item/match", method = "put")]
+    async fn match_items(&self, match_req: Json<KvItemMatchReq>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<TardisPage<KvItemSummaryResp>> {
+        let funs = request.tardis_fun_inst();
+        let resp = kv_item_serv::match_items(match_req.0, &funs, &ctx.0).await?;
         TardisResp::ok(resp)
     }
 

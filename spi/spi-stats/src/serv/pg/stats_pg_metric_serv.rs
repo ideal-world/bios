@@ -384,7 +384,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     fact.own_paths LIKE $1
                     AND del.key IS NULL
                     AND fact.ct >= $2 AND fact.ct <= $3
-                ORDER BY _key,fact.ct DESC
+                ORDER BY {}fact.ct DESC
              ) fact 
              where 1 = 1
             {sql_part_wheres}
@@ -400,6 +400,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         } else {
             "DISTINCT ON (fact.key) fact.key AS _key,"
         },
+        if query_req.ignore_distinct.unwrap_or(false) { "" } else { "_key," },
         if sql_part_groups.is_empty() {
             "".to_string()
         } else {

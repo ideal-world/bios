@@ -22,7 +22,7 @@ pub struct IamCtAccountApi;
 /// Tenant Console Account API
 #[poem_openapi::OpenApi(prefix_path = "/ct/account", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtAccountApi {
-    /// Add Account
+    /// Add Account  安全审计日志--添加长期账号、添加临时账号
     #[oai(path = "/", method = "post")]
     async fn add(&self, app_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
@@ -35,7 +35,7 @@ impl IamCtAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Account
+    /// Modify Account  安全审计日志--修改账号头像、休眠账号、修改用户类型为临时账号、修改姓名
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, app_id: Query<Option<String>>, modify_req: Json<IamAccountAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_app_ctx(ctx.0, app_id.0)?;
@@ -209,7 +209,7 @@ impl IamCtAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Active account
+    /// Active account  安全审计日志--激活账号
     #[oai(path = "/:id/active", method = "put")]
     async fn active_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -234,7 +234,7 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    /// Logout account
+    /// Logout account  安全审计日志--注销账号、下线账号
     #[oai(path = "/:id/logout", method = "put")]
     async fn logout_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -259,7 +259,7 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    ///lock account
+    ///lock account  安全审计日志--人工锁定账号
     #[oai(path = "/:id/lock", method = "put")]
     async fn lock_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -284,7 +284,7 @@ impl IamCtAccountApi {
         TardisResp::ok(Void {})
     }
 
-    ///unlock account
+    ///unlock account  安全审计日志--解锁账号
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
