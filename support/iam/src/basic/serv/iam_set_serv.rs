@@ -187,8 +187,8 @@ impl IamSetServ {
             LogParamOp::Add,
             None,
             Some(Utc::now().to_rfc3339()),
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         result
