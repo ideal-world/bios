@@ -94,7 +94,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
                 ("tag", "schedule_job"),
                 ("content", "delete job"),
                 ("key", code),
-                ("op", "d"),
+                ("op", "delete"),
                 ("ts", &Utc::now().to_rfc3339()),
             ]),
             headers.clone(),
