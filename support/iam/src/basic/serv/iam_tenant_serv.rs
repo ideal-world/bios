@@ -40,7 +40,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
 
-use super::clients::spi_log_client::{SpiLogClient, LogContent};
+use super::clients::spi_log_client::{SpiLogClient, LogParamContent, LogParamTag, LogParamOp};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
@@ -125,15 +125,15 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
         SpiLogClient::add_item(
-            "system".to_string(),
-            LogContent {
+            LogParamTag::Tenant,
+            LogParamContent {
                 op: "添加租户".to_string(),
                 ext: Some(id.to_string()),
                 ..Default::default()
             },
             Some("req".to_string()),
             Some(id.to_string()),
-            Some("add".to_string()),
+            LogParamOp::Add,
             None,
             Some(Utc::now().to_rfc3339()),
             &funs,

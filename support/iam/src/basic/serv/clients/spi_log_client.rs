@@ -15,12 +15,12 @@ use crate::{
         dto::iam_filer_dto::IamAccountFilterReq,
         serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ},
     },
-    iam_config::IamConfig,
+    iam_config::IamConfig, iam_enumeration::IamCertKernelKind,
 };
 pub struct SpiLogClient;
 
-#[derive(Default, Debug)]
-pub struct LogContent {
+#[derive(Serialize, Default, Debug)]
+pub struct LogParamContent {
     pub op: String,
     pub ext: Option<String>,
     pub name: String,
@@ -28,26 +28,57 @@ pub struct LogContent {
     pub ip: String,
 }
 
-impl ToString for LogContent {
-    fn to_string(&self) -> String {
-        json!({
-            "op": self.op,
-            "ext": self.ext,
-            "name": self.name,
-            "ak": self.ak,
-            "ip": self.ip,
-        })
-        .to_string()
+pub enum LogParamTag {
+    Tenant,
+    Org,
+    Account,
+    Role,
+    System,
+    SafeAlert,
+    SafeVisit,
+    Log,
+}
+
+impl Into<String> for LogParamTag {
+    fn into(self) -> String {
+        match self {
+            LogParamTag::Tenant => "Tenant".to_string(),
+            LogParamTag::Org => "Org".to_string(),
+            LogParamTag::Account => "Account".to_string(),
+            LogParamTag::Role => "Role".to_string(),
+            LogParamTag::System => "System".to_string(),
+            LogParamTag::SafeAlert => "SafeAlert".to_string(),
+            LogParamTag::SafeVisit => "SafeVisit".to_string(),
+            LogParamTag::Log => "Log".to_string(),
+        }
+    }
+}
+
+pub enum LogParamOp {
+    Add,
+    Change,
+    Delete,
+    None,
+}
+
+impl Into<String> for LogParamOp {
+    fn into(self) -> String {
+        match self {
+            LogParamOp::Add => "Add".to_string(),
+            LogParamOp::Change => "Change".to_string(),
+            LogParamOp::Delete => "Delete".to_string(),
+            LogParamOp::None => "".to_string(),
+        }
     }
 }
 
 impl SpiLogClient {
     pub async fn add_item(
-        tag: String,
-        mut content: LogContent,
+        tag: LogParamTag,
+        mut content: LogParamContent,
         kind: Option<String>,
         key: Option<String>,
-        op: Option<String>,
+        op: LogParamOp,
         rel_key: Option<String>,
         ts: Option<String>,
         funs: &TardisFunsInst,
@@ -67,31 +98,22 @@ impl SpiLogClient {
         )]);
         // find operater info
         let account = IamAccountServ::get_item(ctx.owner.as_str(), &IamAccountFilterReq::default(), funs, ctx).await?;
-        let cert = IamCertServ::find_certs(
-            &RbumCertFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                rel_rbum_id: Some(account.id.clone()),
-                ..Default::default()
-            },
-            None,
-            None,
+        let cert = IamCertServ::get_kernel_cert(
+            ctx.owner.as_str(),
+            &IamCertKernelKind::UserPwd,
             funs,
             ctx,
         )
-        .await?
-        .pop();
+        .await?;
         content.name = account.name;
-        content.ak = if let Some(cert) = cert { cert.ak } else { "".to_string() };
+        content.ak = cert.ak;
         //add log item
         let mut body = HashMap::from([
-            ("tag", tag),
-            ("content", content.to_string()),
+            ("tag", tag.into()),
+            ("content", TardisFuns::json.obj_to_string(&content).unwrap()),
             ("owner", ctx.owner.clone()),
             ("owner_paths", ctx.own_paths.clone()),
+            ("op", op.into()),
         ]);
         // create search_ext
         let search_ext = json!({
@@ -111,9 +133,6 @@ impl SpiLogClient {
 
         if let Some(key) = key {
             body.insert("key", key);
-        }
-        if let Some(op) = op {
-            body.insert("op", op);
         }
         if let Some(rel_key) = rel_key {
             body.insert("rel_key", rel_key);
