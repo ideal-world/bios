@@ -11,7 +11,6 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamTenantFilterReq;
 use crate::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantAggDetailResp, IamTenantAggModifyReq, IamTenantSummaryResp};
-use crate::basic::serv::clients::spi_log_client::{LogContent, SpiLogClient};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
