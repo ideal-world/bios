@@ -2,11 +2,12 @@ use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq},
     serv::rbum_item_serv::RbumItemCrudOperation,
 };
+use serde::Serialize;
 use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    serde_json::Value,
+    serde_json::{Value, json},
     tokio, TardisFuns, TardisFunsInst,
 };
 
