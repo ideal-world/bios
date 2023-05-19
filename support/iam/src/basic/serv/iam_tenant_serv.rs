@@ -2,11 +2,11 @@ use async_trait::async_trait;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::rbum_enumeration::RbumCertStatusKind;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
-use tardis::chrono::Utc;
 use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::chrono::Utc;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 use tardis::{TardisFuns, TardisFunsInst};
@@ -40,7 +40,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
 
-use super::clients::spi_log_client::{SpiLogClient, LogParamContent, LogParamTag, LogParamOp};
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
@@ -148,6 +148,29 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         }
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
+
+        let mut op_describe = "编辑租户".to_string();
+        if modify_req.disabled == Some(false) {
+            op_describe = "禁用租户".to_string();
+        } else if modify_req.disabled == Some(true) {
+            op_describe = "启用租户".to_string();
+        }
+        SpiLogClient::add_item(
+            LogParamTag::Tenant,
+            LogParamContent {
+                op: op_describe,
+                ext: Some(id.to_string()),
+                ..Default::default()
+            },
+            Some("req".to_string()),
+            Some(id.to_string()),
+            LogParamOp::Modify,
+            None,
+            Some(Utc::now().to_rfc3339()),
+            &funs,
+            &ctx,
+        )
+        .await?;
         Ok(())
     }
 
