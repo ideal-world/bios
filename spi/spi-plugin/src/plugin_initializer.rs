@@ -37,6 +37,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                 plugin_ci_exec_api::PluginExecApi,
                 plugin_ci_kind_api::PluginKindApi,
             ),
+            None,
         )
         .await;
     Ok(())

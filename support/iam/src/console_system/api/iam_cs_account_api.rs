@@ -45,7 +45,7 @@ impl IamCsAccountApi {
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
+        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
         TardisResp::ok(Void {})
@@ -165,7 +165,7 @@ impl IamCsAccountApi {
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
         IamAccountServ::async_delete_account_search(id.0, &funs, ctx.clone()).await?;
         funs.commit().await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)

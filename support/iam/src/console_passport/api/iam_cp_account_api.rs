@@ -26,7 +26,7 @@ impl IamCpAccountApi {
         IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(ctx.clone().owner, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
+        if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
         TardisResp::ok(Void {})

@@ -114,6 +114,6 @@ pub async fn init_data() -> TardisResult<()> {
 }
 
 pub async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, (auth_mgr_api::MgrApi, auth_crypto_api::CryptoApi, auth_kernel_api::AuthApi)).await;
+    web_server.add_module(DOMAIN_CODE, (auth_mgr_api::MgrApi, auth_crypto_api::CryptoApi, auth_kernel_api::AuthApi), None).await;
     Ok(())
 }

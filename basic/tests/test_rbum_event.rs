@@ -55,7 +55,7 @@ pub async fn test() -> TardisResult<()> {
     )
     .await?;
 
-    if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx)? {
+    if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
         rbum_event_helper::try_notifies(notify_events, &funs, &ctx).await?;
     }
 
