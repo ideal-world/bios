@@ -125,7 +125,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
         SpiLogClient::add_item(
-            LogParamTag::Tenant,
+            LogParamTag::IamTenant,
             LogParamContent {
                 op: "添加租户".to_string(),
                 ext: Some(id.to_string()),
@@ -156,7 +156,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             op_describe = "启用租户".to_string();
         }
         SpiLogClient::add_item(
-            LogParamTag::Tenant,
+            LogParamTag::IamTenant,
             LogParamContent {
                 op: op_describe,
                 ext: Some(id.to_string()),
