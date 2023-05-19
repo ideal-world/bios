@@ -31,27 +31,29 @@ pub struct LogParamContent {
 }
 
 pub enum LogParamTag {
-    Tenant,
-    Org,
-    Account,
-    Role,
-    System,
-    SafeAlert,
-    SafeVisit,
+    IamTenant,
+    IamOrg,
+    IamAccount,
+    IamRole,
+    IamRes,
+    IamSystem,
+    SecurityAlarm,
+    SecurityVisit,
     Log,
 }
 
 impl Into<String> for LogParamTag {
     fn into(self) -> String {
         match self {
-            LogParamTag::Tenant => "Tenant".to_string(),
-            LogParamTag::Org => "Org".to_string(),
-            LogParamTag::Account => "Account".to_string(),
-            LogParamTag::Role => "Role".to_string(),
-            LogParamTag::System => "System".to_string(),
-            LogParamTag::SafeAlert => "SafeAlert".to_string(),
-            LogParamTag::SafeVisit => "SafeVisit".to_string(),
-            LogParamTag::Log => "Log".to_string(),
+            LogParamTag::IamTenant => "iam_tenant".to_string(),
+            LogParamTag::IamOrg => "iam_org".to_string(),
+            LogParamTag::IamAccount => "iam_account".to_string(),
+            LogParamTag::IamRole => "iam_role".to_string(),
+            LogParamTag::IamRes => "iam_res".to_string(),
+            LogParamTag::IamSystem => "iam_system".to_string(),
+            LogParamTag::SecurityAlarm => "security_alarm".to_string(),
+            LogParamTag::SecurityVisit => "security_visit".to_string(),
+            LogParamTag::Log => "log".to_string(),
         }
     }
 }
