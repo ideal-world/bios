@@ -15,7 +15,8 @@ use crate::{
         dto::iam_filer_dto::IamAccountFilterReq,
         serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ},
     },
-    iam_config::IamConfig, iam_enumeration::IamCertKernelKind,
+    iam_config::IamConfig,
+    iam_enumeration::IamCertKernelKind,
 };
 pub struct SpiLogClient;
 
@@ -56,7 +57,7 @@ impl Into<String> for LogParamTag {
 
 pub enum LogParamOp {
     Add,
-    Change,
+    Modify,
     Delete,
     None,
 }
@@ -65,7 +66,7 @@ impl Into<String> for LogParamOp {
     fn into(self) -> String {
         match self {
             LogParamOp::Add => "Add".to_string(),
-            LogParamOp::Change => "Change".to_string(),
+            LogParamOp::Modify => "Modify".to_string(),
             LogParamOp::Delete => "Delete".to_string(),
             LogParamOp::None => "".to_string(),
         }
@@ -98,13 +99,7 @@ impl SpiLogClient {
         )]);
         // find operater info
         let account = IamAccountServ::get_item(ctx.owner.as_str(), &IamAccountFilterReq::default(), funs, ctx).await?;
-        let cert = IamCertServ::get_kernel_cert(
-            ctx.owner.as_str(),
-            &IamCertKernelKind::UserPwd,
-            funs,
-            ctx,
-        )
-        .await?;
+        let cert = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await?;
         content.name = account.name;
         content.ak = cert.ak;
         //add log item
