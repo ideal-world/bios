@@ -1,10 +1,17 @@
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
-use tardis::{web::{poem_openapi::{self, payload::Json}, context_extractor::TardisContextExtractor, poem::Request, web_resp::{TardisApiResult, TardisResp}}, log};
+use tardis::{
+    log,
+    web::{
+        context_extractor::TardisContextExtractor,
+        poem::Request,
+        poem_openapi::{self, payload::Json, param::Query},
+        web_resp::{TardisApiResult, TardisResp},
+    },
+};
 
 use crate::dto::conf_namespace_dto::*;
 use crate::serv::*;
 pub struct ConfCiNamespaceApi;
-
 
 /// Interface Console config server API
 #[poem_openapi::OpenApi(prefix_path = "/ci/namespace", tag = "bios_basic::ApiTag::Interface")]
@@ -14,9 +21,10 @@ impl ConfCiNamespaceApi {
         unimplemented!()
     }
     #[oai(path = "/", method = "get")]
-    async fn get_namespace(&self, mut descriptor: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<NamespaceItem> {
+    async fn get_namespace(&self, namespace_id: Query<NamespaceId>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<NamespaceItem> {
         let funs = request.tardis_fun_inst();
-        let item = get_namespace(&mut descriptor.0, &funs, &ctx.0).await?;
+        let mut descriptor = NamespaceDescriptor { namespace_id: namespace_id.0 };
+        let item = get_namespace(&mut descriptor, &funs, &ctx.0).await?;
         TardisResp::ok(item)
     }
     #[oai(path = "/", method = "post")]
@@ -29,8 +37,8 @@ impl ConfCiNamespaceApi {
     async fn edit_namespace(&self, attribute: Json<NamespaceAttribute>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         unimplemented!()
     }
-    #[oai(path = "/", method = "get")]
-    async fn delete_namespace(&self, descriptor: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
+    #[oai(path = "/", method = "delete")]
+    async fn delete_namespace(&self, namespace_id: Query<NamespaceId>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         unimplemented!()
     }
 }

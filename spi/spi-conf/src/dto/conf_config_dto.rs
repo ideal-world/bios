@@ -1,45 +1,60 @@
-use serde::{Deserialize, Serialize};
-use tardis::web::poem_openapi;
-
 use super::conf_namespace_dto::NamespaceId;
+use serde::{Deserialize, Serialize};
+use tardis::db::sea_orm;
+use tardis::web::poem_openapi::{ApiExtractor, ApiExtractorType};
+use tardis::{db::sea_orm::prelude::*, web::poem_openapi};
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
-#[serde(default)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ConfigDescriptor {
     /// 命名空间，默认为public与 ''相同
-    pub namespace_id: Option<NamespaceId>,
+    #[serde(alias = "tenant")]
+    #[serde(default)]
+    #[oai(default)]
+    pub namespace_id: NamespaceId,
     /// 配置分组名
     pub group: String,
     /// 配置名
     pub data_id: String,
     /// 标签
     pub tag: Option<String>,
+    #[serde(rename = "type")]
+    /// 配置类型
+    pub tp: Option<String>,
+}
+impl Default for ConfigDescriptor {
+    fn default() -> Self {
+        Self {
+            namespace_id: "public".into(),
+            group: Default::default(),
+            data_id: Default::default(),
+            tag: Default::default(),
+            tp: Default::default(),
+        }
+    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
 #[serde(default)]
 pub struct ConfigPublishRequest {
     /// 配置内容
-    content: String,
+    pub content: String,
     #[serde(flatten)]
-    descriptor: ConfigDescriptor,
+    #[oai(flatten)]
+    pub descriptor: ConfigDescriptor,
     /// 应用名
-    app_name: Option<String>,
+    pub app_name: Option<String>,
     /// 源用户
-    src_user: Option<String>,
+    pub src_user: Option<String>,
     /// 配置标签列表，可多个，逗号分隔
-    config_tags: Option<String>,
+    pub config_tags: Option<String>,
     /// 配置描述
-    desc: Option<String>,
+    pub desc: Option<String>,
     ///
-    r#use: Option<String>,
+    pub r#use: Option<String>,
     ///
-    effect: Option<String>,
-    #[serde(rename = "type")]
-    /// 配置类型
-    tp: Option<String>,
+    pub effect: Option<String>,
     /// -
-    schema: Option<String>,
+    pub schema: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]

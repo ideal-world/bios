@@ -9,21 +9,19 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::{
-    conf_constants::error,
-    dto::{conf_config_dto::*, conf_namespace_dto::*},
-    serv::pg::conf_pg_initializer,
-};
+use crate::{conf_constants::error, dto::conf_namespace_dto::*, serv::pg::conf_pg_initializer};
 pub async fn get_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<NamespaceItem> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, false).await?;
+    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name_namespace) = conns.namespace;
+    let (_, table_name_config) = conns.config;
     let namespace = conn
         .query_one(
             &format!(
                 r#"SELECT id, show_name, description
 FROM {table_name}
 WHERE id = $1"#,
-                table_name = table_name
+                table_name = table_name_namespace
             ),
             vec![Value::from(&discriptor.namespace_id)],
         )
@@ -33,20 +31,19 @@ WHERE id = $1"#,
         namespace: namespace.try_get("", "id").unwrap(),
         namespace_show_name: namespace.try_get("", "show_name").unwrap(),
         namespace_desc: namespace.try_get("", "description").unwrap(),
-        tp: namespace.try_get("", "tp").unwrap(),
         ..Default::default()
     };
-    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let (conn, table_name) = conf_pg_initializer::init_table_and_conn_config(bs_inst, ctx, false).await?;
-    let count = conn.count_by_sql(
-        format!(
-            "SELECT namespace_id FROM {table} WHERE namespace_id = {id}",
-            table = table_name,
-            id = namespace_item.namespace,
+    let count = conn
+        .count_by_sql(
+            format!(
+                "SELECT namespace_id FROM {table} WHERE namespace_id='{id}'",
+                table = table_name_config,
+                id = namespace_item.namespace,
+            )
+            .as_str(),
+            vec![],
         )
-        .as_str(),
-        vec![],
-    ).await?;
+        .await?;
     namespace_item.config_count = count as u32;
     Ok(namespace_item)
 }

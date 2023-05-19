@@ -5,10 +5,16 @@ use bios_basic::{
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
     test::{init_rbum_test_container, test_http_client::TestHttpClient},
 };
-use bios_spi_conf::{conf_constants::DOMAIN_CODE, dto::conf_namespace_dto::NamespaceAttribute};
+use bios_spi_conf::{
+    conf_constants::DOMAIN_CODE,
+    dto::{
+        conf_config_dto::{ConfigDescriptor, ConfigPublishRequest},
+        conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
+    },
+};
 use serde::__private::de;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
+    basic::{dto::TardisContext, field::TrimString, json, result::TardisResult},
     log::debug,
     serde_json::json,
     testcontainers, tokio,
@@ -61,16 +67,43 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         owner: "app001".to_string(),
         ..Default::default()
     })?;
-    let response = client
+    let _response = client
         .post::<_, bool>(
             "/ci/namespace",
             &NamespaceAttribute {
-                namespace: "test".to_string(),
-                namespace_show_name: "test".to_string(),
-                namespace_desc: Some("test".to_string()),
+                namespace: "test1".to_string(),
+                namespace_show_name: "测试命名空间1".to_string(),
+                namespace_desc: Some("测试命名空间1".to_string()),
             },
         )
         .await;
-    debug!("response: {:?}", response);
+    let _response = client
+        .post::<_, bool>(
+            "/ci/namespace",
+            &NamespaceAttribute {
+                namespace: "test2".to_string(),
+                namespace_show_name: "测试命名空间2".to_string(),
+                namespace_desc: Some("测试命名空间2".to_string()),
+            },
+        )
+        .await;
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": include_str!("./config/conf-default.toml").to_string(),
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-default".to_string(),
+                "schema": "toml",
+            }),
+        )
+        .await;
+    let _response = client.get::<String>("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    let _response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=public").await;
+    assert_eq!(_response.config_count, 1);
+    client.delete("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    let _response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=public").await;
+    assert_eq!(_response.config_count, 0);
+
     Ok(())
 }

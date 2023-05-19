@@ -20,7 +20,7 @@ spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
 serde.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
+tardis = { workspace = true, features = ["reldb-postgres", "web-server", "crypto"] }
 bios-basic = { path = "../../basic", features = ["default"] }
 
 [dev-dependencies]

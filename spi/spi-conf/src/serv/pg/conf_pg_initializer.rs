@@ -5,7 +5,11 @@ use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::reldb_client::{TardisRelDBClient, TardisRelDBlConnection},
 };
-
+pub struct SpiConfTableAndConns {
+    pub namespace: (TardisRelDBlConnection, String),
+    pub config: (TardisRelDBlConnection, String),
+    // pub config_tag: (TardisRelDBlConnection, String),
+}
 pub async fn init_table_and_conn_namespace(
     bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
     ctx: &TardisContext,
@@ -33,21 +37,24 @@ pub async fn init_table_and_conn_namespace(
     .await?;
     Ok((conn, table_name))
 }
-const CONFIG_TABLE_CREATE_CONTENT: &str = r#"id character varying NOT NULL PRIMARY KEY,
-group character varying NOT NULL,
-namespace character varying NOT NULL,
-md5 character varying NOT NULL,
+
+const CONFIG_TABLE_CREATE_CONTENT: &str = r#"id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+data_id character varying NOT NULL,
+grp character varying NOT NULL DEFAULT 'DEFAULT-GROUP',
+namespace_id character varying NOT NULL DEFAULT 'public',
+md5 character(32) NOT NULL,
 content text NOT NULL,
+schema character varying,
 app_name character varying,
 src_user character varying,
-src_ip cidr varying,
+src_ip cidr,
 create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 last_modify_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-tag character varying,
-type smallint NOT NULL"#;
+tp smallint NOT NULL DEFAULT 0"#;
 
 pub async fn init_table_and_conn_config(
     bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    namespace_table_name: &str,
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {
@@ -57,24 +64,55 @@ pub async fn init_table_and_conn_config(
         mgr,
         None,
         "conf_config",
-        CONFIG_TABLE_CREATE_CONTENT,
-        vec![("show_name", "btree")],
+        &format!(
+            r#"id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    data_id character varying NOT NULL,
+    grp character varying NOT NULL DEFAULT 'DEFAULT-GROUP',
+    namespace_id character varying NOT NULL DEFAULT 'public' REFERENCES {namespace_table_name},
+    md5 character(32) NOT NULL,
+    content text NOT NULL,
+    schema character varying,
+    app_name character varying,
+    src_user character varying,
+    src_ip cidr,
+    create_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_modify_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tp smallint NOT NULL DEFAULT 0"#
+        ),
+        vec![("data_id", "btree"), ("grp", "btree"), ("namespace_id", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
         Some("last_modify_time"),
     )
     .await
 }
 
-//    /// 命名空间，默认为public与 ''相同
-//    pub namespace_id: Option<NamespaceId>,
-//    /// 配置分组名
-//    pub group: String,
-//    /// 配置名
-//    pub data_id: String,
-//    /// 标签
-//    pub tag: Option<String>,
-//
-//
-//
-//
-//
+pub async fn init_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String), ctx: &TardisContext, mgr: bool) -> TardisResult<SpiConfTableAndConns> {
+    let (name_space_conn, namespace_table_name) = init_table_and_conn_namespace(bs_inst.clone(), ctx, mgr).await?;
+    let (config_conn, config_table_name) = init_table_and_conn_config(bs_inst, namespace_table_name.as_str(), ctx, mgr).await?;
+    Ok(SpiConfTableAndConns {
+        namespace: (name_space_conn, namespace_table_name),
+        config: (config_conn, config_table_name),
+    })
+}
+
+const CONFIG_TABLE_CREATE_CONFIG_TAG_CONTENT: &str = r#"id uuid PRIMARY KEY,
+name character varying NOT NULL"#;
+
+pub async fn init_table_and_conn_config_tag(
+    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
+    ctx: &TardisContext,
+    mgr: bool,
+) -> TardisResult<(TardisRelDBlConnection, String)> {
+    spi_initializer::common_pg::init_table_and_conn(
+        bs_inst,
+        ctx,
+        mgr,
+        None,
+        "conf_config_tag",
+        CONFIG_TABLE_CREATE_CONFIG_TAG_CONTENT,
+        vec![("show_name", "btree")],
+        None,
+        None,
+    )
+    .await
+}
