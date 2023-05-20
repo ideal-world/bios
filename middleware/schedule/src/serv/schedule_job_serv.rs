@@ -82,9 +82,13 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
 pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     // log this operation
     TardisFuns::web_client()
@@ -118,9 +122,13 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
 
 pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let resp = funs
         .web_client()
@@ -167,9 +175,13 @@ pub(crate) async fn find_task(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<ScheduleTaskInfoResp>> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let mut url = format!(
         "{}/ci/item?tag={}&key={}&page_number={}&page_size={}",
