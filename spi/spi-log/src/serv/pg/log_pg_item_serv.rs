@@ -21,8 +21,8 @@ pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &Tardi
         Value::from(add_req.content.as_str()),
         Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()),
         Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()),
-        Value::from(if let Some(search_ext) = &add_req.search_ext {
-            search_ext.clone()
+        Value::from(if let Some(ext) = &add_req.ext {
+            ext.clone()
         } else {
             TardisFuns::json.str_to_json("{}")?
         }),
@@ -38,7 +38,7 @@ pub async fn add(add_req: &mut LogItemAddReq, funs: &TardisFunsInst, ctx: &Tardi
     conn.execute_one(
         &format!(
             r#"INSERT INTO {table_name} 
-    (kind, key, op, content, owner, own_paths, search_ext, rel_key{})
+    (kind, key, op, content, owner, own_paths, ext, rel_key{})
 VALUES
     ($1, $2, $3, $4, $5, $6, $7,$8{})
 	"#,
@@ -130,28 +130,25 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         sql_vals.push(Value::from(ts_end));
         where_fragments.push(format!("ts <= ${}", sql_vals.len()));
     }
-    if let Some(search_ext) = &find_req.search_ext {
-        for search_ext_item in search_ext {
-            let value = db_helper::json_to_sea_orm_value(&search_ext_item.value, search_ext_item.op == SpiQueryOpKind::Like);
-            if value.is_none() || search_ext_item.op != SpiQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
+    if let Some(ext) = &find_req.ext {
+        for ext_item in ext {
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == SpiQueryOpKind::Like);
+            if value.is_none() || ext_item.op != SpiQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
                 return Err(funs.err().not_found(
                     "item",
                     "log",
-                    &format!(
-                        "The ext field=[{}] value=[{}] operation=[{}] is not legal.",
-                        &search_ext_item.field, search_ext_item.value, &search_ext_item.op,
-                    ),
+                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
                     "404-spi-log-op-not-legal",
                 ));
             }
             let mut value = value.unwrap();
-            if search_ext_item.op == SpiQueryOpKind::In {
+            if ext_item.op == SpiQueryOpKind::In {
                 if value.len() == 1 {
-                    where_fragments.push(format!("search_ext -> '{}' ? ${}", search_ext_item.field, sql_vals.len() + 1));
+                    where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
                 } else {
                     where_fragments.push(format!(
-                        "search_ext -> '{}' ?| array[{}]",
-                        search_ext_item.field,
+                        "ext -> '{}' ?| array[{}]",
+                        ext_item.field,
                         (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
                     ));
                 }
@@ -161,90 +158,30 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             } else {
                 let value = value.pop().unwrap();
                 if let Value::Bool(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::boolean {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::TinyInt(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::smallint {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::SmallInt(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::smallint {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::Int(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::integer {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::BigInt(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::bigint {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::TinyUnsigned(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::smallint {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::SmallUnsigned(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::integer {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::Unsigned(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::bigint {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::BigUnsigned(_) = value {
                     // TODO
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::bigint {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::Float(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::real {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::real {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::Double(_) = value {
-                    where_fragments.push(format!(
-                        "(search_ext ->> '{}')::double precision {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("(ext ->> '{}')::double precision {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else {
-                    where_fragments.push(format!(
-                        "search_ext ->> '{}' {} ${}",
-                        search_ext_item.field,
-                        search_ext_item.op.to_sql(),
-                        sql_vals.len() + 1
-                    ));
+                    where_fragments.push(format!("ext ->> '{}' {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 }
                 sql_vals.push(value);
             }
@@ -263,7 +200,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     let result = conn
         .query_all(
             format!(
-                r#"SELECT ts, key, op, content, kind, search_ext, owner, own_paths, rel_key, count(*) OVER() AS total
+                r#"SELECT ts, key, op, content, kind, ext, owner, own_paths, rel_key, count(*) OVER() AS total
 FROM {table_name}
 WHERE 
     {}
@@ -289,7 +226,7 @@ ORDER BY ts DESC
                 ts: item.try_get("", "ts").unwrap(),
                 key: item.try_get("", "key").unwrap(),
                 op: item.try_get("", "op").unwrap(),
-                search_ext: item.try_get("", "search_ext").unwrap(),
+                ext: item.try_get("", "ext").unwrap(),
                 content: item.try_get("", "content").unwrap(),
                 rel_key: item.try_get("", "rel_key").unwrap(),
                 kind: item.try_get("", "kind").unwrap(),

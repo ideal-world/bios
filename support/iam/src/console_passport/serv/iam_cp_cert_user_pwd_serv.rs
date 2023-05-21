@@ -147,6 +147,7 @@ impl IamCpCertUserPwdServ {
         } else {
             Self::validate_by_user_pwd(sk, funs, ctx).await?;
         }
+        IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
         Ok(())
     }
 
@@ -155,7 +156,6 @@ impl IamCpCertUserPwdServ {
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
 
         let (_, _, _) = RbumCertServ::validate_by_spec_cert_conf(&user_pwd_cert.ak, sk, &rbum_cert_conf_id, false, &ctx.own_paths, funs).await?;
-        IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
         Ok(())
     }
 

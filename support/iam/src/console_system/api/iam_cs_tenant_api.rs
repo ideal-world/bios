@@ -18,7 +18,7 @@ pub struct IamCsTenantApi;
 /// System Console Tenant API
 #[poem_openapi::OpenApi(prefix_path = "/cs/tenant", tag = "bios_basic::ApiTag::System")]
 impl IamCsTenantApi {
-    /// Add Tenant
+    /// Add Tenant  安全审计日志--添加租户
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamTenantAggAddReq>, _ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -28,7 +28,7 @@ impl IamCsTenantApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Tenant By Tenant Id
+    /// Modify Tenant By Tenant Id 安全审计日志--禁用租户、启用租户、编辑租户
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
@@ -44,7 +44,7 @@ impl IamCsTenantApi {
         funs.begin().await?;
         IamTenantServ::modify_tenant_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)

@@ -23,7 +23,7 @@ pub struct IamCsCertApi;
 /// System Console Cert API
 #[poem_openapi::OpenApi(prefix_path = "/cs/cert", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertApi {
-    /// Rest Password By Account Id
+    /// Rest Password By Account Id  安全审计日志--重置账号密码
     #[oai(path = "/user-pwd", method = "put")]
     async fn rest_password(
         &self,
@@ -92,7 +92,7 @@ impl IamCsCertApi {
         funs.begin().await?;
         IamCertServ::delete_cert_and_conf_by_conf_id(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)
@@ -132,7 +132,7 @@ impl IamCsCertApi {
             &ctx.0,
         )
         .await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)

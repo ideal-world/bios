@@ -21,7 +21,7 @@ pub struct IamCtRoleApi;
 /// Tenant Console Role API
 #[poem_openapi::OpenApi(prefix_path = "/ct/role", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtRoleApi {
-    /// Add Role
+    /// Add Role  安全审计日志--添加自定义角色
     #[oai(path = "/", method = "post")]
     async fn add(&self, mut add_req: Json<IamRoleAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -32,7 +32,7 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Role By Role Id
+    /// Modify Role By Role Id  安全审计日志--编辑自定义角色名称、编辑自定义角色权限
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
@@ -41,7 +41,7 @@ impl IamCtRoleApi {
         funs.begin().await?;
         IamRoleServ::modify_role_agg(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)
@@ -94,7 +94,7 @@ impl IamCtRoleApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Role By Role Id
+    /// Delete Role By Role Id  安全审计日志--删除自定义角色
     #[oai(path = "/:id", method = "delete")]
     async fn delete(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -104,7 +104,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Add Role Rel Account
+    /// Add Role Rel Account  安全审计日志--增加账号租户角色为管理员、添加角色人员
     #[oai(path = "/:id/account/:account_id", method = "put")]
     async fn add_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -114,7 +114,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Batch add Role Rel Account
+    /// Batch add Role Rel Account  安全审计日志--增加账号租户角色为管理员
     #[oai(path = "/:id/account/batch/:account_ids", method = "put")]
     async fn batch_add_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -127,7 +127,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Role Rel Account
+    /// Delete Role Rel Account  安全审计日志--移除账号租户角色为管理员、移除角色人员
     #[oai(path = "/:id/account/:account_id", method = "delete")]
     async fn delete_rel_account(&self, id: Path<String>, account_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -137,7 +137,7 @@ impl IamCtRoleApi {
         TardisResp::ok(Void {})
     }
 
-    /// Batch delete Role Rel Account
+    /// Batch delete Role Rel Account  安全审计日志--移除账号租户角色为管理员
     #[oai(path = "/:id/account/batch/:account_ids", method = "delete")]
     async fn batch_delete_rel_account(&self, id: Path<String>, account_ids: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

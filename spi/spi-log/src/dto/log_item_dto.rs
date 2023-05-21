@@ -15,7 +15,7 @@ pub struct LogItemAddReq {
     pub content: String,
     #[oai(validator(min_length = "2"))]
     pub kind: Option<TrimString>,
-    pub search_ext: Option<Value>,
+    pub ext: Option<Value>,
     #[oai(validator(min_length = "2"))]
     pub key: Option<TrimString>,
     #[oai(validator(min_length = "2"))]
@@ -39,7 +39,7 @@ pub struct LogItemFindReq {
     pub owners: Option<Vec<String>>,
     pub own_paths: Option<Vec<String>>,
     // Extended filtering conditions
-    pub search_ext: Option<Vec<SpiQueryCondReq>>,
+    pub ext: Option<Vec<SpiQueryCondReq>>,
     pub rel_keys: Option<Vec<TrimString>>,
     pub ts_start: Option<DateTime<Utc>>,
     pub ts_end: Option<DateTime<Utc>>,
@@ -52,7 +52,7 @@ pub struct LogItemFindResp {
     #[oai(validator(min_length = "2"))]
     pub content: String,
     pub kind: String,
-    pub search_ext: Value,
+    pub ext: Value,
     pub owner: String,
     pub own_paths: String,
     pub key: String,

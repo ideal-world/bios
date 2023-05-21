@@ -107,7 +107,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     info!("【delete ldap conf and cert】");
     IamCertServ::delete_cert_and_conf_by_conf_id(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
     sleep(Duration::from_secs(1)).await;
-    if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(admin_ctx).unwrap() {
+    if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(admin_ctx).await.unwrap() {
         let mut is_finish = false;
         while is_finish {
             sleep(Duration::from_millis(100)).await;

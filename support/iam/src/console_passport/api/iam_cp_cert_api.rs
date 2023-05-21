@@ -215,7 +215,7 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// Bind Mail
+    /// Bind Mail  安全审计日志--绑定邮箱
     #[oai(path = "/cert/mailvcode/bind", method = "put")]
     async fn bind_mail(&self, req: Json<IamCertMailVCodeActivateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -255,7 +255,7 @@ impl IamCpCertApi {
         TardisResp::ok(Void {})
     }
 
-    /// Bind phone
+    /// Bind phone  安全审计日志--绑定手机号
     #[oai(path = "/cert/phonevcode/bind", method = "put")]
     async fn bind_phone(&self, req: Json<IamCertPhoneVCodeBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

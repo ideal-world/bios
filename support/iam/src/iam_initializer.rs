@@ -116,6 +116,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ci_role_api::IamCiRoleApi,
                 ),
             ),
+            None,
         )
         .await;
     Ok(())
