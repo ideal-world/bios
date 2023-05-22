@@ -21,7 +21,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT, self};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
 use super::clients::spi_log_client::{SpiLogClient, LogParamTag, LogParamContent, LogParamOp};
@@ -175,22 +175,29 @@ impl IamSetServ {
             ctx,
         )
         .await;
-        SpiLogClient::add_item(
-            LogParamTag::IamOrg,
-            LogParamContent {
-                op: "添加部门".to_string(),
-                ext: Some(result.as_ref().unwrap().clone()),
-                ..Default::default()
-            },
-            Some("req".to_string()),
-            Some(result.as_ref().unwrap().to_string()),
-            LogParamOp::Add,
-            None,
-            Some(Utc::now().to_rfc3339()),
-            funs,
-            ctx,
-        )
-        .await?;
+
+        let id = result.as_ref().unwrap().clone();
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamOrg,
+                    LogParamContent {
+                        op: "添加部门".to_string(),
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id),
+                    LogParamOp::Add,
+                    None,
+                    Some(Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                ).await.unwrap();
+            })
+        })).await.unwrap();
         result
     }
 
