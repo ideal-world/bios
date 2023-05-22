@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::error::TardisError,
     web::{
-        poem::{self, http::HeaderValue, Body, Endpoint, IntoResponse, Middleware, Request, Response},
+        poem::{self, endpoint::BoxEndpoint, http::HeaderValue, Body, Endpoint, IntoResponse, Middleware, Request, Response},
         web_client::TardisHttpResponse,
+        web_server::BoxMiddleware,
     },
 };
 
@@ -14,11 +15,17 @@ use crate::{iam_config::IamConfig, iam_constants};
 
 pub struct EncryptMW;
 
-impl<E: Endpoint> Middleware<E> for EncryptMW {
-    type Output = EncryptMWImpl<E>;
+impl EncryptMW {
+    pub fn boxed() -> BoxMiddleware<'static> {
+        Box::new(EncryptMW)
+    }
+}
 
-    fn transform(&self, ep: E) -> Self::Output {
-        EncryptMWImpl(ep)
+impl Middleware<BoxEndpoint<'static>> for EncryptMW {
+    type Output = BoxEndpoint<'static>;
+
+    fn transform(&self, ep: BoxEndpoint<'static>) -> Self::Output {
+        Box::new(EncryptMWImpl(ep))
     }
 }
 
