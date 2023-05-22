@@ -100,18 +100,19 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
             headers.clone(),
         )
         .await?;
-    {
-        if let Some(_uuid) = unsafe { service() }.code_uuid.read().await.get(code) {
-            // delete schedual-task from kv cache first
-            funs.web_client()
-                .delete_to_void(
-                    &format!("{kv_url}/ci/item?key={key}", kv_url = kv_url, key = format_args!("{KV_KEY_CODE}{code}")),
-                    headers.clone(),
-                )
-                .await?;
-            // delete schedual-task from scheduler
-            ScheduleTaskServ::delete(code).await?;
-        }
+    let has_job = {
+        unsafe { service() }.code_uuid.read().await.get(code).is_some()
+    };
+    if has_job {
+        // delete schedual-task from kv cache first
+        funs.web_client()
+            .delete_to_void(
+                &format!("{kv_url}/ci/item?key={key}", kv_url = kv_url, key = format_args!("{KV_KEY_CODE}{code}")),
+                headers.clone(),
+            )
+            .await?;
+        // delete schedual-task from scheduler
+        ScheduleTaskServ::delete(code).await?;
     }
     Ok(())
 }
