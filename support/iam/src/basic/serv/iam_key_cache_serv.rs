@@ -403,7 +403,7 @@ impl IamResCacheServ {
         if let Some(rels) = rels {
             let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
             if let Some(res_auth) = res_dto.auth {
-                let mut auth = res_auth.clone();
+                let mut auth = res_auth;
                 for account in &delete_req.accounts {
                     auth.accounts = auth.accounts.replace(&format!("#{account}#"), "#");
                 }
