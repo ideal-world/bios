@@ -17,6 +17,8 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
         roles: vec![],
         groups: vec![],
         ext: Default::default(),
+        sync_task_fns: Default::default(),
+        async_task_fns: Default::default(),
     };
     schedule_job_serv::init(&funs, &ctx).await?;
     funs.commit().await?;
@@ -24,7 +26,7 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
 }
 
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, schedule_ci_job_api::ScheduleCiJobApi).await;
+    web_server.add_module(DOMAIN_CODE, schedule_ci_job_api::ScheduleCiJobApi, None).await;
     Ok(())
 }
 

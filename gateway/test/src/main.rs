@@ -169,7 +169,7 @@ async fn start_serv() -> TardisResult<()> {
         },
     })
     .await?;
-    TardisFuns::web_server().add_module("auth", AuthApi).await.add_module("test", TestApi).await.start().await
+    TardisFuns::web_server().add_module("auth", AuthApi, None).await.add_module("test", TestApi, None).await.start().await
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

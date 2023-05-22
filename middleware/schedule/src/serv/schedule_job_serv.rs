@@ -12,7 +12,7 @@ use tardis::db::sea_orm::prelude::Uuid;
 use tardis::log::{error, info, trace};
 use tardis::tokio::sync::RwLock;
 use tardis::tokio::time;
-use tardis::web::web_resp::TardisPage;
+use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::{TardisFuns, TardisFunsInst};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
@@ -82,9 +82,13 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
 pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     // log this operation
     TardisFuns::web_client()
@@ -94,7 +98,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
                 ("tag", "schedule_job"),
                 ("content", "delete job"),
                 ("key", code),
-                ("op", "d"),
+                ("op", "delete"),
                 ("ts", &Utc::now().to_rfc3339()),
             ]),
             headers.clone(),
@@ -118,13 +122,17 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
 
 pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let resp = funs
         .web_client()
-        .get::<TardisPage<ScheduleJobKvSummaryResp>>(
+        .get::<TardisResp<TardisPage<ScheduleJobKvSummaryResp>>>(
             &format!(
                 "{}/ci/item/match?key_prefix={}&page_number={}&page_size={}",
                 kv_url,
@@ -136,9 +144,9 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
         )
         .await?;
     if resp.code != 200 {
-        return Err(funs.err().conflict("find_job", "find", "job is anomaly", ""));
+        return Err(funs.err().conflict("find_job", "find", &resp.body.unwrap().msg, ""));
     }
-    let page = resp.body.unwrap();
+    let page = resp.body.unwrap().data.unwrap();
     Ok(TardisPage {
         page_size: page.page_size,
         page_number: page.page_number,
@@ -146,12 +154,28 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
         records: page
             .records
             .into_iter()
-            .map(|record| ScheduleJobInfoResp {
-                code: record.key.replace(KV_KEY_CODE, ""),
-                cron: record.value.get("cron").map(ToString::to_string).unwrap_or_default(),
-                callback_url: record.value.get("callback_url").map(ToString::to_string).unwrap_or_default(),
-                create_time: Some(record.create_time),
-                update_time: Some(record.update_time),
+            .map(|record| {
+                let job = TardisFuns::json.str_to_obj::<ScheduleJobAddOrModifyReq>(&record.value.as_str().unwrap());
+                match job {
+                    Ok(job) => {
+                        return ScheduleJobInfoResp {
+                            code: record.key.replace(KV_KEY_CODE, ""),
+                            cron: job.cron,
+                            callback_url: job.callback_url,
+                            create_time: Some(record.create_time),
+                            update_time: Some(record.update_time),
+                        };
+                    }
+                    Err(_) => {
+                        return ScheduleJobInfoResp {
+                            code: record.key.replace(KV_KEY_CODE, ""),
+                            cron: "".to_string(),
+                            callback_url: "".to_string(),
+                            create_time: Some(record.create_time),
+                            update_time: Some(record.update_time),
+                        };
+                    }
+                }
             })
             .collect(),
     })
@@ -167,9 +191,13 @@ pub(crate) async fn find_task(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<ScheduleTaskInfoResp>> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let mut url = format!(
         "{}/ci/item?tag={}&key={}&page_number={}&page_size={}",
@@ -185,11 +213,11 @@ pub(crate) async fn find_task(
     if let Some(ts_end) = ts_end {
         url += &format!("&ts_end={}", ts_end.to_rfc3339());
     }
-    let resp = funs.web_client().get::<TardisPage<ScheduleTaskLogFindResp>>(&url, headers).await?;
+    let resp = funs.web_client().get::<TardisResp<TardisPage<ScheduleTaskLogFindResp>>>(&url, headers).await?;
     if resp.code != 200 {
-        return Err(funs.err().conflict("find_job", "find", "job is anomaly", ""));
+        return Err(funs.err().conflict("find_job", "find", &resp.body.unwrap().msg, ""));
     }
-    let page = resp.body.unwrap();
+    let page = resp.body.unwrap().data.unwrap();
     let mut records = vec![];
     let mut log_iter = page.records.into_iter();
     while let Some(start_log) = log_iter.next() {

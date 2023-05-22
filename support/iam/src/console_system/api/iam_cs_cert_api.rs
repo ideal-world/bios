@@ -92,7 +92,7 @@ impl IamCsCertApi {
         funs.begin().await?;
         IamCertServ::delete_cert_and_conf_by_conf_id(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)
@@ -132,7 +132,7 @@ impl IamCsCertApi {
             &ctx.0,
         )
         .await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)
