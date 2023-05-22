@@ -5,6 +5,8 @@ use bios_mw_schedule::serv::schedule_job_serv::ScheduleTaskServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::serde_json::json;
+use tardis::web::web_resp::Void;
 use tardis::TardisFunsInst;
 pub async fn test(client: &mut TestHttpClient, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
     client.set_auth(&TardisContext {
@@ -15,16 +17,17 @@ pub async fn test(client: &mut TestHttpClient, _funs: &TardisFunsInst, _ctx: &Ta
         owner: "app001".to_string(),
         ..Default::default()
     })?;
-    ScheduleTaskServ::add(
-        "",
-        ScheduleJobAddOrModifyReq {
-            code: TrimString("test".to_string()),
-            cron: "0/5 * * * * ? ".to_string(),
-            callback_url: "http://localhost:8080/schedule/ci/schedule/test/exec/123".to_string(),
-        },
-        &ScheduleConfig::default(),
-    )
-    .await?;
-    ScheduleTaskServ::delete("test").await?;
+    let req = json!({
+        "code": "test",
+        "cron": "0/5 * * * * ?",
+        "callback_url": "http://localhost:8080/schedule/ci/schedule/test/exec/123",
+    });
+    let _resp = client.put::<_, Void>(
+        "schedual/ci/schedule/jobs",
+        &req,
+    ).await;
+    client.delete(
+        "schedual/ci/schedule/jobs/test"
+    ).await;
     Ok(())
 }
