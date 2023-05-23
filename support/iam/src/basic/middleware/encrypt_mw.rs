@@ -2,12 +2,13 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tardis::web::poem_openapi;
 use tardis::{
     basic::error::TardisError,
     log,
     web::{
         poem::{self, endpoint::BoxEndpoint, http::HeaderValue, Body, Endpoint, IntoResponse, Middleware, Request, Response},
-        web_client::TardisHttpResponse,
+        web_resp::TardisResp,
         web_server::BoxMiddleware,
     },
 };
@@ -53,15 +54,22 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
 
                     let mut headers = HashMap::new();
                     headers.insert(funs.conf::<IamConfig>().crypto_conf.head_key_crypto.to_string(), key_crypto);
-                    let auth_encrypt_req = AuthEncryptReq { headers, body: resp_body };
+                    let auth_encrypt_req = AuthEncryptReq { headers, body: resp_body.clone() };
 
-                    let encrypt_resp: TardisHttpResponse<AuthEncryptResp> = funs
+                    let encrypt_resp: TardisResp<AuthEncryptResp> = funs
                         .web_client()
                         .put(&format!("{}/auth/crypto", funs.conf::<IamConfig>().crypto_conf.auth_url), &auth_encrypt_req, None)
                         .await
-                        .map_err(|e| TardisError::internal_error(&format!("[Iam] Encrypted api call error: {e}"), "401-auth-resp-crypto-error"))?;
+                        .map_err(|e| TardisError::internal_error(&format!("[Iam] Encrypted api call error: {e}"), "500-auth-resp-crypto-error"))?
+                        .body
+                        .ok_or(TardisError::internal_error(
+                            &format!("[Iam] Encrypted api call error: not found body"),
+                            "500-auth-resp-crypto-error",
+                        ))?;
 
-                    if let Some(resp_body) = encrypt_resp.body {
+                    if encrypt_resp.code != *"200" {
+                        return Err(TardisError::internal_error(&format!("Iam] Encrypted api call return error:{}", encrypt_resp.msg), "500-auth-resp-crypto-error").into());
+                    } else if let Some(resp_body) = encrypt_resp.data {
                         let encrypt_resp_header_value = resp_body.headers.get(&funs.conf::<IamConfig>().crypto_conf.head_key_crypto).unwrap();
                         let resp_headers = resp.headers_mut();
                         resp_headers.insert(
@@ -70,7 +78,7 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
                         );
                         resp.set_body(Body::from_string(resp_body.body));
                     } else {
-                        return Err(TardisError::internal_error(&format!("[Iam] Encrypted response body not found"), "401-auth-resp-crypto-error").into());
+                        resp.set_body(Body::from_string(resp_body));
                     }
                 }
                 Ok(resp)
@@ -86,7 +94,7 @@ pub struct AuthEncryptReq {
     pub body: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct AuthEncryptResp {
     pub headers: HashMap<String, String>,
     pub body: String,

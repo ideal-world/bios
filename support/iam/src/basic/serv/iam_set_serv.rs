@@ -21,10 +21,10 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT, self};
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
-use super::clients::spi_log_client::{SpiLogClient, LogParamTag, LogParamContent, LogParamOp};
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_rel_serv::IamRelServ;
 
 const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
@@ -195,9 +195,13 @@ impl IamSetServ {
                     Some(Utc::now().to_rfc3339()),
                     &funs,
                     &ctx_clone,
-                ).await.unwrap();
+                )
+                .await
+                .unwrap();
             })
-        })).await.unwrap();
+        }))
+        .await
+        .unwrap();
         result
     }
 
