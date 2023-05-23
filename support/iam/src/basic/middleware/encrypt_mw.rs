@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::error::TardisError,
+    log,
     web::{
         poem::{self, endpoint::BoxEndpoint, http::HeaderValue, Body, Endpoint, IntoResponse, Middleware, Request, Response},
         web_client::TardisHttpResponse,
@@ -47,6 +48,7 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
 
                 //如果有这个头，那么需要返回加密
                 if let Some(key_crypto) = req_head_crypto_value {
+                    log::trace!("[IAM.Middleware] key_crypto:{key_crypto}");
                     let resp_body = resp.take_body().into_string().await?;
 
                     let mut headers = HashMap::new();
@@ -55,7 +57,7 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
 
                     let encrypt_resp: TardisHttpResponse<AuthEncryptResp> = funs
                         .web_client()
-                        .put(&funs.conf::<IamConfig>().crypto_conf.auth_url, &auth_encrypt_req, None)
+                        .put(&format!("{}/auth/crypto", funs.conf::<IamConfig>().crypto_conf.auth_url), &auth_encrypt_req, None)
                         .await
                         .map_err(|e| TardisError::internal_error(&format!("[Iam] Encrypted api call error: {e}"), "401-auth-resp-crypto-error"))?;
 
