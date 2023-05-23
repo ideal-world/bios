@@ -47,10 +47,8 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
     )]);
     // if exist delete it first
-    {
-        if let Some(_uuid) = unsafe { service() }.code_uuid.write().await.get(code) {
-            self::delete(code, funs, ctx).await?;
-        }
+    if unsafe { service().code_uuid.write().await.get(code).is_some() } {
+        self::delete(code, funs, ctx).await?;
     }
     // log this operation
     funs.web_client()
@@ -100,10 +98,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
             headers.clone(),
         )
         .await?;
-    let has_job = {
-        unsafe { service() }.code_uuid.read().await.get(code).is_some()
-    };
-    if has_job {
+    if unsafe { service().code_uuid.read().await.get(code).is_some() } {
         // delete schedual-task from kv cache first
         funs.web_client()
             .delete_to_void(
@@ -310,10 +305,9 @@ impl OwnedScheduleTaskServ {
     }
     /// add schedule task
     pub async fn add(&self, log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
-        {
-            if let Some(_uuid) = self.code_uuid.read().await.get(&add_or_modify.code.0) {
-                self.delete(&add_or_modify.code.0).await?;
-            }
+        let has_job = { self.code_uuid.read().await.get(&add_or_modify.code.0).is_some() };
+        if has_job {
+            self.delete(&add_or_modify.code.0).await?;
         }
         let callback_url = add_or_modify.callback_url.clone();
         let log_url = log_url.to_string();

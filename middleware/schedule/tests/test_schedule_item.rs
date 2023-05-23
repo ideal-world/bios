@@ -26,7 +26,11 @@ pub async fn test(client: &mut TestHttpClient, _funs: &TardisFunsInst, _ctx: &Ta
         "/ci/schedule/jobs",
         &req,
     ).await;
-    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+    let _resp = client.put::<_, Void>(
+        "/ci/schedule/jobs",
+        &req,
+    ).await;
+    // tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     client.delete(
         "/ci/schedule/jobs/test"
     ).await;
