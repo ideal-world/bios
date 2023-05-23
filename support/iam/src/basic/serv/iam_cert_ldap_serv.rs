@@ -597,27 +597,29 @@ impl IamCertLdapServ {
     ) -> TardisResult<String> {
         //验证用户名密码登录
         let (_, _, rbum_item_id) = if let Some(tenant_id) = tenant_id.clone() {
-            let global_check = RbumCertServ::validate_by_ak_and_basic_sk(
+            let global_check = IamCertServ::validate_by_ak_and_sk(
                 user_name,
                 password,
-                &RbumCertRelKind::Item,
+                None,
+                Some(&RbumCertRelKind::Item),
                 false,
                 Some("".to_string()),
-                vec![&IamCertKernelKind::UserPwd.to_string()],
+                Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                 funs,
-            )
-            .await;
+                ctx,
+            ).await;
             if global_check.is_err() {
-                let tenant_check = RbumCertServ::validate_by_ak_and_basic_sk(
+                let tenant_check = IamCertServ::validate_by_ak_and_sk(
                     user_name,
                     password,
-                    &RbumCertRelKind::Item,
+                    None,
+                    Some(&RbumCertRelKind::Item),
                     false,
-                    Some(tenant_id.clone()),
-                    vec![&IamCertKernelKind::UserPwd.to_string()],
+                    Some(tenant_id.to_string()),
+                    Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                     funs,
-                )
-                .await;
+                    ctx,
+                ).await;
                 if tenant_check.is_ok() && ctx.own_paths.is_empty() {
                     return Err(funs.err().conflict("rbum_cert", "bind_user_pwd_by_ldap", "user is private", "409-user-is-private"));
                 } else if tenant_check.is_err() {
@@ -629,16 +631,17 @@ impl IamCertLdapServ {
                 global_check?
             }
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(
+            IamCertServ::validate_by_ak_and_sk(
                 user_name,
                 password,
-                &RbumCertRelKind::Item,
+                None,
+                Some(&RbumCertRelKind::Item),
                 false,
                 Some("".to_string()),
-                vec![&IamCertKernelKind::UserPwd.to_string()],
+                Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                 funs,
-            )
-            .await?
+                ctx,
+            ).await?
         };
         if Self::check_user_pwd_is_bind(user_name, code, tenant_id.clone(), funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "user is bound by ldap", "409-iam-user-is-bound"));

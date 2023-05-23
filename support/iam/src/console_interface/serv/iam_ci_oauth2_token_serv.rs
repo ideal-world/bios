@@ -1,8 +1,10 @@
 use crate::basic::dto::iam_cert_dto::IamOauth2AkSkResp;
+use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_enumeration::{IamCertKernelKind, IamCertTokenKind, Oauth2GrantType};
 use bios_basic::rbum::rbum_enumeration::RbumCertRelKind;
 use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
+use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -15,17 +17,19 @@ impl IamCiOauth2AkSkServ {
         client_secret: &str,
         _scope: Option<String>,
         funs: TardisFunsInst,
+        ctx: TardisContext,
     ) -> TardisResult<IamOauth2AkSkResp> {
-        let (_, _, rel_iam_item_id) = RbumCertServ::validate_by_ak_and_basic_sk(
+        let (_, _, rel_iam_item_id) = IamCertServ::validate_by_ak_and_sk(
             client_id,
             client_secret,
-            &RbumCertRelKind::Item,
+            None,
+            Some(&RbumCertRelKind::Item),
             false,
             None,
-            vec![&IamCertKernelKind::AkSk.to_string()],
+            Some(vec![&IamCertKernelKind::AkSk.to_string()]),
             &funs,
-        )
-        .await?;
+            &ctx,
+        ).await?;
         match grant_type {
             Oauth2GrantType::AuthorizationCode => {}
             Oauth2GrantType::Password => {}

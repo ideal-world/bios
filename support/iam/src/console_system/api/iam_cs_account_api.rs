@@ -13,6 +13,7 @@ use crate::basic::dto::iam_account_dto::{
     AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp,
 };
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
+use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient, LogParamContent, LogParamOp};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -284,7 +285,29 @@ impl IamCsAccountApi {
             &ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0.clone(), true, "".to_string(), &funs, ctx.clone()).await?;
+        let id = id.0.clone();
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamAccount,
+                    LogParamContent {
+                        op: "人工锁定账号".to_string(),
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id.clone()),
+                    LogParamOp::Modify,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                ).await.unwrap();
+            })
+        })).await.unwrap();
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

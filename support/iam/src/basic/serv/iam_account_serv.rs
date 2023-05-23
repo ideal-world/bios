@@ -50,6 +50,7 @@ use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamC
 
 use super::clients::mail_client::MailClient;
 use super::clients::sms_client::SmsClient;
+use super::clients::spi_log_client::{SpiLogClient, LogParamOp, LogParamTag, LogParamContent};
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -139,14 +140,67 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
+
+        let mut op_describe = "".to_string();
+        if modify_req.status == Some(IamAccountStatusKind::Logout) {
+            op_describe = "注销账号".to_string();
+        }
+        let id = id.to_string();
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamAccount,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id.clone()),
+                    LogParamOp::Modify,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                ).await.unwrap();
+            })
+        })).await.unwrap();
         Ok(())
     }
 
-    async fn after_add_item(_id: &str, _: &mut IamAccountAddReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut op_describe = "添加长期账号".to_string();
+        if add_req.temporary == Some(true) {
+            op_describe = "添加临时账号".to_string();
+        }
+        let id = id.to_string();
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamAccount,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id.clone()),
+                    LogParamOp::Add,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                ).await.unwrap();
+            })
+        })).await.unwrap();
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {

@@ -70,6 +70,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             flag: None
         },
         &funs,
+        context
     )
     .await
     .is_err());
@@ -91,6 +92,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             flag: None
         },
         &funs,
+        context
     )
     .await
     .is_err());
@@ -102,6 +104,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             flag: None,
         },
         &funs,
+        context
     )
     .await?;
 
@@ -148,6 +151,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             flag: None,
         },
         &funs,
+        context
     )
     .await?;
 
