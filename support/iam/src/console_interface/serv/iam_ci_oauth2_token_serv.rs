@@ -35,7 +35,7 @@ impl IamCiOauth2AkSkServ {
         let access_token = TardisFuns::crypto.key.generate_token()?;
         let refresh_token = TardisFuns::crypto.key.generate_token()?;
         let expire_sec = 30 * 24 * 60 * 60;
-        IamIdentCacheServ::add_token(&access_token.clone(), &IamCertTokenKind::TokenOauth2, &rel_iam_item_id, expire_sec, 1, &funs).await?;
+        IamIdentCacheServ::add_token(&access_token.clone(), &IamCertTokenKind::TokenOauth2, &rel_iam_item_id, None, expire_sec, 1, &funs).await?;
         Ok(IamOauth2AkSkResp {
             access_token,
             token_type: "Bearer".to_string(),

@@ -71,14 +71,14 @@ impl TaskProcessor {
         T: Future<Output = TardisResult<()>> + Send + 'static,
     {
         let task_id = Self::execute_task(cache_key, process, funs).await?;
-        if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG)? {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}"))
+        if let Some(exist_task_ids) = ctx.get_ext(TASK_IN_CTX_FLAG).await? {
+            ctx.add_ext(TASK_IN_CTX_FLAG, &format!("{exist_task_ids},{task_id}")).await
         } else {
-            ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string())
+            ctx.add_ext(TASK_IN_CTX_FLAG, &task_id.to_string()).await
         }
     }
 
-    pub fn add_notify_event(table_name: &str, operate: &str, record_id: &str, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_notify_event(table_name: &str, operate: &str, record_id: &str, ctx: &TardisContext) -> TardisResult<()> {
         ctx.add_ext(
             &format!("{}{}", NOTIFY_EVENT_IN_CTX_FLAG, TardisFuns::field.nanoid()),
             &tardis::TardisFuns::json.obj_to_string(&NotifyEventMessage {
@@ -87,14 +87,15 @@ impl TaskProcessor {
                 record_id: record_id.to_string(),
             })?,
         )
+        .await
     }
 
-    pub fn get_task_id_with_ctx(ctx: &TardisContext) -> TardisResult<Option<String>> {
-        ctx.get_ext(TASK_IN_CTX_FLAG)
+    pub async fn get_task_id_with_ctx(ctx: &TardisContext) -> TardisResult<Option<String>> {
+        ctx.get_ext(TASK_IN_CTX_FLAG).await
     }
 
-    pub fn get_notify_event_with_ctx(ctx: &TardisContext) -> TardisResult<Option<Vec<NotifyEventMessage>>> {
-        let notify_events = ctx.ext.read()?;
+    pub async fn get_notify_event_with_ctx(ctx: &TardisContext) -> TardisResult<Option<Vec<NotifyEventMessage>>> {
+        let notify_events = ctx.ext.read().await;
         let notify_events = notify_events
             .iter()
             .filter(|(k, _)| k.starts_with(NOTIFY_EVENT_IN_CTX_FLAG))

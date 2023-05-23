@@ -309,6 +309,45 @@ impl IamConfigDataTypeKind {
     pub fn parse(kind: &str) -> TardisResult<IamConfigDataTypeKind> {
         IamConfigDataTypeKind::from_str(kind).map_err(|_| TardisError::format_error(&format!("not config data type kind: {kind}"), "404-iam-config-data-type-not-exist"))
     }
+
+    pub fn to_int(&self, value: String) -> Option<i64> {
+        match self {
+            IamConfigDataTypeKind::Number => Some(value.parse().unwrap()),
+            IamConfigDataTypeKind::Month => None,
+            IamConfigDataTypeKind::Minute => None,
+            IamConfigDataTypeKind::Hour => None,
+            IamConfigDataTypeKind::Day => None,
+            IamConfigDataTypeKind::DatetimeRange => None,
+            IamConfigDataTypeKind::TimeRange => None,
+            IamConfigDataTypeKind::Ips => None,
+        }
+    }
+
+    pub fn to_float(&self, value: String) -> Option<f64> {
+        match self {
+            IamConfigDataTypeKind::Number => Some(value.parse().unwrap()),
+            IamConfigDataTypeKind::Month => None,
+            IamConfigDataTypeKind::Minute => None,
+            IamConfigDataTypeKind::Hour => None,
+            IamConfigDataTypeKind::Day => None,
+            IamConfigDataTypeKind::DatetimeRange => None,
+            IamConfigDataTypeKind::TimeRange => None,
+            IamConfigDataTypeKind::Ips => None,
+        }
+    }
+
+    pub fn to_sec(&self, value: String) -> Option<i64> {
+        match self {
+            IamConfigDataTypeKind::Number => Some(value.parse().unwrap()),
+            IamConfigDataTypeKind::Month => Some(value.parse::<i64>().unwrap() * 30 * 24 * 60 * 60),
+            IamConfigDataTypeKind::Minute => Some(value.parse::<i64>().unwrap() * 60),
+            IamConfigDataTypeKind::Hour => Some(value.parse::<i64>().unwrap() * 60 * 60),
+            IamConfigDataTypeKind::Day => Some(value.parse::<i64>().unwrap() * 24 * 60 * 60),
+            IamConfigDataTypeKind::DatetimeRange => None,
+            IamConfigDataTypeKind::TimeRange => None,
+            IamConfigDataTypeKind::Ips => None,
+        }
+    }
 }
 
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]

@@ -641,6 +641,8 @@ async fn test_rbum_item_with_none_owner_name(context: &TardisContext) -> TardisR
         roles: context.roles.clone(),
         groups: context.groups.clone(),
         ext: context.ext.clone(),
+        sync_task_fns: Default::default(),
+        async_task_fns: Default::default(),
     };
     info!("【test_rbum_item_with_none_owner_name】 : Prepare : RbumKindServ::add_rbum");
     let kind_id = RbumKindServ::add_rbum(

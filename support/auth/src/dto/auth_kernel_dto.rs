@@ -58,6 +58,8 @@ impl AuthResp {
                     roles: if let Some(roles) = &ctx.roles { roles.clone() } else { vec![] },
                     groups: if let Some(groups) = &ctx.groups { groups.clone() } else { vec![] },
                     ext: Default::default(),
+                    sync_task_fns: Default::default(),
+                    async_task_fns: Default::default(),
                 };
                 TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap())
             } else {

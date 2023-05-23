@@ -41,7 +41,7 @@ fn init_behavior(strict_security_mode: bool, _service_url: &str) -> TardisResult
         js_sys::Reflect::set(
             &wasm_bindgen::JsValue::from(web_sys::window().unwrap()),
             &wasm_bindgen::JsValue::from(constants::BIOS_SERV_URL_CONFIG),
-            &wasm_bindgen::JsValue::from(service_url),
+            &wasm_bindgen::JsValue::from(_service_url),
         )?;
         if constants::get_strict_security_mode()? {
             crate::mini_tardis::channel::init(
@@ -49,18 +49,18 @@ fn init_behavior(strict_security_mode: bool, _service_url: &str) -> TardisResult
                 |_| {
                     let config_container = crate::constants::SESSION_CONFIG.read().unwrap();
                     if let Some(config) = config_container.as_ref() {
-                        mini_tardis::channel::send(crate::constants::BIOS_SESSION_CONFIG, config).unwrap();
+                        crate::mini_tardis::channel::send(crate::constants::BIOS_SESSION_CONFIG, config).unwrap();
                     }
                 },
                 |session_config| {
-                    let session_config = mini_tardis::serde::jsvalue_to_obj::<crate::constants::SessionConfig>(session_config).unwrap();
+                    let session_config = crate::mini_tardis::serde::jsvalue_to_obj::<crate::constants::SessionConfig>(session_config).unwrap();
                     crate::constants::init_session_config(session_config).unwrap();
                 },
             )?;
             if let Ok(Some(storage)) = web_sys::window().unwrap().session_storage() {
                 if let Ok(Some(session_config)) = storage.get(constants::BIOS_SESSION_CONFIG) {
                     let session_config = crypto_process::simple_decrypt(&session_config)?;
-                    let session_config = mini_tardis::serde::str_to_obj::<crate::constants::SessionConfig>(&session_config)?;
+                    let session_config = crate::mini_tardis::serde::str_to_obj::<crate::constants::SessionConfig>(&session_config)?;
                     return crate::constants::init_session_config(session_config);
                 }
             }
@@ -68,7 +68,7 @@ fn init_behavior(strict_security_mode: bool, _service_url: &str) -> TardisResult
             if let Ok(Some(storage)) = web_sys::window().unwrap().local_storage() {
                 if let Ok(Some(session_config)) = storage.get(constants::BIOS_SESSION_CONFIG) {
                     let session_config = crypto_process::simple_decrypt(&session_config)?;
-                    let session_config = mini_tardis::serde::str_to_obj::<crate::constants::SessionConfig>(&session_config)?;
+                    let session_config = crate::mini_tardis::serde::str_to_obj::<crate::constants::SessionConfig>(&session_config)?;
                     return crate::constants::init_session_config(session_config);
                 }
             }
@@ -87,17 +87,17 @@ pub(crate) fn change_behavior(_session_config: &SessionConfig, _only_storage: bo
             if let Ok(Some(storage)) = web_sys::window().unwrap().session_storage() {
                 storage.set(
                     constants::BIOS_SESSION_CONFIG,
-                    &crypto_process::simple_encrypt(&mini_tardis::serde::obj_to_str(session_config)?)?,
+                    &crypto_process::simple_encrypt(&crate::mini_tardis::serde::obj_to_str(_session_config)?)?,
                 )?;
             }
-            if !only_storage {
-                crate::mini_tardis::channel::send(constants::BIOS_SESSION_CONFIG, session_config)?;
+            if !_only_storage {
+                crate::mini_tardis::channel::send(constants::BIOS_SESSION_CONFIG, _session_config)?;
             }
         } else {
             if let Ok(Some(storage)) = web_sys::window().unwrap().local_storage() {
                 storage.set(
                     constants::BIOS_SESSION_CONFIG,
-                    &crypto_process::simple_encrypt(&mini_tardis::serde::obj_to_str(session_config)?)?,
+                    &crypto_process::simple_encrypt(&crate::mini_tardis::serde::obj_to_str(_session_config)?)?,
                 )?;
             }
         }

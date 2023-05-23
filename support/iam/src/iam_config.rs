@@ -9,6 +9,7 @@ use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::rbum_config::RbumConfig;
+use tardis::web::poem::http::HeaderName;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -58,6 +59,7 @@ pub struct IamConfig {
     pub spi: IamSpiConfig,
     pub iam_base_url: String,
     pub strict_security_mode: bool,
+    pub crypto_conf: CryptoConf,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -146,6 +148,28 @@ impl Default for IamConfig {
             iam_base_url: "http://localhost:8080/iam".to_string(),
             spi: Default::default(),
             strict_security_mode: false,
+            crypto_conf: CryptoConf::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CryptoConf {
+    pub head_key_crypto: String,
+    pub auth_url: String,
+}
+impl CryptoConf {
+    pub fn get_crypto_header_name(&self) -> TardisResult<HeaderName> {
+        HeaderName::try_from(&self.head_key_crypto)
+            .map_err(|e| TardisError::custom("500", &format!("[Iam] head_key_crypto config error,can't be HeaderName: {e}"), "500-config-parse-error"))
+    }
+}
+
+impl Default for CryptoConf {
+    fn default() -> Self {
+        CryptoConf {
+            head_key_crypto: "bios-crypto".to_string(),
+            auth_url: "http://127.0.0.1:8080/auth".to_string(),
         }
     }
 }

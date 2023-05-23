@@ -26,23 +26,31 @@ use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
-    pub async fn add_token(token: &str, token_kind: &IamCertTokenKind, rel_iam_item_id: &str, expire_sec: i64, coexist_num: i16, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn add_token(
+        token: &str,
+        token_kind: &IamCertTokenKind,
+        rel_iam_item_id: &str,
+        renewal_expire_sec: Option<i64>,
+        expire_sec: i64,
+        coexist_num: i16,
+        funs: &TardisFunsInst,
+    ) -> TardisResult<()> {
+        let token_value = if let Some(renewal_expire_sec) = renewal_expire_sec {
+            format!("{token_kind},{rel_iam_item_id},{}", renewal_expire_sec.to_string())
+        } else {
+            format!("{token_kind},{rel_iam_item_id}")
+        };
         log::trace!("add token: token={}", token);
         if expire_sec > 0 {
             funs.cache()
                 .set_ex(
                     format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{token_kind},{rel_iam_item_id}").as_str(),
+                    token_value.as_str(),
                     expire_sec as usize,
                 )
                 .await?;
         } else {
-            funs.cache()
-                .set(
-                    format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(),
-                    format!("{token_kind},{rel_iam_item_id}").as_str(),
-                )
-                .await?;
+            funs.cache().set(format!("{}{}", funs.conf::<IamConfig>().cache_key_token_info_, token).as_str(), token_value.as_str()).await?;
         }
         funs.cache()
             .hset(
@@ -373,7 +381,17 @@ impl IamResCacheServ {
         res_auth.apps = res_auth.apps.replace("##", "#");
         res_auth.tenants = res_auth.tenants.replace("##", "#");
 
-        res_dto.auth = Some(res_auth);
+        if (res_auth.accounts == "#" || res_auth.accounts == "##")
+            && (res_auth.roles == "#" || res_auth.roles == "##")
+            && (res_auth.groups == "#" || res_auth.groups == "##")
+            && (res_auth.apps == "#" || res_auth.apps == "##")
+            && (res_auth.tenants == "#" || res_auth.tenants == "##")
+        {
+            res_dto.auth = None;
+        } else {
+            res_dto.auth = Some(res_auth);
+        }
+
         funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
         Self::add_change_trigger(&uri_mixed, funs).await
     }
@@ -385,7 +403,7 @@ impl IamResCacheServ {
         if let Some(rels) = rels {
             let mut res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
             if let Some(res_auth) = res_dto.auth {
-                let mut auth = res_auth.clone();
+                let mut auth = res_auth;
                 for account in &delete_req.accounts {
                     auth.accounts = auth.accounts.replace(&format!("#{account}#"), "#");
                 }
