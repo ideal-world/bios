@@ -136,8 +136,8 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             LogParamOp::Add,
             None,
             Some(Utc::now().to_rfc3339()),
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         Ok(())
@@ -167,8 +167,8 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             LogParamOp::Modify,
             None,
             Some(Utc::now().to_rfc3339()),
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         Ok(())
