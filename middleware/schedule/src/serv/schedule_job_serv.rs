@@ -35,7 +35,6 @@ unsafe fn service() -> Arc<OwnedScheduleTaskServ> {
     MAYBE_GLOBAL_SERV.as_ref().cloned().expect("tring to get scheduler before it's initialized")
 }
 
-
 // still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
 // same as `delete`
 pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

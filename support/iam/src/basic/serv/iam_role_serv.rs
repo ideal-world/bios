@@ -28,7 +28,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
-use super::clients::spi_log_client::{SpiLogClient, LogParamTag, LogParamContent, LogParamOp};
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 
 pub struct IamRoleServ;
 
@@ -195,7 +195,11 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
 
         let mut op_describe = String::new();
         if modify_req.name.is_some() {
-            op_describe = format!("编辑{}角色名称为{}", if Self::is_custom_role(role.kind, role.scope_level) { "自定义" } else { "内置" }, modify_req.name.as_ref().unwrap());
+            op_describe = format!(
+                "编辑{}角色名称为{}",
+                if Self::is_custom_role(role.kind, role.scope_level) { "自定义" } else { "内置" },
+                modify_req.name.as_ref().unwrap()
+            );
         }
 
         if !op_describe.is_empty() {
@@ -282,7 +286,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await?;
-        
+
         let id = id.to_string();
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
@@ -383,7 +387,12 @@ impl IamRoleServ {
             .await?;
             let id = id.to_string();
             let ctx_clone = ctx.clone();
-            let op_describe = if Self::is_custom_role(role.kind, role.scope_level) { "编辑自定义角色权限" } else { "编辑内置角色权限" }.to_string();
+            let op_describe = if Self::is_custom_role(role.kind, role.scope_level) {
+                "编辑自定义角色权限"
+            } else {
+                "编辑内置角色权限"
+            }
+            .to_string();
             ctx.add_async_task(Box::new(|| {
                 Box::pin(async move {
                     let funs = iam_constants::get_tardis_inst();
@@ -628,5 +637,5 @@ impl IamRoleServ {
 
     pub fn is_custom_role(kind: IamRoleKind, scope_level: RbumScopeLevelKind) -> bool {
         kind != IamRoleKind::System && scope_level == RbumScopeLevelKind::Private
-    } 
+    }
 }
