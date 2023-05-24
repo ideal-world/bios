@@ -32,7 +32,8 @@ impl IamCpCertPhoneVCodeServ {
             Some(login_req.tenant_id.clone()),
             None,
             funs,
-        ).await;
+        )
+        .await;
         let (_, _, rbum_item_id) = if let Some(e) = result.clone().err() {
             if e.code == "401-iam-cert-valid" {
                 IamCertServ::validate_by_ak_and_sk(
@@ -44,7 +45,8 @@ impl IamCpCertPhoneVCodeServ {
                     Some("".to_string()),
                     None,
                     funs,
-                ).await?
+                )
+                .await?
             } else {
                 result?
             }

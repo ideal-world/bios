@@ -145,10 +145,13 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
                     &funs,
                     &ctx_clone,
                 )
-                .await.unwrap();
+                .await
+                .unwrap();
             })
-        })).await.unwrap();
-        
+        }))
+        .await
+        .unwrap();
+
         Ok(())
     }
     async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -184,9 +187,12 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
                     &funs,
                     &ctx_clone,
                 )
-                .await.unwrap();
+                .await
+                .unwrap();
             })
-        })).await.unwrap();
+        }))
+        .await
+        .unwrap();
 
         Ok(())
     }

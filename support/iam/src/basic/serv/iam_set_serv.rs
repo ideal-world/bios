@@ -23,10 +23,10 @@ use tardis::{TardisFuns, TardisFunsInst};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT, self};
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
-use super::clients::spi_log_client::{SpiLogClient, LogParamTag, LogParamContent, LogParamOp};
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
 
@@ -199,16 +199,20 @@ impl IamSetServ {
                         Some(Utc::now().to_rfc3339()),
                         &funs,
                         &ctx_clone,
-                    ).await.unwrap();
+                    )
+                    .await
+                    .unwrap();
                 })
-            })).await.unwrap();
+            }))
+            .await
+            .unwrap();
         }
 
         result
     }
 
     pub async fn modify_set_cate(set_cate_id: &str, modify_req: &IamSetCateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let result= RbumSetCateServ::modify_rbum(
+        let result = RbumSetCateServ::modify_rbum(
             set_cate_id,
             &mut RbumSetCateModifyReq {
                 bus_code: modify_req.bus_code.clone(),
@@ -244,9 +248,13 @@ impl IamSetServ {
                             Some(Utc::now().to_rfc3339()),
                             &funs,
                             &ctx_clone,
-                        ).await.unwrap();
+                        )
+                        .await
+                        .unwrap();
                     })
-                })).await.unwrap();
+                }))
+                .await
+                .unwrap();
             }
         }
 
@@ -276,9 +284,13 @@ impl IamSetServ {
                         Some(Utc::now().to_rfc3339()),
                         &funs,
                         &ctx_clone,
-                    ).await.unwrap();
+                    )
+                    .await
+                    .unwrap();
                 })
-            })).await.unwrap();
+            }))
+            .await
+            .unwrap();
         }
 
         result
@@ -529,7 +541,8 @@ impl IamSetServ {
             },
             funs,
             ctx,
-        ).await;
+        )
+        .await;
 
         let set_id = add_req.set_id.clone();
         if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
@@ -553,9 +566,13 @@ impl IamSetServ {
                         Some(Utc::now().to_rfc3339()),
                         &funs,
                         &ctx_clone,
-                    ).await.unwrap();
+                    )
+                    .await
+                    .unwrap();
                 })
-            })).await.unwrap();
+            }))
+            .await
+            .unwrap();
         }
 
         result
@@ -566,12 +583,7 @@ impl IamSetServ {
     }
 
     pub async fn delete_set_item(set_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let item = RbumSetItemServ::get_rbum(
-            set_item_id,
-            &RbumSetItemFilterReq::default(),
-            funs,
-            ctx
-        ).await.unwrap();
+        let item = RbumSetItemServ::get_rbum(set_item_id, &RbumSetItemFilterReq::default(), funs, ctx).await.unwrap();
 
         let result = RbumSetItemServ::delete_rbum(set_item_id, funs, ctx).await;
 
@@ -597,9 +609,13 @@ impl IamSetServ {
                             Some(Utc::now().to_rfc3339()),
                             &funs,
                             &ctx_clone,
-                        ).await.unwrap();
+                        )
+                        .await
+                        .unwrap();
                     })
-                })).await.unwrap();
+                }))
+                .await
+                .unwrap();
             }
         }
 

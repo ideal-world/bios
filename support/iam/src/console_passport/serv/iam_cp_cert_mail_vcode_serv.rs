@@ -30,7 +30,8 @@ impl IamCpCertMailVCodeServ {
             Some(login_req.tenant_id.clone()),
             None,
             funs,
-        ).await?;
+        )
+        .await?;
         let resp = IamCertServ::package_tardis_context_and_resp(Some(login_req.tenant_id.clone()), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
         Ok(resp)
     }

@@ -606,7 +606,8 @@ impl IamCertLdapServ {
                 Some("".to_string()),
                 Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                 funs,
-            ).await;
+            )
+            .await;
             if global_check.is_err() {
                 let tenant_check = IamCertServ::validate_by_ak_and_sk(
                     user_name,
@@ -617,7 +618,8 @@ impl IamCertLdapServ {
                     Some(tenant_id.to_string()),
                     Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                     funs,
-                ).await;
+                )
+                .await;
                 if tenant_check.is_ok() && ctx.own_paths.is_empty() {
                     return Err(funs.err().conflict("rbum_cert", "bind_user_pwd_by_ldap", "user is private", "409-user-is-private"));
                 } else if tenant_check.is_err() {
@@ -638,7 +640,8 @@ impl IamCertLdapServ {
                 Some("".to_string()),
                 Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                 funs,
-            ).await?
+            )
+            .await?
         };
         if Self::check_user_pwd_is_bind(user_name, code, tenant_id.clone(), funs).await? {
             return Err(funs.err().not_found("rbum_cert", "bind_user_pwd_by_ldap", "user is bound by ldap", "409-iam-user-is-bound"));

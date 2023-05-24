@@ -50,7 +50,7 @@ use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamC
 
 use super::clients::mail_client::MailClient;
 use super::clients::sms_client::SmsClient;
-use super::clients::spi_log_client::{SpiLogClient, LogParamOp, LogParamTag, LogParamContent};
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -168,9 +168,13 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,
                     &ctx_clone,
-                ).await.unwrap();
+                )
+                .await
+                .unwrap();
             })
-        })).await.unwrap();
+        }))
+        .await
+        .unwrap();
         Ok(())
     }
 
@@ -198,9 +202,13 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,
                     &ctx_clone,
-                ).await.unwrap();
+                )
+                .await
+                .unwrap();
             })
-        })).await.unwrap();
+        }))
+        .await
+        .unwrap();
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {

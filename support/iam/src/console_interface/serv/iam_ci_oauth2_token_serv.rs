@@ -25,7 +25,8 @@ impl IamCiOauth2AkSkServ {
             None,
             Some(vec![&IamCertKernelKind::AkSk.to_string()]),
             &funs,
-        ).await?;
+        )
+        .await?;
         match grant_type {
             Oauth2GrantType::AuthorizationCode => {}
             Oauth2GrantType::Password => {}
