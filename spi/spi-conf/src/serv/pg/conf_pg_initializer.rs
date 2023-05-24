@@ -68,7 +68,7 @@ pub async fn init_table_and_conn_config(
             r#"id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     data_id character varying NOT NULL,
     grp character varying NOT NULL DEFAULT 'DEFAULT-GROUP',
-    namespace_id character varying NOT NULL DEFAULT 'public' REFERENCES {namespace_table_name},
+    namespace_id character varying NOT NULL DEFAULT 'public' REFERENCES {namespace_table_name} ON DELETE CASCADE,
     md5 character(32) NOT NULL,
     content text NOT NULL,
     schema character varying,

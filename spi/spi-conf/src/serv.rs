@@ -18,10 +18,10 @@ macro_rules! dispatch_servive {
     )*) => {
         $(
             $(#[$attr])*
-            pub async fn $service($($arg: $type),*,funs: &TardisFunsInst, ctx: &TardisContext) -> $ret {
+            pub async fn $service($($arg: $type,)* funs: &TardisFunsInst, ctx: &TardisContext) -> $ret {
                 match funs.init(ctx, true, conf_initializer::init_fun).await?.as_str() {
                     #[cfg(feature = "spi-pg")]
-                    spi_constants::SPI_PG_KIND_CODE => pg::$service($($arg),*, funs, ctx).await,
+                    spi_constants::SPI_PG_KIND_CODE => pg::$service($($arg,)* funs, ctx).await,
                     kind_code => Err(funs.bs_not_implemented(kind_code)),
                 }
             }
@@ -35,6 +35,12 @@ dispatch_servive! {
     create_namespace(attribute: &mut NamespaceAttribute) -> TardisResult<()>;
     /// get a namespace
     get_namespace(discriptor: &mut NamespaceDescriptor) -> TardisResult<NamespaceItem>;
+    /// update namespace
+    edit_namespace(attribute: &mut NamespaceAttribute) -> TardisResult<()>;
+    /// delete namespace
+    delete_namespace(discriptor: &mut NamespaceDescriptor) -> TardisResult<()>;
+    /// list namespace
+    get_namespace_list() -> TardisResult<Vec<NamespaceItem>>;
 
     // for configs
     /// publich config
@@ -45,4 +51,5 @@ dispatch_servive! {
     get_md5(descriptor: &mut ConfigDescriptor) -> TardisResult<String>;
     /// delete config
     delete_config(descriptor: &mut ConfigDescriptor) -> TardisResult<bool>;
+    
 }

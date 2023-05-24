@@ -16,7 +16,7 @@ use serde::__private::de;
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, json, result::TardisResult},
     log::debug,
-    serde_json::json,
+    serde_json::{json, Value},
     testcontainers, tokio,
     web::web_resp::{TardisResp, Void},
     TardisFuns,
@@ -30,7 +30,7 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
     let docker = testcontainers::clients::Cli::default();
     let container_hold = init_rbum_test_container::init(&docker, None).await?;
     init_tardis().await?;
-    let web_server_hanlde = start_web_server();
+    let _web_server_hanlde = start_web_server();
     let tardis_ctx = TardisContext::default();
     let mut client = TestHttpClient::new("https://localhost:8080/spi-conf".to_string());
     client.set_auth(&tardis_ctx)?;
@@ -52,13 +52,13 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         )
         .await;
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
-    test(&mut client).await?;
-    web_server_hanlde.await.unwrap()?;
+    test_curd(&mut client).await?;
+    // web_server_hanlde.await.unwrap()?;
     drop(container_hold);
     Ok(())
 }
 
-pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
+pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -67,6 +67,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         owner: "app001".to_string(),
         ..Default::default()
     })?;
+    // 1. create namespace
     let _response = client
         .post::<_, bool>(
             "/ci/namespace",
@@ -87,6 +88,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             },
         )
         .await;
+    // 2. publish a config
     let _response = client
         .post::<_, bool>(
             "/ci/cs/config",
@@ -98,12 +100,61 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
+    // 3. retrieve config
     let _response = client.get::<String>("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    // 4. get namespace info
     let _response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=public").await;
     assert_eq!(_response.config_count, 1);
+    // 4.1 get namespace list
+    let _response = client.get::<Vec<NamespaceItem>>("/ci/namespace/list").await;
+    assert_eq!(_response.len(), 3);
+    // since we have published a config, the config_count should be 1
+    // 5. delete config
     client.delete("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    // 6. get namespace info
     let _response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=public").await;
+    // since we have deleted the config, the config_count should be 0
     assert_eq!(_response.config_count, 0);
+    // 7. update namespace
+    let _response = client
+        .put::<_, bool>(
+            "/ci/namespace",
+            &NamespaceAttribute {
+                namespace: "test1".to_string(),
+                namespace_show_name: "测试命名空间1".to_string(),
+                namespace_desc: Some("测试命名空间1-修改".to_string()),
+            },
+        )
+        .await;
+    // varify the namespace_desc has been updated
+    let response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=test1").await;
+    assert_eq!(&response.namespace_desc.unwrap(), "测试命名空间1-修改");
+
+    // 8. delete namespace
+    // 8.1 first publish a config
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": include_str!("./config/conf-default.toml").to_string(),
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-default".to_string(),
+                "schema": "toml",
+                "namespace_id": "test1".to_string(),
+            }),
+        )
+        .await;
+    // 8.2 delete namespace
+    client.delete("/ci/namespace?namespace_id=test1").await;
+    // 8.3 verify the namespace has been deleted
+    let response = client.get_resp::<Value>("/ci/namespace?namespace_id=test1").await;
+    // since namespace has been deleted, response.code should be 404
+    assert_eq!(response.code, "404");
+    // 8.4 verify the published config has been deleted
+    let response = client.get_resp::<Value>("/ci/cs/config?namespace_id=test1&group=DEFAULT-GROUP&data_id=conf-default").await;
+    assert_eq!(response.code, "404");
+    dbg!(response);
+
 
     Ok(())
 }

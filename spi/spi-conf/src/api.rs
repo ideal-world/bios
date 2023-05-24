@@ -7,5 +7,5 @@ use ci::*;
 use crate::conf_constants;
 
 pub async fn init_api(web_server: &TardisWebServer) {
-    web_server.add_module(conf_constants::DOMAIN_CODE, (SpiCiBsApi, ConfCiConfigServiceApi, ConfCiNamespaceApi)).await;
+    web_server.add_module(conf_constants::DOMAIN_CODE, (SpiCiBsApi, ConfCiConfigServiceApi, ConfCiNamespaceApi), None).await;
 }

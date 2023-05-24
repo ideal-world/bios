@@ -69,3 +69,43 @@ VALUES
     conn.commit().await?;
     Ok(())
 }
+pub async fn edit_namespace(attribute: &mut NamespaceAttribute, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let mut params = vec![Value::from(&attribute.namespace), Value::from(&attribute.namespace_show_name)];
+    params.extend(attribute.namespace_desc.as_ref().map(Value::from));
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(
+        &format!(
+            r#"UPDATE {table_name} 
+SET show_name = $2{}
+WHERE 
+    id = $1
+	"#,
+            if attribute.namespace_desc.is_some() { ", description=$3" } else { "" },
+        ),
+        params,
+    )
+    .await?;
+    conn.commit().await?;
+    Ok(())
+}
+
+pub async fn delete_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
+    conn.begin().await?;
+    conn.execute_one(
+        &format!(
+            r#"DELETE FROM {table_name} 
+WHERE 
+    id = $1
+    "#,
+            table_name = table_name
+        ),
+        vec![Value::from(&discriptor.namespace_id)],
+    )
+    .await?;
+    conn.commit().await?;
+    Ok(())
+}

@@ -79,7 +79,7 @@ impl ConfCiConfigServiceApi {
         TardisResp::ok(Void {})
     }
     #[oai(path = "/configs/listener", method = "get")]
-    async fn listenr(
+    async fn listener(
         &self,
         // mut descriptor: Query<ConfigDescriptor>,
         tenant: Query<Option<NamespaceId>>,
