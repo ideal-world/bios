@@ -252,6 +252,33 @@ impl IamRelServ {
                 funs,
             )
             .await?;
+
+            let id = from_iam_item_id.to_string();
+            let ctx_clone = ctx.clone();
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    SpiLogClient::add_item(
+                        LogParamTag::IamRes,
+                        LogParamContent {
+                            op: "添加API".to_string(),
+                            ext: Some(id.clone()),
+                            ..Default::default()
+                        },
+                        Some("req".to_string()),
+                        Some(id.clone()),
+                        LogParamOp::Add,
+                        None,
+                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                        &funs,
+                        &ctx_clone,
+                    )
+                    .await
+                    .unwrap();
+                })
+            }))
+            .await
+            .unwrap();
         }
         Ok(())
     }
@@ -432,6 +459,33 @@ impl IamRelServ {
                     funs,
                 )
                 .await?;
+
+                let id = from_iam_item_id.to_string();
+                let ctx_clone = ctx.clone();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        SpiLogClient::add_item(
+                            LogParamTag::IamRes,
+                            LogParamContent {
+                                op: "删除API".to_string(),
+                                ext: Some(id.clone()),
+                                ..Default::default()
+                            },
+                            Some("req".to_string()),
+                            Some(id.clone()),
+                            LogParamOp::Delete,
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await
+                        .unwrap();
+                    })
+                }))
+                .await
+                .unwrap();
             }
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;

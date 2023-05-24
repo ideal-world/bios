@@ -180,32 +180,40 @@ impl IamSetServ {
         .await;
 
         if result.is_ok() {
-            let id = result.as_ref().unwrap().clone();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamOrg,
-                        LogParamContent {
-                            op: "添加部门".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id),
-                        LogParamOp::Add,
-                        None,
-                        Some(Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
+            let (op_describe, tag) = match item.kind.as_str() {
+                "Org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg)),
+                "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes)),
+                _ => (String::new(), None),
+            };
+            if let Some(tag) = tag {
+                let id = result.as_ref().unwrap().clone();
+                let ctx_clone = ctx.clone();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        SpiLogClient::add_item(
+                            tag,
+                            LogParamContent {
+                                op: op_describe,
+                                ext: Some(id.clone()),
+                                ..Default::default()
+                            },
+                            Some("req".to_string()),
+                            Some(id),
+                            LogParamOp::Add,
+                            None,
+                            Some(Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await
+                        .unwrap();
+                    })
+                }))
+                .await
+                .unwrap();
+            }
         }
 
         result
@@ -227,23 +235,103 @@ impl IamSetServ {
         )
         .await;
         if result.is_ok() {
-            if let Some(name) = &modify_req.name {
+            let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await.unwrap();
+            let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
+            match item.kind.as_str() {
+                "Org" => {
+                    if let Some(name) = &modify_req.name {
+                        let id = set_cate_id.to_string();
+                        let name = name.to_string();
+                        let ctx_clone = ctx.clone();
+                        ctx.add_async_task(Box::new(|| {
+                            Box::pin(async move {
+                                let funs = iam_constants::get_tardis_inst();
+                                SpiLogClient::add_item(
+                                    LogParamTag::IamOrg,
+                                    LogParamContent {
+                                        op: format!("重命名部门为{}", name),
+                                        ext: Some(id.clone()),
+                                        ..Default::default()
+                                    },
+                                    Some("req".to_string()),
+                                    Some(id),
+                                    LogParamOp::Modify,
+                                    None,
+                                    Some(Utc::now().to_rfc3339()),
+                                    &funs,
+                                    &ctx_clone,
+                                )
+                                .await
+                                .unwrap();
+                            })
+                        }))
+                        .await
+                        .unwrap();
+                    }
+                }
+                "res" => {
+                    let id = set_cate_id.to_string();
+                    let ctx_clone = ctx.clone();
+                    ctx.add_async_task(Box::new(|| {
+                        Box::pin(async move {
+                            let funs = iam_constants::get_tardis_inst();
+                            SpiLogClient::add_item(
+                                LogParamTag::IamRes,
+                                LogParamContent {
+                                    op: "编辑目录".to_string(),
+                                    ext: Some(id.clone()),
+                                    ..Default::default()
+                                },
+                                Some("req".to_string()),
+                                Some(id),
+                                LogParamOp::Modify,
+                                None,
+                                Some(Utc::now().to_rfc3339()),
+                                &funs,
+                                &ctx_clone,
+                            )
+                            .await
+                            .unwrap();
+                        })
+                    }))
+                    .await
+                    .unwrap();
+                }
+                _ => {}
+            }
+        }
+
+        result
+    }
+
+    pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await.unwrap();
+        let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
+
+        let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
+
+        if result.is_ok() {
+            let (op_describe, tag) = match item.kind.as_str() {
+                "Org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg)),
+                "res" => ("删除目录".to_string(), Some(LogParamTag::IamRes)),
+                _ => (String::new(), None),
+            };
+            if let Some(tag) = tag {
                 let id = set_cate_id.to_string();
-                let name = name.to_string();
                 let ctx_clone = ctx.clone();
                 ctx.add_async_task(Box::new(|| {
                     Box::pin(async move {
                         let funs = iam_constants::get_tardis_inst();
                         SpiLogClient::add_item(
-                            LogParamTag::IamOrg,
+                            tag,
                             LogParamContent {
-                                op: format!("重命名部门为{}", name),
+                                op: op_describe,
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
                             Some("req".to_string()),
                             Some(id),
-                            LogParamOp::Modify,
+                            LogParamOp::Delete,
                             None,
                             Some(Utc::now().to_rfc3339()),
                             &funs,
@@ -256,41 +344,6 @@ impl IamSetServ {
                 .await
                 .unwrap();
             }
-        }
-
-        result
-    }
-
-    pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
-
-        if result.is_ok() {
-            let id = set_cate_id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamOrg,
-                        LogParamContent {
-                            op: "删除部门".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id),
-                        LogParamOp::Delete,
-                        None,
-                        Some(Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
         }
 
         result
