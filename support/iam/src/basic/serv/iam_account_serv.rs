@@ -148,6 +148,16 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         let mut op_describe = "".to_string();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             op_describe = "注销账号".to_string();
+        } else if modify_req.status == Some(IamAccountStatusKind::Dormant) {
+            op_describe = "休眠账号".to_string();
+        } else if modify_req.status == Some(IamAccountStatusKind::Active) {
+            op_describe = "激活账号".to_string();
+        } else if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
+            op_describe = "解锁账号".to_string();
+        } else if modify_req.icon.is_some() {
+            op_describe = "修改账号头像".to_string();
+        } else if modify_req.name.is_some() {
+            op_describe = format!("修改姓名为{}", modify_req.name.as_ref().unwrap());
         }
         let id = id.to_string();
         let ctx_clone = ctx.clone();

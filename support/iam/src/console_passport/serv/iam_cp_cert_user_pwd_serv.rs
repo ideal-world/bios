@@ -11,6 +11,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountModifyReq};
 use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq};
+use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -18,6 +19,7 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::IamCpUserPwdLoginReq;
+use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind};
 
 pub struct IamCpCertUserPwdServ;
@@ -128,6 +130,34 @@ impl IamCpCertUserPwdServ {
         )
         .await?;
         IamCertUserPwdServ::modify_ak_cert(req, &rbum_cert_conf_id, funs, &ctx).await?;
+
+        let id = ctx.owner.to_string();
+        let op_describe = format!("修改用户名为{}", req.new_ak.as_ref());
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamAccount,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id.clone()),
+                    LogParamOp::Modify,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
+        .await
+        .unwrap();
         Ok(())
     }
 
