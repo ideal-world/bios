@@ -49,12 +49,17 @@ pub(crate) async fn decrypt_req(
     need_crypto_resp: bool,
     config: &AuthConfig,
 ) -> TardisResult<(Option<String>, Option<HashMap<String, String>>)> {
-    let input_keys = headers.get(&config.head_key_crypto).ok_or_else(|| {
-        TardisError::bad_request(
+    let input_keys = if let Some(r) = headers.get(&config.head_key_crypto) {
+        r
+    } else if let Some(r) = headers.get(&config.head_key_crypto.to_lowercase()) {
+        r
+    } else {
+        return Err(TardisError::bad_request(
             &format!("[Auth] Encrypted request: {} field is not in header.", config.head_key_crypto),
             "401-auth-req-crypto-error",
-        )
-    })?;
+        ));
+    };
+
     let input_keys = TardisFuns::crypto.base64.decode(input_keys).map_err(|_| {
         TardisError::bad_request(
             &format!("[Auth] Encrypted request: {} field in header is not base64 format.", config.head_key_crypto),
@@ -143,12 +148,17 @@ pub(crate) async fn decrypt_req(
 
 pub(crate) async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
-    let pub_key = req.headers.get(&config.head_key_crypto).ok_or_else(|| {
-        TardisError::bad_request(
+    let pub_key = if let Some(r) = req.headers.get(&config.head_key_crypto) {
+        r
+    } else if let Some(r) = req.headers.get(&config.head_key_crypto.to_lowercase()) {
+        r
+    } else {
+        return Err(TardisError::bad_request(
             &format!("[Auth] Encrypted response: {} field is not in header.", config.head_key_crypto),
             "401-auth-req-crypto-error",
-        )
-    })?;
+        ));
+    };
+
     let pub_key = TardisFuns::crypto.base64.decode(pub_key).map_err(|_| {
         TardisError::bad_request(
             &format!("[Auth] Encrypted response: {} field in header is not base64 format.", config.head_key_crypto),

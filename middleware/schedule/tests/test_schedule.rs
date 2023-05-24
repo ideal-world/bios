@@ -7,7 +7,6 @@ use bios_mw_schedule::schedule_constants::DOMAIN_CODE;
 use bios_mw_schedule::schedule_initializer;
 use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
-
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
 use tardis::{testcontainers, tokio, TardisFuns};

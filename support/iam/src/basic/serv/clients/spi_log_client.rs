@@ -1,14 +1,11 @@
-use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq},
-    serv::rbum_item_serv::RbumItemCrudOperation,
-};
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use serde::Serialize;
 use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    serde_json::{Value, json},
-    tokio, TardisFuns, TardisFunsInst,
+    serde_json::json,
+    TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -42,9 +39,9 @@ pub enum LogParamTag {
     Log,
 }
 
-impl Into<String> for LogParamTag {
-    fn into(self) -> String {
-        match self {
+impl From<LogParamTag> for String {
+    fn from(val: LogParamTag) -> Self {
+        match val {
             LogParamTag::IamTenant => "iam_tenant".to_string(),
             LogParamTag::IamOrg => "iam_org".to_string(),
             LogParamTag::IamAccount => "iam_account".to_string(),
@@ -65,9 +62,9 @@ pub enum LogParamOp {
     None,
 }
 
-impl Into<String> for LogParamOp {
-    fn into(self) -> String {
-        match self {
+impl From<LogParamOp> for String {
+    fn from(val: LogParamOp) -> Self {
+        match val {
             LogParamOp::Add => "Add".to_string(),
             LogParamOp::Modify => "Modify".to_string(),
             LogParamOp::Delete => "Delete".to_string(),
