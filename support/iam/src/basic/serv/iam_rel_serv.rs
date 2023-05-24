@@ -89,8 +89,34 @@ impl IamRelServ {
                             ..Default::default()
                         },
                         Some("req".to_string()),
-                        Some(id),
-                        LogParamOp::Modify,
+                        Some(id.clone()),
+                        LogParamOp::Add,
+                        None,
+                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                        &funs,
+                        &ctx_clone,
+                    )
+                    .await
+                    .unwrap();
+                })
+            }))
+            .await
+            .unwrap();
+            let ctx_clone = ctx.clone();
+            let id = to_iam_item_id.to_string();
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    SpiLogClient::add_item(
+                        LogParamTag::IamRole,
+                        LogParamContent {
+                            op: "添加角色人员".to_string(),
+                            ext: Some(id.clone()),
+                            ..Default::default()
+                        },
+                        Some("req".to_string()),
+                        Some(id.clone()),
+                        LogParamOp::Add,
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -424,7 +450,33 @@ impl IamRelServ {
                             },
                             Some("req".to_string()),
                             Some(id),
-                            LogParamOp::Modify,
+                            LogParamOp::Delete,
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await
+                        .unwrap();
+                    })
+                }))
+                .await
+                .unwrap();
+                let ctx_clone = ctx.clone();
+                let id = to_iam_item_id.to_string();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        SpiLogClient::add_item(
+                            LogParamTag::IamRole,
+                            LogParamContent {
+                                op: "移除角色人员".to_string(),
+                                ext: Some(id.clone()),
+                                ..Default::default()
+                            },
+                            Some("req".to_string()),
+                            Some(id.clone()),
+                            LogParamOp::Delete,
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,

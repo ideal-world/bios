@@ -145,7 +145,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
 
-        let mut op_describe = "".to_string();
+        let mut op_describe = String::new();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             op_describe = "注销账号".to_string();
         } else if modify_req.status == Some(IamAccountStatusKind::Dormant) {
@@ -159,32 +159,35 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         } else if modify_req.name.is_some() {
             op_describe = format!("修改姓名为{}", modify_req.name.as_ref().unwrap());
         }
-        let id = id.to_string();
-        let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamAccount,
-                    LogParamContent {
-                        op: op_describe,
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    Some("req".to_string()),
-                    Some(id.clone()),
-                    LogParamOp::Modify,
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        if !op_describe.is_empty() {
+            let id = id.to_string();
+            let ctx_clone = ctx.clone();
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    SpiLogClient::add_item(
+                        LogParamTag::IamAccount,
+                        LogParamContent {
+                            op: op_describe,
+                            ext: Some(id.clone()),
+                            ..Default::default()
+                        },
+                        Some("req".to_string()),
+                        Some(id.clone()),
+                        LogParamOp::Modify,
+                        None,
+                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                        &funs,
+                        &ctx_clone,
+                    )
+                    .await
+                    .unwrap();
+                })
+            }))
+            .await
+            .unwrap();            
+        }
+
         Ok(())
     }
 
