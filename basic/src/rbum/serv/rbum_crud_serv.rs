@@ -207,7 +207,7 @@ where
         };
         if let Some(id) = id {
             Self::after_add_rbum(&id, add_req, funs, ctx).await?;
-            TaskProcessor::add_notify_event(Self::get_table_name(), "c", id.as_str(), ctx)?;
+            TaskProcessor::add_notify_event(Self::get_table_name(), "c", id.as_str(), ctx).await?;
             // rbum_event_helper::try_notify(Self::get_table_name(), "c", &id, funs, ctx).await?;
             Ok(id.to_string())
         } else {
@@ -237,7 +237,7 @@ where
         let domain = Self::package_modify(id, modify_req, funs, ctx).await?;
         funs.db().update_one(domain, ctx).await?;
         Self::after_modify_rbum(id, modify_req, funs, ctx).await?;
-        TaskProcessor::add_notify_event(Self::get_table_name(), "u", id, ctx)?;
+        TaskProcessor::add_notify_event(Self::get_table_name(), "u", id, ctx).await?;
         // rbum_event_helper::try_notify(Self::get_table_name(), "u", id, funs, ctx).await?;
         Ok(())
     }
@@ -269,7 +269,7 @@ where
                 funs.mq().publish(mq_topic_entity_deleted, tardis::TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_rbum(id, &deleted_rbum, funs, ctx).await?;
-            TaskProcessor::add_notify_event(Self::get_table_name(), "d", id, ctx)?;
+            TaskProcessor::add_notify_event(Self::get_table_name(), "d", id, ctx).await?;
             // rbum_event_helper::try_notify(Self::get_table_name(), "d", id, funs, ctx).await?;
             Ok(delete_records.len() as u64)
         }
@@ -277,7 +277,7 @@ where
         {
             let delete_records = funs.db().soft_delete(select, &ctx.owner).await?;
             Self::after_delete_rbum(id, &deleted_rbum, funs, ctx).await?;
-            TaskProcessor::add_notify_event(Self::get_table_name(), "d", id, ctx)?;
+            TaskProcessor::add_notify_event(Self::get_table_name(), "d", id, ctx).await?;
             // rbum_event_helper::try_notify(Self::get_table_name(), "d", &id, funs, ctx).await?;
             Ok(delete_records)
         }

@@ -13,6 +13,7 @@ pub struct IamConfigFilterReq {
     pub basic: RbumBasicFilterReq,
     pub code: Option<String>,
     pub rel_item_id: Option<String>,
+    pub disabled: Option<bool>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]

@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use bios_basic::rbum::serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage};
+use bios_basic::rbum::{
+    dto::rbum_filer_dto::RbumBasicFilterReq,
+    serv::rbum_crud_serv::{RbumCrudOperation, RbumCrudQueryPackage},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{
@@ -111,6 +114,9 @@ impl RbumCrudOperation<iam_config::ActiveModel, IamConfigAddReq, IamConfigModify
         if let Some(rel_item_id) = &filter.rel_item_id {
             query.and_where(Expr::col(iam_config::Column::RelItemId).eq(rel_item_id));
         }
+        if let Some(disabled) = &filter.disabled {
+            query.and_where(Expr::col(iam_config::Column::Disabled).eq(*disabled));
+        }
         query.with_filter(Self::get_table_name(), &filter.basic, is_detail, false, ctx);
         Ok(query)
     }
@@ -156,6 +162,28 @@ impl IamConfigServ {
             }
         }
         Ok(())
+    }
+
+    pub async fn get_config_by_code_and_item_id(code: &IamConfigKind, rel_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamConfigSummaryResp>> {
+        if let Some(config_id) = Self::get_config_id_by_code_and_item_id(code, rel_item_id, funs).await? {
+            let resp = Self::peek_rbum(
+                &config_id,
+                &IamConfigFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            Ok(Some(resp))
+        } else {
+            Ok(None)
+        }
     }
 
     pub async fn get_config_id_by_code_and_item_id(code: &IamConfigKind, rel_item_id: &str, funs: &TardisFunsInst) -> TardisResult<Option<String>> {

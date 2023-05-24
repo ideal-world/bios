@@ -24,6 +24,7 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, I
 use crate::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, JsonMenu};
 use crate::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq};
 use crate::basic::dto::iam_set_dto::IamSetItemAggAddReq;
+use crate::basic::middleware::encrypt_mw::EncryptMW;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_res_serv::{IamMenuServ, IamResServ};
@@ -116,6 +117,7 @@ async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
                     iam_ci_role_api::IamCiRoleApi,
                 ),
             ),
+            vec![EncryptMW::boxed()],
         )
         .await;
     Ok(())

@@ -247,7 +247,7 @@ where
         let ext_domain = Self::package_ext_add(&id, add_req, funs, ctx).await?;
         funs.db().insert_one(ext_domain, ctx).await?;
         Self::after_add_item(&id, add_req, funs, ctx).await?;
-        TaskProcessor::add_notify_event(Self::get_ext_table_name(), "c", id.as_str(), ctx)?;
+        TaskProcessor::add_notify_event(Self::get_ext_table_name(), "c", id.as_str(), ctx).await?;
         // rbum_event_helper::try_notify(Self::get_ext_table_name(), "c", &id, funs, ctx).await?;
         Ok(id)
     }
@@ -319,7 +319,7 @@ where
             funs.db().update_one(ext_domain, ctx).await?;
         }
         Self::after_modify_item(id, modify_req, funs, ctx).await?;
-        TaskProcessor::add_notify_event(Self::get_ext_table_name(), "u", id, ctx)?;
+        TaskProcessor::add_notify_event(Self::get_ext_table_name(), "u", id, ctx).await?;
         // rbum_event_helper::try_notify(Self::get_ext_table_name(), "u", id, funs, ctx).await?;
         Ok(())
     }
@@ -351,7 +351,7 @@ where
                 funs.mq().publish(mq_topic_entity_deleted, TardisFuns::json.obj_to_string(delete_record)?, &mq_header).await?;
             }
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
-            TaskProcessor::add_notify_event(Self::get_ext_table_name(), "d", id, ctx)?;
+            TaskProcessor::add_notify_event(Self::get_ext_table_name(), "d", id, ctx).await?;
             // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", id, funs, ctx).await?;
             Ok(delete_records.len() as u64)
         }
@@ -360,7 +360,7 @@ where
             let delete_records = funs.db().soft_delete(select, &ctx.owner).await?;
             RbumItemServ::delete_rbum(id, funs, ctx).await?;
             Self::after_delete_item(id, &deleted_item, funs, ctx).await?;
-            TaskProcessor::add_notify_event(Self::get_ext_table_name(), "d", id, ctx)?;
+            TaskProcessor::add_notify_event(Self::get_ext_table_name(), "d", id, ctx).await?;
             // rbum_event_helper::try_notify(Self::get_ext_table_name(), "d", &id, funs, ctx).await?;
             Ok(delete_records)
         }

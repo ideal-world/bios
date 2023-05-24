@@ -15,14 +15,16 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
+use tardis::chrono::Utc;
 use tardis::serde_json::json;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_rel_serv::IamRelServ;
 
 const SET_AND_ITEM_SPLIT_FLAG: &str = ":";
@@ -158,7 +160,7 @@ impl IamSetServ {
     }
 
     pub async fn add_set_cate(set_id: &str, add_req: &IamSetCateAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        RbumSetCateServ::add_rbum(
+        let result = RbumSetCateServ::add_rbum(
             &mut RbumSetCateAddReq {
                 name: add_req.name.clone(),
                 bus_code: add_req.bus_code.as_ref().unwrap_or(&TrimString("".to_string())).clone(),
@@ -172,7 +174,35 @@ impl IamSetServ {
             funs,
             ctx,
         )
+        .await;
+
+        let id = result.as_ref().unwrap().clone();
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamOrg,
+                    LogParamContent {
+                        op: "添加部门".to_string(),
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id),
+                    LogParamOp::Add,
+                    None,
+                    Some(Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
         .await
+        .unwrap();
+        result
     }
 
     pub async fn modify_set_cate(set_cate_id: &str, modify_req: &IamSetCateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

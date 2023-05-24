@@ -5,6 +5,8 @@ use bios_basic::test::init_rbum_test_container;
 use bios_basic::test::test_http_client::TestHttpClient;
 use bios_mw_schedule::schedule_constants::DOMAIN_CODE;
 use bios_mw_schedule::schedule_initializer;
+use bios_spi_kv::kv_initializer;
+use bios_spi_log::log_initializer;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
@@ -28,10 +30,11 @@ async fn test_log() -> TardisResult<()> {
 async fn init_data() -> TardisResult<()> {
     use bios_basic::rbum::{rbum_config::RbumConfig, rbum_initializer};
     rbum_initializer::init("schedule", RbumConfig::default()).await?;
-
     let web_server = TardisFuns::web_server();
     // Initialize SPI shedule
     schedule_initializer::init(web_server).await.unwrap();
+    log_initializer::init(web_server).await?;
+    kv_initializer::init(web_server).await?;
 
     tokio::spawn(async move {
         web_server.start().await.unwrap();

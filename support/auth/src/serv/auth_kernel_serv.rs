@@ -71,8 +71,12 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     let rbum_action = req.method.to_lowercase();
 
     if let Some(token) = req.headers.get(&config.head_key_token) {
-        let account_id = if let Some(account_info) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
-            let account_info = account_info.split(',').collect::<Vec<_>>();
+        let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
+            trace!("Token info: {}", token_value);
+            let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
+            if account_info.len() > 2 {
+                cache_client.set_ex(&format!("{}{}", config.cache_key_token_info, token), &token_value, account_info[2].parse().unwrap()).await?;
+            }
             account_info[1].to_string()
         } else {
             return Err(TardisError::unauthorized(&format!("[Auth] Token [{token}] is not legal"), "401-auth-req-token-not-exist"));
@@ -274,7 +278,7 @@ pub async fn decrypt(
         }
     }
     // Or, the interface configuration does not require encryption, but the request comes with encrypted headers. (Content consultation mechanism)
-    if headers.contains_key(&config.head_key_crypto) {
+    if headers.contains_key(&config.head_key_crypto) || headers.contains_key(&config.head_key_crypto.to_lowercase()) {
         //todo Because the return encryption has not yet been implemented, it has been temporarily modified.todo need_crypto_resp ->true
         let (body, headers) = auth_crypto_serv::decrypt_req(headers, body, true, config.default_resp_crypto, config).await?;
         return Ok((body, headers));

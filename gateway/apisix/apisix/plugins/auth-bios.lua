@@ -202,6 +202,7 @@ function _M.access(conf, ctx)
         if result.headers then
             core.log.debug("request.headers: ", core.json.encode(result.headers[conf.head_key_context]))
             core.request.set_header(ctx, conf.head_key_context, result.headers[conf.head_key_context])
+            core.request.set_header(ctx, conf.head_key_crypto, result.headers[conf.head_key_crypto])
         end
         if result.url then
             ctx.var.upstream_uri = result.url

@@ -5,7 +5,7 @@ use bios_basic::{
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     web::web_server::TardisWebServer,
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
 };
 
 use crate::{api::ci::schedule_ci_job_api, schedule_constants::DOMAIN_CODE, serv::schedule_job_serv};
@@ -15,18 +15,12 @@ pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     funs.begin().await?;
     let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     schedule_job_serv::init(&funs, &ctx).await?;
-    init_db(&funs, &ctx).await?;
     funs.commit().await?;
     init_api(web_server).await
 }
 
-async fn init_db(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    spi_initializer::add_kind(spi_constants::SPI_PG_KIND_CODE, funs, ctx).await?;
-    Ok(())
-}
-
 async fn init_api(web_server: &TardisWebServer) -> TardisResult<()> {
-    web_server.add_module(DOMAIN_CODE, schedule_ci_job_api::ScheduleCiJobApi).await;
+    web_server.add_module(DOMAIN_CODE, schedule_ci_job_api::ScheduleCiJobApi, None).await;
     Ok(())
 }
 

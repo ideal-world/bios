@@ -41,7 +41,7 @@ impl IamCtRoleApi {
         funs.begin().await?;
         IamRoleServ::modify_role_agg(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0)? {
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
             TardisResp::ok(None)
