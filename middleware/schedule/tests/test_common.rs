@@ -3,12 +3,12 @@ use std::sync::{
     Arc,
 };
 
-use bios_basic::spi::spi_initializer;
+use bios_basic::{spi::spi_initializer, test::test_http_client::TestHttpClient};
 use bios_mw_schedule::{schedule_constants::DOMAIN_CODE, schedule_initializer, serv::schedule_job_serv::OwnedScheduleTaskServ};
 use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
 use tardis::{
-    basic::result::TardisResult,
+    basic::{dto::TardisContext, result::TardisResult},
     tokio,
     web::{
         poem_openapi,
@@ -65,4 +65,21 @@ pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<Arc<OwnedSch
     }
     funs.commit().await?;
     Ok(collector)
+}
+#[allow(dead_code)]
+pub async fn init_client() -> TardisResult<TestHttpClient> {
+    // const LOG_DOMAIN_CODE: &str = bios_spi_log::log_constants::DOMAIN_CODE;
+    // const KV_DOMAIN_CODE: &str = bios_spi_log::log_constants::DOMAIN_CODE;
+    // init_spi(LOG_DOMAIN_CODE).await?;
+    // init_spi(KV_DOMAIN_CODE).await?;
+    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
+    client.set_auth(&TardisContext {
+        own_paths: "t1/app001".to_string(),
+        ak: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+        owner: "app001".to_string(),
+        ..Default::default()
+    })?;
+    Ok(client)
 }
