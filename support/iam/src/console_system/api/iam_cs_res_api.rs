@@ -1,15 +1,15 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumSetTreeFilterReq;
+use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
+use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
+use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
+use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 use tardis::TardisFuns;
-
-use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
-use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
-use bios_basic::rbum::rbum_enumeration::RbumSetCateLevelQueryKind;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::dto::iam_res_dto::{IamResAggAddReq, IamResDetailResp, IamResModifyReq, IamResSummaryResp};
@@ -35,6 +35,8 @@ impl IamCsResApi {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamResServ::add_res_agg(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -67,6 +69,8 @@ impl IamCsResApi {
         )
         .await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -77,6 +81,8 @@ impl IamCsResApi {
         funs.begin().await?;
         IamRelServ::add_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, None, None, false, false, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -85,6 +91,8 @@ impl IamCsResApi {
     async fn count_rel_res(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<u64> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamRelServ::count_to_rels(&IamRelKind::IamResApi, &id.0, &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -95,6 +103,8 @@ impl IamCsResApi {
         funs.begin().await?;
         IamResServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -105,6 +115,8 @@ impl IamCsResApi {
         funs.begin().await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -115,6 +127,8 @@ impl IamCsResApi {
         funs.begin().await?;
         IamRelServ::delete_simple_rel(&IamRelKind::IamResApi, &res_api_id.0, &id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -134,6 +148,8 @@ impl IamCsResApi {
             &ctx.0,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -161,6 +177,8 @@ impl IamCsResApi {
             &ctx.0,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -175,6 +193,8 @@ impl IamCsResApi {
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::find_to_simple_rel_roles(&IamRelKind::IamResApi, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -189,6 +209,8 @@ impl IamCsResApi {
     ) -> TardisApiResult<Vec<RbumRelBoneResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::find_from_simple_rel_roles(&IamRelKind::IamResRole, false, &id.0, desc_by_create.0, desc_by_update.0, &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -197,6 +219,8 @@ impl IamCsResApi {
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamResDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamResServ::get_item(&id.0, &IamResFilterReq::default(), &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -206,6 +230,8 @@ impl IamCsResApi {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_api_tree(&set_id, &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -215,6 +241,8 @@ impl IamCsResApi {
         let funs = iam_constants::get_tardis_inst();
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamSetServ::get_menu_tree(&set_id, exts.0, &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -239,6 +267,8 @@ impl IamCsResApi {
             &ctx.0,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -249,6 +279,8 @@ impl IamCsResApi {
         funs.begin().await?;
         IamResServ::modify_item(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -259,6 +291,8 @@ impl IamCsResApi {
         funs.begin().await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 }
