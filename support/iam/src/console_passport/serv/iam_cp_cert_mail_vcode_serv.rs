@@ -19,7 +19,7 @@ impl IamCpCertMailVCodeServ {
         IamCertMailVCodeServ::add_cert(add_req, &ctx.owner, &rbum_cert_conf_id, funs, ctx).await
     }
 
-    pub async fn login_by_mail_vocde(login_req: &IamCpMailVCodeLoginReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_by_mail_vocde(login_req: &IamCpMailVCodeLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(login_req.tenant_id.clone()), funs).await?;
         let (_, _, rbum_item_id) = IamCertServ::validate_by_ak_and_sk(
             &login_req.mail,
@@ -30,7 +30,6 @@ impl IamCpCertMailVCodeServ {
             Some(login_req.tenant_id.clone()),
             None,
             funs,
-            ctx,
         ).await?;
         let resp = IamCertServ::package_tardis_context_and_resp(Some(login_req.tenant_id.clone()), &rbum_item_id, login_req.flag.clone(), None, funs).await?;
         Ok(resp)

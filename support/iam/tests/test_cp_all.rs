@@ -113,7 +113,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -127,7 +126,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -141,7 +139,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -155,7 +152,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
     let tenant_admin_context = IamIdentCacheServ::get_context(
@@ -181,7 +177,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -193,7 +188,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -206,7 +200,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -221,7 +214,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
     assert_eq!(account_unlock_resp.account_name, "测试管理员");
@@ -238,7 +230,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
 
@@ -290,7 +281,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None
         },
         &funs,
-        tenant_ctx,
     )
     .await
     .is_err());
@@ -303,7 +293,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
 
@@ -333,7 +322,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
     assert_eq!(account_resp.account_name, "测试管理员");
@@ -357,7 +345,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
     assert_eq!(account_resp.account_name, "bios");
@@ -400,7 +387,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
 
@@ -413,7 +399,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        tenant_ctx,
     )
     .await?;
     assert_eq!(mail_account_resp.account_name, "测试管理员");
@@ -452,7 +437,6 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
             flag: None,
         },
         &funs,
-        &tenant_admin_context,
     )
     .await?;
     info!("【test_cp_all】 : Delete Mail-VCode Cert");

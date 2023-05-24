@@ -1189,17 +1189,22 @@ impl IamCertServ {
         own_paths: Option<String>,
         allowed_kinds: Option<Vec<&str>>,
         funs: &TardisFunsInst,
-        ctx: &TardisContext,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         let result = if rbum_cert_conf_id.is_some() {
-            RbumCertServ::validate_by_spec_cert_conf(ak, input_sk, rbum_cert_conf_id.unwrap(), ignore_end_time, own_paths.unwrap().as_str(), funs).await
+            RbumCertServ::validate_by_spec_cert_conf(ak, input_sk, rbum_cert_conf_id.unwrap(), ignore_end_time, own_paths.as_ref().unwrap(), funs).await
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(ak, input_sk, rel_rbum_kind.unwrap(), ignore_end_time, own_paths, allowed_kinds.unwrap(), funs).await
+            RbumCertServ::validate_by_ak_and_basic_sk(ak, input_sk, rel_rbum_kind.unwrap(), ignore_end_time, own_paths.clone(), allowed_kinds.unwrap(), funs).await
         };
         if let Err(e) = result.as_ref() {
             if e.message.as_str() == "cert is locked" {
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
+                let mut mock_ctx = TardisContext{
+                    ..Default::default()
+                };
+                if let Some(own_paths) = own_paths {
+                    mock_ctx.own_paths = own_paths;
+                }
+                let ctx_clone = mock_ctx.clone();
+                mock_ctx.add_async_task(Box::new(|| {
                     Box::pin(async move {
                         let funs = iam_constants::get_tardis_inst();
                         SpiLogClient::add_item(

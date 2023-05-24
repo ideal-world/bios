@@ -65,9 +65,9 @@ impl IamCpCertApi {
 
     /// Login by Username and Password
     #[oai(path = "/login/userpwd", method = "put")]
-    async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountInfoResp> {
+    async fn login_by_user_pwd(&self, login_req: Json<IamCpUserPwdLoginReq>) -> TardisApiResult<IamAccountInfoResp> {
         let funs = iam_constants::get_tardis_inst();
-        let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, &funs, &ctx.0).await?;
+        let resp = IamCpCertUserPwdServ::login_by_user_pwd(&login_req.0, &funs).await?;
         TardisResp::ok(resp)
     }
 
@@ -128,10 +128,10 @@ impl IamCpCertApi {
 
     /// Set New Password
     #[oai(path = "/cert/userpwd/new", method = "put")]
-    async fn new_pwd_without_login(&self, pwd_new_req: Json<IamCertPwdNewReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn new_pwd_without_login(&self, pwd_new_req: Json<IamCertPwdNewReq>) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        IamCpCertUserPwdServ::new_pwd_without_login(&pwd_new_req.0, &funs, &ctx.0).await?;
+        IamCpCertUserPwdServ::new_pwd_without_login(&pwd_new_req.0, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
@@ -237,10 +237,10 @@ impl IamCpCertApi {
 
     /// Login by Mail And Vcode
     #[oai(path = "/login/mailvcode", method = "put")]
-    async fn login_by_mail_vocde(&self, login_req: Json<IamCpMailVCodeLoginReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountInfoResp> {
+    async fn login_by_mail_vocde(&self, login_req: Json<IamCpMailVCodeLoginReq>) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let resp = IamCpCertMailVCodeServ::login_by_mail_vocde(&login_req.0, &funs, &ctx.0).await?;
+        let resp = IamCpCertMailVCodeServ::login_by_mail_vocde(&login_req.0, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(resp)
     }
@@ -277,10 +277,10 @@ impl IamCpCertApi {
 
     /// Login by Phone And Vcode
     #[oai(path = "/login/phonevcode", method = "put")]
-    async fn login_by_phone_vocde(&self, login_req: Json<IamCpPhoneVCodeLoginSendVCodeReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamAccountInfoResp> {
+    async fn login_by_phone_vocde(&self, login_req: Json<IamCpPhoneVCodeLoginSendVCodeReq>) -> TardisApiResult<IamAccountInfoResp> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let resp = IamCpCertPhoneVCodeServ::login_by_phone_vocde(&login_req.0, &funs, &ctx.0).await?;
+        let resp = IamCpCertPhoneVCodeServ::login_by_phone_vocde(&login_req.0, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(resp)
     }

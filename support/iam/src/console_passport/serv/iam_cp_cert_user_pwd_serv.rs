@@ -23,7 +23,7 @@ use crate::iam_enumeration::{IamAccountStatusKind, IamCertKernelKind};
 pub struct IamCpCertUserPwdServ;
 
 impl IamCpCertUserPwdServ {
-    pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn new_pwd_without_login(pwd_new_req: &IamCertPwdNewReq, funs: &TardisFunsInst) -> TardisResult<()> {
         let mut tenant_id = Self::get_tenant_id(pwd_new_req.tenant_id.clone(), funs).await?;
         let mut rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::UserPwd.to_string(), Some(tenant_id.clone()), funs).await?;
         let validate_resp = IamCertServ::validate_by_ak_and_sk(
@@ -39,7 +39,6 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
             funs,
-            ctx,
         ).await;
         let (_, _, rbum_item_id) = if validate_resp.is_ok() {
             validate_resp.unwrap()
@@ -65,7 +64,6 @@ impl IamCpCertUserPwdServ {
                     &IamCertKernelKind::PhoneVCode.to_string(),
                 ]),
                 funs,
-                ctx,
             ).await?
         };
         let ctx = TardisContext {
@@ -125,7 +123,6 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
             funs,
-            &ctx,
         ).await?;
         IamCertUserPwdServ::modify_ak_cert(req, &rbum_cert_conf_id, funs, &ctx).await?;
         Ok(())
@@ -167,12 +164,11 @@ impl IamCpCertUserPwdServ {
             Some(ctx.own_paths.clone()),
             None,
             funs,
-            ctx,
         ).await?;
         Ok(())
     }
 
-    pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_by_user_pwd(login_req: &IamCpUserPwdLoginReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let tenant_id = Self::get_tenant_id(login_req.tenant_id.clone(), funs).await?;
         let validate_resp = IamCertServ::validate_by_ak_and_sk(
             &login_req.ak.0,
@@ -187,7 +183,6 @@ impl IamCpCertUserPwdServ {
                 &IamCertKernelKind::PhoneVCode.to_string(),
             ]),
             funs,
-            ctx,
         ).await;
         let (_, _, rbum_item_id) = if validate_resp.is_ok() {
             validate_resp.unwrap()

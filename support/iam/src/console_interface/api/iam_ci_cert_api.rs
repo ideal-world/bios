@@ -47,11 +47,10 @@ impl IamCiCertManageApi {
         client_id: Query<String>,
         client_secret: Query<String>,
         scope: Query<Option<String>>,
-        ctx: TardisContextExtractor,
     ) -> TardisApiResult<IamOauth2AkSkResp> {
         let grant_type = Oauth2GrantType::parse(&grant_type.0)?;
         let funs = iam_constants::get_tardis_inst();
-        let resp = IamCiOauth2AkSkServ::generate_token(grant_type, &client_id.0, &client_secret.0, scope.0, funs, ctx.0).await?;
+        let resp = IamCiOauth2AkSkServ::generate_token(grant_type, &client_id.0, &client_secret.0, scope.0, funs).await?;
         TardisResp::ok(resp)
     }
 }

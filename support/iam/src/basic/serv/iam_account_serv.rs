@@ -174,7 +174,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(())
     }
 
-    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut op_describe = "添加长期账号".to_string();
         if add_req.temporary == Some(true) {
             op_describe = "添加临时账号".to_string();

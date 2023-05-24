@@ -134,7 +134,6 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             flag: None,
         },
         &funs,
-        context1.0,
     )
     .await?;
     let context2 = IamIdentCacheServ::get_context(

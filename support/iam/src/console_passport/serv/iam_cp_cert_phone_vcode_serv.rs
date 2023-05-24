@@ -3,7 +3,6 @@ use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamCertPhoneVCodeAddReq;
@@ -21,7 +20,7 @@ impl IamCpCertPhoneVCodeServ {
         IamCertPhoneVCodeServ::add_cert(add_req, &ctx.owner, &rbum_cert_conf_id, funs, ctx).await
     }
 
-    pub async fn login_by_phone_vocde(login_req: &IamCpPhoneVCodeLoginSendVCodeReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamAccountInfoResp> {
+    pub async fn login_by_phone_vocde(login_req: &IamCpPhoneVCodeLoginSendVCodeReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(login_req.tenant_id.clone()), funs).await?;
         let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), None, funs).await?;
         let result = IamCertServ::validate_by_ak_and_sk(
@@ -33,7 +32,6 @@ impl IamCpCertPhoneVCodeServ {
             Some(login_req.tenant_id.clone()),
             None,
             funs,
-            ctx,
         ).await;
         let (_, _, rbum_item_id) = if let Some(e) = result.clone().err() {
             if e.code == "401-iam-cert-valid" {
@@ -46,7 +44,6 @@ impl IamCpCertPhoneVCodeServ {
                     Some("".to_string()),
                     None,
                     funs,
-                    ctx,
                 ).await?
             } else {
                 result?

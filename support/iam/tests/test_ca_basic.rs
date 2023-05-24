@@ -85,7 +85,6 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             flag: None,
         },
         &funs,
-        &tenant_context,
     )
     .await?;
 
@@ -175,7 +174,6 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             flag: None,
         },
         &funs,
-        &tenant_context,
     )
     .await?;
     let app_context1 = IamIdentCacheServ::get_context(
@@ -195,7 +193,6 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             flag: None,
         },
         &funs,
-        &tenant_context,
     )
     .await?;
     let app_context2 = IamIdentCacheServ::get_context(
