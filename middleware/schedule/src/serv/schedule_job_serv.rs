@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use std::vec;
 
 use lazy_static::lazy_static;
 use tardis::basic::dto::TardisContext;
@@ -12,7 +13,7 @@ use tardis::db::sea_orm::prelude::Uuid;
 use tardis::log::{error, info, trace};
 use tardis::tokio::sync::RwLock;
 use tardis::tokio::time;
-use tardis::web::web_resp::TardisPage;
+use tardis::web::web_resp::{TardisPage, TardisResp};
 use tardis::{TardisFuns, TardisFunsInst};
 use tokio_cron_scheduler::{Job, JobScheduler};
 
@@ -25,15 +26,18 @@ lazy_static! {
 }
 
 /// global service instance
-static mut MAYBE_GLOBAL_SERV: Option<OwnedScheduleTaskServ> = None;
+static mut MAYBE_GLOBAL_SERV: Option<Arc<OwnedScheduleTaskServ>> = None;
 
 /// get service instance without checking if it's initialized
 /// # Safety
 /// if called before init, this function will panic
-unsafe fn service() -> OwnedScheduleTaskServ {
+unsafe fn service() -> Arc<OwnedScheduleTaskServ> {
     MAYBE_GLOBAL_SERV.as_ref().cloned().expect("tring to get scheduler before it's initialized")
 }
 
+
+// still not good, should manage to merge it with `OwnedScheduleTaskServ::add`
+// same as `delete`
 pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
@@ -47,10 +51,8 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
         TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
     )]);
     // if exist delete it first
-    {
-        if let Some(_uuid) = unsafe { service() }.code_uuid.write().await.get(code) {
-            self::delete(code, funs, ctx).await?;
-        }
+    if unsafe { service().code_uuid.write().await.get(code).is_some() } {
+        delete(code, funs, ctx).await?;
     }
     // log this operation
     funs.web_client()
@@ -66,22 +68,19 @@ pub(crate) async fn add_or_modify(add_or_modify: ScheduleJobAddOrModifyReq, funs
             headers.clone(),
         )
         .await?;
+    let config = funs.conf::<ScheduleConfig>();
     // put schedual-task to kv cache
-    funs.web_client()
-        .put_obj_to_str(
-            &format!("{kv_url}/ci/item"),
-            &HashMap::from([("key", format!("{KV_KEY_CODE}{code}")), ("value", TardisFuns::json.obj_to_string(&add_or_modify)?)]),
-            headers.clone(),
-        )
-        .await?;
+    let mut conn = funs.cache().cmd().await?;
+    let cache_key_job_changed_info = &config.cache_key_job_changed_info;
+    conn.set(&format!("{cache_key_job_changed_info}{code}"), TardisFuns::json.obj_to_string(&add_or_modify)?).await?;
     // add schedual-task to scheduler
-    ScheduleTaskServ::add(log_url, add_or_modify, funs.conf::<ScheduleConfig>()).await?;
+    ScheduleTaskServ::add(log_url, add_or_modify, config).await?;
     Ok(())
 }
 
 pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
-    let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
+    // let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
         TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
@@ -100,31 +99,31 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
             headers.clone(),
         )
         .await?;
-    {
-        if let Some(_uuid) = unsafe { service() }.code_uuid.read().await.get(code) {
-            // delete schedual-task from kv cache first
-            funs.web_client()
-                .delete_to_void(
-                    &format!("{kv_url}/ci/item?key={key}", kv_url = kv_url, key = format_args!("{KV_KEY_CODE}{code}")),
-                    headers.clone(),
-                )
-                .await?;
-            // delete schedual-task from scheduler
-            ScheduleTaskServ::delete(code).await?;
-        }
+    if unsafe { service().code_uuid.read().await.get(code).is_some() } {
+        // delete schedual-task from kv cache first
+        let mut conn = funs.cache().cmd().await?;
+        let config = funs.conf::<ScheduleConfig>();
+        let cache_key_job_changed_info = &config.cache_key_job_changed_info;
+        conn.del(&format!("{cache_key_job_changed_info}{code}")).await?;
+        // delete schedual-task from scheduler
+        ScheduleTaskServ::delete(code).await?;
     }
     Ok(())
 }
 
 pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: u32, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<ScheduleJobInfoResp>> {
     let kv_url = &funs.conf::<ScheduleConfig>().kv_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let resp = funs
         .web_client()
-        .get::<TardisPage<ScheduleJobKvSummaryResp>>(
+        .get::<TardisResp<TardisPage<ScheduleJobKvSummaryResp>>>(
             &format!(
                 "{}/ci/item/match?key_prefix={}&page_number={}&page_size={}",
                 kv_url,
@@ -136,9 +135,9 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
         )
         .await?;
     if resp.code != 200 {
-        return Err(funs.err().conflict("find_job", "find", "job is anomaly", ""));
+        return Err(funs.err().conflict("find_job", "find", &resp.body.unwrap().msg, ""));
     }
-    let page = resp.body.unwrap();
+    let page = resp.body.unwrap().data.unwrap();
     Ok(TardisPage {
         page_size: page.page_size,
         page_number: page.page_number,
@@ -146,12 +145,28 @@ pub(crate) async fn find_job(code: Option<String>, page_number: u32, page_size: 
         records: page
             .records
             .into_iter()
-            .map(|record| ScheduleJobInfoResp {
-                code: record.key.replace(KV_KEY_CODE, ""),
-                cron: record.value.get("cron").map(ToString::to_string).unwrap_or_default(),
-                callback_url: record.value.get("callback_url").map(ToString::to_string).unwrap_or_default(),
-                create_time: Some(record.create_time),
-                update_time: Some(record.update_time),
+            .map(|record| {
+                let job = TardisFuns::json.str_to_obj::<ScheduleJobAddOrModifyReq>(&record.value.as_str().unwrap());
+                match job {
+                    Ok(job) => {
+                        return ScheduleJobInfoResp {
+                            code: record.key.replace(KV_KEY_CODE, ""),
+                            cron: job.cron,
+                            callback_url: job.callback_url,
+                            create_time: Some(record.create_time),
+                            update_time: Some(record.update_time),
+                        };
+                    }
+                    Err(_) => {
+                        return ScheduleJobInfoResp {
+                            code: record.key.replace(KV_KEY_CODE, ""),
+                            cron: "".to_string(),
+                            callback_url: "".to_string(),
+                            create_time: Some(record.create_time),
+                            update_time: Some(record.update_time),
+                        };
+                    }
+                }
             })
             .collect(),
     })
@@ -167,9 +182,13 @@ pub(crate) async fn find_task(
     ctx: &TardisContext,
 ) -> TardisResult<TardisPage<ScheduleTaskInfoResp>> {
     let log_url = &funs.conf::<ScheduleConfig>().log_url;
+    let spi_ctx = TardisContext {
+        owner: funs.conf::<ScheduleConfig>().spi_app_id.clone(),
+        ..ctx.clone()
+    };
     let headers = Some(vec![(
         "Tardis-Context".to_string(),
-        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
+        TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
     )]);
     let mut url = format!(
         "{}/ci/item?tag={}&key={}&page_number={}&page_size={}",
@@ -185,11 +204,11 @@ pub(crate) async fn find_task(
     if let Some(ts_end) = ts_end {
         url += &format!("&ts_end={}", ts_end.to_rfc3339());
     }
-    let resp = funs.web_client().get::<TardisPage<ScheduleTaskLogFindResp>>(&url, headers).await?;
+    let resp = funs.web_client().get::<TardisResp<TardisPage<ScheduleTaskLogFindResp>>>(&url, headers).await?;
     if resp.code != 200 {
-        return Err(funs.err().conflict("find_job", "find", "job is anomaly", ""));
+        return Err(funs.err().conflict("find_job", "find", &resp.body.unwrap().msg, ""));
     }
-    let page = resp.body.unwrap();
+    let page = resp.body.unwrap().data.unwrap();
     let mut records = vec![];
     let mut log_iter = page.records.into_iter();
     while let Some(start_log) = log_iter.next() {
@@ -234,12 +253,12 @@ impl ScheduleTaskServ {
 
 #[derive(Clone)]
 pub struct OwnedScheduleTaskServ {
-    pub code_uuid: Arc<RwLock<HashMap<String, Uuid>>>,
+    pub code_uuid: Arc<RwLock<HashMap<String, (Uuid, String, String)>>>,
     pub scheduler: Arc<JobScheduler>,
 }
 
 impl OwnedScheduleTaskServ {
-    pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Self> {
+    pub async fn init(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Arc<Self>> {
         let cache_client = funs.cache();
         let config = funs.conf::<ScheduleConfig>().clone();
         let log_url = config.log_url.clone();
@@ -262,6 +281,13 @@ impl OwnedScheduleTaskServ {
         }));
         scheduler.init().await.expect("fail to init job scheduler for schedule mw");
         scheduler.start().await.expect("fail to start job scheduler for schedule mw");
+        let code_uuid_cache_raw = Arc::new(RwLock::new(HashMap::<String, (Uuid, String, String)>::new()));
+        let code_uuid_cache = code_uuid_cache_raw.clone();
+        let serv_raw = Arc::new(Self {
+            code_uuid: code_uuid_cache_raw,
+            scheduler: Arc::new(scheduler),
+        });
+        let serv = serv_raw.clone();
         tardis::tokio::spawn(async move {
             let mut interval = time::interval(Duration::from_secs(config.cache_key_job_changed_timer_sec as u64));
             let log_url = log_url.clone();
@@ -284,23 +310,56 @@ impl OwnedScheduleTaskServ {
                 };
                 trace!("[Schedule] Fetch changed Job cache");
                 {
-                    while let Some(changed_key) = res_iter.next_item().await {
-                        if let Ok(Some(job_cache)) = cache_client.get(&changed_key).await {
+                    // collect configs from remote cache
+                    let mut remote_jobs = HashMap::new();
+                    while let Some(remote_job_code) = res_iter.next_item().await {
+                        if let Ok(Some(job_cache)) = cache_client.get(&remote_job_code).await {
                             // safety: since we create job_cache ourselves, it's ok to unwrap
-                            let job_json: ScheduleJobAddOrModifyReq = TardisFuns::json.str_to_obj(&job_cache).unwrap();
-                            ScheduleTaskServ::add(&log_url, job_json, &config).await.map_err(|e| error!("fail to add schedule task: {e}")).unwrap_or_default();
+                            let remote_job: ScheduleJobAddOrModifyReq = TardisFuns::json.str_to_obj(&job_cache).unwrap();
+                            remote_jobs.insert(remote_job_code, remote_job);
                         } else {
-                            ScheduleTaskServ::delete(&changed_key).await.map_err(|e| error!("fail to delete schedule task: {e}")).unwrap_or_default();
+                            // we missed this job code in a very short time, just predent that remote have not this code since very begining
                         }
+                    }
+                    let mut to_delete = vec![];
+                    let mut to_add = vec![];
+                    {
+                        // this will lock uuid_cache untill all jobs are synced
+                        // it's reasonable since we don't want to process any add or delete request while syncing
+                        let cache = code_uuid_cache.read().await;
+                        for (code, (_uuid, cron, cb_url)) in cache.iter() {
+                            // 1. both remote and local have this code, check if it's changed
+                            if let Some(remote_job) = remote_jobs.remove(code) {
+                                // 1.1 if it's not changed, do nothing
+                                if *cron == remote_job.cron && *cb_url == remote_job.callback_url {
+                                    continue;
+                                }
+                                // 1.2 if it's changed, delete and add by remote config
+                                else {
+                                    to_add.push(remote_job);
+                                }
+                            // 2. remote don't have this code, delete it
+                            } else {
+                                to_delete.push(code.clone());
+                            }
+                        }
+                        // 3. after then, remote still have some code, add it
+                        for (_, remote_job) in remote_jobs {
+                            to_add.push(remote_job);
+                        }
+                    }
+                    // 4. do add and delete
+                    for code in to_delete {
+                        serv.delete(&code).await.map_err(|e| error!("fail to delete schedule task: {e}")).unwrap_or_default();
+                    }
+                    for job_config in to_add {
+                        serv.add(&log_url, job_config, &config).await.map_err(|e| error!("fail to add schedule task: {e}")).unwrap_or_default();
                     }
                 }
                 interval.tick().await;
             }
         });
-        Ok(Self {
-            code_uuid: Arc::new(RwLock::new(HashMap::new())),
-            scheduler: Arc::new(scheduler),
-        })
+        Ok(serv_raw)
     }
 
     /// genetate distributed lock key for a certain task
@@ -308,15 +367,14 @@ impl OwnedScheduleTaskServ {
         format!("{}{}", config.distributed_lock_key_prefix, code)
     }
     /// add schedule task
-    pub async fn add(&self, log_url: &str, add_or_modify: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
-        {
-            if let Some(_uuid) = self.code_uuid.read().await.get(&add_or_modify.code.0) {
-                self.delete(&add_or_modify.code.0).await?;
-            }
+    pub async fn add(&self, log_url: &str, job_config: ScheduleJobAddOrModifyReq, config: &ScheduleConfig) -> TardisResult<()> {
+        let has_job = { self.code_uuid.read().await.get(&job_config.code.0).is_some() };
+        if has_job {
+            self.delete(&job_config.code.0).await?;
         }
-        let callback_url = add_or_modify.callback_url.clone();
+        let callback_url = job_config.callback_url.clone();
         let log_url = log_url.to_string();
-        let code = add_or_modify.code.0.clone();
+        let code = job_config.code.0.clone();
         let lock_key = OwnedScheduleTaskServ::gen_distributed_lock_key(&code, config);
         let distributed_lock_expire_sec = config.distributed_lock_expire_sec;
         let ctx = TardisContext {
@@ -332,7 +390,7 @@ impl OwnedScheduleTaskServ {
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         // startup cron scheduler
-        let job = Job::new_async(add_or_modify.cron.as_str(), move |_uuid, _scheduler| {
+        let job = Job::new_async(job_config.cron.as_str(), move |_uuid, _scheduler| {
             let callback_url = callback_url.clone();
             let log_url = log_url.clone();
             let code = code.clone();
@@ -402,19 +460,19 @@ impl OwnedScheduleTaskServ {
             TardisError::internal_error(&msg, "500-middleware-schedual-create-task-failed")
         })?;
         {
-            self.code_uuid.write().await.insert(add_or_modify.code.0.clone(), uuid);
+            self.code_uuid.write().await.insert(job_config.code.0.clone(), (uuid, job_config.cron.clone(), job_config.callback_url.clone()));
         }
         Ok(())
     }
 
     pub async fn delete(&self, code: &str) -> TardisResult<()> {
-        let mut scheds = self.code_uuid.write().await;
-        if let Some(uuid) = scheds.get(code) {
+        let mut uuid_cache = self.code_uuid.write().await;
+        if let Some((uuid, _, _)) = uuid_cache.get(code) {
             self.scheduler.remove(uuid).await.map_err(|err| {
                 let msg = format!("fail to add job: {}", err);
                 TardisError::internal_error(&msg, "500-middleware-schedual-create-task-failed")
             })?;
-            scheds.remove(code);
+            uuid_cache.remove(code);
         }
         Ok(())
     }

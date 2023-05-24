@@ -39,9 +39,9 @@ pub enum LogParamTag {
     Log,
 }
 
-impl Into<String> for LogParamTag {
-    fn into(self) -> String {
-        match self {
+impl From<LogParamTag> for String {
+    fn from(val: LogParamTag) -> Self {
+        match val {
             LogParamTag::IamTenant => "iam_tenant".to_string(),
             LogParamTag::IamOrg => "iam_org".to_string(),
             LogParamTag::IamAccount => "iam_account".to_string(),
@@ -62,9 +62,9 @@ pub enum LogParamOp {
     None,
 }
 
-impl Into<String> for LogParamOp {
-    fn into(self) -> String {
-        match self {
+impl From<LogParamOp> for String {
+    fn from(val: LogParamOp) -> Self {
+        match val {
             LogParamOp::Add => "Add".to_string(),
             LogParamOp::Modify => "Modify".to_string(),
             LogParamOp::Delete => "Delete".to_string(),

@@ -120,7 +120,7 @@ impl IamCertTokenServ {
         .await?;
         // 根据安全配置的Token Expire，计算token的活化有效期
         if let Some(config) =
-            IamConfigServ::get_config_by_code_and_item_id(&IamConfigKind::TokenExpire, &get_max_level_id_by_context(&ctx).unwrap_or("".to_string()), funs, ctx).await?
+            IamConfigServ::get_config_by_code_and_item_id(&IamConfigKind::TokenExpire, &get_max_level_id_by_context(ctx).unwrap_or("".to_string()), funs, ctx).await?
         {
             if !config.disabled {
                 if let Some(expire_sec) = IamConfigDataTypeKind::parse(&config.data_type)?.to_sec(config.value1) {
