@@ -124,22 +124,34 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
-        SpiLogClient::add_item(
-            LogParamTag::IamTenant,
-            LogParamContent {
-                op: "添加租户".to_string(),
-                ext: Some(id.to_string()),
-                ..Default::default()
-            },
-            Some("req".to_string()),
-            Some(id.to_string()),
-            LogParamOp::Add,
-            None,
-            Some(Utc::now().to_rfc3339()),
-            &funs,
-            &ctx,
-        )
-        .await?;
+
+        let ctx_clone = ctx.clone();
+        let id = id.to_string();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamTenant,
+                    LogParamContent {
+                        op: "添加租户".to_string(),
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id.clone()),
+                    LogParamOp::Add,
+                    None,
+                    Some(Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
+        .await
+        .unwrap();
+
         Ok(())
     }
     async fn after_modify_item(id: &str, modify_req: &mut IamTenantModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -155,22 +167,33 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         } else if modify_req.disabled == Some(true) {
             op_describe = "启用租户".to_string();
         }
-        SpiLogClient::add_item(
-            LogParamTag::IamTenant,
-            LogParamContent {
-                op: op_describe,
-                ext: Some(id.to_string()),
-                ..Default::default()
-            },
-            Some("req".to_string()),
-            Some(id.to_string()),
-            LogParamOp::Modify,
-            None,
-            Some(Utc::now().to_rfc3339()),
-            &funs,
-            &ctx,
-        )
-        .await?;
+        let ctx_clone = ctx.clone();
+        let id = id.to_string();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamTenant,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    Some("req".to_string()),
+                    Some(id.clone()),
+                    LogParamOp::Modify,
+                    None,
+                    Some(Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
+        .await
+        .unwrap();
+
         Ok(())
     }
 

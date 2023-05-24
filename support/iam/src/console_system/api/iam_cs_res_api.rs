@@ -272,7 +272,7 @@ impl IamCsResApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Res By Res Id  安全审计日志--编辑API
+    /// Modify Res By Res Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, mut modify_req: Json<IamResModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();

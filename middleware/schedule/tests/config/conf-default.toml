@@ -3,8 +3,8 @@
 [csm.spi-kv]
 [csm.spi-log]
 [csm.schedule]
-kv_url = "http://127.0.0.1:8080/spi-kv"
-log_url = "http://127.0.0.1:8080/spi-log"
+kv_url = "https://127.0.0.1:8080/spi-kv"
+log_url = "https://127.0.0.1:8080/spi-log"
 
 [fw.web_server]
 enabled = true

@@ -55,7 +55,7 @@ pub async fn mock_webserver() -> TardisResult<Arc<AtomicUsize>> {
     Ok(cb_counter)
 }
 #[allow(dead_code)]
-pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<OwnedScheduleTaskServ>> {
+pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<Arc<OwnedScheduleTaskServ>>> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     let mut collector = vec![];
     funs.begin().await?;

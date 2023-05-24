@@ -14,8 +14,10 @@ use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertUserNameNewReq, IamCertUserPwdAddReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
+use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
@@ -263,7 +265,35 @@ impl IamCertUserPwdServ {
                 )
                 .await?
             };
-            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
+            let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await;
+
+            let id = rel_iam_item_id.to_string();
+            let ctx_clone = ctx.clone();
+            ctx.add_async_task(Box::new(|| {
+                Box::pin(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    SpiLogClient::add_item(
+                        LogParamTag::IamAccount,
+                        LogParamContent {
+                            op: "重置账号密码".to_string(),
+                            ext: Some(id.clone()),
+                            ..Default::default()
+                        },
+                        Some("req".to_string()),
+                        Some(id.clone()),
+                        LogParamOp::Modify,
+                        None,
+                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                        &funs,
+                        &ctx_clone,
+                    )
+                    .await
+                    .unwrap();
+                })
+            }))
+            .await
+            .unwrap();
+            result
         } else {
             Err(funs.err().not_found(
                 "iam_cert_user_pwd",
@@ -312,6 +342,33 @@ impl IamCertUserPwdServ {
                     ctx,
                 )
                 .await?;
+
+                let id = rel_iam_item_id.to_string();
+                let ctx_clone = ctx.clone();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        SpiLogClient::add_item(
+                            LogParamTag::IamAccount,
+                            LogParamContent {
+                                op: "重置账号密码".to_string(),
+                                ext: Some(id.clone()),
+                                ..Default::default()
+                            },
+                            Some("req".to_string()),
+                            Some(id.clone()),
+                            LogParamOp::Modify,
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await
+                        .unwrap();
+                    })
+                }))
+                .await
+                .unwrap();
             } else {
                 return Err(funs.err().bad_request(
                     "iam_cert_user_pwd",

@@ -96,7 +96,7 @@ impl IamCsOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Import Tenant Org  安全审计日志--导入部门
+    /// Import Tenant Org
     ///
     /// id -> set_cate_id
     /// tenant_id -> tenant_id

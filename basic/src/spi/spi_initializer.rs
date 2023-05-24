@@ -17,7 +17,7 @@ use super::domain::spi_bs;
 pub async fn init(code: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
     let ctx = TardisContext {
         own_paths: "".to_string(),
-        ak: "".to_string(),
+        ak: "_".to_string(),
         roles: vec![],
         groups: vec![],
         owner: "".to_string(),
