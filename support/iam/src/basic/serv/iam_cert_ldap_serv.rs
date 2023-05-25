@@ -1109,7 +1109,7 @@ pub(crate) mod ldap {
                                 ext: None,
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             None,
                             LogParamOp::Modify,
                             None,
@@ -1123,6 +1123,8 @@ pub(crate) mod ldap {
                 }))
                 .await
                 .unwrap();
+            let task_handle = tardis::tokio::task::spawn_blocking(move || tardis::tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
+            let _ = task_handle.await;
 
             result
         }

@@ -37,7 +37,6 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
-
 pub struct IamCertServ;
 
 impl IamCertServ {
@@ -1215,7 +1214,7 @@ impl IamCertServ {
                                     ext: None,
                                     ..Default::default()
                                 },
-                                Some("req".to_string()),
+                                None,
                                 None,
                                 LogParamOp::Modify,
                                 None,
@@ -1229,6 +1228,8 @@ impl IamCertServ {
                     }))
                     .await
                     .unwrap();
+                let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
+                let _ = task_handle.await;
             }
         }
         result

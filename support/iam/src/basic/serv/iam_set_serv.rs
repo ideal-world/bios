@@ -199,7 +199,7 @@ impl IamSetServ {
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(id),
                             LogParamOp::Add,
                             None,
@@ -253,7 +253,7 @@ impl IamSetServ {
                                         ext: Some(id.clone()),
                                         ..Default::default()
                                     },
-                                    Some("req".to_string()),
+                                    None,
                                     Some(id),
                                     LogParamOp::Modify,
                                     None,
@@ -282,7 +282,7 @@ impl IamSetServ {
                                     ext: Some(id.clone()),
                                     ..Default::default()
                                 },
-                                Some("req".to_string()),
+                                None,
                                 Some(id),
                                 LogParamOp::Modify,
                                 None,
@@ -329,7 +329,7 @@ impl IamSetServ {
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(id),
                             LogParamOp::Delete,
                             None,
@@ -612,7 +612,7 @@ impl IamSetServ {
                             ext: Some(set_id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(set_id),
                         LogParamOp::Add,
                         Some(rel_rbum_item_id),
@@ -655,7 +655,7 @@ impl IamSetServ {
                                 ext: Some(item.rel_rbum_set_id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(item.rel_rbum_set_id.clone()),
                             LogParamOp::Delete,
                             Some(rel_rbum_item_id),

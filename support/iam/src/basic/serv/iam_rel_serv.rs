@@ -88,7 +88,7 @@ impl IamRelServ {
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Add,
                         None,
@@ -114,7 +114,7 @@ impl IamRelServ {
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Add,
                         None,
@@ -265,7 +265,7 @@ impl IamRelServ {
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Add,
                         None,
@@ -472,7 +472,7 @@ impl IamRelServ {
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(id.clone()),
                             LogParamOp::Delete,
                             None,
@@ -502,7 +502,7 @@ impl IamRelServ {
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(id),
                             LogParamOp::Delete,
                             None,
@@ -528,7 +528,7 @@ impl IamRelServ {
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(id.clone()),
                             LogParamOp::Delete,
                             None,

@@ -172,7 +172,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Modify,
                         None,
@@ -208,7 +208,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                         ext: Some(id.clone()),
                         ..Default::default()
                     },
-                    Some("req".to_string()),
+                    None,
                     Some(id.clone()),
                     LogParamOp::Add,
                     None,

@@ -98,7 +98,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                         ext: Some(id.clone()),
                         ..Default::default()
                     },
-                    Some("req".to_string()),
+                    None,
                     Some(id.clone()),
                     LogParamOp::Add,
                     None,
@@ -215,7 +215,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Modify,
                         None,
@@ -299,7 +299,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                         ext: Some(id.clone()),
                         ..Default::default()
                     },
-                    Some("req".to_string()),
+                    None,
                     Some(id.clone()),
                     LogParamOp::Delete,
                     None,
@@ -403,7 +403,7 @@ impl IamRoleServ {
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Modify,
                         None,

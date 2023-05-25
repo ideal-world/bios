@@ -144,7 +144,7 @@ impl IamCpCertUserPwdServ {
                         ext: Some(id.clone()),
                         ..Default::default()
                     },
-                    Some("req".to_string()),
+                    None,
                     Some(id.clone()),
                     LogParamOp::Modify,
                     None,
