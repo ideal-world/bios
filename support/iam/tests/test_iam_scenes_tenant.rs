@@ -459,7 +459,7 @@ pub async fn tenant_console_account_mgr_page(client: &mut BIOSWebTestClient) -> 
         .put(
             &format!("/ct/cert/user-pwd?account_id={}", account_id),
             &IamCertUserPwdRestReq {
-                new_sk: TrimString("1234567".to_string()),
+                new_sk: Some(TrimString("1234567".to_string())),
             },
         )
         .await;

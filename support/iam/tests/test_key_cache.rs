@@ -196,7 +196,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     info!("【test_key_cache】 Rest cert, expected no token record");
     IamCertUserPwdServ::reset_sk(
         &IamCertUserPwdRestReq {
-            new_sk: TrimString("45678".to_string()),
+            new_sk: Some(TrimString("45678".to_string())),
         },
         &account_resp.account_id,
         &IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), Some(tenant_id.clone()), &funs).await?,
