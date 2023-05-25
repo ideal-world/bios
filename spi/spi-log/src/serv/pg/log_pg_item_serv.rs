@@ -78,17 +78,6 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             .join(",");
         where_fragments.push(format!("owner IN ({place_holder})"));
     }
-    if let Some(own_paths) = &find_req.own_paths {
-        let place_holder = own_paths
-            .iter()
-            .map(|own_paths| {
-                sql_vals.push(Value::from(own_paths.to_string()));
-                format!("${}", sql_vals.len())
-            })
-            .collect::<Vec<String>>()
-            .join(",");
-        where_fragments.push(format!("own_paths IN ({place_holder})"));
-    }
     if let Some(keys) = &find_req.keys {
         let place_holder = keys
             .iter()
@@ -121,6 +110,10 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             .collect::<Vec<String>>()
             .join(",");
         where_fragments.push(format!("rel_key IN ({place_holder})"));
+    }
+    if let Some(own_paths) = &find_req.own_paths {
+        sql_vals.push(Value::from(format!("{}%", own_paths)));
+        where_fragments.push(format!("own_paths like ${}", sql_vals.len()));
     }
     if let Some(ts_start) = find_req.ts_start {
         sql_vals.push(Value::from(ts_start));

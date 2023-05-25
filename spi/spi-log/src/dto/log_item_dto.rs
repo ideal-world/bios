@@ -37,7 +37,7 @@ pub struct LogItemFindReq {
     pub keys: Option<Vec<TrimString>>,
     pub ops: Option<Vec<String>>,
     pub owners: Option<Vec<String>>,
-    pub own_paths: Option<Vec<String>>,
+    pub own_paths: Option<String>,
     // Extended filtering conditions
     pub ext: Option<Vec<SpiQueryCondReq>>,
     pub rel_keys: Option<Vec<TrimString>>,
