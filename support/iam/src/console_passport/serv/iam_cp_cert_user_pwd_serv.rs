@@ -11,7 +11,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_account_dto::{IamAccountInfoResp, IamAccountModifyReq};
 use crate::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserNameNewReq, IamCertUserPwdModifyReq};
-use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_ldap_serv::IamCertLdapServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -146,7 +146,7 @@ impl IamCpCertUserPwdServ {
                     },
                     None,
                     Some(id.clone()),
-                    LogParamOp::Modify,
+                    Some("ModifyUserName".to_string()),
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,

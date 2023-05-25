@@ -24,7 +24,7 @@ use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::mail_client::MailClient;
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 
 pub struct IamCertMailVCodeServ;
 
@@ -258,7 +258,7 @@ impl IamCertMailVCodeServ {
                             },
                             None,
                             Some(owner.clone()),
-                            LogParamOp::Modify,
+                            Some("BindMailbox".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,

@@ -40,7 +40,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_ITEM_ID_TENANT_LEN, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamCertExtKind, IamCertKernelKind, IamCertOAuth2Supplier, IamConfigDataTypeKind, IamConfigKind, IamSetKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use super::iam_config_serv::IamConfigServ;
 use super::iam_platform_serv::IamPlatformServ;
@@ -139,7 +139,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
                     },
                     None,
                     Some(id.clone()),
-                    LogParamOp::Add,
+                    Some("Add".to_string()),
                     None,
                     Some(Utc::now().to_rfc3339()),
                     &funs,
@@ -162,10 +162,13 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
 
         let mut op_describe = "编辑租户".to_string();
+        let mut op_kind = "Modify".to_string();
         if modify_req.disabled == Some(false) {
             op_describe = "禁用租户".to_string();
+            op_kind = "Disabled".to_string();
         } else if modify_req.disabled == Some(true) {
             op_describe = "启用租户".to_string();
+            op_kind = "Enabled".to_string();
         }
         let ctx_clone = ctx.clone();
         let id = id.to_string();
@@ -181,7 +184,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
                     },
                     None,
                     Some(id.clone()),
-                    LogParamOp::Modify,
+                    Some(op_kind),
                     None,
                     Some(Utc::now().to_rfc3339()),
                     &funs,

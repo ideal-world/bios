@@ -1061,7 +1061,7 @@ pub(crate) mod ldap {
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
 
-    use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+    use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
     use crate::iam_constants;
 
     pub struct LdapClient {
@@ -1111,7 +1111,7 @@ pub(crate) mod ldap {
                             },
                             None,
                             None,
-                            LogParamOp::Modify,
+                            Some("Bind5aAccount".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,

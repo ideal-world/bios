@@ -22,7 +22,7 @@ use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::sms_client::SmsClient;
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_tenant_serv::IamTenantServ;
@@ -304,7 +304,7 @@ impl IamCertPhoneVCodeServ {
                             },
                             None,
                             Some(owner.clone()),
-                            LogParamOp::Modify,
+                            Some("BindPhone".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,

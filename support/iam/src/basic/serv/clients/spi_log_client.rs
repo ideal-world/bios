@@ -1,10 +1,6 @@
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq},
-    serv::{
-        rbum_crud_serv::RbumCrudOperation,
-        rbum_item_serv::RbumItemCrudOperation,
-        rbum_set_serv::{RbumSetItemServ},
-    },
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
 };
 use serde::Serialize;
 use std::collections::HashMap;
@@ -65,31 +61,13 @@ impl From<LogParamTag> for String {
     }
 }
 
-pub enum LogParamOp {
-    Add,
-    Modify,
-    Delete,
-    None,
-}
-
-impl From<LogParamOp> for String {
-    fn from(val: LogParamOp) -> Self {
-        match val {
-            LogParamOp::Add => "Add".to_string(),
-            LogParamOp::Modify => "Modify".to_string(),
-            LogParamOp::Delete => "Delete".to_string(),
-            LogParamOp::None => "".to_string(),
-        }
-    }
-}
-
 impl SpiLogClient {
     pub async fn add_item(
         tag: LogParamTag,
         mut content: LogParamContent,
         kind: Option<String>,
         key: Option<String>,
-        op: LogParamOp,
+        op: Option<String>,
         rel_key: Option<String>,
         ts: Option<String>,
         funs: &TardisFunsInst,
@@ -136,7 +114,6 @@ impl SpiLogClient {
             ("content", TardisFuns::json.obj_to_string(&content)?),
             ("owner", ctx.owner.clone()),
             ("owner_paths", ctx.own_paths.clone()),
-            ("op", op.into()),
         ]);
         // create search_ext
         let search_ext = json!({
@@ -152,6 +129,10 @@ impl SpiLogClient {
 
         if let Some(kind) = kind {
             body.insert("kind", kind);
+        }
+
+        if let Some(op) = op {
+            body.insert("op", op);
         }
 
         if let Some(key) = key {

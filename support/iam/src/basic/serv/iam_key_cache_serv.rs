@@ -16,7 +16,7 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
-use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
@@ -107,7 +107,7 @@ impl IamIdentCacheServ {
                             },
                             None,
                             None,
-                            LogParamOp::Modify,
+                            Some("OfflineAccount".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
@@ -224,7 +224,7 @@ impl IamIdentCacheServ {
                         },
                         None,
                         None,
-                        LogParamOp::Modify,
+                        Some("OfflineAccount".to_string()),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,

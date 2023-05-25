@@ -50,7 +50,7 @@ use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamC
 
 use super::clients::mail_client::MailClient;
 use super::clients::sms_client::SmsClient;
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -146,18 +146,25 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
 
         let mut op_describe = String::new();
+        let mut op_kind = String::new();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             op_describe = "注销账号".to_string();
+            op_kind = "Logout".to_string();
         } else if modify_req.status == Some(IamAccountStatusKind::Dormant) {
             op_describe = "休眠账号".to_string();
+            op_kind = "DormantAccount".to_string();
         } else if modify_req.status == Some(IamAccountStatusKind::Active) {
             op_describe = "激活账号".to_string();
+            op_kind = "ActivateAccount".to_string();
         } else if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
             op_describe = "解锁账号".to_string();
+            op_kind = "UnlockAccount".to_string();
         } else if modify_req.icon.is_some() {
             op_describe = "修改账号头像".to_string();
+            op_kind = "ModifyAccountIcon".to_string();
         } else if modify_req.name.is_some() {
             op_describe = format!("修改姓名为{}", modify_req.name.as_ref().unwrap());
+            op_kind = "ModifyName".to_string();
         }
         if !op_describe.is_empty() {
             let id = id.to_string();
@@ -174,7 +181,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                         },
                         None,
                         Some(id.clone()),
-                        LogParamOp::Modify,
+                        Some(op_kind),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -193,8 +200,10 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
     async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut op_describe = "添加长期账号".to_string();
+        let mut op_kind = "AddLongTermAccount".to_string();
         if add_req.temporary == Some(true) {
             op_describe = "添加临时账号".to_string();
+            op_kind = "AddTempAccount".to_string();
         }
         let id = id.to_string();
         let ctx_clone = ctx.clone();
@@ -210,7 +219,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
                     },
                     None,
                     Some(id.clone()),
-                    LogParamOp::Add,
+                    Some(op_kind),
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,

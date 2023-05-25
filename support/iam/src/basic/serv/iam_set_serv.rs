@@ -26,7 +26,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
 
@@ -181,10 +181,10 @@ impl IamSetServ {
 
         if result.is_ok() {
             let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
-            let (op_describe, tag) = match item.kind.as_str() {
-                "Org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg)),
-                "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes)),
-                _ => (String::new(), None),
+            let (op_describe, tag, op_kind) = match item.kind.as_str() {
+                "Org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg), Some("Add".to_string())),
+                "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes), Some("Add".to_string())),
+                _ => (String::new(), None, None),
             };
             if let Some(tag) = tag {
                 let id = result.as_ref().unwrap().clone();
@@ -201,7 +201,7 @@ impl IamSetServ {
                             },
                             None,
                             Some(id),
-                            LogParamOp::Add,
+                            op_kind,
                             None,
                             Some(Utc::now().to_rfc3339()),
                             &funs,
@@ -255,7 +255,7 @@ impl IamSetServ {
                                     },
                                     None,
                                     Some(id),
-                                    LogParamOp::Modify,
+                                    Some("Rename".to_string()),
                                     None,
                                     Some(Utc::now().to_rfc3339()),
                                     &funs,
@@ -284,7 +284,7 @@ impl IamSetServ {
                                 },
                                 None,
                                 Some(id),
-                                LogParamOp::Modify,
+                                Some("ModifyContent".to_string()),
                                 None,
                                 Some(Utc::now().to_rfc3339()),
                                 &funs,
@@ -311,10 +311,10 @@ impl IamSetServ {
         let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
 
         if result.is_ok() {
-            let (op_describe, tag) = match item.kind.as_str() {
-                "Org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg)),
-                "res" => ("删除目录".to_string(), Some(LogParamTag::IamRes)),
-                _ => (String::new(), None),
+            let (op_describe, tag, op_kind) = match item.kind.as_str() {
+                "Org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg), Some("Delete".to_string())),
+                "res" => ("删除目录".to_string(), Some(LogParamTag::IamRes), Some("Delete".to_string())),
+                _ => (String::new(), None, None),
             };
             if let Some(tag) = tag {
                 let id = set_cate_id.to_string();
@@ -331,7 +331,7 @@ impl IamSetServ {
                             },
                             None,
                             Some(id),
-                            LogParamOp::Delete,
+                            op_kind,
                             None,
                             Some(Utc::now().to_rfc3339()),
                             &funs,
@@ -614,7 +614,7 @@ impl IamSetServ {
                         },
                         None,
                         Some(set_id),
-                        LogParamOp::Add,
+                        Some("AddAccount".to_string()),
                         Some(rel_rbum_item_id),
                         Some(Utc::now().to_rfc3339()),
                         &funs,
@@ -657,7 +657,7 @@ impl IamSetServ {
                             },
                             None,
                             Some(item.rel_rbum_set_id.clone()),
-                            LogParamOp::Delete,
+                            Some("RemoveAccount".to_string()),
                             Some(rel_rbum_item_id),
                             Some(Utc::now().to_rfc3339()),
                             &funs,

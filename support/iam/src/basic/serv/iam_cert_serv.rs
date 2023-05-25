@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_rel_serv::IamRelServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
@@ -1216,7 +1216,7 @@ impl IamCertServ {
                                 },
                                 None,
                                 None,
-                                LogParamOp::Modify,
+                                Some("PasswordLockAccount".to_string()),
                                 None,
                                 Some(tardis::chrono::Utc::now().to_rfc3339()),
                                 &funs,

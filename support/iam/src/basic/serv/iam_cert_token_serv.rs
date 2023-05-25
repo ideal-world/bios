@@ -17,7 +17,7 @@ use crate::iam_config::IamBasicConfigApi;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamCertTokenServ;
@@ -146,7 +146,7 @@ impl IamCertTokenServ {
                     },
                     None,
                     Some(rel_iam_item_id),
-                    LogParamOp::Modify,
+                    None,
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,

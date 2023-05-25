@@ -28,7 +28,7 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 
 pub struct IamRoleServ;
 
@@ -100,7 +100,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     },
                     None,
                     Some(id.clone()),
-                    LogParamOp::Add,
+                    Some("AddCustomizeRole".to_string()),
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,
@@ -194,12 +194,15 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
 
         let mut op_describe = String::new();
+        let mut op_kind = String::new();
         if modify_req.name.is_some() {
-            op_describe = format!(
-                "编辑{}角色名称为{}",
-                if Self::is_custom_role(role.kind, role.scope_level) { "自定义" } else { "内置" },
-                modify_req.name.as_ref().unwrap()
-            );
+            if Self::is_custom_role(role.kind, role.scope_level) {
+                op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap());
+                op_kind = "ModifyCustomizeRoleName".to_string();
+            } else {
+                op_describe = format!("编辑内置角色名称为{}", modify_req.name.as_ref().unwrap());
+                op_kind = "ModifyBuiltRoleName".to_string();
+            }
         }
 
         if !op_describe.is_empty() {
@@ -217,7 +220,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                         },
                         None,
                         Some(id.clone()),
-                        LogParamOp::Modify,
+                        Some(op_kind),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -301,7 +304,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                     },
                     None,
                     Some(id.clone()),
-                    LogParamOp::Delete,
+                    Some("DeleteCustomizeRole".to_string()),
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
                     &funs,
@@ -387,12 +390,11 @@ impl IamRoleServ {
             .await?;
             let id = id.to_string();
             let ctx_clone = ctx.clone();
-            let op_describe = if Self::is_custom_role(role.kind, role.scope_level) {
-                "编辑自定义角色权限"
+            let (op_describe, op_kind) = if Self::is_custom_role(role.kind, role.scope_level) {
+                ("编辑自定义角色权限".to_string(), "ModifyCustomizeRolePermissions".to_string())
             } else {
-                "编辑内置角色权限"
-            }
-            .to_string();
+                ("编辑内置角色权限".to_string(), "ModifyBuiltRolePermissions".to_string())
+            };
             ctx.add_async_task(Box::new(|| {
                 Box::pin(async move {
                     let funs = iam_constants::get_tardis_inst();
@@ -405,7 +407,7 @@ impl IamRoleServ {
                         },
                         None,
                         Some(id.clone()),
-                        LogParamOp::Modify,
+                        Some(op_kind),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,

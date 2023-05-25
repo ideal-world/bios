@@ -19,7 +19,7 @@ use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 
 pub struct IamRelServ;
 
@@ -90,7 +90,7 @@ impl IamRelServ {
                         },
                         None,
                         Some(id.clone()),
-                        LogParamOp::Add,
+                        Some("AddTenantRoleAsAdmin".to_string()),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -116,7 +116,7 @@ impl IamRelServ {
                         },
                         None,
                         Some(id.clone()),
-                        LogParamOp::Add,
+                        Some("AddRoleAccount".to_string()),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -267,7 +267,7 @@ impl IamRelServ {
                         },
                         None,
                         Some(id.clone()),
-                        LogParamOp::Add,
+                        Some("AddApi".to_string()),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -474,7 +474,7 @@ impl IamRelServ {
                             },
                             None,
                             Some(id.clone()),
-                            LogParamOp::Delete,
+                            Some("DeleteApi".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
@@ -504,7 +504,7 @@ impl IamRelServ {
                             },
                             None,
                             Some(id),
-                            LogParamOp::Delete,
+                            Some("RemoveTenantRoleAsAdmin".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
@@ -530,7 +530,7 @@ impl IamRelServ {
                             },
                             None,
                             Some(id.clone()),
-                            LogParamOp::Delete,
+                            Some("RemoveRoleAccount".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
