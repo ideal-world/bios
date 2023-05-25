@@ -1,13 +1,20 @@
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
-use tardis::web::{
-    context_extractor::TardisContextExtractor,
-    poem::Request,
-    poem_openapi::{self, param::Query, payload::Json},
-    web_resp::{TardisApiResult, TardisResp, Void},
+use tardis::{
+    basic::error::TardisError,
+    db::sea_orm::prelude::Uuid,
+    web::{
+        context_extractor::TardisContextExtractor,
+        poem::Request,
+        poem_openapi::{self, param::Query, payload::Json},
+        web_resp::{TardisApiResult, TardisResp, Void},
+    },
 };
 
-use crate::dto::{conf_config_dto::*, conf_namespace_dto::*};
-use crate::serv::*;
+use crate::{conf_constants::error, serv::*};
+use crate::{
+    conf_constants::error::*,
+    dto::{conf_config_dto::*, conf_namespace_dto::*},
+};
 
 pub struct ConfCiConfigServiceApi;
 
@@ -116,16 +123,92 @@ impl ConfCiConfigServiceApi {
         TardisResp::ok(config)
     }
     #[oai(path = "/history/list", method = "get")]
-    async fn history_list(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigHistoryList> {
-        unimplemented!()
+    async fn history_list(
+        &self,
+        /// 命名空间
+        namespace_id: Query<Option<NamespaceId>>,
+        /// 租户
+        tenant: Query<Option<NamespaceId>>,
+        /// 配置分组名
+        group: Query<String>,
+        /// 配置名
+        data_id: Query<String>,
+        /// 页数
+        page_no: Query<Option<u32>>,
+        /// 每页大小
+        page_size: Query<Option<u32>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<ConfigHistoryListResponse> {
+        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let descriptor = ConfigDescriptor {
+            namespace_id,
+            group: group.0,
+            data_id: data_id.0,
+            ..Default::default()
+        };
+        let funs = request.tardis_fun_inst();
+        let page_size = page_size.0.unwrap_or(100).min(500).max(1);
+        let page_number = page_no.0.unwrap_or(1).max(0);
+        let mut request = ConfigHistoryListRequest {
+            descriptor,
+            page_no: page_number,
+            page_size,
+        };
+        let response = get_history_list_by_namespace(&mut request, &funs, &ctx.0).await?;
+        TardisResp::ok(response)
     }
     #[oai(path = "/history", method = "get")]
-    async fn history(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigItem> {
-        unimplemented!()
+    async fn history(
+        &self,
+        /// 命名空间
+        namespace_id: Query<Option<NamespaceId>>,
+        /// 租户
+        tenant: Query<Option<NamespaceId>>,
+        /// 配置分组名
+        group: Query<String>,
+        /// 配置名
+        data_id: Query<String>,
+        id: Query<String>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<ConfigItem> {
+        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut descriptor = ConfigDescriptor {
+            namespace_id,
+            group: group.0,
+            data_id: data_id.0,
+            ..Default::default()
+        };
+        let funs = request.tardis_fun_inst();
+        let config = find_history(&mut descriptor, &id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(config)
     }
     #[oai(path = "/history/previous", method = "get")]
-    async fn history_previous(&self, add_or_modify_req: Json<ConfigDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<ConfigItem> {
-        unimplemented!()
+    async fn history_previous(
+        &self,
+        /// 命名空间
+        namespace_id: Query<Option<NamespaceId>>,
+        /// 租户
+        tenant: Query<Option<NamespaceId>>,
+        /// 配置分组名
+        group: Query<String>,
+        /// 配置名
+        data_id: Query<String>,
+        id: Query<String>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<ConfigItem> {
+        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut descriptor = ConfigDescriptor {
+            namespace_id,
+            group: group.0,
+            data_id: data_id.0,
+            ..Default::default()
+        };
+        let funs = request.tardis_fun_inst();
+        let config = find_previous_history(&mut descriptor, &id.0, &funs, &ctx.0).await?;
+        TardisResp::ok(config)
     }
     #[oai(path = "/history/configs", method = "get")]
     async fn history_configs(&self, add_or_modify_req: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<ConfigItem>> {

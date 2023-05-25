@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, io};
 
 use bios_basic::{
     rbum::serv::rbum_kind_serv::RbumKindServ,
@@ -8,7 +8,7 @@ use bios_basic::{
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::{
-        conf_config_dto::{ConfigDescriptor, ConfigPublishRequest},
+        conf_config_dto::{ConfigDescriptor, ConfigPublishRequest, ConfigHistoryListResponse},
         conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
     },
 };
@@ -100,6 +100,18 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
+    // try update
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": include_str!("./config/conf-default.toml").to_string(),
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-default".to_string(),
+                "schema": "toml",
+            }),
+        )
+        .await;
     // 3. retrieve config
     let _response = client.get::<String>("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
     // 4. get namespace info
@@ -155,6 +167,95 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(response.code, "404");
     dbg!(response);
 
+    // 9. test config history
+    // 9.1 publish a config
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "测试版本1",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-default".to_string(),
+                "schema": "toml",
+                "namespace_id": "public".to_string(),
+            }),
+        )
+        .await;
+    // 9.2 update the config
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "测试版本2",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-default".to_string(),
+                "schema": "toml",
+                "namespace_id": "public".to_string(),
+            }),
+        )
+        .await;
 
+    // 9.3 get config history
+    let response = client.get::<ConfigHistoryListResponse>("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    assert_eq!(response.total_count, 5);
+    assert_eq!(response.page_items[0].content, "测试版本2");
+    assert_eq!(response.page_items[0].op_type, "U");
+    assert_eq!(response.page_items[1].content, "测试版本1");
+    assert_eq!(response.page_items[1].op_type, "I");
+    assert_eq!(response.page_items[2].op_type, "D");
+    assert_eq!(response.page_items[3].op_type, "U");
+    assert_eq!(response.page_items[4].op_type, "I");
+
+    // 10. test find certain config history
+    // 10.1 upload two new config
+    let data_id_1 = "conf-history-test-1";
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "历史版本测试1",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": data_id_1.to_string(),
+                "schema": "plaintext",
+                "namespace_id": "public".to_string(),
+            }),
+        )
+        .await;
+    let _response = client
+    .post::<_, bool>(
+        "/ci/cs/config",
+        &json!( {
+            "content": "历史版本测试2",
+            "group": "DEFAULT-GROUP".to_string(),
+            "data_id": "conf-history-test-2".to_string(),
+            "schema": "plaintext",
+            "namespace_id": "public".to_string(),
+        }),
+    )
+    .await;
+    // 10.2 update the first config
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "历史版本测试1-修改",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": data_id_1.to_string(),
+                "schema": "plaintext",
+                "namespace_id": "public".to_string(),
+            }),
+        )
+        .await;
+    // 10.3 find first config history version 1
+    let response = client.get::<ConfigHistoryListResponse>(&format!("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id={data_id_1}")).await;
+    assert_eq!(response.total_count, 2);
+    // response.page_items[1];
+    // let response = client.get::<ConfigHistoryItem>("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id=1").await;
+    // let response = client.get::<ConfigHistoryListResponse>("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-2").await;
+    
+    // wait user press enter
+    println!("Press enter to continue...");
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
     Ok(())
 }

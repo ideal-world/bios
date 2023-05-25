@@ -42,6 +42,7 @@ dispatch_servive! {
     /// list namespace
     get_namespace_list() -> TardisResult<Vec<NamespaceItem>>;
 
+
     // for configs
     /// publich config
     publish_config(req: &mut ConfigPublishRequest) -> TardisResult<bool>;
@@ -52,4 +53,11 @@ dispatch_servive! {
     /// delete config
     delete_config(descriptor: &mut ConfigDescriptor) -> TardisResult<bool>;
     
+    // for config history
+    /// get config history list
+    get_history_list_by_namespace(req: &mut ConfigHistoryListRequest) -> TardisResult<ConfigHistoryListResponse>;
+    /// find come certain history
+    find_history(descriptor: &mut ConfigDescriptor, id: &String) -> TardisResult<ConfigItem>;
+    /// find previous history
+    find_previous_history(descriptor: &mut ConfigDescriptor, id: &String) -> TardisResult<ConfigItem>;
 }

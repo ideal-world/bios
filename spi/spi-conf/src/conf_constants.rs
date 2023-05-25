@@ -12,8 +12,9 @@ pub mod error {
     }
     def_error_code! {
         "spi-conf" {
-            CONF_NOTFOUND:          404 = "conf-not-exist";
-            NAMESPACE_NOTFOUND:     404 = "namespace-not-exist";
+            INVALID_UUID:               400 = "invalid-uuid";
+            CONF_NOTFOUND:              404 = "conf-not-exist";
+            NAMESPACE_NOTFOUND:         404 = "namespace-not-exist";
         }
     }
 }

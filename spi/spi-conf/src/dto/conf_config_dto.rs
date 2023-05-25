@@ -1,5 +1,6 @@
 use super::conf_namespace_dto::NamespaceId;
 use serde::{Deserialize, Serialize};
+use tardis::chrono::Utc;
 use tardis::db::sea_orm;
 use tardis::web::poem_openapi::{ApiExtractor, ApiExtractorType};
 use tardis::{db::sea_orm::prelude::*, web::poem_openapi};
@@ -57,49 +58,69 @@ pub struct ConfigPublishRequest {
     pub schema: Option<String>,
 }
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
-#[serde(default)]
-pub struct ConfigItem {
-    // 	配置id
-    id: String,
-    //
-    last_id: u32,
-    // 	配置名
-    data_id: String,
-    // 	配置分组
-    group: String,
-    // 	租户信息（命名空间）
-    tenant: String,
-    // 	应用名
-    app_name: String,
-    // 	配置内容的md5值
-    md5: String,
-    // 	配置内容
-    content: String,
-    // 	源ip
-    src_ip: String,
-    // 	源用户
-    src_user: String,
-    // 	操作类型
-    op_type: String,
-    // 	创建时间
-    created_time: String,
-    // 	上次修改时间
-    last_modified_time: String,
-    //
-    encrypted_data_key: String,
-}
-
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
-pub struct ConfigHistoryList {
-    #[serde(flatten)]
-    descriptor: ConfigDescriptor,
-    page_no: u32,
-    page_size: u32,
+pub struct ConfigItem {
+    /// 配置id
+    pub id: String,
+    ///
+    pub last_id: i32,
+    /// 配置名
+    pub data_id: String,
+    /// 配置分组
+    pub group: String,
+    /// 租户信息（命名空间）
+    pub namespace: String,
+    /// 应用名
+    pub app_name: String,
+    /// 配置内容的md5值
+    pub md5: String,
+    /// 配置内容
+    pub content: String,
+    /// 源ip
+    pub src_ip: Option<String>,
+    /// 源用户
+    pub src_user: String,
+    /// 操作类型
+    pub op_type: String,
+    /// 创建时间
+    pub created_time: DateTimeUtc,
+    /// 上次修改时间
+    pub last_modified_time: DateTimeUtc,
+    ///
+    pub encrypted_data_key: Option<String>,
 }
 
-impl Default for ConfigHistoryList {
+impl Default for ConfigItem {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            last_id: -1,
+            data_id: Default::default(),
+            group: Default::default(),
+            namespace: Default::default(),
+            app_name: Default::default(),
+            md5: Default::default(),
+            content: Default::default(),
+            src_ip: None,
+            src_user: Default::default(),
+            op_type: Default::default(),
+            created_time: Default::default(),
+            last_modified_time: Default::default(),
+            encrypted_data_key: None,
+        }
+    }
+}
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[serde(default)]
+pub struct ConfigHistoryListRequest {
+    #[serde(flatten)]
+    pub descriptor: ConfigDescriptor,
+    pub page_no: u32,
+    pub page_size: u32,
+}
+
+impl Default for ConfigHistoryListRequest {
     fn default() -> Self {
         Self {
             descriptor: Default::default(),
@@ -107,6 +128,14 @@ impl Default for ConfigHistoryList {
             page_size: 100,
         }
     }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct ConfigHistoryListResponse {
+    pub total_count: u32,
+    pub page_number: u32,
+    pub pages_available: u32,
+    pub page_items: Vec<ConfigItem>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]

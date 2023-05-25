@@ -11,21 +11,13 @@ use crate::{
     dto::{conf_config_dto::*, conf_namespace_dto::NamespaceItem},
 };
 
-use super::conf_pg_initializer;
+use super::{conf_pg_initializer, get_namespace_id, OpType, add_history, HistoryInsertParams};
 
 fn md5(content: &str) -> String {
     use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
     let mut md5 = Md5::new();
     md5.input_str(content);
     md5.result_str()
-}
-
-fn get_namespace_id(namespace: &String) -> String {
-    if namespace.is_empty() {
-        "public".to_string()
-    } else {
-        namespace.to_string()
-    }
 }
 
 pub async fn get_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
@@ -75,36 +67,75 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
 pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
     let data_id = &req.descriptor.data_id;
     let group = &req.descriptor.group;
-    let namespace = get_namespace_id(&req.descriptor.namespace_id);
+    let namespace = &get_namespace_id(&req.descriptor.namespace_id);
     let content = &req.content;
-    let md5 = md5(content);
-    let app_name = &req.app_name;
-    let schema = &req.schema;
+    let md5 = &md5(content);
+    let app_name = req.app_name.as_deref();
+    let schema = req.schema.as_deref();
+    let history = HistoryInsertParams { data_id, group, namespace, content, md5, app_name, schema};
     let params = vec![
+        ("content", Value::from(content)),
+        ("md5", Value::from(md5)),
+        ("app_name", Value::from(app_name)),
+        ("schema", Value::from(schema)),
+    ];
+    let key_params = vec![
         ("data_id", Value::from(data_id)),
         ("grp", Value::from(group)),
         ("namespace_id", Value::from(namespace)),
-        ("content", Value::from(content)),
-        ("md5", Value::from(md5)),
-        ("app_name", Value::from(app_name.clone())),
-        ("schema", Value::from(schema.clone())),
     ];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (mut conn, table_name) = conns.config;
+    // check if exists
+    let qry_result = conn
+        .query_one(
+            &format!(
+                r#"SELECT (data_id) FROM {table_name} cc
+WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
+                    "#,
+            ),
+            vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
+        )
+        .await?;
+    let op_type: OpType;
+
     conn.begin().await?;
-    let (fields, placeholders, values) = super::gen_insert_sql_stmt(params);
-    conn.execute_one(
-        &format!(
-            r#"INSERT INTO {table_name} 
-    ({fields})
-VALUES
-    ({placeholders})
-	"#,
-        ),
-        values,
-    )
-    .await?;
+    if qry_result.is_some() {
+        // if exists, update
+        op_type = OpType::Update;
+        let (set_caluse, where_caluse, values) = super::gen_update_sql_stmt(params, key_params);
+        add_history(history, op_type, funs, ctx).await?;
+        conn.execute_one(
+            &format!(
+                r#"UPDATE {table_name} 
+SET {set_caluse}
+WHERE {where_caluse}
+        "#,
+            ),
+            values,
+        )
+        .await?;
+    } else {
+        // if not exists, insert
+        op_type = OpType::Insert;
+        add_history(history, op_type, funs, ctx).await?;
+        let mut fields_and_values = params;
+        fields_and_values.extend(key_params);
+        let (fields, placeholders, values) = super::gen_insert_sql_stmt(fields_and_values);
+        conn.begin().await?;
+        conn.execute_one(
+            &format!(
+                r#"INSERT INTO {table_name} 
+        ({fields})
+    VALUES
+        ({placeholders})
+        "#,
+            ),
+            values,
+        )
+        .await?;
+    }
     conn.commit().await?;
     Ok(true)
 }
@@ -112,11 +143,13 @@ VALUES
 pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = get_namespace_id(&descriptor.namespace_id);
+    let namespace = &get_namespace_id(&descriptor.namespace_id);
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let history = HistoryInsertParams { data_id, group, namespace, ..Default::default()};
     let (mut conn, table_name) = conns.config;
     conn.begin().await?;
+    add_history(history, OpType::Delete, funs, ctx).await?;
     conn.execute_one(
         &format!(
             r#"DELETE FROM {table_name} cc
