@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log::debug,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
