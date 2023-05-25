@@ -5,8 +5,9 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::tokio::task;
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -916,7 +917,8 @@ impl IamCertServ {
         let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
 
         IamCertTokenServ::add_cert(&account_info.token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
-
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(context.execute_task()));
+        let _ = task_handle.await;
         Ok(account_info)
     }
 
@@ -944,10 +946,10 @@ impl IamCertServ {
         )
         .await?;
         if account_agg.disabled {
-            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-rbum-cert-lock"));
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-iam-account-disabled"));
         }
         if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
-            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-cert-lock"));
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),

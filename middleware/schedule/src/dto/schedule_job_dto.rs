@@ -34,6 +34,24 @@ pub struct ScheduleJobInfoResp {
     pub update_time: Option<chrono::DateTime<Utc>>,
 }
 
+#[derive(poem_openapi::Object, Deserialize, Debug, Serialize)]
+pub(crate) struct KvSchedualJobItemDetailResp {
+    pub key: String,
+    pub value: ScheduleJobAddOrModifyReq,
+    pub info: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+}
+
+impl ScheduleJobInfoResp {
+    pub fn create_add_or_mod_req(&self) -> ScheduleJobAddOrModifyReq {
+        ScheduleJobAddOrModifyReq {
+            code: self.code.clone().into(),
+            cron: self.cron.clone(),
+            callback_url: self.callback_url.clone(),
+        }
+    }
+}
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct ScheduleTaskLogFindResp {
     #[oai(validator(min_length = "2"))]
