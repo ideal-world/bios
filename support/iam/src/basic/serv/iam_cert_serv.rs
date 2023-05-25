@@ -944,10 +944,10 @@ impl IamCertServ {
         )
         .await?;
         if account_agg.disabled {
-            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-rbum-cert-lock"));
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-iam-account-disabled"));
         }
         if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
-            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-cert-lock"));
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
