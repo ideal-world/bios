@@ -1,4 +1,7 @@
-use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
+use bios_basic::{
+    rbum::{rbum_config::RbumConfig, rbum_initializer},
+    spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer},
+};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     web::web_server::TardisWebServer,
@@ -10,16 +13,7 @@ use crate::{api::ci::schedule_ci_job_api, schedule_constants::DOMAIN_CODE, serv:
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
     funs.begin().await?;
-    let ctx = TardisContext {
-        own_paths: "".to_string(),
-        owner: "".to_string(),
-        ak: "_".to_string(),
-        roles: vec![],
-        groups: vec![],
-        ext: Default::default(),
-        sync_task_fns: Default::default(),
-        async_task_fns: Default::default(),
-    };
+    let ctx = spi_initializer::init(DOMAIN_CODE, &funs).await?;
     schedule_job_serv::init(&funs, &ctx).await?;
     funs.commit().await?;
     init_api(web_server).await

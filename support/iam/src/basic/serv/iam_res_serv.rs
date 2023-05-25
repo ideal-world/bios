@@ -33,6 +33,7 @@ use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind};
 
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_key_cache_serv::IamCacheResRelAddOrModifyReq;
@@ -105,6 +106,37 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if res.kind == IamResKind::Api {
             IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
         }
+        let op_describe = match res.kind {
+            IamResKind::Menu => "添加目录页面".to_string(),
+            IamResKind::Api => "添加目录页面API".to_string(),
+            IamResKind::Ele => "添加目录页面按钮".to_string(),
+        };
+        let id = id.to_string();
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    LogParamTag::IamRes,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: Some(id.clone()),
+                        ..Default::default()
+                    },
+                    None,
+                    Some(id.clone()),
+                    LogParamOp::Add,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
+        .await
+        .unwrap();
         Ok(())
     }
 

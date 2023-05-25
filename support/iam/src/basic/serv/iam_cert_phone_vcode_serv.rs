@@ -18,9 +18,11 @@ use crate::basic::dto::iam_cert_conf_dto::IamCertConfPhoneVCodeAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::IamCertPhoneVCodeAddReq;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
+use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::sms_client::SmsClient;
+use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_tenant_serv::IamTenantServ;
@@ -286,6 +288,34 @@ impl IamCertPhoneVCodeServ {
                     &ctx,
                 )
                 .await?;
+
+                let op_describe = format!("绑定手机号为{}", phone);
+                let owner = ctx.owner.to_string();
+                let ctx_clone = ctx.clone();
+                ctx.add_async_task(Box::new(|| {
+                    Box::pin(async move {
+                        let funs = iam_constants::get_tardis_inst();
+                        SpiLogClient::add_item(
+                            LogParamTag::IamAccount,
+                            LogParamContent {
+                                op: op_describe,
+                                ext: Some(owner.clone()),
+                                ..Default::default()
+                            },
+                            None,
+                            Some(owner.clone()),
+                            LogParamOp::Modify,
+                            None,
+                            Some(tardis::chrono::Utc::now().to_rfc3339()),
+                            &funs,
+                            &ctx_clone,
+                        )
+                        .await
+                        .unwrap();
+                    })
+                }))
+                .await
+                .unwrap();
                 return Ok(id);
             }
         }

@@ -54,3 +54,5 @@
 400-iam--ldap-cert-add-parameter-incorrect	LDAP认证添加参数错误
 500-config-parse-error	配置处理错误
 500-auth-resp-crypto-error	返回加密处理错误
+401-iam-account-disabled    用户被禁止
+401-rbum-account-lock   用户被锁定
