@@ -27,7 +27,7 @@ impl IamCsSpiDataApi {
     async fn init_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        Self::do_init_spi_data(&funs, &ctx.0).await?;
+        Self::do_init_spi_data(&funs, &ctx.0, false).await?;
         funs.commit().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
@@ -35,7 +35,22 @@ impl IamCsSpiDataApi {
             TardisResp::ok(None)
         }
     }
-    async fn do_init_spi_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+
+    /// Do update Data
+    #[oai(path = "/", method = "patch")]
+    async fn update_spi_data(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<String>> {
+        let mut funs = iam_constants::get_tardis_inst();
+        funs.begin().await?;
+        Self::do_init_spi_data(&funs, &ctx.0, true).await?;
+        funs.commit().await?;
+        if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
+            TardisResp::accepted(Some(task_id))
+        } else {
+            TardisResp::ok(None)
+        }
+    }
+
+    async fn do_init_spi_data(funs: &TardisFunsInst, ctx: &TardisContext, is_modify: bool) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         {
             let task_ctx = ctx.clone();
@@ -136,7 +151,7 @@ impl IamCsSpiDataApi {
                             &task_ctx,
                         )
                         .await?;
-                        IamAccountServ::add_or_modify_account_search(account_resp, true, "", &funs, &task_ctx).await?;
+                        IamAccountServ::add_or_modify_account_search(account_resp, is_modify, "", &funs, &task_ctx).await?;
                     }
                     funs.commit().await?;
                     Ok(())
