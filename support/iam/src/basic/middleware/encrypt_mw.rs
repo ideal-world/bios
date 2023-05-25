@@ -49,7 +49,7 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
 
                 //如果有这个头，那么需要返回加密
                 if let Some(key_crypto) = req_head_crypto_value {
-                    log::trace!("[IAM.Middleware] key_crypto:{key_crypto}");
+                    log::trace!("[Iam.Middleware] key_crypto:{key_crypto}");
                     let resp_body = resp.take_body().into_string().await?;
 
                     let mut headers = HashMap::new();
@@ -60,15 +60,16 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
                         .web_client()
                         .put(&format!("{}/auth/crypto", funs.conf::<IamConfig>().crypto_conf.auth_url), &auth_encrypt_req, None)
                         .await
-                        .map_err(|e| TardisError::internal_error(&format!("[Iam] Encrypted api call error: {e}"), "500-auth-resp-crypto-error"))?
+                        .map_err(|e| TardisError::internal_error(&format!("[Iam.Middleware] Encrypted api call error: {e}"), "500-auth-resp-crypto-error"))?
                         .body
-                        .ok_or(TardisError::internal_error(
-                            &format!("[Iam] Encrypted api call error: not found body"),
-                            "500-auth-resp-crypto-error",
-                        ))?;
+                        .ok_or_else(|| TardisError::internal_error("[Iam.Middleware] Encrypted api call error: not found body", "500-auth-resp-crypto-error"))?;
 
                     if encrypt_resp.code != *"200" {
-                        return Err(TardisError::internal_error(&format!("Iam] Encrypted api call return error:{}", encrypt_resp.msg), "500-auth-resp-crypto-error").into());
+                        return Err(TardisError::internal_error(
+                            &format!("[Iam.Middleware] Encrypted api call return error:{}", encrypt_resp.msg),
+                            "500-auth-resp-crypto-error",
+                        )
+                        .into());
                     } else if let Some(resp_body) = encrypt_resp.data {
                         let encrypt_resp_header_value = resp_body.headers.get(&funs.conf::<IamConfig>().crypto_conf.head_key_crypto).unwrap();
                         let resp_headers = resp.headers_mut();
