@@ -20,7 +20,7 @@ pub async fn presign_obj_url(
     let bs_inst = funs.bs(ctx).await?.inst::<TardisOSClient>();
     let client = bs_inst.0;
     let bucket_name = common::get_isolation_flag_from_ext(bs_inst.1).map(|bucket_name_prefix| format!("{}-{}", bucket_name_prefix, if private { "pri" } else { "pub" }));
-    let exp_secs = if private { exp_secs } else { u32::MAX };
+    let exp_secs = if private { exp_secs } else { 604800 };
     match presign_kind {
         ObjectObjPresignKind::Upload => client.object_create_url(object_path, exp_secs, bucket_name),
         ObjectObjPresignKind::Delete => client.object_delete_url(object_path, exp_secs, bucket_name),
