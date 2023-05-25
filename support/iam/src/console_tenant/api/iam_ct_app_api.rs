@@ -11,7 +11,7 @@ use crate::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppDetailResp, IamAppMo
 use crate::basic::dto::iam_filer_dto::IamAppFilterReq;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::iam_constants;
-
+use tardis::tokio::{self, task};
 pub struct IamCtAppApi;
 
 /// Tenant Console App API
@@ -24,6 +24,8 @@ impl IamCtAppApi {
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -36,6 +38,9 @@ impl IamCtAppApi {
         funs.begin().await?;
         IamAppServ::modify_item(&id.0, &mut modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let ctx_task = ctx.0.clone();
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
+        let _ = task_handle.await;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
@@ -48,6 +53,8 @@ impl IamCtAppApi {
     async fn get(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAppServ::get_item(&id.0, &IamAppFilterReq::default(), &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -84,6 +91,8 @@ impl IamCtAppApi {
             &ctx.0,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -94,6 +103,8 @@ impl IamCtAppApi {
         funs.begin().await?;
         IamAppServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 }

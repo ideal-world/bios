@@ -1,5 +1,6 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::helper::rbum_event_helper;
+use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
@@ -26,6 +27,9 @@ impl IamCpAccountApi {
         IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(ctx.clone().owner, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
+        let ctx_task = ctx.clone();
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
+        let _ = task_handle.await;
         if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
@@ -37,6 +41,8 @@ impl IamCpAccountApi {
     async fn get_current_account_info(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamCpAccountInfoResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCpAccountServ::get_current_account_info(true, &funs, &ctx.0).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 }

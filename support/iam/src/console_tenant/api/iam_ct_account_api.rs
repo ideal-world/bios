@@ -16,7 +16,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamRelKind};
-
+use tardis::tokio::{self, task};
 pub struct IamCtAccountApi;
 
 /// Tenant Console Account API
@@ -29,9 +29,11 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(result.clone(), false, "".to_string(), &funs, ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(result.clone(), false, "".to_string(), &funs, ctx.clone()).await?;
         // TaskProcessor::get_notify_event_with_ctx(&funs, &ctx).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -44,6 +46,9 @@ impl IamCtAccountApi {
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
+        let ctx_task = ctx.clone();
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
+        let _ = task_handle.await;
         if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
@@ -69,6 +74,8 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -165,6 +172,8 @@ impl IamCtAccountApi {
             &ctx,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -174,8 +183,10 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx.0).await?;
-        IamAccountServ::async_delete_account_search(id.0, &funs, ctx.0).await?;
+        IamAccountServ::async_delete_account_search(id.0, &funs, ctx.0.clone()).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -186,6 +197,8 @@ impl IamCtAccountApi {
         funs.begin().await?;
         IamAccountServ::delete_tokens(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -206,6 +219,8 @@ impl IamCtAccountApi {
             &ctx,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -229,8 +244,10 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0.clone()).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -254,8 +271,10 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "Manual cancellation.".to_string(), &funs, ctx.0).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "Manual cancellation.".to_string(), &funs, ctx.0.clone()).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -279,8 +298,10 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0.clone()).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -290,8 +311,10 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::unlock_account(&id.0, &funs, &ctx.0).await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0.clone()).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 }

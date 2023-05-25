@@ -3,7 +3,6 @@ use tardis::basic::result::TardisResult;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::helper::rbum_scope_helper::get_max_level_id_by_context;
-use bios_basic::rbum::serv::rbum_cert_serv::RbumCertServ;
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamCertPhoneVCodeAddReq;
@@ -24,10 +23,30 @@ impl IamCpCertPhoneVCodeServ {
     pub async fn login_by_phone_vocde(login_req: &IamCpPhoneVCodeLoginSendVCodeReq, funs: &TardisFunsInst) -> TardisResult<IamAccountInfoResp> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(login_req.tenant_id.clone()), funs).await?;
         let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), None, funs).await?;
-        let result = RbumCertServ::validate_by_spec_cert_conf(&login_req.phone, &login_req.vcode.0, &rbum_cert_conf_id, false, &login_req.tenant_id, funs).await;
+        let result = IamCertServ::validate_by_ak_and_sk(
+            &login_req.phone,
+            &login_req.vcode.0,
+            Some(&rbum_cert_conf_id),
+            None,
+            false,
+            Some(login_req.tenant_id.clone()),
+            None,
+            funs,
+        )
+        .await;
         let (_, _, rbum_item_id) = if let Some(e) = result.clone().err() {
             if e.code == "401-iam-cert-valid" {
-                RbumCertServ::validate_by_spec_cert_conf(&login_req.phone, &login_req.vcode.0, &global_rbum_cert_conf_id, false, "", funs).await?
+                IamCertServ::validate_by_ak_and_sk(
+                    &login_req.phone,
+                    &login_req.vcode.0,
+                    Some(&global_rbum_cert_conf_id),
+                    None,
+                    false,
+                    Some("".to_string()),
+                    None,
+                    funs,
+                )
+                .await?
             } else {
                 result?
             }
