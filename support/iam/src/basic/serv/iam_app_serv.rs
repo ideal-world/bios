@@ -268,13 +268,13 @@ impl IamAppServ {
 
     #[cfg(feature = "spi_kv")]
     async fn add_or_modify_app_kv(app_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let names = Self::find_name_by_ids(
-            IamAppFilterReq {
+        let app = Self::get_item(
+            app_id,
+            &IamAppFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
-                    own_paths: Some(ctx.own_paths.clone()),
+                    own_paths: Some("".to_owned()),
                     with_sub_own_paths: true,
-                    ids: Some(vec![app_id.to_string()]),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -283,13 +283,7 @@ impl IamAppServ {
             ctx,
         )
         .await?;
-        SpiKvClient::add_or_modify_key_name(
-            &format!("{}:{app_id}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone()),
-            names.first().unwrap(),
-            funs,
-            ctx,
-        )
-        .await?;
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{app_id}", funs.conf::<IamConfig>().spi.kv_app_prefix.clone()), &app.name, funs, ctx).await?;
 
         Ok(())
     }

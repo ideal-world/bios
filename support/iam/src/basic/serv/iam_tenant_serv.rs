@@ -655,14 +655,21 @@ impl IamTenantServ {
     }
     #[cfg(feature = "spi_kv")]
     async fn add_or_modify_tenant_kv(tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let names = IamTenantServ::find_name_by_ids(vec![tenant_id.to_string()], funs, ctx).await?;
-        SpiKvClient::add_or_modify_key_name(
-            &format!("{}:{tenant_id}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone()),
-            names.first().unwrap(),
+        let tenant = IamTenantServ::get_item(
+            tenant_id,
+            &IamTenantFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
             funs,
             ctx,
         )
         .await?;
+        SpiKvClient::add_or_modify_key_name(&format!("{}:{tenant_id}", funs.conf::<IamConfig>().spi.kv_tenant_prefix.clone()), &tenant.name, funs, ctx).await?;
         Ok(())
     }
 }
