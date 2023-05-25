@@ -123,7 +123,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                         ext: Some(id.clone()),
                         ..Default::default()
                     },
-                    Some("req".to_string()),
+                    None,
                     Some(id.clone()),
                     LogParamOp::Add,
                     None,
