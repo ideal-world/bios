@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::dto::spi_basic_dto::SpiQueryCondReq;
+use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -158,7 +158,7 @@ pub struct SearchItemQueryReq {
     pub update_time_start: Option<DateTime<Utc>>,
     pub update_time_end: Option<DateTime<Utc>>,
     // Extended filtering conditions
-    pub ext: Option<Vec<SpiQueryCondReq>>,
+    pub ext: Option<Vec<BasicQueryCondInfo>>,
 }
 
 #[derive(poem_openapi::Enum, Serialize, Deserialize, Debug)]

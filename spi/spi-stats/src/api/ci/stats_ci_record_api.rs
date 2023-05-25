@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use bios_basic::TardisFunInstExtractor;
 use tardis::chrono::{DateTime, Utc};
 use tardis::serde_json::Value;
 use tardis::web::context_extractor::TardisContextExtractor;

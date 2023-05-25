@@ -73,6 +73,7 @@ pub mod sm {
             TardisCryptoSm2PublicKey::from_private_key(private_key)
         }
 
+        #[allow(dead_code)]
         pub fn new_public_key_from_public_key(&self, public_key: &str) -> TardisResult<TardisCryptoSm2PublicKey> {
             TardisCryptoSm2PublicKey::from_public_key_str(public_key)
         }
@@ -86,6 +87,7 @@ pub mod sm {
             Ok(TardisCryptoSm2PrivateKey { pri_key: sk })
         }
 
+        #[allow(dead_code)]
         pub fn from(private_key: &str) -> TardisResult<Self> {
             let sk = SigCtx::new()
                 .load_seckey(&hex::decode(private_key)?)
@@ -93,6 +95,7 @@ pub mod sm {
             Ok(TardisCryptoSm2PrivateKey { pri_key: sk })
         }
 
+        #[allow(dead_code)]
         pub fn serialize(&self) -> TardisResult<String> {
             let sk = SigCtx::new()
                 .serialize_seckey(&self.pri_key)
