@@ -121,7 +121,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() {
+        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
