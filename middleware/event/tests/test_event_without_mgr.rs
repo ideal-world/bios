@@ -7,6 +7,7 @@ use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::tokio::time::sleep;
+use tardis::web::tokio_tungstenite::tungstenite::Message;
 use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketReq};
 use tardis::TardisFuns;
 
@@ -18,7 +19,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     // Register user listener
     let url = add_listener(vec![TrimString("doc001".to_string())], http_client).await?;
     TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         if receive_msg.msg.get("block001").is_some() && receive_msg.msg.get("block001").unwrap().as_str().unwrap() == "xnfeonfd" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
@@ -31,7 +32,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
 
     let url = add_listener(vec![TrimString("doc001".to_string())], http_client).await?;
     TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         if receive_msg.msg.get("block001").is_some() && receive_msg.msg.get("block001").unwrap().as_str().unwrap() == "xnfeonfd" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
@@ -39,7 +40,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
             assert!(1 == 2);
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
-        Some(
+        Some(Message::text(
             TardisFuns::json
                 .obj_to_string(&TardisWebsocketReq {
                     msg: json!({
@@ -49,13 +50,13 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
                     ..Default::default()
                 })
                 .unwrap(),
-        )
+        ))
     })
     .await?;
 
     let url = add_listener(vec![TrimString("doc001".to_string())], http_client).await?;
     let doc01_client = TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         if receive_msg.msg.get("block001").is_some() && receive_msg.msg.get("block001").unwrap().as_str().unwrap() == "xnfeonfd" {
             assert!(1 == 2);
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);

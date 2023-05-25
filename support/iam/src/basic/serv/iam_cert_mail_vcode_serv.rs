@@ -256,7 +256,7 @@ impl IamCertMailVCodeServ {
                                 ext: Some(owner.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(owner.clone()),
                             LogParamOp::Modify,
                             None,

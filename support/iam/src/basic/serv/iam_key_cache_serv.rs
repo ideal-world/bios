@@ -23,7 +23,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
-
+use tardis::tokio::{self, task};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -105,7 +105,7 @@ impl IamIdentCacheServ {
                                 ext: None,
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             None,
                             LogParamOp::Modify,
                             None,
@@ -119,6 +119,8 @@ impl IamIdentCacheServ {
                 }))
                 .await
                 .unwrap();
+            let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
+            let _ = task_handle.await;
         }
         Ok(())
     }
@@ -220,7 +222,7 @@ impl IamIdentCacheServ {
                             ext: None,
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         None,
                         LogParamOp::Modify,
                         None,
@@ -234,6 +236,8 @@ impl IamIdentCacheServ {
             }))
             .await
             .unwrap();
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
+        let _ = task_handle.await;
 
         Ok(())
     }

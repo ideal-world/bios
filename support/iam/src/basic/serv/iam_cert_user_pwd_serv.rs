@@ -279,7 +279,7 @@ impl IamCertUserPwdServ {
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
-                        Some("req".to_string()),
+                        None,
                         Some(id.clone()),
                         LogParamOp::Modify,
                         None,
@@ -355,7 +355,7 @@ impl IamCertUserPwdServ {
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
-                            Some("req".to_string()),
+                            None,
                             Some(id.clone()),
                             LogParamOp::Modify,
                             None,
