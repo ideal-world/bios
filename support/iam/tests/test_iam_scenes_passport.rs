@@ -1130,7 +1130,9 @@ pub async fn do_test_ldap(
     let rest_user1_pwd_resp: TardisResp<Void> = client
         .put_resp(
             &format!("/cp/cert/userpwd/reset?account_id={}", user1_account.iam_account_info_resp.account_id),
-            &IamCertUserPwdRestReq { new_sk: rest_user1_pwd.into() },
+            &IamCertUserPwdRestReq {
+                new_sk: Some(rest_user1_pwd.into()),
+            },
         )
         .await;
     assert_eq!(rest_user1_pwd_resp.code, "200");
