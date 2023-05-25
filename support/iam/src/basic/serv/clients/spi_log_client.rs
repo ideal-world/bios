@@ -38,6 +38,7 @@ pub enum LogParamTag {
     SecurityAlarm,
     SecurityVisit,
     Log,
+    Token,
 }
 
 impl From<LogParamTag> for String {
@@ -52,6 +53,7 @@ impl From<LogParamTag> for String {
             LogParamTag::SecurityAlarm => "security_alarm".to_string(),
             LogParamTag::SecurityVisit => "security_visit".to_string(),
             LogParamTag::Log => "log".to_string(),
+            LogParamTag::Token => "token".to_string(),
         }
     }
 }
@@ -99,7 +101,7 @@ impl SpiLogClient {
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
         )]);
         // find operater info
-        let account = IamAccountServ::get_item(
+        if let Ok(account) = IamAccountServ::get_item(
             ctx.owner.as_str(),
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
@@ -112,10 +114,13 @@ impl SpiLogClient {
             funs,
             ctx,
         )
-        .await?;
-        let cert = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await?;
-        content.name = account.name;
-        content.ak = cert.ak;
+        .await
+        {
+            content.name = account.name;
+        }
+        if let Ok(cert) = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
+            content.ak = cert.ak;
+        }
         //add log item
         let mut body = HashMap::from([
             ("tag", tag.into()),
