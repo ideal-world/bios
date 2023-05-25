@@ -13,6 +13,7 @@ use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemDetailResp;
 use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
+use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -46,6 +47,8 @@ impl IamCsOrgApi {
             &ctx,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
     /// Add Org Cate  安全审计日志--添加部门
@@ -55,6 +58,8 @@ impl IamCsOrgApi {
         funs.begin().await?;
         let result = IamCsOrgServ::add_set_cate(tenant_id.0, &mut add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -72,6 +77,8 @@ impl IamCsOrgApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -83,6 +90,8 @@ impl IamCsOrgApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         sleep(Duration::from_millis(100));
         TardisResp::ok(Void {})
     }
@@ -99,6 +108,8 @@ impl IamCsOrgApi {
         funs.begin().await?;
         IamCsOrgServ::bind_cate_with_tenant(&id.0, &tenant_id.0, &IamSetKind::Org, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -128,6 +139,8 @@ impl IamCsOrgApi {
             IamCsOrgServ::unbind_cate_with_tenant(old_rel, &funs, &ctx.0).await?;
         }
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -138,6 +151,8 @@ impl IamCsOrgApi {
         funs.begin().await?;
         let result = IamCsOrgServ::find_rel_tenant_org(&funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 }
@@ -174,6 +189,8 @@ impl IamCsOrgItemApi {
             );
         }
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -189,6 +206,8 @@ impl IamCsOrgItemApi {
             Some(RbumScopeLevelKind::Root)
         };
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, scope_level, false, &funs, &ctx).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -200,6 +219,8 @@ impl IamCsOrgItemApi {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 }

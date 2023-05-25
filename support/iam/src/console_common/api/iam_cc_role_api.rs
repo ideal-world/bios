@@ -1,5 +1,6 @@
 use bios_basic::rbum::dto::rbum_rel_dto::RbumRelBoneResp;
 use bios_basic::rbum::rbum_enumeration::RbumScopeLevelKind;
+use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
@@ -55,6 +56,8 @@ impl IamCcRoleApi {
             &ctx.0,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(TardisPage {
             page_size: result.page_size,
             page_number: result.page_number,
@@ -107,6 +110,8 @@ impl IamCcRoleApi {
             &ctx,
         )
         .await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 }

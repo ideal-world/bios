@@ -1,9 +1,10 @@
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::{dto::rbum_filer_dto::RbumBasicFilterReq, serv::rbum_item_serv::RbumItemCrudOperation};
 use serde::Serialize;
 use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    log::debug,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
@@ -98,7 +99,20 @@ impl SpiLogClient {
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
         )]);
         // find operater info
-        let account = IamAccountServ::get_item(ctx.owner.as_str(), &IamAccountFilterReq::default(), funs, ctx).await?;
+        let account = IamAccountServ::get_item(
+            ctx.owner.as_str(),
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_owned()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
         let cert = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await?;
         content.name = account.name;
         content.ak = cert.ak;

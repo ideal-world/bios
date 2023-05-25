@@ -13,7 +13,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::IamSetKind;
-
+use tardis::tokio::{self, task};
 pub struct IamCtAppSetApi;
 
 /// Tenant Console App Set API
@@ -28,6 +28,8 @@ impl IamCtAppSetApi {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx.0).await?;
         let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -38,6 +40,8 @@ impl IamCtAppSetApi {
         funs.begin().await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -70,6 +74,8 @@ impl IamCtAppSetApi {
             )
             .await?
         };
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -80,6 +86,8 @@ impl IamCtAppSetApi {
         funs.begin().await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -102,6 +110,8 @@ impl IamCtAppSetApi {
         )
         .await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -130,6 +140,8 @@ impl IamCtAppSetApi {
             );
         }
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -140,6 +152,8 @@ impl IamCtAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::find_set_items_with_none_set_cate_id(Some(set_id), cate_id.0, item_id.0, false, &funs, &ctx).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 
@@ -151,6 +165,8 @@ impl IamCtAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
 
@@ -161,6 +177,8 @@ impl IamCtAppSetApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Apps, &funs, &ctx).await?;
         let result = IamSetServ::check_scope(&app_id.0, &account_id.0.unwrap_or_else(|| ctx.owner.clone()), &set_id, &funs, &ctx).await?;
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
+        let _ = task_handle.await;
         TardisResp::ok(result)
     }
 }
