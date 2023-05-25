@@ -1,9 +1,9 @@
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetFilterReq, RbumSetItemFilterReq},
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq},
     serv::{
         rbum_crud_serv::RbumCrudOperation,
         rbum_item_serv::RbumItemCrudOperation,
-        rbum_set_serv::{RbumSetItemServ, RbumSetServ},
+        rbum_set_serv::{RbumSetItemServ},
     },
 };
 use serde::Serialize;
@@ -11,17 +11,13 @@ use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    log::debug,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
 
 use crate::{
     basic::{
-        dto::{
-            iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq},
-            iam_tenant_dto::IamTenantSummaryResp,
-        },
+        dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq},
         serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_res_serv::IamResServ, iam_role_serv::IamRoleServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
@@ -132,6 +128,8 @@ impl SpiLogClient {
         if let Ok(cert) = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
             content.ak = cert.ak;
         }
+        // get ext name
+        content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
         //add log item
         let mut body = HashMap::from([
             ("tag", tag.into()),
