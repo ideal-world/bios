@@ -1,7 +1,4 @@
-use bios_basic::{
-    helper::db_helper,
-    spi::{spi_enumeration::SpiQueryOpKind, spi_funs::SpiBsInstExtractor},
-};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -271,8 +268,8 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     }
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == SpiQueryOpKind::Like);
-            if value.is_none() || ext_item.op != SpiQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
+            if value.is_none() || ext_item.op != BasicQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
                 return Err(funs.err().not_found(
                     "item",
                     "search",
@@ -281,7 +278,7 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                 ));
             }
             let mut value = value.unwrap();
-            if ext_item.op == SpiQueryOpKind::In {
+            if ext_item.op == BasicQueryOpKind::In {
                 if value.len() == 1 {
                     where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
                 } else {

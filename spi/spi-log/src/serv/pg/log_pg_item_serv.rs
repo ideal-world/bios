@@ -1,7 +1,4 @@
-use bios_basic::{
-    helper::db_helper,
-    spi::{spi_enumeration::SpiQueryOpKind, spi_funs::SpiBsInstExtractor},
-};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -125,8 +122,8 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
     }
     if let Some(ext) = &find_req.ext {
         for ext_item in ext {
-            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == SpiQueryOpKind::Like);
-            if value.is_none() || ext_item.op != SpiQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
+            let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
+            if value.is_none() || ext_item.op != BasicQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
                 return Err(funs.err().not_found(
                     "item",
                     "log",
@@ -135,7 +132,7 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                 ));
             }
             let mut value = value.unwrap();
-            if ext_item.op == SpiQueryOpKind::In {
+            if ext_item.op == BasicQueryOpKind::In {
                 if value.len() == 1 {
                     where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
                 } else {

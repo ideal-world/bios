@@ -3,7 +3,7 @@ use bios_basic::rbum::dto::rbum_kind_attr_dto::RbumKindAttrSummaryResp;
 use bios_basic::rbum::dto::rbum_kind_dto::RbumKindSummaryResp;
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
-use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use bios_basic::TardisFunInstExtractor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;
