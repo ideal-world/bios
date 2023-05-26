@@ -77,6 +77,7 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
     let md5 = &md5(content);
     let app_name = req.app_name.as_deref();
     let schema = req.schema.as_deref();
+    let src_user = &ctx.owner;
     let history = HistoryInsertParams {
         data_id,
         group,
@@ -91,6 +92,7 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
         ("md5", Value::from(md5)),
         ("app_name", Value::from(app_name)),
         ("schema", Value::from(schema)),
+        ("src_user", Value::from(src_user)),
     ];
     let key_params = vec![("data_id", Value::from(data_id)), ("grp", Value::from(group)), ("namespace_id", Value::from(namespace))];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();

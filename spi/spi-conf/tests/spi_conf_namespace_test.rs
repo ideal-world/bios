@@ -12,9 +12,8 @@ use bios_spi_conf::{
         conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
     },
 };
-use serde::__private::de;
 use tardis::{
-    basic::{dto::TardisContext, field::TrimString, json, result::TardisResult},
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log::debug,
     serde_json::{json, Value},
     testcontainers, tokio,
@@ -253,6 +252,8 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     let his_id_2 = &response.page_items[0].id;
     let response_1 = client.get::<ConfigItem>(&format!("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id={his_id_1}")).await;
     assert_eq!(response_1.content, "历史版本测试1");
+    // src_user should be app001
+    assert_eq!(response_1.src_user, "app001");
     // 10.4 find first config history previous to version 2 (should be version 1)
     let response_prev_2 = client
         .get::<ConfigItem>(&format!(

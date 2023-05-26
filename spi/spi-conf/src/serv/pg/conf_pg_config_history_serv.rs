@@ -155,6 +155,7 @@ ORDER BY created_time DESC
         op_type: String,
         created_time: DateTimeUtc,
         modified_time: DateTimeUtc,
+        src_user: String,
         grp: String,
     });
     Ok(ConfigItem {
@@ -167,6 +168,7 @@ ORDER BY created_time DESC
         created_time,
         last_modified_time: modified_time,
         group: grp,
+        src_user,
         ..Default::default()
     })
 }
@@ -216,6 +218,8 @@ pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: 
         app_name,
         schema,
     } = param;
+    let src_user = &ctx.owner;
+
     let params = vec![
         ("data_id", Value::from(data_id)),
         ("grp", Value::from(group)),
@@ -225,6 +229,7 @@ pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: 
         ("app_name", Value::from(app_name)),
         ("schema", Value::from(schema)),
         ("op_type", Value::from(op_type.as_char())),
+        ("src_user", Value::from(src_user))
     ];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
