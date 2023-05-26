@@ -3,11 +3,11 @@ use bios_basic::rbum::{
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
 };
 use serde::Serialize;
-use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::json,
+    web::web_resp::{TardisApiResult, Void},
     TardisFuns, TardisFunsInst,
 };
 
@@ -136,40 +136,33 @@ impl SpiLogClient {
         }
         // get ext name
         content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
-        //add log item
-        let mut body = HashMap::from([
-            ("tag", tag.into()),
-            ("content", TardisFuns::json.obj_to_string(&content)?),
-            ("owner", ctx.owner.clone()),
-            ("owner_paths", ctx.own_paths.clone()),
-        ]);
+
         // create search_ext
         let search_ext = json!({
+            "name":content.name,
+            "ak":content.ak,
+            "ip":content.ak,
             "ext":content.ext,
             "ts":ts,
             "op":op,
-        })
-        .to_string();
-        body.insert("ext", search_ext);
+        });
 
-        if let Some(kind) = kind {
-            body.insert("kind", kind);
-        }
+        // generate log item
+        let tag: String = tag.into();
+        let body = json!({
+            "tag": tag,
+            "content": TardisFuns::json.obj_to_string(&content)?,
+            "owner": ctx.owner.clone(),
+            "owner_paths":ctx.own_paths.clone(),
+            "kind": kind,
+            "ext": search_ext,
+            "key": key,
+            "op": op,
+            "rel_key": rel_key,
+            "ts": ts,
+        });
 
-        if let Some(op) = op {
-            body.insert("op", op);
-        }
-
-        if let Some(key) = key {
-            body.insert("key", key);
-        }
-        if let Some(rel_key) = rel_key {
-            body.insert("rel_key", rel_key);
-        }
-        if let Some(ts) = ts {
-            body.insert("ts", ts);
-        }
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        funs.web_client().put_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 
