@@ -136,20 +136,7 @@ impl SpiLogClient {
         }
         // get ext name
         content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
-        //add log item
-        let tag: String = tag.into();
-        let mut body = json!({
-            "tag": tag,
-            "content": TardisFuns::json.obj_to_string(&content)?,
-            "owner": ctx.owner.clone(),
-            "owner_paths":ctx.own_paths.clone(),
-            "kind": "",
-            "ext": "",
-            "key": "",
-            "op": "",
-            "rel_key": "",
-            "ts": "",
-        });
+
         // create search_ext
         let search_ext = json!({
             "name":content.name,
@@ -159,25 +146,22 @@ impl SpiLogClient {
             "ts":ts,
             "op":op,
         });
-        *body.get_mut("ext").unwrap() = search_ext;
 
-        if let Some(kind) = kind {
-            *body.get_mut("kind").unwrap() = json!(kind);
-        }
+        // generate log item
+        let tag: String = tag.into();
+        let mut body = json!({
+            "tag": tag,
+            "content": TardisFuns::json.obj_to_string(&content)?,
+            "owner": ctx.owner.clone(),
+            "owner_paths":ctx.own_paths.clone(),
+            "kind": kind,
+            "ext": search_ext,
+            "key": key,
+            "op": op,
+            "rel_key": rel_key,
+            "ts": ts,
+        });
 
-        if let Some(op) = op {
-            *body.get_mut("op").unwrap() = json!(op);
-        }
-
-        if let Some(key) = key {
-            *body.get_mut("key").unwrap() = json!(key);
-        }
-        if let Some(rel_key) = rel_key {
-            *body.get_mut("rel_key").unwrap() = json!(rel_key);
-        }
-        if let Some(ts) = ts {
-            *body.get_mut("ts").unwrap() = json!(ts);
-        }
         funs.web_client().put_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
