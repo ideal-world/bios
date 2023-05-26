@@ -3,7 +3,6 @@ use bios_basic::rbum::{
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
 };
 use serde::Serialize;
-use std::collections::HashMap;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
@@ -137,39 +136,47 @@ impl SpiLogClient {
         // get ext name
         content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
         //add log item
-        let mut body = HashMap::from([
-            ("tag", tag.into()),
-            ("content", TardisFuns::json.obj_to_string(&content)?),
-            ("owner", ctx.owner.clone()),
-            ("owner_paths", ctx.own_paths.clone()),
-        ]);
+        let mut body = json!({
+            "tag": tag.into(),
+            "content": TardisFuns::json.obj_to_string(&content)?,
+            "owner": ctx.owner.clone(),
+            "owner_paths":ctx.own_paths.clone(),
+            "kind": None,
+            "ext": None,
+            "key": None,
+            "op": None,
+            "rel_key": None,
+            "ts": None,
+        });
         // create search_ext
         let search_ext = json!({
+            "name":content.name,
+            "ak":content.ak,
+            "ip":content.ak,
             "ext":content.ext,
             "ts":ts,
             "op":op,
-        })
-        .to_string();
-        body.insert("ext", search_ext);
+        });
+        *body.get_mut("ext").unwrap() = search_ext;
 
         if let Some(kind) = kind {
-            body.insert("kind", kind);
+            *body.get_mut("kind").unwrap() = json!(kind);
         }
 
         if let Some(op) = op {
-            body.insert("op", op);
+            *body.get_mut("op").unwrap() = json!(op);
         }
 
         if let Some(key) = key {
-            body.insert("key", key);
+            *body.get_mut("key").unwrap() = json!(key);
         }
         if let Some(rel_key) = rel_key {
-            body.insert("rel_key", rel_key);
+            *body.get_mut("rel_key").unwrap() = json!(rel_key);
         }
         if let Some(ts) = ts {
-            body.insert("ts", ts);
+            *body.get_mut("ts").unwrap() = json!(ts);
         }
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        funs.web_client().post(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 
