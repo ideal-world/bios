@@ -260,6 +260,7 @@ impl IamCertLdapServ {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.ldap_id.clone()),
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -761,6 +762,7 @@ impl IamCertLdapServ {
                         &mut RbumCertModifyReq {
                             ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
                             sk: None,
+                            is_ignore_check_sk: false,
                             ext: None,
                             start_time: None,
                             end_time: None,
@@ -808,6 +810,7 @@ impl IamCertLdapServ {
                             &mut RbumCertModifyReq {
                                 ak: None,
                                 sk: None,
+                                is_ignore_check_sk: false,
                                 ext: None,
                                 start_time: None,
                                 end_time: None,
