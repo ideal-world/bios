@@ -1,8 +1,5 @@
 use super::conf_namespace_dto::NamespaceId;
 use serde::{Deserialize, Serialize};
-use tardis::chrono::Utc;
-use tardis::db::sea_orm;
-use tardis::web::poem_openapi::{ApiExtractor, ApiExtractorType};
 use tardis::{db::sea_orm::prelude::*, web::poem_openapi};
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -17,11 +14,13 @@ pub struct ConfigDescriptor {
     /// 配置名
     pub data_id: String,
     /// 标签
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tag: Option<String>,
     #[serde(rename = "type")]
     /// 配置类型
     pub tp: Option<String>,
 }
+
 impl Default for ConfigDescriptor {
     fn default() -> Self {
         Self {
@@ -72,7 +71,7 @@ pub struct ConfigItem {
     /// 租户信息（命名空间）
     pub namespace: String,
     /// 应用名
-    pub app_name: String,
+    pub app_name: Option<String>,
     /// 配置内容的md5值
     pub md5: String,
     /// 配置内容
@@ -111,6 +110,22 @@ impl Default for ConfigItem {
         }
     }
 }
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+#[serde(default)]
+pub struct ConfigItemDigest {
+    /// 配置名
+    pub data_id: String,
+    /// 配置分组
+    pub group: String,
+    /// 租户信息（命名空间）
+    pub namespace: String,
+    /// 应用名
+    pub app_name: Option<String>,
+    /// 类型
+    pub r#type: Option<String>
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 #[serde(default)]
 pub struct ConfigHistoryListRequest {

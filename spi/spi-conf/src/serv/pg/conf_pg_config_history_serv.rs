@@ -13,7 +13,7 @@ use tardis::{
 
 use crate::{
     conf_constants::error,
-    dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigHistoryListResponse, ConfigItem, ConfigPublishRequest}
+    dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigHistoryListResponse, ConfigItem},
 };
 
 use super::{conf_pg_initializer, get_namespace_id};
@@ -126,7 +126,7 @@ OFFSET {offset}
     })
 }
 
-pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
     let namespace = &descriptor.namespace_id;
@@ -142,7 +142,7 @@ WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3 AND cch.id=$4
 ORDER BY created_time DESC
 "#,
             ),
-            vec![Value::from(namespace_id), Value::from(group), Value::from(data_id), Value::from(id)],
+            vec![Value::from(namespace_id), Value::from(group), Value::from(data_id), Value::from(*id)],
         )
         .await?
         .ok_or(TardisError::not_found("history config not found", error::CONF_NOTFOUND))?;
@@ -171,7 +171,7 @@ ORDER BY created_time DESC
     })
 }
 
-pub async fn find_previous_history(descriptor: &mut ConfigDescriptor, id: &String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+pub async fn find_previous_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
     // find previous config by id
     // 1. find previous id
     let data_id = &descriptor.data_id;
@@ -185,22 +185,23 @@ pub async fn find_previous_history(descriptor: &mut ConfigDescriptor, id: &Strin
         .query_one(
             &format!(
                 r#"SELECT prev_id FROM (
-    SELECT id FROM {table_name} cch
-    LAG(id) OVER (ORDER BY created_time ASC) AS prev_id
+    SELECT 
+        id,
+        LAG(id) OVER (ORDER BY created_time ASC) AS prev_id
+    FROM {table_name} cch
     WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3
-    ORDER BY created_time DESC
 ) AS T
-WHERE T.prev_id = $4
+WHERE T.id = $4
 "#,
             ),
-            vec![Value::from(namespace_id), Value::from(group), Value::from(data_id), Value::from(id)],
+            vec![Value::from(namespace_id), Value::from(group), Value::from(data_id), Value::from(*id)],
         )
         .await?
         .ok_or(TardisError::not_found("history config not found", error::CONF_NOTFOUND))?;
-    get!(qry_result => { id: Option<Uuid>, });
-    if let Some(prev_id) = id {
+    get!(qry_result => { prev_id: Option<Uuid>, });
+    if let Some(prev_id) = prev_id {
         // 2. find config by id
-        self::find_history(descriptor, &prev_id.to_string(), funs, ctx).await
+        self::find_history(descriptor, &prev_id, funs, ctx).await
     } else {
         Err(TardisError::not_found("history config not found", error::CONF_NOTFOUND))
     }

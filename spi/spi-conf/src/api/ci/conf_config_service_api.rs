@@ -10,11 +10,8 @@ use tardis::{
     },
 };
 
+use crate::dto::{conf_config_dto::*, conf_namespace_dto::*};
 use crate::{conf_constants::error, serv::*};
-use crate::{
-    conf_constants::error::*,
-    dto::{conf_config_dto::*, conf_namespace_dto::*},
-};
 
 pub struct ConfCiConfigServiceApi;
 
@@ -82,7 +79,7 @@ impl ConfCiConfigServiceApi {
             tp: r#type.0,
         };
         let funs = request.tardis_fun_inst();
-        let result = delete_config(&mut descriptor, &funs, &ctx.0).await?;
+        delete_config(&mut descriptor, &funs, &ctx.0).await?;
         TardisResp::ok(Void {})
     }
     #[oai(path = "/configs/listener", method = "get")]
@@ -180,8 +177,10 @@ impl ConfCiConfigServiceApi {
             data_id: data_id.0,
             ..Default::default()
         };
+        let id = Uuid::parse_str(&id.0).map_err(|e| TardisError::bad_request(&e.to_string(), error::INVALID_UUID))?;
+
         let funs = request.tardis_fun_inst();
-        let config = find_history(&mut descriptor, &id.0, &funs, &ctx.0).await?;
+        let config = find_history(&mut descriptor, &id, &funs, &ctx.0).await?;
         TardisResp::ok(config)
     }
     #[oai(path = "/history/previous", method = "get")]
@@ -200,6 +199,7 @@ impl ConfCiConfigServiceApi {
         request: &Request,
     ) -> TardisApiResult<ConfigItem> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let id = Uuid::parse_str(&id.0).map_err(|e| TardisError::bad_request(&e.to_string(), error::INVALID_UUID))?;
         let mut descriptor = ConfigDescriptor {
             namespace_id,
             group: group.0,
@@ -207,11 +207,33 @@ impl ConfCiConfigServiceApi {
             ..Default::default()
         };
         let funs = request.tardis_fun_inst();
-        let config = find_previous_history(&mut descriptor, &id.0, &funs, &ctx.0).await?;
+        let config = find_previous_history(&mut descriptor, &id, &funs, &ctx.0).await?;
         TardisResp::ok(config)
     }
     #[oai(path = "/history/configs", method = "get")]
-    async fn history_configs(&self, add_or_modify_req: Json<NamespaceDescriptor>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<Vec<ConfigItem>> {
-        unimplemented!()
+    async fn configs_by_namespace(
+        &self,
+        namespace_id: Query<Option<NamespaceId>>,
+        tenant: Query<Option<NamespaceId>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<ConfigItemDigest>> {
+        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let funs = request.tardis_fun_inst();
+        let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
+        TardisResp::ok(config)
+    }
+    #[oai(path = "/configs", method = "get")]
+    async fn configs_by_namespace_alt(
+        &self,
+        namespace_id: Query<Option<NamespaceId>>,
+        tenant: Query<Option<NamespaceId>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<Vec<ConfigItemDigest>> {
+        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let funs = request.tardis_fun_inst();
+        let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
+        TardisResp::ok(config)
     }
 }

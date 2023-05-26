@@ -8,7 +8,7 @@ use bios_basic::{
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::{
-        conf_config_dto::{ConfigDescriptor, ConfigPublishRequest, ConfigHistoryListResponse},
+        conf_config_dto::{ConfigDescriptor, ConfigHistoryListResponse, ConfigItem, ConfigItemDigest, ConfigPublishRequest},
         conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
     },
 };
@@ -222,17 +222,17 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     let _response = client
-    .post::<_, bool>(
-        "/ci/cs/config",
-        &json!( {
-            "content": "历史版本测试2",
-            "group": "DEFAULT-GROUP".to_string(),
-            "data_id": "conf-history-test-2".to_string(),
-            "schema": "plaintext",
-            "namespace_id": "public".to_string(),
-        }),
-    )
-    .await;
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "历史版本测试2",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": "conf-history-test-2".to_string(),
+                "schema": "plaintext",
+                "namespace_id": "public".to_string(),
+            }),
+        )
+        .await;
     // 10.2 update the first config
     let _response = client
         .post::<_, bool>(
@@ -249,13 +249,70 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     // 10.3 find first config history version 1
     let response = client.get::<ConfigHistoryListResponse>(&format!("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id={data_id_1}")).await;
     assert_eq!(response.total_count, 2);
-    // response.page_items[1];
-    // let response = client.get::<ConfigHistoryItem>("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id=1").await;
+    let his_id_1 = &response.page_items[1].id;
+    let his_id_2 = &response.page_items[0].id;
+    let response_1 = client.get::<ConfigItem>(&format!("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id={his_id_1}")).await;
+    assert_eq!(response_1.content, "历史版本测试1");
+    // 10.4 find first config history previous to version 2 (should be version 1)
+    let response_prev_2 = client
+        .get::<ConfigItem>(&format!(
+            "/ci/cs/history/previous?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id={his_id_2}"
+        ))
+        .await;
+    assert_eq!(response_prev_2.content, "历史版本测试1");
+    assert_eq!(response_prev_2.id, *his_id_1);
+    // 10.5 find first config history previous to version 1 (should not found)
+    let response_prev_1 = client
+        .get_resp::<ConfigItem>(&format!(
+            "/ci/cs/history/previous?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id={his_id_1}"
+        ))
+        .await;
+    assert_eq!(response_prev_1.code, "404");
     // let response = client.get::<ConfigHistoryListResponse>("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-2").await;
-    
-    // wait user press enter
-    println!("Press enter to continue...");
-    let mut line = String::new();
-    io::stdin().read_line(&mut line).unwrap();
+    // {
+    //     // wait user press enter
+    //     println!("Press enter to continue...");
+    //     let mut line = String::new();
+    //     io::stdin().read_line(&mut line).unwrap();
+    // }
+    // 11. test get config by namespace
+    // 11.1 create a namespace
+    const NAMESPACE_ID: &str = "test-get-config-by-namespace";
+    let _response = client
+        .post::<_, bool>(
+            "/ci/namespace",
+            &NamespaceAttribute {
+                namespace: NAMESPACE_ID.into(),
+                namespace_show_name: "测试命名空间1".to_string(),
+                namespace_desc: Some("测试命名空间1".to_string()),
+            },
+        )
+        .await;
+    // namespace should have 0 configs, varifies that the namespace is empty
+    let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/configs?namespace_id={}", NAMESPACE_ID)).await;
+    assert_eq!(response.len(), 0);
+    // 11.2 create 3 config in the namespace
+    for i in 0..3 {
+        let _response = client
+            .post::<_, bool>(
+                "/ci/cs/config",
+                &json!( {
+                    "content": format!("测试命名空间1-配置{}", i),
+                    "group": "DEFAULT-GROUP".to_string(),
+                    "data_id": format!("conf-{}", i),
+                    "schema": "plaintext",
+                    "namespace_id": NAMESPACE_ID.to_string(),
+                }),
+            )
+            .await;
+    }
+    // 11.3 get all config in the namespace
+    let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/configs?namespace_id={}", NAMESPACE_ID)).await;
+    assert_eq!(response.len(), 3);
+    // those configs should be sorted by create time
+    assert_eq!(response[0].data_id, "conf-2");
+    assert_eq!(response[1].data_id, "conf-1");
+    assert_eq!(response[2].data_id, "conf-0");
+
     Ok(())
 }

@@ -1,12 +1,9 @@
 use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
-use tardis::{
-    log,
-    web::{
-        context_extractor::TardisContextExtractor,
-        poem::Request,
-        poem_openapi::{self, payload::Json, param::Query},
-        web_resp::{TardisApiResult, TardisResp, Void},
-    },
+use tardis::web::{
+    context_extractor::TardisContextExtractor,
+    poem::Request,
+    poem_openapi::{self, param::Query, payload::Json},
+    web_resp::{TardisApiResult, TardisResp, Void},
 };
 
 use crate::dto::conf_namespace_dto::*;

@@ -2,16 +2,21 @@ use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
-    web::web_resp::TardisPage,
     TardisFunsInst,
 };
 
 use crate::{
     conf_constants::*,
-    dto::{conf_config_dto::*, conf_namespace_dto::NamespaceItem},
+    dto::{conf_config_dto::*, conf_namespace_dto::*},
 };
 
-use super::{conf_pg_initializer, get_namespace_id, OpType, add_history, HistoryInsertParams};
+macro_rules! get {
+    ($result:expr => {$($name:ident: $type:ty,)*}) => {
+        $(let $name = $result.try_get::<$type>("", stringify!($name))?;)*
+    };
+}
+
+use super::{add_history, conf_pg_initializer, get_namespace_id, HistoryInsertParams, OpType};
 
 fn md5(content: &str) -> String {
     use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
@@ -72,18 +77,22 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
     let md5 = &md5(content);
     let app_name = req.app_name.as_deref();
     let schema = req.schema.as_deref();
-    let history = HistoryInsertParams { data_id, group, namespace, content, md5, app_name, schema};
+    let history = HistoryInsertParams {
+        data_id,
+        group,
+        namespace,
+        content,
+        md5,
+        app_name,
+        schema,
+    };
     let params = vec![
         ("content", Value::from(content)),
         ("md5", Value::from(md5)),
         ("app_name", Value::from(app_name)),
         ("schema", Value::from(schema)),
     ];
-    let key_params = vec![
-        ("data_id", Value::from(data_id)),
-        ("grp", Value::from(group)),
-        ("namespace_id", Value::from(namespace)),
-    ];
+    let key_params = vec![("data_id", Value::from(data_id)), ("grp", Value::from(group)), ("namespace_id", Value::from(namespace))];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (mut conn, table_name) = conns.config;
@@ -146,7 +155,12 @@ pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsI
     let namespace = &get_namespace_id(&descriptor.namespace_id);
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
-    let history = HistoryInsertParams { data_id, group, namespace, ..Default::default()};
+    let history = HistoryInsertParams {
+        data_id,
+        group,
+        namespace,
+        ..Default::default()
+    };
     let (mut conn, table_name) = conns.config;
     conn.begin().await?;
     add_history(history, OpType::Delete, funs, ctx).await?;
@@ -163,44 +177,39 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
     Ok(true)
 }
 
-// this could be slow
-pub async fn get_namespace_list(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<NamespaceItem>> {
+
+
+pub async fn get_configs_by_namespace(namespace_id: &NamespaceId, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<ConfigItemDigest>> {
+    let namespace = get_namespace_id(namespace_id);
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
-    let (conn, table_name_namespace) = conns.namespace;
-    let (_, table_name_config) = conns.config;
-    let namespaces = conn
+    let (conn, table_name) = conns.config;
+    let qry_result = conn
         .query_all(
             &format!(
-                r#"SELECT id, show_name, description
-FROM {table_name}
-"#,
-                table_name = table_name_namespace
+                r#"SELECT data_id, grp, namespace_id, app_name, tp FROM {table_name} cc
+WHERE cc.namespace_id=$1
+ORDER BY created_time DESC
+	"#,
             ),
-            vec![],
+            vec![Value::from(namespace)],
         )
         .await?;
-    let mut namespace_items = vec![];
-    for namespace in namespaces {
-        let mut namespace_item = NamespaceItem {
-            namespace: namespace.try_get("", "id").unwrap(),
-            namespace_show_name: namespace.try_get("", "show_name").unwrap(),
-            namespace_desc: namespace.try_get("", "description").unwrap(),
-            ..Default::default()
-        };
-        let count = conn
-            .count_by_sql(
-                format!(
-                    "SELECT namespace_id FROM {table} WHERE namespace_id='{id}'",
-                    table = table_name_config,
-                    id = namespace_item.namespace,
-                )
-                .as_str(),
-                vec![],
-            )
-            .await?;
-        namespace_item.config_count = count as u32;
-        namespace_items.push(namespace_item);
-    }
-    Ok(namespace_items)
+    let list = qry_result.iter().map(|result|{
+        get!(result => {
+            data_id: String,
+            grp: String,
+            namespace_id: String,
+            app_name: Option<String>,
+            tp: Option<String>,
+        });
+        Ok(ConfigItemDigest {
+            data_id,
+            group: grp,
+            namespace: namespace_id,
+            app_name,
+            r#type: tp,
+        })
+    }).collect::<TardisResult<Vec<_>>>()?;
+    Ok(list)
 }

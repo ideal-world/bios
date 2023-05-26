@@ -64,7 +64,7 @@ src_user character varying,
 src_ip cidr,
 created_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 modified_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-tp smallint NOT NULL DEFAULT 0"#
+tp character varying"#
         ),
         vec![("data_id", "btree"), ("grp", "btree"), ("namespace_id", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
@@ -99,7 +99,7 @@ src_ip cidr,
 created_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 modified_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 op_type character(1) NOT NULL DEFAULT 'I',
-tp smallint NOT NULL DEFAULT 0"#
+tp character varying"#
         ),
         vec![("data_id", "btree"), ("grp", "btree"), ("namespace_id", "btree"), ("md5", "btree"), ("app_name", "btree")],
         None,
@@ -117,26 +117,4 @@ pub async fn init_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, 
         config: (config_conn, config_table_name),
         config_history: (config_history_conn, history_table_name)
     })
-}
-
-const CONFIG_TABLE_CREATE_CONFIG_TAG_CONTENT: &str = r#"id uuid PRIMARY KEY,
-name character varying NOT NULL"#;
-
-pub async fn init_table_and_conn_config_tag(
-    bs_inst: (&TardisRelDBClient, &HashMap<String, String>, String),
-    ctx: &TardisContext,
-    mgr: bool,
-) -> TardisResult<(TardisRelDBlConnection, String)> {
-    spi_initializer::common_pg::init_table_and_conn(
-        bs_inst,
-        ctx,
-        mgr,
-        None,
-        "conf_config_tag",
-        CONFIG_TABLE_CREATE_CONFIG_TAG_CONTENT,
-        vec![("show_name", "btree")],
-        None,
-        None,
-    )
-    .await
 }
