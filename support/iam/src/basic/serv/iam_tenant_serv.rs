@@ -124,7 +124,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()),  "添加租户".to_string(), Some("Add".to_string()), ctx).await;
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), "添加租户".to_string(), Some("Add".to_string()), ctx).await;
 
         Ok(())
     }
@@ -144,7 +144,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             op_describe = "启用租户".to_string();
             op_kind = "Enabled".to_string();
         }
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()),  op_describe, Some(op_kind), ctx).await;
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
 
         Ok(())
     }

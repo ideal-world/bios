@@ -1202,8 +1202,22 @@ impl IamCertServ {
                 if let Some(own_paths) = own_paths {
                     mock_ctx.own_paths = own_paths;
                 }
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, "密码锁定账号".to_string(), Some("PasswordLockAccount".to_string()), &mock_ctx).await;
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, None, "连续登录失败".to_string(), Some("ContinuLoginFail".to_string()), &mock_ctx).await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    None,
+                    "密码锁定账号".to_string(),
+                    Some("PasswordLockAccount".to_string()),
+                    &mock_ctx,
+                )
+                .await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::SecurityVisit,
+                    None,
+                    "连续登录失败".to_string(),
+                    Some("ContinuLoginFail".to_string()),
+                    &mock_ctx,
+                )
+                .await;
                 let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
                 let _ = task_handle.await;
             }

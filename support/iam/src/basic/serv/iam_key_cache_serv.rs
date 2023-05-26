@@ -93,7 +93,14 @@ impl IamIdentCacheServ {
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
             let mock_ctx = TardisContext { ..Default::default() };
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(token.to_string()), "下线账号".to_string(), Some("OfflineAccount".to_string()), &mock_ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(token.to_string()),
+                "下线账号".to_string(),
+                Some("OfflineAccount".to_string()),
+                &mock_ctx,
+            )
+            .await;
             let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "退出".to_string(), Some("Quit".to_string()), &mock_ctx).await;
 
             let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
@@ -187,7 +194,14 @@ impl IamIdentCacheServ {
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
 
         let mock_ctx = TardisContext { ..Default::default() };
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(account_id.to_string()), "下线账号".to_string(), Some("OfflineAccount".to_string()), &mock_ctx).await;
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamAccount,
+            Some(account_id.to_string()),
+            "下线账号".to_string(),
+            Some("OfflineAccount".to_string()),
+            &mock_ctx,
+        )
+        .await;
 
         let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
         let _ = task_handle.await;

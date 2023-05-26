@@ -309,7 +309,14 @@ impl IamCsAccountApi {
         )
         .await?;
         IamAccountServ::async_add_or_modify_account_search(id.0.clone(), true, "".to_string(), &funs, ctx.clone()).await?;
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.0.clone()), "人工锁定账号".to_string(), Some("ManuallyLockAccount".to_string()), &ctx).await;
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamAccount,
+            Some(id.0.clone()),
+            "人工锁定账号".to_string(),
+            Some("ManuallyLockAccount".to_string()),
+            &ctx,
+        )
+        .await;
         funs.commit().await?;
         let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
         let _ = task_handle.await;

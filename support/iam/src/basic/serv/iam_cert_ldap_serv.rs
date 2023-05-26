@@ -1097,7 +1097,14 @@ pub(crate) mod ldap {
             let result = self.bind_by_dn(&dn, pw).await;
 
             let mock_ctx = TardisContext { ..Default::default() };
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, format!("绑定5A账号为{}", dn.as_str()), Some("Bind5aAccount".to_string()), &mock_ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                None,
+                format!("绑定5A账号为{}", dn.as_str()),
+                Some("Bind5aAccount".to_string()),
+                &mock_ctx,
+            )
+            .await;
             let task_handle = tardis::tokio::task::spawn_blocking(move || tardis::tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
             let _ = task_handle.await;
 

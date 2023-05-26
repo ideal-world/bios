@@ -76,8 +76,22 @@ impl IamRelServ {
         RbumRelServ::add_rel(req, funs, ctx).await?;
 
         if rel_kind == &IamRelKind::IamAccountRole {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(from_iam_item_id.to_string()), "增加账号租户角色为管理员".to_string(), Some("AddTenantRoleAsAdmin".to_string()), ctx).await;
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(to_iam_item_id.to_string()), "添加角色人员".to_string(), Some("AddRoleAccount".to_string()), ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(from_iam_item_id.to_string()),
+                "增加账号租户角色为管理员".to_string(),
+                Some("AddTenantRoleAsAdmin".to_string()),
+                ctx,
+            )
+            .await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamRole,
+                Some(to_iam_item_id.to_string()),
+                "添加角色人员".to_string(),
+                Some("AddRoleAccount".to_string()),
+                ctx,
+            )
+            .await;
         }
 
         if rel_kind == &IamRelKind::IamResRole {
@@ -203,7 +217,14 @@ impl IamRelServ {
             )
             .await?;
 
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(from_iam_item_id.to_string()), "添加目录页面API".to_string(), Some("AddContentPageApi".to_string()), ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamRes,
+                Some(from_iam_item_id.to_string()),
+                "添加目录页面API".to_string(),
+                Some("AddContentPageApi".to_string()),
+                ctx,
+            )
+            .await;
         }
         Ok(())
     }
@@ -385,12 +406,33 @@ impl IamRelServ {
                 )
                 .await?;
 
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(from_iam_item_id.to_string()), "移除目录页面API".to_string(), Some("RemoveContentPageApi".to_string()), ctx).await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamRes,
+                    Some(from_iam_item_id.to_string()),
+                    "移除目录页面API".to_string(),
+                    Some("RemoveContentPageApi".to_string()),
+                    ctx,
+                )
+                .await;
             }
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(from_iam_item_id.to_string()), "移除账号租户角色为管理员".to_string(), Some("RemoveTenantRoleAsAdmin".to_string()), ctx).await;
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(to_iam_item_id.to_string()), "移除角色人员".to_string(), Some("RemoveRoleAccount".to_string()), ctx).await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    Some(from_iam_item_id.to_string()),
+                    "移除账号租户角色为管理员".to_string(),
+                    Some("RemoveTenantRoleAsAdmin".to_string()),
+                    ctx,
+                )
+                .await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamRole,
+                    Some(to_iam_item_id.to_string()),
+                    "移除角色人员".to_string(),
+                    Some("RemoveRoleAccount".to_string()),
+                    ctx,
+                )
+                .await;
                 // TODO reset account cache
                 // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;

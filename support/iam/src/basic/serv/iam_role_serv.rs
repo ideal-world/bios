@@ -86,7 +86,14 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             )
             .await?;
 
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), "添加自定义角色".to_string(), Some("AddCustomizeRole".to_string()), ctx).await;
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamRole,
+            Some(id.to_string()),
+            "添加自定义角色".to_string(),
+            Some("AddCustomizeRole".to_string()),
+            ctx,
+        )
+        .await;
 
         Ok(())
     }
@@ -240,7 +247,14 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         )
         .await?;
 
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), "删除自定义角色".to_string(), Some("DeleteCustomizeRole".to_string()), ctx).await;
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamRole,
+            Some(id.to_string()),
+            "删除自定义角色".to_string(),
+            Some("DeleteCustomizeRole".to_string()),
+            ctx,
+        )
+        .await;
 
         Ok(())
     }

@@ -272,7 +272,14 @@ impl IamCertUserPwdServ {
             .await?;
             let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await;
 
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(rel_iam_item_id.to_string()), "重置账号密码".to_string(), Some("ResetAccountPassword".to_string()), ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(rel_iam_item_id.to_string()),
+                "重置账号密码".to_string(),
+                Some("ResetAccountPassword".to_string()),
+                ctx,
+            )
+            .await;
 
             result
         } else {
@@ -329,7 +336,14 @@ impl IamCertUserPwdServ {
                 )
                 .await?;
 
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(rel_iam_item_id.to_string()), "重置账号密码".to_string(), Some("ResetAccountPassword".to_string()), ctx).await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    Some(rel_iam_item_id.to_string()),
+                    "重置账号密码".to_string(),
+                    Some("ResetAccountPassword".to_string()),
+                    ctx,
+                )
+                .await;
             } else {
                 return Err(funs.err().bad_request(
                     "iam_cert_user_pwd",

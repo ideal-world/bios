@@ -33,7 +33,14 @@ impl IamPlatformServ {
             let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
             IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
 
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, Some(ctx.owner.clone()), "修改认证方式为用户名".to_string(), Some("ModifyCertifiedUsername".to_string()), ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::SecurityAlarm,
+                Some(ctx.owner.clone()),
+                "修改认证方式为用户名".to_string(),
+                Some("ModifyCertifiedUsername".to_string()),
+                ctx,
+            )
+            .await;
         }
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
             if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
