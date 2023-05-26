@@ -99,7 +99,7 @@ impl ConfCiConfigServiceApi {
         md5: Query<Option<String>>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<String> {
+    ) -> TardisApiResult<Option<ConfigDescriptor>> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         let mut descriptor = ConfigDescriptor {
             namespace_id,
@@ -110,12 +110,12 @@ impl ConfCiConfigServiceApi {
         };
         let md5 = md5.0.unwrap_or_default();
         let funs = request.tardis_fun_inst();
-        let config = if md5.is_empty() && md5 != get_md5(&mut descriptor, &funs, &ctx.0).await? {
-            // if md5 is empty or changed, return config
-            get_config(&mut descriptor, &funs, &ctx.0).await?
+        let config = if md5.is_empty() || md5 != get_md5(&mut descriptor, &funs, &ctx.0).await? {
+            // if md5 is empty or changed, return descriptor
+            Some(descriptor)
         } else {
-            // if md5 is not changed, return empty string
-            String::new()
+            // if md5 is not changed, return none
+            None
         };
         TardisResp::ok(config)
     }

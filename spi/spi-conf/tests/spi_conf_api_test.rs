@@ -51,13 +51,6 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         )
         .await;
     let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
-    test_curd(&mut client).await?;
-    // web_server_hanlde.await.unwrap()?;
-    drop(container_hold);
-    Ok(())
-}
-
-pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
         ak: "".to_string(),
@@ -66,6 +59,13 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         owner: "app001".to_string(),
         ..Default::default()
     })?;
+    test_curd(&mut client).await?;
+    // web_server_hanlde.await.unwrap()?;
+    drop(container_hold);
+    Ok(())
+}
+
+pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     // 1. create namespace
     let _response = client
         .post::<_, bool>(

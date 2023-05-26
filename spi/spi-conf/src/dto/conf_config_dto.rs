@@ -7,11 +7,13 @@ pub struct ConfigDescriptor {
     /// 命名空间，默认为public与 ''相同
     #[serde(alias = "tenant")]
     #[serde(default)]
-    #[oai(default)]
+    #[oai(default, validator(min_length = 1, max_length = 256))]
     pub namespace_id: NamespaceId,
     /// 配置分组名
+    #[oai(validator(min_length = 1, max_length = 256))]
     pub group: String,
     /// 配置名
+    #[oai(validator(min_length = 1, max_length = 256))]
     pub data_id: String,
     /// 标签
     #[serde(skip_serializing_if = "Option::is_none")]
