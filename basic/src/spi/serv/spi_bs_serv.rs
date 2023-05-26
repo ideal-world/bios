@@ -136,6 +136,7 @@ impl RbumItemCrudOperation<spi_bs::ActiveModel, SpiBsAddReq, SpiBsModifyReq, Spi
                 &mut RbumCertModifyReq {
                     ak: modify_req.ak.clone(),
                     sk: modify_req.sk.clone(),
+                    is_ignore_check_sk: false,
                     conn_uri: modify_req.conn_uri.clone(),
                     ext: modify_req.ext.clone(),
                     status: None,
