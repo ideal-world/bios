@@ -14,10 +14,9 @@ use crate::basic::dto::iam_cert_conf_dto::{IamCertConfTokenAddReq, IamCertConfTo
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamConfigDataTypeKind, IamConfigKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamCertTokenServ;

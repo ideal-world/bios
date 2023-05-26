@@ -16,10 +16,9 @@ use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
-use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
 pub struct IamRelServ;
 

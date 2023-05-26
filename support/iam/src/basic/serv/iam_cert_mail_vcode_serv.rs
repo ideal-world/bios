@@ -20,11 +20,10 @@ use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::mail_client::MailClient;
-use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
 pub struct IamCertMailVCodeServ;
 

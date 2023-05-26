@@ -14,7 +14,7 @@ use crate::basic::dto::iam_account_dto::{
     AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp,
 };
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;

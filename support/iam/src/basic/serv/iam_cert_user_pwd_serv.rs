@@ -14,10 +14,9 @@ use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertUserNameNewReq, IamCertUserPwdAddReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
-use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;

@@ -18,11 +18,10 @@ use crate::basic::dto::iam_cert_conf_dto::IamCertConfPhoneVCodeAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::IamCertPhoneVCodeAddReq;
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
-use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::sms_client::SmsClient;
-use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_tenant_serv::IamTenantServ;

@@ -1062,7 +1062,6 @@ pub(crate) mod ldap {
     use tardis::log::trace;
 
     use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
-    use crate::iam_constants;
 
     pub struct LdapClient {
         ldap: Ldap,

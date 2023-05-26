@@ -16,17 +16,16 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 
-use tardis::chrono::Utc;
 use tardis::serde_json::json;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
+use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamSetCateKind, IamSetKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_rel_serv::IamRelServ;
 
@@ -537,7 +536,6 @@ impl IamSetServ {
 
         if result.is_ok() {
             if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-                let account_name = account.name.clone();
                 let _ = SpiLogClient::add_ctx_task(
                     LogParamTag::IamOrg,
                     Some(item.rel_rbum_set_id.clone()),
