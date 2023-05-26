@@ -272,32 +272,8 @@ impl IamCertUserPwdServ {
             .await?;
             let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await;
 
-            let id = rel_iam_item_id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamAccount,
-                        LogParamContent {
-                            op: "重置账号密码".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        None,
-                        Some(id.clone()),
-                        Some("ResetAccountPassword".to_string()),
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(rel_iam_item_id.to_string()), "重置账号密码".to_string(), Some("ResetAccountPassword".to_string()), ctx).await;
+
             result
         } else {
             Err(funs.err().not_found(
@@ -353,32 +329,7 @@ impl IamCertUserPwdServ {
                 )
                 .await?;
 
-                let id = rel_iam_item_id.to_string();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: "重置账号密码".to_string(),
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            None,
-                            Some(id.clone()),
-                            Some("ResetAccountPassword".to_string()),
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(rel_iam_item_id.to_string()), "重置账号密码".to_string(), Some("ResetAccountPassword".to_string()), ctx).await;
             } else {
                 return Err(funs.err().bad_request(
                     "iam_cert_user_pwd",

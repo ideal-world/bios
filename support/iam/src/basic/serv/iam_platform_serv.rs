@@ -1,6 +1,7 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
+use tardis::chrono::Utc;
 use tardis::{TardisFuns, TardisFunsInst};
 
 use crate::basic::dto::iam_cert_conf_dto::{IamCertConfMailVCodeAddOrModifyReq, IamCertConfPhoneVCodeAddOrModifyReq};
@@ -11,8 +12,10 @@ use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_config::IamConfig;
+use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
+use super::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamPlatformServ;
@@ -29,6 +32,8 @@ impl IamPlatformServ {
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
             let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
             IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
+
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, Some(ctx.owner.clone()), "修改认证方式为用户名".to_string(), Some("ModifyCertifiedUsername".to_string()), ctx).await;
         }
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
             if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {

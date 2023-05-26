@@ -17,6 +17,7 @@ use crate::{
         serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_res_serv::IamResServ, iam_role_serv::IamRoleServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
+    iam_constants,
     iam_enumeration::IamCertKernelKind,
 };
 pub struct SpiLogClient;
@@ -62,6 +63,33 @@ impl From<LogParamTag> for String {
 }
 
 impl SpiLogClient {
+    pub async fn add_ctx_task(tag: LogParamTag, ext: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    tag,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: ext.clone(),
+                        ..Default::default()
+                    },
+                    None,
+                    ext.clone(),
+                    op_kind,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
+        .await
+    }
+
     pub async fn add_item(
         tag: LogParamTag,
         mut content: LogParamContent,
@@ -117,12 +145,9 @@ impl SpiLogClient {
         ]);
         // create search_ext
         let search_ext = json!({
-            "name":content.name,
-            "ak":content.ak,
-            "ip":content.ip,
-            "rel_key":rel_key,
+            "ext":content.ext,
             "ts":ts,
-            "op":content.op,
+            "op":op,
         })
         .to_string();
         body.insert("search_ext", search_ext);

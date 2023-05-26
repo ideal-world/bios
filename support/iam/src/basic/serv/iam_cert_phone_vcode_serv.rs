@@ -290,32 +290,7 @@ impl IamCertPhoneVCodeServ {
                 .await?;
 
                 let op_describe = format!("绑定手机号为{}", phone);
-                let owner = ctx.owner.to_string();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: op_describe,
-                                ext: Some(owner.clone()),
-                                ..Default::default()
-                            },
-                            None,
-                            Some(owner.clone()),
-                            Some("BindPhone".to_string()),
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindPhone".to_string()), &ctx).await;
                 return Ok(id);
             }
         }

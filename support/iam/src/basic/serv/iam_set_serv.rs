@@ -186,33 +186,9 @@ impl IamSetServ {
                 "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes), Some("Add".to_string())),
                 _ => (String::new(), None, None),
             };
+            
             if let Some(tag) = tag {
-                let id = result.as_ref().unwrap().clone();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            tag,
-                            LogParamContent {
-                                op: op_describe,
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            None,
-                            Some(id),
-                            op_kind,
-                            None,
-                            Some(Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(tag, Some(result.as_ref().unwrap().clone()), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -240,62 +216,11 @@ impl IamSetServ {
             match item.kind.as_str() {
                 "Org" => {
                     if let Some(name) = &modify_req.name {
-                        let id = set_cate_id.to_string();
-                        let name = name.to_string();
-                        let ctx_clone = ctx.clone();
-                        ctx.add_async_task(Box::new(|| {
-                            Box::pin(async move {
-                                let funs = iam_constants::get_tardis_inst();
-                                SpiLogClient::add_item(
-                                    LogParamTag::IamOrg,
-                                    LogParamContent {
-                                        op: format!("重命名部门为{}", name),
-                                        ext: Some(id.clone()),
-                                        ..Default::default()
-                                    },
-                                    None,
-                                    Some(id),
-                                    Some("Rename".to_string()),
-                                    None,
-                                    Some(Utc::now().to_rfc3339()),
-                                    &funs,
-                                    &ctx_clone,
-                                )
-                                .await
-                                .unwrap();
-                            })
-                        }))
-                        .await
-                        .unwrap();
+                        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamOrg, Some(set_cate_id.to_string()), format!("重命名部门为{}", name), Some("Rename".to_string()), ctx).await;
                     }
                 }
                 "res" => {
-                    let id = set_cate_id.to_string();
-                    let ctx_clone = ctx.clone();
-                    ctx.add_async_task(Box::new(|| {
-                        Box::pin(async move {
-                            let funs = iam_constants::get_tardis_inst();
-                            SpiLogClient::add_item(
-                                LogParamTag::IamRes,
-                                LogParamContent {
-                                    op: "编辑目录".to_string(),
-                                    ext: Some(id.clone()),
-                                    ..Default::default()
-                                },
-                                None,
-                                Some(id),
-                                Some("ModifyContent".to_string()),
-                                None,
-                                Some(Utc::now().to_rfc3339()),
-                                &funs,
-                                &ctx_clone,
-                            )
-                            .await
-                            .unwrap();
-                        })
-                    }))
-                    .await
-                    .unwrap();
+                    let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(set_cate_id.to_string()), "编辑目录".to_string(), Some("ModifyContent".to_string()), ctx).await;
                 }
                 _ => {}
             }
@@ -317,32 +242,7 @@ impl IamSetServ {
                 _ => (String::new(), None, None),
             };
             if let Some(tag) = tag {
-                let id = set_cate_id.to_string();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            tag,
-                            LogParamContent {
-                                op: op_describe,
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            None,
-                            Some(id),
-                            op_kind,
-                            None,
-                            Some(Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(tag, Some(set_cate_id.to_string()), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -599,33 +499,7 @@ impl IamSetServ {
 
         let set_id = add_req.set_id.clone();
         if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
-            let account_name = account.name.clone();
-            let rel_rbum_item_id = add_req.rel_rbum_item_id.clone();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamOrg,
-                        LogParamContent {
-                            op: format!("添加部门人员{}", account_name),
-                            ext: Some(set_id.clone()),
-                            ..Default::default()
-                        },
-                        None,
-                        Some(set_id),
-                        Some("AddAccount".to_string()),
-                        Some(rel_rbum_item_id),
-                        Some(Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamOrg, Some(set_id.clone()), format!("添加部门人员{}", account.name.clone()), Some("AddAccount".to_string()), ctx).await;
         }
 
         result
@@ -643,32 +517,7 @@ impl IamSetServ {
         if result.is_ok() {
             if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
                 let account_name = account.name.clone();
-                let rel_rbum_item_id = item.rel_rbum_item_id.clone();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamOrg,
-                            LogParamContent {
-                                op: format!("移除部门人员{}", account_name),
-                                ext: Some(item.rel_rbum_set_id.clone()),
-                                ..Default::default()
-                            },
-                            None,
-                            Some(item.rel_rbum_set_id.clone()),
-                            Some("RemoveAccount".to_string()),
-                            Some(rel_rbum_item_id),
-                            Some(Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamOrg, Some(item.rel_rbum_set_id.clone()), format!("移除部门人员{}", account.name.clone()), Some("RemoveAccount".to_string()), ctx).await;
             }
         }
 

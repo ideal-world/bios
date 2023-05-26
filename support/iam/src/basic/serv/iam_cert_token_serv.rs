@@ -131,33 +131,10 @@ impl IamCertTokenServ {
             }
         }
         IamIdentCacheServ::add_token(token, token_kind, rel_iam_item_id, None, cert_conf.expire_sec, cert_conf.coexist_num, funs).await?;
-        let ctx_clone = ctx.clone();
-        let rel_iam_item_id = rel_iam_item_id.to_owned();
-        let token = token.to_owned();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::Token,
-                    LogParamContent {
-                        op: "add token".to_owned(),
-                        ext: Some(token),
-                        ..Default::default()
-                    },
-                    None,
-                    Some(rel_iam_item_id),
-                    None,
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::Token, Some(token.to_string()), "add token".to_string(), None, ctx).await;
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "登录".to_string(), Some("Login".to_string()), ctx).await;
+
         Ok(())
     }
 

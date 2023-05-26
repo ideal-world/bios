@@ -1061,7 +1061,7 @@ pub(crate) mod ldap {
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
 
-    use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamTag, SpiLogClient};
+    use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
     use crate::iam_constants;
 
     pub struct LdapClient {
@@ -1097,32 +1097,7 @@ pub(crate) mod ldap {
             let result = self.bind_by_dn(&dn, pw).await;
 
             let mock_ctx = TardisContext { ..Default::default() };
-            let ctx_clone = mock_ctx.clone();
-            mock_ctx
-                .add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: format!("绑定5A账号为{}", dn.as_str()),
-                                ext: None,
-                                ..Default::default()
-                            },
-                            None,
-                            None,
-                            Some("Bind5aAccount".to_string()),
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, format!("绑定5A账号为{}", dn.as_str()), Some("Bind5aAccount".to_string()), &mock_ctx).await;
             let task_handle = tardis::tokio::task::spawn_blocking(move || tardis::tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
             let _ = task_handle.await;
 

@@ -112,32 +112,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             IamResKind::Ele => ("添加目录页面按钮".to_string(), "AddContentPageButton".to_string()),
         };
         if !op_describe.is_empty() {
-            let id = id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamRes,
-                        LogParamContent {
-                            op: op_describe,
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        None,
-                        Some(id.clone()),
-                        Some(op_kind),
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
 
         Ok(())
@@ -247,32 +222,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             IamResKind::Ele => ("".to_string(), "".to_string()),
         };
         if !op_describe.is_empty() {
-            let id = id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamRes,
-                        LogParamContent {
-                            op: op_describe,
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        None,
-                        Some(id.clone()),
-                        Some(op_kind),
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
 
         Ok(())
@@ -307,32 +257,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
             };
             if !op_describe.is_empty() {
-                let id = deleted_item.id.to_string();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamRes,
-                            LogParamContent {
-                                op: op_describe,
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            None,
-                            Some(id.clone()),
-                            Some(op_kind),
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(deleted_item.id.to_string()), op_describe, Some(op_kind), ctx).await;
             }
 
             Ok(())

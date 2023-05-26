@@ -86,32 +86,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             )
             .await?;
 
-        let id = id.to_string();
-        let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamRole,
-                    LogParamContent {
-                        op: "添加自定义角色".to_string(),
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    None,
-                    Some(id.clone()),
-                    Some("AddCustomizeRole".to_string()),
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), "添加自定义角色".to_string(), Some("AddCustomizeRole".to_string()), ctx).await;
 
         Ok(())
     }
@@ -206,32 +181,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         }
 
         if !op_describe.is_empty() {
-            let id = id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamRole,
-                        LogParamContent {
-                            op: op_describe,
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        None,
-                        Some(id.clone()),
-                        Some(op_kind),
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
 
         Ok(())
@@ -290,32 +240,7 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         )
         .await?;
 
-        let id = id.to_string();
-        let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamRole,
-                    LogParamContent {
-                        op: "删除自定义角色".to_string(),
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    None,
-                    Some(id.clone()),
-                    Some("DeleteCustomizeRole".to_string()),
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), "删除自定义角色".to_string(), Some("DeleteCustomizeRole".to_string()), ctx).await;
 
         Ok(())
     }
@@ -388,37 +313,13 @@ impl IamRoleServ {
                 ctx,
             )
             .await?;
-            let id = id.to_string();
-            let ctx_clone = ctx.clone();
+
             let (op_describe, op_kind) = if Self::is_custom_role(role.kind, role.scope_level) {
                 ("编辑自定义角色权限".to_string(), "ModifyCustomizeRolePermissions".to_string())
             } else {
                 ("编辑内置角色权限".to_string(), "ModifyBuiltRolePermissions".to_string())
             };
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamRole,
-                        LogParamContent {
-                            op: op_describe,
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        None,
-                        Some(id.clone()),
-                        Some(op_kind),
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
         Ok(())
     }

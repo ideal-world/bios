@@ -124,33 +124,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
     async fn after_add_item(id: &str, _: &mut IamTenantAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         #[cfg(feature = "spi_kv")]
         Self::add_or_modify_tenant_kv(id, funs, ctx).await?;
-
-        let ctx_clone = ctx.clone();
-        let id = id.to_string();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamTenant,
-                    LogParamContent {
-                        op: "添加租户".to_string(),
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    None,
-                    Some(id.clone()),
-                    Some("Add".to_string()),
-                    None,
-                    Some(Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()),  "添加租户".to_string(), Some("Add".to_string()), ctx).await;
 
         Ok(())
     }
@@ -170,32 +144,7 @@ impl RbumItemCrudOperation<iam_tenant::ActiveModel, IamTenantAddReq, IamTenantMo
             op_describe = "启用租户".to_string();
             op_kind = "Enabled".to_string();
         }
-        let ctx_clone = ctx.clone();
-        let id = id.to_string();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamTenant,
-                    LogParamContent {
-                        op: op_describe,
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    None,
-                    Some(id.clone()),
-                    Some(op_kind),
-                    None,
-                    Some(Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamTenant, Some(id.to_string()),  op_describe, Some(op_kind), ctx).await;
 
         Ok(())
     }
