@@ -238,7 +238,7 @@ impl IamCertMailVCodeServ {
                 )
                 .await?;
                 let op_describe = format!("绑定邮箱为{}", mail);
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), ctx).await;
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(ctx.owner.to_string()), op_describe, Some("BindMailbox".to_string()), &ctx).await;
 
                 return Ok(id);
             }
