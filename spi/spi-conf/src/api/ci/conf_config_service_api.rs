@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use bios_basic::TardisFunInstExtractor;
 use tardis::{
     basic::error::TardisError,
     db::sea_orm::prelude::Uuid,
