@@ -7,6 +7,7 @@ use serde::Serialize;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::json,
+    web::web_resp::{TardisApiResult, Void},
     TardisFuns, TardisFunsInst,
 };
 
@@ -136,17 +137,18 @@ impl SpiLogClient {
         // get ext name
         content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
         //add log item
+        let tag: String = tag.into();
         let mut body = json!({
-            "tag": tag.into(),
+            "tag": tag,
             "content": TardisFuns::json.obj_to_string(&content)?,
             "owner": ctx.owner.clone(),
             "owner_paths":ctx.own_paths.clone(),
-            "kind": None,
-            "ext": None,
-            "key": None,
-            "op": None,
-            "rel_key": None,
-            "ts": None,
+            "kind": "",
+            "ext": "",
+            "key": "",
+            "op": "",
+            "rel_key": "",
+            "ts": "",
         });
         // create search_ext
         let search_ext = json!({
@@ -176,7 +178,7 @@ impl SpiLogClient {
         if let Some(ts) = ts {
             *body.get_mut("ts").unwrap() = json!(ts);
         }
-        funs.web_client().post(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        funs.web_client().put_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 
