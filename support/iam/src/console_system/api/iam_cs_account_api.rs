@@ -14,7 +14,7 @@ use crate::basic::dto::iam_account_dto::{
     AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp,
 };
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -309,32 +309,14 @@ impl IamCsAccountApi {
         )
         .await?;
         IamAccountServ::async_add_or_modify_account_search(id.0.clone(), true, "".to_string(), &funs, ctx.clone()).await?;
-        let id = id.0.clone();
-        let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamAccount,
-                    LogParamContent {
-                        op: "人工锁定账号".to_string(),
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    None,
-                    Some(id.clone()),
-                    LogParamOp::Modify,
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamAccount,
+            Some(id.0.clone()),
+            "人工锁定账号".to_string(),
+            Some("ManuallyLockAccount".to_string()),
+            &ctx,
+        )
+        .await;
         funs.commit().await?;
         let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
         let _ = task_handle.await;

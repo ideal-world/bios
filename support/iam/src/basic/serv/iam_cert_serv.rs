@@ -19,7 +19,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_rel_serv::IamRelServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
@@ -1202,32 +1202,22 @@ impl IamCertServ {
                 if let Some(own_paths) = own_paths {
                     mock_ctx.own_paths = own_paths;
                 }
-                let ctx_clone = mock_ctx.clone();
-                mock_ctx
-                    .add_async_task(Box::new(|| {
-                        Box::pin(async move {
-                            let funs = iam_constants::get_tardis_inst();
-                            SpiLogClient::add_item(
-                                LogParamTag::IamAccount,
-                                LogParamContent {
-                                    op: "密码锁定账号".to_string(),
-                                    ext: None,
-                                    ..Default::default()
-                                },
-                                None,
-                                None,
-                                LogParamOp::Modify,
-                                None,
-                                Some(tardis::chrono::Utc::now().to_rfc3339()),
-                                &funs,
-                                &ctx_clone,
-                            )
-                            .await
-                            .unwrap();
-                        })
-                    }))
-                    .await
-                    .unwrap();
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    None,
+                    "密码锁定账号".to_string(),
+                    Some("PasswordLockAccount".to_string()),
+                    &mock_ctx,
+                )
+                .await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::SecurityVisit,
+                    None,
+                    "连续登录失败".to_string(),
+                    Some("ContinuLoginFail".to_string()),
+                    &mock_ctx,
+                )
+                .await;
                 let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
                 let _ = task_handle.await;
             }
