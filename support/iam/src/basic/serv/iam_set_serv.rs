@@ -187,7 +187,7 @@ impl IamSetServ {
             };
 
             if let Some(tag) = tag {
-                let _ = SpiLogClient::add_ctx_task(tag, Some(result.as_ref().unwrap().clone()), op_describe, op_kind, ctx).await;
+                let _ = SpiLogClient::add_ctx_task(tag, Some(result.as_ref().unwrap().to_string()), op_describe, op_kind, ctx).await;
             }
         }
 

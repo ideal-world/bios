@@ -13,16 +13,19 @@ use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::tokio::time::sleep;
 
-use crate::test_basic::{self, LDAP_ACCOUNT_NUB};
-
-pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisContext, tenant2_admin_context: &TardisContext) -> () {
+pub async fn test(
+    ldap_account_num: u64,
+    conf_ldap_add_or_modify_req: IamCertConfLdapAddOrModifyReq,
+    admin_ctx: &TardisContext,
+    tenant1_admin_context: &TardisContext,
+    tenant2_admin_context: &TardisContext,
+) -> () {
     let funs = iam_constants::get_tardis_inst();
     //不能开启事务 iam_sync_ldap_user_to_iam 这个方法里有自己的事务
     info!("【test ldap conf curd】");
     let ldap_cert_conf = IamCertLdapServ::get_cert_conf_by_ctx(&funs, admin_ctx).await.unwrap();
     assert!(ldap_cert_conf.is_none());
 
-    let conf_ldap_add_or_modify_req = test_basic::gen_test_ldap_conf();
     let err_req_param = IamCertConfLdapAddOrModifyReq {
         port: Some(293u16),
         ..conf_ldap_add_or_modify_req.clone()
@@ -102,8 +105,8 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     error!("exec manual sync 2 error_msg: {}", error_msg);
     let account_ldap_cert: Vec<Option<&String>> = account_page.records.iter().map(|a| a.certs.get(&conf_ldap_add_or_modify_req.name)).filter(|o| o.is_some()).collect();
 
-    assert_eq!(account_ldap_cert.len() as u64, LDAP_ACCOUNT_NUB);
-    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB + 2);
+    assert_eq!(account_ldap_cert.len() as u64, ldap_account_num);
+    assert_eq!(account_page.total_size, ldap_account_num + 2);
 
     info!("【delete ldap conf and cert】");
     IamCertServ::delete_cert_and_conf_by_conf_id(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
@@ -169,7 +172,7 @@ pub async fn test(admin_ctx: &TardisContext, tenant1_admin_context: &TardisConte
     .await
     .unwrap();
     println!("================={:?}", account_page.records);
-    assert_eq!(account_page.total_size, LDAP_ACCOUNT_NUB * 2 + 2);
+    assert_eq!(account_page.total_size, ldap_account_num * 2 + 2);
 
     funs.commit().await.unwrap();
 }
