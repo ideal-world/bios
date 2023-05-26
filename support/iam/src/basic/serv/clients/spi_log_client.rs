@@ -149,7 +149,7 @@ impl SpiLogClient {
 
         // generate log item
         let tag: String = tag.into();
-        let mut body = json!({
+        let body = json!({
             "tag": tag,
             "content": TardisFuns::json.obj_to_string(&content)?,
             "owner": ctx.owner.clone(),
