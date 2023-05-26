@@ -2,7 +2,7 @@ use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::spi::dto::spi_bs_dto::{SpiBsAddReq, SpiBsDetailResp, SpiBsFilterReq, SpiBsModifyReq, SpiBsSummaryResp};
 use bios_basic::spi::serv::spi_bs_serv::SpiBsServ;
-use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use bios_basic::TardisFunInstExtractor;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;

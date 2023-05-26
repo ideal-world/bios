@@ -199,7 +199,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 "keys":["001"],
                 "kinds":["req"],
                 "owners":["account002"],
-                "own_paths":["tenant001"],
+                "own_paths":"tenant001",
                 "ext":[
                     {"field":"name","op":"like","value":"测试"},
                     {"field":"status","op":"=","value":1},

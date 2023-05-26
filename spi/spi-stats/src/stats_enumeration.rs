@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bios_basic::{helper::db_helper, spi::spi_enumeration::SpiQueryOpKind};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper};
 use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, NaiveDate, Utc},
@@ -94,24 +94,24 @@ impl StatsDataTypeKind {
         &self,
         multi_values: bool,
         column_name: &str,
-        op: &SpiQueryOpKind,
+        op: &BasicQueryOpKind,
         param_idx: usize,
         value: &serde_json::Value,
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
     ) -> Option<(String, sea_orm::Value)> {
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
-            let value = self.json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
+            let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
             Some(vec![value])
         } else {
-            db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like)
+            db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
         };
         let mut value = value.unwrap();
-        if multi_values && (time_window_fun.is_some() || op != &SpiQueryOpKind::In)
-            || self == &StatsDataTypeKind::Int && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Float && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Boolean && (op != &SpiQueryOpKind::Eq && op != &SpiQueryOpKind::Ne)
-            || self == &StatsDataTypeKind::Date && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
-            || self == &StatsDataTypeKind::DateTime && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
+        if multi_values && (time_window_fun.is_some() || op != &BasicQueryOpKind::In)
+            || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
+            || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
             || (self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime) && time_window_fun.is_some()
         {
             None
@@ -132,24 +132,24 @@ impl StatsDataTypeKind {
         &self,
         multi_values: bool,
         column_name: &str,
-        op: &SpiQueryOpKind,
+        op: &BasicQueryOpKind,
         param_idx: usize,
         value: &serde_json::Value,
         fun: Option<&StatsQueryAggFunKind>,
     ) -> Option<(String, sea_orm::Value)> {
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
-            let value = self.json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like);
+            let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
             Some(vec![value])
         } else {
-            db_helper::json_to_sea_orm_value(value, op == &SpiQueryOpKind::Like)
+            db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
         };
         let mut value = value.unwrap();
-        if multi_values && (fun.is_some() || op != &SpiQueryOpKind::In)
-            || self == &StatsDataTypeKind::Int && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Float && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Boolean && (op != &SpiQueryOpKind::Eq && op != &SpiQueryOpKind::Ne)
-            || self == &StatsDataTypeKind::Date && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
-            || self == &StatsDataTypeKind::DateTime && (op == &SpiQueryOpKind::In || op == &SpiQueryOpKind::Like)
+        if multi_values && (fun.is_some() || op != &BasicQueryOpKind::In)
+            || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
+            || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
         {
             None
         } else if multi_values {

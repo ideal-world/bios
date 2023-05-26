@@ -1191,7 +1191,7 @@ impl IamCertServ {
         allowed_kinds: Option<Vec<&str>>,
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
-        let result = if rbum_cert_conf_id.is_some() {
+        let result: Result<(String, RbumCertRelKind, String), tardis::basic::error::TardisError> = if rbum_cert_conf_id.is_some() {
             RbumCertServ::validate_by_spec_cert_conf(ak, input_sk, rbum_cert_conf_id.unwrap(), ignore_end_time, own_paths.as_ref().unwrap(), funs).await
         } else {
             RbumCertServ::validate_by_ak_and_basic_sk(ak, input_sk, rel_rbum_kind.unwrap(), ignore_end_time, own_paths.clone(), allowed_kinds.unwrap(), funs).await

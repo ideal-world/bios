@@ -1,4 +1,5 @@
 pub(crate) mod basic;
+#[allow(dead_code)]
 pub(crate) mod channel;
 pub(crate) mod crypto;
 pub(crate) mod error;

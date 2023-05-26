@@ -136,7 +136,8 @@ impl IamCertMailVCodeServ {
     }
 
     pub async fn activate_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
+        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
+        if let Some(cached_vcode) = RbumCertServ::get_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let cert = RbumCertServ::find_one_rbum(
                     &RbumCertFilterReq {
@@ -144,12 +145,12 @@ impl IamCertMailVCodeServ {
                         status: Some(RbumCertStatusKind::Pending),
                         rel_rbum_kind: Some(RbumCertRelKind::Item),
                         rel_rbum_cert_conf_ids: Some(vec![
-                            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                            IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?,
                         ]),
                         ..Default::default()
                     },
                     funs,
-                    ctx,
+                    &ctx,
                 )
                 .await?;
                 return if let Some(cert) = cert {
@@ -165,7 +166,7 @@ impl IamCertMailVCodeServ {
                             conn_uri: None,
                         },
                         funs,
-                        ctx,
+                        &ctx,
                     )
                     .await?;
                     Ok(())
@@ -183,17 +184,18 @@ impl IamCertMailVCodeServ {
     }
 
     pub async fn send_bind_mail(mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
         if RbumCertServ::count_rbums(
             &RbumCertFilterReq {
                 ak: Some(mail.to_string()),
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
                 rel_rbum_cert_conf_ids: Some(vec![
-                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?,
+                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?,
                 ]),
                 ..Default::default()
             },
             funs,
-            ctx,
+            &ctx,
         )
         .await?
             > 0
@@ -201,25 +203,18 @@ impl IamCertMailVCodeServ {
             return Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email already exist", "401-iam-cert-valid"));
         }
         let vcode = Self::get_vcode();
-        let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, ctx).await?.name;
+        let account_name = IamAccountServ::peek_item(&ctx.owner, &IamAccountFilterReq::default(), funs, &ctx).await?.name;
         RbumCertServ::add_vcode_to_cache(mail, &vcode, &ctx.own_paths, funs).await?;
         MailClient::send_cert_activate_vcode(mail, Some(account_name), &vcode, funs).await?;
         Ok(())
     }
 
     pub async fn bind_mail(mail: &str, input_vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        if let Some(cached_vcode) = RbumCertServ::get_and_delete_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
+        let ctx = IamAccountServ::new_context_if_account_is_global(ctx, funs).await?;
+        if let Some(cached_vcode) = RbumCertServ::get_vcode_in_cache(mail, &ctx.own_paths, funs).await? {
             if cached_vcode == input_vcode {
                 let rel_rbum_cert_conf_id =
-                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(ctx, funs)?), funs).await?;
-                let actual_ctx = if IamAccountServ::is_global_account(&ctx.owner, funs, ctx).await? {
-                    TardisContext {
-                        own_paths: "".to_string(),
-                        ..ctx.clone()
-                    }
-                } else {
-                    ctx.clone()
-                };
+                    IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::MailVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?;
                 let id = RbumCertServ::add_rbum(
                     &mut RbumCertAddReq {
                         ak: TrimString(mail.trim().to_string()),
@@ -239,7 +234,7 @@ impl IamCertMailVCodeServ {
                         is_ignore_check_sk: false,
                     },
                     funs,
-                    &actual_ctx,
+                    &ctx,
                 )
                 .await?;
                 let op_describe = format!("绑定邮箱为{}", mail);
