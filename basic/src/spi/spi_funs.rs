@@ -15,18 +15,6 @@ use crate::spi::dto::spi_bs_dto::SpiBsCertResp;
 use super::serv::spi_bs_serv::SpiBsServ;
 use super::spi_constants;
 
-pub trait SpiTardisFunInstExtractor {
-    fn tardis_fun_inst(&self) -> TardisFunsInst;
-}
-
-#[cfg(feature = "default")]
-impl SpiTardisFunInstExtractor for tardis::web::poem::Request {
-    fn tardis_fun_inst(&self) -> TardisFunsInst {
-        let serv_domain = self.original_uri().path().split('/').collect::<Vec<&str>>()[1];
-        TardisFuns::inst_with_db_conn(serv_domain.to_string(), None)
-    }
-}
-
 pub struct SpiBsInst {
     pub client: Box<dyn Any + Send>,
     pub ext: HashMap<String, String>,

@@ -597,24 +597,26 @@ impl IamCertLdapServ {
     ) -> TardisResult<String> {
         //验证用户名密码登录
         let (_, _, rbum_item_id) = if let Some(tenant_id) = tenant_id.clone() {
-            let global_check = RbumCertServ::validate_by_ak_and_basic_sk(
+            let global_check = IamCertServ::validate_by_ak_and_sk(
                 user_name,
                 password,
-                &RbumCertRelKind::Item,
+                None,
+                Some(&RbumCertRelKind::Item),
                 false,
                 Some("".to_string()),
-                vec![&IamCertKernelKind::UserPwd.to_string()],
+                Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                 funs,
             )
             .await;
             if global_check.is_err() {
-                let tenant_check = RbumCertServ::validate_by_ak_and_basic_sk(
+                let tenant_check = IamCertServ::validate_by_ak_and_sk(
                     user_name,
                     password,
-                    &RbumCertRelKind::Item,
+                    None,
+                    Some(&RbumCertRelKind::Item),
                     false,
-                    Some(tenant_id.clone()),
-                    vec![&IamCertKernelKind::UserPwd.to_string()],
+                    Some(tenant_id.to_string()),
+                    Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                     funs,
                 )
                 .await;
@@ -629,13 +631,14 @@ impl IamCertLdapServ {
                 global_check?
             }
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(
+            IamCertServ::validate_by_ak_and_sk(
                 user_name,
                 password,
-                &RbumCertRelKind::Item,
+                None,
+                Some(&RbumCertRelKind::Item),
                 false,
                 Some("".to_string()),
-                vec![&IamCertKernelKind::UserPwd.to_string()],
+                Some(vec![&IamCertKernelKind::UserPwd.to_string()]),
                 funs,
             )
             .await?
@@ -1054,8 +1057,11 @@ pub(crate) mod ldap {
     use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry, SearchOptions};
     use serde::{Deserialize, Serialize};
+    use tardis::basic::dto::TardisContext;
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
+
+    use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
     pub struct LdapClient {
         ldap: Ldap,
@@ -1087,7 +1093,21 @@ pub(crate) mod ldap {
 
         pub async fn bind(&mut self, cn: &str, pw: &str) -> TardisResult<Option<String>> {
             let dn = format!("cn={},{}", cn, self.base_dn);
-            self.bind_by_dn(&dn, pw).await
+            let result = self.bind_by_dn(&dn, pw).await;
+
+            let mock_ctx = TardisContext { ..Default::default() };
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                None,
+                format!("绑定5A账号为{}", dn.as_str()),
+                Some("Bind5aAccount".to_string()),
+                &mock_ctx,
+            )
+            .await;
+            let task_handle = tardis::tokio::task::spawn_blocking(move || tardis::tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
+            let _ = task_handle.await;
+
+            result
         }
 
         pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {

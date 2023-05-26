@@ -50,6 +50,7 @@ use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamC
 
 use super::clients::mail_client::MailClient;
 use super::clients::sms_client::SmsClient;
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -99,7 +100,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
-        if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.status.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         let disabled = if modify_req.status.is_some() {
@@ -120,7 +121,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() {
+        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
@@ -139,14 +140,47 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         Ok(Some(iam_account))
     }
 
-    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_modify_item(id: &str, modify_req: &mut IamAccountModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if modify_req.disabled.is_some() || modify_req.scope_level.is_some() || modify_req.status.is_some() {
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
+
+        let mut op_describe = String::new();
+        let mut op_kind = String::new();
+        if modify_req.status == Some(IamAccountStatusKind::Logout) {
+            op_describe = "注销账号".to_string();
+            op_kind = "Logout".to_string();
+        } else if modify_req.status == Some(IamAccountStatusKind::Dormant) {
+            op_describe = "休眠账号".to_string();
+            op_kind = "DormantAccount".to_string();
+        } else if modify_req.status == Some(IamAccountStatusKind::Active) {
+            op_describe = "激活账号".to_string();
+            op_kind = "ActivateAccount".to_string();
+        } else if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
+            op_describe = "解锁账号".to_string();
+            op_kind = "UnlockAccount".to_string();
+        } else if modify_req.icon.is_some() {
+            op_describe = "修改账号头像".to_string();
+            op_kind = "ModifyAccountIcon".to_string();
+        } else if modify_req.name.is_some() {
+            op_describe = format!("修改姓名为{}", modify_req.name.as_ref().unwrap());
+            op_kind = "ModifyName".to_string();
+        }
+        if !op_describe.is_empty() {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        }
+
         Ok(())
     }
 
-    async fn after_add_item(_id: &str, _: &mut IamAccountAddReq, _funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let mut op_describe = "添加长期账号".to_string();
+        let mut op_kind = "AddLongTermAccount".to_string();
+        if add_req.temporary == Some(true) {
+            op_describe = "添加临时账号".to_string();
+            op_kind = "AddTempAccount".to_string();
+        }
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {

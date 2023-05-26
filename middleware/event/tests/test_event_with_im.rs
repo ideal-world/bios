@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::tokio::time::sleep;
+use tardis::web::tokio_tungstenite::tungstenite::Message;
 use tardis::web::ws_processor::{TardisWebsocketMessage, TardisWebsocketMgrMessage, TardisWebsocketReq};
 use tardis::TardisFuns;
 
@@ -21,7 +22,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     // Register management listener
     let url = add_listener(Vec::new(), true, http_client).await?;
     let mgr_client = TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMgrMessage>(msg.to_string().as_str()).unwrap();
         let ori_msg = TardisFuns::json.json_to_obj::<EventMessageMgrWrap>(receive_msg.msg.clone()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(ori_msg.msg.clone()).unwrap();
         if raw_msg.content == "系统升级" {
@@ -37,13 +38,15 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
         if raw_msg.content == "Hi" {
             TO_G1_COUNTER.fetch_add(1, Ordering::SeqCst);
         }
-        Some(TardisFuns::json.obj_to_string(&receive_msg.into_req(ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap())
+        Some(Message::text(
+            TardisFuns::json.obj_to_string(&receive_msg.into_req(ori_msg.msg, ori_msg.ori_from_avatar, ori_msg.ori_to_avatars)).unwrap(),
+        ))
     })
     .await?;
     // Register user listener
     let url = add_listener(vec![TrimString("user01".to_string()), TrimString("group01".to_string())], false, http_client).await?;
     let user01_client = TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(receive_msg.msg).unwrap();
         if raw_msg.content == "系统升级" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -64,7 +67,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
 
     let url = add_listener(vec![TrimString("user02".to_string())], false, http_client).await?;
     let user02_client = TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(receive_msg.msg).unwrap();
         if raw_msg.content == "系统升级" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -86,7 +89,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
 
     let url = add_listener(vec![TrimString("user03".to_string()), TrimString("group01".to_string())], false, http_client).await?;
     let user03_client = TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(receive_msg.msg).unwrap();
         if raw_msg.content == "系统升级" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -109,7 +112,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
 
     let url = add_listener(vec![TrimString("user04".to_string()), TrimString("group01".to_string())], false, http_client).await?;
     TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(receive_msg.msg).unwrap();
         if raw_msg.content == "系统升级" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -130,7 +133,7 @@ pub async fn test(http_client: &TestHttpClient) -> TardisResult<()> {
     .await?;
     let url = add_listener(vec![TrimString("user04".to_string()), TrimString("group01".to_string())], false, http_client).await?;
     TardisFuns::ws_client(&url, move |msg| async move {
-        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(&msg).unwrap();
+        let receive_msg = TardisFuns::json.str_to_obj::<TardisWebsocketMessage>(msg.to_string().as_str()).unwrap();
         let raw_msg = TardisFuns::json.json_to_obj::<ImWebsocketMessage>(receive_msg.msg).unwrap();
         if raw_msg.content == "系统升级" {
             NOTIFY_COUNTER.fetch_add(1, Ordering::SeqCst);

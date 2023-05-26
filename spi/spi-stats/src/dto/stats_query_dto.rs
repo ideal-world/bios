@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bios_basic::spi::spi_enumeration::SpiQueryOpKind;
+use bios_basic::basic_enumeration::BasicQueryOpKind;
 use serde::{Deserialize, Serialize};
 use tardis::{
     chrono::{DateTime, Utc},
@@ -60,7 +60,7 @@ pub struct StatsQueryMetricsWhereReq {
     /// Dimension or measure column key
     pub code: String,
     /// Operator
-    pub op: SpiQueryOpKind,
+    pub op: BasicQueryOpKind,
     /// Value
     pub value: Value,
     /// Time window function
@@ -91,7 +91,7 @@ pub struct StatsQueryMetricsHavingReq {
     /// Aggregate function
     pub fun: StatsQueryAggFunKind,
     /// Operator
-    pub op: SpiQueryOpKind,
+    pub op: BasicQueryOpKind,
     /// Value
     pub value: Value,
 }

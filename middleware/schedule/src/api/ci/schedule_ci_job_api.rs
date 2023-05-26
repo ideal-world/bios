@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use bios_basic::TardisFunInstExtractor;
 use tardis::chrono::{self, Utc};
 use tardis::log::info;
 use tardis::web::context_extractor::TardisContextExtractor;

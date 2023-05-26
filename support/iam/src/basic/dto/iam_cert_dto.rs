@@ -55,7 +55,7 @@ pub struct IamCertUserPwdModifyReq {
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertUserPwdRestReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub new_sk: TrimString,
+    pub new_sk: Option<TrimString>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

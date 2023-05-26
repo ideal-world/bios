@@ -28,6 +28,8 @@ use crate::iam_constants;
 use crate::iam_constants::{RBUM_SCOPE_LEVEL_APP, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamRelKind, IamRoleKind};
 
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+
 pub struct IamRoleServ;
 
 #[async_trait]
@@ -83,6 +85,16 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 TardisFuns::json.obj_to_string(&role)?.as_str(),
             )
             .await?;
+
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamRole,
+            Some(id.to_string()),
+            "添加自定义角色".to_string(),
+            Some("AddCustomizeRole".to_string()),
+            ctx,
+        )
+        .await;
+
         Ok(())
     }
 
@@ -162,6 +174,23 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             )
             .await?;
         }
+
+        let mut op_describe = String::new();
+        let mut op_kind = String::new();
+        if modify_req.name.is_some() {
+            if Self::is_custom_role(role.kind, role.scope_level) {
+                op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap());
+                op_kind = "ModifyCustomizeRoleName".to_string();
+            } else {
+                op_describe = format!("编辑内置角色名称为{}", modify_req.name.as_ref().unwrap());
+                op_kind = "ModifyBuiltRoleName".to_string();
+            }
+        }
+
+        if !op_describe.is_empty() {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        }
+
         Ok(())
     }
 
@@ -217,6 +246,16 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             ctx,
         )
         .await?;
+
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamRole,
+            Some(id.to_string()),
+            "删除自定义角色".to_string(),
+            Some("DeleteCustomizeRole".to_string()),
+            ctx,
+        )
+        .await;
+
         Ok(())
     }
 
@@ -274,6 +313,27 @@ impl IamRoleServ {
                     Self::delete_rel_res(id, &stored_res_id, funs, ctx).await?;
                 }
             }
+
+            let role = Self::do_get_item(
+                id,
+                &IamRoleFilterReq {
+                    basic: RbumBasicFilterReq {
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+
+            let (op_describe, op_kind) = if Self::is_custom_role(role.kind, role.scope_level) {
+                ("编辑自定义角色权限".to_string(), "ModifyCustomizeRolePermissions".to_string())
+            } else {
+                ("编辑内置角色权限".to_string(), "ModifyBuiltRolePermissions".to_string())
+            };
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRole, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
         Ok(())
     }
@@ -490,5 +550,9 @@ impl IamRoleServ {
         } else {
             Ok(())
         }
+    }
+
+    pub fn is_custom_role(kind: IamRoleKind, scope_level: RbumScopeLevelKind) -> bool {
+        kind != IamRoleKind::System && scope_level == RbumScopeLevelKind::Private
     }
 }

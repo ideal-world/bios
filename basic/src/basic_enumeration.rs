@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use tardis::derive_more::Display;
 #[cfg(feature = "default")]
 use tardis::web::poem_openapi;
@@ -17,4 +18,40 @@ pub enum ApiTag {
     Passport,
     #[oai(rename = "Interface Console")]
     Interface,
+}
+
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Enum))]
+pub enum BasicQueryOpKind {
+    #[oai(rename = "=")]
+    Eq,
+    #[oai(rename = "!=")]
+    Ne,
+    #[oai(rename = ">")]
+    Gt,
+    #[oai(rename = ">=")]
+    Ge,
+    #[oai(rename = "<")]
+    Lt,
+    #[oai(rename = "<=")]
+    Le,
+    #[oai(rename = "like")]
+    Like,
+    #[oai(rename = "in")]
+    In,
+}
+
+impl BasicQueryOpKind {
+    pub fn to_sql(&self) -> String {
+        match self {
+            BasicQueryOpKind::Eq => "=".to_string(),
+            BasicQueryOpKind::Ne => "!=".to_string(),
+            BasicQueryOpKind::Gt => ">".to_string(),
+            BasicQueryOpKind::Ge => ">=".to_string(),
+            BasicQueryOpKind::Lt => "<".to_string(),
+            BasicQueryOpKind::Le => "<=".to_string(),
+            BasicQueryOpKind::Like => "LIKE".to_string(),
+            BasicQueryOpKind::In => "IN".to_string(),
+        }
+    }
 }

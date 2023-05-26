@@ -33,6 +33,7 @@ use crate::iam_config::IamBasicInfoManager;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind, IamSetCateKind};
 
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_serv::IamCertServ;
 use super::iam_key_cache_serv::IamCacheResRelAddOrModifyReq;
@@ -105,6 +106,15 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         if res.kind == IamResKind::Api {
             IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
         }
+        let (op_describe, op_kind) = match res.kind {
+            IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
+            IamResKind::Api => ("添加API".to_string(), "AddApi".to_string()),
+            IamResKind::Ele => ("添加目录页面按钮".to_string(), "AddContentPageButton".to_string()),
+        };
+        if !op_describe.is_empty() {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        }
+
         Ok(())
     }
 
@@ -205,6 +215,16 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 }
             }
         }
+
+        let (op_describe, op_kind) = match res.kind {
+            IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
+            IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
+            IamResKind::Ele => ("".to_string(), "".to_string()),
+        };
+        if !op_describe.is_empty() {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
+        }
+
         Ok(())
     }
 
@@ -226,11 +246,20 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         ))
     }
 
-    async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst, _: &TardisContext) -> TardisResult<()> {
+    async fn after_delete_item(_: &str, deleted_item: &Option<IamResDetailResp>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(deleted_item) = deleted_item {
             if deleted_item.kind == IamResKind::Api {
                 IamResCacheServ::delete_res(&deleted_item.code, &deleted_item.method, funs).await?;
             }
+            let (op_describe, op_kind) = match deleted_item.kind {
+                IamResKind::Menu => ("删除目录页面".to_string(), "DeleteContentPageAsPersonal".to_string()),
+                IamResKind::Api => ("删除API".to_string(), "DeleteApi".to_string()),
+                IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
+            };
+            if !op_describe.is_empty() {
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamRes, Some(deleted_item.id.to_string()), op_describe, Some(op_kind), ctx).await;
+            }
+
             Ok(())
         } else {
             Err(funs.err().not_found(&Self::get_obj_name(), "delete", "not found resource", "404-iam-res-not-exist"))

@@ -1,4 +1,7 @@
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::{
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq},
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
+};
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -10,10 +13,11 @@ use tardis::{
 
 use crate::{
     basic::{
-        dto::iam_filer_dto::IamAccountFilterReq,
-        serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ},
+        dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq, IamRoleFilterReq, IamTenantFilterReq},
+        serv::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_res_serv::IamResServ, iam_role_serv::IamRoleServ, iam_tenant_serv::IamTenantServ},
     },
     iam_config::IamConfig,
+    iam_constants,
     iam_enumeration::IamCertKernelKind,
 };
 pub struct SpiLogClient;
@@ -25,6 +29,7 @@ pub struct LogParamContent {
     pub name: String,
     pub ak: String,
     pub ip: String,
+    pub ext_name: Option<String>,
 }
 
 pub enum LogParamTag {
@@ -37,6 +42,7 @@ pub enum LogParamTag {
     SecurityAlarm,
     SecurityVisit,
     Log,
+    Token,
 }
 
 impl From<LogParamTag> for String {
@@ -51,35 +57,45 @@ impl From<LogParamTag> for String {
             LogParamTag::SecurityAlarm => "security_alarm".to_string(),
             LogParamTag::SecurityVisit => "security_visit".to_string(),
             LogParamTag::Log => "log".to_string(),
-        }
-    }
-}
-
-pub enum LogParamOp {
-    Add,
-    Modify,
-    Delete,
-    None,
-}
-
-impl From<LogParamOp> for String {
-    fn from(val: LogParamOp) -> Self {
-        match val {
-            LogParamOp::Add => "Add".to_string(),
-            LogParamOp::Modify => "Modify".to_string(),
-            LogParamOp::Delete => "Delete".to_string(),
-            LogParamOp::None => "".to_string(),
+            LogParamTag::Token => "token".to_string(),
         }
     }
 }
 
 impl SpiLogClient {
+    pub async fn add_ctx_task(tag: LogParamTag, ext: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let funs = iam_constants::get_tardis_inst();
+                SpiLogClient::add_item(
+                    tag,
+                    LogParamContent {
+                        op: op_describe,
+                        ext: ext.clone(),
+                        ..Default::default()
+                    },
+                    None,
+                    ext.clone(),
+                    op_kind,
+                    None,
+                    Some(tardis::chrono::Utc::now().to_rfc3339()),
+                    &funs,
+                    &ctx_clone,
+                )
+                .await
+                .unwrap();
+            })
+        }))
+        .await
+    }
+
     pub async fn add_item(
         tag: LogParamTag,
         mut content: LogParamContent,
         kind: Option<String>,
         key: Option<String>,
-        op: LogParamOp,
+        op: Option<String>,
         rel_key: Option<String>,
         ts: Option<String>,
         funs: &TardisFunsInst,
@@ -95,35 +111,53 @@ impl SpiLogClient {
         };
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
         )]);
         // find operater info
-        let account = IamAccountServ::get_item(ctx.owner.as_str(), &IamAccountFilterReq::default(), funs, ctx).await?;
-        let cert = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await?;
-        content.name = account.name;
-        content.ak = cert.ak;
+        if let Ok(account) = IamAccountServ::get_item(
+            ctx.owner.as_str(),
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_owned()),
+                    ignore_scope: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await
+        {
+            content.name = account.name;
+        }
+        if let Ok(cert) = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
+            content.ak = cert.ak;
+        }
+        // get ext name
+        content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
         //add log item
         let mut body = HashMap::from([
             ("tag", tag.into()),
-            ("content", TardisFuns::json.obj_to_string(&content).unwrap()),
+            ("content", TardisFuns::json.obj_to_string(&content)?),
             ("owner", ctx.owner.clone()),
             ("owner_paths", ctx.own_paths.clone()),
-            ("op", op.into()),
         ]);
         // create search_ext
         let search_ext = json!({
-            "name":content.name,
-            "ak":content.ak,
-            "ip":content.ip,
-            "rel_key":rel_key,
+            "ext":content.ext,
             "ts":ts,
-            "op":content.op,
+            "op":op,
         })
         .to_string();
-        body.insert("search_ext", search_ext);
+        body.insert("ext", search_ext);
 
         if let Some(kind) = kind {
             body.insert("kind", kind);
+        }
+
+        if let Some(op) = op {
+            body.insert("op", op);
         }
 
         if let Some(key) = key {
@@ -135,7 +169,62 @@ impl SpiLogClient {
         if let Some(ts) = ts {
             body.insert("ts", ts);
         }
-        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await.unwrap();
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
+    }
+
+    async fn get_ext_name(tag: &LogParamTag, ext_id: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> Option<String> {
+        if let Some(ext_id) = ext_id {
+            match tag {
+                LogParamTag::IamTenant => {
+                    if let Ok(item) = IamTenantServ::peek_item(ext_id, &IamTenantFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
+                    } else {
+                        None
+                    }
+                }
+                LogParamTag::IamOrg => {
+                    if let Ok(item) = RbumSetItemServ::get_rbum(ext_id, &RbumSetItemFilterReq::default(), funs, ctx).await {
+                        item.rel_rbum_set_cate_name
+                    } else {
+                        None
+                    }
+                }
+                LogParamTag::IamAccount => {
+                    if let Ok(item) = IamAccountServ::get_item(ext_id, &IamAccountFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
+                    } else {
+                        None
+                    }
+                }
+                LogParamTag::IamRole => {
+                    if let Ok(item) = IamRoleServ::get_item(ext_id, &IamRoleFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
+                    } else {
+                        None
+                    }
+                }
+                LogParamTag::IamRes => {
+                    if let Ok(item) = IamResServ::get_item(ext_id, &IamResFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
+                    } else {
+                        None
+                    }
+                }
+                LogParamTag::IamSystem => {
+                    if let Ok(item) = IamResServ::get_item(ext_id, &IamResFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
+                    } else {
+                        None
+                    }
+                }
+                LogParamTag::SecurityAlarm => None,
+                LogParamTag::SecurityVisit => None,
+                LogParamTag::Log => None,
+                LogParamTag::Token => None,
+            }
+        } else {
+            None
+        }
     }
 }

@@ -117,6 +117,9 @@ pub fn decrypt(body: &str, headers: HashMap<String, String>) -> TardisResult<Str
     if let Some(encrypt_key) = headers.get(BIOS_CRYPTO) {
         let resp = do_decrypt(body, encrypt_key)?;
         Ok(resp)
+    } else if let Some(encrypt_key) = headers.get(&BIOS_CRYPTO.to_lowercase()) {
+        let resp = do_decrypt(body, encrypt_key)?;
+        Ok(resp)
     } else {
         Ok(body.to_string())
     }
@@ -134,7 +137,7 @@ pub fn do_decrypt(body: &str, encrypt_key: &str) -> TardisResult<String> {
     let sm4_iv = key[2];
 
     if sm3_digest != crypto::sm::digest(body)? {
-        return Err(TardisError::bad_request(&"[BIOS.Crypto] Encrypted response: body digest error.".to_string(), ""));
+        return Err(TardisError::bad_request("[BIOS.Crypto] Encrypted response: body digest error.", ""));
     }
 
     let body =
