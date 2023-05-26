@@ -150,7 +150,7 @@ impl SpiLogClient {
             "op":op,
         })
         .to_string();
-        body.insert("search_ext", search_ext);
+        body.insert("ext", search_ext);
 
         if let Some(kind) = kind {
             body.insert("kind", kind);
