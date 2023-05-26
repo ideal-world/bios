@@ -1,8 +1,10 @@
+use std::hash::Hash;
+
 use super::conf_namespace_dto::NamespaceId;
 use serde::{Deserialize, Serialize};
 use tardis::{db::sea_orm::prelude::*, web::poem_openapi};
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigDescriptor {
     /// 命名空间，默认为public与 ''相同
     #[serde(alias = "tenant")]
@@ -23,6 +25,21 @@ pub struct ConfigDescriptor {
     pub tp: Option<String>,
 }
 
+impl PartialEq for ConfigDescriptor {
+    fn eq(&self, other: &Self) -> bool {
+        self.namespace_id == other.namespace_id && self.group == other.group && self.data_id == other.data_id
+    }
+}
+
+impl Eq for ConfigDescriptor {}
+impl Hash for ConfigDescriptor {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.namespace_id.hash(state);
+        self.group.hash(state);
+        self.data_id.hash(state);
+    }
+}
+
 impl Default for ConfigDescriptor {
     fn default() -> Self {
         Self {
@@ -31,6 +48,14 @@ impl Default for ConfigDescriptor {
             data_id: Default::default(),
             tag: Default::default(),
             tp: Default::default(),
+        }
+    }
+}
+
+impl ConfigDescriptor {
+    pub fn fix_namespace_id(&mut self) {
+        if self.namespace_id.is_empty() {
+            self.namespace_id = "public".into();
         }
     }
 }
@@ -125,7 +150,7 @@ pub struct ConfigItemDigest {
     /// 应用名
     pub app_name: Option<String>,
     /// 类型
-    pub r#type: Option<String>
+    pub r#type: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

@@ -1,5 +1,5 @@
 use std::{
-    env, io,
+    env,
     sync::{atomic::AtomicUsize, Arc},
 };
 
@@ -8,20 +8,14 @@ use bios_basic::{
     spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants},
     test::{init_rbum_test_container, test_http_client::TestHttpClient},
 };
-use bios_spi_conf::{
-    conf_constants::DOMAIN_CODE,
-    dto::{
-        conf_config_dto::{ConfigDescriptor, ConfigHistoryListResponse, ConfigItem, ConfigItemDigest, ConfigPublishRequest},
-        conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
-    },
-};
+use bios_spi_conf::{conf_constants::DOMAIN_CODE, dto::conf_config_dto::ConfigDescriptor};
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     log::debug,
     rand,
-    serde_json::{json, Value},
+    serde_json::json,
     testcontainers, tokio,
-    web::web_resp::{TardisResp, Void},
+    web::web_resp::Void,
     TardisFuns,
 };
 mod spi_conf_test_common;

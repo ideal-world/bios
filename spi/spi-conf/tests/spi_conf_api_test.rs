@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::env;
 
 use bios_basic::{
     rbum::serv::rbum_kind_serv::RbumKindServ,
@@ -8,16 +8,15 @@ use bios_basic::{
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::{
-        conf_config_dto::{ConfigDescriptor, ConfigHistoryListResponse, ConfigItem, ConfigItemDigest, ConfigPublishRequest},
+        conf_config_dto::{ConfigHistoryListResponse, ConfigItem, ConfigItemDigest},
         conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
     },
 };
 use tardis::{
     basic::{dto::TardisContext, field::TrimString, result::TardisResult},
-    log::debug,
     serde_json::{json, Value},
     testcontainers, tokio,
-    web::web_resp::{TardisResp, Void},
+    web::web_resp::Void,
     TardisFuns,
 };
 mod spi_conf_test_common;
@@ -164,7 +163,6 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     // 8.4 verify the published config has been deleted
     let response = client.get_resp::<Value>("/ci/cs/config?namespace_id=test1&group=DEFAULT-GROUP&data_id=conf-default").await;
     assert_eq!(response.code, "404");
-    dbg!(response);
 
     // 9. test config history
     // 9.1 publish a config
@@ -269,13 +267,6 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         ))
         .await;
     assert_eq!(response_prev_1.code, "404");
-    // let response = client.get::<ConfigHistoryListResponse>("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-2").await;
-    // {
-    //     // wait user press enter
-    //     println!("Press enter to continue...");
-    //     let mut line = String::new();
-    //     io::stdin().read_line(&mut line).unwrap();
-    // }
     // 11. test get config by namespace
     // 11.1 create a namespace
     const NAMESPACE_ID: &str = "test-get-config-by-namespace";

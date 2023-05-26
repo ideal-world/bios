@@ -115,6 +115,6 @@ pub async fn init_table_and_conn(bs_inst: (&TardisRelDBClient, &HashMap<String, 
     Ok(SpiConfTableAndConns {
         namespace: (name_space_conn, namespace_table_name),
         config: (config_conn, config_table_name),
-        config_history: (config_history_conn, history_table_name)
+        config_history: (config_history_conn, history_table_name),
     })
 }

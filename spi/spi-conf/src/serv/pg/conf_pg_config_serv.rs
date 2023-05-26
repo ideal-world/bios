@@ -1,7 +1,10 @@
+use std::{collections::HashMap, time::Duration};
+
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    tokio::{sync::RwLock, time::Instant},
     TardisFunsInst,
 };
 
@@ -10,13 +13,18 @@ use crate::{
     dto::{conf_config_dto::*, conf_namespace_dto::*},
 };
 
+// local memory cached md5
+lazy_static::lazy_static! {
+    static ref MD5_CACHE: RwLock<HashMap<ConfigDescriptor, (String, Instant)>> = RwLock::new(HashMap::new());
+}
+
 macro_rules! get {
     ($result:expr => {$($name:ident: $type:ty,)*}) => {
         $(let $name = $result.try_get::<$type>("", stringify!($name))?;)*
     };
 }
 
-use super::{add_history, conf_pg_initializer, get_namespace_id, HistoryInsertParams, OpType};
+use super::{add_history, conf_pg_initializer, HistoryInsertParams, OpType};
 
 fn md5(content: &str) -> String {
     use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
@@ -26,9 +34,10 @@ fn md5(content: &str) -> String {
 }
 
 pub async fn get_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = get_namespace_id(&descriptor.namespace_id);
+    let namespace = &descriptor.namespace_id;
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
@@ -48,9 +57,19 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
 }
 
 pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    descriptor.fix_namespace_id();
+    const EXPIRE: Duration = Duration::from_secs(1);
+    // try get from cache
+    {
+        if let Some((md5, register_time)) = MD5_CACHE.read().await.get(descriptor) {
+            if register_time.elapsed() < EXPIRE {
+                return Ok(md5.clone());
+            }
+        }
+    }
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = get_namespace_id(&descriptor.namespace_id);
+    let namespace = &descriptor.namespace_id;
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
@@ -66,13 +85,24 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
         .await?
         .ok_or(TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
     let md5 = qry_result.try_get::<String>("", "md5")?;
+    // set cache
+    {
+        let mut cache = MD5_CACHE.write().await;
+        cache.insert(descriptor.clone(), (md5.clone(), Instant::now()));
+    }
     Ok(md5)
 }
 
 pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    // clear cache
+    req.descriptor.fix_namespace_id();
+    {
+        let mut cache = MD5_CACHE.write().await;
+        cache.remove(&req.descriptor);
+    }
     let data_id = &req.descriptor.data_id;
     let group = &req.descriptor.group;
-    let namespace = &get_namespace_id(&req.descriptor.namespace_id);
+    let namespace = &req.descriptor.namespace_id;
     let content = &req.content;
     let md5 = &md5(content);
     let app_name = req.app_name.as_deref();
@@ -152,9 +182,15 @@ WHERE {where_caluse}
 }
 
 pub async fn delete_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    descriptor.fix_namespace_id();
+    // clear cache
+    {
+        let mut cache = MD5_CACHE.write().await;
+        cache.remove(descriptor);
+    }
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = &get_namespace_id(&descriptor.namespace_id);
+    let namespace = &descriptor.namespace_id;
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let history = HistoryInsertParams {
@@ -179,10 +215,9 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
     Ok(true)
 }
 
-
-
 pub async fn get_configs_by_namespace(namespace_id: &NamespaceId, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<ConfigItemDigest>> {
-    let namespace = get_namespace_id(namespace_id);
+    let namespace_id = if namespace_id.is_empty() { "public" } else { namespace_id };
+
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config;
@@ -194,24 +229,27 @@ WHERE cc.namespace_id=$1
 ORDER BY created_time DESC
 	"#,
             ),
-            vec![Value::from(namespace)],
+            vec![Value::from(namespace_id)],
         )
         .await?;
-    let list = qry_result.iter().map(|result|{
-        get!(result => {
-            data_id: String,
-            grp: String,
-            namespace_id: String,
-            app_name: Option<String>,
-            tp: Option<String>,
-        });
-        Ok(ConfigItemDigest {
-            data_id,
-            group: grp,
-            namespace: namespace_id,
-            app_name,
-            r#type: tp,
+    let list = qry_result
+        .iter()
+        .map(|result| {
+            get!(result => {
+                data_id: String,
+                grp: String,
+                namespace_id: String,
+                app_name: Option<String>,
+                tp: Option<String>,
+            });
+            Ok(ConfigItemDigest {
+                data_id,
+                group: grp,
+                namespace: namespace_id,
+                app_name,
+                r#type: tp,
+            })
         })
-    }).collect::<TardisResult<Vec<_>>>()?;
+        .collect::<TardisResult<Vec<_>>>()?;
     Ok(list)
 }

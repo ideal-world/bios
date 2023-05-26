@@ -1,7 +1,8 @@
 use bios_basic::spi::{spi_constants, spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
-    TardisFunsInst, db::sea_orm::prelude::Uuid,
+    db::sea_orm::prelude::Uuid,
+    TardisFunsInst,
 };
 
 use crate::{

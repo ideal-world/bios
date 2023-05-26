@@ -16,7 +16,7 @@ use crate::{
     dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigHistoryListResponse, ConfigItem},
 };
 
-use super::{conf_pg_initializer, get_namespace_id};
+use super::conf_pg_initializer;
 
 #[derive(Debug, Default)]
 pub struct HistoryInsertParams<'a> {
@@ -56,14 +56,14 @@ macro_rules! get {
 pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigHistoryListResponse> {
     // query config history list by a ConfigDescriptor
     let ConfigHistoryListRequest { descriptor, page_no, page_size } = req;
+    descriptor.fix_namespace_id();
     let limit = (*page_size).min(500).max(1);
     let page_number = (*page_no).max(1);
     let offset = (page_number - 1) * limit;
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = &descriptor.namespace_id;
+    let namespace_id = &descriptor.namespace_id;
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let namespace_id = get_namespace_id(namespace);
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
     let total: u32 = conn
@@ -86,7 +86,7 @@ LIMIT {limit}
 OFFSET {offset}
 "#,
             ),
-            vec![Value::from(namespace), Value::from(group), Value::from(data_id)],
+            vec![Value::from(namespace_id), Value::from(group), Value::from(data_id)],
         )
         .await?;
 
@@ -127,11 +127,11 @@ OFFSET {offset}
 }
 
 pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+    descriptor.fix_namespace_id();
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = &descriptor.namespace_id;
+    let namespace_id = &descriptor.namespace_id;
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let namespace_id = get_namespace_id(namespace);
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
     let qry_result = conn
@@ -174,13 +174,13 @@ ORDER BY created_time DESC
 }
 
 pub async fn find_previous_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+    descriptor.fix_namespace_id();
     // find previous config by id
     // 1. find previous id
     let data_id = &descriptor.data_id;
     let group = &descriptor.group;
-    let namespace = &descriptor.namespace_id;
+    let namespace_id = &descriptor.namespace_id;
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
-    let namespace_id = get_namespace_id(namespace);
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
     let qry_result = conn
@@ -229,7 +229,7 @@ pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: 
         ("app_name", Value::from(app_name)),
         ("schema", Value::from(schema)),
         ("op_type", Value::from(op_type.as_char())),
-        ("src_user", Value::from(src_user))
+        ("src_user", Value::from(src_user)),
     ];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;

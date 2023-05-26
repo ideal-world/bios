@@ -100,7 +100,10 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Option<ConfigDescriptor>> {
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        if namespace_id.is_empty() {
+            namespace_id = "public".into();
+        }
         let mut descriptor = ConfigDescriptor {
             namespace_id,
             group: group.0,
@@ -137,7 +140,10 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<ConfigHistoryListResponse> {
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        if namespace_id.is_empty() {
+            namespace_id = "public".into();
+        }
         let descriptor = ConfigDescriptor {
             namespace_id,
             group: group.0,
@@ -170,7 +176,10 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<ConfigItem> {
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        if namespace_id.is_empty() {
+            namespace_id = "public".into();
+        }
         let mut descriptor = ConfigDescriptor {
             namespace_id,
             group: group.0,
@@ -198,7 +207,10 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<ConfigItem> {
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        if namespace_id.is_empty() {
+            namespace_id = "public".into();
+        }
         let id = Uuid::parse_str(&id.0).map_err(|e| TardisError::bad_request(&e.to_string(), error::INVALID_UUID))?;
         let mut descriptor = ConfigDescriptor {
             namespace_id,
@@ -218,7 +230,10 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<ConfigItemDigest>> {
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        if namespace_id.is_empty() {
+            namespace_id = "public".into();
+        }
         let funs = request.tardis_fun_inst();
         let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
         TardisResp::ok(config)
@@ -231,7 +246,10 @@ impl ConfCiConfigServiceApi {
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Vec<ConfigItemDigest>> {
-        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        if namespace_id.is_empty() {
+            namespace_id = "public".into();
+        }
         let funs = request.tardis_fun_inst();
         let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
         TardisResp::ok(config)

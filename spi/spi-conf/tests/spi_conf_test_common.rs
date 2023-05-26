@@ -1,7 +1,13 @@
-
-use bios_basic::{rbum::{rbum_config::RbumConfig, rbum_initializer}, test::test_http_client::TestHttpClient};
-use bios_spi_conf::{conf_initializer, conf_constants::DOMAIN_CODE};
-use tardis::{basic::{result::TardisResult, dto::TardisContext}, TardisFuns, tokio::{self, task::JoinHandle}};
+use bios_basic::{
+    rbum::{rbum_config::RbumConfig, rbum_initializer},
+    test::test_http_client::TestHttpClient,
+};
+use bios_spi_conf::{conf_constants::DOMAIN_CODE, conf_initializer};
+use tardis::{
+    basic::{dto::TardisContext, result::TardisResult},
+    tokio::{self, task::JoinHandle},
+    TardisFuns,
+};
 
 #[allow(dead_code)]
 pub async fn init_tardis() -> TardisResult<()> {

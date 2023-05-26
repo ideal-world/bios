@@ -1,10 +1,7 @@
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    db::{
-        reldb_client::TardisRelDBClient,
-        sea_orm::Value,
-    },
+    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
     TardisFunsInst,
 };
 
