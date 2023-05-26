@@ -107,9 +107,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
             IamResCacheServ::add_res(&res.code, &res.method, res.crypto_req, res.crypto_resp, res.double_auth, funs).await?;
         }
         let (op_describe, op_kind) = match res.kind {
-            IamResKind::Menu => ("添加目录".to_string(), "AddContent".to_string()),
+            IamResKind::Menu => ("添加目录页面".to_string(), "AddContentPageaspersonal".to_string()),
             IamResKind::Api => ("添加API".to_string(), "AddApi".to_string()),
-            IamResKind::Ele => ("".to_string(), "".to_string()),
+            IamResKind::Ele => ("添加目录页面按钮".to_string(), "AddContentPageButton".to_string()),
         };
         if !op_describe.is_empty() {
             let id = id.to_string();
@@ -242,7 +242,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
         }
 
         let (op_describe, op_kind) = match res.kind {
-            IamResKind::Menu => ("编辑目录".to_string(), "ModifyContent".to_string()),
+            IamResKind::Menu => ("编辑目录页面".to_string(), "ModifyContentPage".to_string()),
             IamResKind::Api => ("编辑API".to_string(), "ModifyApi".to_string()),
             IamResKind::Ele => ("".to_string(), "".to_string()),
         };
@@ -302,9 +302,9 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                 IamResCacheServ::delete_res(&deleted_item.code, &deleted_item.method, funs).await?;
             }
             let (op_describe, op_kind) = match deleted_item.kind {
-                IamResKind::Menu => ("删除目录".to_string(), "DeleteContent".to_string()),
+                IamResKind::Menu => ("删除目录页面".to_string(), "DeleteContentPageAsPersonal".to_string()),
                 IamResKind::Api => ("删除API".to_string(), "DeleteApi".to_string()),
-                IamResKind::Ele => ("".to_string(), "".to_string()),
+                IamResKind::Ele => ("移除目录页面按钮".to_string(), "RemoveContentPageButton".to_string()),
             };
             if !op_describe.is_empty() {
                 let id = deleted_item.id.to_string();

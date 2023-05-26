@@ -261,13 +261,13 @@ impl IamRelServ {
                     SpiLogClient::add_item(
                         LogParamTag::IamRes,
                         LogParamContent {
-                            op: "添加API".to_string(),
+                            op: "添加目录页面API".to_string(),
                             ext: Some(id.clone()),
                             ..Default::default()
                         },
                         None,
                         Some(id.clone()),
-                        Some("AddApi".to_string()),
+                        Some("AddContentPageApi".to_string()),
                         None,
                         Some(tardis::chrono::Utc::now().to_rfc3339()),
                         &funs,
@@ -468,13 +468,13 @@ impl IamRelServ {
                         SpiLogClient::add_item(
                             LogParamTag::IamRes,
                             LogParamContent {
-                                op: "删除API".to_string(),
+                                op: "移除目录页面API".to_string(),
                                 ext: Some(id.clone()),
                                 ..Default::default()
                             },
                             None,
                             Some(id.clone()),
-                            Some("DeleteApi".to_string()),
+                            Some("RemoveContentPageApi".to_string()),
                             None,
                             Some(tardis::chrono::Utc::now().to_rfc3339()),
                             &funs,
