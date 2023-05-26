@@ -58,8 +58,9 @@ pub fn on_before_request(method: &str, uri: &str, body: JsValue, headers: JsValu
 #[wasm_bindgen]
 pub fn on_before_response(body: JsValue, headers: JsValue) -> Result<String, JsValue> {
     let body = mini_tardis::serde::jsvalue_to_str(&body)?;
+    let body = mini_tardis::basic::remove_quotes(&body);
     let headers = mini_tardis::serde::jsvalue_to_obj(headers)?;
-    Ok(modules::crypto_process::decrypt(&body, headers)?)
+    Ok(modules::crypto_process::decrypt(body, headers)?)
 }
 
 #[wasm_bindgen]
