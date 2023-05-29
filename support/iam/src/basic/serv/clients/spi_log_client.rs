@@ -113,25 +113,9 @@ impl SpiLogClient {
             TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
         )]);
         // find operater info
-        if let Ok(account) = IamAccountServ::get_item(
-            ctx.owner.as_str(),
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_owned()),
-                    ignore_scope: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await
-        {
-            content.name = account.name;
-        }
-        if let Ok(cert) = IamCertServ::get_kernel_cert(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
+        if let Ok(cert) = IamCertServ::get_cert_detail_by_id_and_kind(ctx.owner.as_str(), &IamCertKernelKind::UserPwd, funs, ctx).await {
             content.ak = cert.ak;
+            content.name = cert.owner_name.unwrap_or("".to_string());
         }
         // get ext name
         content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
@@ -148,11 +132,7 @@ impl SpiLogClient {
 
         // generate log item
         let tag: String = tag.into();
-        let own_paths = if ctx.own_paths.is_empty() {
-            None
-        } else {
-            Some(ctx.own_paths.clone())
-        };
+        let own_paths = if ctx.own_paths.is_empty() { None } else { Some(ctx.own_paths.clone()) };
         let body = json!({
             "tag": tag,
             "content": TardisFuns::json.obj_to_string(&content)?,
