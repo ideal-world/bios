@@ -141,7 +141,7 @@ impl SpiLogClient {
         let search_ext = json!({
             "name":content.name,
             "ak":content.ak,
-            "ip":content.ak,
+            "ip":content.ip,
             "ext":content.ext,
             "ts":ts,
             "op":op,
