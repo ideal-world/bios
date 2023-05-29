@@ -29,3 +29,11 @@ where
     pub total_size: u64,
     pub records: Vec<T>,
 }
+
+pub fn remove_quotes(s: &str) -> &str {
+    if s.starts_with('"') && s.ends_with('"') && s.len() >= 2 {
+        &s[1..s.len() - 1]
+    } else {
+        s
+    }
+}
