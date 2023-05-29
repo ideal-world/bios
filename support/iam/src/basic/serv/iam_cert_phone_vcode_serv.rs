@@ -198,6 +198,7 @@ impl IamCertPhoneVCodeServ {
                             status: Some(RbumCertStatusKind::Enabled),
                             ak: None,
                             sk: None,
+                            is_ignore_check_sk: false,
                             ext: None,
                             start_time: None,
                             end_time: None,

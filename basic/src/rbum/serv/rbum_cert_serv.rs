@@ -1239,6 +1239,7 @@ impl RbumCertServ {
                     .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
                     .is_match(sk.as_ref())
                     .unwrap_or(false)
+                && !modify_req.is_ignore_check_sk
             {
                 return Err(funs.err().bad_request(
                     &Self::get_obj_name(),
