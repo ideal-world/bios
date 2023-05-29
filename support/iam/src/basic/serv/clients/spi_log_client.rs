@@ -148,11 +148,16 @@ impl SpiLogClient {
 
         // generate log item
         let tag: String = tag.into();
+        let own_paths = if ctx.own_paths.is_empty() {
+            None
+        } else {
+            Some(ctx.own_paths.clone())
+        };
         let body = json!({
             "tag": tag,
             "content": TardisFuns::json.obj_to_string(&content)?,
             "owner": ctx.owner.clone(),
-            "owner_paths":ctx.own_paths.clone(),
+            "own_paths":own_paths,
             "kind": kind,
             "ext": search_ext,
             "key": key,
@@ -161,7 +166,7 @@ impl SpiLogClient {
             "ts": ts,
         });
 
-        funs.web_client().put_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
+        funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 

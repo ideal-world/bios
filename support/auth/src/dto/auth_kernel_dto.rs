@@ -9,7 +9,7 @@ use tardis::{
 
 use crate::auth_config::AuthConfig;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct AuthReq {
     pub scheme: String,
     pub path: String,
