@@ -153,7 +153,7 @@ impl SpiLogClient {
             "tag": tag,
             "content": TardisFuns::json.obj_to_string(&content)?,
             "owner": ctx.owner.clone(),
-            "owner_paths":ctx.own_paths.clone(),
+            "own_paths":ctx.own_paths.clone(),
             "kind": kind,
             "ext": search_ext,
             "key": key,
