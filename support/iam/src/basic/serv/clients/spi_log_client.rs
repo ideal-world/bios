@@ -7,7 +7,6 @@ use serde::Serialize;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::json,
-    web::web_resp::{TardisApiResult, Void},
     TardisFuns, TardisFunsInst,
 };
 
@@ -135,7 +134,7 @@ impl SpiLogClient {
             content.ak = cert.ak;
         }
         // get ext name
-        content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
+        content.ext_name = Self::get_ext_name(&tag, content.ext.as_deref(), funs, ctx).await;
 
         // create search_ext
         let search_ext = json!({

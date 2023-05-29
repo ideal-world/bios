@@ -169,7 +169,7 @@ impl IamCpCertApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamCpCertUserPwdServ::modify_cert_user_pwd(&ctx.owner, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.clone().execute_task()));
+        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
         let _ = task_handle.await;
         TardisResp::ok(Void {})
     }
