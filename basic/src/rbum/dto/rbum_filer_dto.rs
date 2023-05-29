@@ -21,7 +21,9 @@ pub struct RbumBasicFilterReq {
     pub scope_level: Option<RbumScopeLevelKind>,
     pub enabled: Option<bool>,
     pub name: Option<String>,
+    pub names: Option<Vec<String>>,
     pub code: Option<String>,
+    pub codes: Option<Vec<String>>,
     pub rbum_kind_id: Option<String>,
     pub rbum_domain_id: Option<String>,
 

@@ -19,7 +19,7 @@ impl IamCcSystemApi {
         let funs = iam_constants::get_tardis_inst();
         let task_ids = task_ids.0.split(',');
         for task_id in task_ids {
-            let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-foramt"))?;
+            let task_id = task_id.parse().map_err(|_| funs.err().format_error("system", "task", "task id format error", "406-iam-task-id-format"))?;
             let is_finished = TaskProcessor::check_status(&funs.conf::<IamConfig>().cache_key_async_task_status, task_id, funs.cache()).await?;
             if !is_finished {
                 return TardisResp::ok(false);
