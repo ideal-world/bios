@@ -212,10 +212,15 @@ impl IamCertServ {
         Ok(result)
     }
 
-    pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_cert_detail_by_id_and_kind(
+        account_id: &str,
+        rel_iam_cert_kind: &IamCertKernelKind,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumCertDetailResp> {
         let ctx = IamAccountServ::is_global_account_context(account_id, funs, ctx).await?;
         let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), Some(ctx.clone().own_paths), funs).await?;
-        let kernel_cert = RbumCertServ::find_one_detail_rbum(
+        let cert_detail = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id]),
@@ -225,7 +230,21 @@ impl IamCertServ {
             &ctx,
         )
         .await?;
-        if let Some(kernel_cert) = kernel_cert {
+        if let Some(cert_detail) = cert_detail {
+            Ok(cert_detail)
+        } else {
+            Err(funs.err().not_found(
+                "iam_cert",
+                "get_cert_detail_by_id_and_kind",
+                &format!("not found credential of kind {rel_iam_cert_kind:?}"),
+                "404-iam-cert-kind-not-exist",
+            ))
+        }
+    }
+
+    pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let kernel_cert = Self::get_cert_detail_by_id_and_kind(account_id, rel_iam_cert_kind, funs, &ctx).await;
+        if let Ok(kernel_cert) = kernel_cert {
             let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &ctx).await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: kernel_cert.id,
