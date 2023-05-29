@@ -352,6 +352,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             end_time: None,
             conn_uri: None,
             status: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -449,6 +450,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             end_time: None,
             conn_uri: None,
             status: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context,
@@ -777,7 +779,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             start_time: None,
             end_time: None,
             conn_uri: None,
-            status: None
+            status: None,
+            is_ignore_check_sk: false
         },
         &funs,
         context
@@ -795,6 +798,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             end_time: None,
             conn_uri: None,
             status: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
