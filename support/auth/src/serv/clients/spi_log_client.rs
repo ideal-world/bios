@@ -4,7 +4,7 @@ use serde::Serialize;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::json,
-    TardisFuns, TardisFunsInst,
+    TardisFuns,
 };
 
 use crate::{auth_config::AuthConfig, auth_constants::DOMAIN_CODE, dto::auth_kernel_dto::AuthReq};
