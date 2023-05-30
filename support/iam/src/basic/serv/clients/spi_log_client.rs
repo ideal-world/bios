@@ -5,6 +5,7 @@ use bios_basic::rbum::{
 use serde::Serialize;
 
 use tardis::{
+    log,
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::json,
     TardisFuns, TardisFunsInst,
@@ -148,7 +149,7 @@ impl SpiLogClient {
             "rel_key": rel_key,
             "ts": ts,
         });
-
+        log::info!("body: {}", body.to_string());
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
