@@ -1,5 +1,5 @@
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq},
+    dto::rbum_filer_dto::RbumSetItemFilterReq,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
 };
 use serde::Serialize;
@@ -25,11 +25,11 @@ pub struct SpiLogClient;
 #[derive(Serialize, Default, Debug)]
 pub struct LogParamContent {
     pub op: String,
-    pub ext: Option<String>,
+    pub key: Option<String>,
     pub name: String,
     pub ak: String,
     pub ip: String,
-    pub ext_name: Option<String>,
+    pub key_name: Option<String>,
 }
 
 pub enum LogParamTag {
@@ -63,7 +63,7 @@ impl From<LogParamTag> for String {
 }
 
 impl SpiLogClient {
-    pub async fn add_ctx_task(tag: LogParamTag, ext: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -72,11 +72,11 @@ impl SpiLogClient {
                     tag,
                     LogParamContent {
                         op: op_describe,
-                        ext: ext.clone(),
+                        key: key.clone(),
                         ..Default::default()
                     },
                     None,
-                    ext.clone(),
+                    key.clone(),
                     op_kind,
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -119,14 +119,14 @@ impl SpiLogClient {
             content.name = cert.owner_name.unwrap_or("".to_string());
         }
         // get ext name
-        content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
+        content.key_name = Self::get_ext_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
 
         // create search_ext
         let search_ext = json!({
             "name":content.name,
             "ak":content.ak,
             "ip":content.ip,
-            "ext":content.ext,
+            "key":content.key,
             "ts":ts,
             "op":op,
         });
