@@ -83,6 +83,8 @@ impl SpiLogClient {
                     &ctx_clone,
                 )
                 .await
+                .unwrap();
+                Ok(())
             })
         }))
         .await
