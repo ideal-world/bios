@@ -10,7 +10,6 @@ use bios_basic::rbum::dto::rbum_kind_attr_dto::{RbumKindAttrDetailResp, RbumKind
 use crate::basic::dto::iam_attr_dto::IamKindAttrAddReq;
 use crate::basic::serv::iam_attr_serv::IamAttrServ;
 use crate::iam_constants;
-use tardis::tokio::{self, task};
 
 pub struct IamCtAccountAttrApi;
 
@@ -26,8 +25,7 @@ impl IamCtAccountAttrApi {
         funs.begin().await?;
         let result = IamAttrServ::add_account_attr(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -38,8 +36,7 @@ impl IamCtAccountAttrApi {
         funs.begin().await?;
         IamAttrServ::modify_account_attr(&id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -48,8 +45,7 @@ impl IamCtAccountAttrApi {
     async fn get_attr(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumKindAttrDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::get_account_attr(&id.0, true, &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -58,8 +54,7 @@ impl IamCtAccountAttrApi {
     async fn find_attrs(&self, ctx: TardisContextExtractor) -> TardisApiResult<Vec<RbumKindAttrSummaryResp>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attrs(&funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -70,8 +65,7 @@ impl IamCtAccountAttrApi {
         funs.begin().await?;
         IamAttrServ::delete_account_attr(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -80,8 +74,7 @@ impl IamCtAccountAttrApi {
     async fn find_account_attr_values(&self, account_id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<HashMap<String, String>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAttrServ::find_account_attr_values(&account_id.0, &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

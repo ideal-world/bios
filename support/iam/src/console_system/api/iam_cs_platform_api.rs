@@ -1,4 +1,3 @@
-use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::payload::Json;
@@ -20,8 +19,7 @@ impl IamCsPlatformApi {
         funs.begin().await?;
         IamPlatformServ::modify_platform_config_agg(&modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -30,8 +28,7 @@ impl IamCsPlatformApi {
     async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamPlatformConfigResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamPlatformServ::get_platform_config_agg(&funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

@@ -15,7 +15,6 @@ use crate::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamS
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
-use tardis::tokio::{self, task};
 pub struct IamCtOrgApi;
 
 /// Tenant Console Org API
@@ -33,8 +32,7 @@ impl IamCtOrgApi {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::add_set_cate(&set_id, &add_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -46,8 +44,7 @@ impl IamCtOrgApi {
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         IamSetServ::modify_set_cate(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -73,8 +70,7 @@ impl IamCtOrgApi {
             &ctx,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -86,8 +82,7 @@ impl IamCtOrgApi {
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         IamSetServ::delete_set_cate(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -113,8 +108,7 @@ impl IamCtOrgApi {
         .await?
         .is_some();
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-        let _ = task_handle.await;
+        mock_ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -143,8 +137,7 @@ impl IamCtOrgApi {
             );
         }
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -155,8 +148,7 @@ impl IamCtOrgApi {
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
         let result = IamSetServ::find_set_items(Some(set_id), cate_id.0, None, None, false, &funs, &ctx).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -168,8 +160,7 @@ impl IamCtOrgApi {
         let ctx = IamSetServ::try_get_rel_ctx_by_set_id(set_id.0, &funs, ctx.0).await?;
         IamSetServ::delete_set_item(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

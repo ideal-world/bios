@@ -23,7 +23,6 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
-use tardis::tokio::{self, task};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -103,8 +102,7 @@ impl IamIdentCacheServ {
             .await;
             let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "退出".to_string(), Some("Quit".to_string()), &mock_ctx).await;
 
-            let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-            let _ = task_handle.await;
+            mock_ctx.execute_task().await?;
         }
         Ok(())
     }
@@ -203,8 +201,7 @@ impl IamIdentCacheServ {
         )
         .await;
 
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-        let _ = task_handle.await;
+        mock_ctx.execute_task().await?;
 
         Ok(())
     }
