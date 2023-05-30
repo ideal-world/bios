@@ -122,7 +122,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ));
         };
         let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx) {
-            TardisFuns::json.str_to_obj::<TardisContext>(bios_ctx)?
+            TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode(bios_ctx)?)?
         } else {
             return Err(TardisError::unauthorized(
                 &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_bios_ctx),
@@ -196,7 +196,6 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ))
         }
     } else {
-        // if req.query.contains_key("app_id") {}
         // public
         Ok(AuthContext {
             rbum_uri,

@@ -201,6 +201,7 @@ impl RbumItemCrudOperation<iam_res::ActiveModel, IamResAddReq, IamResModifyReq, 
                     need_crypto_req: modify_req.crypto_req,
                     need_crypto_resp: modify_req.crypto_resp,
                     need_double_auth: modify_req.double_auth,
+                    pwd: None,
                 },
                 funs,
             )

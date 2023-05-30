@@ -389,18 +389,17 @@ impl IamResCacheServ {
             // TODO support time range
             return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none", "409-iam-cache-res-date-not-none"));
         }
-        let pwd = if let Some(pwd) = add_or_modify_req.pwd.clone() {
-            Some(HashMap::from([(
+        // TODO improve PWD
+        let pwd = add_or_modify_req.pwd.clone().map(|pwd| {
+            HashMap::from([(
                 pwd,
                 if let (Some(st), Some(et)) = (add_or_modify_req.st, add_or_modify_req.et) {
                     Some((st, et))
                 } else {
                     None
                 },
-            )]))
-        } else {
-            None
-        };
+            )])
+        });
         let mut res_auth = IamCacheResAuth {
             accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
             roles: format!("#{}#", add_or_modify_req.roles.join("#")),
