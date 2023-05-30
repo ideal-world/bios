@@ -26,7 +26,7 @@ pub struct IamCsAccountApi;
 /// System Console Account API
 #[poem_openapi::OpenApi(prefix_path = "/cs/account", tag = "bios_basic::ApiTag::System")]
 impl IamCsAccountApi {
-    /// Add Account By Tenant Id 安全审计日志--添加长期账号、添加临时账号
+    /// Add Account By Tenant Id
     #[oai(path = "/", method = "post")]
     async fn add(&self, tenant_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -39,7 +39,7 @@ impl IamCsAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Account By Account Id  安全审计日志--修改账号头像、休眠账号、修改用户类型为临时账号、修改姓名
+    /// Modify Account By Account Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, tenant_id: Query<Option<String>>, modify_req: Json<IamAccountAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -221,7 +221,7 @@ impl IamCsAccountApi {
         TardisResp::ok(result)
     }
 
-    /// Active account  安全审计日志--激活账号
+    /// Active account
     #[oai(path = "/:id/active", method = "put")]
     async fn active_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -248,7 +248,7 @@ impl IamCsAccountApi {
         TardisResp::ok(Void {})
     }
 
-    /// Logout account  安全审计日志--注销账号、下线账号
+    /// Logout account
     #[oai(path = "/:id/logout", method = "put")]
     async fn logout_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -275,7 +275,7 @@ impl IamCsAccountApi {
         TardisResp::ok(Void {})
     }
 
-    ///lock account 安全审计日志--人工锁定账号
+    ///lock account
     #[oai(path = "/:id/lock", method = "put")]
     async fn lock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -310,7 +310,7 @@ impl IamCsAccountApi {
         TardisResp::ok(Void {})
     }
 
-    ///Unlock account  安全审计日志--解锁账号
+    ///Unlock account
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;

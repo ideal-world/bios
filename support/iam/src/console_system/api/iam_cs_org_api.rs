@@ -49,7 +49,7 @@ impl IamCsOrgApi {
         ctx.execute_task().await?;
         TardisResp::ok(result)
     }
-    /// Add Org Cate  安全审计日志--添加部门
+    /// Add Org Cate
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, mut add_req: Json<IamSetCateAddReq>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -60,7 +60,7 @@ impl IamCsOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Org Cate By Org Cate Id  安全审计日志--部门重命名
+    /// Modify Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(
         &self,
@@ -78,7 +78,7 @@ impl IamCsOrgApi {
         TardisResp::ok(Void {})
     }
 
-    /// Delete Org Cate By Org Cate Id 安全审计日志--删除部门
+    /// Delete Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -150,7 +150,7 @@ impl IamCsOrgApi {
 /// System Console Org Item API
 #[poem_openapi::OpenApi(prefix_path = "/cs/org/item", tag = "bios_basic::ApiTag::System")]
 impl IamCsOrgItemApi {
-    /// Batch Add Org Item 安全审计日志--添加部门人员
+    /// Batch Add Org Item
     #[oai(path = "/batch", method = "put")]
     async fn batch_add_set_item(
         &self,
@@ -200,7 +200,7 @@ impl IamCsOrgItemApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Org Item By Org Item Id 安全审计日志--移除部门人员
+    /// Delete Org Item By Org Item Id
     #[oai(path = "/:id", method = "delete")]
     async fn delete_item(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
