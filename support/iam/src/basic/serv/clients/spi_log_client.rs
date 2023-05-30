@@ -64,7 +64,7 @@ impl From<LogParamTag> for String {
 impl SpiLogClient {
     pub async fn add_ctx_task(tag: LogParamTag, ext: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
+        let _ = ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
                 let funs = iam_constants::get_tardis_inst();
                 SpiLogClient::add_item(
@@ -87,7 +87,8 @@ impl SpiLogClient {
                 Ok(())
             })
         }))
-        .await
+        .await;
+        Ok(())
     }
 
     pub async fn add_item(
