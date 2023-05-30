@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::rbum_filer_dto::RbumSetFilterReq,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetServ},
@@ -30,6 +32,16 @@ pub struct LogParamContent {
     pub ak: String,
     pub ip: String,
     pub key_name: Option<String>,
+}
+
+#[derive(Serialize, Default, Debug)]
+struct LogSearchExt {
+    pub name: String,
+    pub ak: String,
+    pub ip: String,
+    pub key: String,
+    pub ts: String,
+    pub op: String,
 }
 
 pub enum LogParamTag {
@@ -122,32 +134,51 @@ impl SpiLogClient {
         content.key_name = Self::get_key_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
 
         // create search_ext
-        let search_ext = json!({
-            "name":content.name,
-            "ak":content.ak,
-            "ip":content.ip,
-            "key":content.key,
-            "ts":ts,
-            "op":op,
-        });
+        let mut search_ext = LogSearchExt {
+            name: content.name.clone(),
+            ak: content.ak.clone(),
+            ip: content.ip.clone(),
+            op: content.op.clone(),
+            ..Default::default()
+        };
+        if let Some(key) = key.clone() {
+            search_ext.key = key;
+        }
+        if let Some(ts) = ts.clone() {
+            search_ext.ts = ts;
+        }
 
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        let body = json!({
-            "tag": tag,
-            "content": TardisFuns::json.obj_to_string(&content)?,
-            "owner": owner,
-            "own_paths":own_paths,
-            "kind": kind,
-            "ext": search_ext,
-            "key": key,
-            "op": op,
-            "rel_key": rel_key,
-            "ts": ts,
-        });
-        log::info!("body: {}", body.to_string());
+        let mut body = HashMap::from([
+            ("tag", tag),
+            ("content", TardisFuns::json.obj_to_string(&content)?),
+            ("ext", TardisFuns::json.obj_to_string(&search_ext)?),
+        ]);
+        if let Some(owner) = owner {
+            body.insert("owner", owner);
+        }
+        if let Some(own_paths) = own_paths {
+            body.insert("own_paths", own_paths);
+        }
+        if let Some(kind) = kind {
+            body.insert("kind", kind);
+        }
+        if let Some(key) = key {
+            body.insert("key", key);
+        }
+        if let Some(op) = op {
+            body.insert("op", op);
+        }
+        if let Some(rel_key) = rel_key {
+            body.insert("rel_key", rel_key);
+        }
+        if let Some(ts) = ts {
+            body.insert("ts", ts);
+        }
+
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
