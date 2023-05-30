@@ -1,12 +1,12 @@
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumSetItemFilterReq,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
+    dto::rbum_filer_dto::RbumSetFilterReq,
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetServ},
 };
 use serde::Serialize;
 
 use tardis::{
-    log,
     basic::{dto::TardisContext, result::TardisResult},
+    log,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
@@ -119,7 +119,7 @@ impl SpiLogClient {
             content.name = cert.owner_name.unwrap_or("".to_string());
         }
         // get ext name
-        content.key_name = Self::get_ext_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
+        content.key_name = Self::get_key_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
 
         // create search_ext
         let search_ext = json!({
@@ -152,46 +152,46 @@ impl SpiLogClient {
         Ok(())
     }
 
-    async fn get_ext_name(tag: &LogParamTag, ext_id: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> Option<String> {
-        if let Some(ext_id) = ext_id {
+    async fn get_key_name(tag: &LogParamTag, key: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> Option<String> {
+        if let Some(key) = key {
             match tag {
                 LogParamTag::IamTenant => {
-                    if let Ok(item) = IamTenantServ::peek_item(ext_id, &IamTenantFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamTenantServ::peek_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamOrg => {
-                    if let Ok(item) = RbumSetItemServ::get_rbum(ext_id, &RbumSetItemFilterReq::default(), funs, ctx).await {
-                        item.rel_rbum_set_cate_name
+                    if let Ok(item) = RbumSetServ::get_rbum(key, &RbumSetFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamAccount => {
-                    if let Ok(item) = IamAccountServ::get_item(ext_id, &IamAccountFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamAccountServ::get_item(key, &IamAccountFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamRole => {
-                    if let Ok(item) = IamRoleServ::get_item(ext_id, &IamRoleFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamRoleServ::get_item(key, &IamRoleFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamRes => {
-                    if let Ok(item) = IamResServ::get_item(ext_id, &IamResFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamResServ::get_item(key, &IamResFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamSystem => {
-                    if let Ok(item) = IamResServ::get_item(ext_id, &IamResFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamResServ::get_item(key, &IamResFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
