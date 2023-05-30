@@ -834,6 +834,8 @@ impl IamCertLdapServ {
                                 org_cate_ids: None,
                                 exts: None,
                                 status: None,
+                                cert_phone: None,
+                                cert_mail: None,
                             },
                             &funs,
                             ctx,

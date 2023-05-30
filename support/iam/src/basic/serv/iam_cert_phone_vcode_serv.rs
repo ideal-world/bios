@@ -15,7 +15,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfPhoneVCodeAddOrModifyReq;
-use crate::basic::dto::iam_cert_dto::IamCertPhoneVCodeAddReq;
+use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamCertPhoneVCodeModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_enumeration::IamCertKernelKind;
@@ -123,6 +123,56 @@ impl IamCertPhoneVCodeServ {
         // TODO send vcode
         Self::send_activation_phone(account_id, &add_req.phone, &vcode, funs, ctx).await?;
         Ok(id)
+    }
+
+    pub async fn modify_cert(id: &str, modify_req: &IamCertPhoneVCodeModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumCertServ::modify_rbum(
+            id,
+            &mut RbumCertModifyReq {
+                ak: Some(TrimString(modify_req.phone.to_string())),
+                sk: None,
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: None,
+                is_ignore_check_sk: false,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn add_or_modify_cert(phone: &str, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::PhoneVCode, funs, ctx).await;
+        match resp {
+            Ok(cert) => {
+                Self::modify_cert(
+                    &cert.id,
+                    &IamCertPhoneVCodeModifyReq {
+                        phone: TrimString(phone.to_string()),
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+            Err(_) => {
+                Self::add_cert(
+                    &IamCertPhoneVCodeAddReq {
+                        phone: TrimString(phone.to_string()),
+                    },
+                    account_id,
+                    rel_rbum_cert_conf_id,
+                    funs,
+                    ctx,
+                )
+                .await?;
+            }
+        }
+        Ok(())
     }
 
     ///不需要验证直接添加cert
