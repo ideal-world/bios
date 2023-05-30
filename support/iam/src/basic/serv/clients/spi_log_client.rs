@@ -1,11 +1,12 @@
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetItemFilterReq},
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetItemServ},
+    dto::rbum_filer_dto::RbumSetFilterReq,
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetServ},
 };
 use serde::Serialize;
 
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    log,
     serde_json::json,
     TardisFuns, TardisFunsInst,
 };
@@ -24,11 +25,11 @@ pub struct SpiLogClient;
 #[derive(Serialize, Default, Debug)]
 pub struct LogParamContent {
     pub op: String,
-    pub ext: Option<String>,
+    pub key: Option<String>,
     pub name: String,
     pub ak: String,
     pub ip: String,
-    pub ext_name: Option<String>,
+    pub key_name: Option<String>,
 }
 
 pub enum LogParamTag {
@@ -62,7 +63,7 @@ impl From<LogParamTag> for String {
 }
 
 impl SpiLogClient {
-    pub async fn add_ctx_task(tag: LogParamTag, ext: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_ctx_task(tag: LogParamTag, key: Option<String>, op_describe: String, op_kind: Option<String>, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
@@ -71,11 +72,11 @@ impl SpiLogClient {
                     tag,
                     LogParamContent {
                         op: op_describe,
-                        ext: ext.clone(),
+                        key: key.clone(),
                         ..Default::default()
                     },
                     None,
-                    ext.clone(),
+                    key.clone(),
                     op_kind,
                     None,
                     Some(tardis::chrono::Utc::now().to_rfc3339()),
@@ -118,14 +119,14 @@ impl SpiLogClient {
             content.name = cert.owner_name.unwrap_or("".to_string());
         }
         // get ext name
-        content.ext_name = Self::get_ext_name(&tag, content.ext.as_ref().map(|x| x.as_str()), funs, ctx).await;
+        content.key_name = Self::get_key_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
 
         // create search_ext
         let search_ext = json!({
             "name":content.name,
             "ak":content.ak,
             "ip":content.ip,
-            "ext":content.ext,
+            "key":content.key,
             "ts":ts,
             "op":op,
         });
@@ -146,51 +147,51 @@ impl SpiLogClient {
             "rel_key": rel_key,
             "ts": ts,
         });
-
+        log::info!("body: {}", body.to_string());
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
 
-    async fn get_ext_name(tag: &LogParamTag, ext_id: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> Option<String> {
-        if let Some(ext_id) = ext_id {
+    async fn get_key_name(tag: &LogParamTag, key: Option<&str>, funs: &TardisFunsInst, ctx: &TardisContext) -> Option<String> {
+        if let Some(key) = key {
             match tag {
                 LogParamTag::IamTenant => {
-                    if let Ok(item) = IamTenantServ::peek_item(ext_id, &IamTenantFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamTenantServ::peek_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamOrg => {
-                    if let Ok(item) = RbumSetItemServ::get_rbum(ext_id, &RbumSetItemFilterReq::default(), funs, ctx).await {
-                        item.rel_rbum_set_cate_name
+                    if let Ok(item) = RbumSetServ::get_rbum(key, &RbumSetFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamAccount => {
-                    if let Ok(item) = IamAccountServ::get_item(ext_id, &IamAccountFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamAccountServ::get_item(key, &IamAccountFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamRole => {
-                    if let Ok(item) = IamRoleServ::get_item(ext_id, &IamRoleFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamRoleServ::get_item(key, &IamRoleFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamRes => {
-                    if let Ok(item) = IamResServ::get_item(ext_id, &IamResFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamResServ::get_item(key, &IamResFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamSystem => {
-                    if let Ok(item) = IamResServ::get_item(ext_id, &IamResFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamResServ::get_item(key, &IamResFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None

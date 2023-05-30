@@ -179,7 +179,7 @@ impl IamSetServ {
         .await;
 
         if result.is_ok() {
-            let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
+            let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
             let (op_describe, tag, op_kind) = match item.kind.as_str() {
                 "Org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg), Some("Add".to_string())),
                 "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes), Some("Add".to_string())),
@@ -210,8 +210,8 @@ impl IamSetServ {
         )
         .await;
         if result.is_ok() {
-            let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await.unwrap();
-            let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
+            let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
+            let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
             match item.kind.as_str() {
                 "Org" => {
                     if let Some(name) = &modify_req.name {
@@ -243,8 +243,8 @@ impl IamSetServ {
     }
 
     pub async fn delete_set_cate(set_cate_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await.unwrap();
-        let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await.unwrap();
+        let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
+        let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
 
         let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
 
@@ -530,7 +530,7 @@ impl IamSetServ {
     }
 
     pub async fn delete_set_item(set_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let item = RbumSetItemServ::get_rbum(set_item_id, &RbumSetItemFilterReq::default(), funs, ctx).await.unwrap();
+        let item = RbumSetItemServ::get_rbum(set_item_id, &RbumSetItemFilterReq::default(), funs, ctx).await?;
 
         let result = RbumSetItemServ::delete_rbum(set_item_id, funs, ctx).await;
 

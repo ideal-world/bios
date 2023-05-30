@@ -24,7 +24,7 @@ pub struct IamCtOrgApi;
 /// Transferring to another tenant or platform's set_id will result in permission escalation
 #[poem_openapi::OpenApi(prefix_path = "/ct/org", tag = "bios_basic::ApiTag::Tenant")]
 impl IamCtOrgApi {
-    /// Add Org Cate 安全审计日志--添加部门
+    /// Add Org Cate
     #[oai(path = "/cate", method = "post")]
     async fn add_cate(&self, add_req: Json<IamSetCateAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -38,7 +38,7 @@ impl IamCtOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Modify Org Cate By Org Cate Id  安全审计日志--部门重命名
+    /// Modify Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "put")]
     async fn modify_set_cate(&self, id: Path<String>, modify_req: Json<IamSetCateModifyReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -78,7 +78,7 @@ impl IamCtOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Org Cate By Org Cate Id  安全审计日志--删除部门
+    /// Delete Org Cate By Org Cate Id
     #[oai(path = "/cate/:id", method = "delete")]
     async fn delete_cate(&self, id: Path<String>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -118,7 +118,7 @@ impl IamCtOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Batch Add Org Item 安全审计日志--添加部门人员
+    /// Batch Add Org Item
     #[oai(path = "/item/batch", method = "put")]
     async fn batch_add_set_item(&self, add_req: Json<IamSetItemWithDefaultSetAddReq>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Vec<String>> {
         let mut funs = iam_constants::get_tardis_inst();
@@ -160,7 +160,7 @@ impl IamCtOrgApi {
         TardisResp::ok(result)
     }
 
-    /// Delete Org Item By Org Item Id  安全审计日志--移除部门人员
+    /// Delete Org Item By Org Item Id
     #[oai(path = "/item/:id", method = "delete")]
     async fn delete_item(&self, id: Path<String>, set_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
