@@ -7,7 +7,7 @@ use serde::Serialize;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     serde_json::json,
-    TardisFuns, TardisFunsInst,
+    tokio, TardisFuns, TardisFunsInst,
 };
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
 };
 pub struct SpiLogClient;
 
-#[derive(Serialize, Default, Debug)]
+#[derive(Serialize, Default, Debug, Clone)]
 pub struct LogParamContent {
     pub op: String,
     pub ext: Option<String>,
@@ -66,24 +66,28 @@ impl SpiLogClient {
         let ctx_clone = ctx.clone();
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    tag,
-                    LogParamContent {
-                        op: op_describe,
-                        ext: ext.clone(),
-                        ..Default::default()
-                    },
-                    None,
-                    ext.clone(),
-                    op_kind,
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    SpiLogClient::add_item(
+                        tag,
+                        LogParamContent {
+                            op: op_describe,
+                            ext: ext.clone(),
+                            ..Default::default()
+                        },
+                        None,
+                        ext.clone(),
+                        op_kind,
+                        None,
+                        Some(tardis::chrono::Utc::now().to_rfc3339()),
+                        &funs,
+                        &ctx_clone,
+                    )
+                    .await
+                    .unwrap();
+                });
+                task_handle.await.unwrap();
+                Ok(())
             })
         }))
         .await
@@ -91,7 +95,7 @@ impl SpiLogClient {
 
     pub async fn add_item(
         tag: LogParamTag,
-        mut content: LogParamContent,
+        content: LogParamContent,
         kind: Option<String>,
         key: Option<String>,
         op: Option<String>,
@@ -100,6 +104,7 @@ impl SpiLogClient {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let mut content = content.clone();
         let log_url = funs.conf::<IamConfig>().spi.log_url.clone();
         if log_url.is_empty() {
             return Ok(());

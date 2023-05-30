@@ -42,7 +42,7 @@ fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
 
 # tardis
-tardis = { version = "0.1.0-beta.7" }
+tardis = { version = "0.1.0-beta.8" }
 
 # crypto
 base64 = { version = "0.21" }

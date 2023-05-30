@@ -1109,9 +1109,7 @@ pub(crate) mod ldap {
                 &mock_ctx,
             )
             .await;
-            let task_handle = tardis::tokio::task::spawn_blocking(move || tardis::tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-            let _ = task_handle.await;
-
+            mock_ctx.execute_task().await?;
             result
         }
 
