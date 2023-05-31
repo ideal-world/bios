@@ -61,8 +61,7 @@ impl IamCpCertApi {
     async fn login_status(&self, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
         let status = IamCertServ::get_kernel_cert(&ctx.0.owner, &IamCertKernelKind::UserPwd, &funs, &ctx.0).await?.status;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(status.to_string())
     }
 
@@ -107,8 +106,7 @@ impl IamCpCertApi {
             &ctx.0,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(rbum_certs)
     }
 
@@ -118,8 +116,7 @@ impl IamCpCertApi {
         let funs = iam_constants::get_tardis_inst();
         // let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
         let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&ctx.0.owner, vec![supplier.0], &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }
 
@@ -130,8 +127,7 @@ impl IamCpCertApi {
         funs.begin().await?;
         IamCpCertUserPwdServ::new_user_name(&pwd_new_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -156,8 +152,7 @@ impl IamCpCertApi {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
         IamCertUserPwdServ::reset_sk_for_pending_status(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -169,8 +164,7 @@ impl IamCpCertApi {
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamCpCertUserPwdServ::modify_cert_user_pwd(&ctx.owner, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -225,20 +219,18 @@ impl IamCpCertApi {
         funs.begin().await?;
         IamCertMailVCodeServ::send_bind_mail(&req.0.mail, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Bind Mail  安全审计日志--绑定邮箱
+    /// Bind Mail
     #[oai(path = "/cert/mailvcode/bind", method = "put")]
     async fn bind_mail(&self, req: Json<IamCertMailVCodeActivateReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertMailVCodeServ::bind_mail(&req.0.mail, &req.0.vcode, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -269,20 +261,18 @@ impl IamCpCertApi {
         funs.begin().await?;
         IamCertPhoneVCodeServ::send_bind_phone(&req.0.phone, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Bind phone  安全审计日志--绑定手机号
+    /// Bind phone
     #[oai(path = "/cert/phonevcode/bind", method = "put")]
     async fn bind_phone(&self, req: Json<IamCertPhoneVCodeBindReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamCertPhoneVCodeServ::bind_phone(&req.0.phone.to_string(), &req.0.vcode, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 

@@ -1,5 +1,4 @@
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
@@ -50,8 +49,7 @@ impl IamCcAppApi {
             &ctx.0,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -82,8 +80,7 @@ impl IamCcAppApi {
             &ctx.0,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

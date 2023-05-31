@@ -9,7 +9,7 @@ use crate::basic::dto::iam_platform_dto::{IamPlatformConfigReq, IamPlatformConfi
 use crate::basic::serv::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use crate::basic::serv::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
-
+use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::iam_config::IamConfig;
 use crate::iam_enumeration::IamCertKernelKind;
 
