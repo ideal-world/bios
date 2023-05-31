@@ -1,0 +1,6 @@
+409-flow-state-already-used	状态已被使用
+404-flow-state-add-not-legal	要添加的状态不合法（权限错误、已禁用等）
+404-flow-transition-rel-model-not-legal	转换关联的模型不合法
+404-flow-inst-not-found	找不到实例
+404-flow-inst-rel-model-not-found	找不到实例关联的模型
+404-flow-inst-transfer-state-not-found	没有可流转的状态
