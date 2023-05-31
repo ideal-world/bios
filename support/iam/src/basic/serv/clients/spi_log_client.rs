@@ -161,7 +161,7 @@ impl SpiLogClient {
         if let Some(key) = key {
             match tag {
                 LogParamTag::IamTenant => {
-                    if let Ok(item) = IamTenantServ::peek_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamTenantServ::get_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
