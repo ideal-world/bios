@@ -23,6 +23,8 @@ use crate::{
     iam_enumeration::IamConfigKind,
 };
 
+use super::clients::spi_log_client::{SpiLogClient, LogParamTag};
+
 pub struct IamConfigServ;
 
 #[async_trait]
@@ -126,6 +128,15 @@ impl IamConfigServ {
     pub async fn add_or_modify_batch(rel_item_id: &str, reqs: Vec<IamConfigAggOrModifyReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         for config in reqs {
             let config_id = Self::get_config_id_by_code_and_item_id(&config.code, rel_item_id, funs).await?;
+            let (op_describe, op_kind) = match &config.code {
+                IamConfigKind::AccountInactivityLock => { (format!("设置{}个月未使用的账号进行锁定或将其转为休眠账号", config.value1.clone().unwrap_or(0.to_string())), "SetUpUnusedAccountsToLock".to_string()) },
+                IamConfigKind::TokenExpire => { (format!("设置{}分钟不活动则会话失效", config.value1.clone().unwrap_or(0.to_string())), "SetUpSessionInvalidation".to_string()) },
+                IamConfigKind::AccountTemporaryExpire => { (format!("设置临时账号使用期限为{}个月", config.value1.clone().unwrap_or(0.to_string())), "SetUpUnusedAccountsToLock".to_string()) },
+                _ => { ("".to_string(), "".to_string()) },
+            };
+            if !op_describe.is_empty() {
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+            }
             if let Some(id) = config_id {
                 Self::modify_rbum(
                     &id,

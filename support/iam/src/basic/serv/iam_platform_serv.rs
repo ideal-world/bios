@@ -13,6 +13,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::IamConfig;
 use crate::iam_enumeration::IamCertKernelKind;
 
+use super::clients::spi_log_client::{SpiLogClient, LogParamTag};
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamPlatformServ;
@@ -23,6 +24,16 @@ impl IamPlatformServ {
             return Ok(());
         }
 
+        let mut log_tasks = vec![];
+        if modify_req.cert_conf_by_phone_vcode.is_some() {
+            log_tasks.push(("修改认证方式为手机号".to_string(), "ModifyCertifiedWay".to_string()));
+        }
+        if modify_req.cert_conf_by_mail_vcode.is_some() {
+            log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
+        }
+        for (op_describe, op_kind) in log_tasks {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+        }
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some("".to_string()), None, None, funs, ctx).await?;
 
