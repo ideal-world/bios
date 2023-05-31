@@ -3,13 +3,15 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
 use tardis::basic::result::TardisResult;
 use tardis::db::reldb_client::{IdResp, TardisActiveModel};
 use tardis::db::sea_orm::sea_query::{Alias, Cond, Expr, Func, IntoValueTuple, JoinType, Order, Query, SelectStatement, Value, ValueTuple};
 use tardis::db::sea_orm::{self, Condition, EntityTrait, FromQueryResult, QueryFilter, Select};
 use tardis::regex::Regex;
+#[cfg(feature = "default")]
+use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::TardisFunsInst;
@@ -347,6 +349,8 @@ where
         ctx: &TardisContext,
     ) -> TardisResult<TardisPage<String>> {
         let mut query = Self::package_query(false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.column((Alias::new(Self::get_table_name()), ID_FIELD.clone()));
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -359,6 +363,48 @@ where
             page_number: page_number as u64,
             total_size,
             records: records.into_iter().map(|resp| resp.id).collect(),
+        })
+    }
+
+    async fn paginate_id_name_rbums(
+        filter: &FilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<IdNameResp>> {
+        Self::do_paginate_id_name_rbums(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    async fn do_paginate_id_name_rbums(
+        filter: &FilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<IdNameResp>> {
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.columns([
+            (Alias::new(Self::get_table_name()), ID_FIELD.clone()),
+            (Alias::new(Self::get_table_name()), NAME_FIELD.clone()),
+        ]);
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos::<IdNameResp>(&query, page_number as u64, page_size as u64).await?;
+        Ok(TardisPage {
+            page_size: page_size as u64,
+            page_number: page_number as u64,
+            total_size,
+            records,
         })
     }
 
@@ -467,6 +513,8 @@ where
         ctx: &TardisContext,
     ) -> TardisResult<Vec<String>> {
         let mut query = Self::package_query(false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.column((Alias::new(Self::get_table_name()), ID_FIELD.clone()));
         if let Some(sort) = desc_sort_by_create {
             query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -474,6 +522,38 @@ where
             query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
         Ok(funs.db().find_dtos::<IdResp>(&query).await?.into_iter().map(|resp| resp.id).collect())
+    }
+
+    async fn find_id_name_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, String>> {
+        Self::do_find_id_name_rbums(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    async fn do_find_id_name_rbums(
+        filter: &FilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, String>> {
+        let mut query = Self::package_query(false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.columns([
+            (Alias::new(Self::get_table_name()), ID_FIELD.clone()),
+            (Alias::new(Self::get_table_name()), NAME_FIELD.clone()),
+        ]);
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((Alias::new(Self::get_table_name()), CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((Alias::new(Self::get_table_name()), UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos::<IdNameResp>(&query).await?.into_iter().map(|resp| (resp.id, resp.name)).collect())
     }
 
     async fn find_rbums(
@@ -582,8 +662,14 @@ impl RbumCrudQueryPackage for SelectStatement {
         if let Some(name) = &filter.name {
             self.and_where(Expr::col((Alias::new(table_name), NAME_FIELD.clone())).like(format!("%{name}%").as_str()));
         }
+        if let Some(names) = &filter.names {
+            self.and_where(Expr::col((Alias::new(table_name), NAME_FIELD.clone())).is_in(names.clone()));
+        }
         if let Some(code) = &filter.code {
             self.and_where(Expr::col((Alias::new(table_name), CODE_FIELD.clone())).like(format!("{code}%").as_str()));
+        }
+        if let Some(codes) = &filter.codes {
+            self.and_where(Expr::col((Alias::new(table_name), CODE_FIELD.clone())).is_in(codes.clone()));
         }
 
         if let Some(rbum_kind_id) = &filter.rbum_kind_id {
@@ -706,5 +792,12 @@ impl RbumCrudQueryPackage for SelectStatement {
 
 #[derive(Debug, sea_orm::FromQueryResult)]
 pub struct NameResp {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, sea_orm::FromQueryResult)]
+#[cfg_attr(feature = "default", derive(poem_openapi::Object))]
+pub struct IdNameResp {
+    pub id: String,
     pub name: String,
 }

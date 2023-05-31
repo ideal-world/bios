@@ -14,13 +14,13 @@ use crate::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertUserNameNewReq, IamCertUserPwdAddReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::IamBasicConfigApi;
-use crate::iam_constants;
 use crate::iam_enumeration::IamCertKernelKind;
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_account_serv::IamAccountServ;
 use super::iam_cert_mail_vcode_serv::IamCertMailVCodeServ;
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
+use super::iam_cert_serv::IamCertServ;
 
 pub struct IamCertUserPwdServ;
 
@@ -156,6 +156,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: None,
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -209,6 +210,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: Some(modify_req.new_ak.clone()),
                     sk: Some(modify_req.sk.clone()),
+                    is_ignore_check_sk: true,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -232,7 +234,13 @@ impl IamCertUserPwdServ {
     }
 
     //todo 统一reset_sk_for_pending_status方法
+    //可进行重置后的状态：Pending、Enabled、Disabled
     pub async fn reset_sk(modify_req: &IamCertUserPwdRestReq, rel_iam_item_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let new_sk = if let Some(new_sk) = &modify_req.new_sk {
+            new_sk.to_string()
+        } else {
+            IamCertServ::get_new_pwd()
+        };
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
@@ -245,54 +253,36 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
-            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
-            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
-            if cert.status == RbumCertStatusKind::Pending {
-                RbumCertServ::modify_rbum(
-                    &cert.id,
-                    &mut RbumCertModifyReq {
-                        ak: None,
-                        sk: None,
-                        ext: None,
-                        start_time: None,
-                        end_time: None,
-                        conn_uri: None,
-                        status: RbumCertStatusKind::Enabled.into(),
-                    },
-                    funs,
-                    ctx,
-                )
-                .await?
-            };
+            RbumCertServ::reset_sk(&cert.id, &new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+            IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+            IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+            RbumCertServ::modify_rbum(
+                &cert.id,
+                &mut RbumCertModifyReq {
+                    ak: None,
+                    sk: None,
+                    is_ignore_check_sk: false,
+                    ext: None,
+                    start_time: None,
+                    end_time: None,
+                    conn_uri: None,
+                    status: RbumCertStatusKind::Pending.into(),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             let result = IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await;
 
-            let id = rel_iam_item_id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamAccount,
-                        LogParamContent {
-                            op: "重置账号密码".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id.clone()),
-                        LogParamOp::Modify,
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(rel_iam_item_id.to_string()),
+                "重置账号密码".to_string(),
+                Some("ResetAccountPassword".to_string()),
+                ctx,
+            )
+            .await;
+
             result
         } else {
             Err(funs.err().not_found(
@@ -311,6 +301,11 @@ impl IamCertUserPwdServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
+        let new_sk = if let Some(new_sk) = &modify_req.new_sk {
+            new_sk.to_string()
+        } else {
+            IamCertServ::get_new_pwd()
+        };
         let cert = RbumCertServ::find_one_rbum(
             &RbumCertFilterReq {
                 rel_rbum_kind: Some(RbumCertRelKind::Item),
@@ -324,14 +319,15 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             if cert.status.eq(&RbumCertStatusKind::Pending) {
-                RbumCertServ::reset_sk(&cert.id, &modify_req.new_sk.0, &RbumCertFilterReq::default(), funs, ctx).await?;
-                IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
-                IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &modify_req.new_sk.0, funs, ctx).await?;
+                RbumCertServ::reset_sk(&cert.id, &new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+                IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
+                IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
                 RbumCertServ::modify_rbum(
                     &cert.id,
                     &mut RbumCertModifyReq {
                         ak: None,
                         sk: None,
+                        is_ignore_check_sk: false,
                         ext: None,
                         start_time: None,
                         end_time: None,
@@ -343,32 +339,14 @@ impl IamCertUserPwdServ {
                 )
                 .await?;
 
-                let id = rel_iam_item_id.to_string();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: "重置账号密码".to_string(),
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            Some("req".to_string()),
-                            Some(id.clone()),
-                            LogParamOp::Modify,
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    Some(rel_iam_item_id.to_string()),
+                    "重置账号密码".to_string(),
+                    Some("ResetAccountPassword".to_string()),
+                    ctx,
+                )
+                .await;
             } else {
                 return Err(funs.err().bad_request(
                     "iam_cert_user_pwd",

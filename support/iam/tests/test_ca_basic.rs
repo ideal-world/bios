@@ -25,15 +25,6 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
     funs.begin().await?;
 
     info!("【test_ca】 : Prepare : IamCsTenantServ::add_tenant");
-    let tenant_context = IamIdentCacheServ::get_context(
-        &IamContextFetchReq {
-            token: account_resp.token.to_string(),
-            app_id: None,
-        },
-        &funs,
-    )
-    .await?;
-
     let (tenant_id, tenant_admin_pwd, tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
         &mut IamTenantAggAddReq {
             name: TrimString("测试租户1".to_string()),
@@ -83,6 +74,14 @@ pub async fn test(_context: &TardisContext) -> TardisResult<(TardisContext, Tard
             sk: TrimString(tenant_admin_pwd),
             tenant_id: Some(tenant_id.clone()),
             flag: None,
+        },
+        &funs,
+    )
+    .await?;
+    let tenant_context = IamIdentCacheServ::get_context(
+        &IamContextFetchReq {
+            token: account_resp.token.to_string(),
+            app_id: None,
         },
         &funs,
     )

@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 pub const BIOS_CRYPTO: &str = "Bios-Crypto";
 pub const BIOS_TOKEN: &str = "Bios-Token";
+#[allow(dead_code)]
 pub const BIOS_SESSION_CONFIG: &str = "Bios_config";
 pub const BIOS_SERV_URL_CONFIG: &str = "Bios_serv_url";
 

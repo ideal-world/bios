@@ -1,6 +1,6 @@
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::helper::rbum_event_helper;
-use tardis::tokio::{self, task};
+use tardis::tokio::time::sleep;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::{param::Path, param::Query, payload::Json};
@@ -14,7 +14,7 @@ use crate::basic::dto::iam_account_dto::{
     AccountTenantInfoResp, IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountModifyReq, IamAccountSummaryAggResp,
 };
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
@@ -26,7 +26,7 @@ pub struct IamCsAccountApi;
 /// System Console Account API
 #[poem_openapi::OpenApi(prefix_path = "/cs/account", tag = "bios_basic::ApiTag::System")]
 impl IamCsAccountApi {
-    /// Add Account By Tenant Id 安全审计日志--添加长期账号、添加临时账号
+    /// Add Account By Tenant Id
     #[oai(path = "/", method = "post")]
     async fn add(&self, tenant_id: Query<Option<String>>, add_req: Json<IamAccountAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -35,12 +35,11 @@ impl IamCsAccountApi {
         let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(result.clone(), false, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Modify Account By Account Id  安全审计日志--修改账号头像、休眠账号、修改用户类型为临时账号、修改姓名
+    /// Modify Account By Account Id
     #[oai(path = "/:id", method = "put")]
     async fn modify(&self, id: Path<String>, tenant_id: Query<Option<String>>, modify_req: Json<IamAccountAggModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -49,9 +48,7 @@ impl IamCsAccountApi {
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        let ctx_task = ctx.clone();
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
             rbum_event_helper::try_notifies(notify_events, &iam_constants::get_tardis_inst(), &ctx).await?;
         }
@@ -78,8 +75,7 @@ impl IamCsAccountApi {
             &ctx,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -162,8 +158,7 @@ impl IamCsAccountApi {
             &ctx,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -176,9 +171,7 @@ impl IamCsAccountApi {
         IamAccountServ::delete_item_with_all_rels(&id.0, &funs, &ctx).await?;
         IamAccountServ::async_delete_account_search(id.0, &funs, ctx.clone()).await?;
         funs.commit().await?;
-        let ctx_task = ctx.clone();
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {
             TardisResp::accepted(Some(task_id))
         } else {
@@ -194,8 +187,7 @@ impl IamCsAccountApi {
         funs.begin().await?;
         IamAccountServ::delete_tokens(&id.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -216,8 +208,7 @@ impl IamCsAccountApi {
             &ctx,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -226,12 +217,11 @@ impl IamCsAccountApi {
     async fn get_account_tenant_info(&self, id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<AccountTenantInfoResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAccountServ::get_account_tenant_info(&id.0, &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Active account  安全审计日志--激活账号
+    /// Active account
     #[oai(path = "/:id/active", method = "put")]
     async fn active_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -254,12 +244,11 @@ impl IamCsAccountApi {
         .await?;
         IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    /// Logout account  安全审计日志--注销账号、下线账号
+    /// Logout account
     #[oai(path = "/:id/logout", method = "put")]
     async fn logout_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -282,12 +271,11 @@ impl IamCsAccountApi {
         .await?;
         IamAccountServ::async_add_or_modify_account_search(id.0, true, "Manual cancellation.".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    ///lock account 安全审计日志--人工锁定账号
+    ///lock account
     #[oai(path = "/:id/lock", method = "put")]
     async fn lock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -309,39 +297,20 @@ impl IamCsAccountApi {
         )
         .await?;
         IamAccountServ::async_add_or_modify_account_search(id.0.clone(), true, "".to_string(), &funs, ctx.clone()).await?;
-        let id = id.0.clone();
-        let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamAccount,
-                    LogParamContent {
-                        op: "人工锁定账号".to_string(),
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    Some("req".to_string()),
-                    Some(id.clone()),
-                    LogParamOp::Modify,
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamAccount,
+            Some(id.0.clone()),
+            "人工锁定账号".to_string(),
+            Some("ManuallyLockAccount".to_string()),
+            &ctx,
+        )
+        .await;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
-    ///Unlock account  安全审计日志--解锁账号
+    ///Unlock account
     #[oai(path = "/:id/unlock", method = "post")]
     async fn unlock_account(&self, id: Path<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
@@ -350,8 +319,7 @@ impl IamCsAccountApi {
         IamAccountServ::unlock_account(&id.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

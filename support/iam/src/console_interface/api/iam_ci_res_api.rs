@@ -26,8 +26,7 @@ impl IamCiResApi {
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Res, &funs, &ctx.0).await?;
         let result = IamResServ::add_res_agg(&mut add_req.0, &set_id, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -60,8 +59,7 @@ impl IamCiResApi {
         )
         .await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

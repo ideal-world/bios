@@ -14,7 +14,6 @@ use bios_basic::rbum::dto::rbum_set_dto::RbumSetTreeResp;
 use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountAggModifyReq, IamAccountDetailAggResp, IamAccountSummaryAggResp};
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfUserPwdAddOrModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::IamCertUserPwdRestReq;
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResAggAddReq, IamResDetailResp, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggAddReq, IamRoleAggModifyReq, IamRoleDetailResp, IamRoleModifyReq, IamRoleSummaryResp};
@@ -50,24 +49,31 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 note: None,
                 admin_name: TrimString("测试管理员".to_string()),
                 admin_username: TrimString("admin".to_string()),
-                admin_password: Some("123456".to_string()),
-                cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
-                    ak_rule_len_min: 2,
-                    ak_rule_len_max: 20,
-                    sk_rule_len_min: 2,
-                    sk_rule_len_max: 20,
-                    sk_rule_need_num: false,
-                    sk_rule_need_uppercase: false,
-                    sk_rule_need_lowercase: false,
-                    sk_rule_need_spec_char: false,
-                    sk_lock_cycle_sec: 60,
-                    sk_lock_err_times: 2,
-                    sk_lock_duration_sec: 60,
-                    repeatable: false,
-                    expire_sec: 6000,
-                },
-                cert_conf_by_phone_vcode: true,
-                cert_conf_by_mail_vcode: false,
+                admin_password: Some(TrimString("123456".to_string())),
+                admin_phone: None,
+                admin_mail: None,
+                audit_username: TrimString("audit".to_string()),
+                audit_name: TrimString("审计管理员".to_string()),
+                audit_password: None,
+                audit_phone: None,
+                audit_mail: None,
+                // cert_conf_by_user_pwd: IamCertConfUserPwdAddOrModifyReq {
+                //     ak_rule_len_min: 2,
+                //     ak_rule_len_max: 20,
+                //     sk_rule_len_min: 2,
+                //     sk_rule_len_max: 20,
+                //     sk_rule_need_num: false,
+                //     sk_rule_need_uppercase: false,
+                //     sk_rule_need_lowercase: false,
+                //     sk_rule_need_spec_char: false,
+                //     sk_lock_cycle_sec: 60,
+                //     sk_lock_err_times: 2,
+                //     sk_lock_duration_sec: 60,
+                //     repeatable: false,
+                //     expire_sec: 6000,
+                // },
+                // cert_conf_by_phone_vcode: true,
+                // cert_conf_by_mail_vcode: false,
                 disabled: None,
                 account_self_reg: None,
                 cert_conf_by_oauth2: None,
@@ -100,7 +106,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 id: None,
                 name: TrimString("用户1".to_string()),
                 cert_user_name: TrimString("user1".to_string()),
-                cert_password: TrimString("123456".to_string()),
+                cert_password: Some(TrimString("123456".to_string())),
                 cert_phone: None,
                 cert_mail: None,
                 role_ids: None,
@@ -110,6 +116,8 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 icon: None,
                 exts: HashMap::from([("ext9".to_string(), "00001".to_string())]),
                 status: None,
+                temporary: None,
+                lock_status: None,
             },
         )
         .await;
@@ -153,26 +161,26 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 sort: None,
                 contact_phone: None,
                 note: None,
-                cert_conf_by_user_pwd: Some(IamCertConfUserPwdAddOrModifyReq {
-                    ak_rule_len_min: 2,
-                    ak_rule_len_max: 20,
-                    sk_rule_len_min: 2,
-                    sk_rule_len_max: 20,
-                    sk_rule_need_num: false,
-                    sk_rule_need_uppercase: false,
-                    sk_rule_need_lowercase: false,
-                    sk_rule_need_spec_char: false,
-                    sk_lock_cycle_sec: 60,
-                    sk_lock_err_times: 2,
-                    sk_lock_duration_sec: 60,
-                    repeatable: true,
-                    expire_sec: 111,
-                }),
-                cert_conf_by_phone_vcode: Some(false),
-                cert_conf_by_mail_vcode: Some(true),
+                // cert_conf_by_user_pwd: Some(IamCertConfUserPwdAddOrModifyReq {
+                //     ak_rule_len_min: 2,
+                //     ak_rule_len_max: 20,
+                //     sk_rule_len_min: 2,
+                //     sk_rule_len_max: 20,
+                //     sk_rule_need_num: false,
+                //     sk_rule_need_uppercase: false,
+                //     sk_rule_need_lowercase: false,
+                //     sk_rule_need_spec_char: false,
+                //     sk_lock_cycle_sec: 60,
+                //     sk_lock_err_times: 2,
+                //     sk_lock_duration_sec: 60,
+                //     repeatable: true,
+                //     expire_sec: 111,
+                // }),
+                // cert_conf_by_phone_vcode: Some(false),
+                // cert_conf_by_mail_vcode: Some(true),
                 account_self_reg: None,
-                cert_conf_by_oauth2: None,
-                cert_conf_by_ldap: None,
+                // cert_conf_by_oauth2: None,
+                // cert_conf_by_ldap: None,
             },
         )
         .await;
@@ -235,6 +243,9 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
                 role_ids: None,
                 org_cate_ids: None,
                 exts: None,
+                status: None,
+                cert_phone: None,
+                cert_mail: None,
             },
         )
         .await;
@@ -244,7 +255,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
         .put(
             &format!("/cs/cert/user-pwd?account_id={}&tenant_id={}", sys_admin_account_id, tenant_id),
             &IamCertUserPwdRestReq {
-                new_sk: TrimString("1234567".to_string()),
+                new_sk: Some(TrimString("1234567".to_string())),
             },
         )
         .await;
@@ -404,7 +415,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 id: None,
                 name: TrimString("系统用户1".to_string()),
                 cert_user_name: TrimString("user1".to_string()),
-                cert_password: TrimString("123456".to_string()),
+                cert_password: Some(TrimString("123456".to_string())),
                 cert_phone: None,
                 cert_mail: Some(TrimString("i@sunisle.org".to_string())),
                 role_ids: Some(vec![role_id.to_string()]),
@@ -414,6 +425,8 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 icon: None,
                 exts: HashMap::from([("ext1_idx".to_string(), "00001".to_string())]),
                 status: None,
+                temporary: None,
+                lock_status: None,
             },
         )
         .await;
@@ -442,6 +455,9 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
                 role_ids: Some(vec![]),
                 org_cate_ids: None,
                 exts: Some(HashMap::from([("ext1_idx".to_string(), "".to_string())])),
+                status: None,
+                cert_phone: None,
+                cert_mail: None,
             },
         )
         .await;
@@ -465,7 +481,7 @@ pub async fn sys_console_account_mgr_page(client: &mut BIOSWebTestClient) -> Tar
         .put(
             &format!("/cs/cert/user-pwd?account_id={}", account_id),
             &IamCertUserPwdRestReq {
-                new_sk: TrimString("1234567".to_string()),
+                new_sk: Some(TrimString("1234567".to_string())),
             },
         )
         .await;
@@ -553,9 +569,10 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
-                    crypto_req: false,
-                    crypto_resp: false,
-                    double_auth: false,
+                    crypto_req: Some(false),
+                    crypto_resp: Some(false),
+                    double_auth: Some(false),
+                    double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -580,9 +597,10 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
-                    crypto_req: false,
-                    crypto_resp: false,
-                    double_auth: false,
+                    crypto_req: Some(false),
+                    crypto_resp: Some(false),
+                    double_auth: Some(false),
+                    double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -605,9 +623,10 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
-                    crypto_req: false,
-                    crypto_resp: false,
-                    double_auth: false,
+                    crypto_req: Some(false),
+                    crypto_resp: Some(false),
+                    double_auth: Some(false),
+                    double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_work_spaces_id.to_string(),
@@ -635,9 +654,10 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                     action: None,
                     scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
                     disabled: None,
-                    crypto_req: false,
-                    crypto_resp: false,
-                    double_auth: false,
+                    crypto_req: Some(false),
+                    crypto_resp: Some(false),
+                    double_auth: Some(false),
+                    double_auth_msg: None,
                 },
                 set: IamSetItemAggAddReq {
                     set_cate_id: cate_apis_id.to_string(),
@@ -661,6 +681,7 @@ pub async fn sys_console_res_mgr_page(client: &mut BIOSWebTestClient) -> TardisR
                 crypto_req: None,
                 crypto_resp: None,
                 double_auth: None,
+                double_auth_msg: None,
             },
         )
         .await;

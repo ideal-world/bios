@@ -5,8 +5,9 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::tokio::task;
 use tardis::web::web_resp::TardisPage;
-use tardis::{TardisFuns, TardisFunsInst};
+use tardis::{tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -18,7 +19,7 @@ use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_rel_serv::IamRelServ;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_conf_dto::{
@@ -36,7 +37,6 @@ use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::iam_config::{IamBasicConfigApi, IamConfig};
 use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_TENANT};
 use crate::iam_enumeration::{IamAccountLockStateKind, IamCertExtKind, IamCertKernelKind, IamCertTokenKind, IamRelKind};
-
 pub struct IamCertServ;
 
 impl IamCertServ {
@@ -212,10 +212,15 @@ impl IamCertServ {
         Ok(result)
     }
 
-    pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_cert_detail_by_id_and_kind(
+        account_id: &str,
+        rel_iam_cert_kind: &IamCertKernelKind,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumCertDetailResp> {
         let ctx = IamAccountServ::is_global_account_context(account_id, funs, ctx).await?;
         let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), Some(ctx.clone().own_paths), funs).await?;
-        let kernel_cert = RbumCertServ::find_one_detail_rbum(
+        let cert_detail = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id]),
@@ -225,7 +230,21 @@ impl IamCertServ {
             &ctx,
         )
         .await?;
-        if let Some(kernel_cert) = kernel_cert {
+        if let Some(cert_detail) = cert_detail {
+            Ok(cert_detail)
+        } else {
+            Err(funs.err().not_found(
+                "iam_cert",
+                "get_cert_detail_by_id_and_kind",
+                &format!("not found credential of kind {rel_iam_cert_kind:?}"),
+                "404-iam-cert-kind-not-exist",
+            ))
+        }
+    }
+
+    pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let kernel_cert = Self::get_cert_detail_by_id_and_kind(account_id, rel_iam_cert_kind, funs, &ctx).await;
+        if let Ok(kernel_cert) = kernel_cert {
             let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &ctx).await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: kernel_cert.id,
@@ -431,6 +450,7 @@ impl IamCertServ {
                 ext: modify_req.ext.clone(),
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
                 sk: Some(TrimString(modify_req.sk.as_ref().unwrap().to_string())),
+                is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
                 conn_uri: modify_req.conn_uri.clone(),
@@ -450,6 +470,7 @@ impl IamCertServ {
                 ext: Some(ext.to_string()),
                 ak: None,
                 sk: None,
+                is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
@@ -916,7 +937,7 @@ impl IamCertServ {
         let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
 
         IamCertTokenServ::add_cert(&account_info.token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
-
+        context.execute_task().await?;
         Ok(account_info)
     }
 
@@ -944,10 +965,10 @@ impl IamCertServ {
         )
         .await?;
         if account_agg.disabled {
-            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-rbum-cert-lock"));
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is disabled", "401-iam-account-disabled"));
         }
         if account_agg.lock_status != IamAccountLockStateKind::Unlocked {
-            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-cert-lock"));
+            return Err(funs.err().unauthorized("iam_account", "account_context", "cert is locked", "401-rbum-account-lock"));
         }
         let account_info = IamAccountInfoResp {
             account_id: account_id.to_string(),
@@ -1190,7 +1211,7 @@ impl IamCertServ {
         allowed_kinds: Option<Vec<&str>>,
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
-        let result = if rbum_cert_conf_id.is_some() {
+        let result: Result<(String, RbumCertRelKind, String), tardis::basic::error::TardisError> = if rbum_cert_conf_id.is_some() {
             RbumCertServ::validate_by_spec_cert_conf(ak, input_sk, rbum_cert_conf_id.unwrap(), ignore_end_time, own_paths.as_ref().unwrap(), funs).await
         } else {
             RbumCertServ::validate_by_ak_and_basic_sk(ak, input_sk, rel_rbum_kind.unwrap(), ignore_end_time, own_paths.clone(), allowed_kinds.unwrap(), funs).await
@@ -1201,32 +1222,23 @@ impl IamCertServ {
                 if let Some(own_paths) = own_paths {
                     mock_ctx.own_paths = own_paths;
                 }
-                let ctx_clone = mock_ctx.clone();
-                mock_ctx
-                    .add_async_task(Box::new(|| {
-                        Box::pin(async move {
-                            let funs = iam_constants::get_tardis_inst();
-                            SpiLogClient::add_item(
-                                LogParamTag::IamAccount,
-                                LogParamContent {
-                                    op: "密码锁定账号".to_string(),
-                                    ext: None,
-                                    ..Default::default()
-                                },
-                                Some("req".to_string()),
-                                None,
-                                LogParamOp::Modify,
-                                None,
-                                Some(tardis::chrono::Utc::now().to_rfc3339()),
-                                &funs,
-                                &ctx_clone,
-                            )
-                            .await
-                            .unwrap();
-                        })
-                    }))
-                    .await
-                    .unwrap();
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    None,
+                    "密码锁定账号".to_string(),
+                    Some("PasswordLockAccount".to_string()),
+                    &mock_ctx,
+                )
+                .await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::SecurityVisit,
+                    None,
+                    "连续登录失败".to_string(),
+                    Some("ContinuLoginFail".to_string()),
+                    &mock_ctx,
+                )
+                .await;
+                mock_ctx.execute_task().await?;
             }
         }
         result

@@ -16,14 +16,13 @@ use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
 use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamAppFilterReq};
-use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_app_serv::IamAppServ;
 use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
-
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -93,32 +92,17 @@ impl IamIdentCacheServ {
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
             let mock_ctx = TardisContext { ..Default::default() };
-            let ctx_clone = mock_ctx.clone();
-            mock_ctx
-                .add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: "下线账号".to_string(),
-                                ext: None,
-                                ..Default::default()
-                            },
-                            Some("req".to_string()),
-                            None,
-                            LogParamOp::Modify,
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(token.to_string()),
+                "下线账号".to_string(),
+                Some("OfflineAccount".to_string()),
+                &mock_ctx,
+            )
+            .await;
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "退出".to_string(), Some("Quit".to_string()), &mock_ctx).await;
+
+            mock_ctx.execute_task().await?;
         }
         Ok(())
     }
@@ -208,32 +192,16 @@ impl IamIdentCacheServ {
         funs.cache().del(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str()).await?;
 
         let mock_ctx = TardisContext { ..Default::default() };
-        let ctx_clone = mock_ctx.clone();
-        mock_ctx
-            .add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamAccount,
-                        LogParamContent {
-                            op: "下线账号".to_string(),
-                            ext: None,
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        None,
-                        LogParamOp::Modify,
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+        let _ = SpiLogClient::add_ctx_task(
+            LogParamTag::IamAccount,
+            Some(account_id.to_string()),
+            "下线账号".to_string(),
+            Some("OfflineAccount".to_string()),
+            &mock_ctx,
+        )
+        .await;
+
+        mock_ctx.execute_task().await?;
 
         Ok(())
     }

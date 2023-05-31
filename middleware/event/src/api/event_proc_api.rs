@@ -1,4 +1,4 @@
-use bios_basic::spi::spi_funs::SpiTardisFunInstExtractor;
+use bios_basic::TardisFunInstExtractor;
 use tardis::web::poem::web::websocket::{BoxWebSocketUpgraded, WebSocket};
 use tardis::web::poem::Request;
 use tardis::web::poem_openapi;

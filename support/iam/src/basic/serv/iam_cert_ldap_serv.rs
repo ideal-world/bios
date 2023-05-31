@@ -260,6 +260,7 @@ impl IamCertLdapServ {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.ldap_id.clone()),
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -761,6 +762,7 @@ impl IamCertLdapServ {
                         &mut RbumCertModifyReq {
                             ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
                             sk: None,
+                            is_ignore_check_sk: false,
                             ext: None,
                             start_time: None,
                             end_time: None,
@@ -808,6 +810,7 @@ impl IamCertLdapServ {
                             &mut RbumCertModifyReq {
                                 ak: None,
                                 sk: None,
+                                is_ignore_check_sk: false,
                                 ext: None,
                                 start_time: None,
                                 end_time: None,
@@ -831,6 +834,8 @@ impl IamCertLdapServ {
                                 org_cate_ids: None,
                                 exts: None,
                                 status: None,
+                                cert_phone: None,
+                                cert_mail: None,
                             },
                             &funs,
                             ctx,
@@ -1061,8 +1066,7 @@ pub(crate) mod ldap {
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
 
-    use crate::basic::serv::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
-    use crate::iam_constants;
+    use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
     pub struct LdapClient {
         ldap: Ldap,
@@ -1097,33 +1101,15 @@ pub(crate) mod ldap {
             let result = self.bind_by_dn(&dn, pw).await;
 
             let mock_ctx = TardisContext { ..Default::default() };
-            let ctx_clone = mock_ctx.clone();
-            mock_ctx
-                .add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: format!("绑定5A账号为{}", dn.as_str()),
-                                ext: None,
-                                ..Default::default()
-                            },
-                            Some("req".to_string()),
-                            None,
-                            LogParamOp::Modify,
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
-
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                None,
+                format!("绑定5A账号为{}", dn.as_str()),
+                Some("Bind5aAccount".to_string()),
+                &mock_ctx,
+            )
+            .await;
+            mock_ctx.execute_task().await?;
             result
         }
 

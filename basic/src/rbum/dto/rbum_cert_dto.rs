@@ -43,6 +43,7 @@ pub struct RbumCertModifyReq {
     pub ak: Option<TrimString>,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "10000")))]
     pub sk: Option<TrimString>,
+    pub is_ignore_check_sk: bool,
     #[cfg_attr(feature = "default", oai(validator(min_length = "2", max_length = "2000")))]
     pub ext: Option<String>,
     pub start_time: Option<DateTime<Utc>>,

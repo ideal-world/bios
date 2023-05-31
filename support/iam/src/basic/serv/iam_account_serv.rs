@@ -50,7 +50,7 @@ use crate::iam_enumeration::{IamAccountLockStateKind, IamAccountStatusKind, IamC
 
 use super::clients::mail_client::MailClient;
 use super::clients::sms_client::SmsClient;
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_app_serv::IamAppServ;
 
 pub struct IamAccountServ;
@@ -100,7 +100,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_item_modify(_: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
-        if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.disabled.is_none() {
+        if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.status.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
         let disabled = if modify_req.status.is_some() {
@@ -121,7 +121,7 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
     }
 
     async fn package_ext_modify(id: &str, modify_req: &IamAccountModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<iam_account::ActiveModel>> {
-        if modify_req.icon.is_none() {
+        if modify_req.icon.is_none() && modify_req.status.is_none() && modify_req.lock_status.is_none() {
             return Ok(None);
         }
         let mut iam_account = iam_account::ActiveModel {
@@ -146,46 +146,28 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
 
         let mut op_describe = String::new();
+        let mut op_kind = String::new();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             op_describe = "注销账号".to_string();
+            op_kind = "Logout".to_string();
         } else if modify_req.status == Some(IamAccountStatusKind::Dormant) {
             op_describe = "休眠账号".to_string();
+            op_kind = "DormantAccount".to_string();
         } else if modify_req.status == Some(IamAccountStatusKind::Active) {
             op_describe = "激活账号".to_string();
+            op_kind = "ActivateAccount".to_string();
         } else if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
             op_describe = "解锁账号".to_string();
+            op_kind = "UnlockAccount".to_string();
         } else if modify_req.icon.is_some() {
             op_describe = "修改账号头像".to_string();
+            op_kind = "ModifyAccountIcon".to_string();
         } else if modify_req.name.is_some() {
             op_describe = format!("修改姓名为{}", modify_req.name.as_ref().unwrap());
+            op_kind = "ModifyName".to_string();
         }
         if !op_describe.is_empty() {
-            let id = id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamAccount,
-                        LogParamContent {
-                            op: op_describe,
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id.clone()),
-                        LogParamOp::Modify,
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
 
         Ok(())
@@ -193,35 +175,12 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
 
     async fn after_add_item(id: &str, add_req: &mut IamAccountAddReq, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let mut op_describe = "添加长期账号".to_string();
+        let mut op_kind = "AddLongTermAccount".to_string();
         if add_req.temporary == Some(true) {
             op_describe = "添加临时账号".to_string();
+            op_kind = "AddTempAccount".to_string();
         }
-        let id = id.to_string();
-        let ctx_clone = ctx.clone();
-        ctx.add_async_task(Box::new(|| {
-            Box::pin(async move {
-                let funs = iam_constants::get_tardis_inst();
-                SpiLogClient::add_item(
-                    LogParamTag::IamAccount,
-                    LogParamContent {
-                        op: op_describe,
-                        ext: Some(id.clone()),
-                        ..Default::default()
-                    },
-                    Some("req".to_string()),
-                    Some(id.clone()),
-                    LogParamOp::Add,
-                    None,
-                    Some(tardis::chrono::Utc::now().to_rfc3339()),
-                    &funs,
-                    &ctx_clone,
-                )
-                .await
-                .unwrap();
-            })
-        }))
-        .await
-        .unwrap();
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         Ok(())
     }
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<IamAccountDetailResp>> {
@@ -408,6 +367,16 @@ impl IamAccountServ {
                 stored_cates.into_iter().filter(|r| !input_org_cate_ids.contains(&r.rel_rbum_set_cate_id.clone().unwrap_or_default())).map(|r| r.id).unique().collect();
             for deleted_item_id in deleted_item_ids {
                 IamSetServ::delete_set_item(&deleted_item_id, funs, ctx).await?;
+            }
+        }
+        if let Some(cert_phone) = &modify_req.cert_phone {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                IamCertPhoneVCodeServ::add_or_modify_cert(cert_phone, &id, &cert_conf.id, funs, ctx).await?;
+            }
+        }
+        if let Some(cert_mail) = &modify_req.cert_mail {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                IamCertMailVCodeServ::add_or_modify_cert(cert_mail, &id, &cert_conf.id, funs, ctx).await?;
             }
         }
         if let Some(exts) = &modify_req.exts {

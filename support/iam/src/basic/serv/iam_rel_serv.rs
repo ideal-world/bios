@@ -16,10 +16,9 @@ use crate::basic::dto::iam_filer_dto::IamResFilterReq;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
-use crate::iam_constants;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
-use super::clients::spi_log_client::{LogParamContent, LogParamOp, LogParamTag, SpiLogClient};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
 pub struct IamRelServ;
 
@@ -76,58 +75,22 @@ impl IamRelServ {
         RbumRelServ::add_rel(req, funs, ctx).await?;
 
         if rel_kind == &IamRelKind::IamAccountRole {
-            let ctx_clone = ctx.clone();
-            let id = from_iam_item_id.to_string();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamAccount,
-                        LogParamContent {
-                            op: "增加账号租户角色为管理员".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id.clone()),
-                        LogParamOp::Add,
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
-            let ctx_clone = ctx.clone();
-            let id = to_iam_item_id.to_string();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamRole,
-                        LogParamContent {
-                            op: "添加角色人员".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id.clone()),
-                        LogParamOp::Add,
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(from_iam_item_id.to_string()),
+                "增加账号租户角色为管理员".to_string(),
+                Some("AddTenantRoleAsAdmin".to_string()),
+                ctx,
+            )
+            .await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamRole,
+                Some(to_iam_item_id.to_string()),
+                "添加角色人员".to_string(),
+                Some("AddRoleAccount".to_string()),
+                ctx,
+            )
+            .await;
         }
 
         if rel_kind == &IamRelKind::IamResRole {
@@ -253,32 +216,14 @@ impl IamRelServ {
             )
             .await?;
 
-            let id = from_iam_item_id.to_string();
-            let ctx_clone = ctx.clone();
-            ctx.add_async_task(Box::new(|| {
-                Box::pin(async move {
-                    let funs = iam_constants::get_tardis_inst();
-                    SpiLogClient::add_item(
-                        LogParamTag::IamRes,
-                        LogParamContent {
-                            op: "添加API".to_string(),
-                            ext: Some(id.clone()),
-                            ..Default::default()
-                        },
-                        Some("req".to_string()),
-                        Some(id.clone()),
-                        LogParamOp::Add,
-                        None,
-                        Some(tardis::chrono::Utc::now().to_rfc3339()),
-                        &funs,
-                        &ctx_clone,
-                    )
-                    .await
-                    .unwrap();
-                })
-            }))
-            .await
-            .unwrap();
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamRes,
+                Some(from_iam_item_id.to_string()),
+                "添加目录页面API".to_string(),
+                Some("AddContentPageApi".to_string()),
+                ctx,
+            )
+            .await;
         }
         Ok(())
     }
@@ -460,88 +405,33 @@ impl IamRelServ {
                 )
                 .await?;
 
-                let id = from_iam_item_id.to_string();
-                let ctx_clone = ctx.clone();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamRes,
-                            LogParamContent {
-                                op: "删除API".to_string(),
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            Some("req".to_string()),
-                            Some(id.clone()),
-                            LogParamOp::Delete,
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamRes,
+                    Some(from_iam_item_id.to_string()),
+                    "移除目录页面API".to_string(),
+                    Some("RemoveContentPageApi".to_string()),
+                    ctx,
+                )
+                .await;
             }
             IamRelKind::IamAccountRole => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
-
-                let ctx_clone = ctx.clone();
-                let id = from_iam_item_id.to_string();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamAccount,
-                            LogParamContent {
-                                op: "移除账号租户角色为管理员".to_string(),
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            Some("req".to_string()),
-                            Some(id),
-                            LogParamOp::Delete,
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
-                let ctx_clone = ctx.clone();
-                let id = to_iam_item_id.to_string();
-                ctx.add_async_task(Box::new(|| {
-                    Box::pin(async move {
-                        let funs = iam_constants::get_tardis_inst();
-                        SpiLogClient::add_item(
-                            LogParamTag::IamRole,
-                            LogParamContent {
-                                op: "移除角色人员".to_string(),
-                                ext: Some(id.clone()),
-                                ..Default::default()
-                            },
-                            Some("req".to_string()),
-                            Some(id.clone()),
-                            LogParamOp::Delete,
-                            None,
-                            Some(tardis::chrono::Utc::now().to_rfc3339()),
-                            &funs,
-                            &ctx_clone,
-                        )
-                        .await
-                        .unwrap();
-                    })
-                }))
-                .await
-                .unwrap();
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamAccount,
+                    Some(from_iam_item_id.to_string()),
+                    "移除账号租户角色为管理员".to_string(),
+                    Some("RemoveTenantRoleAsAdmin".to_string()),
+                    ctx,
+                )
+                .await;
+                let _ = SpiLogClient::add_ctx_task(
+                    LogParamTag::IamRole,
+                    Some(to_iam_item_id.to_string()),
+                    "移除角色人员".to_string(),
+                    Some("RemoveRoleAccount".to_string()),
+                    ctx,
+                )
+                .await;
                 // TODO reset account cache
                 // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;

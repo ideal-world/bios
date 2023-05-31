@@ -10,7 +10,6 @@ use crate::iam_constants;
 use crate::iam_enumeration::Oauth2GrantType;
 use bios_basic::rbum::dto::rbum_cert_dto::RbumCertSummaryWithSkResp;
 use tardis::basic::dto::TardisContext;
-use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::{Path, Query};
@@ -31,8 +30,7 @@ impl IamCiCertManageApi {
     async fn add_aksk(&self, add_req: Json<IamCertAkSkAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<IamCertAkSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCiCertAkSkServ::general_cert(add_req.0, &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -40,8 +38,7 @@ impl IamCiCertManageApi {
     async fn delete_aksk(&self, id: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamCiCertAkSkServ::delete_cert(&id.0, &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -91,8 +88,7 @@ impl IamCiCertApi {
         };
 
         let cert = IamCertServ::get_cert_by_relrubmid_kind_supplier(&account_id.0, &kind, vec![supplier], conf_id, &true_tenant_id.unwrap_or_default(), &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(cert)
     }
 
@@ -103,8 +99,7 @@ impl IamCiCertApi {
         funs.begin().await?;
         IamCertServ::add_3th_kind_cert(&mut add_req.0, &account_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -113,8 +108,7 @@ impl IamCiCertApi {
     async fn get_third_cert(&self, account_id: Query<String>, supplier: Query<String>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let rbum_cert = IamCertServ::get_3th_kind_cert_by_rel_rubm_id(&account_id.0, vec![supplier.0], &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(rbum_cert)
     }
 
@@ -125,8 +119,7 @@ impl IamCiCertApi {
     async fn third_integration_sync(&self, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let funs = iam_constants::get_tardis_inst();
         let msg = IamCertServ::third_integration_sync_without_config(&funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(msg)
     }
 }
@@ -146,8 +139,7 @@ impl IamCiLdapCertApi {
             ..Default::default()
         };
         let result = IamCertLdapServ::get_ldap_resp_by_cn(&cn.0, &funs, &ctx).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 }

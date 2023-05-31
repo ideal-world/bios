@@ -1,4 +1,4 @@
-use bios_basic::spi::dto::spi_basic_dto::SpiQueryCondReq;
+use bios_basic::dto::BasicQueryCondInfo;
 use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
@@ -37,9 +37,9 @@ pub struct LogItemFindReq {
     pub keys: Option<Vec<TrimString>>,
     pub ops: Option<Vec<String>>,
     pub owners: Option<Vec<String>>,
-    pub own_paths: Option<Vec<String>>,
+    pub own_paths: Option<String>,
     // Extended filtering conditions
-    pub ext: Option<Vec<SpiQueryCondReq>>,
+    pub ext: Option<Vec<BasicQueryCondInfo>>,
     pub rel_keys: Option<Vec<TrimString>>,
     pub ts_start: Option<DateTime<Utc>>,
     pub ts_end: Option<DateTime<Utc>>,
