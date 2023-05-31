@@ -245,7 +245,7 @@ impl IamTenantServ {
             None
         };
         IamCertServ::init_default_ident_conf(
-            &mut IamCertConfUserPwdAddOrModifyReq {
+            &IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: platform_config.cert_conf_by_user_pwd.ak_rule_len_min,
                 ak_rule_len_max: platform_config.cert_conf_by_user_pwd.ak_rule_len_max,
                 sk_rule_len_min: platform_config.cert_conf_by_user_pwd.sk_rule_len_min,
