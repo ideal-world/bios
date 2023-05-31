@@ -4,7 +4,7 @@ use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::log::info;
-use tardis::mail::mail_client::{TardisMailClient, TardisMailSendReq};
+
 use tardis::rand::Rng;
 use tardis::TardisFunsInst;
 
@@ -17,7 +17,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfPhoneVCodeAddOrModifyReq;
 use crate::basic::dto::iam_cert_dto::{IamCertPhoneVCodeAddReq, IamCertPhoneVCodeModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
-use crate::iam_config::{IamBasicConfigApi, IamConfig};
+use crate::iam_config::IamBasicConfigApi;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::sms_client::SmsClient;
@@ -216,9 +216,9 @@ impl IamCertPhoneVCodeServ {
     }
 
     async fn send_activation_phone(account_id: &str, phone: &str, vcode: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
+        let _account_name = IamAccountServ::peek_item(account_id, &IamAccountFilterReq::default(), funs, ctx).await?.name;
         // TODO send activation
-        SmsClient::send_vcode(phone, &vcode, funs, &ctx).await?;
+        SmsClient::send_vcode(phone, vcode, funs, ctx).await?;
         Ok(())
     }
 

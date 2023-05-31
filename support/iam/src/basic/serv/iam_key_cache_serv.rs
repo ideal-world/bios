@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::default::Default;
 use std::str::FromStr;
 
@@ -354,17 +355,56 @@ impl IamResCacheServ {
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
+    // add anonymous access permissions
+    pub async fn add_anonymous_res_rel(item_code: &str, action: &str, st: Option<i64>, et: Option<i64>, funs: &TardisFunsInst) -> TardisResult<()> {
+        let res_auth = IamCacheResAuth {
+            tenants: "#*#".to_string(),
+            st,
+            et,
+            ..Default::default()
+        };
+        let mut res_dto = IamCacheResRelAddOrModifyDto {
+            auth: Some(res_auth),
+            need_crypto_req: false,
+            need_crypto_resp: false,
+            need_double_auth: false,
+        };
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
+        if let Some(rels) = rels {
+            let old_res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
+            res_dto.need_crypto_req = old_res_dto.need_crypto_req;
+            res_dto.need_crypto_resp = old_res_dto.need_crypto_resp;
+            res_dto.need_double_auth = old_res_dto.need_double_auth;
+        }
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
+    }
+
     pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
-        if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
+        if (add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some()) && add_or_modify_req.pwd.is_none() {
             // TODO support time range
             return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none", "409-iam-cache-res-date-not-none"));
         }
+        // TODO improve PWD
+        let pwd = add_or_modify_req.pwd.clone().map(|pwd| {
+            HashMap::from([(
+                pwd,
+                if let (Some(st), Some(et)) = (add_or_modify_req.st, add_or_modify_req.et) {
+                    Some((st, et))
+                } else {
+                    None
+                },
+            )])
+        });
         let mut res_auth = IamCacheResAuth {
             accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
             roles: format!("#{}#", add_or_modify_req.roles.join("#")),
             groups: format!("#{}#", add_or_modify_req.groups.join("#")),
             apps: format!("#{}#", add_or_modify_req.apps.join("#")),
             tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            pwd,
+            ..Default::default()
         };
         let mut res_dto = IamCacheResRelAddOrModifyDto {
             auth: None,
@@ -383,6 +423,14 @@ impl IamResCacheServ {
                 res_auth.groups = format!("{}{}", res_auth.groups, old_auth.groups);
                 res_auth.apps = format!("{}{}", res_auth.apps, old_auth.apps);
                 res_auth.tenants = format!("{}{}", res_auth.tenants, old_auth.tenants);
+                if let Some(old_pwd) = old_auth.pwd {
+                    res_auth.pwd = if let Some(mut res_auth_pwd) = res_auth.pwd.clone() {
+                        res_auth_pwd.extend(old_pwd);
+                        res_auth.pwd
+                    } else {
+                        Some(old_pwd)
+                    };
+                }
             }
 
             if let Some(need_crypto_req) = add_or_modify_req.need_crypto_req {
@@ -495,6 +543,10 @@ struct IamCacheResAuth {
     pub groups: String,
     pub apps: String,
     pub tenants: String,
+    // pwd->(st,et)
+    pub pwd: Option<HashMap<String, Option<(i64, i64)>>>,
+    pub st: Option<i64>,
+    pub et: Option<i64>,
 }
 
 pub struct IamCacheResRelAddOrModifyReq {
@@ -505,6 +557,8 @@ pub struct IamCacheResRelAddOrModifyReq {
     pub groups: Vec<String>,
     pub apps: Vec<String>,
     pub tenants: Vec<String>,
+    //pwd first
+    pub pwd: Option<String>,
     pub need_crypto_req: Option<bool>,
     pub need_crypto_resp: Option<bool>,
     pub need_double_auth: Option<bool>,

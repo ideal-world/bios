@@ -371,12 +371,12 @@ impl IamAccountServ {
         }
         if let Some(cert_phone) = &modify_req.cert_phone {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
-                IamCertPhoneVCodeServ::add_or_modify_cert(cert_phone, &id, &cert_conf.id, funs, ctx).await?;
+                IamCertPhoneVCodeServ::add_or_modify_cert(cert_phone, id, &cert_conf.id, funs, ctx).await?;
             }
         }
         if let Some(cert_mail) = &modify_req.cert_mail {
             if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
-                IamCertMailVCodeServ::add_or_modify_cert(cert_mail, &id, &cert_conf.id, funs, ctx).await?;
+                IamCertMailVCodeServ::add_or_modify_cert(cert_mail, id, &cert_conf.id, funs, ctx).await?;
             }
         }
         if let Some(exts) = &modify_req.exts {
