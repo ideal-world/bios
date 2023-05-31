@@ -14,7 +14,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 
 use crate::basic::dto::iam_cert_conf_dto::IamCertConfMailVCodeAddOrModifyReq;
-use crate::basic::dto::iam_cert_dto::IamCertMailVCodeAddReq;
+use crate::basic::dto::iam_cert_dto::{IamCertMailVCodeAddReq, IamCertMailVCodeModifyReq};
 use crate::basic::dto::iam_filer_dto::IamAccountFilterReq;
 use crate::basic::serv::iam_account_serv::IamAccountServ;
 use crate::basic::serv::iam_cert_serv::IamCertServ;
@@ -121,6 +121,39 @@ impl IamCertMailVCodeServ {
         .await?;
         Self::send_activation_mail(account_id, &add_req.mail, &vcode, funs, ctx).await?;
         Ok(id)
+    }
+
+    pub async fn modify_cert(id: &str, modify_req: &IamCertMailVCodeModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        RbumCertServ::modify_rbum(
+            id,
+            &mut RbumCertModifyReq {
+                ak: Some(TrimString(modify_req.mail.to_string())),
+                sk: None,
+                ext: None,
+                start_time: None,
+                end_time: None,
+                conn_uri: None,
+                status: None,
+                is_ignore_check_sk: false,
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn add_or_modify_cert(mail: &str, account_id: &str, rel_rbum_cert_conf_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::MailVCode, funs, ctx).await;
+        match resp {
+            Ok(cert) => {
+                Self::modify_cert(&cert.id, &IamCertMailVCodeModifyReq { mail: mail.to_string() }, funs, ctx).await?;
+            }
+            Err(_) => {
+                Self::add_cert(&IamCertMailVCodeAddReq { mail: mail.to_string() }, account_id, rel_rbum_cert_conf_id, funs, ctx).await?;
+            }
+        }
+        Ok(())
     }
 
     pub async fn resend_activation_mail(account_id: &str, mail: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {

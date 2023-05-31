@@ -3,7 +3,6 @@ use crate::basic::serv::iam_app_serv::IamAppServ;
 
 use crate::iam_constants::{self};
 use bios_basic::process::task_processor::TaskProcessor;
-use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 
@@ -24,8 +23,7 @@ impl IamCiAppApi {
         funs.begin().await?;
         let result = IamAppServ::add_app_agg(&add_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -39,9 +37,7 @@ impl IamCiAppApi {
 
         IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let ctx_tesk = ctx.0.clone();
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_tesk.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {

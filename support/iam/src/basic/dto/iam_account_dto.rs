@@ -65,6 +65,11 @@ pub struct IamAccountAggModifyReq {
     #[oai(validator(min_length = "2", max_length = "1000"))]
     pub icon: Option<String>,
 
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub cert_phone: Option<TrimString>,
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub cert_mail: Option<TrimString>,
+
     pub role_ids: Option<Vec<String>>,
     pub org_cate_ids: Option<Vec<String>>,
 
