@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bios_basic::rbum::{
     dto::rbum_filer_dto::RbumSetFilterReq,
     serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetServ},
@@ -32,16 +30,6 @@ pub struct LogParamContent {
     pub ak: String,
     pub ip: String,
     pub key_name: Option<String>,
-}
-
-#[derive(Serialize, Default, Debug)]
-struct LogSearchExt {
-    pub name: String,
-    pub ak: String,
-    pub ip: String,
-    pub key: String,
-    pub ts: String,
-    pub op: String,
 }
 
 pub enum LogParamTag {
@@ -136,7 +124,7 @@ impl SpiLogClient {
             content.name = cert.owner_name.unwrap_or("".to_string());
         }
         // get ext name
-        content.key_name = Self::get_key_name(&tag, content.key.as_deref(), funs, ctx).await;
+        content.key_name = Self::get_key_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
 
         // create search_ext
         let search_ext = json!({
@@ -147,38 +135,24 @@ impl SpiLogClient {
             "ts":ts,
             "op":op,
         });
-        
+
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
-        let mut body = HashMap::from([
-            ("tag", json!(tag)),
-            ("content", json!(content)),
-            ("ext", search_ext),
-        ]);
-        if let Some(owner) = owner {
-            body.insert("owner", json!(owner));
-        }
-        if let Some(own_paths) = own_paths {
-            body.insert("own_paths", json!(own_paths));
-        }
-        if let Some(kind) = kind {
-            body.insert("kind", json!(kind));
-        }
-        if let Some(key) = key {
-            body.insert("key", json!(key));
-        }
-        if let Some(op) = op {
-            body.insert("op", json!(op));
-        }
-        if let Some(rel_key) = rel_key {
-            body.insert("rel_key", json!(rel_key));
-        }
-        if let Some(ts) = ts {
-            body.insert("ts", json!(ts));
-        }
-
+        let body = json!({
+            "tag": tag,
+            "content": TardisFuns::json.obj_to_string(&content)?,
+            "owner": owner,
+            "own_paths":own_paths,
+            "kind": kind,
+            "ext": search_ext,
+            "key": key,
+            "op": op,
+            "rel_key": rel_key,
+            "ts": ts,
+        });
+        log::info!("body: {}", body.to_string());
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
         Ok(())
     }
