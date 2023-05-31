@@ -134,49 +134,44 @@ impl SpiLogClient {
         content.key_name = Self::get_key_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
 
         // create search_ext
-        let mut search_ext = LogSearchExt {
-            name: content.name.clone(),
-            ak: content.ak.clone(),
-            ip: content.ip.clone(),
-            op: content.op.clone(),
-            ..Default::default()
-        };
-        if let Some(key) = key.clone() {
-            search_ext.key = key;
-        }
-        if let Some(ts) = ts.clone() {
-            search_ext.ts = ts;
-        }
-
+        let search_ext = json!({
+            "name":content.name,
+            "ak":content.ak,
+            "ip":content.ip,
+            "key":content.key,
+            "ts":ts,
+            "op":op,
+        });
+        
         // generate log item
         let tag: String = tag.into();
         let own_paths = if ctx.own_paths.len() < 2 { None } else { Some(ctx.own_paths.clone()) };
         let owner = if ctx.owner.len() < 2 { None } else { Some(ctx.owner.clone()) };
         let mut body = HashMap::from([
-            ("tag", tag),
-            ("content", TardisFuns::json.obj_to_string(&content)?),
-            ("ext", TardisFuns::json.obj_to_string(&search_ext)?),
+            ("tag", json!(tag)),
+            ("content", json!(content)),
+            ("ext", search_ext),
         ]);
         if let Some(owner) = owner {
-            body.insert("owner", owner);
+            body.insert("owner", json!(owner));
         }
         if let Some(own_paths) = own_paths {
-            body.insert("own_paths", own_paths);
+            body.insert("own_paths", json!(own_paths));
         }
         if let Some(kind) = kind {
-            body.insert("kind", kind);
+            body.insert("kind", json!(kind));
         }
         if let Some(key) = key {
-            body.insert("key", key);
+            body.insert("key", json!(key));
         }
         if let Some(op) = op {
-            body.insert("op", op);
+            body.insert("op", json!(op));
         }
         if let Some(rel_key) = rel_key {
-            body.insert("rel_key", rel_key);
+            body.insert("rel_key", json!(rel_key));
         }
         if let Some(ts) = ts {
-            body.insert("ts", ts);
+            body.insert("ts", json!(ts));
         }
 
         funs.web_client().post_obj_to_str(&format!("{log_url}/ci/item"), &body, headers.clone()).await?;
