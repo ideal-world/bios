@@ -163,6 +163,17 @@ pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
     Ok(())
 }
 
+pub async fn delete_auth(res_action: &str, res_uri: &str) -> TardisResult<()> {
+    TardisFuns::cache_by_module_or_default(DOMAIN_CODE)
+        .hdel(
+            &TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE).cache_key_res_info,
+            &format!("{}##{}", res_uri, res_action),
+        )
+        .await
+        .unwrap();
+    remove_res(res_action, res_uri)
+}
+
 fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &Vec<String>, multi_wildcard: bool, matched_uris: &mut Vec<ResContainerLeafInfo>) {
     // TODO "res_items[0] == "?"" approach will ignore the query, there needs to be a better way
     if res_container.has_child("$") && (res_items.is_empty() || multi_wildcard || res_items[0] == "?") {

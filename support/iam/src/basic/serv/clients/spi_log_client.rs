@@ -203,7 +203,13 @@ impl SpiLogClient {
                     }
                 }
                 LogParamTag::SecurityAlarm => None,
-                LogParamTag::SecurityVisit => None,
+                LogParamTag::SecurityVisit => {
+                    if let Ok(item) = IamAccountServ::get_item(key, &IamAccountFilterReq::default(), funs, ctx).await {
+                        Some(item.name)
+                    } else {
+                        None
+                    }
+                },
                 LogParamTag::Log => None,
                 LogParamTag::Token => None,
             }

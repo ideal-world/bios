@@ -1,7 +1,4 @@
-use bios_basic::{
-    rbum::{rbum_config::RbumConfig, rbum_initializer},
-    spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer},
-};
+use bios_basic::spi::{dto::spi_bs_dto::SpiBsCertResp, spi_constants, spi_funs::SpiBsInst, spi_initializer};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     web::web_server::TardisWebServer,
