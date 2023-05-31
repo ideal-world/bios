@@ -1,14 +1,21 @@
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
+use std::{
+    env,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
 };
 
-use bios_basic::{spi::spi_initializer, test::test_http_client::TestHttpClient};
+use bios_basic::{
+    rbum::serv::rbum_kind_serv::RbumKindServ,
+    spi::{dto::spi_bs_dto::SpiBsAddReq, spi_constants, spi_initializer},
+    test::test_http_client::TestHttpClient,
+};
 use bios_mw_schedule::{schedule_constants::DOMAIN_CODE, schedule_initializer, serv::schedule_job_serv::OwnedScheduleTaskServ};
 use bios_spi_kv::kv_initializer;
 use bios_spi_log::log_initializer;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, field::TrimString, result::TardisResult},
     tokio,
     web::{
         poem_openapi,
@@ -41,6 +48,7 @@ pub async fn init_tardis() -> TardisResult<()> {
     // rbum_initializer::init("", RbumConfig::default()).await?;
     let web_server = TardisFuns::web_server();
     // cache_initializer::init(web_server).await?;
+    bios_basic::rbum::rbum_initializer::init("bios-spi", bios_basic::rbum::rbum_config::RbumConfig::default()).await?;
     log_initializer::init(web_server).await?;
     kv_initializer::init(web_server).await?;
     schedule_initializer::init(web_server).await?;
@@ -68,10 +76,6 @@ pub async fn init_task_serve_group(size: usize) -> TardisResult<Vec<Arc<OwnedSch
 }
 #[allow(dead_code)]
 pub async fn init_client() -> TardisResult<TestHttpClient> {
-    // const LOG_DOMAIN_CODE: &str = bios_spi_log::log_constants::DOMAIN_CODE;
-    // const KV_DOMAIN_CODE: &str = bios_spi_log::log_constants::DOMAIN_CODE;
-    // init_spi(LOG_DOMAIN_CODE).await?;
-    // init_spi(KV_DOMAIN_CODE).await?;
     let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", DOMAIN_CODE));
     client.set_auth(&TardisContext {
         own_paths: "t1/app001".to_string(),
@@ -82,4 +86,41 @@ pub async fn init_client() -> TardisResult<TestHttpClient> {
         ..Default::default()
     })?;
     Ok(client)
+}
+
+#[allow(dead_code)]
+pub async fn init_spi(code: &str) -> TardisResult<()> {
+    let mut client = TestHttpClient::new(format!("https://localhost:8080/{}", code));
+    let funs = TardisFuns::inst_with_db_conn(DOMAIN_CODE.to_string(), None);
+
+    let kind_id = RbumKindServ::get_rbum_kind_id_by_code(spi_constants::SPI_PG_KIND_CODE, &funs).await?.unwrap();
+    let ctx = TardisContext {
+        own_paths: "".to_string(),
+        ak: "".to_string(),
+        roles: vec![],
+        groups: vec![],
+        owner: "".to_string(),
+        ..Default::default()
+    };
+    client.set_auth(&ctx)?;
+
+    let bs_id: String = client
+        .post(
+            "/ci/manage/bs",
+            &SpiBsAddReq {
+                name: TrimString("test-spi".to_string()),
+                kind_id: TrimString(kind_id),
+                conn_uri: env::var("TARDIS_FW.DB.URL").unwrap(),
+                ak: TrimString("".to_string()),
+                sk: TrimString("".to_string()),
+                ext: "{\"max_connections\":20,\"min_connections\":10}".to_string(),
+                private: false,
+                disabled: None,
+            },
+        )
+        .await;
+
+    let _: Void = client.put(&format!("/ci/manage/bs/{}/rel/app001", bs_id), &Void {}).await;
+
+    Ok(())
 }
