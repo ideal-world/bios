@@ -85,38 +85,6 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             }),
         )
         .await;
-    
-        // {"op":"登录","key":"tkaiXSnpUyqoNVa-swsGG66","name":"九九9527","ak":"jiujiu","ip":"","key_name":null}
-        // {"ak":"jiujiu","ip":"","op":"Login","ts":"2023-05-31T01:14:08.892463817+00:00","key":"tkaiXSnpUyqoNVa-swsGG66","name":"九九9527"}
-        let kind: Option<String> = None;
-        let owner: Option<String> = None;
-        let owner_paths: Option<String> = None;
-        let rel_key: Option<String> = None;
-        let search_ext = json!({
-            "name":"九九9527",
-            "ak":"jiujiu",
-            "ip":"",
-            "key": "tkaiXSnpUyqoNVa-swsGG66",
-            "ts":"2023-05-31T01:14:08.892463817+00:00",
-            "op":"Login",
-        });
-        let _: Void = client
-        .post(
-            "/ci/item",
-            &json!({
-                "tag":"security_visit",
-                "kind": kind,
-                "key": "tkaiXSnpUyqoNVa-swsGG66",
-                "content": r#"{"op":"登录","key":"tkaiXSnpUyqoNVa-swsGG66","name":"九九9527","ak":"jiujiu","ip":"","key_name":null}"#,
-                "ext": search_ext,
-                "owner":owner,
-                "own_paths":owner_paths,
-                "op":"Login",
-                "ts":"2022-09-26T23:23:50.000Z",
-                "rel_key":rel_key
-            }),
-        )
-        .await;
 
     let find_result: TardisResp<TardisPage<LogItemFindResp>> = client
         .put_resp(
