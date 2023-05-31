@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::tokio::task;
+
 use tardis::web::web_resp::TardisPage;
-use tardis::{tokio, TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -243,9 +243,9 @@ impl IamCertServ {
     }
 
     pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
-        let kernel_cert = Self::get_cert_detail_by_id_and_kind(account_id, rel_iam_cert_kind, funs, &ctx).await;
+        let kernel_cert = Self::get_cert_detail_by_id_and_kind(account_id, rel_iam_cert_kind, funs, ctx).await;
         if let Ok(kernel_cert) = kernel_cert {
-            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &ctx).await?;
+            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: kernel_cert.id,
                 ak: kernel_cert.ak,
