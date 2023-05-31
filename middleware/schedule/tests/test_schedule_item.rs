@@ -13,7 +13,14 @@ pub async fn test(client: &mut TestHttpClient, _funs: &TardisFunsInst) -> Tardis
     });
     let _resp = client.put::<_, Void>("/ci/schedule/jobs", &req).await;
     let _resp = client.put::<_, Void>("/ci/schedule/jobs", &req).await;
-    // tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+    // wait for press enter, enable to debug
+    // {
+    //     use std::io::{self, Write};
+    //     print!("Press enter to continue...");
+    //     io::stdout().flush().unwrap();
+    //     let mut s = String::new();
+    //     io::stdin().read_line(&mut s).unwrap();
+    // }
     client.delete("/ci/schedule/jobs/test").await;
     Ok(())
 }
