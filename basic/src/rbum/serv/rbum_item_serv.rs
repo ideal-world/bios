@@ -12,6 +12,7 @@ use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
+use super::rbum_crud_serv::IdNameResp;
 use crate::process::task_processor::TaskProcessor;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{
@@ -30,8 +31,11 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use lazy_static::lazy_static;
 
-use super::rbum_crud_serv::IdNameResp;
+lazy_static! {
+    pub static ref RBUM_ITEM_TABLE: Alias = Alias::new("rbum_item");
+}
 
 pub struct RbumItemServ;
 
