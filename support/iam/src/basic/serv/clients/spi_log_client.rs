@@ -1,6 +1,6 @@
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumSetFilterReq,
-    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetServ},
+    dto::rbum_filer_dto::RbumSetCateFilterReq,
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::{RbumSetServ, RbumSetCateServ}},
 };
 use serde::Serialize;
 
@@ -161,14 +161,14 @@ impl SpiLogClient {
         if let Some(key) = key {
             match tag {
                 LogParamTag::IamTenant => {
-                    if let Ok(item) = IamTenantServ::peek_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamTenantServ::get_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamOrg => {
-                    if let Ok(item) = RbumSetServ::get_rbum(key, &RbumSetFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = RbumSetCateServ::get_rbum(key, &RbumSetCateFilterReq::default(), funs, ctx).await {
                         Some(item.name)
                     } else {
                         None

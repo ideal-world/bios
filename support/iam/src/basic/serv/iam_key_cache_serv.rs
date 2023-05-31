@@ -95,13 +95,13 @@ impl IamIdentCacheServ {
             let mock_ctx = TardisContext { ..Default::default() };
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
-                Some(token.to_string()),
+                Some(iam_item_id.to_string()),
                 "下线账号".to_string(),
                 Some("OfflineAccount".to_string()),
                 &mock_ctx,
             )
             .await;
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "退出".to_string(), Some("Quit".to_string()), &mock_ctx).await;
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(iam_item_id.to_string()), "退出".to_string(), Some("Quit".to_string()), &mock_ctx).await;
 
             mock_ctx.execute_task().await?;
         }

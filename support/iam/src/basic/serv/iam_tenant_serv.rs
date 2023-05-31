@@ -393,6 +393,16 @@ impl IamTenantServ {
             return Ok(());
         }
 
+        let mut log_tasks = vec![];
+        if modify_req.cert_conf_by_phone_vcode.is_some() {
+            log_tasks.push(("修改认证方式为手机号".to_string(), "ModifyCertifiedWay".to_string()));
+        }
+        if modify_req.cert_conf_by_mail_vcode.is_some() {
+            log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
+        }
+        for (op_describe, op_kind) in log_tasks {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+        }
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
 

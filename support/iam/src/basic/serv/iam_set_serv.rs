@@ -180,8 +180,10 @@ impl IamSetServ {
 
         if result.is_ok() {
             let item = RbumSetServ::get_rbum(set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
-            let (op_describe, tag, op_kind) = match item.kind.as_str() {
-                "Org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg), Some("Add".to_string())),
+            let mut kind = item.kind;
+            kind.make_ascii_lowercase();
+            let (op_describe, tag, op_kind) = match kind.as_str() {
+                "org" => ("添加部门".to_string(), Some(LogParamTag::IamOrg), Some("Add".to_string())),
                 "res" => ("添加目录".to_string(), Some(LogParamTag::IamRes), Some("Add".to_string())),
                 _ => (String::new(), None, None),
             };
@@ -212,8 +214,10 @@ impl IamSetServ {
         if result.is_ok() {
             let set_cate_item = RbumSetCateServ::get_rbum(set_cate_id, &RbumSetCateFilterReq::default(), funs, ctx).await?;
             let item = RbumSetServ::get_rbum(&set_cate_item.rel_rbum_set_id, &RbumSetFilterReq::default(), funs, ctx).await?;
-            match item.kind.as_str() {
-                "Org" => {
+            let mut kind = item.kind;
+            kind.make_ascii_lowercase();
+            match kind.as_str() {
+                "org" => {
                     if let Some(name) = &modify_req.name {
                         let _ = SpiLogClient::add_ctx_task(
                             LogParamTag::IamOrg,
@@ -249,7 +253,9 @@ impl IamSetServ {
         let result = RbumSetCateServ::delete_rbum(set_cate_id, funs, ctx).await;
 
         if result.is_ok() {
-            let (op_describe, tag, op_kind) = match item.kind.as_str() {
+            let mut kind = item.kind;
+            kind.make_ascii_lowercase();
+            let (op_describe, tag, op_kind) = match kind.as_str() {
                 "Org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg), Some("Delete".to_string())),
                 "res" => ("删除目录".to_string(), Some(LogParamTag::IamRes), Some("Delete".to_string())),
                 _ => (String::new(), None, None),
