@@ -30,6 +30,8 @@ publish = false
 lto = true
 codegen-units = 1
 opt-level = "z"
+panic = "abort"
+strip = true
 
 [workspace.dependencies]
 # basic
@@ -42,7 +44,8 @@ fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
 
 # tardis
-tardis = { version = "0.1.0-beta.8" }
+tardis = { version = "=0.1.0-beta.8" }
+# tardis = { paths = "../tardis/tardis" }
 
 # crypto
 base64 = { version = "0.21" }
