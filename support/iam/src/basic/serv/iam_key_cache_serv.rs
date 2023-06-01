@@ -92,7 +92,10 @@ impl IamIdentCacheServ {
             Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
-            let mock_ctx = TardisContext { ..Default::default() };
+            let mock_ctx = TardisContext {
+                owner: iam_item_id.to_string(),
+                ..Default::default()
+            };
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(iam_item_id.to_string()),
