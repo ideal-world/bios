@@ -130,7 +130,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         query.column((flow_model::Entity, flow_model::Column::Info));
         query.column((flow_model::Entity, flow_model::Column::InitStateId));
         query.column((flow_model::Entity, flow_model::Column::Tag));
-        query.expr_as(Expr::val(json!{()}), Alias::new("transitions"));
+        query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
         if let Some(tag) = &filter.tag {
             query.and_where(Expr::col(flow_model::Column::Tag).eq(tag.as_str()));
         }
