@@ -61,18 +61,29 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         Ok(flow_state::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
-            sys_state: Set(add_req.sys_state.to_string()),
+            sys_state: Set(add_req.sys_state.clone()),
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
-            vars: Set(add_req.vars.as_ref().map(|vars| TardisFuns::json.obj_to_json(&vars).unwrap()).unwrap_or(json!({}))),
-            state_kind: Set(add_req.state_kind.as_ref().map(|state_kind| state_kind.to_string()).unwrap_or(FlowStateKind::Simple.to_string())),
+            state_kind: Set(add_req.state_kind.clone().unwrap_or(FlowStateKind::Simple)),
             kind_conf: Set(add_req.kind_conf.as_ref().unwrap_or(&json!({})).clone()),
             template: Set(add_req.template.unwrap_or(false)),
             rel_state_id: Set(add_req.rel_state_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
-            // TODO
-            own_paths: Set(ctx.own_paths.clone()),
             ..Default::default()
         })
+    }
+
+    async fn before_modify_item(id: &str, modify_req: &mut FlowStateModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // Modifications are allowed only where non-key fields are modified or not used
+        if (modify_req.scope_level.is_some()
+            || modify_req.disabled.is_some()
+            || modify_req.sys_state.is_some()
+            || modify_req.state_kind.is_some()
+            || modify_req.kind_conf.is_some())
+            && FlowModelServ::state_is_used(id, funs, ctx).await?
+        {
+            return Err(funs.err().conflict(&Self::get_obj_name(), "modify", &format!("state {id} already used"), "409-flow-state-already-used"));
+        }
+        Ok(())
     }
 
     async fn package_item_modify(_: &str, modify_req: &FlowStateModifyReq, _: &TardisFunsInst, _: &TardisContext) -> TardisResult<Option<RbumItemKernelModifyReq>> {
@@ -91,7 +102,6 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         if modify_req.icon.is_none()
             && modify_req.sys_state.is_none()
             && modify_req.info.is_none()
-            && modify_req.vars.is_none()
             && modify_req.state_kind.is_none()
             && modify_req.kind_conf.is_none()
             && modify_req.template.is_none()
@@ -108,16 +118,13 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             flow_state.icon = Set(icon.to_string());
         }
         if let Some(sys_state) = &modify_req.sys_state {
-            flow_state.sys_state = Set(sys_state.to_string());
+            flow_state.sys_state = Set(sys_state.clone());
         }
         if let Some(info) = &modify_req.info {
             flow_state.info = Set(info.to_string());
         }
-        if let Some(vars) = &modify_req.vars {
-            flow_state.vars = Set(TardisFuns::json.obj_to_json(vars)?);
-        }
         if let Some(state_kind) = &modify_req.state_kind {
-            flow_state.state_kind = Set(state_kind.to_string());
+            flow_state.state_kind = Set(state_kind.clone());
         }
         if let Some(kind_conf) = &modify_req.kind_conf {
             flow_state.kind_conf = Set(kind_conf.clone());
@@ -135,6 +142,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
     }
 
     async fn before_delete_item(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Option<FlowStateDetailResp>> {
+        // Can only be deleted when not in use
         if FlowModelServ::state_is_used(id, funs, ctx).await? {
             return Err(funs.err().conflict(&Self::get_obj_name(), "delete", &format!("state {id} already used"), "409-flow-state-already-used"));
         }
@@ -145,7 +153,6 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         query.column((flow_state::Entity, flow_state::Column::Icon));
         query.column((flow_state::Entity, flow_state::Column::SysState));
         query.column((flow_state::Entity, flow_state::Column::Info));
-        query.column((flow_state::Entity, flow_state::Column::Vars));
         query.column((flow_state::Entity, flow_state::Column::StateKind));
         query.column((flow_state::Entity, flow_state::Column::KindConf));
         query.column((flow_state::Entity, flow_state::Column::Template));
@@ -153,13 +160,13 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         query.column((flow_state::Entity, flow_state::Column::Tag));
 
         if let Some(sys_state) = &filter.sys_state {
-            query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state.to_string()));
+            query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state));
         }
         if let Some(tag) = &filter.tag {
             query.and_where(Expr::col(flow_state::Column::Tag).eq(tag.as_str()));
         }
         if let Some(state_kind) = &filter.state_kind {
-            query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind.to_string()));
+            query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind));
         }
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_state::Column::Template).eq(template));
