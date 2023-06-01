@@ -46,7 +46,7 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
     }
     req.path = req.path.trim().to_string();
     if req.path.starts_with('/') {
-        req.path = req.path.strip_prefix('/').unwrap().to_string();
+        req.path = req.path.strip_prefix('/').map_or(req.path.clone(), |s| s.to_string());
     }
     if req.path.is_empty() {
         return Err(TardisError::bad_request("[Auth] Request is not legal, missing [path]", "400-auth-req-path-not-empty"));
@@ -281,7 +281,13 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             return Ok(Some(matched_res));
         }
     }
-    Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
+    if ctx.ak.is_some() {
+        //have token,not not have permission
+        Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
+    } else {
+        //not token
+        Err(TardisError::unauthorized("[Auth] Permission denied", "401-auth-req-unauthorized"))
+    }
 }
 
 pub async fn decrypt(
