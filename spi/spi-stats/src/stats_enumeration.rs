@@ -123,6 +123,8 @@ impl StatsDataTypeKind {
                 format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
                 value.pop().unwrap(),
             ))
+        } else if op == &BasicQueryOpKind::In {
+            Some((format!("{column_name} {} (${param_idx})", op.to_sql()), value.pop().unwrap()))
         } else {
             Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
         }
