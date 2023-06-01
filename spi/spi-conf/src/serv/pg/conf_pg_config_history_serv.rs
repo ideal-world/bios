@@ -13,7 +13,7 @@ use tardis::{
 
 use crate::{
     conf_constants::error,
-    dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigHistoryListResponse, ConfigItem},
+    dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigListResponse, ConfigItem},
 };
 
 use super::conf_pg_initializer;
@@ -53,7 +53,7 @@ macro_rules! get {
     };
 }
 
-pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigHistoryListResponse> {
+pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigListResponse> {
     // query config history list by a ConfigDescriptor
     let ConfigHistoryListRequest { descriptor, page_no, page_size } = req;
     descriptor.fix_namespace_id();
@@ -118,7 +118,7 @@ OFFSET {offset}
             })
         })
         .collect::<TardisResult<Vec<_>>>()?;
-    Ok(ConfigHistoryListResponse {
+    Ok(ConfigListResponse {
         total_count: total,
         page_number,
         pages_available: total / limit + 1,

@@ -90,6 +90,9 @@ WHERE
 pub async fn delete_namespace(discriptor: &mut NamespaceDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
+    if discriptor.namespace_id.is_empty() || discriptor.namespace_id == "public" {
+        return Err(TardisError::bad_request("default namespace(public) can not be deleted", error::NAMESPACE_DEFAULT_CANNOT_DELETE));
+    }
     conn.begin().await?;
     conn.execute_one(
         &format!(

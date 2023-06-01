@@ -3,6 +3,30 @@ use std::hash::Hash;
 use super::conf_namespace_dto::NamespaceId;
 use serde::{Deserialize, Serialize};
 use tardis::{db::sea_orm::prelude::*, web::poem_openapi};
+pub enum SearchMode {
+    /// 模糊查询
+    Fuzzy,
+    /// 精确查询
+    Exact,
+}
+
+impl Default for SearchMode {
+    fn default() -> Self {
+        Self::Fuzzy
+    }
+}
+
+impl From<&str> for SearchMode {
+    fn from(s: &str) -> Self {
+        match s {
+            // nacos use blur
+            "fuzzy" | "blur" => Self::Fuzzy,
+            // nacos use accurate
+            "exact" | "accurate" => Self::Exact,
+            _ => Self::default(),
+        }
+    }
+}
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigDescriptor {
@@ -18,8 +42,8 @@ pub struct ConfigDescriptor {
     #[oai(validator(min_length = 1, max_length = 256))]
     pub data_id: String,
     /// 标签
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tag: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
     #[serde(rename = "type")]
     /// 配置类型
     pub tp: Option<String>,
@@ -46,7 +70,7 @@ impl Default for ConfigDescriptor {
             namespace_id: "public".into(),
             group: Default::default(),
             data_id: Default::default(),
-            tag: Default::default(),
+            tags: Default::default(),
             tp: Default::default(),
         }
     }
@@ -72,8 +96,8 @@ pub struct ConfigPublishRequest {
     pub app_name: Option<String>,
     /// 源用户
     pub src_user: Option<String>,
-    /// 配置标签列表，可多个，逗号分隔
-    pub config_tags: Option<String>,
+    /// 配置标签列表，可多个
+    pub config_tags: Vec<String>,
     /// 配置描述
     pub desc: Option<String>,
     ///
@@ -172,8 +196,32 @@ impl Default for ConfigHistoryListRequest {
     }
 }
 
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Default)]
+#[serde(default)]
+pub struct ConfigListRequest {
+    /// 命名空间，默认为public与 ''相同
+    #[serde(alias = "tenant")]
+    #[serde(default)]
+    #[oai(default, validator(min_length = 1, max_length = 256))]
+    pub namespace_id: Option<NamespaceId>,
+    /// 配置分组名
+    #[oai(validator(min_length = 1, max_length = 256))]
+    pub group:  Option<String>,
+    /// 配置名
+    #[oai(validator(min_length = 1, max_length = 256))]
+    pub data_id:  Option<String>,
+    /// 标签
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(rename = "type")]
+    /// 配置类型
+    pub tp: Option<String>,
+    pub page_no: u32,
+    pub page_size: u32,
+}
+
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct ConfigHistoryListResponse {
+pub struct ConfigListResponse {
     pub total_count: u32,
     pub page_number: u32,
     pub pages_available: u32,

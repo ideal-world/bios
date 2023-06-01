@@ -58,7 +58,7 @@ dispatch_servive! {
 
     // for config history
     /// get config history list
-    get_history_list_by_namespace(req: &mut ConfigHistoryListRequest) -> TardisResult<ConfigHistoryListResponse>;
+    get_history_list_by_namespace(req: &mut ConfigHistoryListRequest) -> TardisResult<ConfigListResponse>;
     /// find come certain history
     find_history(descriptor: &mut ConfigDescriptor, id: &Uuid) -> TardisResult<ConfigItem>;
     /// find previous history

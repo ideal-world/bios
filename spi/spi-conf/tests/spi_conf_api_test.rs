@@ -8,7 +8,7 @@ use bios_basic::{
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::{
-        conf_config_dto::{ConfigHistoryListResponse, ConfigItem, ConfigItemDigest},
+        conf_config_dto::{ConfigListResponse, ConfigItem, ConfigItemDigest},
         conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
     },
 };
@@ -193,7 +193,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
 
     // 9.3 get config history
-    let response = client.get::<ConfigHistoryListResponse>("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    let response = client.get::<ConfigListResponse>("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
     assert_eq!(response.total_count, 5);
     assert_eq!(response.page_items[0].content, "测试版本2");
     assert_eq!(response.page_items[0].op_type, "U");
@@ -244,7 +244,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // 10.3 find first config history version 1
-    let response = client.get::<ConfigHistoryListResponse>(&format!("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id={data_id_1}")).await;
+    let response = client.get::<ConfigListResponse>(&format!("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id={data_id_1}")).await;
     assert_eq!(response.total_count, 2);
     let his_id_1 = &response.page_items[1].id;
     let his_id_2 = &response.page_items[0].id;

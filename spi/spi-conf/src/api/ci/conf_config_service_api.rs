@@ -36,11 +36,12 @@ impl ConfCiConfigServiceApi {
         request: &Request,
     ) -> TardisApiResult<String> {
         let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let tags = tag.0.unwrap_or_default().split(',').map(str::trim).map(String::from).collect();
         let mut descriptor = ConfigDescriptor {
             namespace_id,
             group: group.0,
             data_id: data_id.0,
-            tag: tag.0,
+            tags,
             tp: r#type.0,
         };
         let funs = request.tardis_fun_inst();
@@ -63,10 +64,6 @@ impl ConfCiConfigServiceApi {
         group: Query<String>,
         /// 配置名
         data_id: Query<String>,
-        /// 标签
-        tag: Query<Option<String>>,
-        /// 配置类型
-        r#type: Query<Option<String>>,
         ctx: TardisContextExtractor,
         request: &Request,
     ) -> TardisApiResult<Void> {
@@ -75,8 +72,7 @@ impl ConfCiConfigServiceApi {
             namespace_id,
             group: group.0,
             data_id: data_id.0,
-            tag: tag.0,
-            tp: r#type.0,
+            ..Default::default()
         };
         let funs = request.tardis_fun_inst();
         delete_config(&mut descriptor, &funs, &ctx.0).await?;
@@ -92,10 +88,6 @@ impl ConfCiConfigServiceApi {
         group: Query<String>,
         /// 配置名
         data_id: Query<String>,
-        /// 标签
-        tag: Query<Option<String>>,
-        /// 配置类型
-        r#type: Query<Option<String>>,
         md5: Query<Option<String>>,
         ctx: TardisContextExtractor,
         request: &Request,
@@ -108,8 +100,7 @@ impl ConfCiConfigServiceApi {
             namespace_id,
             group: group.0,
             data_id: data_id.0,
-            tag: tag.0,
-            tp: r#type.0,
+            ..Default::default()
         };
         let md5 = md5.0.unwrap_or_default();
         let funs = request.tardis_fun_inst();
@@ -121,6 +112,10 @@ impl ConfCiConfigServiceApi {
             None
         };
         TardisResp::ok(config)
+    }
+    #[oai(path = "/configs", method = "get")]
+    async fn get_configs(&self) {
+        todo!()
     }
     #[oai(path = "/history/list", method = "get")]
     async fn history_list(
@@ -139,7 +134,7 @@ impl ConfCiConfigServiceApi {
         page_size: Query<Option<u32>>,
         ctx: TardisContextExtractor,
         request: &Request,
-    ) -> TardisApiResult<ConfigHistoryListResponse> {
+    ) -> TardisApiResult<ConfigListResponse> {
         let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
         if namespace_id.is_empty() {
             namespace_id = "public".into();
@@ -224,22 +219,6 @@ impl ConfCiConfigServiceApi {
     }
     #[oai(path = "/history/configs", method = "get")]
     async fn configs_by_namespace(
-        &self,
-        namespace_id: Query<Option<NamespaceId>>,
-        tenant: Query<Option<NamespaceId>>,
-        ctx: TardisContextExtractor,
-        request: &Request,
-    ) -> TardisApiResult<Vec<ConfigItemDigest>> {
-        let mut namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
-        if namespace_id.is_empty() {
-            namespace_id = "public".into();
-        }
-        let funs = request.tardis_fun_inst();
-        let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
-        TardisResp::ok(config)
-    }
-    #[oai(path = "/configs", method = "get")]
-    async fn configs_by_namespace_alt(
         &self,
         namespace_id: Query<Option<NamespaceId>>,
         tenant: Query<Option<NamespaceId>>,

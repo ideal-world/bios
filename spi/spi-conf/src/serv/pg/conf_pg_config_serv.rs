@@ -1,9 +1,15 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::{HashMap, HashSet}, time::Duration};
 
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
-    db::{reldb_client::TardisRelDBClient, sea_orm::Value},
+    db::{
+        reldb_client::TardisRelDBClient,
+        sea_orm::{
+            prelude::{DateTimeUtc, Uuid},
+            Value,
+        },
+    },
     tokio::{sync::RwLock, time::Instant},
     TardisFunsInst,
 };
@@ -24,7 +30,7 @@ macro_rules! get {
     };
 }
 
-use super::{add_history, conf_pg_initializer, HistoryInsertParams, OpType};
+use super::{add_history, conf_pg_initializer, gen_select_sql_stmt, HistoryInsertParams, OpType};
 
 fn md5(content: &str) -> String {
     use tardis::crypto::rust_crypto::{digest::Digest, md5::Md5};
@@ -104,6 +110,7 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
     let group = &req.descriptor.group;
     let namespace = &req.descriptor.namespace_id;
     let content = &req.content;
+    let config_tags = &req.config_tags;
     let md5 = &md5(content);
     let app_name = req.app_name.as_deref();
     let schema = req.schema.as_deref();
@@ -124,32 +131,46 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
         ("schema", Value::from(schema)),
         ("src_user", Value::from(src_user)),
     ];
+
     let key_params = vec![("data_id", Value::from(data_id)), ("grp", Value::from(group)), ("namespace_id", Value::from(namespace))];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
-    let (mut conn, table_name) = conns.config;
+    let (mut conn, config_table_name) = conns.config;
+    let (_, tag_table_name) = conns.tag;
+    let (_, config_tag_rel_table_name) = conns.config_tag_rel;
     // check if exists
     let qry_result = conn
         .query_one(
             &format!(
-                r#"SELECT (data_id) FROM {table_name} cc
+                r#"SELECT (data_id) FROM {config_table_name} cc
 WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
                     "#,
             ),
             vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
         )
-        .await?;
+        .await?
+        .and_then(|r| r.try_get::<Uuid>("", "data_id").ok());
     let op_type: OpType;
 
     conn.begin().await?;
-    if qry_result.is_some() {
+    if !config_tags.is_empty() {
+        let placeholders = (1..=config_tags.len()).map(|idx| format!("${idx}")).collect::<Vec<String>>().join(", ");
+        let config_values = config_tags.iter().map(Value::from).collect();
+        // 1. insert tags
+        conn.execute_one(
+            &format!("INSERT INTO {tag_table_name} (id) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING",),
+            config_values,
+        )
+        .await?;
+    }
+    let config_id = if let Some(uuid) = qry_result {
         // if exists, update
         op_type = OpType::Update;
         let (set_caluse, where_caluse, values) = super::gen_update_sql_stmt(params, key_params);
         add_history(history, op_type, funs, ctx).await?;
         conn.execute_one(
             &format!(
-                r#"UPDATE {table_name} 
+                r#"UPDATE {config_table_name} 
 SET {set_caluse}
 WHERE {where_caluse}
         "#,
@@ -157,6 +178,7 @@ WHERE {where_caluse}
             values,
         )
         .await?;
+        uuid
     } else {
         // if not exists, insert
         op_type = OpType::Insert;
@@ -165,18 +187,53 @@ WHERE {where_caluse}
         fields_and_values.extend(key_params);
         let (fields, placeholders, values) = super::gen_insert_sql_stmt(fields_and_values);
         conn.begin().await?;
-        conn.execute_one(
-            &format!(
-                r#"INSERT INTO {table_name} 
+        let result = conn
+            .execute_one(
+                &format!(
+                    r#"INSERT INTO {config_table_name} 
         ({fields})
     VALUES
         ({placeholders})
-        "#,
+    RETURNING id
+        "#
+                ),
+                values,
+            )
+            .await?;
+        conn.query_one(
+            &format!(
+                r#"SELECT (data_id) FROM {config_table_name} cc
+    WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
+                    "#,
             ),
-            values,
+            vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
         )
-        .await?;
+        .await?
+        .and_then(|r| r.try_get::<Uuid>("", "data_id").ok())
+        .unwrap()
+    };
+    // get existed tags
+    let mut exsisted_tags = conn
+    .query_all(&format!("SELECT tag_id FROM {tag_table_name} t WHERE t.data_id=$1"), vec![Value::from(config_id)]).await?
+    .iter().map(|r| r.try_get::<String>("", "tag_id")).collect::<Result<HashSet<String>, _>>()?;
+    let mut insert_values = vec![];
+    for tag in config_tags {
+        if exsisted_tags.take(tag).is_none() {
+            // insert rel
+            insert_values.push(vec!(Value::from(tag), Value::from(config_id)));
+        }
     }
+    conn.insert_raw_many(&format!("INSERT INTO {config_tag_rel_table_name} (tag_id, config_id) VALUES $1"), insert_values).await?;
+    let placeholders = (1..=exsisted_tags.len()).map(|idx| format!("${idx}")).collect::<Vec<String>>().join(", ");
+    let mut delete_values = exsisted_tags.iter().map(Value::from).collect::<Vec<_>>();
+    let cfg_id_ph = delete_values.len() + 1;
+    delete_values.push(Value::from(config_id));
+    conn.execute_one(&format!(
+        r#"
+        DELETE FROM {config_tag_rel_table_name} ctr
+        WHERE ctr.config_id=${cfg_id_ph} AND ctr.tag_id NOT IN ({placeholders})
+        "#
+    ), delete_values).await?;
     conn.commit().await?;
     Ok(true)
 }
@@ -252,4 +309,97 @@ ORDER BY created_time DESC
         })
         .collect::<TardisResult<Vec<_>>>()?;
     Ok(list)
+}
+
+pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigListResponse> {
+    // query config history list by a ConfigDescriptor
+    let ConfigListRequest {
+        page_no,
+        page_size,
+        namespace_id,
+        group,
+        data_id,
+        tags,
+        tp,
+    } = req;
+    let limit = page_size.min(500).max(1);
+    let page_number = page_no.max(1);
+    let offset = (page_number - 1) * limit;
+    let mut keys = vec![];
+    let op = match mode {
+        SearchMode::Fuzzy => "~",
+        SearchMode::Exact => "=",
+    };
+    keys.extend(data_id.as_deref().map(|data_id| ("data_id", op, Value::from(data_id))));
+    keys.extend(namespace_id.as_deref().map(|namespace_id| ("namespace_id", op, Value::from(if namespace_id.is_empty() { "public" } else { namespace_id }))));
+    keys.extend(group.as_deref().map(|group| ("grp", op, Value::from(group))));
+    keys.extend(tp.as_deref().map(|tp| ("tp", op, Value::from(tp))));
+    let (where_clause, mut values) = gen_select_sql_stmt(keys);
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, config_table_name) = conns.config;
+    let (_, config_tag_rel_table_name) = conns.config_tag_rel;
+    let inner_join_clause = if !tags.is_empty() {
+        values.push(Value::from(tags));
+        format!(
+            r#"INNER JOIN (
+            SELECT data_id FROM {config_tag_rel_table_name} ctr
+            WHERE ctr.tag_id IN (${tags_placeholder})
+        ) AS ctrd ON cch.data_id=ctrd.data_id"#,
+            tags_placeholder = values.len()
+        )
+    } else {
+        "".into()
+    };
+    let qry_result_list = conn
+        .query_all(
+            &format!(
+                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, grp, count(*) AS total_count FROM {config_table_name} cch
+    WHERE {where_clause}
+    {inner_join_clause}
+    ORDER BY created_time DESC
+    LIMIT {limit}
+    OFFSET {offset}
+    "#,
+            ),
+            values,
+        )
+        .await?;
+    let mut total = 0;
+    let list = qry_result_list
+        .into_iter()
+        .map(|qry_result| {
+            get!(qry_result => {
+                id: Uuid,
+                data_id: String,
+                namespace_id: String,
+                md5: String,
+                content: String,
+                op_type: String,
+                created_time: DateTimeUtc,
+                modified_time: DateTimeUtc,
+                grp: String,
+                total_count: u32,
+            });
+            total = total_count;
+            Ok(ConfigItem {
+                id: id.to_string(),
+                data_id,
+                namespace: namespace_id,
+                md5,
+                content,
+                op_type,
+                created_time,
+                last_modified_time: modified_time,
+                group: grp,
+                ..Default::default()
+            })
+        })
+        .collect::<TardisResult<Vec<_>>>()?;
+    Ok(ConfigListResponse {
+        total_count: total,
+        page_number,
+        pages_available: total / limit + 1,
+        page_items: list,
+    })
 }

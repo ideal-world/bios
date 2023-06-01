@@ -12,6 +12,7 @@ pub mod error {
     }
     def_error_code! {
         "spi-conf" {
+            NAMESPACE_DEFAULT_CANNOT_DELETE: 400 = "default-namespace-cannot-be-deleted";
             INVALID_UUID:               400 = "invalid-uuid";
             CONF_NOTFOUND:              404 = "conf-not-exist";
             NAMESPACE_NOTFOUND:         404 = "namespace-not-exist";
