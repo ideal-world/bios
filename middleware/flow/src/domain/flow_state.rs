@@ -1,9 +1,9 @@
-use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 use tardis::basic::dto::TardisContext;
 use tardis::db::reldb_client::TardisActiveModel;
 use tardis::db::sea_orm;
 use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
+use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
 /// Similar to `Task` in BPMN
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation)]
@@ -25,7 +25,7 @@ pub struct Model {
     // ......
     #[index(index_id = "idx_202")]
     pub state_kind: String,
-    
+
     pub vars: Json,
     pub kind_conf: Json,
 

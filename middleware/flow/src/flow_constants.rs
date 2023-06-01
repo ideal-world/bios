@@ -1,4 +1,4 @@
-use tardis::{TardisFunsInst, TardisFuns};
+use tardis::{TardisFuns, TardisFunsInst};
 
 pub const DOMAIN_CODE: &str = "flow";
 pub const RBUM_KIND_STATE_CODE: &str = "fw-state";
