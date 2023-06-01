@@ -99,6 +99,9 @@ impl StatsDataTypeKind {
         value: &serde_json::Value,
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
     ) -> Option<(String, sea_orm::Value)> {
+        if value.is_null() {
+            return None;
+        }
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
             Some(vec![value])
