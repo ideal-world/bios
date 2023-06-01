@@ -1,5 +1,5 @@
 use bios_basic::rbum::{
-    dto::rbum_filer_dto::RbumSetCateFilterReq,
+    dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
     serv::{
         rbum_crud_serv::RbumCrudOperation,
         rbum_item_serv::RbumItemCrudOperation,
@@ -165,42 +165,132 @@ impl SpiLogClient {
         if let Some(key) = key {
             match tag {
                 LogParamTag::IamTenant => {
-                    if let Ok(item) = IamTenantServ::get_item(key, &IamTenantFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamTenantServ::get_item(
+                        key,
+                        &IamTenantFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamOrg => {
-                    if let Ok(item) = RbumSetCateServ::get_rbum(key, &RbumSetCateFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = RbumSetCateServ::get_rbum(
+                        key,
+                        &RbumSetCateFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamAccount => {
-                    if let Ok(item) = IamAccountServ::get_item(key, &IamAccountFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamAccountServ::get_item(
+                        key,
+                        &IamAccountFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamRole => {
-                    if let Ok(item) = IamRoleServ::get_item(key, &IamRoleFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamRoleServ::get_item(
+                        key,
+                        &IamRoleFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamRes => {
-                    if let Ok(item) = IamResServ::get_item(key, &IamResFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamResServ::get_item(
+                        key,
+                        &IamResFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
                     }
                 }
                 LogParamTag::IamSystem => {
-                    if let Ok(item) = IamResServ::get_item(key, &IamResFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamResServ::get_item(
+                        key,
+                        &IamResFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
@@ -208,7 +298,22 @@ impl SpiLogClient {
                 }
                 LogParamTag::SecurityAlarm => None,
                 LogParamTag::SecurityVisit => {
-                    if let Ok(item) = IamAccountServ::get_item(key, &IamAccountFilterReq::default(), funs, ctx).await {
+                    if let Ok(item) = IamAccountServ::get_item(
+                        key,
+                        &IamAccountFilterReq {
+                            basic: RbumBasicFilterReq {
+                                ignore_scope: true,
+                                with_sub_own_paths: true,
+                                own_paths: Some("".to_string()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        funs,
+                        ctx,
+                    )
+                    .await
+                    {
                         Some(item.name)
                     } else {
                         None
