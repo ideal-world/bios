@@ -99,6 +99,9 @@ impl StatsDataTypeKind {
         value: &serde_json::Value,
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
     ) -> Option<(String, sea_orm::Value)> {
+        if value.is_null() {
+            return None;
+        }
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
             Some(vec![value])
@@ -123,6 +126,8 @@ impl StatsDataTypeKind {
                 format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
                 value.pop().unwrap(),
             ))
+        } else if op == &BasicQueryOpKind::In {
+            Some((format!("{column_name} {} (${param_idx})", op.to_sql()), value.pop().unwrap()))
         } else {
             Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
         }
@@ -157,6 +162,8 @@ impl StatsDataTypeKind {
             todo!();
         } else if let Some(fun) = fun {
             Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), value.pop().unwrap()))
+        } else if op == &BasicQueryOpKind::In {
+            Some((format!("{column_name} {} (${param_idx})", op.to_sql()), value.pop().unwrap()))
         } else {
             Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
         }

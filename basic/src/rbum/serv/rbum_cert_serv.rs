@@ -335,6 +335,7 @@ impl RbumCertConfServ {
     pub async fn get_rbum_cert_conf_id_and_ext_by_kind_supplier(
         kind: &str,
         supplier: &str,
+        ignore_status: bool,
         rbum_domain_id: &str,
         rbum_item_id: &str,
         funs: &TardisFunsInst,
@@ -345,9 +346,11 @@ impl RbumCertConfServ {
             .column(rbum_cert_conf::Column::Ext)
             .from(rbum_cert_conf::Entity)
             .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
-            .and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()))
             .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
             .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id));
+        if !ignore_status {
+            conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()));
+        }
         //Ldap can be no supplier
         if kind != "Ldap" || !supplier.is_empty() {
             conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier));

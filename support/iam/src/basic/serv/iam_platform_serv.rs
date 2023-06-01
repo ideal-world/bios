@@ -13,7 +13,7 @@ use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::iam_config::IamConfig;
 use crate::iam_enumeration::IamCertKernelKind;
 
-use super::clients::spi_log_client::{SpiLogClient, LogParamTag};
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamPlatformServ;

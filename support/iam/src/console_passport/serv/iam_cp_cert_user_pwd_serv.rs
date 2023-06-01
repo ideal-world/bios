@@ -132,7 +132,7 @@ impl IamCpCertUserPwdServ {
 
         let id = ctx.owner.to_string();
         let op_describe = format!("修改用户名为{}", req.new_ak.as_ref());
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some("ModifyUserName".to_string()), &ctx).await;
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id), op_describe, Some("ModifyUserName".to_string()), &ctx).await;
 
         Ok(())
     }
