@@ -120,6 +120,14 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         sql_vals.push(Value::from(ts_end));
         where_fragments.push(format!("ts <= ${}", sql_vals.len()));
     }
+    if let Some(query) = &find_req.query {
+        sql_vals.push(Value::from(format!("{query}%")));
+        let sql_vals_idx = sql_vals.len();
+        where_fragments.push(format!(
+            "(ext ->> 'ak' LIKE ${} OR ext ->> 'name' LIKE ${} OR ext ->> 'ip' LIKE ${})",
+            sql_vals_idx, sql_vals_idx, sql_vals_idx
+        ));
+    }
     if let Some(ext) = &find_req.ext {
         for ext_item in ext {
             let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);

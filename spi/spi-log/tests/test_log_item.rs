@@ -215,5 +215,25 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(find_result.total_size, 1);
     assert_eq!(find_result.records[0].key, "001");
     assert_eq!(find_result.records[0].op, "init");
+
+    let find_result: TardisPage<LogItemFindResp> = client
+        .put(
+            "/ci/item/find",
+            &json!({
+                "tag":"project",
+                "keys":["001"],
+                "kinds":["req"],
+                "owners":["account002"],
+                "own_paths":"tenant001",
+                "query":"测试",
+                "ops":["init","modify"],
+                "page_number":1,
+                "page_size":10
+            }),
+        )
+        .await;
+    assert_eq!(find_result.total_size, 1);
+    assert_eq!(find_result.records[0].key, "001");
+    assert_eq!(find_result.records[0].op, "init");
     Ok(())
 }
