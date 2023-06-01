@@ -159,6 +159,8 @@ impl StatsDataTypeKind {
             todo!();
         } else if let Some(fun) = fun {
             Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), value.pop().unwrap()))
+        } else if op == &BasicQueryOpKind::In {
+            Some((format!("{column_name} {} (${param_idx})", op.to_sql()), value.pop().unwrap()))
         } else {
             Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
         }
