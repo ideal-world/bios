@@ -359,7 +359,7 @@ impl IamCertPhoneVCodeServ {
         .await?
             == 0
         {
-            return Err(funs.err().not_found("iam_cert_phone_vcode", "activate", "phone not fond", "404-iam-cert-phone-not-exist"));
+            return Err(funs.err().not_found("iam_cert_phone_vcode", "activate", "phone not find", "404-iam-cert-phone-not-exist"));
         }
 
         let vcode = Self::get_vcode();
