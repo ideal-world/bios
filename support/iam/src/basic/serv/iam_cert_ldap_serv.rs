@@ -3,6 +3,7 @@ use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
@@ -51,7 +52,7 @@ impl IamCertLdapServ {
     //ldap only can be one recode in each tenant
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::validate_cert_conf(add_req, funs).await?;
-        RbumCertConfServ::add_rbum(
+        let result = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
                 supplier: add_req.supplier.clone(),
@@ -82,12 +83,18 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-        .await
+        .await;
+
+        if result.is_ok() {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, "绑定5A账号".to_string(), Some("Bind5aAccount".to_string()), ctx).await;
+        }
+
+        result
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::validate_cert_conf(modify_req, funs).await?;
-        RbumCertConfServ::modify_rbum(
+        let result = RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
                 name: None,
@@ -113,7 +120,11 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-        .await
+        .await;
+        if result.is_ok() {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, "绑定5A账号".to_string(), Some("Bind5aAccount".to_string()), ctx).await;
+        }
+        result
     }
 
     //验证cert conf配置是否正确
@@ -1098,15 +1109,7 @@ pub(crate) mod ldap {
 
         pub async fn bind(&mut self, cn: &str, pw: &str) -> TardisResult<Option<String>> {
             let dn = format!("cn={},{}", cn, self.base_dn);
-            let result = self.bind_by_dn(&dn, pw).await;
-
-            if result.is_ok() {
-                let mock_ctx = TardisContext { ..Default::default() };
-                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, format!("绑定5A账号为{}", cn), Some("Bind5aAccount".to_string()), &mock_ctx).await;
-                mock_ctx.execute_task().await?;
-            }
-
-            result
+            self.bind_by_dn(&dn, pw).await
         }
 
         pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {
