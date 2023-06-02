@@ -79,7 +79,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                     .set_ex(
                         &format!("{}{}", config.cache_key_token_info, token),
                         &token_value,
-                        account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), "")?),
+                        account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), ""))?,
                     )
                     .await?;
             }

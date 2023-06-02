@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use tardis::{
     basic::{error::TardisError, result::TardisResult},
     crypto::crypto_sm2_4::{TardisCryptoSm2PrivateKey, TardisCryptoSm2PublicKey},
+    log::trace,
     tokio::sync::RwLock,
     TardisFuns,
 };
@@ -153,6 +154,8 @@ pub(crate) async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncry
             "401-auth-req-crypto-error",
         )
     })?;
+    trace!("[Auth] Encrypted response: pub_key: {}", pub_key);
+
     let pub_key = TardisFuns::crypto
         .sm2
         .new_public_key_from_public_key(&pub_key)
