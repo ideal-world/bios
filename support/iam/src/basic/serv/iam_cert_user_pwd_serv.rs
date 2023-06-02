@@ -299,7 +299,7 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::reset_sk(&cert.id, &new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+            RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
             IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
             RbumCertServ::modify_rbum(
@@ -365,7 +365,7 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             if cert.status.eq(&RbumCertStatusKind::Pending) {
-                RbumCertServ::reset_sk(&cert.id, &new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+                RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
                 IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
                 IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
                 RbumCertServ::modify_rbum(
