@@ -126,7 +126,7 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
             let res_uris: Vec<&str> = res_uri.split("://").collect();
             if res_uris.len() == 2 {
                 res_apis.as_mut().expect("[Auth] res_apis got none").insert(
-                    res_uri.to_string(),
+                    format!("{res_uri}##{res_action}"),
                     Api {
                         action: res_action.clone(),
                         uri: res_uris[1].to_string(),
@@ -166,7 +166,7 @@ pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
         }
         res_container_node = res_container_node.get_child_mut(res_item);
     }
-    apis.remove(res_uri);
+    apis.remove(&format!("{res_uri}##{res_action}"));
     res_container_node.remove_child(&res_action);
     remove_empty_node(res_container.as_mut().expect("[Auth] res_container got none"), res_items);
     Ok(())
