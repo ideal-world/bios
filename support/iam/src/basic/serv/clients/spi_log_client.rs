@@ -1,10 +1,6 @@
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumSetCateFilterReq},
-    serv::{
-        rbum_crud_serv::RbumCrudOperation,
-        rbum_item_serv::RbumItemCrudOperation,
-        rbum_set_serv::{RbumSetCateServ, RbumSetServ},
-    },
+    serv::{rbum_crud_serv::RbumCrudOperation, rbum_item_serv::RbumItemCrudOperation, rbum_set_serv::RbumSetCateServ},
 };
 use serde::Serialize;
 
@@ -128,7 +124,7 @@ impl SpiLogClient {
             content.name = cert.owner_name.unwrap_or("".to_string());
         }
         // get ext name
-        content.key_name = Self::get_key_name(&tag, content.key.as_ref().map(|x| x.as_str()), funs, ctx).await;
+        content.key_name = Self::get_key_name(&tag, content.key.as_deref(), funs, ctx).await;
 
         // create search_ext
         let search_ext = json!({
