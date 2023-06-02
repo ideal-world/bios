@@ -169,7 +169,7 @@ pub async fn test_init() -> TardisResult<()> {
         ["et"]
         .as_i64()
         .unwrap();
-    let now = Utc::now().timestamp_millis();
+    let now = Utc::now().timestamp();
     assert!(st < now && now < et && st < et);
 
     Ok(())

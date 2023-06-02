@@ -61,7 +61,7 @@ impl AuthResp {
                     sync_task_fns: Default::default(),
                     async_task_fns: Default::default(),
                 };
-                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap())
+                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap_or_default())
             } else {
                 "".to_string()
             },
