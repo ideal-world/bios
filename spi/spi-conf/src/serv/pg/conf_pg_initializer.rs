@@ -100,6 +100,7 @@ src_ip cidr,
 created_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 modified_time timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 op_type character(1) NOT NULL DEFAULT 'I',
+config_tags text NOT NULL DEFAULT '',
 tp character varying"#
         ),
         vec![("data_id", "btree"), ("grp", "btree"), ("namespace_id", "btree"), ("md5", "btree"), ("app_name", "btree")],
@@ -114,20 +115,7 @@ pub async fn init_table_and_conn_tag(
     ctx: &TardisContext,
     mgr: bool,
 ) -> TardisResult<(TardisRelDBlConnection, String)> {
-    spi_initializer::common_pg::init_table_and_conn(
-        bs_inst,
-        ctx,
-        mgr,
-        None,
-        "conf_config_history",
-        &format!(
-            r#"id character varying PRIMARY KEY"#
-        ),
-        vec![],
-        None,
-        None,
-    )
-    .await
+    spi_initializer::common_pg::init_table_and_conn(bs_inst, ctx, mgr, None, "conf_tag", r#"id character varying PRIMARY KEY"#, vec![], None, None).await
 }
 
 pub async fn init_table_and_conn_tag_config_rel(
@@ -142,12 +130,11 @@ pub async fn init_table_and_conn_tag_config_rel(
         ctx,
         mgr,
         None,
-        "conf_config_history",
+        "conf_tag_config_rel",
         &format!(
             r#"id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-tag_id    uuid NOT NULL REFERENCES {tag_table_name}    ON DELETE CASCADE,
-config_id uuid NOT NULL REFERENCES {config_table_name} ON DELETE CASCADE,
-"#
+tag_id character varying NOT NULL REFERENCES {tag_table_name} ON DELETE CASCADE,
+config_id uuid NOT NULL REFERENCES {config_table_name} ON DELETE CASCADE"#
         ),
         vec![("tag_id", "btree"), ("config_id", "btree")],
         None,

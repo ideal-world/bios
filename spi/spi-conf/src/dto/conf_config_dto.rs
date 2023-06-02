@@ -3,17 +3,14 @@ use std::hash::Hash;
 use super::conf_namespace_dto::NamespaceId;
 use serde::{Deserialize, Serialize};
 use tardis::{db::sea_orm::prelude::*, web::poem_openapi};
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub enum SearchMode {
     /// 模糊查询
+    #[default]
     Fuzzy,
     /// 精确查询
     Exact,
-}
-
-impl Default for SearchMode {
-    fn default() -> Self {
-        Self::Fuzzy
-    }
 }
 
 impl From<&str> for SearchMode {
@@ -42,6 +39,8 @@ pub struct ConfigDescriptor {
     #[oai(validator(min_length = 1, max_length = 256))]
     pub data_id: String,
     /// 标签
+    #[serde(default)]
+    #[oai(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
     #[serde(rename = "type")]
@@ -97,6 +96,8 @@ pub struct ConfigPublishRequest {
     /// 源用户
     pub src_user: Option<String>,
     /// 配置标签列表，可多个
+    #[serde(default, alias = "tags")]
+    #[oai(default)]
     pub config_tags: Vec<String>,
     /// 配置描述
     pub desc: Option<String>,
@@ -130,7 +131,7 @@ pub struct ConfigItem {
     /// 源ip
     pub src_ip: Option<String>,
     /// 源用户
-    pub src_user: String,
+    pub src_user: Option<String>,
     /// 操作类型
     pub op_type: String,
     /// 创建时间
@@ -139,6 +140,8 @@ pub struct ConfigItem {
     pub last_modified_time: DateTimeUtc,
     ///
     pub encrypted_data_key: Option<String>,
+    ///
+    pub config_tags: Vec<String>,
 }
 
 impl Default for ConfigItem {
@@ -158,6 +161,7 @@ impl Default for ConfigItem {
             created_time: Default::default(),
             last_modified_time: Default::default(),
             encrypted_data_key: None,
+            config_tags: Default::default(),
         }
     }
 }
@@ -206,10 +210,10 @@ pub struct ConfigListRequest {
     pub namespace_id: Option<NamespaceId>,
     /// 配置分组名
     #[oai(validator(min_length = 1, max_length = 256))]
-    pub group:  Option<String>,
+    pub group: Option<String>,
     /// 配置名
     #[oai(validator(min_length = 1, max_length = 256))]
-    pub data_id:  Option<String>,
+    pub data_id: Option<String>,
     /// 标签
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,

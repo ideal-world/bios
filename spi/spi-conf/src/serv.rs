@@ -49,12 +49,16 @@ dispatch_servive! {
     publish_config(req: &mut ConfigPublishRequest) -> TardisResult<bool>;
     /// get config
     get_config(descriptor: &mut ConfigDescriptor) -> TardisResult<String>;
+    /// get config detail
+    get_config_detail(descriptor: &mut ConfigDescriptor) -> TardisResult<ConfigItem>;
     /// get content's md5 value by descriptor
     get_md5(descriptor: &mut ConfigDescriptor) -> TardisResult<String>;
     /// delete config
     delete_config(descriptor: &mut ConfigDescriptor) -> TardisResult<bool>;
-    /// get config by history
+    /// get config by namespace
     get_configs_by_namespace(namespace_id: &NamespaceId) -> TardisResult<Vec<ConfigItemDigest>>;
+    /// get config
+    get_configs(req: ConfigListRequest, mode: SearchMode) -> TardisResult<ConfigListResponse>;
 
     // for config history
     /// get config history list

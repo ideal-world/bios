@@ -1,4 +1,7 @@
-use std::{collections::{HashMap, HashSet}, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::{
@@ -51,17 +54,74 @@ pub async fn get_config(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst
         .query_one(
             &format!(
                 r#"SELECT (content) FROM {table_name} cc
-WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
+WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3
 	"#,
             ),
-            vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
+            vec![Value::from(namespace), Value::from(group), Value::from(data_id)],
         )
         .await?
-        .ok_or(TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
+        .ok_or_else(|| TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
     let content = qry_result.try_get::<String>("", "content")?;
     Ok(content)
 }
 
+pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<ConfigItem> {
+    descriptor.fix_namespace_id();
+    let data_id = &descriptor.data_id;
+    let group = &descriptor.group;
+    let namespace = &descriptor.namespace_id;
+    let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
+    let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
+    let (conn, table_name) = conns.config;
+    let config_tag_rel_table_name = conns.config_tag_rel.1;
+
+    let qry_result = conn
+        .query_one(
+            &format!(
+                r#"SELECT id, data_id, namespace_id, md5, content, src_user, created_time, modified_time, grp FROM {table_name} cc
+WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3"#,
+            ),
+            vec![Value::from(namespace), Value::from(group), Value::from(data_id)],
+        )
+        .await?
+        .ok_or_else(|| TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
+    get!(qry_result => {
+        id: Uuid,
+        data_id: String,
+        namespace_id: String,
+        md5: String,
+        content: String,
+        created_time: DateTimeUtc,
+        modified_time: DateTimeUtc,
+        grp: String,
+        src_user: Option<String>,
+    });
+    let config_tags = conn
+        .query_all(
+            &format!(
+                r#"SELECT tag_id FROM {config_tag_rel_table_name} t WHERE t.config_id=$1
+"#,
+            ),
+            vec![Value::from(id)],
+        )
+        .await?
+        .iter()
+        .map(|r| r.try_get::<String>("", "tag_id"))
+        .collect::<Result<Vec<String>, _>>()?;
+    Ok(ConfigItem {
+        id: id.to_string(),
+        data_id,
+        namespace: namespace_id,
+        md5,
+        content,
+        created_time,
+        last_modified_time: modified_time,
+        group: grp,
+        config_tags,
+        src_user,
+        ..Default::default()
+    })
+}
 pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
     descriptor.fix_namespace_id();
     const EXPIRE: Duration = Duration::from_secs(1);
@@ -83,13 +143,12 @@ pub async fn get_md5(descriptor: &mut ConfigDescriptor, funs: &TardisFunsInst, c
         .query_one(
             &format!(
                 r#"SELECT (md5) FROM {table_name} cc
-WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
-	"#,
+WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'"#,
             ),
             vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
         )
         .await?
-        .ok_or(TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
+        .ok_or_else(|| TardisError::not_found("config not found", error::NAMESPACE_NOTFOUND))?;
     let md5 = qry_result.try_get::<String>("", "md5")?;
     // set cache
     {
@@ -123,6 +182,7 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
         md5,
         app_name,
         schema,
+        config_tags: config_tags.iter().map(String::as_str).collect(),
     };
     let params = vec![
         ("content", Value::from(content)),
@@ -142,23 +202,22 @@ pub async fn publish_config(req: &mut ConfigPublishRequest, funs: &TardisFunsIns
     let qry_result = conn
         .query_one(
             &format!(
-                r#"SELECT (data_id) FROM {config_table_name} cc
-WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
-                    "#,
+                r#"SELECT id FROM {config_table_name} cc
+WHERE cc.grp=$1 AND cc.namespace_id=$2 AND cc.data_id=$3"#,
             ),
-            vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
+            vec![Value::from(group), Value::from(namespace), Value::from(data_id)],
         )
         .await?
-        .and_then(|r| r.try_get::<Uuid>("", "data_id").ok());
+        .and_then(|r| r.try_get::<Uuid>("", "id").ok());
     let op_type: OpType;
 
     conn.begin().await?;
     if !config_tags.is_empty() {
-        let placeholders = (1..=config_tags.len()).map(|idx| format!("${idx}")).collect::<Vec<String>>().join(", ");
+        let placeholders = (1..=config_tags.len()).map(|idx| format!("(${idx})")).collect::<Vec<String>>().join(", ");
         let config_values = config_tags.iter().map(Value::from).collect();
         // 1. insert tags
         conn.execute_one(
-            &format!("INSERT INTO {tag_table_name} (id) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING",),
+            &format!("INSERT INTO {tag_table_name} (id) VALUES {placeholders} ON CONFLICT (id) DO NOTHING",),
             config_values,
         )
         .await?;
@@ -172,8 +231,7 @@ WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_i
             &format!(
                 r#"UPDATE {config_table_name} 
 SET {set_caluse}
-WHERE {where_caluse}
-        "#,
+WHERE {where_caluse}"#,
             ),
             values,
         )
@@ -186,8 +244,7 @@ WHERE {where_caluse}
         let mut fields_and_values = params;
         fields_and_values.extend(key_params);
         let (fields, placeholders, values) = super::gen_insert_sql_stmt(fields_and_values);
-        conn.begin().await?;
-        let result = conn
+        let _result = conn
             .execute_one(
                 &format!(
                     r#"INSERT INTO {config_table_name} 
@@ -202,38 +259,57 @@ WHERE {where_caluse}
             .await?;
         conn.query_one(
             &format!(
-                r#"SELECT (data_id) FROM {config_table_name} cc
-    WHERE cc.namespace_id='{namespace}' AND cc.grp='{group}' AND cc.data_id='{data_id}'
+                r#"SELECT id FROM {config_table_name} cc
+    WHERE cc.data_id=$1 AND cc.grp=$2 AND cc.namespace_id=$3
                     "#,
             ),
             vec![Value::from(data_id), Value::from(group), Value::from(namespace)],
         )
         .await?
-        .and_then(|r| r.try_get::<Uuid>("", "data_id").ok())
-        .unwrap()
+        .map(|r| r.try_get::<Uuid>("", "id").expect("query result no id (primary key) which is impossible"))
+        .expect("no such config after insert")
     };
     // get existed tags
     let mut exsisted_tags = conn
-    .query_all(&format!("SELECT tag_id FROM {tag_table_name} t WHERE t.data_id=$1"), vec![Value::from(config_id)]).await?
-    .iter().map(|r| r.try_get::<String>("", "tag_id")).collect::<Result<HashSet<String>, _>>()?;
+        .query_all(
+            &format!("SELECT tag_id FROM {config_tag_rel_table_name} t WHERE t.config_id=$1"),
+            vec![Value::from(config_id)],
+        )
+        .await?
+        .iter()
+        .map(|r| r.try_get::<String>("", "tag_id"))
+        .collect::<Result<HashSet<String>, _>>()?;
     let mut insert_values = vec![];
     for tag in config_tags {
         if exsisted_tags.take(tag).is_none() {
             // insert rel
-            insert_values.push(vec!(Value::from(tag), Value::from(config_id)));
+            insert_values.push(vec![Value::from(tag), Value::from(config_id)]);
         }
     }
-    conn.insert_raw_many(&format!("INSERT INTO {config_tag_rel_table_name} (tag_id, config_id) VALUES $1"), insert_values).await?;
-    let placeholders = (1..=exsisted_tags.len()).map(|idx| format!("${idx}")).collect::<Vec<String>>().join(", ");
-    let mut delete_values = exsisted_tags.iter().map(Value::from).collect::<Vec<_>>();
-    let cfg_id_ph = delete_values.len() + 1;
-    delete_values.push(Value::from(config_id));
-    conn.execute_one(&format!(
-        r#"
-        DELETE FROM {config_tag_rel_table_name} ctr
-        WHERE ctr.config_id=${cfg_id_ph} AND ctr.tag_id NOT IN ({placeholders})
-        "#
-    ), delete_values).await?;
+    if !insert_values.is_empty() {
+        let placeholders = (1..=insert_values.len()).map(|idx| format!("(${ptag}, ${pconfig})", ptag = idx * 2 - 1, pconfig = idx * 2)).collect::<Vec<String>>().join(", ");
+        conn.execute_one(
+            &format!("INSERT INTO {config_tag_rel_table_name} (tag_id, config_id) VALUES {placeholders}"),
+            insert_values.concat(),
+        )
+        .await?;
+    }
+    if !exsisted_tags.is_empty() {
+        let placeholders = (1..=exsisted_tags.len()).map(|idx| format!("${idx}")).collect::<Vec<String>>().join(", ");
+        let mut delete_values = exsisted_tags.iter().map(Value::from).collect::<Vec<_>>();
+        let cfg_id_ph = delete_values.len() + 1;
+        delete_values.push(Value::from(config_id));
+        conn.execute_one(
+            &format!(
+                r#"
+            DELETE FROM {config_tag_rel_table_name} ctr
+            WHERE ctr.config_id=${cfg_id_ph} AND ctr.tag_id IN ({placeholders})
+            "#
+            ),
+            delete_values,
+        )
+        .await?;
+    }
     conn.commit().await?;
     Ok(true)
 }
@@ -380,6 +456,7 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
                 modified_time: DateTimeUtc,
                 grp: String,
                 total_count: u32,
+                src_user: Option<String>,
             });
             total = total_count;
             Ok(ConfigItem {
@@ -392,6 +469,7 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
                 created_time,
                 last_modified_time: modified_time,
                 group: grp,
+                src_user,
                 ..Default::default()
             })
         })

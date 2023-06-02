@@ -22,11 +22,11 @@ WHERE id = $1"#,
             vec![Value::from(&discriptor.namespace_id)],
         )
         .await?
-        .ok_or(TardisError::not_found("namespace not found", error::NAMESPACE_NOTFOUND))?;
+        .ok_or_else(|| TardisError::not_found("namespace not found", error::NAMESPACE_NOTFOUND))?;
     let mut namespace_item = NamespaceItem {
-        namespace: namespace.try_get("", "id").unwrap(),
-        namespace_show_name: namespace.try_get("", "show_name").unwrap(),
-        namespace_desc: namespace.try_get("", "description").unwrap(),
+        namespace: namespace.try_get("", "id")?,
+        namespace_show_name: namespace.try_get("", "show_name")?,
+        namespace_desc: namespace.try_get("", "description")?,
         ..Default::default()
     };
     let count = conn
@@ -91,7 +91,10 @@ pub async fn delete_namespace(discriptor: &mut NamespaceDescriptor, funs: &Tardi
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let (mut conn, table_name) = conf_pg_initializer::init_table_and_conn_namespace(bs_inst, ctx, true).await?;
     if discriptor.namespace_id.is_empty() || discriptor.namespace_id == "public" {
-        return Err(TardisError::bad_request("default namespace(public) can not be deleted", error::NAMESPACE_DEFAULT_CANNOT_DELETE));
+        return Err(TardisError::bad_request(
+            "default namespace(public) can not be deleted",
+            error::NAMESPACE_DEFAULT_CANNOT_DELETE,
+        ));
     }
     conn.begin().await?;
     conn.execute_one(
@@ -129,9 +132,9 @@ FROM {table_name}
     let mut namespace_items = vec![];
     for namespace in namespaces {
         let mut namespace_item = NamespaceItem {
-            namespace: namespace.try_get("", "id").unwrap(),
-            namespace_show_name: namespace.try_get("", "show_name").unwrap(),
-            namespace_desc: namespace.try_get("", "description").unwrap(),
+            namespace: namespace.try_get("", "id")?,
+            namespace_show_name: namespace.try_get("", "show_name")?,
+            namespace_desc: namespace.try_get("", "description")?,
             ..Default::default()
         };
         let count = conn

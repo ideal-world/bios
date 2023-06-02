@@ -13,7 +13,7 @@ use tardis::{
 
 use crate::{
     conf_constants::error,
-    dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigListResponse, ConfigItem},
+    dto::conf_config_dto::{ConfigDescriptor, ConfigHistoryListRequest, ConfigItem, ConfigListResponse},
 };
 
 use super::conf_pg_initializer;
@@ -27,6 +27,7 @@ pub struct HistoryInsertParams<'a> {
     pub md5: &'a str,
     pub app_name: Option<&'a str>,
     pub schema: Option<&'a str>,
+    pub config_tags: Vec<&'a str>,
 }
 
 #[repr(u8)]
@@ -79,7 +80,7 @@ WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3
     let qry_result_list = conn
         .query_all(
             &format!(
-                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, grp FROM {table_name} cch
+                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, config_tags, grp FROM {table_name} cch
 WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3
 ORDER BY created_time DESC
 LIMIT {limit}
@@ -103,6 +104,7 @@ OFFSET {offset}
                 created_time: DateTimeUtc,
                 modified_time: DateTimeUtc,
                 grp: String,
+                config_tags: String,
             });
             Ok(ConfigItem {
                 id: id.to_string(),
@@ -114,6 +116,7 @@ OFFSET {offset}
                 created_time,
                 last_modified_time: modified_time,
                 group: grp,
+                config_tags: config_tags.split(',').filter(|s| !s.is_empty()).map(String::from).collect(),
                 ..Default::default()
             })
         })
@@ -137,15 +140,14 @@ pub async fn find_history(descriptor: &mut ConfigDescriptor, id: &Uuid, funs: &T
     let qry_result = conn
         .query_one(
             &format!(
-                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, grp FROM {table_name} cch
+                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, grp, config_tags FROM {table_name} cch
 WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3 AND cch.id=$4
-ORDER BY created_time DESC
-"#,
+ORDER BY created_time DESC"#,
             ),
             vec![Value::from(namespace_id), Value::from(group), Value::from(data_id), Value::from(*id)],
         )
         .await?
-        .ok_or(TardisError::not_found("history config not found", error::CONF_NOTFOUND))?;
+        .ok_or_else(|| TardisError::not_found("history config not found", error::CONF_NOTFOUND))?;
     get!(qry_result => {
         id: Uuid,
         data_id: String,
@@ -155,8 +157,9 @@ ORDER BY created_time DESC
         op_type: String,
         created_time: DateTimeUtc,
         modified_time: DateTimeUtc,
-        src_user: String,
+        src_user: Option<String>,
         grp: String,
+        config_tags: String,
     });
     Ok(ConfigItem {
         id: id.to_string(),
@@ -169,6 +172,7 @@ ORDER BY created_time DESC
         last_modified_time: modified_time,
         group: grp,
         src_user,
+        config_tags: config_tags.split(',').filter(|s| !s.is_empty()).map(String::from).collect(),
         ..Default::default()
     })
 }
@@ -199,7 +203,7 @@ WHERE T.id = $4
             vec![Value::from(namespace_id), Value::from(group), Value::from(data_id), Value::from(*id)],
         )
         .await?
-        .ok_or(TardisError::not_found("history config not found", error::CONF_NOTFOUND))?;
+        .ok_or_else(|| TardisError::not_found("history config not found", error::CONF_NOTFOUND))?;
     get!(qry_result => { prev_id: Option<Uuid>, });
     if let Some(prev_id) = prev_id {
         // 2. find config by id
@@ -217,6 +221,7 @@ pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: 
         md5,
         app_name,
         schema,
+        config_tags,
     } = param;
     let src_user = &ctx.owner;
 
@@ -230,6 +235,7 @@ pub async fn add_history(param: HistoryInsertParams<'_>, op_type: OpType, funs: 
         ("schema", Value::from(schema)),
         ("op_type", Value::from(op_type.as_char())),
         ("src_user", Value::from(src_user)),
+        ("config_tags", Value::from(config_tags.join(","))),
     ];
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;

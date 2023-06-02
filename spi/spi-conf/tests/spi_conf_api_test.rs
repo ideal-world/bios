@@ -8,7 +8,7 @@ use bios_basic::{
 use bios_spi_conf::{
     conf_constants::DOMAIN_CODE,
     dto::{
-        conf_config_dto::{ConfigListResponse, ConfigItem, ConfigItemDigest},
+        conf_config_dto::{ConfigItem, ConfigItemDigest, ConfigListResponse},
         conf_namespace_dto::{NamespaceAttribute, NamespaceItem},
     },
 };
@@ -59,12 +59,14 @@ async fn spi_conf_namespace_test() -> TardisResult<()> {
         ..Default::default()
     })?;
     test_curd(&mut client).await?;
+    test_tags(&mut client).await?;
     // web_server_hanlde.await.unwrap()?;
     drop(container_hold);
     Ok(())
 }
 
 pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
+    let user = client.context().owner.as_str();
     // 1. create namespace
     let _response = client
         .post::<_, bool>(
@@ -112,6 +114,9 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         .await;
     // 3. retrieve config
     let _response = client.get::<String>("/ci/cs/config?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    let response = client.get::<ConfigItem>("/ci/cs/config/detail?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-default").await;
+    assert_eq!(response.data_id, "conf-default");
+    assert_eq!(response.src_user.unwrap(), user);
     // 4. get namespace info
     let _response = client.get::<NamespaceItem>("/ci/namespace?namespace_id=public").await;
     assert_eq!(_response.config_count, 1);
@@ -251,7 +256,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     let response_1 = client.get::<ConfigItem>(&format!("/ci/cs/history?namespace_id=public&group=DEFAULT-GROUP&data_id=conf-history-test-1&id={his_id_1}")).await;
     assert_eq!(response_1.content, "历史版本测试1");
     // src_user should be app001
-    assert_eq!(response_1.src_user, "app001");
+    assert_eq!(response_1.src_user.unwrap(), "app001");
     // 10.4 find first config history previous to version 2 (should be version 1)
     let response_prev_2 = client
         .get::<ConfigItem>(&format!(
@@ -281,7 +286,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // namespace should have 0 configs, varifies that the namespace is empty
-    let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/configs?namespace_id={}", NAMESPACE_ID)).await;
+    let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/history/configs?namespace_id={}", NAMESPACE_ID)).await;
     assert_eq!(response.len(), 0);
     // 11.2 create 3 config in the namespace
     for i in 0..3 {
@@ -299,7 +304,7 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
             .await;
     }
     // 11.3 get all config in the namespace
-    let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/configs?namespace_id={}", NAMESPACE_ID)).await;
+    let response = client.get::<Vec<ConfigItemDigest>>(&format!("/ci/cs/history/configs?namespace_id={}", NAMESPACE_ID)).await;
     assert_eq!(response.len(), 3);
     // those configs should be sorted by create time
     assert_eq!(response[0].data_id, "conf-2");
@@ -307,4 +312,61 @@ pub async fn test_curd(client: &mut TestHttpClient) -> TardisResult<()> {
     assert_eq!(response[2].data_id, "conf-0");
 
     Ok(())
+}
+
+pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
+    const DATA_ID: &str = "conf-tag-test";
+    // 1. publish a config with tags
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "for tag test",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": DATA_ID,
+                "schema": "toml",
+                "namespace_id": "public".to_string(),
+                "config_tags": ["tag1", "tag2"],
+            }),
+        )
+        .await;
+    // 2. varify the tags
+    let response = client.get::<ConfigItem>(&format!("/ci/cs/config/detail?namespace_id=public&group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
+    assert!(response.config_tags.contains(&"tag1".to_string()));
+    assert!(response.config_tags.contains(&"tag2".to_string()));
+    // 3. update the config with new tags
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "for tag test",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": DATA_ID,
+                "schema": "toml",
+                "namespace_id": "public".to_string(),
+                "config_tags": ["tag2", "tag3"],
+            }),
+        )
+        .await;
+    // 4. varify the tags
+    let response = client.get::<ConfigItem>(&format!("/ci/cs/config/detail?namespace_id=public&group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
+    assert!(!response.config_tags.contains(&"tag1".to_string()));
+    assert!(response.config_tags.contains(&"tag2".to_string()));
+    assert!(response.config_tags.contains(&"tag3".to_string()));
+    // 5. check if history has tags
+    let response = client.get::<ConfigListResponse>(&format!("/ci/cs/history/list?namespace_id=public&group=DEFAULT-GROUP&data_id={DATA_ID}")).await;
+    assert_eq!(response.total_count, 2);
+    // wait_press_enter();
+    assert!(response.page_items[0].config_tags.contains(&"tag2".to_string()));
+    assert!(response.page_items[0].config_tags.contains(&"tag3".to_string()));
+    assert!(response.page_items[1].config_tags.contains(&"tag1".to_string()));
+    assert!(response.page_items[1].config_tags.contains(&"tag2".to_string()));
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn wait_press_enter() {
+    println!("Press ENTER to continue...");
+    let mut line = String::new();
+    std::io::stdin().read_line(&mut line).unwrap();
 }

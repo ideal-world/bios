@@ -48,6 +48,36 @@ impl ConfCiConfigServiceApi {
         let content = get_config(&mut descriptor, &funs, &ctx.0).await?;
         TardisResp::ok(content)
     }
+    #[oai(path = "/config/detail", method = "get")]
+    async fn get_config_detail(
+        &self,
+        // mut descriptor: Query<ConfigDescriptor>,
+        tenant: Query<Option<NamespaceId>>,
+        namespace_id: Query<Option<NamespaceId>>,
+        /// 配置分组名
+        group: Query<String>,
+        /// 配置名
+        data_id: Query<String>,
+        /// 标签
+        tag: Query<Option<String>>,
+        /// 配置类型
+        r#type: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<ConfigItem> {
+        let namespace_id = namespace_id.0.or(tenant.0).unwrap_or("public".into());
+        let tags = tag.0.unwrap_or_default().split(',').map(str::trim).map(String::from).collect();
+        let mut descriptor = ConfigDescriptor {
+            namespace_id,
+            group: group.0,
+            data_id: data_id.0,
+            tags,
+            tp: r#type.0,
+        };
+        let funs = request.tardis_fun_inst();
+        let content = get_config_detail(&mut descriptor, &funs, &ctx.0).await?;
+        TardisResp::ok(content)
+    }
     #[oai(path = "/config", method = "post")]
     async fn publish_config(&self, mut publish_request: Json<ConfigPublishRequest>, ctx: TardisContextExtractor, request: &Request) -> TardisApiResult<bool> {
         let funs = request.tardis_fun_inst();
@@ -114,8 +144,40 @@ impl ConfCiConfigServiceApi {
         TardisResp::ok(config)
     }
     #[oai(path = "/configs", method = "get")]
-    async fn get_configs(&self) {
-        todo!()
+    async fn get_configs(
+        &self,
+        namespace_id: Query<Option<NamespaceId>>,
+        tenant: Query<Option<NamespaceId>>,
+        #[oai(validator(min_length = 1, max_length = 256))] group: Query<Option<String>>,
+        /// 配置名
+        #[oai(validator(min_length = 1, max_length = 256))]
+        data_id: Query<Option<String>>,
+        /// 标签
+        tags: Query<Option<Vec<String>>>,
+        /// 配置类型
+        r#type: Query<Option<String>>,
+        page_no: Query<Option<u32>>,
+        page_size: Query<Option<u32>>,
+        mode: Query<Option<String>>,
+        ctx: TardisContextExtractor,
+        request: &Request,
+    ) -> TardisApiResult<ConfigListResponse> {
+        let funs = request.tardis_fun_inst();
+        let page_size = page_size.0.unwrap_or(100).min(500).max(1);
+        let page_number = page_no.0.unwrap_or(1).max(0);
+        let mode = mode.0.as_deref().unwrap_or_default().into();
+        let request = ConfigListRequest {
+            namespace_id: namespace_id.0.or(tenant.0),
+            group: group.0,
+            data_id: data_id.0,
+            tags: tags.0.unwrap_or_default(),
+            tp: r#type.0,
+            page_no: page_number,
+            page_size,
+        };
+        // let config = get_configs_by_namespace(&namespace_id, &funs, &ctx.0).await?;
+        let resp = get_configs(request, mode, &funs, &ctx.0).await?;
+        TardisResp::ok(resp)
     }
     #[oai(path = "/history/list", method = "get")]
     async fn history_list(
