@@ -287,14 +287,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // Start a instance
-    let inst_id: String = client
-        .post(
-            &format!("/cc/inst?flow_model_id={}", model_id),
-            &FlowInstStartReq {
-                create_vars: None,
-            },
-        )
-        .await;
+    let inst_id: String = client.post(&format!("/cc/inst?flow_model_id={}", model_id), &FlowInstStartReq { create_vars: None }).await;
     // Get the current status of some tasks
     let names: HashMap<String, String> = client.get(&format!("/cc/state/names?ids={}&ids={}", state_init_id, state_assigned_id)).await;
     assert_eq!(names[&state_init_id], "初始");

@@ -1100,16 +1100,12 @@ pub(crate) mod ldap {
             let dn = format!("cn={},{}", cn, self.base_dn);
             let result = self.bind_by_dn(&dn, pw).await;
 
-            let mock_ctx = TardisContext { ..Default::default() };
-            let _ = SpiLogClient::add_ctx_task(
-                LogParamTag::IamAccount,
-                None,
-                format!("绑定5A账号为{}", dn.as_str()),
-                Some("Bind5aAccount".to_string()),
-                &mock_ctx,
-            )
-            .await;
-            mock_ctx.execute_task().await?;
+            if result.is_ok() {
+                let mock_ctx = TardisContext { ..Default::default() };
+                let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, format!("绑定5A账号为{}", cn), Some("Bind5aAccount".to_string()), &mock_ctx).await;
+                mock_ctx.execute_task().await?;
+            }
+
             result
         }
 

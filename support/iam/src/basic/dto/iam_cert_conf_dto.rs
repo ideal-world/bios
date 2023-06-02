@@ -158,14 +158,11 @@ pub struct IamCertConfLdapResp {
 impl IamCertConfLdapResp {
     //模糊搜索账号语句
     pub fn package_filter_by_fuzzy_search_account(&self, user_or_display_name: &str) -> String {
-        if self.account_field_map.search_base_filter.is_some() && !self.account_field_map.search_base_filter.clone().unwrap().is_empty() {
+        let search_base_filter = self.account_field_map.search_base_filter.clone().unwrap_or_default();
+        if !search_base_filter.is_empty() {
             format!(
                 "(&({})(|({}=*{}*)({}=*{}*)))",
-                self.account_field_map.search_base_filter.clone().unwrap(),
-                self.account_field_map.field_user_name,
-                user_or_display_name,
-                self.account_field_map.field_display_name,
-                user_or_display_name
+                search_base_filter, self.account_field_map.field_user_name, user_or_display_name, self.account_field_map.field_display_name, user_or_display_name
             )
         } else {
             // such as `(|(cn=*test*)(displayName=*test*))`
