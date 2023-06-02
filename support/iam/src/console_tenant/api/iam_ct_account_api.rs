@@ -28,7 +28,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamAccountServ::add_account_agg(&add_req.0, false, &funs, &ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(result.clone(), false, "".to_string(), &funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(result.clone(), Box::new(false), "".to_string(), &funs, &ctx).await?;
         // TaskProcessor::get_notify_event_with_ctx(&funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
@@ -42,7 +42,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::modify_account_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         if let Some(notify_events) = TaskProcessor::get_notify_event_with_ctx(&ctx).await? {
@@ -235,7 +235,7 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -261,7 +261,7 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "Manual cancellation.".to_string(), &funs, ctx.0.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "Manual cancellation.".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -287,7 +287,7 @@ impl IamCtAccountApi {
             &ctx.0,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
@@ -299,7 +299,7 @@ impl IamCtAccountApi {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         IamAccountServ::unlock_account(&id.0, &funs, &ctx.0).await?;
-        IamAccountServ::async_add_or_modify_account_search(id.0, true, "".to_string(), &funs, ctx.0.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(id.0, Box::new(true), "".to_string(), &funs, &ctx.0).await?;
         funs.commit().await?;
         ctx.0.execute_task().await?;
         TardisResp::ok(Void {})

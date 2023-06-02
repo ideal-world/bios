@@ -10,13 +10,15 @@ use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
+use tardis::log::debug;
+use tardis::tokio::sync::Mutex;
 
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
 
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::{serde_json, TardisFuns, TardisFunsInst};
+use tardis::{serde_json, tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -813,7 +815,40 @@ impl IamAccountServ {
 
     // todo
     // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
-    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, logout_msg: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: Box<bool>, logout_msg: String, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                debug!("50eq: ee {}", account_id);
+                let task_handle = tokio::spawn(async move {
+                    debug!("50eq: ae {}", account_id);
+                    let funs = iam_constants::get_tardis_inst();
+                    Self::add_or_modify_account_search(&account_id, is_modify, &logout_msg, &funs, &ctx_clone).await.unwrap();
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    pub async fn async_delete_account_search(account_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    Self::delete_account_search(&account_id, &funs, &ctx_clone).await.unwrap();
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
+    }
+
+    // account 全局搜索埋点方法
+    pub async fn add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let account_resp = IamAccountServ::get_account_detail_aggs(
             &account_id,
             &IamAccountFilterReq {
@@ -827,43 +862,12 @@ impl IamAccountServ {
             },
             true,
             true,
-            funs,
+            &funs,
             &ctx,
         )
-        .await?;
-        let r = TaskProcessor::execute_task(
-            &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
-                let funs = iam_constants::get_tardis_inst();
-                Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx).await
-            },
-            funs,
-        )
-        .await?;
-        sleep(Duration::from_millis(100)).await;
-        Ok(r)
-    }
-
-    pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
-        TaskProcessor::execute_task(
-            &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
-                let funs = iam_constants::get_tardis_inst();
-                Self::delete_account_search(&account_id, &funs, &ctx).await
-            },
-            funs,
-        )
         .await
-    }
-
-    // account 全局搜索埋点方法
-    pub async fn add_or_modify_account_search(
-        account_resp: IamAccountDetailAggResp,
-        is_modify: bool,
-        logout_msg: &str,
-        funs: &TardisFunsInst,
-        ctx: &TardisContext,
-    ) -> TardisResult<()> {
+        .ok()
+        .unwrap();
         let account_id = account_resp.id.as_str();
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
@@ -965,7 +969,7 @@ impl IamAccountServ {
                 }),
             );
             //add search
-            if is_modify {
+            if *is_modify {
                 search_body.as_object_mut().unwrap().insert("ext_override".to_string(), serde_json::Value::from(true));
                 funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/{key}"), &search_body, headers.clone()).await.unwrap();
             } else {
