@@ -135,7 +135,23 @@ impl IamCsSpiDataApi {
                     )
                     .await?;
                     for account in list {
-                        IamAccountServ::add_or_modify_account_search(&account.id, is_modify.clone(), "", &funs, &task_ctx).await?;
+                        let account_resp = IamAccountServ::get_account_detail_aggs(
+                            &account.id,
+                            &IamAccountFilterReq {
+                                basic: RbumBasicFilterReq {
+                                    ignore_scope: true,
+                                    with_sub_own_paths: true,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            true,
+                            true,
+                            &funs,
+                            &task_ctx,
+                        )
+                        .await?;
+                        IamAccountServ::add_or_modify_account_search(account_resp, is_modify.clone(), "", &funs, &task_ctx).await?;
                     }
                     funs.commit().await?;
                     Ok(())

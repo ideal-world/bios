@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
@@ -10,8 +9,6 @@ use std::time::Duration;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::log::debug;
-use tardis::tokio::sync::Mutex;
 
 use tardis::db::sea_orm::sea_query::{Alias, Expr, SelectStatement};
 use tardis::db::sea_orm::*;
@@ -815,15 +812,30 @@ impl IamAccountServ {
 
     // todo
     // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
-    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: Box<bool>, logout_msg: String, _funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: Box<bool>, logout_msg: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
+        let account_resp = IamAccountServ::get_account_detail_aggs(
+            &account_id,
+            &IamAccountFilterReq {
+                basic: RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            true,
+            true,
+            &funs,
+            &ctx,
+        )
+        .await?;
         ctx.add_async_task(Box::new(|| {
             Box::pin(async move {
-                debug!("50eq: ee {}", account_id);
                 let task_handle = tokio::spawn(async move {
-                    debug!("50eq: ae {}", account_id);
+                    sleep(Duration::from_secs(1)).await;
                     let funs = iam_constants::get_tardis_inst();
-                    Self::add_or_modify_account_search(&account_id, is_modify, &logout_msg, &funs, &ctx_clone).await.unwrap();
+                    let _ = Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx_clone).await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
@@ -838,7 +850,7 @@ impl IamAccountServ {
             Box::pin(async move {
                 let task_handle = tokio::spawn(async move {
                     let funs = iam_constants::get_tardis_inst();
-                    Self::delete_account_search(&account_id, &funs, &ctx_clone).await.unwrap();
+                    let _ = Self::delete_account_search(&account_id, &funs, &ctx_clone).await;
                 });
                 task_handle.await.unwrap();
                 Ok(())
@@ -848,26 +860,13 @@ impl IamAccountServ {
     }
 
     // account 全局搜索埋点方法
-    pub async fn add_or_modify_account_search(account_id: &str, is_modify: Box<bool>, logout_msg: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let account_resp = IamAccountServ::get_account_detail_aggs(
-            &account_id,
-            &IamAccountFilterReq {
-                basic: RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            true,
-            true,
-            &funs,
-            &ctx,
-        )
-        .await
-        .ok()
-        .unwrap();
+    pub async fn add_or_modify_account_search(
+        account_resp: IamAccountDetailAggResp,
+        is_modify: Box<bool>,
+        logout_msg: &str,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<()> {
         let account_id = account_resp.id.as_str();
         let account_certs = account_resp.certs.iter().map(|m| m.1.clone()).collect::<Vec<String>>();
         let account_app_ids: Vec<String> = account_resp.apps.iter().map(|a| a.app_id.clone()).collect();
