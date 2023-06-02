@@ -179,8 +179,10 @@ impl IamCpCertApi {
 
     /// Validate userpwd By Current Account
     ///
+    /// when ldap validate , the validate_type is supplier
+    ///
     #[oai(path = "/validate/userpwd", method = "put")]
-    async fn validate_by_user_pwd(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn validate_by_user_pwd_and_ldap(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamCpCertUserPwdServ::generic_sk_validate(
             &req.0.sk,
@@ -189,6 +191,14 @@ impl IamCpCertApi {
             &IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?,
         )
         .await?;
+        TardisResp::ok(Void {})
+    }
+    
+    /// Validate userpwd By Current Account and ignore expired
+    #[oai(path = "/validate/userpwd/ignore/expired", method = "put")]
+    async fn validate_by_user_pwd_ignore_expired(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let funs = iam_constants::get_tardis_inst();
+        IamCpCertUserPwdServ::validate_by_user_pwd(&req.0.sk, true, &funs, &IamAccountServ::new_context_if_account_is_global(&ctx.0, &funs).await?).await?;
         TardisResp::ok(Void {})
     }
 

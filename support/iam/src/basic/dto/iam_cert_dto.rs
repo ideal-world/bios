@@ -62,6 +62,7 @@ pub struct IamCertUserPwdRestReq {
 pub struct IamCertGenericValidateSkReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
+    // when ldap validate , the validate_type is supplier
     pub validate_type: Option<String>,
 }
 

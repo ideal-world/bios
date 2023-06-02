@@ -154,13 +154,13 @@ impl IamCpCertUserPwdServ {
         if let Some(supplier) = supplier {
             IamCertLdapServ::validate_by_ldap(sk, &supplier, funs, ctx).await?;
         } else {
-            Self::validate_by_user_pwd(sk, funs, ctx).await?;
+            Self::validate_by_user_pwd(sk, false, funs, ctx).await?;
         }
         IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
         Ok(())
     }
 
-    pub async fn validate_by_user_pwd(sk: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn validate_by_user_pwd(sk: &str, ignore_end_time: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
 
