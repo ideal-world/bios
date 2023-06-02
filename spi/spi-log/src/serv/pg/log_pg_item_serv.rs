@@ -177,6 +177,73 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
             }
         }
     }
+    if let Some(ext_or) = &find_req.ext_or {
+        let mut or_fragments = vec![];
+        for ext_or_item in ext_or {
+            let value = db_helper::json_to_sea_orm_value(&ext_or_item.value, ext_or_item.op == BasicQueryOpKind::Like);
+            if value.is_none() || ext_or_item.op != BasicQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
+                return Err(funs.err().not_found(
+                    "item",
+                    "log",
+                    &format!(
+                        "The ext field=[{}] value=[{}] operation=[{}] is not legal.",
+                        &ext_or_item.field, ext_or_item.value, &ext_or_item.op,
+                    ),
+                    "404-spi-log-op-not-legal",
+                ));
+            }
+            let mut value = value.unwrap();
+            if ext_or_item.op == BasicQueryOpKind::In {
+                if value.len() == 1 {
+                    or_fragments.push(format!("ext -> '{}' ? ${}", ext_or_item.field, sql_vals.len() + 1));
+                } else {
+                    or_fragments.push(format!(
+                        "ext -> '{}' ?| array[{}]",
+                        ext_or_item.field,
+                        (0..value.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(", ")
+                    ));
+                }
+                for val in value {
+                    sql_vals.push(val);
+                }
+            } else {
+                let value = value.pop().unwrap();
+                if let Value::Bool(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::TinyInt(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::SmallInt(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Int(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::BigInt(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::TinyUnsigned(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::smallint {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::SmallUnsigned(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::integer {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Unsigned(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::BigUnsigned(_) = value {
+                    // TODO
+                    or_fragments.push(format!("(ext ->> '{}')::bigint {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Float(_) = value {
+                    or_fragments.push(format!("(ext ->> '{}')::real {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                } else if let Value::Double(_) = value {
+                    or_fragments.push(format!(
+                        "(ext ->> '{}')::double precision {} ${}",
+                        ext_or_item.field,
+                        ext_or_item.op.to_sql(),
+                        sql_vals.len() + 1
+                    ));
+                } else {
+                    or_fragments.push(format!("ext ->> '{}' {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
+                }
+                sql_vals.push(value);
+            }
+        }
+        where_fragments.push(format!(" ( {} ) ", or_fragments.join(" OR ")));
+    }
     if where_fragments.is_empty() {
         where_fragments.push("1 = 1".to_string());
     }

@@ -64,8 +64,6 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             init_state_id: Set(add_req.init_state_id.to_string()),
             tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
-            // TODO
-            own_paths: Set(ctx.own_paths.clone()),
             ..Default::default()
         })
     }
@@ -228,8 +226,6 @@ impl FlowModelServ {
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
 
                 rel_flow_model_id: Set(flow_model_id.to_string()),
-                // TODO
-                own_paths: Set(ctx.own_paths.clone()),
                 ..Default::default()
             })
             .collect_vec();

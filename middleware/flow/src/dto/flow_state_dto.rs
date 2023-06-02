@@ -27,7 +27,6 @@ pub struct FlowStateAddReq {
     pub sys_state: FlowSysStateKind,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
-    pub vars: Option<Vec<FlowVarSimpleInfo>>,
     pub state_kind: Option<FlowStateKind>,
     pub kind_conf: Option<Value>,
 
@@ -51,7 +50,6 @@ pub struct FlowStateModifyReq {
     pub sys_state: Option<FlowSysStateKind>,
     #[oai(validator(min_length = "2", max_length = "2000"))]
     pub info: Option<String>,
-    pub vars: Option<Vec<FlowVarSimpleInfo>>,
     pub state_kind: Option<FlowStateKind>,
     pub kind_conf: Option<Value>,
 
@@ -73,8 +71,6 @@ pub struct FlowStateSummaryResp {
     pub icon: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
-
-    pub vars: Option<Value>,
 
     pub state_kind: FlowStateKind,
     pub kind_conf: Value,
@@ -98,8 +94,6 @@ pub struct FlowStateDetailResp {
     pub icon: String,
     pub sys_state: FlowSysStateKind,
     pub info: String,
-
-    pub vars: Option<Value>,
 
     pub state_kind: FlowStateKind,
     pub kind_conf: Value,
@@ -136,6 +130,12 @@ impl TryGetable for FlowSysStateKind {
     }
 }
 
+impl From<FlowSysStateKind> for sea_orm::Value {
+    fn from(kind: FlowSysStateKind) -> Self {
+        sea_orm::Value::String(kind.to_string())
+    }
+}
+
 #[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
 pub enum FlowStateKind {
     Simple,
@@ -154,6 +154,12 @@ impl TryGetable for FlowStateKind {
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
         panic!("not implemented")
+    }
+}
+
+impl From<FlowStateKind> for sea_orm::Value {
+    fn from(kind: FlowStateKind) -> Self {
+        sea_orm::Value::String(kind.to_string())
     }
 }
 

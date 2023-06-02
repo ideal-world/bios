@@ -70,7 +70,6 @@ impl FlowInstServ {
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
-            rel_res_id: Set(start_req.rel_res_id.to_string()),
 
             current_state_id: Set(flow_model.unwrap().init_state_id),
 
@@ -127,7 +126,6 @@ impl FlowInstServ {
             pub id: String,
             pub rel_flow_model_id: String,
             pub rel_flow_model_name: String,
-            pub rel_res_id: String,
 
             pub current_state_id: String,
             pub current_state_name: Option<String>,
@@ -153,7 +151,6 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
-                (flow_inst::Entity, flow_inst::Column::RelResId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CurrentVars),
                 (flow_inst::Entity, flow_inst::Column::CreateVars),
@@ -197,7 +194,6 @@ impl FlowInstServ {
                 id: inst.id,
                 rel_flow_model_id: inst.rel_flow_model_id,
                 rel_flow_model_name: inst.rel_flow_model_name,
-                rel_res_id: inst.rel_res_id,
                 create_vars: inst.create_vars.map(|create_vars| TardisFuns::json.json_to_obj(create_vars).unwrap()),
                 create_ctx: inst.create_ctx,
                 create_time: inst.create_time,
@@ -228,7 +224,6 @@ impl FlowInstServ {
             pub id: String,
             pub rel_flow_model_id: String,
             pub rel_flow_model_name: String,
-            pub rel_res_id: String,
 
             pub current_state_id: String,
 
@@ -247,7 +242,6 @@ impl FlowInstServ {
             .columns([
                 (flow_inst::Entity, flow_inst::Column::Id),
                 (flow_inst::Entity, flow_inst::Column::RelFlowModelId),
-                (flow_inst::Entity, flow_inst::Column::RelResId),
                 (flow_inst::Entity, flow_inst::Column::CurrentStateId),
                 (flow_inst::Entity, flow_inst::Column::CreateCtx),
                 (flow_inst::Entity, flow_inst::Column::CreateTime),
@@ -289,7 +283,6 @@ impl FlowInstServ {
                     id: inst.id,
                     rel_flow_model_id: inst.rel_flow_model_id,
                     rel_flow_model_name: inst.rel_flow_model_name,
-                    rel_res_id: inst.rel_res_id,
                     create_ctx: TardisFuns::json.json_to_obj(inst.create_ctx).unwrap(),
                     create_time: inst.create_time,
                     finish_ctx: inst.finish_ctx.map(|finish_ctx| TardisFuns::json.json_to_obj(finish_ctx).unwrap()),
@@ -449,6 +442,7 @@ impl FlowInstServ {
         })
     }
 
+    /// The kernel function of flow processing
     async fn do_find_next_transitions(
         flow_inst: &FlowInstDetailResp,
         flow_model: &FlowModelDetailResp,
