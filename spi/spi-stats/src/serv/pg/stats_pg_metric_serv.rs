@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ptr::null};
 
 use bios_basic::spi::{
     spi_funs::SpiBsInstExtractor,
@@ -12,7 +12,7 @@ use tardis::{
         sea_orm::{self, FromQueryResult, Value},
     },
     log::info,
-    serde_json::{self, Map},
+    serde_json::{self, json, Map},
     TardisFunsInst,
 };
 
@@ -450,7 +450,7 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
     result
         .iter()
         .into_group_map_by(|record| {
-            let key = record.get(dimension_key).unwrap();
+            let key = record.get(dimension_key).unwrap_or(&json!(null));
             if key.is_f64() {
                 key.as_f64().unwrap().to_string()
             } else if key.is_i64() {
