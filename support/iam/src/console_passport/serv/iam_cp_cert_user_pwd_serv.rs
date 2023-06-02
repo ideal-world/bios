@@ -164,7 +164,17 @@ impl IamCpCertUserPwdServ {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
 
-        let (_, _, _) = IamCertServ::validate_by_ak_and_sk(&user_pwd_cert.ak, sk, Some(&rbum_cert_conf_id), None, false, Some(ctx.own_paths.clone()), None, funs).await?;
+        let (_, _, _) = IamCertServ::validate_by_ak_and_sk(
+            &user_pwd_cert.ak,
+            sk,
+            Some(&rbum_cert_conf_id),
+            None,
+            ignore_end_time,
+            Some(ctx.own_paths.clone()),
+            None,
+            funs,
+        )
+        .await?;
         Ok(())
     }
 

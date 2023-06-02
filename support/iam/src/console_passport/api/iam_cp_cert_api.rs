@@ -193,7 +193,7 @@ impl IamCpCertApi {
         .await?;
         TardisResp::ok(Void {})
     }
-    
+
     /// Validate userpwd By Current Account and ignore expired
     #[oai(path = "/validate/userpwd/ignore/expired", method = "put")]
     async fn validate_by_user_pwd_ignore_expired(&self, req: Json<IamCertGenericValidateSkReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
