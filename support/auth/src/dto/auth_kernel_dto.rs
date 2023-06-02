@@ -131,7 +131,7 @@ impl ResContainerNode {
     }
 
     pub fn insert_child(&mut self, key: &str) {
-        self.children.as_mut().unwrap().insert(key.to_string(), ResContainerNode::new());
+        self.children.as_mut().expect("[Auth.kernel] children get none").insert(key.to_string(), ResContainerNode::new());
     }
 
     pub fn get_child(&self, key: &str) -> &ResContainerNode {

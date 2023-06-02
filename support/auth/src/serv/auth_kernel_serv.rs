@@ -75,7 +75,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             trace!("Token info: {}", token_value);
             let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
             if account_info.len() > 2 {
-                cache_client.set_ex(&format!("{}{}", config.cache_key_token_info, token), &token_value, account_info[2].parse().unwrap()).await?;
+                cache_client
+                    .set_ex(
+                        &format!("{}{}", config.cache_key_token_info, token),
+                        &token_value,
+                        account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), "")?),
+                    )
+                    .await?;
             }
             account_info[1].to_string()
         } else {
