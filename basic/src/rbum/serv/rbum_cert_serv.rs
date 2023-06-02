@@ -1263,7 +1263,7 @@ impl RbumCertServ {
                         .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().unwrap().0.as_str()))
                         .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.clone()))
                         .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
-                        .and_where(Expr::col(rbum_cert::Column::Id).ne(format!("{id}%").as_str())),
+                        .and_where(Expr::col(rbum_cert::Column::Id).ne(format!("{id}").as_str())),
                 )
                 .await?
                 > 0
