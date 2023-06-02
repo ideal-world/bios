@@ -86,7 +86,14 @@ impl IamCertLdapServ {
         .await;
 
         if result.is_ok() {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, "绑定5A账号".to_string(), Some("Bind5aAccount".to_string()), ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(ctx.owner.clone()),
+                "绑定5A账号".to_string(),
+                Some("Bind5aAccount".to_string()),
+                ctx,
+            )
+            .await;
         }
 
         result
@@ -122,7 +129,14 @@ impl IamCertLdapServ {
         )
         .await;
         if result.is_ok() {
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, None, "绑定5A账号".to_string(), Some("Bind5aAccount".to_string()), ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(ctx.owner.clone()),
+                "绑定5A账号".to_string(),
+                Some("Bind5aAccount".to_string()),
+                ctx,
+            )
+            .await;
         }
         result
     }
