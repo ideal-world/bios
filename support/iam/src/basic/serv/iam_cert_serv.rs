@@ -245,7 +245,21 @@ impl IamCertServ {
     pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
         let kernel_cert = Self::get_cert_detail_by_id_and_kind(account_id, rel_iam_cert_kind, funs, ctx).await;
         if let Ok(kernel_cert) = kernel_cert {
-            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, ctx).await?;
+            let now_sk = RbumCertServ::show_sk(
+                kernel_cert.id.as_str(),
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: kernel_cert.id,
                 ak: kernel_cert.ak,

@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
@@ -12,7 +13,7 @@ use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
@@ -92,10 +93,25 @@ impl IamIdentCacheServ {
             Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
-            let mock_ctx = TardisContext {
+            let mut mock_ctx = TardisContext {
                 owner: iam_item_id.to_string(),
                 ..Default::default()
             };
+            let own_paths = RbumItemServ::get_rbum(
+                iam_item_id,
+                &RbumBasicFilterReq {
+                    ignore_scope: true,
+                    with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
+                    ..Default::default()
+                },
+                funs,
+                &mock_ctx,
+            )
+            .await?
+            .own_paths;
+            mock_ctx.own_paths = own_paths;
+
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
                 Some(iam_item_id.to_string()),

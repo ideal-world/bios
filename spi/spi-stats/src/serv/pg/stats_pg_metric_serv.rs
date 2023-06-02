@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ptr::null};
 
 use bios_basic::spi::{
     spi_funs::SpiBsInstExtractor,
@@ -12,7 +12,7 @@ use tardis::{
         sea_orm::{self, FromQueryResult, Value},
     },
     log::info,
-    serde_json::{self, Map},
+    serde_json::{self, json, Map},
     TardisFunsInst,
 };
 
@@ -228,7 +228,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     &and_where.value,
                     &and_where.time_window,
                 ) {
-                    params.push(value);
+                    value.iter().for_each(|v| params.push(v.clone()));
                     sql_part_and_wheres.push(sql_part);
                 } else {
                     return Err(funs.err().not_found(
@@ -320,7 +320,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             if let Some((sql_part, value)) =
                 col_conf.mes_data_type.as_ref().unwrap().to_pg_having(false, &format!("_.{}", &having.code), &having.op, params.len() + 1, &having.value, Some(&having.fun))
             {
-                params.push(value);
+                value.iter().for_each(|v| params.push(v.clone()));
                 sql_part_havings.push(sql_part);
             } else {
                 return Err(funs.err().not_found(
@@ -450,7 +450,7 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
     result
         .iter()
         .into_group_map_by(|record| {
-            let key = record.get(dimension_key).unwrap();
+            let key = record.get(dimension_key).unwrap_or(&json!(null));
             if key.is_f64() {
                 key.as_f64().unwrap().to_string()
             } else if key.is_i64() {

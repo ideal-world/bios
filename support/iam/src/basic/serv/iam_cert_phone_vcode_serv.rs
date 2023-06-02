@@ -277,7 +277,7 @@ impl IamCertPhoneVCodeServ {
         if RbumCertServ::count_rbums(
             &RbumCertFilterReq {
                 ak: Some(phone.to_string()),
-                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_kind: Some(RbumCertRelKind::Item), 
                 rel_rbum_cert_conf_ids: Some(vec![
                     IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::PhoneVCode.to_string().as_str(), Some(IamTenantServ::get_id_by_ctx(&ctx, funs)?), funs).await?,
                 ]),
@@ -359,7 +359,7 @@ impl IamCertPhoneVCodeServ {
         .await?
             == 0
         {
-            return Err(funs.err().not_found("iam_cert_phone_vcode", "activate", "phone not fond", "404-iam-cert-phone-not-exist"));
+            return Err(funs.err().not_found("iam_cert_phone_vcode", "activate", "phone not find", "404-iam-cert-phone-not-exist"));
         }
 
         let vcode = Self::get_vcode();
