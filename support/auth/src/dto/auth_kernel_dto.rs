@@ -143,7 +143,7 @@ impl ResContainerNode {
     }
 
     pub fn get_child_opt(&self, key: &str) -> Option<&ResContainerNode> {
-        self.children.as_ref().expect("[Auth.kernel] children get none").get(key).get(key)
+        self.children.as_ref().expect("[Auth.kernel] children get none").get(key)
     }
 
     pub fn remove_child(&mut self, key: &str) {
