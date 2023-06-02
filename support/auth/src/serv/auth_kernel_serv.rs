@@ -46,7 +46,7 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
     }
     req.path = req.path.trim().to_string();
     if req.path.starts_with('/') {
-        req.path = req.path.strip_prefix('/').unwrap().to_string();
+        req.path = req.path.strip_prefix('/').map_or(req.path.clone(), |s| s.to_string());
     }
     if req.path.is_empty() {
         return Err(TardisError::bad_request("[Auth] Request is not legal, missing [path]", "400-auth-req-path-not-empty"));
@@ -75,7 +75,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             trace!("Token info: {}", token_value);
             let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
             if account_info.len() > 2 {
-                cache_client.set_ex(&format!("{}{}", config.cache_key_token_info, token), &token_value, account_info[2].parse().unwrap()).await?;
+                cache_client
+                    .set_ex(
+                        &format!("{}{}", config.cache_key_token_info, token),
+                        &token_value,
+                        account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), "")?),
+                    )
+                    .await?;
             }
             account_info[1].to_string()
         } else {
@@ -281,7 +287,13 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             return Ok(Some(matched_res));
         }
     }
-    Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
+    if ctx.ak.is_some() {
+        //have token,not not have permission
+        Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
+    } else {
+        //not token
+        Err(TardisError::unauthorized("[Auth] Permission denied", "401-auth-req-unauthorized"))
+    }
 }
 
 pub async fn decrypt(

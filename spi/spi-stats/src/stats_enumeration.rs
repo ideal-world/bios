@@ -98,7 +98,7 @@ impl StatsDataTypeKind {
         param_idx: usize,
         value: &serde_json::Value,
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
-    ) -> Option<(String, sea_orm::Value)> {
+    ) -> Option<(String, Vec<sea_orm::Value>)> {
         if value.is_null() {
             return None;
         }
@@ -124,12 +124,22 @@ impl StatsDataTypeKind {
         } else if let Some(time_window_fun) = time_window_fun {
             Some((
                 format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
-                value.pop().unwrap(),
+                vec![value.pop().unwrap()],
             ))
         } else if op == &BasicQueryOpKind::In {
-            Some((format!("{column_name} {} (${param_idx})", op.to_sql()), value.pop().unwrap()))
+            let mut index = 0;
+            let param_sql = value
+                .iter()
+                .map(|_| {
+                    let param_idx = param_idx + index;
+                    index = index + 1;
+                    format!("${}", param_idx)
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
         } else {
-            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
+            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value.pop().unwrap()]))
         }
     }
 
@@ -141,7 +151,7 @@ impl StatsDataTypeKind {
         param_idx: usize,
         value: &serde_json::Value,
         fun: Option<&StatsQueryAggFunKind>,
-    ) -> Option<(String, sea_orm::Value)> {
+    ) -> Option<(String, Vec<sea_orm::Value>)> {
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
             Some(vec![value])
@@ -161,11 +171,21 @@ impl StatsDataTypeKind {
             // TODO Not supported yet
             todo!();
         } else if let Some(fun) = fun {
-            Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), value.pop().unwrap()))
+            Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), vec![value.pop().unwrap()]))
         } else if op == &BasicQueryOpKind::In {
-            Some((format!("{column_name} {} (${param_idx})", op.to_sql()), value.pop().unwrap()))
+            let mut index = 0;
+            let param_sql = value
+                .iter()
+                .map(|_| {
+                    let param_idx = param_idx + index;
+                    index = index + 1;
+                    format!("${}", param_idx)
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
         } else {
-            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), value.pop().unwrap()))
+            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value.pop().unwrap()]))
         }
     }
 

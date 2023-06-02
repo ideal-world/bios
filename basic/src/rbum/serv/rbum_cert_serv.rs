@@ -1033,7 +1033,7 @@ impl RbumCertServ {
         }
     }
 
-    pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn reset_sk(id: &str, new_sk: &str, is_ignore_check_sk: bool, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(id, filter, funs, ctx).await?;
         let new_sk = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::peek_rbum(
@@ -1051,6 +1051,7 @@ impl RbumCertServ {
                     .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "reset_sk", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
                     .is_match(new_sk)
                     .unwrap_or(false)
+                && !is_ignore_check_sk
             {
                 return Err(funs.err().bad_request(
                     &Self::get_obj_name(),

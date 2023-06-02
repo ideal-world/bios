@@ -231,22 +231,22 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
     if let Some(owners) = &search_req.query.owners {
         if !owners.is_empty() {
             where_fragments.push(format!(
-                "owner LIKE ANY (ARRAY[{}])",
+                "owner = ANY (ARRAY[{}])",
                 (0..owners.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for owner in owners {
-                sql_vals.push(Value::from(format!("{owner}%")));
+                sql_vals.push(Value::from(format!("{owner}")));
             }
         }
     }
     if let Some(own_paths) = &search_req.query.own_paths {
         if !own_paths.is_empty() {
             where_fragments.push(format!(
-                "own_paths LIKE ANY (ARRAY[{}])",
+                "own_paths = ANY (ARRAY[{}])",
                 (0..own_paths.len()).map(|idx| format!("${}", sql_vals.len() + idx + 1)).collect::<Vec<String>>().join(",")
             ));
             for own_path in own_paths {
-                sql_vals.push(Value::from(format!("{own_path}%")));
+                sql_vals.push(Value::from(format!("{own_path}")));
             }
         }
     }

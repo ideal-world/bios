@@ -6,13 +6,16 @@ use crate::{
     auth_constants::DOMAIN_CODE,
     serv::{auth_crypto_serv, auth_res_serv},
 };
-use tardis::cache::{AsyncCommands, AsyncIter};
 use tardis::{
     basic::result::TardisResult,
     log::{info, trace},
     tokio::time,
     web::web_server::TardisWebServer,
     TardisFuns,
+};
+use tardis::{
+    cache::{AsyncCommands, AsyncIter},
+    serde_json::json,
 };
 
 pub async fn init(web_server: &TardisWebServer) -> TardisResult<()> {
@@ -48,62 +51,47 @@ pub async fn init_data() -> TardisResult<()> {
             None
         };
         let need_crypto_req = if let Some(need_crypto_req) = info.get("need_crypto_req") {
-            need_crypto_req.as_bool().unwrap()
+            need_crypto_req.as_bool().unwrap_or_default()
         } else {
             false
         };
         let need_crypto_resp = if let Some(need_crypto_resp) = info.get("need_crypto_resp") {
-            need_crypto_resp.as_bool().unwrap()
+            need_crypto_resp.as_bool().unwrap_or_default()
         } else {
             false
         };
         let need_double_auth = if let Some(need_double_auth) = info.get("need_double_auth") {
-            need_double_auth.as_bool().unwrap()
+            need_double_auth.as_bool().unwrap_or_default()
         } else {
             false
         };
-        auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth).unwrap();
+        auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth).unwrap_or_default();
     }
     tardis::tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(config.cache_key_res_changed_timer_sec as u64));
         loop {
             {
                 trace!("[Auth] Fetch changed resource cache");
-                let mut cache_cmd = cache_client.cmd().await.unwrap();
-                let mut res_iter: AsyncIter<String> = cache_cmd.scan_match(&format!("{}*", config.cache_key_res_changed_info)).await.unwrap();
-                while let Some(changed_key) = res_iter.next_item().await {
-                    let key = changed_key.strip_prefix(&config.cache_key_res_changed_info).unwrap();
-                    trace!("[Auth]Fetch changed key [{}]", key);
-                    let f = key.split("##").collect::<Vec<_>>();
-                    if let Some(changed_value) = TardisFuns::cache_by_module_or_default(DOMAIN_CODE).hget(&config.cache_key_res_info, key).await.unwrap() {
-                        let info = TardisFuns::json.str_to_json(&changed_value).unwrap();
-                        let auth = if let Some(auth) = info.get("auth") {
-                            if auth.is_null() {
-                                None
-                            } else {
-                                Some(TardisFuns::json.json_to_obj(auth.clone()).unwrap())
+                if let Ok(mut cache_cmd) = cache_client.cmd().await {
+                    if let Ok(mut res_iter) = cache_cmd.scan_match::<_, String>(&format!("{}*", config.cache_key_res_changed_info)).await {
+                        while let Some(changed_key) = res_iter.next_item().await {
+                            if let Some(key) = changed_key.strip_prefix(&config.cache_key_res_changed_info) {
+                                trace!("[Auth]Fetch changed key [{}]", key);
+                                let f = key.split("##").collect::<Vec<_>>();
+                                if let Some(changed_value) = TardisFuns::cache_by_module_or_default(DOMAIN_CODE).hget(&config.cache_key_res_info, key).await.unwrap_or_default() {
+                                    let info = TardisFuns::json.str_to_json(&changed_value).unwrap_or(json!({}));
+                                    let auth = info.get("auth").and_then(|v| if v.is_null() { None } else { TardisFuns::json.json_to_obj(v.clone()).ok() });
+
+                                    let need_crypto_req = info.get("need_crypto_req").map_or(false, |v| v.as_bool().unwrap_or_default());
+                                    let need_crypto_resp = info.get("need_crypto_resp").map_or(false, |v| v.as_bool().unwrap_or_default());
+                                    let need_double_auth = info.get("need_double_auth").map_or(false, |v| v.as_bool().unwrap_or_default());
+
+                                    auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth).unwrap_or_default();
+                                } else {
+                                    auth_res_serv::remove_res(f[1], f[0]).unwrap_or_default();
+                                }
                             }
-                        } else {
-                            None
-                        };
-                        let need_crypto_req = if let Some(need_crypto_req) = info.get("need_crypto_req") {
-                            need_crypto_req.as_bool().unwrap()
-                        } else {
-                            false
-                        };
-                        let need_crypto_resp = if let Some(need_crypto_resp) = info.get("need_crypto_resp") {
-                            need_crypto_resp.as_bool().unwrap()
-                        } else {
-                            false
-                        };
-                        let need_double_auth = if let Some(need_double_auth) = info.get("need_double_auth") {
-                            need_double_auth.as_bool().unwrap()
-                        } else {
-                            false
-                        };
-                        auth_res_serv::add_res(f[1], f[0], auth, need_crypto_req, need_crypto_resp, need_double_auth).unwrap();
-                    } else {
-                        auth_res_serv::remove_res(f[1], f[0]).unwrap();
+                        }
                     }
                 }
             }

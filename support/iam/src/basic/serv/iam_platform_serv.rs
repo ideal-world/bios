@@ -14,6 +14,7 @@ use crate::iam_config::IamConfig;
 use crate::iam_enumeration::IamCertKernelKind;
 
 use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use super::iam_config_serv::IamConfigServ;
 
 pub struct IamPlatformServ;
@@ -36,6 +37,11 @@ impl IamPlatformServ {
         }
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some("".to_string()), None, None, funs, ctx).await?;
+
+        if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
+            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
+            IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
+        }
 
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
             if let Some(cert_conf_by_phone_vcode_id) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()).map(|r| r.id.clone()) {
