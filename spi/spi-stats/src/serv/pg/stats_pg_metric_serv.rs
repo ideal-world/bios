@@ -228,7 +228,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     &and_where.value,
                     &and_where.time_window,
                 ) {
-                    params.push(value);
+                    value.iter().for_each(|v| params.push(v.clone()));
                     sql_part_and_wheres.push(sql_part);
                 } else {
                     return Err(funs.err().not_found(
@@ -320,7 +320,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             if let Some((sql_part, value)) =
                 col_conf.mes_data_type.as_ref().unwrap().to_pg_having(false, &format!("_.{}", &having.code), &having.op, params.len() + 1, &having.value, Some(&having.fun))
             {
-                params.push(value);
+                value.iter().for_each(|v| params.push(v.clone()));
                 sql_part_havings.push(sql_part);
             } else {
                 return Err(funs.err().not_found(
