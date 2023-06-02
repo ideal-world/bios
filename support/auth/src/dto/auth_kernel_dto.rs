@@ -135,19 +135,19 @@ impl ResContainerNode {
     }
 
     pub fn get_child(&self, key: &str) -> &ResContainerNode {
-        self.children.as_ref().unwrap().get(key).unwrap()
+        self.children.as_ref().expect("[Auth.kernel] children get none").get(key).expect(&format!("[Auth.kernel] children get key:{key} none"))
     }
 
     pub fn get_child_mut(&mut self, key: &str) -> &mut ResContainerNode {
-        self.children.as_mut().unwrap().get_mut(key).unwrap()
+        self.children.as_mut().expect("[Auth.kernel] children get none").get_mut(key).expect(&format!("[Auth.kernel] children get key:{key} none"))
     }
 
     pub fn get_child_opt(&self, key: &str) -> Option<&ResContainerNode> {
-        self.children.as_ref().unwrap().get(key)
+        self.children.as_ref().expect("[Auth.kernel] children get none").get(key).get(key)
     }
 
     pub fn remove_child(&mut self, key: &str) {
-        self.children.as_mut().unwrap().remove(key);
+        self.children.as_mut().expect("[Auth.kernel] children get none").remove(key);
     }
 
     pub fn insert_leaf(
@@ -160,7 +160,7 @@ impl ResContainerNode {
         need_crypto_resp: bool,
         need_double_auth: bool,
     ) {
-        self.children.as_mut().unwrap().insert(
+        self.children.as_mut().expect("[Auth.kernel] children get none").insert(
             key.to_string(),
             ResContainerNode {
                 children: None,
@@ -177,7 +177,7 @@ impl ResContainerNode {
     }
 
     pub fn get_leaf_info(&self) -> ResContainerLeafInfo {
-        self.leaf_info.as_ref().unwrap().clone()
+        self.leaf_info.as_ref().expect("[Auth.kernel] leaf_info get none").clone()
     }
 }
 
