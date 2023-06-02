@@ -75,7 +75,7 @@ impl IamCaAccountApi {
             &ctx.0,
         )
         .await?;
-    ctx.0.execute_task().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 

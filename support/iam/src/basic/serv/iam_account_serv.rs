@@ -819,6 +819,7 @@ impl IamAccountServ {
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
+                    own_paths: Some("".to_string()),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
