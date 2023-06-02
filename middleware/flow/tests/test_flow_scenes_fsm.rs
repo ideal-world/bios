@@ -291,7 +291,6 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .post(
             &format!("/cc/inst?flow_model_id={}", model_id),
             &FlowInstStartReq {
-                rel_res_id: "test_task_001".to_string(),
                 create_vars: None,
             },
         )
