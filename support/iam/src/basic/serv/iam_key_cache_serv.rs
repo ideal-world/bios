@@ -93,24 +93,26 @@ impl IamIdentCacheServ {
             Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
-            let mut mock_ctx = TardisContext {
-                owner: iam_item_id.to_string(),
-                ..Default::default()
-            };
-            let own_paths = RbumItemServ::get_rbum(
-                iam_item_id,
-                &RbumBasicFilterReq {
-                    ignore_scope: true,
-                    with_sub_own_paths: true,
-                    own_paths: Some("".to_string()),
-                    ..Default::default()
-                },
-                funs,
-                &mock_ctx,
-            )
-            .await?
-            .own_paths;
-            mock_ctx.own_paths = own_paths;
+            let mut mock_ctx = TardisContext::default();
+            if let Ok(account_context) = Self::get_account_context(iam_item_id, "", funs).await {
+                mock_ctx = account_context;
+            } else {
+                mock_ctx.owner = iam_item_id.to_string();
+                let own_paths = RbumItemServ::get_rbum(
+                    iam_item_id,
+                    &RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    funs,
+                    &mock_ctx,
+                )
+                .await?
+                .own_paths;
+                mock_ctx.own_paths = own_paths;
+            }
 
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamAccount,

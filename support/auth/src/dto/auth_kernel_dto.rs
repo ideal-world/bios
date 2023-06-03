@@ -135,11 +135,11 @@ impl ResContainerNode {
     }
 
     pub fn get_child(&self, key: &str) -> &ResContainerNode {
-        self.children.as_ref().expect("[Auth.kernel] children get none").get(key).expect(&format!("[Auth.kernel] children get key:{key} none"))
+        self.children.as_ref().expect("[Auth.kernel] children get none").get(key).unwrap_or_else(|| panic!("[Auth.kernel] children get key:{key} none"))
     }
 
     pub fn get_child_mut(&mut self, key: &str) -> &mut ResContainerNode {
-        self.children.as_mut().expect("[Auth.kernel] children get none").get_mut(key).expect(&format!("[Auth.kernel] children get key:{key} none"))
+        self.children.as_mut().expect("[Auth.kernel] children get none").get_mut(key).unwrap_or_else(|| panic!("[Auth.kernel] children get key:{key} none"))
     }
 
     pub fn get_child_opt(&self, key: &str) -> Option<&ResContainerNode> {
