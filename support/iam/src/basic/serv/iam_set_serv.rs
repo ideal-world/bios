@@ -536,7 +536,18 @@ impl IamSetServ {
     }
 
     pub async fn delete_set_item(set_item_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
-        let item = RbumSetItemServ::get_rbum(set_item_id, &RbumSetItemFilterReq::default(), funs, ctx).await?;
+        let item: RbumSetItemDetailResp = RbumSetItemServ::get_rbum(
+            set_item_id,
+            &RbumSetItemFilterReq {
+                basic: Default::default(),
+                rel_rbum_item_disabled: Some(false),
+                table_rbum_set_cate_is_left: Some(true),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
 
         let result = RbumSetItemServ::delete_rbum(set_item_id, funs, ctx).await;
 
