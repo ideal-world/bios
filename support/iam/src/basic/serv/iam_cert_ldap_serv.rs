@@ -1011,7 +1011,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, &ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, ctx).await?;
         Ok(account_id)
     }
 
@@ -1090,11 +1090,9 @@ pub(crate) mod ldap {
     use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry, SearchOptions};
     use serde::{Deserialize, Serialize};
-    use tardis::basic::dto::TardisContext;
+
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
-
-    use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
     pub struct LdapClient {
         ldap: Ldap,
