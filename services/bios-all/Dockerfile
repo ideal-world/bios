@@ -1,4 +1,4 @@
-FROM mineman/ubuntu:openssl1.1.1t
+FROM mineman/ubuntu:opensll1.1.1t
 
 ENV TZ=Asia/Shanghai
 
