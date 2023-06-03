@@ -256,7 +256,7 @@ impl IamSetServ {
             let mut kind = item.kind;
             kind.make_ascii_lowercase();
             let (op_describe, tag, op_kind) = match kind.as_str() {
-                "Org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg), Some("Delete".to_string())),
+                "org" => ("删除部门".to_string(), Some(LogParamTag::IamOrg), Some("Delete".to_string())),
                 "res" => ("删除目录".to_string(), Some(LogParamTag::IamRes), Some("Delete".to_string())),
                 _ => (String::new(), None, None),
             };
@@ -516,11 +516,11 @@ impl IamSetServ {
         )
         .await;
 
-        let set_id = add_req.set_id.clone();
+        let set_cate_id = add_req.set_cate_id.clone();
         if let Ok(account) = IamAccountServ::get_item(add_req.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamOrg,
-                Some(set_id.clone()),
+                Some(set_cate_id.clone()),
                 format!("添加部门人员{}", account.name.clone()),
                 Some("AddAccount".to_string()),
                 ctx,
@@ -544,7 +544,7 @@ impl IamSetServ {
             if let Ok(account) = IamAccountServ::get_item(item.rel_rbum_item_id.clone().as_str(), &IamAccountFilterReq::default(), funs, ctx).await {
                 let _ = SpiLogClient::add_ctx_task(
                     LogParamTag::IamOrg,
-                    Some(item.rel_rbum_set_id.clone()),
+                    Some(item.rel_rbum_set_cate_id.unwrap_or_default().clone()),
                     format!("移除部门人员{}", account.name.clone()),
                     Some("RemoveAccount".to_string()),
                     ctx,
