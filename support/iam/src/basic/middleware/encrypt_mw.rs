@@ -71,13 +71,14 @@ impl<E: Endpoint> Endpoint for EncryptMWImpl<E> {
                         )
                         .into());
                     } else if let Some(resp_body) = encrypt_resp.data {
-                        let encrypt_resp_header_value = resp_body.headers.get(&funs.conf::<IamConfig>().crypto_conf.head_key_crypto).unwrap();
-                        let resp_headers = resp.headers_mut();
-                        resp_headers.insert(
-                            funs.conf::<IamConfig>().crypto_conf.get_crypto_header_name()?,
-                            HeaderValue::from_str(encrypt_resp_header_value).unwrap(),
-                        );
-                        resp.set_body(Body::from_string(resp_body.body));
+                        if let Some(encrypt_resp_header_value) = resp_body.headers.get(&funs.conf::<IamConfig>().crypto_conf.head_key_crypto) {
+                            let resp_headers = resp.headers_mut();
+                            resp_headers.insert(
+                                funs.conf::<IamConfig>().crypto_conf.get_crypto_header_name()?,
+                                HeaderValue::from_str(encrypt_resp_header_value).unwrap(),
+                            );
+                            resp.set_body(Body::from_string(resp_body.body));
+                        }
                     } else {
                         resp.set_body(Body::from_string(resp_body));
                     }
