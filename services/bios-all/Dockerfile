@@ -1,4 +1,4 @@
-FROM mineman/ubuntu:opensll1.1.1t
+FROM ubuntu
 
 ENV TZ=Asia/Shanghai
 
