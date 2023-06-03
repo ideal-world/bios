@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{RwLock, RwLockReadGuard},
-};
+use std::{collections::HashMap, sync::RwLock};
 
 use lazy_static::lazy_static;
 use tardis::{

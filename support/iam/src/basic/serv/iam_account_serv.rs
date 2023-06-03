@@ -827,8 +827,8 @@ impl IamAccountServ {
             },
             true,
             true,
-            &funs,
-            &ctx,
+            funs,
+            ctx,
         )
         .await?;
         ctx.add_async_task(Box::new(|| {
