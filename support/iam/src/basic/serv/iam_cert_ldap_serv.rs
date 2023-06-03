@@ -423,6 +423,7 @@ impl IamCertLdapServ {
                 &mock_ctx,
             )
             .await?;
+            mock_ctx.execute_task().await?;
             Ok((account_id, dn.to_string()))
         } else {
             return Err(funs.err().not_found(
@@ -600,6 +601,7 @@ impl IamCertLdapServ {
                 )
                 .await?
             };
+            mock_ctx.execute_task().await?;
             Ok((account_id, dn))
         } else {
             return Err(funs.err().not_found(
@@ -940,6 +942,7 @@ impl IamCertLdapServ {
                 continue;
             }
             funs.commit().await?;
+            mock_ctx.execute_task().await?;
         }
         Ok(msg)
     }
@@ -1008,7 +1011,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, &ctx).await?;
         Ok(account_id)
     }
 

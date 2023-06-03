@@ -355,7 +355,7 @@ impl IamRoleServ {
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
         IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, &ctx).await?;
         Ok(())
     }
 
@@ -379,7 +379,7 @@ impl IamRoleServ {
             }
         }
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, &ctx).await?;
         Ok(())
     }
 

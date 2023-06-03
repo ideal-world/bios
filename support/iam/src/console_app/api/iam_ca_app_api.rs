@@ -25,6 +25,7 @@ impl IamCaAppApi {
         funs.begin().await?;
         IamAppServ::modify_app_agg(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &modify_req, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
@@ -37,6 +38,7 @@ impl IamCaAppApi {
     async fn get(&self, ctx: TardisContextExtractor) -> TardisApiResult<IamAppDetailResp> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamAppServ::get_item(&IamAppServ::get_id_by_ctx(&ctx.0, &funs)?, &IamAppFilterReq::default(), &funs, &ctx.0).await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -57,6 +59,7 @@ impl IamCaAppApi {
         funs.begin().await?;
         IamAppServ::delete_rel_account(&id.0, &account_id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 }

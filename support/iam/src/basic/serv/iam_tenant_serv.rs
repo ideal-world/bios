@@ -357,8 +357,9 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(admin_id, false, "".to_string(), funs, tenant_ctx.clone()).await?;
-        IamAccountServ::async_add_or_modify_account_search(audit_id, false, "".to_string(), funs, tenant_ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(admin_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(audit_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
+        tenant_ctx.execute_task().await?;
         Ok((tenant_id, admin_pwd, audit_pwd))
     }
 
