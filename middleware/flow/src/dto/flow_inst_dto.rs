@@ -13,7 +13,6 @@ use super::flow_var_dto::FlowVarInfo;
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {
-    #[oai(validator(min_length = "2", max_length = "255"))]
     pub create_vars: Option<HashMap<String, Value>>,
 }
 

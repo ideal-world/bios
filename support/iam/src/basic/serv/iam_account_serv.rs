@@ -814,6 +814,10 @@ impl IamAccountServ {
     // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
     pub async fn async_add_or_modify_account_search(account_id: String, is_modify: Box<bool>, logout_msg: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let ctx_clone = ctx.clone();
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
         let account_resp = IamAccountServ::get_account_detail_aggs(
             &account_id,
             &IamAccountFilterReq {
@@ -827,8 +831,8 @@ impl IamAccountServ {
             },
             true,
             true,
-            &funs,
-            &ctx,
+            funs,
+            &mock_ctx,
         )
         .await?;
         ctx.add_async_task(Box::new(|| {

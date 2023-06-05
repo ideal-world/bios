@@ -319,7 +319,7 @@ impl IamCertMailVCodeServ {
     }
 
     pub async fn send_pwd(account_id: &str, pwd: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::PhoneVCode, funs, ctx).await;
+        let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::MailVCode, funs, ctx).await;
         match resp {
             Ok(cert) => {
                 let _ = MailClient::send_pwd(&cert.ak, pwd, funs).await;

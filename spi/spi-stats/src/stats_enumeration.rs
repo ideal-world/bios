@@ -293,18 +293,49 @@ impl StatsQueryTimeWindowKind {
         if is_date_time {
             match self {
                 StatsQueryTimeWindowKind::Date => format!("date(timezone('UTC', {column_name}))"),
-                StatsQueryTimeWindowKind::Hour => format!("date_part('hour',timezone('UTC', {column_name}))"),
-                StatsQueryTimeWindowKind::Day => format!("date_part('day',timezone('UTC', {column_name}))"),
-                StatsQueryTimeWindowKind::Month => format!("date_part('month',timezone('UTC', {column_name}))"),
+                // StatsQueryTimeWindowKind::Hour => format!("date_part('hour',timezone('UTC', {column_name}))"),
+                StatsQueryTimeWindowKind::Hour => format!(
+                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'), ' ',
+                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0')
+             )"
+                ),
+                // StatsQueryTimeWindowKind::Day => format!("date_part('day',timezone('UTC', {column_name}))"),
+                StatsQueryTimeWindowKind::Day => format!(
+                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'))"
+                ),
+                // StatsQueryTimeWindowKind::Month => format!("date_part('month',timezone('UTC', {column_name}))"),
+                StatsQueryTimeWindowKind::Month => {
+                    format!("CONCAT(date_part('year', timezone('UTC',{column_name})), '-',LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'))")
+                }
                 StatsQueryTimeWindowKind::Year => format!("date_part('year',timezone('UTC', {column_name}))"),
             }
         } else {
             match self {
                 StatsQueryTimeWindowKind::Date => column_name.to_string(),
-                StatsQueryTimeWindowKind::Hour => format!("date_part('hour', {column_name})"),
-                StatsQueryTimeWindowKind::Day => format!("date_part('day', {column_name})"),
-                StatsQueryTimeWindowKind::Month => format!("date_part('month', {column_name})"),
-                StatsQueryTimeWindowKind::Year => format!("date_part('year', {column_name})"),
+                // StatsQueryTimeWindowKind::Hour => format!("date_part('hour', {column_name})"),
+                // StatsQueryTimeWindowKind::Day => format!("date_part('day', {column_name})"),
+                // StatsQueryTimeWindowKind::Month => format!("date_part('month', {column_name})"),
+                // StatsQueryTimeWindowKind::Year => format!("date_part('year', {column_name})"),
+                StatsQueryTimeWindowKind::Hour => format!(
+                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'), ' ',
+                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0')
+             )"
+                ),
+                StatsQueryTimeWindowKind::Day => format!(
+                    "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
+                LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
+                LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'))"
+                ),
+                StatsQueryTimeWindowKind::Month => {
+                    format!("CONCAT(date_part('year', timezone('UTC',{column_name})), '-',LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'))")
+                }
+                StatsQueryTimeWindowKind::Year => format!("date_part('year',timezone('UTC', {column_name}))"),
             }
         }
     }
