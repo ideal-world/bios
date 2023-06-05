@@ -57,7 +57,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &FlowModelAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<flow_model::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &FlowModelAddReq, _: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<flow_model::ActiveModel> {
         Ok(flow_model::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -203,7 +203,7 @@ impl FlowModelServ {
             ));
         }
         let flow_transitions = add_req
-            .into_iter()
+            .iter()
             .map(|req| flow_transition::ActiveModel {
                 id: Set(TardisFuns::field.nanoid()),
                 name: Set(req.name.as_ref().map(|name| name.to_string()).unwrap_or("".to_string())),
@@ -218,9 +218,9 @@ impl FlowModelServ {
                 guard_by_his_operators: Set(req.guard_by_his_operators.unwrap_or(false)),
                 guard_by_spec_account_ids: Set(req.guard_by_spec_account_ids.as_ref().unwrap_or(&vec![]).clone()),
                 guard_by_spec_role_ids: Set(req.guard_by_spec_role_ids.as_ref().unwrap_or(&vec![]).clone()),
-                guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!({})).clone()),
+                guard_by_other_conds: Set(req.guard_by_other_conds.as_ref().map(|conds| TardisFuns::json.obj_to_json(conds).unwrap()).unwrap_or(json!({}))),
 
-                vars_collect: Set(req.vars_collect.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap()).unwrap_or(json!({})).clone()),
+                vars_collect: Set(req.vars_collect.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap()).unwrap_or(json!({}))),
 
                 action_by_pre_callback: Set(req.action_by_pre_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
                 action_by_post_callback: Set(req.action_by_post_callback.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -270,7 +270,7 @@ impl FlowModelServ {
         if funs
             .db()
             .count(
-                &Query::select()
+                Query::select()
                     .column((flow_transition::Entity, flow_transition::Column::Id))
                     .from(flow_transition::Entity)
                     .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id.to_string()))
@@ -345,7 +345,7 @@ impl FlowModelServ {
         if funs
             .db()
             .count(
-                &Query::select()
+                Query::select()
                     .column((flow_transition::Entity, flow_transition::Column::Id))
                     .from(flow_transition::Entity)
                     .and_where(Expr::col((flow_transition::Entity, flow_transition::Column::RelFlowModelId)).eq(flow_model_id.to_string()))
@@ -421,7 +421,7 @@ impl FlowModelServ {
         if funs
             .db()
             .count(
-                &Query::select().column((flow_transition::Entity, flow_transition::Column::Id)).from(flow_transition::Entity).cond_where(
+                Query::select().column((flow_transition::Entity, flow_transition::Column::Id)).from(flow_transition::Entity).cond_where(
                     Cond::any().add(
                         Cond::any()
                             .add(Expr::col((flow_transition::Entity, flow_transition::Column::FromFlowStateId)).eq(flow_state_id))

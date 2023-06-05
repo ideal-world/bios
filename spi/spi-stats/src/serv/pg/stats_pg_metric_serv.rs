@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ptr::null};
+use std::collections::HashMap;
 
 use bios_basic::spi::{
     spi_funs::SpiBsInstExtractor,
@@ -11,7 +11,7 @@ use tardis::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
-    log::info,
+    log::{debug, info},
     serde_json::{self, json, Map},
     TardisFunsInst,
 };
@@ -84,12 +84,13 @@ const FUNCTION_SUFFIX_FLAG: &str = "__";
 ///   ) _
 /// GROUP BY
 /// -- List of dimensions to grouping
+/// -- Omit adding rollup dimensions according to the ignore_group_rollup configuration, Default is false
 ///   ROLLUP(date(timezone('UTC', _.ct)), _.status)
 /// HAVING
 /// -- Filter condition of the measure value after grouping and aggregation, optional
 ///   sum(_.act_hours) > 30
 /// ORDER BY
-/// -- Order of the measure values ​​after grouping ad aggregation, optional
+/// -- Order of the measure and group values ​​after grouping ad aggregation, optional
 ///   act_hours__sum DESC
 /// LIMIT
 /// -- Length limit after grouping, optional
@@ -175,11 +176,25 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         dim_data_type: Some(StatsDataTypeKind::DateTime),
         query_limit: conf_info.get(0).unwrap().query_limit,
     });
+    conf_info.push(StatsConfInfo {
+        col_key: "_count".to_string(),
+        show_name: "虚构计算数".to_string(),
+        col_kind: StatsFactColKind::Measure,
+        dim_multi_values: Some(false),
+        mes_data_type: Some(StatsDataTypeKind::Int),
+        dim_data_type: None,
+        query_limit: conf_info.get(0).unwrap().query_limit,
+    });
 
     let conf_limit = conf_info.get(0).unwrap().query_limit;
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone(), v)).collect::<HashMap<String, StatsConfInfo>>();
     if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code))
         || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension)
+        || query_req
+            .group_order
+            .as_ref()
+            .map(|orders| orders.iter().any(|order| !query_req.group.iter().any(|group| group.code == order.code && group.time_window == order.time_window)))
+            .unwrap_or(false)
         || query_req
             .metrics_order
             .as_ref()
@@ -342,24 +357,6 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         "".to_string()
     };
 
-    // Package metrics order
-    let sql_metrics_orders = if let Some(orders) = &query_req.metrics_order {
-        let sql_part_orders = orders
-            .iter()
-            .map(|order| {
-                format!(
-                    "{}{FUNCTION_SUFFIX_FLAG}{} {}",
-                    order.code,
-                    order.fun.to_string().to_lowercase(),
-                    if order.asc { "ASC" } else { "DESC" }
-                )
-            })
-            .collect::<Vec<String>>();
-        format!("ORDER BY {}", sql_part_orders.join(","))
-    } else {
-        "".to_string()
-    };
-
     // Package dimension order
     let sql_dimension_orders = if let Some(orders) = &query_req.dimension_order {
         let sql_part_orders = orders.iter().map(|order| format!("fact.{} {}", order.code, if order.asc { "ASC" } else { "DESC" })).collect::<Vec<String>>();
@@ -368,6 +365,41 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         "".to_string()
     };
 
+    // Package metrics or group order
+    let sql_orders = if query_req.group_order.is_some() || query_req.metrics_order.is_some() {
+        let mut sql_part_orders = Vec::new();
+        if let Some(orders) = &query_req.group_order {
+            let group_orders = orders
+                .iter()
+                .map(|order| {
+                    format!(
+                        "{}{FUNCTION_SUFFIX_FLAG}{} {}",
+                        order.code,
+                        order.time_window.as_ref().map(|i| i.to_string().to_lowercase()).unwrap_or("".to_string()),
+                        if order.asc { "ASC" } else { "DESC" }
+                    )
+                })
+                .collect::<Vec<String>>();
+            sql_part_orders.extend(group_orders);
+        }
+        if let Some(orders) = &query_req.metrics_order {
+            let metrics_orders = orders
+                .iter()
+                .map(|order| {
+                    format!(
+                        "{}{FUNCTION_SUFFIX_FLAG}{} {}",
+                        order.code,
+                        order.fun.to_string().to_lowercase(),
+                        if order.asc { "ASC" } else { "DESC" }
+                    )
+                })
+                .collect::<Vec<String>>();
+            sql_part_orders.extend(metrics_orders);
+        }
+        format!("ORDER BY {}", sql_part_orders.join(","))
+    } else {
+        "".to_string()
+    };
     // package limit
     let query_limit = if let Some(limit) = &query_req.limit { format!("LIMIT {limit}") } else { "".to_string() };
 
@@ -377,7 +409,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         SELECT
              {sql_part_inner_selects}
              FROM(
-                SELECT {}fact.*
+                SELECT {}fact.*, 1 as _count
                 FROM {fact_inst_table_name} fact
                 LEFT JOIN {fact_inst_del_table_name} del ON del.key = fact.key AND del.ct >= $2 AND del.ct <= $3
                 WHERE
@@ -393,7 +425,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     ) _
     {}
     {sql_part_havings}
-    {sql_metrics_orders}
+    {sql_orders}
     {query_limit}"#,
         if query_req.ignore_distinct.unwrap_or(false) {
             ""
@@ -404,7 +436,11 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if sql_part_groups.is_empty() {
             "".to_string()
         } else {
-            format!("GROUP BY ROLLUP({sql_part_groups})")
+            if query_req.ignore_group_rollup.unwrap_or(false) {
+                format!("GROUP BY {sql_part_groups}")
+            } else {
+                format!("GROUP BY ROLLUP({sql_part_groups})")
+            }
         }
     );
 
@@ -422,7 +458,6 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let select_measure_keys =
         sql_part_outer_select_infos.iter().filter(|(_, _, _, is_dimension)| !*is_dimension).map(|(_, alias_name, _, _)| alias_name.to_string()).collect::<Vec<String>>();
     let show_names = sql_part_outer_select_infos.into_iter().map(|(_, alias_name, show_name, _)| (alias_name, show_name)).collect::<HashMap<String, String>>();
-
     Ok(StatsQueryMetricsResp {
         from: query_req.from.to_string(),
         show_names,
@@ -432,7 +467,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
 
 fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: &Vec<String>, result: Vec<serde_json::Value>) -> serde_json::Value {
     if curr_select_dimension_keys.is_empty() {
-        let mut leaf_node = Map::new();
+        let mut leaf_node = Map::with_capacity(result.len());
         select_measure_keys.iter().for_each(|measure_key| {
             let val = result.get(0).unwrap().get(measure_key).unwrap();
             let val = if measure_key.ends_with(&format!("{FUNCTION_SUFFIX_FLAG}avg")) {
@@ -445,11 +480,11 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
         });
         return serde_json::Value::Object(leaf_node);
     }
-    let mut node = Map::new();
+    let mut node = Map::with_capacity(0);
     let dimension_key = curr_select_dimension_keys.get(0).unwrap();
     result
         .iter()
-        .into_group_map_by(|record| {
+        .group_by(|record| {
             let key = record.get(dimension_key).unwrap_or(&json!(null));
             if key.is_f64() {
                 key.as_f64().unwrap().to_string()
@@ -460,7 +495,7 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
             } else if key.is_u64() {
                 key.as_u64().unwrap().to_string()
             } else if key.is_null() {
-                "".to_string()
+                "ROLLUP".to_string()
             } else {
                 key.as_str().unwrap().to_string()
             }

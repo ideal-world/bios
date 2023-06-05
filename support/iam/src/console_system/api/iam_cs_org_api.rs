@@ -187,7 +187,7 @@ impl IamCsOrgItemApi {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0.clone())?;
         let set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, &ctx).await?;
-        let scope_level = if tenant_id.is_none() || tenant_id.0.clone().unwrap().is_empty() {
+        let scope_level = if tenant_id.is_none() || tenant_id.0.clone().unwrap_or_default().is_empty() {
             None
         } else {
             Some(RbumScopeLevelKind::Root)
