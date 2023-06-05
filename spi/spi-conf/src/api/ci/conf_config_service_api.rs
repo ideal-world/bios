@@ -153,7 +153,7 @@ impl ConfCiConfigServiceApi {
         #[oai(validator(min_length = 1, max_length = 256))]
         data_id: Query<Option<String>>,
         /// 标签
-        tags: Query<Option<Vec<String>>>,
+        tags: Query<Option<String>>,
         /// 配置类型
         r#type: Query<Option<String>>,
         page_no: Query<Option<u32>>,
@@ -170,7 +170,7 @@ impl ConfCiConfigServiceApi {
             namespace_id: namespace_id.0.or(tenant.0),
             group: group.0,
             data_id: data_id.0,
-            tags: tags.0.unwrap_or_default(),
+            tags: tags.0.unwrap_or_default().split(',').map(String::from).collect(),
             tp: r#type.0,
             page_no: page_number,
             page_size,

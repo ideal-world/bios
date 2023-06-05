@@ -78,8 +78,13 @@ pub async fn get_config_detail(descriptor: &mut ConfigDescriptor, funs: &TardisF
     let qry_result = conn
         .query_one(
             &format!(
-                r#"SELECT id, data_id, namespace_id, md5, content, src_user, created_time, modified_time, grp FROM {table_name} cc
-WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3"#,
+                r#"SELECT 
+    *, 
+    ARRAY_TO_STRING(
+        ARRAY(select tag_id from {config_tag_rel_table_name} tcr where tcr.config_id = c.id), ','
+    ) as tags 
+FROM {table_name} c
+WHERE c.namespace_id=$1 AND c.grp=$2 AND c.data_id=$3"#,
             ),
             vec![Value::from(namespace), Value::from(group), Value::from(data_id)],
         )
@@ -95,19 +100,9 @@ WHERE cc.namespace_id=$1 AND cc.grp=$2 AND cc.data_id=$3"#,
         modified_time: DateTimeUtc,
         grp: String,
         src_user: Option<String>,
+        tags: Option<String>,
     });
-    let config_tags = conn
-        .query_all(
-            &format!(
-                r#"SELECT tag_id FROM {config_tag_rel_table_name} t WHERE t.config_id=$1
-"#,
-            ),
-            vec![Value::from(id)],
-        )
-        .await?
-        .iter()
-        .map(|r| r.try_get::<String>("", "tag_id"))
-        .collect::<Result<Vec<String>, _>>()?;
+    let config_tags = tags.map(|tags| tags.split(',').filter(|s| !s.is_empty()).map(String::from).collect()).unwrap_or_default();
     Ok(ConfigItem {
         id: id.to_string(),
         data_id,
@@ -415,14 +410,16 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, config_table_name) = conns.config;
     let (_, config_tag_rel_table_name) = conns.config_tag_rel;
-    let inner_join_clause = if !tags.is_empty() {
-        values.push(Value::from(tags));
+    let tag_condition_clause = if !tags.is_empty() {
+        let tag_count = tags.len();
+        let tags_placeholder = (values.len() + 1..=values.len() + tag_count).map(|idx| format!("${}", idx)).collect::<Vec<String>>().join(", ");
+        values.extend(tags.iter().map(Value::from));
         format!(
-            r#"INNER JOIN (
-            SELECT data_id FROM {config_tag_rel_table_name} ctr
-            WHERE ctr.tag_id IN (${tags_placeholder})
-        ) AS ctrd ON cch.data_id=ctrd.data_id"#,
-            tags_placeholder = values.len()
+            r#"id IN (
+        SELECT config_id FROM {config_tag_rel_table_name} tcr
+        WHERE tcr.tag_id IN ({tags_placeholder})
+        GROUP BY config_id
+        HAVING COUNT(config_id) = {tag_count})"#
         )
     } else {
         "".into()
@@ -430,13 +427,19 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
     let qry_result_list = conn
         .query_all(
             &format!(
-                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, grp, count(*) AS total_count FROM {config_table_name} cch
-    WHERE {where_clause}
-    {inner_join_clause}
+                r#"SELECT 
+    *, 
+    COUNT(*) OVER () as total_count,
+    ARRAY_TO_STRING(
+		ARRAY(select tag_id from {config_tag_rel_table_name} tcr where tcr.config_id = c.id), ','
+	) as tags
+    FROM {config_table_name} c
+    WHERE {cond}
     ORDER BY created_time DESC
     LIMIT {limit}
     OFFSET {offset}
     "#,
+                cond = [where_clause.as_deref().unwrap_or("1=1"), tag_condition_clause.as_str()].join(" AND "),
             ),
             values,
         )
@@ -451,12 +454,12 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
                 namespace_id: String,
                 md5: String,
                 content: String,
-                op_type: String,
                 created_time: DateTimeUtc,
                 modified_time: DateTimeUtc,
                 grp: String,
-                total_count: u32,
+                total_count: i64,
                 src_user: Option<String>,
+                tags: Option<String>,
             });
             total = total_count;
             Ok(ConfigItem {
@@ -465,15 +468,16 @@ pub async fn get_configs(req: ConfigListRequest, mode: SearchMode, funs: &Tardis
                 namespace: namespace_id,
                 md5,
                 content,
-                op_type,
                 created_time,
                 last_modified_time: modified_time,
                 group: grp,
                 src_user,
+                config_tags: tags.map(|tags| tags.split(',').filter(|s| !s.is_empty()).map(String::from).collect()).unwrap_or_default(),
                 ..Default::default()
             })
         })
         .collect::<TardisResult<Vec<_>>>()?;
+    let total = total as u32;
     Ok(ConfigListResponse {
         total_count: total,
         page_number,

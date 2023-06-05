@@ -67,20 +67,10 @@ pub async fn get_history_list_by_namespace(req: &mut ConfigHistoryListRequest, f
     let bs_inst = funs.bs(ctx).await?.inst::<TardisRelDBClient>();
     let conns = conf_pg_initializer::init_table_and_conn(bs_inst, ctx, true).await?;
     let (conn, table_name) = conns.config_history;
-    let total: u32 = conn
-        .count_by_sql(
-            &format!(
-                r#"SELECT (id) FROM {table_name} cch
-WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3
-"#
-            ),
-            vec![Value::from(namespace_id), Value::from(group), Value::from(data_id)],
-        )
-        .await? as u32;
     let qry_result_list = conn
         .query_all(
             &format!(
-                r#"SELECT id, data_id, namespace_id, md5, content, src_user, op_type, created_time, modified_time, config_tags, grp FROM {table_name} cch
+                r#"SELECT *, count(*) over () as total_count FROM {table_name} cch
 WHERE cch.namespace_id=$1 AND cch.grp=$2 AND cch.data_id=$3
 ORDER BY created_time DESC
 LIMIT {limit}
@@ -90,7 +80,7 @@ OFFSET {offset}
             vec![Value::from(namespace_id), Value::from(group), Value::from(data_id)],
         )
         .await?;
-
+    let mut total = 0;
     let list = qry_result_list
         .into_iter()
         .map(|qry_result| {
@@ -105,7 +95,9 @@ OFFSET {offset}
                 modified_time: DateTimeUtc,
                 grp: String,
                 config_tags: String,
+                total_count: i64,
             });
+            total = total_count as u32;
             Ok(ConfigItem {
                 id: id.to_string(),
                 data_id,

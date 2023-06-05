@@ -25,7 +25,7 @@ fn gen_insert_sql_stmt<'a>(fields_and_values: impl IntoIterator<Item = (&'a str,
     (init.0, init.1, values)
 }
 
-fn gen_select_sql_stmt<'a>(keys: impl IntoIterator<Item = (&'a str, &'a str, Value)>) -> (String, Vec<Value>) {
+fn gen_select_sql_stmt<'a>(keys: impl IntoIterator<Item = (&'a str, &'a str, Value)>) -> (Option<String>, Vec<Value>) {
     let mut init = String::new();
     let mut values = vec![];
     for (idx, (column, op, value)) in keys.into_iter().enumerate() {
@@ -38,7 +38,7 @@ fn gen_select_sql_stmt<'a>(keys: impl IntoIterator<Item = (&'a str, &'a str, Val
         init.push_str((idx + 1).to_string().as_str());
         values.push(value)
     }
-    (init, values)
+    ((!init.is_empty()).then_some(init), values)
 }
 
 /// return set caluse, where caluse, values

@@ -344,7 +344,7 @@ pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
                 "data_id": DATA_ID,
                 "schema": "toml",
                 "namespace_id": "public".to_string(),
-                "config_tags": ["tag2", "tag3"],
+                "config_tags": ["tag2", "tag3", "tag4"],
             }),
         )
         .await;
@@ -359,8 +359,32 @@ pub async fn test_tags(client: &mut TestHttpClient) -> TardisResult<()> {
     // wait_press_enter();
     assert!(response.page_items[0].config_tags.contains(&"tag2".to_string()));
     assert!(response.page_items[0].config_tags.contains(&"tag3".to_string()));
+    assert!(!response.page_items[0].config_tags.contains(&"tag1".to_string()));
     assert!(response.page_items[1].config_tags.contains(&"tag1".to_string()));
     assert!(response.page_items[1].config_tags.contains(&"tag2".to_string()));
+    // 6. search by tags
+    let _response = client
+        .post::<_, bool>(
+            "/ci/cs/config",
+            &json!( {
+                "content": "for tag test",
+                "group": "DEFAULT-GROUP".to_string(),
+                "data_id": format!("{}-{}", DATA_ID, 2),
+                "schema": "toml",
+                "namespace_id": "public".to_string(),
+                "config_tags": ["tag2", "tag3"],
+            }),
+        )
+        .await;
+    let response = client.get::<ConfigListResponse>("/ci/cs/configs?tags=tag2,tag3").await;
+    assert_eq!(response.total_count, 2);
+    assert!(response.page_items.iter().any(|item| item.data_id == DATA_ID));
+    assert!(response.page_items.iter().any(|item| item.data_id == format!("{}-{}", DATA_ID, 2)));
+    assert!(response.page_items.iter().all(|item| item.config_tags.contains(&"tag2".to_owned()) && item.config_tags.contains(&"tag3".to_owned())));
+    let response = client.get::<ConfigListResponse>(&format!("/ci/cs/configs?tags=tag2&data_id={DATA_ID}&mode=fuzzy")).await;
+    assert_eq!(response.total_count, 2);
+    let response = client.get::<ConfigListResponse>(&format!("/ci/cs/configs?tags=tag4&data_id={DATA_ID}&mode=fuzzy")).await;
+    assert_eq!(response.total_count, 1);
     Ok(())
 }
 
