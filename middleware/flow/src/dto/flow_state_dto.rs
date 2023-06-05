@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -8,13 +6,10 @@ use serde::{Deserialize, Serialize};
 use tardis::{
     basic::field::TrimString,
     chrono::{DateTime, Utc},
-    db::sea_orm::{self, DbErr, QueryResult, TryGetError, TryGetable},
-    derive_more::Display,
+    db::sea_orm::{self},
     serde_json::Value,
     web::poem_openapi,
 };
-
-use super::flow_var_dto::FlowVarSimpleInfo;
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowStateAddReq {
@@ -112,55 +107,32 @@ pub struct FlowStateDetailResp {
     pub disabled: bool,
 }
 
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowSysStateKind {
+    #[sea_orm(string_value = "start")]
     Start,
+    #[sea_orm(string_value = "progress")]
     Progress,
+    #[sea_orm(string_value = "finish")]
     Finish,
 }
 
-impl TryGetable for FlowSysStateKind {
-    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = String::try_get(res, pre, col)?;
-        FlowSysStateKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
-    }
-
-    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
-    }
-}
-
-impl From<FlowSysStateKind> for sea_orm::Value {
-    fn from(kind: FlowSysStateKind) -> Self {
-        sea_orm::Value::String(kind.to_string())
-    }
-}
-
-#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
 pub enum FlowStateKind {
+    #[sea_orm(string_value = "simple")]
     Simple,
+    #[sea_orm(string_value = "form")]
     Form,
+    #[sea_orm(string_value = "mail")]
     Mail,
+    #[sea_orm(string_value = "callback")]
     Callback,
+    #[sea_orm(string_value = "timer")]
     Timer,
+    #[sea_orm(string_value = "script")]
     Script,
-}
-
-impl TryGetable for FlowStateKind {
-    fn try_get(res: &QueryResult, pre: &str, col: &str) -> Result<Self, TryGetError> {
-        let s = String::try_get(res, pre, col)?;
-        FlowStateKind::from_str(&s).map_err(|_| TryGetError::DbErr(DbErr::RecordNotFound(format!("{pre}:{col}"))))
-    }
-
-    fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
-    }
-}
-
-impl From<FlowStateKind> for sea_orm::Value {
-    fn from(kind: FlowStateKind) -> Self {
-        sea_orm::Value::String(kind.to_string())
-    }
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone, Default)]
