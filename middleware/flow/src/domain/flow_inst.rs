@@ -53,7 +53,7 @@ pub struct Model {
     ///
     /// TODO Vec<FlowInstTransitionInfo>
     #[index(full_text)]
-    #[sea_orm(column_type = "JsonBinary")]
+    #[sea_orm(column_type = "JsonBinary", custom_type = "JsonBinary",nullable)]
     pub transitions: Option<Json>,
 
     pub own_paths: String,

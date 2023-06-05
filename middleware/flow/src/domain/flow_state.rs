@@ -29,6 +29,7 @@ pub struct Model {
     /// When the process flows to the system state `Finish`, the process is automatically ended
     /// 当流程流转到系统状态为 `Finish` 时即自动结束流程
     #[index]
+    #[sea_orm(custom_type = "String")]
     pub sys_state: FlowSysStateKind,
     /// State type / 状态类型
     ///
@@ -45,6 +46,7 @@ pub struct Model {
     /// Script: Execute a script
     /// ......
     #[index]
+    #[sea_orm(custom_type = "String")]
     pub state_kind: FlowStateKind,
     /// Status type configuration / 状态类型配置
     ///
