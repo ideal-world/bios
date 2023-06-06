@@ -207,6 +207,7 @@ WHERE cc.grp=$1 AND cc.namespace_id=$2 AND cc.data_id=$3"#,
     let op_type: OpType;
 
     conn.begin().await?;
+    // if has config tags, insert tags first
     if !config_tags.is_empty() {
         let placeholders = (1..=config_tags.len()).map(|idx| format!("(${idx})")).collect::<Vec<String>>().join(", ");
         let config_values = config_tags.iter().map(Value::from).collect();
@@ -217,6 +218,7 @@ WHERE cc.grp=$1 AND cc.namespace_id=$2 AND cc.data_id=$3"#,
         )
         .await?;
     }
+    // update or insert config, get config id
     let config_id = if let Some(uuid) = qry_result {
         // if exists, update
         op_type = OpType::Update;
@@ -274,13 +276,18 @@ WHERE {where_caluse}"#,
         .iter()
         .map(|r| r.try_get::<String>("", "tag_id"))
         .collect::<Result<HashSet<String>, _>>()?;
+
     let mut insert_values = vec![];
+
     for tag in config_tags {
+        // for tags existed, do nothing
         if exsisted_tags.take(tag).is_none() {
             // insert rel
             insert_values.push(vec![Value::from(tag), Value::from(config_id)]);
         }
     }
+
+    // insert new tags
     if !insert_values.is_empty() {
         let placeholders = (1..=insert_values.len()).map(|idx| format!("(${ptag}, ${pconfig})", ptag = idx * 2 - 1, pconfig = idx * 2)).collect::<Vec<String>>().join(", ");
         conn.execute_one(
@@ -289,6 +296,8 @@ WHERE {where_caluse}"#,
         )
         .await?;
     }
+
+    // delete removed tags
     if !exsisted_tags.is_empty() {
         let placeholders = (1..=exsisted_tags.len()).map(|idx| format!("${idx}")).collect::<Vec<String>>().join(", ");
         let mut delete_values = exsisted_tags.iter().map(Value::from).collect::<Vec<_>>();
