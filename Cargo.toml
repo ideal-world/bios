@@ -6,6 +6,7 @@ members = [
     "gateway/test",
     "middleware/event",
     "middleware/schedule",
+    "middleware/flow",
     "support/iam",
     "support/auth",
     "support/enhance-wasm",
@@ -45,7 +46,5 @@ fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
 
 # tardis
-tardis = { version = "=0.1.0-beta.9" }
+tardis = { version = "=0.1.0-beta.10" }
 # tardis = { paths = "../tardis/tardis" }
-
-
