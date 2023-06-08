@@ -57,7 +57,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &FlowStateAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<flow_state::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &FlowStateAddReq, _: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<flow_state::ActiveModel> {
         Ok(flow_state::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -67,7 +67,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             kind_conf: Set(add_req.kind_conf.as_ref().unwrap_or(&json!({})).clone()),
             template: Set(add_req.template.unwrap_or(false)),
             rel_state_id: Set(add_req.rel_state_id.as_ref().unwrap_or(&"".to_string()).to_string()),
-            tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
+            tag: Set(add_req.tag.as_ref().unwrap_or(&vec![]).to_vec()),
             ..Default::default()
         })
     }
@@ -136,7 +136,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             flow_state.rel_state_id = Set(rel_state_id.to_string());
         }
         if let Some(tag) = &modify_req.tag {
-            flow_state.tag = Set(tag.to_string());
+            flow_state.tag = Set(tag.to_vec());
         }
         Ok(Some(flow_state))
     }

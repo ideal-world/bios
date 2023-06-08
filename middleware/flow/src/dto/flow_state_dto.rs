@@ -30,7 +30,7 @@ pub struct FlowStateAddReq {
     pub rel_state_id: Option<String>,
 
     #[oai(validator(min_length = "2", max_length = "200"))]
-    pub tag: Option<String>,
+    pub tag: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -53,7 +53,7 @@ pub struct FlowStateModifyReq {
     pub rel_state_id: Option<String>,
 
     #[oai(validator(min_length = "2", max_length = "200"))]
-    pub tag: Option<String>,
+    pub tag: Option<Vec<String>>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
