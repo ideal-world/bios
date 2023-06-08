@@ -98,10 +98,10 @@ async fn init_basic_info<'a>(funs: &TardisFunsInst) -> TardisResult<()> {
 }
 
 pub async fn init_rbum_data(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let kind_state_id = add_kind(flow_constants::RBUM_KIND_STATE_CODE, flow_constants::RBUM_EXT_TABLE_STATE, funs, &ctx).await?;
-    let kind_model_id = add_kind(flow_constants::RBUM_KIND_MODEL_CODE, flow_constants::RBUM_EXT_TABLE_MODEL, funs, &ctx).await?;
+    let kind_state_id = add_kind(flow_constants::RBUM_KIND_STATE_CODE, flow_constants::RBUM_EXT_TABLE_STATE, funs, ctx).await?;
+    let kind_model_id = add_kind(flow_constants::RBUM_KIND_MODEL_CODE, flow_constants::RBUM_EXT_TABLE_MODEL, funs, ctx).await?;
 
-    let domain_flow_id = add_domain(funs, &ctx).await?;
+    let domain_flow_id = add_domain(funs, ctx).await?;
 
     FlowBasicInfoManager::set(BasicInfo {
         kind_state_id,
