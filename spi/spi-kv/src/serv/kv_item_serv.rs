@@ -1,6 +1,7 @@
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
@@ -73,16 +74,36 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
         spi_constants::SPI_PG_KIND_CODE => pg::kv_pg_item_serv::find_items(keys, None, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
-    .map(|items| {
+    .and_then(|items| {
         items
             .into_iter()
-            .map(|item| KvNameFindResp {
-                key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME).unwrap_or("").to_string(),
-                name: item.value.as_str().unwrap().to_string(),
-                create_time: item.create_time,
-                update_time: item.update_time,
+            .map::<TardisResult<KvNameFindResp>, _>(|item| {
+                Ok(KvNameFindResp {
+                    key: item
+                        .key
+                        .strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME)
+                        .ok_or(TardisError::internal_error(
+                            &format!(
+                                "{ty} key is not start with {keyname}:{keyval}",
+                                ty = stringify!(KvNameFindResp),
+                                keyname = stringify!(kv_constants::KEY_PREFIX_BY_KEY_NAME),
+                                keyval = item.key
+                            ),
+                            "",
+                        ))?
+                        .to_string(),
+                    name: item.value.as_str().ok_or(TardisError::internal_error(
+                        &format!(
+                            "{ty}'s value is not a str, key: {key}, value: {value}",
+                            ty = stringify!(KvNameFindResp),
+                            key = item.key,
+                            value = item.value
+                    ), ""))?.to_string(),
+                    create_time: item.create_time,
+                    update_time: item.update_time,
+                })
             })
-            .collect()
+            .collect::<TardisResult<Vec<KvNameFindResp>>>()
     })
 }
 
@@ -106,9 +127,9 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
         spi_constants::SPI_PG_KIND_CODE => {
             pg::kv_pg_item_serv::match_items(
                 KvItemMatchReq {
-                    key_prefix: key_prefix,
-                    page_number: page_number,
-                    page_size: page_size,
+                    key_prefix,
+                    page_number,
+                    page_size,
                     ..Default::default()
                 },
                 funs,
@@ -118,19 +139,27 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
-    .map(|items| TardisPage {
+    .and_then(|items| Ok(TardisPage {
         page_size: items.page_size,
         page_number: items.page_number,
         total_size: items.total_size,
         records: items
             .records
             .into_iter()
-            .map(|item| KvTagFindResp {
-                key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
-                items: TardisFuns::json.json_to_obj(item.value).unwrap(),
+            .map(|item| Ok(KvTagFindResp {
+                key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).ok_or(TardisError::internal_error(
+                    &format!(
+                        "{ty} key is not start with {keyname}:{keyval}",
+                        ty = stringify!(KvTagFindResp),
+                        keyname = stringify!(kv_constants::KEY_PREFIX_BY_TAG),
+                        keyval = item.key
+                    ),
+                    "",
+                ))?.to_string(),
+                items: TardisFuns::json.json_to_obj(item.value)?,
                 create_time: item.create_time,
                 update_time: item.update_time,
-            })
-            .collect(),
-    })
+            }))
+            .collect::<TardisResult<Vec<_>>>()?,
+    }))
 }
