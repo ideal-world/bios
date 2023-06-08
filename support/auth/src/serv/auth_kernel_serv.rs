@@ -118,7 +118,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
         })
-    } else if let Some(ak_authorization) = req.headers.get(&config.head_key_ak_authorization) {
+    } else if let Some(ak_authorization) = get_ak_key(req, config) {
         let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag) {
             req_date
         } else {
@@ -215,6 +215,17 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: None,
         })
     }
+}
+
+fn get_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
+    let lowercase_key = config.head_key_ak_authorization.to_lowercase();
+
+    req.headers
+        .get(&config.head_key_ak_authorization)
+        .or_else(|| req.headers.get(&lowercase_key))
+        .or_else(|| req.query.get(&config.head_key_ak_authorization))
+        .or_else(|| req.query.get(&lowercase_key))
+        .cloned()
 }
 
 pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafInfo>> {
