@@ -237,8 +237,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.from, "req");
     assert_eq!(resp.show_names.len(), 3);
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()[""]["act_hours__sum"], 100);
-    assert_eq!(resp.group.as_object().unwrap()[""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["plan_hours__sum"], 200);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["act_hours__sum"], 80);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 160);
 
@@ -258,8 +258,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.from, "req");
     assert_eq!(resp.show_names.len(), 3);
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()[""]["key__count"], 10);
-    assert_eq!(resp.group.as_object().unwrap()[""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["key__count"], 10);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["plan_hours__sum"], 200);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["key__count"], 8);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["plan_hours__sum"], 160);
 
@@ -283,8 +283,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.show_names["status__"].as_str(), "状态");
     assert_eq!(resp.show_names["source__"].as_str(), "来源");
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"][""]["act_hours__sum"], 80);
-    assert_eq!(resp.group.as_object().unwrap()["hangzhou"][""]["plan_hours__max"], 20);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["ROLLUP"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["ROLLUP"]["plan_hours__max"], 20);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["act_hours__sum"], 10);
     assert_eq!(resp.group.as_object().unwrap()["hangzhou"]["close"]["plan_hours__max"], 20);
 
@@ -319,12 +319,12 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.show_names.len(), 4);
     assert_eq!(resp.show_names["ct__day"].as_str(), "创建时间");
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__avg"], 10.0);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__avg"], 20.0);
-    assert_eq!(resp.group.as_object().unwrap()["1"][""]["act_hours__avg"], 10.0);
-    assert_eq!(resp.group.as_object().unwrap()["1"][""]["plan_hours__avg"], 20.0);
-    assert_eq!(resp.group.as_object().unwrap()["1"]["open"]["act_hours__avg"], 10.0);
-    assert_eq!(resp.group.as_object().unwrap()["1"]["open"]["plan_hours__avg"], 20.0);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["act_hours__avg"], 10.0);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["plan_hours__avg"], 20.0);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["ROLLUP"]["act_hours__avg"], 10.0);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["ROLLUP"]["plan_hours__avg"], 20.0);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__avg"], 10.0);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__avg"], 20.0);
 
     // test two dimensions with limit
     let resp: StatsQueryMetricsResp = client
@@ -343,7 +343,7 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.from, "req");
     assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
     assert_eq!(resp.group.as_object().unwrap().len(), 1);
-    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"][""]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["ROLLUP"]["act_hours__sum"], 80);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
 
     // test two dimensions with order
@@ -364,8 +364,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.show_names.len(), 4);
     assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["plan_hours__sum"], 200);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-03"]["close"]["act_hours__sum"], 10);
 
     // test dimensions with order
@@ -386,8 +386,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.show_names.len(), 4);
     assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
     assert_eq!(resp.group.as_object().unwrap().len(), 4);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["plan_hours__sum"], 200);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-03"]["close"]["act_hours__sum"], 10);
 
     // test tree dimensions with having
@@ -406,8 +406,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
         .await;
     assert_eq!(resp.from, "req");
     assert_eq!(resp.group.as_object().unwrap().len(), 2);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["plan_hours__sum"], 200);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__sum"], 160);
 
@@ -431,8 +431,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.from, "req");
     assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
     assert_eq!(resp.group.as_object().unwrap().len(), 2);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 100);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 200);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["act_hours__sum"], 100);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["plan_hours__sum"], 200);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__sum"], 160);
 
@@ -445,7 +445,7 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
                 "select":[{"code":"act_hours","fun":"sum"},{"code":"plan_hours","fun":"sum"}],
                 "group":[{"code":"ct","time_window":"date"},{"code":"status"}],
                 "where":[
-                    [{"code":"act_hours", "op":">", "value":10},{"code":"ct", "op":"!=", "value":1, "time_window":"day"}],
+                    [{"code":"act_hours", "op":">", "value":10},{"code":"ct", "op":"!=", "value":"2023-01-01", "time_window":"day"}],
                     [{"code":"status", "op":"=", "value":"open"}]
                     ],
                 "start_time":"2023-01-01T12:00:00.000Z",
@@ -456,8 +456,8 @@ pub async fn test_metric_query(client: &mut TestHttpClient) -> TardisResult<()> 
     assert_eq!(resp.from, "req");
     assert_eq!(resp.show_names["ct__date"].as_str(), "创建时间");
     assert_eq!(resp.group.as_object().unwrap().len(), 2);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["act_hours__sum"], 80);
-    assert_eq!(resp.group.as_object().unwrap()[""][""]["plan_hours__sum"], 160);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["act_hours__sum"], 80);
+    assert_eq!(resp.group.as_object().unwrap()["ROLLUP"]["ROLLUP"]["plan_hours__sum"], 160);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["act_hours__sum"], 80);
     assert_eq!(resp.group.as_object().unwrap()["2023-01-01"]["open"]["plan_hours__sum"], 160);
 

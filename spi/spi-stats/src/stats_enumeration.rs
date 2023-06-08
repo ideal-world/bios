@@ -103,8 +103,12 @@ impl StatsDataTypeKind {
             return None;
         }
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
-            let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
-            Some(vec![value])
+            if time_window_fun.is_some() {
+                Some(vec![sea_orm::Value::from(value.as_str().unwrap().to_string())])
+            } else {
+                let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
+                Some(vec![value])
+            }
         } else {
             db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
         };

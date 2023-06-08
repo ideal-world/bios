@@ -15,16 +15,17 @@ name = "bios_spi_stats"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-pg"]
+default = ["spi-pg", "preserve_order"]
 spi-pg = ["tardis/reldb-postgres"]
+preserve_order = []
 
 [dependencies]
+bios-basic = { path = "../../basic", features = ["default"] }
 serde.workspace = true
 lazy_static.workspace = true
 itertools.workspace = true
 tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-bios-basic = { path = "../../basic", features = ["default"] }
-
+serde_json = { workspace = true, features = ["preserve_order"] }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }
