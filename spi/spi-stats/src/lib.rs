@@ -1,3 +1,5 @@
+#![warn(clippy::unwrap_used)]
+
 extern crate lazy_static;
 
 mod api;

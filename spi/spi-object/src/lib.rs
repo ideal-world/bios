@@ -1,3 +1,5 @@
+#![warn(clippy::unwrap_used)]
+
 mod api;
 mod dto;
 pub mod object_config;

@@ -1,3 +1,5 @@
+#![warn(clippy::unwrap_used)]
+
 mod api;
 mod domain;
 pub mod dto;
