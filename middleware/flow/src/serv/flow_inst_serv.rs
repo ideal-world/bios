@@ -87,7 +87,7 @@ impl FlowInstServ {
         if funs
             .db()
             .count(
-                &Query::select()
+                Query::select()
                     .column((flow_inst::Entity, flow_inst::Column::Id))
                     .from(flow_inst::Entity)
                     .and_where(Expr::col((flow_inst::Entity, flow_inst::Column::Id)).eq(flow_inst_id.to_string()))
@@ -491,7 +491,7 @@ impl FlowInstServ {
                         return false;
                     }
                 }
-                return true;
+                true
             })
             .map(|model_transition| FlowInstFindNextTransitionResp {
                 next_flow_transition_id: model_transition.id.to_string(),
