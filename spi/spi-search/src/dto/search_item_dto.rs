@@ -89,7 +89,7 @@ impl SearchItemVisitKeysReq {
         } else {
             sqls.insert("groups".to_string(), vec![]);
         }
-        TardisFuns::json.obj_to_json(&sqls).unwrap()
+        TardisFuns::json.obj_to_json(&sqls).expect("it's impossible to fail here, since sql has type HashMap<String, Vec<String>>")
     }
 }
 

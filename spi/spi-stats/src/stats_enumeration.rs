@@ -54,7 +54,7 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::DateTime => sea_orm::Value::from(DateTime::parse_from_rfc3339(json_value.as_str().unwrap()).unwrap().with_timezone(&Utc)),
         }
     }
-
+    
     pub fn json_to_sea_orm_value_array(&self, json_value: &serde_json::Value, like_by_str: bool) -> sea_orm::Value {
         let sea_orm_data_type = match self {
             StatsDataTypeKind::String => sea_orm::sea_query::ArrayType::String,

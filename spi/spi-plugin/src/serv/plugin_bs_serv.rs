@@ -194,7 +194,7 @@ impl PluginBsServ {
     }
 
     pub async fn get_bs_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {
-        let rel_agg = RbumRelServ::find_rels(
+        let mut rel_agg = RbumRelServ::find_rels(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some("".to_string()),
@@ -213,10 +213,13 @@ impl PluginBsServ {
             ctx,
         )
         .await?;
-        if rel_agg.len() > 1 || rel_agg.is_empty() {
-            return Err(funs.err().conflict(&SpiBsServ::get_obj_name(), "get_bs", "not found backend", ""));
+        if let Some(last) = rel_agg.pop() {
+            // it means it's unique
+            if rel_agg.is_empty() {
+                return Ok(last);
+            }
         }
-        Ok(rel_agg.into_iter().next().unwrap())
+        Err(funs.err().conflict(&SpiBsServ::get_obj_name(), "get_bs", "not found backend", ""))
     }
 
     pub fn get_parent_own_paths(own_paths: &str) -> TardisResult<Vec<String>> {

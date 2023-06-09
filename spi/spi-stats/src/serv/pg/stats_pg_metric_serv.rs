@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ptr::null};
+use std::collections::HashMap;
 
 use bios_basic::spi::{
     spi_funs::SpiBsInstExtractor,
@@ -128,34 +128,41 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
             vec![Value::from(&query_req.from), Value::from(StatsFactColKind::Ext.to_string())],
         )
         .await?;
-    if conf_info.is_empty() {
-        return Err(funs.err().not_found(
-            "metric",
-            "query",
-            &format!("The query fact [{}] does not exist.", query_req.from),
-            "404-spi-stats-metric-fact-not-exist",
-        ));
-    }
+
     let mut conf_info = conf_info
         .into_iter()
-        .map(|item| StatsConfInfo {
-            col_key: item.try_get("", "col_key").unwrap(),
-            show_name: item.try_get("", "show_name").unwrap(),
-            col_kind: item.try_get("", "col_kind").unwrap(),
-            dim_multi_values: item.try_get("", "dim_multi_values").unwrap(),
-            mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type").unwrap().is_none() {
-                None
-            } else {
-                Some(item.try_get("", "mes_data_type").unwrap())
-            },
-            dim_data_type: if item.try_get::<Option<String>>("", "dim_data_type").unwrap().is_none() {
-                None
-            } else {
-                Some(item.try_get("", "dim_data_type").unwrap())
-            },
-            query_limit: item.try_get("", "query_limit").unwrap(),
+        .map(|item| {
+            Ok(StatsConfInfo {
+                col_key: item.try_get("", "col_key")?,
+                show_name: item.try_get("", "show_name")?,
+                col_kind: item.try_get("", "col_kind")?,
+                dim_multi_values: item.try_get("", "dim_multi_values")?,
+                mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "mes_data_type")?)
+                },
+                dim_data_type: if item.try_get::<Option<String>>("", "dim_data_type")?.is_none() {
+                    None
+                } else {
+                    Some(item.try_get("", "dim_data_type")?)
+                },
+                query_limit: item.try_get("", "query_limit")?,
+            })
         })
-        .collect::<Vec<StatsConfInfo>>();
+        .collect::<TardisResult<Vec<StatsConfInfo>>>()?;
+
+    let query_limit = match conf_info.as_slice() {
+        [] => {
+            return Err(funs.err().not_found(
+                "metric",
+                "query",
+                &format!("The query fact [{}] does not exist.", query_req.from),
+                "404-spi-stats-metric-fact-not-exist",
+            ));
+        }
+        [first, ..] => first.query_limit,
+    };
     // Add default dimension
     conf_info.push(StatsConfInfo {
         col_key: "key".to_string(),
@@ -164,7 +171,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         dim_multi_values: Some(false),
         mes_data_type: Some(StatsDataTypeKind::String),
         dim_data_type: None,
-        query_limit: conf_info.get(0).unwrap().query_limit,
+        query_limit,
     });
     conf_info.push(StatsConfInfo {
         col_key: "ct".to_string(),
@@ -173,13 +180,16 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         dim_multi_values: Some(false),
         mes_data_type: None,
         dim_data_type: Some(StatsDataTypeKind::DateTime),
-        query_limit: conf_info.get(0).unwrap().query_limit,
+        query_limit,
     });
 
-    let conf_limit = conf_info.get(0).unwrap().query_limit;
+    let conf_limit = query_limit;
     let conf_info = conf_info.into_iter().map(|v| (v.col_key.clone(), v)).collect::<HashMap<String, StatsConfInfo>>();
     if query_req.select.iter().any(|i| !conf_info.contains_key(&i.code))
-        || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension)
+        // should be equivalent: 
+        // original: || query_req.group.iter().any(|i| !conf_info.contains_key(&i.code) || conf_info.get(&i.code).unwrap().col_kind != StatsFactColKind::Dimension))
+        // (!contain || not_dim) => !(contain && is_dim)
+        || query_req.group.iter().any(|i| !conf_info.get(&i.code).is_some_and(|i|i.col_kind == StatsFactColKind::Dimension))
         || query_req
             .metrics_order
             .as_ref()
