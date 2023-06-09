@@ -390,6 +390,7 @@ impl IamTenantServ {
             && modify_req.cert_conf_by_mail_vcode.is_none()
             && modify_req.cert_conf_by_oauth2.is_none()
             && modify_req.cert_conf_by_ldap.is_none()
+            && modify_req.config.is_none()
         {
             return Ok(());
         }
