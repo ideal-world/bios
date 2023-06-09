@@ -73,7 +73,7 @@ pub struct FlowStateSummaryResp {
     pub template: bool,
     pub rel_state_id: String,
 
-    pub tag: String,
+    pub tags: String,
 
     pub owner: String,
     pub create_time: DateTime<Utc>,
@@ -96,7 +96,7 @@ pub struct FlowStateDetailResp {
     pub template: bool,
     pub rel_state_id: String,
 
-    pub tag: String,
+    pub tags: String,
 
     pub own_paths: String,
     pub owner: String,

@@ -456,7 +456,7 @@ impl FlowInstServ {
             .iter()
             .filter(|model_transition| {
                 model_transition.from_flow_state_id == flow_inst.current_state_id
-                    && (spec_flow_transition_id.is_none() || &model_transition.to_flow_state_id == spec_flow_transition_id.as_ref().unwrap())
+                    && (spec_flow_transition_id.is_none() || &model_transition.id == spec_flow_transition_id.as_ref().unwrap())
             })
             .filter(|model_transition| {
                 if model_transition.guard_by_creator && (flow_inst.create_ctx.own_paths != ctx.own_paths || flow_inst.create_ctx.owner != ctx.owner) {

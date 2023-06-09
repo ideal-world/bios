@@ -176,7 +176,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
-    async fn add_transitions(flow_model_id: &str, add_req: &Vec<FlowTransitionAddReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = add_req.iter().map(|req| req.from_flow_state_id.to_string()).chain(add_req.iter().map(|req| req.to_flow_state_id.to_string())).unique().collect_vec();
         let flow_state_ids_len = flow_state_ids.len();
         if FlowStateServ::count_items(
@@ -198,7 +198,7 @@ impl FlowModelServ {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
                 "add_transitions",
-                &format!("the states to be added is not legal"),
+                "the states to be added is not legal",
                 "404-flow-state-add-not-legal",
             ));
         }
@@ -260,7 +260,7 @@ impl FlowModelServ {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
                 "modify_transitions",
-                &format!("the states to be added is not legal"),
+                "the states to be added is not legal",
                 "404-flow-state-add-not-legal",
             ));
         }
@@ -282,7 +282,7 @@ impl FlowModelServ {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
                 "modify_transitions",
-                &format!("the transition of related models not legal"),
+                "the transition of related models not legal",
                 "404-flow-transition-rel-model-not-legal",
             ));
         }
@@ -357,7 +357,7 @@ impl FlowModelServ {
             return Err(funs.err().not_found(
                 &Self::get_obj_name(),
                 "delete_transitions",
-                &format!("the transition of related models not legal"),
+                "the transition of related models not legal",
                 "404-flow-transition-rel-model-not-legal",
             ));
         }
