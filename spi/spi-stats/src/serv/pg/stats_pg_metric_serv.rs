@@ -190,7 +190,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         dim_multi_values: Some(false),
         mes_data_type: Some(StatsDataTypeKind::Int),
         dim_data_type: None,
-        query_limit: conf_info.get(0).unwrap().query_limit,
+        query_limit,
     });
 
     let conf_limit = query_limit;

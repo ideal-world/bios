@@ -3,6 +3,7 @@
 501-spi-bs-not-exist	后端服务类型不存在或SPI特性未启用
 400-spi-graph-key-require	[from_key]与[to_key]至少有一个不能为空
 500-spi-object-s3-cannot-get-bucket-name    无法获取bucket名称
+400-spi-stats-invalid-request 无效的请求
 400-spi-stats-fail-to-get-dim-config-key  缺失维度配置key
 409-spi-stats-fail-to-get-dim-config      无法获取维度配置
 409-spi-stats-miss-mes-data-type    缺少字段mes-data-type

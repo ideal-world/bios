@@ -34,7 +34,14 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
 
     let mut fields = vec!["key".to_string(), "own_paths".to_string(), "ct".to_string()];
     let mut values = vec![Value::from(fact_record_key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
-    let req_data = add_req.data.as_object().unwrap();
+    let req_data = add_req.data.as_object().ok_or(funs.err().bad_request(
+        "fact_record",
+        "load",
+        "
+        Data should be an map
+    ",
+        "400-spi-stats-invalid-request",
+    ))?;
 
     for (req_fact_col_key, req_fact_col_value) in req_data {
         let fact_col_conf = fact_col_conf_set.iter().find(|c| &c.key == req_fact_col_key).ok_or_else(|| {
@@ -46,7 +53,22 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
             )
         })?;
         if fact_col_conf.kind == StatsFactColKind::Dimension {
-            let dim_conf = stats_pg_conf_dim_serv::get(fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
+            let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
+                return Err(funs.err().not_found(
+                    "fact_record",
+                    "load",
+                    "Fail to get conf_dim_key",
+                    "400-spi-stats-fail-to-get-dim-config-key",
+                ))
+            };
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx).await? else {
+                return Err(funs.err().not_found(
+                    "fact_record",
+                    "load",
+                    &format!("Fail to get dim_conf by key [{req_fact_col_key}]"),
+                    "400-spi-stats-fail-to-get-dim-config-key",
+                ))
+            };
             // TODO check value enum when stable_ds =true
             fields.push(req_fact_col_key.to_string());
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
@@ -337,7 +359,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "add", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.unwrap();
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.expect("Fail to get dim_conf");
     if !dim_conf.stable_ds {
         return Err(funs.err().bad_request(
             "dim_record",
@@ -377,7 +399,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
                 "404-spi-stats-dim-inst-record-not-exist",
             )
         })?;
-        let parent_hierarchy = parent_record.get("hierarchy").unwrap().as_i64().unwrap();
+        let parent_hierarchy = parent_record.get("hierarchy").and_then(|x| x.as_u64()).expect("parent_hierarchy missing field hierarchy");
         if (parent_hierarchy + 1) as usize >= dim_conf.hierarchy.len() {
             return Err(funs.err().conflict(
                 "dim_record",
@@ -391,8 +413,10 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
         params.push(dim_record_key_value);
         sql_fields.push(format!("key{}", parent_hierarchy + 1));
         for i in 0..parent_hierarchy + 1 {
-            params.push(Value::from(parent_record.get(&format!("key{i}")).unwrap().as_str().unwrap()));
-            sql_fields.push(format!("key{i}"));
+            if let Some (record) = parent_record.get(&format!("key{i}")).and_then(serde_json::Value::as_str) {
+                params.push(record.into());
+                sql_fields.push(format!("key{i}"));
+            }
         }
     } else if dim_conf.hierarchy.len() > 1 {
         params.push(Value::from(0));
@@ -518,9 +542,9 @@ LIMIT $1 OFFSET $2
     let mut final_result = vec![];
     for item in result {
         if total_size == 0 {
-            total_size = item.try_get("", "total").unwrap();
+            total_size = item.try_get("", "total")?;
         }
-        let values = serde_json::Value::from_query_result_optional(&item, "")?.unwrap();
+        let values = serde_json::Value::from_query_result_optional(&item, "")?.expect("Fail to get value from query result in dim_do_record_paginate");
         final_result.push(values);
     }
     Ok(TardisPage {
@@ -538,7 +562,7 @@ pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: serd
     if !stats_pg_conf_dim_serv::online(&dim_conf_key, &conn, ctx).await? {
         return Err(funs.err().conflict("dim_record", "delete", "The dimension config not online.", "409-spi-stats-dim-conf-not-online"));
     }
-    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.unwrap();
+    let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.expect("Fail to get dim_conf");
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
     let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)];
