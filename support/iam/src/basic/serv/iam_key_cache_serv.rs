@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::default::Default;
 use std::str::FromStr;
 
@@ -410,28 +409,16 @@ impl IamResCacheServ {
     }
 
     pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
-        if (add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some()) && add_or_modify_req.pwd.is_none() {
+        if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
             // TODO support time range
             return Err(funs.err().conflict("iam_cache_res", "add_or_modify", "st and et must be none", "409-iam-cache-res-date-not-none"));
         }
-        // TODO improve PWD
-        let pwd = add_or_modify_req.pwd.clone().map(|pwd| {
-            HashMap::from([(
-                pwd,
-                if let (Some(st), Some(et)) = (add_or_modify_req.st, add_or_modify_req.et) {
-                    Some((st, et))
-                } else {
-                    None
-                },
-            )])
-        });
         let mut res_auth = IamCacheResAuth {
             accounts: format!("#{}#", add_or_modify_req.accounts.join("#")),
             roles: format!("#{}#", add_or_modify_req.roles.join("#")),
             groups: format!("#{}#", add_or_modify_req.groups.join("#")),
             apps: format!("#{}#", add_or_modify_req.apps.join("#")),
             tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
-            pwd,
             ..Default::default()
         };
         let mut res_dto = IamCacheResRelAddOrModifyDto {
@@ -451,14 +438,6 @@ impl IamResCacheServ {
                 res_auth.groups = format!("{}{}", res_auth.groups, old_auth.groups);
                 res_auth.apps = format!("{}{}", res_auth.apps, old_auth.apps);
                 res_auth.tenants = format!("{}{}", res_auth.tenants, old_auth.tenants);
-                if let Some(old_pwd) = old_auth.pwd {
-                    res_auth.pwd = if let Some(mut res_auth_pwd) = res_auth.pwd.clone() {
-                        res_auth_pwd.extend(old_pwd);
-                        res_auth.pwd
-                    } else {
-                        Some(old_pwd)
-                    };
-                }
             }
 
             if let Some(need_crypto_req) = add_or_modify_req.need_crypto_req {
@@ -571,8 +550,6 @@ struct IamCacheResAuth {
     pub groups: String,
     pub apps: String,
     pub tenants: String,
-    // pwd->(st,et)
-    pub pwd: Option<HashMap<String, Option<(i64, i64)>>>,
     pub st: Option<i64>,
     pub et: Option<i64>,
 }
@@ -585,8 +562,6 @@ pub struct IamCacheResRelAddOrModifyReq {
     pub groups: Vec<String>,
     pub apps: Vec<String>,
     pub tenants: Vec<String>,
-    //pwd first
-    pub pwd: Option<String>,
     pub need_crypto_req: Option<bool>,
     pub need_crypto_resp: Option<bool>,
     pub need_double_auth: Option<bool>,

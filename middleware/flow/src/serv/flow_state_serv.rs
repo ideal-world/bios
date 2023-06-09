@@ -94,7 +94,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             code: None,
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),
-            disabled: modify_req.disabled.clone(),
+            disabled: modify_req.disabled,
         }))
     }
 

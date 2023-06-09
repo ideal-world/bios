@@ -23,7 +23,11 @@ pub struct StatsQueryMetricsReq {
     pub ignore_distinct: Option<bool>,
     /// List of grouped fields,
     /// the order is related to the returned hierarchy and is handled internally using ROLLUP
-    pub group: Vec<StatsQueryMetricsGroupReq>,
+    pub group: Vec<StatsQueryDimensionGroupReq>,
+    /// Ignore group rollup
+    /// If true or null, the group rollup will not be counted
+    /// If false, the group rollup will be counted
+    pub ignore_group_rollup: Option<bool>,
     /// Filter conditions, two-dimensional array, OR between groups, AND within groups
     #[oai(rename = "where")]
     pub _where: Option<Vec<Vec<StatsQueryMetricsWhereReq>>>,
@@ -31,6 +35,9 @@ pub struct StatsQueryMetricsReq {
     /// Sort conditions
     /// The code and fun must exist in Select
     pub metrics_order: Option<Vec<StatsQueryMetricsOrderReq>>,
+    /// Sort conditions
+    /// The code and fun must exist in Select
+    pub group_order: Option<Vec<StatsQueryDimensionGroupOrderReq>>,
     /// Filter conditions after group
     /// The code and fun must exist in Select
     pub having: Option<Vec<StatsQueryMetricsHavingReq>>,
@@ -48,7 +55,7 @@ pub struct StatsQueryMetricsSelectReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct StatsQueryMetricsGroupReq {
+pub struct StatsQueryDimensionGroupReq {
     /// Dimension column key
     pub code: String,
     /// Time window function
@@ -72,6 +79,16 @@ pub struct StatsQueryMetricsOrderReq {
     /// Measure column key
     pub code: String,
     pub fun: StatsQueryAggFunKind,
+    /// Sort direction
+    pub asc: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct StatsQueryDimensionGroupOrderReq {
+    /// Dimension column key
+    pub code: String,
+    /// Time window function
+    pub time_window: Option<StatsQueryTimeWindowKind>,
     /// Sort direction
     pub asc: bool,
 }
@@ -110,6 +127,7 @@ pub struct StatsQueryMetricsResp {
     /// Group
     ///
     /// Format with only one level (single dimension):
+    /// map
     /// ```
     /// {
     ///     "":{  // The root group
@@ -125,6 +143,16 @@ pub struct StatsQueryMetricsResp {
     ///         "alias name...":value,
     ///     }
     /// }
+    /// ```
+    /// array
+    /// ```
+    /// [   
+    ///     {
+    ///         "name": "<group name1>",
+    ///         "value": value
+    ///     },
+    ///     
+    /// ]
     /// ```
     ///
     /// Format with multiple levels (multiple dimensions):
