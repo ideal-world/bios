@@ -482,9 +482,10 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
     }
     let mut node = Map::with_capacity(0);
     let dimension_key = curr_select_dimension_keys.get(0).unwrap();
-    result
-        .iter()
-        .group_by(|record| {
+    let mut groups = HashMap::new();
+    let mut order = Vec::new();
+    for record in result {
+        let key = {
             let key = record.get(dimension_key).unwrap_or(&json!(null));
             if key.is_f64() {
                 key.as_f64().unwrap().to_string()
@@ -499,16 +500,18 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
             } else {
                 key.as_str().unwrap().to_string()
             }
-        })
-        .into_iter()
-        .for_each(|(key, group)| {
-            let sub = package_groups(
-                curr_select_dimension_keys[1..].to_vec(),
-                select_measure_keys,
-                group.into_iter().cloned().collect::<Vec<serde_json::Value>>(),
-            );
-            node.insert(key, sub);
-        });
+        };
+        let group = groups.entry(key.clone()).or_insert_with(Vec::new);
+        group.push(record.clone());
+        if !order.contains(&key) {
+            order.push(key.clone());
+        }
+    }
+    for key in order {
+        let group = groups.get(&key).unwrap();
+        let sub = package_groups(curr_select_dimension_keys[1..].to_vec(), select_measure_keys, group.to_vec());
+        node.insert(key, sub);
+    }
     serde_json::Value::Object(node)
 }
 

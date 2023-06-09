@@ -12,7 +12,7 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::dto::iam_filer_dto::IamResFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
@@ -84,10 +84,26 @@ impl IamRelServ {
                 ctx,
             )
             .await;
+            let account_name = IamAccountServ::get_item(
+                from_iam_item_id,
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .name;
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamRole,
                 Some(to_iam_item_id.to_string()),
-                "添加角色人员".to_string(),
+                format!("添加角色人员{}", account_name),
                 Some("AddRoleAccount".to_string()),
                 ctx,
             )
@@ -131,7 +147,6 @@ impl IamRelServ {
                         need_crypto_req: None,
                         need_crypto_resp: None,
                         need_double_auth: None,
-                        pwd: None,
                     },
                     funs,
                 )
@@ -173,7 +188,6 @@ impl IamRelServ {
                             need_crypto_req: None,
                             need_crypto_resp: None,
                             need_double_auth: None,
-                            pwd: None,
                         },
                         funs,
                     )
@@ -218,7 +232,6 @@ impl IamRelServ {
                     need_crypto_req: None,
                     need_crypto_resp: None,
                     need_double_auth: None,
-                    pwd: None,
                 },
                 funs,
             )
@@ -432,10 +445,26 @@ impl IamRelServ {
                     ctx,
                 )
                 .await;
+                let account_name = IamAccountServ::get_item(
+                    from_iam_item_id,
+                    &IamAccountFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ignore_scope: true,
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                .name;
                 let _ = SpiLogClient::add_ctx_task(
                     LogParamTag::IamRole,
                     Some(to_iam_item_id.to_string()),
-                    "移除角色人员".to_string(),
+                    format!("移除角色人员{}", account_name),
                     Some("RemoveRoleAccount".to_string()),
                     ctx,
                 )
