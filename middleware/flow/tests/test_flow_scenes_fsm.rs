@@ -39,7 +39,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("初始".to_string())),
                 id_prefix: Some(TrimString("init".to_string())),
-                tag: Some(vec!["proj_states".to_string()]),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Start,
                 icon: None,
                 info: None,
@@ -58,7 +58,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已确认".to_string())),
                 id_prefix: Some(TrimString("confirmed".to_string())),
-                tag: Some(vec!["proj_states".to_string()]),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -77,7 +77,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已拒绝".to_string())),
                 id_prefix: Some(TrimString("rejected".to_string())),
-                tag: Some(vec!["proj_states".to_string()]),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -96,7 +96,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已分配".to_string())),
                 id_prefix: Some(TrimString("assigned".to_string())),
-                tag: Some(vec!["proj_states".to_string()]),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -115,7 +115,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("执行中".to_string())),
                 id_prefix: Some(TrimString("executing".to_string())),
-                tag: Some(vec!["proj_states".to_string()]),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -134,7 +134,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已完成".to_string())),
                 id_prefix: Some(TrimString("finish".to_string())),
-                tag: Some(vec!["proj_states".to_string()]),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Finish,
                 icon: None,
                 info: None,

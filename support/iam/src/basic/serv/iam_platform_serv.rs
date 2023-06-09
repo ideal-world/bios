@@ -21,7 +21,11 @@ pub struct IamPlatformServ;
 
 impl IamPlatformServ {
     pub async fn modify_platform_config_agg(modify_req: &IamPlatformConfigReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        if modify_req.cert_conf_by_user_pwd.is_none() && modify_req.cert_conf_by_phone_vcode.is_none() && modify_req.cert_conf_by_mail_vcode.is_none() && modify_req.config.is_none() {
+        if modify_req.cert_conf_by_user_pwd.is_none()
+            && modify_req.cert_conf_by_phone_vcode.is_none()
+            && modify_req.cert_conf_by_mail_vcode.is_none()
+            && modify_req.config.is_none()
+        {
             return Ok(());
         }
 

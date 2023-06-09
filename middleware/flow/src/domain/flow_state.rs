@@ -72,7 +72,7 @@ pub struct Model {
     /// Used for state classification
     /// 用于状态分类
     #[index]
-    pub tag: Vec<String>,
+    pub tags: String,
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,
