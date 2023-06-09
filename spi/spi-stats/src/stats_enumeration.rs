@@ -103,8 +103,12 @@ impl StatsDataTypeKind {
             return None;
         }
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
-            let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
-            Some(vec![value])
+            if time_window_fun.is_some() {
+                Some(vec![sea_orm::Value::from(value.as_str().unwrap().to_string())])
+            } else {
+                let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
+                Some(vec![value])
+            }
         } else {
             db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
         };
@@ -280,6 +284,8 @@ pub enum StatsQueryTimeWindowKind {
     Date,
     #[oai(rename = "hour")]
     Hour,
+    #[oai(rename = "week")]
+    Week,
     #[oai(rename = "day")]
     Day,
     #[oai(rename = "month")]
@@ -298,14 +304,17 @@ impl StatsQueryTimeWindowKind {
                     "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
                 LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
                 LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'), ' ',
-                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0')
-             )"
+                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0'))"
                 ),
                 // StatsQueryTimeWindowKind::Day => format!("date_part('day',timezone('UTC', {column_name}))"),
                 StatsQueryTimeWindowKind::Day => format!(
                     "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
                 LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
                 LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'))"
+                ),
+                StatsQueryTimeWindowKind::Week => format!(
+                    "CONCAT(date_part('year', timezone('UTC', {column_name})), ' ',
+                    date_part('week', timezone('UTC', {column_name})))"
                 ),
                 // StatsQueryTimeWindowKind::Month => format!("date_part('month',timezone('UTC', {column_name}))"),
                 StatsQueryTimeWindowKind::Month => {
@@ -324,13 +333,16 @@ impl StatsQueryTimeWindowKind {
                     "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
                 LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
                 LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'), ' ',
-                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0')
-             )"
+                LPAD(date_part('hour', timezone('UTC', {column_name}))::text, 2, '0'))"
                 ),
                 StatsQueryTimeWindowKind::Day => format!(
                     "CONCAT(date_part('year', timezone('UTC', {column_name})), '-',
                 LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'), '-',
                 LPAD(date_part('day', timezone('UTC', {column_name}))::text, 2, '0'))"
+                ),
+                StatsQueryTimeWindowKind::Week => format!(
+                    "CONCAT(date_part('year', timezone('UTC', {column_name})), ' ',
+                    date_part('week', timezone('UTC', {column_name})))"
                 ),
                 StatsQueryTimeWindowKind::Month => {
                     format!("CONCAT(date_part('year', timezone('UTC',{column_name})), '-',LPAD(date_part('month', timezone('UTC', {column_name}))::text, 2, '0'))")

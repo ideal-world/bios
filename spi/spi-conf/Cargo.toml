@@ -1,5 +1,5 @@
 [package]
-name = "bios-spi-stats"
+name = "bios-spi-conf"
 version.workspace = true
 authors.workspace = true
 homepage.workspace = true
@@ -11,7 +11,7 @@ readme.workspace = true
 publish.workspace = true
 
 [lib]
-name = "bios_spi_stats"
+name = "bios_spi_conf"
 path = "src/lib.rs"
 
 [features]
@@ -19,12 +19,14 @@ default = ["spi-pg"]
 spi-pg = ["tardis/reldb-postgres"]
 
 [dependencies]
-bios-basic = { path = "../../basic", features = ["default"] }
 serde.workspace = true
-lazy_static.workspace = true
-itertools.workspace = true
-tardis = { workspace = true, features = ["reldb-postgres", "web-server"] }
-serde_json = { workspace = true, features = ["preserve_order"] }
+tardis = { workspace = true, features = [
+    "reldb-postgres",
+    "web-server",
+    "crypto",
+] }
+bios-basic = { path = "../../basic", features = ["default"] }
+lazy_static = { workspace = true }
 [dev-dependencies]
 tardis = { workspace = true, features = ["test"] }
 bios-basic = { path = "../../basic", features = ["default", "test"] }

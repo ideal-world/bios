@@ -57,7 +57,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         })
     }
 
-    async fn package_ext_add(id: &str, add_req: &FlowStateAddReq, _: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<flow_state::ActiveModel> {
+    async fn package_ext_add(id: &str, add_req: &FlowStateAddReq, _: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<flow_state::ActiveModel> {
         Ok(flow_state::ActiveModel {
             id: Set(id.to_string()),
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
@@ -94,7 +94,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             code: None,
             name: modify_req.name.clone(),
             scope_level: modify_req.scope_level.clone(),
-            disabled: modify_req.disabled.clone(),
+            disabled: modify_req.disabled,
         }))
     }
 
@@ -160,13 +160,13 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         query.column((flow_state::Entity, flow_state::Column::Tag));
 
         if let Some(sys_state) = &filter.sys_state {
-            query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state));
+            query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state.clone()));
         }
         if let Some(tag) = &filter.tag {
             query.and_where(Expr::col(flow_state::Column::Tag).eq(tag.as_str()));
         }
         if let Some(state_kind) = &filter.state_kind {
-            query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind));
+            query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind.clone()));
         }
         if let Some(template) = filter.template {
             query.and_where(Expr::col(flow_state::Column::Template).eq(template));

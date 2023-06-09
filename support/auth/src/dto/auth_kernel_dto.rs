@@ -220,8 +220,6 @@ pub struct ResAuthInfo {
     pub groups: Option<String>,
     pub apps: Option<String>,
     pub tenants: Option<String>,
-    // pwd->(st,et)
-    pub pwd: Option<HashMap<String, Option<(i64, i64)>>>,
     pub st: Option<i64>,
     pub et: Option<i64>,
 }
