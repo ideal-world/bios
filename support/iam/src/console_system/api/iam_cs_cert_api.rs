@@ -69,8 +69,8 @@ impl IamCsCertApi {
         let funs = iam_constants::get_tardis_inst();
         let resp = IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx.0).await;
         ctx.0.execute_task().await?;
-        let rbum_cert = if resp.is_ok() {
-            resp.unwrap()
+        let rbum_cert = if let Ok(resp) = resp {
+            resp
         } else {
             let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
             IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx).await?

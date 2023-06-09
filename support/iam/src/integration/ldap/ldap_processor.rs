@@ -36,11 +36,11 @@ async fn get_basic_info<'a>(account_name_with_tenant: &str, funs: &TardisFunsIns
     let (tenant_id, ak) = if account_name_with_tenant.clone().count() == 2 {
         (
             // Ensure case sensitivity
-            Some(String::from_utf8(TardisFuns::crypto.hex.decode(account_name_with_tenant.next().unwrap())?)?),
-            account_name_with_tenant.next().unwrap().to_string(),
+            Some(String::from_utf8(TardisFuns::crypto.hex.decode(account_name_with_tenant.next().unwrap_or_default())?)?),
+            account_name_with_tenant.next().unwrap_or_default().to_string(),
         )
     } else {
-        (None, account_name_with_tenant.next().unwrap().to_string())
+        (None, account_name_with_tenant.next().unwrap_or_default().to_string())
     };
     let tenant_id = IamCpCertUserPwdServ::get_tenant_id(tenant_id, funs).await?;
     Ok((tenant_id, ak))

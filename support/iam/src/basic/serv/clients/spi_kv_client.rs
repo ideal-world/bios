@@ -19,7 +19,7 @@ impl SpiKvClient {
         };
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
         )]);
 
         //add kv
@@ -29,8 +29,7 @@ impl SpiKvClient {
                 &HashMap::from([("key", key.to_string()), ("value", TardisFuns::json.obj_to_string(value)?)]),
                 headers.clone(),
             )
-            .await
-            .unwrap();
+            .await?;
         Ok(())
     }
 
@@ -45,7 +44,7 @@ impl SpiKvClient {
         };
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx)?),
         )]);
 
         //add kv
@@ -55,8 +54,7 @@ impl SpiKvClient {
                 &HashMap::from([("key", key.to_string()), ("name", name.to_string())]),
                 headers.clone(),
             )
-            .await
-            .unwrap();
+            .await?;
         Ok(())
     }
 }

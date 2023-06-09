@@ -42,8 +42,8 @@ impl IamCpCertUserPwdServ {
             funs,
         )
         .await;
-        let (_, _, rbum_item_id) = if validate_resp.is_ok() {
-            validate_resp.unwrap()
+        let (_, _, rbum_item_id) = if let Ok(validate_resp) = validate_resp {
+            validate_resp
         } else {
             if let Some(e) = validate_resp.clone().err() {
                 // throw out Err when sk is expired and cert is locked
@@ -195,8 +195,8 @@ impl IamCpCertUserPwdServ {
             funs,
         )
         .await;
-        let (_, _, rbum_item_id) = if validate_resp.is_ok() {
-            validate_resp.unwrap()
+        let (_, _, rbum_item_id) = if let Ok(validate_resp) = validate_resp {
+            validate_resp
         } else {
             if let Some(e) = validate_resp.clone().err() {
                 // throw out Err when sk is expired and cert is locked

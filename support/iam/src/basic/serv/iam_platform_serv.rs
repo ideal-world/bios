@@ -1,5 +1,6 @@
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::{TardisFuns, TardisFunsInst};
 
@@ -39,8 +40,9 @@ impl IamPlatformServ {
         let cert_confs = IamCertServ::find_cert_conf(true, Some("".to_string()), None, None, funs, ctx).await?;
 
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
-            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
-            IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
+            if let Some(cert_conf_by_user_pwd_id) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()) {
+                IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
+            }
         }
 
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
@@ -70,7 +72,12 @@ impl IamPlatformServ {
 
     pub async fn get_platform_config_agg(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamPlatformConfigResp> {
         let cert_confs = IamCertServ::find_cert_conf(true, Some("".to_string()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
+        let cert_conf_by_user_pwd = match cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()) {
+            Some(conf) => conf,
+            None => {
+                return Err(funs.err().not_found("iam_platform_serv", "get_platform_config_agg", "not found cert config", "404-iam-cert-conf-not-exist"));
+            }
+        };
         let config = IamConfigServ::find_rbums(
             &IamConfigFilterReq {
                 rel_item_id: Some("".to_string()),

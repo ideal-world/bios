@@ -168,15 +168,18 @@ impl IamIdentCacheServ {
                     },
                     ..Default::default()
                 };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap() as isize;
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                    let mut ids = Vec::new();
+                    if let Ok(page) = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await {
+                        ids = page.records;
+                    }
                     for id in ids {
                         let account_context = Self::get_account_context(&id, "", &funs).await;
                         if let Ok(account_context) = account_context {
                             if account_context.own_paths == ctx_clone.own_paths {
-                                Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                                Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
                             }
                         }
                     }
@@ -184,16 +187,18 @@ impl IamIdentCacheServ {
                     count -= 100;
                 }
                 if is_app {
-                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap() as isize;
+                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                     let mut page_number = 1;
                     while count > 0 {
-                        let ids =
-                            IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                        let mut ids = Vec::new();
+                        if let Ok(page) = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await {
+                            ids = page.records;
+                        }
                         for id in ids {
                             let account_context = Self::get_account_context(&id, "", &funs).await;
                             if let Ok(account_context) = account_context {
                                 if account_context.own_paths == ctx_clone.own_paths {
-                                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
                                 }
                             }
                         }

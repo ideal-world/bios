@@ -15,8 +15,9 @@ name = "bios_spi_stats"
 path = "src/lib.rs"
 
 [features]
-default = ["spi-pg"]
+default = ["spi-pg", "preserve_order"]
 spi-pg = ["tardis/reldb-postgres"]
+preserve_order = []
 
 [dependencies]
 bios-basic = { path = "../../basic", features = ["default"] }
