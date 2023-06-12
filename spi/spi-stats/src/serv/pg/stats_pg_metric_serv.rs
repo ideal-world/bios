@@ -4,7 +4,7 @@ use bios_basic::spi::{
     spi_funs::SpiBsInstExtractor,
     spi_initializer::common_pg::{self, package_table_name},
 };
-use itertools::Itertools;
+
 use tardis::{
     basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
@@ -547,24 +547,28 @@ fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: 
         return Ok(serde_json::Value::Object(leaf_node));
     }
     let mut node = Map::with_capacity(0);
+
     let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
-    for (key, group) in result
-        .iter()
-        .group_by(|record| {
+    let mut groups = HashMap::new();
+    let mut order = Vec::new();
+    for record in result {
+        let key = {
             let key = record.get(dimension_key).unwrap_or(&json!(null));
             match key {
                 serde_json::Value::Null => "ROLLUP".to_string(),
                 serde_json::Value::String(s) => s.clone(),
                 not_null => not_null.to_string(),
             }
-        })
-        .into_iter()
-    {
-        let sub = package_groups(
-            curr_select_dimension_keys[1..].to_vec(),
-            select_measure_keys,
-            group.into_iter().cloned().collect::<Vec<serde_json::Value>>(),
-        )?;
+        };
+        let group = groups.entry(key.clone()).or_insert_with(Vec::new);
+        group.push(record.clone());
+        if !order.contains(&key) {
+            order.push(key.clone());
+        }
+    }
+    for key in order {
+        let group = groups.get(&key).expect("groups shouldn't miss the value of key in order");
+        let sub = package_groups(curr_select_dimension_keys[1..].to_vec(), select_measure_keys, group.to_vec())?;
         node.insert(key, sub);
     }
     Ok(serde_json::Value::Object(node))
