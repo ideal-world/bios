@@ -82,15 +82,7 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
                     key: item
                         .key
                         .strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME)
-                        .ok_or(TardisError::internal_error(
-                            &format!(
-                                "{ty} key is not start with {keyname}:{keyval}",
-                                ty = stringify!(KvNameFindResp),
-                                keyname = stringify!(kv_constants::KEY_PREFIX_BY_KEY_NAME),
-                                keyval = item.key
-                            ),
-                            "",
-                        ))?
+                        .unwrap_or("")
                         .to_string(),
                     name: item
                         .value
@@ -158,15 +150,7 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
                         key: item
                             .key
                             .strip_prefix(kv_constants::KEY_PREFIX_BY_TAG)
-                            .ok_or(TardisError::internal_error(
-                                &format!(
-                                    "{ty} key is not start with {keyname}:{keyval}",
-                                    ty = stringify!(KvTagFindResp),
-                                    keyname = stringify!(kv_constants::KEY_PREFIX_BY_TAG),
-                                    keyval = item.key
-                                ),
-                                "",
-                            ))?
+                            .unwrap_or("")
                             .to_string(),
                         items: TardisFuns::json.json_to_obj(item.value)?,
                         create_time: item.create_time,

@@ -303,7 +303,7 @@ impl TryGetable for StatsQueryAggFunKind {
     }
 
     fn try_get_by<I: sea_orm::ColIdx>(_res: &QueryResult, _index: I) -> Result<Self, TryGetError> {
-        panic!("not implemented")
+        unimplemented!()
     }
 }
 
