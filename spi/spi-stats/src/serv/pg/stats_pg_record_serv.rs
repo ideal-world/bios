@@ -65,7 +65,7 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                 return Err(funs.err().not_found(
                     "fact_record",
                     "load",
-                    &format!("Fail to get dim_conf by key [{req_fact_col_key}]"),
+                    &format!("Fail to get dim_conf by key [{key}]"),
                     "400-spi-stats-fail-to-get-dim-config-key",
                 ))
             };
@@ -77,11 +77,19 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                 values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false));
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
+            let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                return Err(funs.err().bad_request(
+                    "fact_record", "load", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
+            };
             fields.push(req_fact_col_key.to_string());
-            values.push(fact_col_conf.mes_data_type.as_ref().unwrap().json_to_sea_orm_value(req_fact_col_value, false));
+            values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false));
         } else {
+            let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
+                return Err(funs.err().bad_request(
+                    "fact_record", "load", &format!("For the key [{req_fact_col_key}], value: [{req_fact_col_value}] is not a string"), "400-spi-stats-invalid-request"))
+            };
             fields.push(req_fact_col_key.to_string());
-            values.push(Value::from(req_fact_col_value.as_str().unwrap()));
+            values.push(req_fact_col_value.into());
         }
         // TODO check data type
     }
@@ -98,16 +106,25 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
             if !req_data.contains_key(&fact_col_conf.key) {
                 fields.push(fact_col_conf.key.to_string());
                 if fact_col_conf.kind == StatsFactColKind::Dimension {
-                    let dim_conf = stats_pg_conf_dim_serv::get(&fact_col_conf.dim_rel_conf_dim_key.unwrap(), &conn, ctx).await?.unwrap();
+                    let Some(dim_rel_conf_dim_key) = &fact_col_conf.dim_rel_conf_dim_key else {
+                        return Err(funs.err().internal_error("fact_record", "load", "dim_rel_conf_dim_key unexpectedly being empty", "500-spi-stats-internal-error"))
+                    };
+                    let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_rel_conf_dim_key, &conn, ctx).await? else {
+                        return Err(funs.err().internal_error("fact_record", "load", &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "), "500-spi-stats-internal-error"))
+                    };
                     if fact_col_conf.dim_multi_values.unwrap_or(false) {
                         values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key));
                     } else {
                         values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
                     }
                 } else if fact_col_conf.kind == StatsFactColKind::Measure {
-                    values.push(fact_col_conf.mes_data_type.unwrap().result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
+                    let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                        return Err(funs.err().bad_request(
+                            "fact_record", "load", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
+                    };
+                    values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
                 } else {
-                    values.push(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key).unwrap()));
+                    values.push(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key)?));
                 }
             }
         }
@@ -146,7 +163,9 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
     let mut value_sets = vec![];
 
     for add_req in add_req_set {
-        let req_data = add_req.data.as_object().unwrap();
+        let Some(req_data) =  add_req.data.as_object() else {
+            return Err(funs.err().bad_request("fact_record", "load_set", &format!("add_req.data should be a map value, got {data}", data= add_req.data), "400-spi-stats-invalid-request"))
+        };
         let mut values = vec![Value::from(&add_req.key), Value::from(add_req.own_paths), Value::from(add_req.ct)];
 
         for fact_col_conf in &fact_col_conf_set {
@@ -166,7 +185,22 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
                 )
             })?;
             if fact_col_conf.kind == StatsFactColKind::Dimension {
-                let dim_conf = stats_pg_conf_dim_serv::get(fact_col_conf.dim_rel_conf_dim_key.as_ref().unwrap(), &conn, ctx).await?.unwrap();
+                let Some(key) = fact_col_conf.dim_rel_conf_dim_key.as_ref() else {
+                    return Err(funs.err().not_found(
+                        "fact_record",
+                        "load_set",
+                        "Fail to get conf_dim_key",
+                        "400-spi-stats-fail-to-get-dim-config-key",
+                    ))
+                };
+                let Some(dim_conf) = stats_pg_conf_dim_serv::get(key, &conn, ctx).await? else {
+                    return Err(funs.err().not_found(
+                        "fact_record",
+                        "load_set",
+                        &format!("Fail to get dim_conf by key [{key}]"),
+                        "400-spi-stats-fail-to-get-dim-config-key",
+                    ))
+                };
                 // TODO check value enum when stable_ds =true
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
                     values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false));
@@ -174,9 +208,17 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
                     values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false));
                 }
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
-                values.push(fact_col_conf.mes_data_type.as_ref().unwrap().json_to_sea_orm_value(req_fact_col_value, false));
+                let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                    return Err(funs.err().bad_request(
+                        "fact_record", "load_set", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
+                };
+                values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false));
             } else {
-                values.push(Value::from(req_fact_col_value.as_str().unwrap()));
+                let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
+                    return Err(funs.err().bad_request(
+                        "fact_record", "load_set", &format!("Value: [{req_fact_col_value}] is not a string"), "400-spi-stats-invalid-request"))
+                };
+                values.push(req_fact_col_value.into());
             }
             // TODO check data type
         }
@@ -413,7 +455,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
         params.push(dim_record_key_value);
         sql_fields.push(format!("key{}", parent_hierarchy + 1));
         for i in 0..parent_hierarchy + 1 {
-            if let Some (record) = parent_record.get(&format!("key{i}")).and_then(serde_json::Value::as_str) {
+            if let Some(record) = parent_record.get(&format!("key{i}")).and_then(serde_json::Value::as_str) {
                 params.push(record.into());
                 sql_fields.push(format!("key{i}"));
             }
