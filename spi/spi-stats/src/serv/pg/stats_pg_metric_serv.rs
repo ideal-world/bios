@@ -6,12 +6,12 @@ use bios_basic::spi::{
 };
 use itertools::Itertools;
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     db::{
         reldb_client::TardisRelDBClient,
         sea_orm::{self, FromQueryResult, Value},
     },
-    log::{debug, info},
+    log::info,
     serde_json::{self, json, Map},
     TardisFunsInst,
 };
@@ -238,11 +238,26 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         for or_wheres in wheres {
             let mut sql_part_and_wheres = vec![];
             for and_where in or_wheres {
-                let col_conf = conf_info.get(&and_where.code).unwrap();
+                let col_conf = conf_info.get(&and_where.code).ok_or(funs.err().internal_error(
+                    "metric",
+                    "query",
+                    &format!("missing config with code [{code}]", code = and_where.code),
+                    "500-spi-stats-internal-error",
+                ))?;
                 let col_data_type = if col_conf.col_kind == StatsFactColKind::Dimension {
-                    col_conf.dim_data_type.as_ref().unwrap()
+                    col_conf.dim_data_type.as_ref().ok_or(funs.err().internal_error(
+                        "metric",
+                        "query",
+                        &format!("config missing dim_data_type with code [{code}]", code = and_where.code),
+                        "500-spi-stats-internal-error",
+                    ))?
                 } else {
-                    col_conf.mes_data_type.as_ref().unwrap()
+                    col_conf.mes_data_type.as_ref().ok_or(funs.err().internal_error(
+                        "metric",
+                        "query",
+                        &format!("config missing mes_data_type with code [{code}]", code = and_where.code),
+                        "500-spi-stats-internal-error",
+                    ))?
                 };
                 info!("col_data_type={:?}", col_data_type);
                 if let Some((sql_part, value)) = col_data_type.to_pg_where(
@@ -252,7 +267,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     params.len() + 1,
                     &and_where.value,
                     &and_where.time_window,
-                ) {
+                )? {
                     value.iter().for_each(|v| params.push(v.clone()));
                     sql_part_and_wheres.push(sql_part);
                 } else {
@@ -265,7 +280,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                             col_data_type.to_string().to_lowercase(),
                             &and_where.op.to_sql(),
                             &and_where.time_window.is_some(),
-                            col_conf.dim_multi_values.unwrap()
+                            col_conf.dim_multi_values.unwrap_or_default()
                         ),
                         "404-spi-stats-metric-op-not-legal",
                     ));
@@ -296,8 +311,18 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     // (column name with fun, alias name, show name)
     let mut sql_part_group_infos = vec![];
     for group in &query_req.group {
-        let col_conf = conf_info.get(&group.code).unwrap();
-        let col_data_type = col_conf.dim_data_type.as_ref().unwrap();
+        let col_conf = conf_info.get(&group.code).ok_or(funs.err().not_found(
+            "metric",
+            "query",
+            &format!("Missing config for group code [{code}] does not exist.", code = group.code),
+            "500-spi-stats-internal-error",
+        ))?;
+        let col_data_type = col_conf.dim_data_type.as_ref().ok_or(funs.err().not_found(
+            "metric",
+            "query",
+            &format!("Missing col_data_type for group code [{code}] does not exist.", code = group.code),
+            "500-spi-stats-internal-error",
+        ))?;
         if let Some(column_name_with_fun) = col_data_type.to_pg_group(&format!("_.{}", &group.code), &group.time_window) {
             let alias_name = format!(
                 "{}{FUNCTION_SUFFIX_FLAG}{}",
@@ -328,8 +353,18 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, show_name, true));
     }
     for select in &query_req.select {
-        let col_conf = conf_info.get(&select.code).unwrap();
-        let col_data_type = col_conf.mes_data_type.as_ref().unwrap();
+        let col_conf = conf_info.get(&select.code).ok_or(funs.err().not_found(
+            "metric",
+            "query",
+            &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
+            "500-spi-stats-internal-error",
+        ))?;
+        let col_data_type = col_conf.mes_data_type.as_ref().ok_or(funs.err().not_found(
+            "metric",
+            "query",
+            &format!("Missing col_data_type for select code [{code}] does not exist.", code = select.code),
+            "500-spi-stats-internal-error",
+        ))?;
         let column_name_with_fun = col_data_type.to_pg_select(&format!("_.{}", &select.code), &select.fun);
         let alias_name = format!("{}{FUNCTION_SUFFIX_FLAG}{}", select.code, select.fun.to_string().to_lowercase());
         sql_part_outer_select_infos.push((column_name_with_fun, alias_name, col_conf.show_name.clone(), false));
@@ -341,9 +376,22 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     let sql_part_havings = if let Some(havings) = &query_req.having {
         let mut sql_part_havings = vec![];
         for having in havings {
-            let col_conf = conf_info.get(&having.code).unwrap();
-            if let Some((sql_part, value)) =
-                col_conf.mes_data_type.as_ref().unwrap().to_pg_having(false, &format!("_.{}", &having.code), &having.op, params.len() + 1, &having.value, Some(&having.fun))
+            let col_conf = conf_info.get(&having.code).ok_or(funs.err().not_found(
+                "metric",
+                "query",
+                &format!("Missing config for having code [{code}] does not exist.", code = having.code),
+                "500-spi-stats-internal-error",
+            ))?;
+            if let Some((sql_part, value)) = col_conf
+                .mes_data_type
+                .as_ref()
+                .ok_or(funs.err().not_found(
+                    "metric",
+                    "query",
+                    &format!("Missing mes_data_type for having code [{code}] does not exist.", code = having.code),
+                    "500-spi-stats-internal-error",
+                ))?
+                .to_pg_having(false, &format!("_.{}", &having.code), &having.op, params.len() + 1, &having.value, Some(&having.fun))?
             {
                 value.iter().for_each(|v| params.push(v.clone()));
                 sql_part_havings.push(sql_part);
@@ -354,7 +402,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
                     &format!(
                         "The query column=[{}] type=[{}] operation=[{}] fun=[{}] is not legal.",
                         &having.code,
-                        col_conf.mes_data_type.as_ref().unwrap().to_string().to_lowercase(),
+                        col_conf.mes_data_type.as_ref().map(ToString::to_string).unwrap_or("None".into()).to_lowercase(),
                         &having.op.to_sql(),
                         &having.fun.to_string().to_lowercase()
                     ),
@@ -446,6 +494,7 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         if sql_part_groups.is_empty() {
             "".to_string()
         } else {
+            #[allow(clippy::collapsible_else_if)]
             if query_req.ignore_group_rollup.unwrap_or(false) {
                 format!("GROUP BY {sql_part_groups}")
             } else {
@@ -460,8 +509,8 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
         .iter()
         .map(|record|
         // TODO This method cannot get the data of array type, so the dimension of multiple values, such as labels, cannot be obtained.
-        serde_json::Value::from_query_result(record, "").unwrap())
-        .collect::<Vec<serde_json::Value>>();
+        serde_json::Value::from_query_result(record, ""))
+        .collect::<Result<Vec<_>, _>>()?;
 
     let select_dimension_keys =
         sql_part_outer_select_infos.iter().filter(|(_, _, _, is_dimension)| *is_dimension).map(|(_, alias_name, _, _)| alias_name.to_string()).collect::<Vec<String>>();
@@ -471,55 +520,54 @@ pub async fn query_metrics(query_req: &StatsQueryMetricsReq, funs: &TardisFunsIn
     Ok(StatsQueryMetricsResp {
         from: query_req.from.to_string(),
         show_names,
-        group: package_groups(select_dimension_keys, &select_measure_keys, result),
+        group: package_groups(select_dimension_keys, &select_measure_keys, result)
+            .map_err(|msg| TardisError::internal_error(&format!("Fail to package groups: {msg}"), "500-spi-stats-internal-error"))?,
     })
 }
 
-fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: &Vec<String>, result: Vec<serde_json::Value>) -> serde_json::Value {
+fn package_groups(curr_select_dimension_keys: Vec<String>, select_measure_keys: &Vec<String>, result: Vec<serde_json::Value>) -> Result<serde_json::Value, String> {
     if curr_select_dimension_keys.is_empty() {
+        let first_result = result.first().ok_or("result is empty")?;
         let mut leaf_node = Map::with_capacity(result.len());
-        select_measure_keys.iter().for_each(|measure_key| {
-            let val = result.get(0).unwrap().get(measure_key).unwrap();
+        for measure_key in select_measure_keys {
+            let val = first_result.get(measure_key).ok_or(format!("failed to get key {measure_key}"))?;
             let val = if measure_key.ends_with(&format!("{FUNCTION_SUFFIX_FLAG}avg")) {
                 // Fix `avg` function return type error
-                serde_json::Value::from(val.as_str().unwrap().parse::<f64>().unwrap())
+                let val = val
+                    .as_str()
+                    .ok_or(format!("value of field {measure_key} should be a string"))?
+                    .parse::<f64>()
+                    .map_err(|_| format!("value of field {measure_key} can not be parsed as a valid f64 number"))?;
+                serde_json::Value::from(val)
             } else {
                 val.clone()
             };
             leaf_node.insert(measure_key.to_string(), val);
-        });
-        return serde_json::Value::Object(leaf_node);
+        }
+        return Ok(serde_json::Value::Object(leaf_node));
     }
     let mut node = Map::with_capacity(0);
-    let dimension_key = curr_select_dimension_keys.get(0).unwrap();
-    result
+    let dimension_key = curr_select_dimension_keys.first().ok_or("curr_select_dimension_keys is empty")?;
+    for (key, group) in result
         .iter()
         .group_by(|record| {
             let key = record.get(dimension_key).unwrap_or(&json!(null));
-            if key.is_f64() {
-                key.as_f64().unwrap().to_string()
-            } else if key.is_i64() {
-                key.as_i64().unwrap().to_string()
-            } else if key.is_boolean() {
-                key.as_bool().unwrap().to_string()
-            } else if key.is_u64() {
-                key.as_u64().unwrap().to_string()
-            } else if key.is_null() {
-                "ROLLUP".to_string()
-            } else {
-                key.as_str().unwrap().to_string()
+            match key {
+                serde_json::Value::Null => "ROLLUP".to_string(),
+                serde_json::Value::String(s) => s.clone(),
+                not_null => not_null.to_string(),
             }
         })
         .into_iter()
-        .for_each(|(key, group)| {
-            let sub = package_groups(
-                curr_select_dimension_keys[1..].to_vec(),
-                select_measure_keys,
-                group.into_iter().cloned().collect::<Vec<serde_json::Value>>(),
-            );
-            node.insert(key, sub);
-        });
-    serde_json::Value::Object(node)
+    {
+        let sub = package_groups(
+            curr_select_dimension_keys[1..].to_vec(),
+            select_measure_keys,
+            group.into_iter().cloned().collect::<Vec<serde_json::Value>>(),
+        )?;
+        node.insert(key, sub);
+    }
+    Ok(serde_json::Value::Object(node))
 }
 
 #[derive(sea_orm::FromQueryResult)]

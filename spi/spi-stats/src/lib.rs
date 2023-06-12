@@ -1,4 +1,4 @@
-#![warn(clippy::unwrap_used)]
+#![warn(clippy::unwrap_used, clippy::todo, clippy::unimplemented)]
 
 extern crate lazy_static;
 

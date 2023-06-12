@@ -1,4 +1,4 @@
-use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor, dto::BasicQueryCondInfo};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -120,23 +120,15 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         sql_vals.push(Value::from(ts_end));
         where_fragments.push(format!("ts <= ${}", sql_vals.len()));
     }
-    let err_notfound = |ext: &BasicQueryCondInfo| Err(funs.err().not_found(
-        "item",
-        "log",
-        &format!(
-            "The ext field=[{}] value=[{}] operation=[{}] is not legal.",
-            &ext.field, ext.value, &ext.op,
-        ),
-        "404-spi-log-op-not-legal",
-    ));
-    let err_op_in_without_value = || {
-        Err(funs.err().bad_request(
+    let err_notfound = |ext: &BasicQueryCondInfo| {
+        Err(funs.err().not_found(
             "item",
             "log",
-            "Request item using 'IN' operator show hava a value",
-            "400-spi-item-op-in-without-value",
+            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op,),
+            "404-spi-log-op-not-legal",
         ))
     };
+    let err_op_in_without_value = || Err(funs.err().bad_request("item", "log", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
     if let Some(ext) = &find_req.ext {
         for ext_item in ext {
             let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);

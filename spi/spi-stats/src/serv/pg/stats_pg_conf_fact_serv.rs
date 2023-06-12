@@ -347,11 +347,7 @@ async fn create_inst_table(
                     "409-spi-stats-miss-mes-data-type",
                 ));
             };
-            sql.push(format!(
-                "{} {} NOT NULL",
-                &fact_col_conf.key,
-                mes_data_type.to_pg_data_type()
-            ));
+            sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, mes_data_type.to_pg_data_type()));
         } else {
             sql.push(format!("{} character varying", &fact_col_conf.key));
         }

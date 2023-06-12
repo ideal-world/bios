@@ -92,13 +92,19 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
                             "",
                         ))?
                         .to_string(),
-                    name: item.value.as_str().ok_or(TardisError::internal_error(
-                        &format!(
-                            "{ty}'s value is not a str, key: {key}, value: {value}",
-                            ty = stringify!(KvNameFindResp),
-                            key = item.key,
-                            value = item.value
-                    ), ""))?.to_string(),
+                    name: item
+                        .value
+                        .as_str()
+                        .ok_or(TardisError::internal_error(
+                            &format!(
+                                "{ty}'s value is not a str, key: {key}, value: {value}",
+                                ty = stringify!(KvNameFindResp),
+                                key = item.key,
+                                value = item.value
+                            ),
+                            "",
+                        ))?
+                        .to_string(),
                     create_time: item.create_time,
                     update_time: item.update_time,
                 })
@@ -139,27 +145,35 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
         }
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
-    .and_then(|items| Ok(TardisPage {
-        page_size: items.page_size,
-        page_number: items.page_number,
-        total_size: items.total_size,
-        records: items
-            .records
-            .into_iter()
-            .map(|item| Ok(KvTagFindResp {
-                key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).ok_or(TardisError::internal_error(
-                    &format!(
-                        "{ty} key is not start with {keyname}:{keyval}",
-                        ty = stringify!(KvTagFindResp),
-                        keyname = stringify!(kv_constants::KEY_PREFIX_BY_TAG),
-                        keyval = item.key
-                    ),
-                    "",
-                ))?.to_string(),
-                items: TardisFuns::json.json_to_obj(item.value)?,
-                create_time: item.create_time,
-                update_time: item.update_time,
-            }))
-            .collect::<TardisResult<Vec<_>>>()?,
-    }))
+    .and_then(|items| {
+        Ok(TardisPage {
+            page_size: items.page_size,
+            page_number: items.page_number,
+            total_size: items.total_size,
+            records: items
+                .records
+                .into_iter()
+                .map(|item| {
+                    Ok(KvTagFindResp {
+                        key: item
+                            .key
+                            .strip_prefix(kv_constants::KEY_PREFIX_BY_TAG)
+                            .ok_or(TardisError::internal_error(
+                                &format!(
+                                    "{ty} key is not start with {keyname}:{keyval}",
+                                    ty = stringify!(KvTagFindResp),
+                                    keyname = stringify!(kv_constants::KEY_PREFIX_BY_TAG),
+                                    keyval = item.key
+                                ),
+                                "",
+                            ))?
+                            .to_string(),
+                        items: TardisFuns::json.json_to_obj(item.value)?,
+                        create_time: item.create_time,
+                        update_time: item.update_time,
+                    })
+                })
+                .collect::<TardisResult<Vec<_>>>()?,
+        })
+    })
 }

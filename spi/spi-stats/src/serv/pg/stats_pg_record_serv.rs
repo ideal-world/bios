@@ -72,9 +72,9 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
             // TODO check value enum when stable_ds =true
             fields.push(req_fact_col_key.to_string());
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false));
+                values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
             } else {
-                values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false));
+                values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
             let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
@@ -82,7 +82,7 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                     "fact_record", "load", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
             };
             fields.push(req_fact_col_key.to_string());
-            values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false));
+            values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
         } else {
             let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
                 return Err(funs.err().bad_request(
@@ -113,16 +113,16 @@ pub(crate) async fn fact_record_load(fact_conf_key: &str, fact_record_key: &str,
                         return Err(funs.err().internal_error("fact_record", "load", &format!("key [{dim_rel_conf_dim_key}] missing corresponding config "), "500-spi-stats-internal-error"))
                     };
                     if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                        values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key));
+                        values.push(dim_conf.data_type.result_to_sea_orm_value_array(&latest_data, &fact_col_conf.key)?);
                     } else {
-                        values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
+                        values.push(dim_conf.data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
                     }
                 } else if fact_col_conf.kind == StatsFactColKind::Measure {
                     let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
                         return Err(funs.err().bad_request(
                             "fact_record", "load", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
                     };
-                    values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key));
+                    values.push(mes_data_type.result_to_sea_orm_value(&latest_data, &fact_col_conf.key)?);
                 } else {
                     values.push(Value::from(latest_data.try_get::<String>("", &fact_col_conf.key)?));
                 }
@@ -203,16 +203,16 @@ pub(crate) async fn fact_records_load(fact_conf_key: &str, add_req_set: Vec<Stat
                 };
                 // TODO check value enum when stable_ds =true
                 if fact_col_conf.dim_multi_values.unwrap_or(false) {
-                    values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false));
+                    values.push(dim_conf.data_type.json_to_sea_orm_value_array(req_fact_col_value, false)?);
                 } else {
-                    values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false));
+                    values.push(dim_conf.data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
                 }
             } else if fact_col_conf.kind == StatsFactColKind::Measure {
                 let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
                     return Err(funs.err().bad_request(
                         "fact_record", "load_set", "Col_conf.mes_data_type shouldn't be empty while fact_col_conf.kind is Measure", "400-spi-stats-invalid-request"))
                 };
-                values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false));
+                values.push(mes_data_type.json_to_sea_orm_value(req_fact_col_value, false)?);
             } else {
                 let Some(req_fact_col_value) = req_fact_col_value.as_str() else {
                     return Err(funs.err().bad_request(
@@ -353,7 +353,7 @@ async fn find_fact_record_key(
     let mut params: Vec<Value> = vec![];
     if let Some(dim_record_key) = &dim_record_key {
         sql_where.push(format!("{fact_conf_col_key} = $1"));
-        params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false));
+        params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false)?);
     }
     let result = conn
         .query_all(
@@ -420,7 +420,7 @@ pub(crate) async fn dim_record_add(dim_conf_key: String, add_req: StatsDimRecord
     }
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
-    let dim_record_key_value = dim_conf.data_type.json_to_sea_orm_value(&add_req.key, false);
+    let dim_record_key_value = dim_conf.data_type.json_to_sea_orm_value(&add_req.key, false)?;
     if conn.count_by_sql(&format!("SELECT 1 FROM {table_name} WHERE key = $1"), vec![dim_record_key_value.clone()]).await? != 0 {
         return Err(funs.err().conflict(
             "dim_record",
@@ -547,7 +547,7 @@ async fn dim_do_record_paginate(
     let mut params: Vec<Value> = vec![Value::from(page_size), Value::from((page_number - 1) * page_size)];
     if let Some(dim_record_key) = &dim_record_key {
         sql_where.push(format!("key = ${}", params.len() + 1));
-        params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false));
+        params.push(dim_conf.data_type.json_to_sea_orm_value(dim_record_key, false)?);
     }
     if let Some(show_name) = &show_name {
         sql_where.push(format!("show_name LIKE ${}", params.len() + 1));
@@ -607,7 +607,7 @@ pub(crate) async fn dim_record_delete(dim_conf_key: String, dim_record_key: serd
     let dim_conf = stats_pg_conf_dim_serv::get(&dim_conf_key, &conn, ctx).await?.expect("Fail to get dim_conf");
 
     let table_name = package_table_name(&format!("stats_inst_dim_{}", dim_conf.key), ctx);
-    let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)];
+    let values = vec![dim_conf.data_type.json_to_sea_orm_value(&dim_record_key, false)?];
 
     conn.execute_one(
         &format!(

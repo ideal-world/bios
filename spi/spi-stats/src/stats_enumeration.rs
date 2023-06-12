@@ -3,6 +3,7 @@ use std::str::FromStr;
 use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper};
 use serde::{Deserialize, Serialize};
 use tardis::{
+    basic::{error::TardisError, result::TardisResult},
     chrono::{DateTime, NaiveDate, Utc},
     db::sea_orm::{self, prelude::DateTimeWithTimeZone, DbErr, QueryResult, TryGetError, TryGetable},
     derive_more::Display,
@@ -27,6 +28,13 @@ pub enum StatsDataTypeKind {
 }
 
 impl StatsDataTypeKind {
+    fn err_json_value_type(&self) -> TardisError {
+        TardisError::internal_error(
+            &format!("Encounter an error at json_to_sea_orm_value, expect {type_kind} array", type_kind = self),
+            "500-spi-stats-internal-error",
+        )
+    }
+
     pub fn to_pg_data_type(&self) -> &str {
         match self {
             StatsDataTypeKind::String => "character varying",
@@ -38,24 +46,34 @@ impl StatsDataTypeKind {
         }
     }
 
-    pub fn json_to_sea_orm_value(&self, json_value: &serde_json::Value, like_by_str: bool) -> sea_orm::Value {
-        match self {
+    pub fn json_to_sea_orm_value(&self, json_value: &serde_json::Value, like_by_str: bool) -> TardisResult<sea_orm::Value> {
+        let err_parse_time = || {
+            TardisError::internal_error(
+                &format!("Encounter an error at json_to_sea_orm_value when parse time, value: {json_value}"),
+                "500-spi-stats-internal-error",
+            )
+        };
+        Ok(match self {
             StatsDataTypeKind::String => {
                 if like_by_str {
-                    sea_orm::Value::from(format!("{}%", json_value.as_str().unwrap()))
+                    sea_orm::Value::from(format!("{}%", json_value.as_str().ok_or(self.err_json_value_type())?))
                 } else {
-                    sea_orm::Value::from(json_value.as_str().unwrap().to_string())
+                    sea_orm::Value::from(json_value.as_str().ok_or(self.err_json_value_type())?.to_string())
                 }
             }
-            StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().unwrap() as i32),
-            StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().unwrap() as f32),
-            StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().unwrap()),
-            StatsDataTypeKind::Date => sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().unwrap(), "%Y-%m-%d").unwrap()),
-            StatsDataTypeKind::DateTime => sea_orm::Value::from(DateTime::parse_from_rfc3339(json_value.as_str().unwrap()).unwrap().with_timezone(&Utc)),
-        }
+            StatsDataTypeKind::Int => sea_orm::Value::from(json_value.as_i64().ok_or(self.err_json_value_type())? as i32),
+            StatsDataTypeKind::Float => sea_orm::Value::from(json_value.as_f64().ok_or(self.err_json_value_type())? as f32),
+            StatsDataTypeKind::Boolean => sea_orm::Value::from(json_value.as_bool().ok_or(self.err_json_value_type())?),
+            StatsDataTypeKind::Date => {
+                sea_orm::Value::from(NaiveDate::parse_from_str(json_value.as_str().ok_or(self.err_json_value_type())?, "%Y-%m-%d").map_err(|_| err_parse_time())?)
+            }
+            StatsDataTypeKind::DateTime => {
+                sea_orm::Value::from(DateTime::parse_from_rfc3339(json_value.as_str().ok_or(self.err_json_value_type())?).map_err(|_| err_parse_time())?.with_timezone(&Utc))
+            }
+        })
     }
-    
-    pub fn json_to_sea_orm_value_array(&self, json_value: &serde_json::Value, like_by_str: bool) -> sea_orm::Value {
+
+    pub fn json_to_sea_orm_value_array(&self, json_value: &serde_json::Value, like_by_str: bool) -> TardisResult<sea_orm::Value> {
         let sea_orm_data_type = match self {
             StatsDataTypeKind::String => sea_orm::sea_query::ArrayType::String,
             StatsDataTypeKind::Int => sea_orm::sea_query::ArrayType::Int,
@@ -64,30 +82,30 @@ impl StatsDataTypeKind {
             StatsDataTypeKind::Date => sea_orm::sea_query::ArrayType::TimeDate,
             StatsDataTypeKind::DateTime => sea_orm::sea_query::ArrayType::TimeDateTimeWithTimeZone,
         };
-        let values = json_value.as_array().unwrap().iter().map(|json| self.json_to_sea_orm_value(json, like_by_str)).collect();
-        sea_orm::Value::Array(sea_orm_data_type, Some(Box::new(values)))
+        let values = json_value.as_array().ok_or(self.err_json_value_type())?.iter().map(|json| self.json_to_sea_orm_value(json, like_by_str)).collect::<TardisResult<Vec<_>>>()?;
+        Ok(sea_orm::Value::Array(sea_orm_data_type, Some(Box::new(values))))
     }
 
-    pub fn result_to_sea_orm_value(&self, query_result: &QueryResult, key: &str) -> sea_orm::Value {
-        match self {
-            StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<String>("", key).unwrap()),
-            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<i32>("", key).unwrap()),
-            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<f32>("", key).unwrap()),
-            StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<bool>("", key).unwrap()),
-            StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<NaiveDate>("", key).unwrap()),
-            StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<DateTimeWithTimeZone>("", key).unwrap()),
-        }
+    pub fn result_to_sea_orm_value(&self, query_result: &QueryResult, key: &str) -> TardisResult<sea_orm::Value> {
+        Ok(match self {
+            StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<String>("", key)?),
+            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<i32>("", key)?),
+            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<f32>("", key)?),
+            StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<bool>("", key)?),
+            StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<NaiveDate>("", key)?),
+            StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<DateTimeWithTimeZone>("", key)?),
+        })
     }
 
-    pub fn result_to_sea_orm_value_array(&self, query_result: &QueryResult, key: &str) -> sea_orm::Value {
-        match self {
-            StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<Vec<String>>("", key).unwrap()),
-            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<Vec<i32>>("", key).unwrap()),
-            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<Vec<f32>>("", key).unwrap()),
-            StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<Vec<bool>>("", key).unwrap()),
-            StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<Vec<NaiveDate>>("", key).unwrap()),
-            StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<Vec<DateTimeWithTimeZone>>("", key).unwrap()),
-        }
+    pub fn result_to_sea_orm_value_array(&self, query_result: &QueryResult, key: &str) -> TardisResult<sea_orm::Value> {
+        Ok(match self {
+            StatsDataTypeKind::String => sea_orm::Value::from(query_result.try_get::<Vec<String>>("", key)?),
+            StatsDataTypeKind::Int => sea_orm::Value::from(query_result.try_get::<Vec<i32>>("", key)?),
+            StatsDataTypeKind::Float => sea_orm::Value::from(query_result.try_get::<Vec<f32>>("", key)?),
+            StatsDataTypeKind::Boolean => sea_orm::Value::from(query_result.try_get::<Vec<bool>>("", key)?),
+            StatsDataTypeKind::Date => sea_orm::Value::from(query_result.try_get::<Vec<NaiveDate>>("", key)?),
+            StatsDataTypeKind::DateTime => sea_orm::Value::from(query_result.try_get::<Vec<DateTimeWithTimeZone>>("", key)?),
+        })
     }
 
     pub(crate) fn to_pg_where(
@@ -98,53 +116,59 @@ impl StatsDataTypeKind {
         param_idx: usize,
         value: &serde_json::Value,
         time_window_fun: &Option<StatsQueryTimeWindowKind>,
-    ) -> Option<(String, Vec<sea_orm::Value>)> {
+    ) -> TardisResult<Option<(String, Vec<sea_orm::Value>)>> {
         if value.is_null() {
-            return None;
+            return Ok(None);
         }
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
             if time_window_fun.is_some() {
-                Some(vec![sea_orm::Value::from(value.as_str().unwrap().to_string())])
+                Some(vec![sea_orm::Value::from(value.as_str().ok_or(self.err_json_value_type())?.to_string())])
             } else {
-                let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
+                let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)?;
                 Some(vec![value])
             }
         } else {
             db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
         };
-        let mut value = value.unwrap();
-        if multi_values && (time_window_fun.is_some() || op != &BasicQueryOpKind::In)
-            || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
-            || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || (self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime) && time_window_fun.is_some()
-        {
-            None
-        } else if multi_values {
-            // TODO Not supported yet
-            todo!();
-        } else if let Some(time_window_fun) = time_window_fun {
-            Some((
-                format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
-                vec![value.pop().unwrap()],
-            ))
-        } else if op == &BasicQueryOpKind::In {
-            let mut index = 0;
-            let param_sql = value
-                .iter()
-                .map(|_| {
-                    let param_idx = param_idx + index;
-                    index = index + 1;
-                    format!("${}", param_idx)
+        let Some(mut value) = value else {
+            return Err(TardisError::internal_error("json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
+        };
+        Ok(
+            if multi_values && (time_window_fun.is_some() || op != &BasicQueryOpKind::In)
+                || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
+                || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || (self != &StatsDataTypeKind::Date && self != &StatsDataTypeKind::DateTime) && time_window_fun.is_some()
+            {
+                None
+            } else if multi_values {
+                // TODO Not supported yet
+                return Err(TardisError::internal_error("json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
+            } else if let Some(time_window_fun) = time_window_fun {
+                value.pop().map(|value| {
+                    (
+                        format!("{} {} ${param_idx}", time_window_fun.to_sql(column_name, self == &StatsDataTypeKind::DateTime), op.to_sql()),
+                        vec![value],
+                    )
                 })
-                .collect::<Vec<_>>()
-                .join(", ");
-            Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
-        } else {
-            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value.pop().unwrap()]))
-        }
+            } else if op == &BasicQueryOpKind::In {
+                let mut index = 0;
+                let param_sql = value
+                    .iter()
+                    .map(|_| {
+                        let param_idx = param_idx + index;
+                        index += 1;
+                        format!("${}", param_idx)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
+            } else {
+                value.pop().map(|value| (format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value]))
+            },
+        )
     }
 
     pub(crate) fn to_pg_having(
@@ -155,42 +179,47 @@ impl StatsDataTypeKind {
         param_idx: usize,
         value: &serde_json::Value,
         fun: Option<&StatsQueryAggFunKind>,
-    ) -> Option<(String, Vec<sea_orm::Value>)> {
+    ) -> TardisResult<Option<(String, Vec<sea_orm::Value>)>> {
         let value = if (self == &StatsDataTypeKind::DateTime || self != &StatsDataTypeKind::Date) && value.is_string() {
-            let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like);
+            let value = self.json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)?;
             Some(vec![value])
         } else {
             db_helper::json_to_sea_orm_value(value, op == &BasicQueryOpKind::Like)
         };
-        let mut value = value.unwrap();
-        if multi_values && (fun.is_some() || op != &BasicQueryOpKind::In)
-            || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
-            || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-            || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
-        {
-            None
-        } else if multi_values {
-            // TODO Not supported yet
-            todo!();
-        } else if let Some(fun) = fun {
-            Some((format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), vec![value.pop().unwrap()]))
-        } else if op == &BasicQueryOpKind::In {
-            let mut index = 0;
-            let param_sql = value
-                .iter()
-                .map(|_| {
-                    let param_idx = param_idx + index;
-                    index = index + 1;
-                    format!("${}", param_idx)
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-            Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
-        } else {
-            Some((format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value.pop().unwrap()]))
-        }
+
+        let Some(mut value) = value else {
+            return Err(TardisError::internal_error("to_pg_having: json_to_sea_orm_value result is empty", "spi-stats-inaternal-error"));
+        };
+        Ok(
+            if multi_values && (fun.is_some() || op != &BasicQueryOpKind::In)
+                || self == &StatsDataTypeKind::Int && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::Float && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::Boolean && (op != &BasicQueryOpKind::Eq && op != &BasicQueryOpKind::Ne)
+                || self == &StatsDataTypeKind::Date && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+                || self == &StatsDataTypeKind::DateTime && (op == &BasicQueryOpKind::In || op == &BasicQueryOpKind::Like)
+            {
+                None
+            } else if multi_values {
+                // TODO Not supported yet
+                return Err(TardisError::internal_error("to_pg_having: multi_values not supported yet", "spi-stats-inaternal-error"));
+            } else if let Some(fun) = fun {
+                value.pop().map(|value| (format!("{} {} ${param_idx}", fun.to_sql(column_name), op.to_sql()), vec![value]))
+            } else if op == &BasicQueryOpKind::In {
+                let mut index = 0;
+                let param_sql = value
+                    .iter()
+                    .map(|_| {
+                        let param_idx = param_idx + index;
+                        index += 1;
+                        format!("${}", param_idx)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Some((format!("{column_name} {} ({})", op.to_sql(), param_sql), value))
+            } else {
+                value.pop().map(|value| (format!("{column_name} {} ${param_idx}", op.to_sql()), vec![value]))
+            },
+        )
     }
 
     pub(crate) fn to_pg_group(&self, column_name: &str, time_window_fun: &Option<StatsQueryTimeWindowKind>) -> Option<String> {
