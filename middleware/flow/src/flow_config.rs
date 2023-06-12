@@ -20,8 +20,8 @@ impl Default for FlowConfig {
         FlowConfig {
             rbum: Default::default(),
             app_key: Default::default(),
-            search_url: "".to_string(),
-            log_url: "".to_string(),
+            search_url: "http://127.0.0.1:8080/spi-search".to_string(),
+            log_url: "http://127.0.0.1:8080/spi-log".to_string(),
         }
     }
 }
