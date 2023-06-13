@@ -446,7 +446,7 @@ impl FlowInstServ {
         })
     }
 
-    /// request webhook when transion is entered
+    /// request webhook when the transition occurs
     async fn do_request_webhook(from_transion_detail: Option<&FlowTransitionDetailResp>, to_transion_detail: Option<&FlowTransitionDetailResp>) -> TardisResult<()> {
         if let Some(from_transion_detail) = from_transion_detail {
             if !from_transion_detail.action_by_post_callback.is_empty() {
