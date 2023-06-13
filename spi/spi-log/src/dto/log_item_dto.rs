@@ -38,6 +38,7 @@ pub struct LogItemFindReq {
     pub ops: Option<Vec<String>>,
     pub owners: Option<Vec<String>>,
     pub own_paths: Option<String>,
+    pub ext_or: Option<Vec<BasicQueryCondInfo>>,
     // Extended filtering conditions
     pub ext: Option<Vec<BasicQueryCondInfo>>,
     pub rel_keys: Option<Vec<TrimString>>,

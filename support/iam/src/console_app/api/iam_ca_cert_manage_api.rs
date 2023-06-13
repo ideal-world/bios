@@ -20,6 +20,7 @@ impl IamCaCertManageApi {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let cert = IamCertServ::get_3th_kind_cert_by_id(&id.0, &funs, &ctx).await?;
+        ctx.execute_task().await?;
         TardisResp::ok(cert)
     }
 
@@ -29,6 +30,7 @@ impl IamCaCertManageApi {
         let funs = iam_constants::get_tardis_inst();
         let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         let rbum_certs = IamCertServ::find_to_simple_rel_cert(&item_id.0, None, None, &funs, &ctx).await?;
+        ctx.execute_task().await?;
         TardisResp::ok(rbum_certs)
     }
 }

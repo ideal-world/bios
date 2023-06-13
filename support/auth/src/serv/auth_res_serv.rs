@@ -19,23 +19,29 @@ use crate::{
 
 use super::auth_crypto_serv;
 
+//todo Change to asynchronous lock or spin when obtaining lock/改成异步锁或者是获取锁的时候自旋
 lazy_static! {
     static ref RES_CONTAINER: RwLock<Option<ResContainerNode>> = RwLock::new(None);
     static ref RES_APIS: RwLock<Option<HashMap<String, Api>>> = RwLock::new(None);
 }
 
 pub fn get_res_json() -> TardisResult<Value> {
-    if let Some(res) = RES_CONTAINER.read().unwrap().as_ref() {
-        Ok(TardisFuns::json.obj_to_json(res)?)
-    } else {
-        Ok(Value::Null)
+    if let Ok(res) = RES_CONTAINER.read() {
+        if let Some(res) = res.as_ref() {
+            return TardisFuns::json.obj_to_json(res);
+        }
     }
+    Ok(Value::Null)
 }
 
 pub fn get_apis_json() -> TardisResult<Value> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
-    let apis = if let Some(apis) = RES_APIS.read().unwrap().as_ref() {
-        apis.clone()
+    let apis = if let Ok(apis) = RES_APIS.read() {
+        if let Some(apis) = apis.as_ref() {
+            apis.clone()
+        } else {
+            HashMap::new()
+        }
     } else {
         HashMap::new()
     };
@@ -106,7 +112,7 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
     if res_apis.is_none() {
         *res_apis = Some(HashMap::new());
     }
-    let mut res_container_node = res_container.as_mut().unwrap();
+    let mut res_container_node = res_container.as_mut().expect("[Auth] res_container got none");
     for res_item in res_items.into_iter() {
         if !res_container_node.has_child(&res_item) {
             res_container_node.insert_child(&res_item);
@@ -116,8 +122,8 @@ pub fn add_res(res_action: &str, res_uri: &str, auth_info: Option<ResAuthInfo>, 
             res_container_node.insert_leaf(&res_action, &res_action, res_uri, auth_info.clone(), need_crypto_req, need_crypto_resp, need_double_auth);
             let res_uris: Vec<&str> = res_uri.split("://").collect();
             if res_uris.len() == 2 {
-                res_apis.as_mut().unwrap().insert(
-                    res_uri.to_string(),
+                res_apis.as_mut().expect("[Auth] res_apis got none").insert(
+                    format!("{res_uri}##{res_action}"),
                     Api {
                         action: res_action.clone(),
                         uri: res_uris[1].to_string(),
@@ -148,19 +154,30 @@ pub fn remove_res(res_action: &str, res_uri: &str) -> TardisResult<()> {
     info!("[Auth] Remove resource [{}][{}]", res_action, res_uri);
     let res_items = parse_uri(res_uri)?;
     let mut res_container = RES_CONTAINER.write()?;
-    let mut res_container_node = res_container.as_mut().unwrap();
+    let mut res_container_node = res_container.as_mut().expect("[Auth] res_container got none");
     let mut res_apis = RES_APIS.write()?;
-    let apis = res_apis.as_mut().unwrap();
+    let apis = res_apis.as_mut().expect("[Auth] res_apis got none");
     for res_item in res_items.iter() {
         if !res_container_node.has_child(res_item) {
             return Ok(());
         }
         res_container_node = res_container_node.get_child_mut(res_item);
     }
-    apis.remove(res_uri);
+    apis.remove(&format!("{res_uri}##{res_action}"));
     res_container_node.remove_child(&res_action);
-    remove_empty_node(res_container.as_mut().unwrap(), res_items);
+    remove_empty_node(res_container.as_mut().expect("[Auth] res_container got none"), res_items);
     Ok(())
+}
+
+pub async fn delete_auth(res_action: &str, res_uri: &str) -> TardisResult<()> {
+    TardisFuns::cache_by_module_or_default(DOMAIN_CODE)
+        .hdel(
+            &TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE).cache_key_res_info,
+            &format!("{}##{}", res_uri, res_action),
+        )
+        .await
+        .map_err(|e| TardisError::internal_error(&format!("[Auth] delete_auth failed: {}", e), ""))?;
+    remove_res(res_action, res_uri)
 }
 
 fn do_match_res(res_action: &str, res_container: &ResContainerNode, res_items: &Vec<String>, multi_wildcard: bool, matched_uris: &mut Vec<ResContainerLeafInfo>) {
@@ -202,6 +219,12 @@ pub fn match_res(res_action: &str, res_uri: &str) -> TardisResult<Vec<ResContain
     res_items.remove(res_items.len() - 1);
     let mut matched_uris = vec![];
     let res_container = RES_CONTAINER.read()?;
-    do_match_res(&res_action, res_container.as_ref().unwrap(), &res_items, false, &mut matched_uris);
+    do_match_res(
+        &res_action,
+        res_container.as_ref().expect("[Auth] res_container got none"),
+        &res_items,
+        false,
+        &mut matched_uris,
+    );
     Ok(matched_uris)
 }

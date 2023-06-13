@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
+use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tardis::basic::dto::TardisContext;
@@ -11,7 +12,7 @@ use tardis::chrono::Utc;
 use tardis::{log, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
-use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
+use bios_basic::rbum::serv::rbum_item_serv::{RbumItemCrudOperation, RbumItemServ};
 
 use crate::basic::dto::iam_account_dto::IamAccountInfoResp;
 use crate::basic::dto::iam_cert_dto::IamContextFetchReq;
@@ -23,7 +24,6 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::iam_config::IamConfig;
 use crate::iam_constants;
 use crate::iam_enumeration::{IamCertTokenKind, IamRelKind};
-use tardis::tokio::{self, task};
 pub struct IamIdentCacheServ;
 
 impl IamIdentCacheServ {
@@ -92,19 +92,45 @@ impl IamIdentCacheServ {
             Self::delete_double_auth(iam_item_id, funs).await?;
             funs.cache().hdel(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_rel_, iam_item_id).as_str(), token).await?;
 
-            let mock_ctx = TardisContext { ..Default::default() };
+            let mut mock_ctx = TardisContext::default();
+            if let Ok(account_context) = Self::get_account_context(iam_item_id, "", funs).await {
+                mock_ctx = account_context;
+            } else {
+                mock_ctx.owner = iam_item_id.to_string();
+                let own_paths = RbumItemServ::get_rbum(
+                    iam_item_id,
+                    &RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    funs,
+                    &mock_ctx,
+                )
+                .await?
+                .own_paths;
+                mock_ctx.own_paths = own_paths;
+            }
+
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamAccount,
-                Some(token.to_string()),
+                Some(iam_item_id.to_string()),
                 "下线账号".to_string(),
                 Some("OfflineAccount".to_string()),
                 &mock_ctx,
             )
             .await;
-            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityVisit, Some(token.to_string()), "退出".to_string(), Some("Quit".to_string()), &mock_ctx).await;
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::SecurityVisit,
+                Some(iam_item_id.to_string()),
+                "退出".to_string(),
+                Some("Quit".to_string()),
+                &mock_ctx,
+            )
+            .await;
 
-            let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-            let _ = task_handle.await;
+            mock_ctx.execute_task().await?;
         }
         Ok(())
     }
@@ -142,15 +168,18 @@ impl IamIdentCacheServ {
                     },
                     ..Default::default()
                 };
-                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap() as isize;
+                let mut count = IamAccountServ::count_items(&filter, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                    let mut ids = Vec::new();
+                    if let Ok(page) = IamAccountServ::paginate_id_items(&filter, page_number, 100, None, None, &funs, &ctx_clone).await {
+                        ids = page.records;
+                    }
                     for id in ids {
                         let account_context = Self::get_account_context(&id, "", &funs).await;
                         if let Ok(account_context) = account_context {
                             if account_context.own_paths == ctx_clone.own_paths {
-                                Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                                Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
                             }
                         }
                     }
@@ -158,16 +187,18 @@ impl IamIdentCacheServ {
                     count -= 100;
                 }
                 if is_app {
-                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap() as isize;
+                    let mut count = IamRelServ::count_to_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                     let mut page_number = 1;
                     while count > 0 {
-                        let ids =
-                            IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                        let mut ids = Vec::new();
+                        if let Ok(page) = IamRelServ::paginate_to_id_rels(&IamRelKind::IamAccountApp, &tenant_or_app_id, page_number, 100, None, None, &funs, &ctx_clone).await {
+                            ids = page.records;
+                        }
                         for id in ids {
                             let account_context = Self::get_account_context(&id, "", &funs).await;
                             if let Ok(account_context) = account_context {
                                 if account_context.own_paths == ctx_clone.own_paths {
-                                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                                    Self::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
                                 }
                             }
                         }
@@ -203,8 +234,7 @@ impl IamIdentCacheServ {
         )
         .await;
 
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-        let _ = task_handle.await;
+        mock_ctx.execute_task().await?;
 
         Ok(())
     }
@@ -357,6 +387,32 @@ impl IamResCacheServ {
         Self::add_change_trigger(&uri_mixed, funs).await
     }
 
+    // add anonymous access permissions
+    pub async fn add_anonymous_res_rel(item_code: &str, action: &str, st: Option<i64>, et: Option<i64>, funs: &TardisFunsInst) -> TardisResult<()> {
+        let res_auth = IamCacheResAuth {
+            tenants: "#*#".to_string(),
+            st,
+            et,
+            ..Default::default()
+        };
+        let mut res_dto = IamCacheResRelAddOrModifyDto {
+            auth: Some(res_auth),
+            need_crypto_req: false,
+            need_crypto_resp: false,
+            need_double_auth: false,
+        };
+        let uri_mixed = Self::package_uri_mixed(item_code, action);
+        let rels = funs.cache().hget(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed).await?;
+        if let Some(rels) = rels {
+            let old_res_dto = TardisFuns::json.str_to_obj::<IamCacheResRelAddOrModifyDto>(&rels)?;
+            res_dto.need_crypto_req = old_res_dto.need_crypto_req;
+            res_dto.need_crypto_resp = old_res_dto.need_crypto_resp;
+            res_dto.need_double_auth = old_res_dto.need_double_auth;
+        }
+        funs.cache().hset(&funs.conf::<IamConfig>().cache_key_res_info, &uri_mixed, &TardisFuns::json.obj_to_string(&res_dto)?).await?;
+        Self::add_change_trigger(&uri_mixed, funs).await
+    }
+
     pub async fn add_or_modify_res_rel(item_code: &str, action: &str, add_or_modify_req: &IamCacheResRelAddOrModifyReq, funs: &TardisFunsInst) -> TardisResult<()> {
         if add_or_modify_req.st.is_some() || add_or_modify_req.et.is_some() {
             // TODO support time range
@@ -368,6 +424,7 @@ impl IamResCacheServ {
             groups: format!("#{}#", add_or_modify_req.groups.join("#")),
             apps: format!("#{}#", add_or_modify_req.apps.join("#")),
             tenants: format!("#{}#", add_or_modify_req.tenants.join("#")),
+            ..Default::default()
         };
         let mut res_dto = IamCacheResRelAddOrModifyDto {
             auth: None,
@@ -498,6 +555,8 @@ struct IamCacheResAuth {
     pub groups: String,
     pub apps: String,
     pub tenants: String,
+    pub st: Option<i64>,
+    pub et: Option<i64>,
 }
 
 pub struct IamCacheResRelAddOrModifyReq {

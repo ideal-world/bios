@@ -1,4 +1,5 @@
 use bios_auth::auth_config::AuthConfig;
+use bios_mw_flow::flow_config::FlowConfig;
 use bios_spi_cache::cache_config::CacheConfig;
 use bios_spi_graph::graph_config::GraphConfig;
 use bios_spi_kv::kv_config::KvConfig;
@@ -26,4 +27,5 @@ pub struct BiosConfig {
     pub search: SearchConfig,
     pub stats: StatsConfig,
     pub schedule: ScheduleConfig,
+    pub flow: FlowConfig,
 }

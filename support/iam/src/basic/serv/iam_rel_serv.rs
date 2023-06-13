@@ -12,13 +12,14 @@ use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 
-use crate::basic::dto::iam_filer_dto::IamResFilterReq;
+use crate::basic::dto::iam_filer_dto::{IamAccountFilterReq, IamResFilterReq};
 use crate::basic::serv::iam_cert_serv::IamCertServ;
 use crate::basic::serv::iam_key_cache_serv::{IamCacheResRelAddOrModifyReq, IamCacheResRelDeleteReq, IamIdentCacheServ, IamResCacheServ};
 use crate::basic::serv::iam_res_serv::IamResServ;
 use crate::iam_enumeration::{IamRelKind, IamResKind};
 
 use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
+use super::iam_account_serv::IamAccountServ;
 
 pub struct IamRelServ;
 
@@ -83,14 +84,34 @@ impl IamRelServ {
                 ctx,
             )
             .await;
+            let account_name = IamAccountServ::get_item(
+                from_iam_item_id,
+                &IamAccountFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        with_sub_own_paths: true,
+                        own_paths: Some("".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?
+            .name;
             let _ = SpiLogClient::add_ctx_task(
                 LogParamTag::IamRole,
                 Some(to_iam_item_id.to_string()),
-                "添加角色人员".to_string(),
+                format!("添加角色人员{}", account_name),
                 Some("AddRoleAccount".to_string()),
                 ctx,
             )
             .await;
+            IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+        }
+        if rel_kind == &IamRelKind::IamAccountApp {
+            IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         }
 
         if rel_kind == &IamRelKind::IamResRole {
@@ -424,22 +445,42 @@ impl IamRelServ {
                     ctx,
                 )
                 .await;
+                let account_name = IamAccountServ::get_item(
+                    from_iam_item_id,
+                    &IamAccountFilterReq {
+                        basic: RbumBasicFilterReq {
+                            ignore_scope: true,
+                            with_sub_own_paths: true,
+                            own_paths: Some("".to_string()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    funs,
+                    ctx,
+                )
+                .await?
+                .name;
                 let _ = SpiLogClient::add_ctx_task(
                     LogParamTag::IamRole,
                     Some(to_iam_item_id.to_string()),
-                    "移除角色人员".to_string(),
+                    format!("移除角色人员{}", account_name),
                     Some("RemoveRoleAccount".to_string()),
                     ctx,
                 )
                 .await;
+                IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
                 // TODO reset account cache
                 // let tenant_ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.clone())?;
                 // IamCertServ::package_tardis_account_context_and_resp(from_iam_item_id, &tenant_ctx.own_paths, "".to_string(), None, funs, &tenant_ctx).await?;
             }
             IamRelKind::IamAccountApp => {
                 IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(from_iam_item_id, funs).await?;
+                IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
             }
-            IamRelKind::IamAccountRel => {}
+            IamRelKind::IamAccountRel => {
+                IamAccountServ::async_add_or_modify_account_search(from_iam_item_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
+            }
             IamRelKind::IamCertRel => {}
             IamRelKind::IamOrgRel => {}
         }

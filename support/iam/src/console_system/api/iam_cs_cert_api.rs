@@ -1,5 +1,4 @@
 use bios_basic::process::task_processor::TaskProcessor;
-use tardis::tokio::{self, task};
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Path;
@@ -24,7 +23,7 @@ pub struct IamCsCertApi;
 /// System Console Cert API
 #[poem_openapi::OpenApi(prefix_path = "/cs/cert", tag = "bios_basic::ApiTag::System")]
 impl IamCsCertApi {
-    /// Rest Password By Account Id  安全审计日志--重置账号密码
+    /// Rest Password By Account Id
     #[oai(path = "/user-pwd", method = "put")]
     async fn rest_password(
         &self,
@@ -40,8 +39,7 @@ impl IamCsCertApi {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
         IamCertUserPwdServ::reset_sk(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -61,8 +59,7 @@ impl IamCsCertApi {
             &ctx,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(rbum_certs)
     }
 
@@ -71,8 +68,9 @@ impl IamCsCertApi {
     async fn get_user_pwd_cert(&self, account_id: Query<String>, tenant_id: Query<Option<String>>, ctx: TardisContextExtractor) -> TardisApiResult<RbumCertSummaryWithSkResp> {
         let funs = iam_constants::get_tardis_inst();
         let resp = IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx.0).await;
-        let rbum_cert = if resp.is_ok() {
-            resp.unwrap()
+        ctx.0.execute_task().await?;
+        let rbum_cert = if let Ok(resp) = resp {
+            resp
         } else {
             let ctx = IamCertServ::try_use_tenant_ctx(ctx.0, tenant_id.0)?;
             IamCertServ::get_kernel_cert(&account_id.0, &IamCertKernelKind::UserPwd, &funs, &ctx).await?
@@ -87,8 +85,7 @@ impl IamCsCertApi {
         funs.begin().await?;
         IamCertServ::delete_cert_conf(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -99,9 +96,7 @@ impl IamCsCertApi {
         funs.begin().await?;
         IamCertServ::delete_cert_and_conf_by_conf_id(&id.0, &funs, &ctx.0).await?;
         funs.commit().await?;
-        let ctx_task = ctx.0.clone();
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {
@@ -114,8 +109,7 @@ impl IamCsCertApi {
     async fn add_or_modify_sync_third_integration_config(&self, req: Json<IamThirdIntegrationSyncAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let funs = iam_constants::get_tardis_inst();
         IamCertServ::add_or_modify_sync_third_integration_config(req.0, &funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(Void {})
     }
 
@@ -124,8 +118,7 @@ impl IamCsCertApi {
     async fn get_sync_third_integration_config(&self, ctx: TardisContextExtractor) -> TardisApiResult<Option<IamThirdIntegrationConfigDto>> {
         let funs = iam_constants::get_tardis_inst();
         let result = IamCertServ::get_sync_third_integration_config(&funs, &ctx.0).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -146,9 +139,7 @@ impl IamCsCertApi {
             &ctx.0,
         )
         .await?;
-        let ctx_task = ctx.0.clone();
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx.0).await? {
             TardisResp::accepted(Some(task_id))
         } else {

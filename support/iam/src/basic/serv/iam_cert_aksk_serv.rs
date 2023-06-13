@@ -107,13 +107,13 @@ impl IamCertAkSkServ {
         let new_ctx = TardisContext {
             owner: RBUM_SYSTEM_OWNER.to_string(),
             own_paths: if app_id.is_some() {
-                format!("{}/{}", tenant_id, app_id.clone().unwrap())
+                format!("{}/{}", tenant_id, app_id.clone().unwrap_or_default())
             } else {
                 tenant_id.clone()
             },
             ..ctx.clone()
         };
-        let rel_rbum_id = if app_id.is_some() { app_id.clone().unwrap() } else { tenant_id.clone() };
+        let rel_rbum_id = if app_id.is_some() { app_id.clone().unwrap_or_default() } else { tenant_id.clone() };
         let id = RbumCertServ::add_rbum(
             &mut RbumCertAddReq {
                 ak: ak.into(),

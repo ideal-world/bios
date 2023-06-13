@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
-use tardis::tokio::task;
+
 use tardis::web::web_resp::TardisPage;
-use tardis::{tokio, TardisFuns, TardisFunsInst};
+use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfDetailResp, RbumCertConfIdAndExtResp, RbumCertConfModifyReq, RbumCertConfSummaryResp};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertDetailResp, RbumCertModifyReq, RbumCertSummaryResp, RbumCertSummaryWithSkResp};
@@ -212,10 +212,15 @@ impl IamCertServ {
         Ok(result)
     }
 
-    pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+    pub async fn get_cert_detail_by_id_and_kind(
+        account_id: &str,
+        rel_iam_cert_kind: &IamCertKernelKind,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<RbumCertDetailResp> {
         let ctx = IamAccountServ::is_global_account_context(account_id, funs, ctx).await?;
         let rel_rbum_cert_conf_id = Self::get_cert_conf_id_by_kind(rel_iam_cert_kind.to_string().as_str(), Some(ctx.clone().own_paths), funs).await?;
-        let kernel_cert = RbumCertServ::find_one_detail_rbum(
+        let cert_detail = RbumCertServ::find_one_detail_rbum(
             &RbumCertFilterReq {
                 rel_rbum_id: Some(account_id.to_string()),
                 rel_rbum_cert_conf_ids: Some(vec![rel_rbum_cert_conf_id]),
@@ -225,8 +230,36 @@ impl IamCertServ {
             &ctx,
         )
         .await?;
-        if let Some(kernel_cert) = kernel_cert {
-            let now_sk = RbumCertServ::show_sk(kernel_cert.id.as_str(), &RbumCertFilterReq::default(), funs, &ctx).await?;
+        if let Some(cert_detail) = cert_detail {
+            Ok(cert_detail)
+        } else {
+            Err(funs.err().not_found(
+                "iam_cert",
+                "get_cert_detail_by_id_and_kind",
+                &format!("not found credential of kind {rel_iam_cert_kind:?}"),
+                "404-iam-cert-kind-not-exist",
+            ))
+        }
+    }
+
+    pub async fn get_kernel_cert(account_id: &str, rel_iam_cert_kind: &IamCertKernelKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumCertSummaryWithSkResp> {
+        let kernel_cert = Self::get_cert_detail_by_id_and_kind(account_id, rel_iam_cert_kind, funs, ctx).await;
+        if let Ok(kernel_cert) = kernel_cert {
+            let now_sk = RbumCertServ::show_sk(
+                kernel_cert.id.as_str(),
+                &RbumCertFilterReq {
+                    basic: RbumBasicFilterReq {
+                        ignore_scope: true,
+                        own_paths: Some("".to_string()),
+                        with_sub_own_paths: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
             Ok(RbumCertSummaryWithSkResp {
                 id: kernel_cert.id,
                 ak: kernel_cert.ak,
@@ -406,7 +439,7 @@ impl IamCertServ {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(add_req.supplier.clone()),
                 vcode: None,
-                ext: Some(add_req.ext.as_ref().unwrap().to_string()),
+                ext: Some(add_req.ext.clone().unwrap_or_default()),
                 start_time: None,
                 end_time: None,
                 conn_uri: add_req.conn_uri.clone(),
@@ -430,7 +463,8 @@ impl IamCertServ {
             &mut RbumCertModifyReq {
                 ext: modify_req.ext.clone(),
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
-                sk: Some(TrimString(modify_req.sk.as_ref().unwrap().to_string())),
+                sk: Some(TrimString(modify_req.sk.clone().unwrap_or_default())),
+                is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
                 conn_uri: modify_req.conn_uri.clone(),
@@ -450,6 +484,7 @@ impl IamCertServ {
                 ext: Some(ext.to_string()),
                 ak: None,
                 sk: None,
+                is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
                 conn_uri: None,
@@ -548,12 +583,7 @@ impl IamCertServ {
                 ctx,
             )
             .await;
-            is_ldap = if cert_conf.is_ok() {
-                let resp = cert_conf.unwrap();
-                resp.kind == "Ldap"
-            } else {
-                false
-            };
+            is_ldap = if let Ok(resp) = cert_conf { resp.kind == "Ldap" } else { false };
             RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(tenant_id.to_string()),
@@ -882,7 +912,7 @@ impl IamCertServ {
     }
 
     pub async fn get_cert_conf_id_and_ext_opt_by_kind(code: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(code, "", &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs).await
+        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(code, "", true, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs).await
     }
 
     pub async fn get_cert_conf_id_and_ext_opt_by_kind_supplier(
@@ -891,7 +921,8 @@ impl IamCertServ {
         rel_iam_item_id: Option<String>,
         funs: &TardisFunsInst,
     ) -> TardisResult<Option<RbumCertConfIdAndExtResp>> {
-        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(kind, supplier, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs).await
+        RbumCertConfServ::get_rbum_cert_conf_id_and_ext_by_kind_supplier(kind, supplier, false, &funs.iam_basic_domain_iam_id(), rel_iam_item_id.unwrap_or_default().as_str(), funs)
+            .await
     }
 
     pub async fn package_tardis_context_and_resp(
@@ -916,8 +947,7 @@ impl IamCertServ {
         let account_info = Self::package_tardis_account_context_and_resp(account_id, &tenant_id, token, access_token, funs, &context).await?;
 
         IamCertTokenServ::add_cert(&account_info.token, &token_kind, account_id, &rbum_cert_conf_id, funs, &context).await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(context.execute_task()));
-        let _ = task_handle.await;
+        context.execute_task().await?;
         Ok(account_info)
     }
 
@@ -1092,7 +1122,7 @@ impl IamCertServ {
     pub async fn add_or_modify_sync_third_integration_config(req: IamThirdIntegrationSyncAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
 
@@ -1111,8 +1141,7 @@ impl IamCertServ {
                         ]),
                         headers.clone(),
                     )
-                    .await
-                    .unwrap();
+                    .await?;
             }
         }
 
@@ -1192,9 +1221,26 @@ impl IamCertServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         let result: Result<(String, RbumCertRelKind, String), tardis::basic::error::TardisError> = if rbum_cert_conf_id.is_some() {
-            RbumCertServ::validate_by_spec_cert_conf(ak, input_sk, rbum_cert_conf_id.unwrap(), ignore_end_time, own_paths.as_ref().unwrap(), funs).await
+            RbumCertServ::validate_by_spec_cert_conf(
+                ak,
+                input_sk,
+                rbum_cert_conf_id.unwrap_or(""),
+                ignore_end_time,
+                own_paths.clone().unwrap_or_default().as_str(),
+                funs,
+            )
+            .await
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(ak, input_sk, rel_rbum_kind.unwrap(), ignore_end_time, own_paths.clone(), allowed_kinds.unwrap(), funs).await
+            RbumCertServ::validate_by_ak_and_basic_sk(
+                ak,
+                input_sk,
+                rel_rbum_kind.unwrap_or(&RbumCertRelKind::Item),
+                ignore_end_time,
+                own_paths.clone(),
+                allowed_kinds.unwrap_or_default(),
+                funs,
+            )
+            .await
         };
         if let Err(e) = result.as_ref() {
             if e.message.as_str() == "cert is locked" {
@@ -1218,8 +1264,7 @@ impl IamCertServ {
                     &mock_ctx,
                 )
                 .await;
-                let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-                let _ = task_handle.await;
+                mock_ctx.execute_task().await?;
             }
         }
         result

@@ -411,8 +411,8 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
 
     // ------------------ Mail-VCode Cert Test End ------------------
     info!("【test_cp_all】 : Validate User Pwd");
-    assert!(IamCpCertUserPwdServ::validate_by_user_pwd(sysadmin_info.1, &funs, &tenant_admin_context).await.is_err());
-    IamCpCertUserPwdServ::validate_by_user_pwd(tenant_admin_pwd.as_str(), &funs, &tenant_admin_context).await?;
+    assert!(IamCpCertUserPwdServ::validate_by_user_pwd(sysadmin_info.1, false, &funs, &tenant_admin_context).await.is_err());
+    IamCpCertUserPwdServ::validate_by_user_pwd(tenant_admin_pwd.as_str(), false, &funs, &tenant_admin_context).await?;
     info!("【test_cp_all】 : Send Bind Mail");
     IamCertMailVCodeServ::send_bind_mail("i@sunisle.org", &funs, &tenant_admin_context).await?;
 

@@ -66,7 +66,7 @@ async fn init_data(minio_url: &str) -> TardisResult<()> {
                 conn_uri: minio_url.to_string(),
                 ak: TrimString("minioadmin".to_string()),
                 sk: TrimString("minioadmin".to_string()),
-                ext: format!(r#"{{"region":"us-east-1"}}"#),
+                ext: r#"{"region":"us-east-1"}"#.to_string(),
                 private: false,
                 disabled: None,
             },

@@ -194,16 +194,16 @@ LIMIT $1 OFFSET $2
     let mut final_result = vec![];
     for item in result {
         if total_size == 0 {
-            total_size = item.try_get("", "total").unwrap();
+            total_size = item.try_get("", "total")?;
         }
         final_result.push(StatsConfFactInfoResp {
-            key: item.try_get("", "key").unwrap(),
-            show_name: item.try_get("", "show_name").unwrap(),
-            query_limit: item.try_get("", "query_limit").unwrap(),
-            remark: item.try_get("", "remark").unwrap(),
-            create_time: item.try_get("", "create_time").unwrap(),
-            update_time: item.try_get("", "update_time").unwrap(),
-            online: online(&item.try_get::<String>("", "key").unwrap(), conn, ctx).await.unwrap(),
+            key: item.try_get("", "key")?,
+            show_name: item.try_get("", "show_name")?,
+            query_limit: item.try_get("", "query_limit")?,
+            remark: item.try_get("", "remark")?,
+            create_time: item.try_get("", "create_time")?,
+            update_time: item.try_get("", "update_time")?,
+            online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
         });
     }
     Ok(TardisPage {
@@ -292,7 +292,14 @@ async fn create_inst_table(
     index.push(("own_paths".to_string(), "btree"));
     for fact_col_conf in fact_col_conf_set {
         if fact_col_conf.kind == StatsFactColKind::Dimension {
-            let dim_conf_key = &fact_col_conf.dim_rel_conf_dim_key.clone().unwrap();
+            let Some(dim_conf_key) = &fact_col_conf.dim_rel_conf_dim_key else {
+                return Err(funs.err().bad_request(
+                    "fact_inst",
+                    "create",
+                    "Fail to get dimension config",
+                    "400-spi-stats-fail-to-get-dim-config-key",
+                ));
+            };
             if !stats_pg_conf_dim_serv::online(dim_conf_key, conn, ctx).await? {
                 return Err(funs.err().conflict(
                     "fact_inst",
@@ -301,7 +308,14 @@ async fn create_inst_table(
                     "409-spi-stats-dim-conf-not-online",
                 ));
             }
-            let dim_conf = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx).await?.unwrap();
+            let Some(dim_conf) = stats_pg_conf_dim_serv::get(dim_conf_key, conn, ctx).await? else {
+                return Err(funs.err().conflict(
+                    "fact_inst",
+                    "create",
+                    &format!("Fail to get dimension config by key [{dim_conf_key}]"),
+                    "409-spi-stats-fail-to-get-dim-config",
+                ));
+            };
             if fact_col_conf.dim_multi_values.unwrap_or(false) {
                 sql.push(format!("{} {}[] NOT NULL", &fact_col_conf.key, dim_conf.data_type.to_pg_data_type()));
                 index.push((fact_col_conf.key.clone(), "gin"));
@@ -325,11 +339,15 @@ async fn create_inst_table(
                 }
             }
         } else if fact_col_conf.kind == StatsFactColKind::Measure {
-            sql.push(format!(
-                "{} {} NOT NULL",
-                &fact_col_conf.key,
-                &fact_col_conf.mes_data_type.as_ref().unwrap().to_pg_data_type()
-            ));
+            let Some(mes_data_type) = fact_col_conf.mes_data_type.as_ref() else {
+                return Err(funs.err().conflict(
+                    "fact_inst",
+                    "create",
+                    "Config of kind StatsFactColKind::Measure should have a mes_data_type",
+                    "409-spi-stats-miss-mes-data-type",
+                ));
+            };
+            sql.push(format!("{} {} NOT NULL", &fact_col_conf.key, mes_data_type.to_pg_data_type()));
         } else {
             sql.push(format!("{} character varying", &fact_col_conf.key));
         }

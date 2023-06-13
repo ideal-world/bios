@@ -46,7 +46,7 @@
 409-iam-role-del-only-one-user	当前角色只有一个用户，不能删除
 401-iam-role-illegal	角色不合法
 
-406-iam-task-id-foramt	任务Id格式错误
+406-iam-task-id-format	任务Id格式错误
 
 403-operation-not-allowed	操作不允许
 409-iam-user-is-bound	账号已经绑定
@@ -54,5 +54,5 @@
 400-iam--ldap-cert-add-parameter-incorrect	LDAP认证添加参数错误
 500-config-parse-error	配置处理错误
 500-auth-resp-crypto-error	返回加密处理错误
-401-iam-account-disabled    用户被禁止
-401-rbum-account-lock   用户被锁定
+401-iam-account-disabled	用户被禁止
+401-rbum-account-lock	用户被锁定

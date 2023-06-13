@@ -62,11 +62,18 @@ pub struct IamCertUserPwdRestReq {
 pub struct IamCertGenericValidateSkReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub sk: TrimString,
+    // when ldap validate , the validate_type is supplier
     pub validate_type: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertMailVCodeAddReq {
+    #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
+    pub mail: String,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertMailVCodeModifyReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
 }
@@ -87,6 +94,12 @@ pub struct IamCertMailVCodeActivateReq {
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
 pub struct IamCertPhoneVCodeAddReq {
+    #[oai(validator(min_length = "2", max_length = "255"))]
+    pub phone: TrimString,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct IamCertPhoneVCodeModifyReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: TrimString,
 }

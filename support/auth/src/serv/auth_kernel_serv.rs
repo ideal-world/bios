@@ -46,7 +46,7 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
     }
     req.path = req.path.trim().to_string();
     if req.path.starts_with('/') {
-        req.path = req.path.strip_prefix('/').unwrap().to_string();
+        req.path = req.path.strip_prefix('/').map_or(req.path.clone(), |s| s.to_string());
     }
     if req.path.is_empty() {
         return Err(TardisError::bad_request("[Auth] Request is not legal, missing [path]", "400-auth-req-path-not-empty"));
@@ -75,7 +75,13 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             trace!("Token info: {}", token_value);
             let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
             if account_info.len() > 2 {
-                cache_client.set_ex(&format!("{}{}", config.cache_key_token_info, token), &token_value, account_info[2].parse().unwrap()).await?;
+                cache_client
+                    .set_ex(
+                        &format!("{}{}", config.cache_key_token_info, token),
+                        &token_value,
+                        account_info[2].parse().map_err(|e| TardisError::internal_error(&format!("[Auth] account_info ex_sec parse error {}", e), ""))?,
+                    )
+                    .await?;
             }
             account_info[1].to_string()
         } else {
@@ -112,12 +118,20 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             own_paths: Some(context.own_paths),
             ak: Some(context.ak),
         })
-    } else if let Some(ak_authorization) = req.headers.get(&config.head_key_ak_authorization) {
+    } else if let Some(ak_authorization) = get_ak_key(req, config) {
         let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag) {
             req_date
         } else {
             return Err(TardisError::unauthorized(
                 &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_date_flag),
+                "401-auth-req-ak-not-exist",
+            ));
+        };
+        let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx) {
+            TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode(bios_ctx)?)?
+        } else {
+            return Err(TardisError::unauthorized(
+                &format!("[Auth] Request is not legal, missing header [{}]", config.head_key_bios_ctx),
                 "401-auth-req-ak-not-exist",
             ));
         };
@@ -168,17 +182,25 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             }
             own_paths = format!("{cache_tenant_id}/{app_id}")
         }
-        Ok(AuthContext {
-            rbum_uri,
-            rbum_action,
-            app_id: if app_id.is_empty() { None } else { Some(app_id) },
-            tenant_id: Some(cache_tenant_id),
-            account_id: None,
-            roles: None,
-            groups: None,
-            own_paths: Some(own_paths),
-            ak: Some(ak_authorization.to_string()),
-        })
+
+        if bios_ctx.own_paths.contains(&own_paths) {
+            Ok(AuthContext {
+                rbum_uri,
+                rbum_action,
+                app_id: if app_id.is_empty() { None } else { Some(app_id) },
+                tenant_id: Some(cache_tenant_id),
+                account_id: Some(bios_ctx.owner),
+                roles: Some(bios_ctx.roles),
+                groups: Some(bios_ctx.groups),
+                own_paths: Some(own_paths),
+                ak: Some(ak_authorization.to_string()),
+            })
+        } else {
+            Err(TardisError::forbidden(
+                &format!("[Auth] Request is not legal from head [{}]", config.head_key_bios_ctx),
+                "403-auth-req-permission-denied",
+            ))
+        }
     } else {
         // public
         Ok(AuthContext {
@@ -193,6 +215,17 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: None,
         })
     }
+}
+
+fn get_ak_key(req: &AuthReq, config: &AuthConfig) -> Option<String> {
+    let lowercase_key = config.head_key_ak_authorization.to_lowercase();
+
+    req.headers
+        .get(&config.head_key_ak_authorization)
+        .or_else(|| req.headers.get(&lowercase_key))
+        .or_else(|| req.query.get(&config.head_key_ak_authorization))
+        .or_else(|| req.query.get(&lowercase_key))
+        .cloned()
 }
 
 pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafInfo>> {
@@ -214,6 +247,14 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
         }
         // Check auth
         if let Some(auth) = &matched_res.auth {
+            let now = Utc::now().timestamp();
+            if let (Some(st), Some(et)) = (auth.st, auth.et) {
+                if now > et || now < st {
+                    // expired,need delete auth
+                    auth_res_serv::delete_auth(&matched_res.action, &matched_res.uri).await?;
+                    continue;
+                }
+            }
             if let Some(matched_accounts) = &auth.accounts {
                 if let Some(req_account_id) = &ctx.account_id {
                     if matched_accounts.contains(&format!("#{req_account_id}#")) {
@@ -248,7 +289,7 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             }
             if let Some(matched_tenants) = &auth.tenants {
                 if let Some(iam_tenant_id) = &ctx.tenant_id {
-                    if matched_tenants.contains(&format!("#{iam_tenant_id}#")) {
+                    if matched_tenants.contains(&format!("#{iam_tenant_id}#")) || matched_tenants.contains(&format!("#*#")) {
                         return Ok(Some(matched_res));
                     }
                 }
@@ -257,7 +298,13 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             return Ok(Some(matched_res));
         }
     }
-    Err(TardisError::forbidden("[Auth] Permission denied", "401-auth-req-permission-denied"))
+    if ctx.ak.is_some() {
+        //have token,not not have permission
+        Err(TardisError::forbidden("[Auth] Permission denied", "403-auth-req-permission-denied"))
+    } else {
+        //not token
+        Err(TardisError::unauthorized("[Auth] Permission denied", "401-auth-req-unauthorized"))
+    }
 }
 
 pub async fn decrypt(

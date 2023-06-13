@@ -1,6 +1,9 @@
 400-auth-req-path-not-empty	请求路径不能为空
 401-auth-req-token-not-exist	请求的Token不合法
 401-auth-req-token-or-app-not-exist	请求的Token或对应的应用不合法
-401-auth-req-permission-denied	请求权限不合法
+401-auth-req-unauthorized	请求未授权
 401-auth-req-need-double-auth	需要二次确认
 401-auth-req-crypto-error	加密传输处理错误
+401-auth-req-ak-not-exist	请求ak不存在或不完整
+
+403-auth-req-permission-denied	请求权限不合法

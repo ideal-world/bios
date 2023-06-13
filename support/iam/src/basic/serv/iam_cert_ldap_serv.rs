@@ -3,6 +3,7 @@ use ldap3::log::{error, warn};
 use std::collections::HashMap;
 
 use self::ldap::LdapClient;
+use super::clients::spi_log_client::{LogParamTag, SpiLogClient};
 use super::iam_cert_phone_vcode_serv::IamCertPhoneVCodeServ;
 use super::{iam_account_serv::IamAccountServ, iam_cert_serv::IamCertServ, iam_tenant_serv::IamTenantServ};
 use crate::basic::dto::iam_account_dto::{IamAccountAddByLdapResp, IamAccountAggModifyReq, IamAccountExtSysAddReq, IamAccountExtSysBatchAddReq};
@@ -51,7 +52,7 @@ impl IamCertLdapServ {
     //ldap only can be one recode in each tenant
     pub async fn add_cert_conf(add_req: &IamCertConfLdapAddOrModifyReq, rel_iam_item_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         Self::validate_cert_conf(add_req, funs).await?;
-        RbumCertConfServ::add_rbum(
+        let result = RbumCertConfServ::add_rbum(
             &mut RbumCertConfAddReq {
                 kind: TrimString(IamCertExtKind::Ldap.to_string()),
                 supplier: add_req.supplier.clone(),
@@ -82,12 +83,25 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-        .await
+        .await;
+
+        if result.is_ok() {
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(ctx.owner.clone()),
+                "绑定5A账号".to_string(),
+                Some("Bind5aAccount".to_string()),
+                ctx,
+            )
+            .await;
+        }
+
+        result
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfLdapAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         Self::validate_cert_conf(modify_req, funs).await?;
-        RbumCertConfServ::modify_rbum(
+        let result = RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
                 name: None,
@@ -113,7 +127,18 @@ impl IamCertLdapServ {
             funs,
             ctx,
         )
-        .await
+        .await;
+        if result.is_ok() {
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(ctx.owner.clone()),
+                "绑定5A账号".to_string(),
+                Some("Bind5aAccount".to_string()),
+                ctx,
+            )
+            .await;
+        }
+        result
     }
 
     //验证cert conf配置是否正确
@@ -214,25 +239,22 @@ impl IamCertLdapServ {
 
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertConfLdapResp> {
         RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await.map(|resp| {
-            TardisFuns::json
-                .str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext)
-                .map(|info| IamCertConfLdapResp {
-                    id: resp.id,
-                    supplier: resp.supplier,
-                    conn_uri: resp.conn_uri,
-                    is_tls: info.is_tls,
-                    timeout: info.timeout,
-                    principal: info.principal,
-                    credentials: info.credentials,
-                    base_dn: info.base_dn,
-                    port: info.port,
-                    account_unique_id: info.account_unique_id,
-                    account_field_map: info.account_field_map,
-                    // org_unique_id: info.org_unique_id,
-                    // org_field_map: info.org_field_map,
-                })
-                .unwrap()
-        })
+            TardisFuns::json.str_to_obj::<IamCertLdapServerAuthInfo>(&resp.ext).map(|info| IamCertConfLdapResp {
+                id: resp.id,
+                supplier: resp.supplier,
+                conn_uri: resp.conn_uri,
+                is_tls: info.is_tls,
+                timeout: info.timeout,
+                principal: info.principal,
+                credentials: info.credentials,
+                base_dn: info.base_dn,
+                port: info.port,
+                account_unique_id: info.account_unique_id,
+                account_field_map: info.account_field_map,
+                // org_unique_id: info.org_unique_id,
+                // org_field_map: info.org_field_map,
+            })
+        })?
     }
 
     pub async fn add_or_modify_cert(
@@ -260,6 +282,7 @@ impl IamCertLdapServ {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.ldap_id.clone()),
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -292,8 +315,7 @@ impl IamCertLdapServ {
                 funs,
                 ctx,
             )
-            .await
-            .unwrap();
+            .await?;
         };
         Ok(())
     }
@@ -343,7 +365,7 @@ impl IamCertLdapServ {
                 )
                 .await;
                 if verify.is_ok() {
-                    result.push(verify.unwrap().0);
+                    result.push(verify.unwrap_or_default().0);
                 } else {
                     let err_msg = if let Err(tardis_error) = verify { tardis_error.message } else { "".to_string() };
                     warn!("get_or_add_account_without_verify resp is err:{}", err_msg);
@@ -397,6 +419,7 @@ impl IamCertLdapServ {
                 &mock_ctx,
             )
             .await?;
+            mock_ctx.execute_task().await?;
             Ok((account_id, dn.to_string()))
         } else {
             return Err(funs.err().not_found(
@@ -451,11 +474,11 @@ impl IamCertLdapServ {
     }
 
     pub async fn check_user_pwd_is_bind(ak: &str, supplier: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<bool> {
-        if tenant_id.is_some() && IamTenantServ::is_disabled(&tenant_id.clone().unwrap(), funs).await? {
+        if tenant_id.is_some() && IamTenantServ::is_disabled(&tenant_id.clone().unwrap_or_default(), funs).await? {
             return Err(funs.err().conflict(
                 "user_pwd",
                 "check_bind",
-                &format!("tenant {} is disabled", tenant_id.unwrap()),
+                &format!("tenant {} is disabled", tenant_id.unwrap_or_default()),
                 "409-iam-tenant-is-disabled",
             ));
         }
@@ -553,7 +576,7 @@ impl IamCertLdapServ {
                 .await?
             } else {
                 // create user_pwd and bind user_pwd with ldap cert
-                if tenant_id.is_some() && !IamTenantServ::get_item(&tenant_id.unwrap(), &IamTenantFilterReq::default(), funs, &mock_ctx).await?.account_self_reg {
+                if tenant_id.is_some() && !IamTenantServ::get_item(&tenant_id.unwrap_or_default(), &IamTenantFilterReq::default(), funs, &mock_ctx).await?.account_self_reg {
                     return Err(funs.err().not_found(
                         "rbum_cert",
                         "create_user_pwd_by_ldap",
@@ -574,6 +597,7 @@ impl IamCertLdapServ {
                 )
                 .await?
             };
+            mock_ctx.execute_task().await?;
             Ok((account_id, dn))
         } else {
             return Err(funs.err().not_found(
@@ -761,6 +785,7 @@ impl IamCertLdapServ {
                         &mut RbumCertModifyReq {
                             ak: Some(TrimString(iam_account_ext_sys_resp.mobile.clone())),
                             sk: None,
+                            is_ignore_check_sk: false,
                             ext: None,
                             start_time: None,
                             end_time: None,
@@ -771,8 +796,8 @@ impl IamCertLdapServ {
                         ctx,
                     )
                     .await;
-                    if modify_result.is_err() {
-                        let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, modify_result.err().unwrap());
+                    if let Some(e) = modify_result.err() {
+                        let err_msg = format!("modify phone cert_id:{} failed:{}", phone_cert.id, e);
                         tardis::log::error!("{}", err_msg);
                         msg = format!("{msg}{err_msg}\n");
                     }
@@ -808,6 +833,7 @@ impl IamCertLdapServ {
                             &mut RbumCertModifyReq {
                                 ak: None,
                                 sk: None,
+                                is_ignore_check_sk: false,
                                 ext: None,
                                 start_time: None,
                                 end_time: None,
@@ -831,6 +857,8 @@ impl IamCertLdapServ {
                                 org_cate_ids: None,
                                 exts: None,
                                 status: None,
+                                cert_phone: None,
+                                cert_mail: None,
                             },
                             &funs,
                             ctx,
@@ -850,7 +878,14 @@ impl IamCertLdapServ {
                 owner: TardisFuns::field.nanoid(),
                 ..ctx.clone()
             };
-            let ldap_resp = ldap_id_to_account_map.get(ldap_id).unwrap();
+            let ldap_resp = ldap_id_to_account_map.get(ldap_id).ok_or_else(|| {
+                funs.err().not_found(
+                    "iam_cert_ldap_serv",
+                    "iam_sync_ldap_user_to_iam",
+                    "not found account by ldap id",
+                    "404-iam-cert-conf-not-exist",
+                )
+            })?;
             let mut funs = iam_constants::get_tardis_inst();
             funs.begin().await?;
             let add_result = match sync_config.account_way_to_add {
@@ -902,14 +937,15 @@ impl IamCertLdapServ {
                 }
             };
 
-            if add_result.is_err() {
-                let err_msg = format!("add account:{:?} failed:{}", ldap_resp, add_result.err().unwrap());
+            if let Some(e) = add_result.err() {
+                let err_msg = format!("add account:{:?} failed:{}", ldap_resp, e);
                 tardis::log::error!("{}", err_msg);
                 msg = format!("{msg}{err_msg}\n");
                 funs.rollback().await?;
                 continue;
             }
             funs.commit().await?;
+            mock_ctx.execute_task().await?;
         }
         Ok(msg)
     }
@@ -978,7 +1014,7 @@ impl IamCertLdapServ {
             ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, ctx).await?;
         Ok(account_id)
     }
 
@@ -1057,11 +1093,9 @@ pub(crate) mod ldap {
     use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
     use ldap3::{log::warn, Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry, SearchOptions};
     use serde::{Deserialize, Serialize};
-    use tardis::basic::dto::TardisContext;
+
     use tardis::basic::{error::TardisError, result::TardisResult};
     use tardis::log::trace;
-
-    use crate::basic::serv::clients::spi_log_client::{LogParamTag, SpiLogClient};
 
     pub struct LdapClient {
         ldap: Ldap,
@@ -1093,21 +1127,7 @@ pub(crate) mod ldap {
 
         pub async fn bind(&mut self, cn: &str, pw: &str) -> TardisResult<Option<String>> {
             let dn = format!("cn={},{}", cn, self.base_dn);
-            let result = self.bind_by_dn(&dn, pw).await;
-
-            let mock_ctx = TardisContext { ..Default::default() };
-            let _ = SpiLogClient::add_ctx_task(
-                LogParamTag::IamAccount,
-                None,
-                format!("绑定5A账号为{}", dn.as_str()),
-                Some("Bind5aAccount".to_string()),
-                &mock_ctx,
-            )
-            .await;
-            let task_handle = tardis::tokio::task::spawn_blocking(move || tardis::tokio::runtime::Runtime::new().unwrap().block_on(mock_ctx.execute_task()));
-            let _ = task_handle.await;
-
-            result
+            self.bind_by_dn(&dn, pw).await
         }
 
         pub async fn bind_by_dn(&mut self, dn: &str, pw: &str) -> TardisResult<Option<String>> {

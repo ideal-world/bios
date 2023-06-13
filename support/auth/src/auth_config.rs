@@ -6,6 +6,7 @@ use std::fmt::Debug;
 pub struct AuthConfig {
     pub head_key_token: String,
     pub head_key_ak_authorization: String,
+    pub head_key_bios_ctx: String,
     pub head_key_date_flag: String,
     pub head_key_app: String,
     pub head_key_protocol: String,
@@ -13,6 +14,8 @@ pub struct AuthConfig {
     pub head_key_crypto: String,
     pub head_date_format: String,
     pub head_date_interval_millsec: u32,
+
+    pub query_key_secret: String,
 
     pub cache_key_token_info: String,
     pub cache_key_account_info: String,
@@ -32,6 +35,7 @@ pub struct AuthConfig {
     pub double_auth_exp_sec: u32,
     pub extra_api: ApiConfig,
 
+    pub spi: IamSpiConfig,
     /// When the request is encrypted,
     /// true: it is the default response and encryption is also required,
     /// false: otherwise, encryption is not required
@@ -45,6 +49,7 @@ impl Default for AuthConfig {
         AuthConfig {
             head_key_token: "Bios-Token".to_string(),
             head_key_ak_authorization: "Bios-Authorization".to_string(),
+            head_key_bios_ctx: "Bios-Ctx".to_string(),
             /// Special: need use UTC Time
             head_key_date_flag: "Bios-Date".to_string(),
             head_key_app: "Bios-App".to_string(),
@@ -69,6 +74,9 @@ impl Default for AuthConfig {
             double_auth_exp_sec: 300,
             extra_api: ApiConfig::default(),
             default_resp_crypto: false,
+            query_key_secret: "secret".to_string(),
+
+            spi: IamSpiConfig::default(),
         }
     }
 }
@@ -100,6 +108,22 @@ impl Default for ApiConfig {
             logout_req_path: "/iam/cp/logout".to_string(),
             double_auth_req_method: "put".to_string(),
             double_auth_req_path: "/iam/cp/validate/userpwd".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct IamSpiConfig {
+    pub log_url: String,
+    pub owner: String,
+}
+
+impl Default for IamSpiConfig {
+    fn default() -> Self {
+        Self {
+            log_url: "http://127.0.0.1:8080/spi-log".to_string(),
+            owner: "".to_string(),
         }
     }
 }

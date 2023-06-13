@@ -118,7 +118,7 @@ pub(crate) async fn delete(code: &str, funs: &TardisFunsInst, ctx: &TardisContex
         )
         .await?;
     // 2. sync to kv
-    TardisFuns::web_client().delete_to_void(&format!("{kv_url}/ci/item/{code}"), headers.clone()).await?;
+    TardisFuns::web_client().delete_to_void(&format!("{kv_url}/ci/item?key={KV_KEY_CODE}{code}"), headers.clone()).await?;
     // 3. notify cache
     let config = funs.conf::<ScheduleConfig>();
     let mut conn = funs.cache().cmd().await?;

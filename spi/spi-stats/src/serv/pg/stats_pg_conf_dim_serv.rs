@@ -190,18 +190,18 @@ WHERE
     let mut final_result = vec![];
     for item in result {
         if total_size == 0 {
-            total_size = item.try_get("", "total").unwrap();
+            total_size = item.try_get("", "total")?;
         }
         final_result.push(StatsConfDimInfoResp {
-            key: item.try_get("", "key").unwrap(),
-            show_name: item.try_get("", "show_name").unwrap(),
-            stable_ds: item.try_get("", "stable_ds").unwrap(),
-            data_type: item.try_get("", "data_type").unwrap(),
-            hierarchy: item.try_get("", "hierarchy").unwrap(),
-            remark: item.try_get("", "remark").unwrap(),
-            create_time: item.try_get("", "create_time").unwrap(),
-            update_time: item.try_get("", "update_time").unwrap(),
-            online: online(&item.try_get::<String>("", "key").unwrap(), conn, ctx).await.unwrap(),
+            key: item.try_get("", "key")?,
+            show_name: item.try_get("", "show_name")?,
+            stable_ds: item.try_get("", "stable_ds")?,
+            data_type: item.try_get("", "data_type")?,
+            hierarchy: item.try_get("", "hierarchy")?,
+            remark: item.try_get("", "remark")?,
+            create_time: item.try_get("", "create_time")?,
+            update_time: item.try_get("", "update_time")?,
+            online: online(&item.try_get::<String>("", "key")?, conn, ctx).await?,
         });
     }
     Ok(TardisPage {

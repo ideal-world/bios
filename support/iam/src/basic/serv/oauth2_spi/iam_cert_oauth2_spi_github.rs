@@ -28,10 +28,10 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
                 "500-iam-cert-oauth-get-access-token-error",
             ));
         }
-        let result = result.body.unwrap();
+        let result = result.body.unwrap_or_default();
         trace!("iam oauth2 spi [Github] get access token response: {}", result);
         if let Some(access_token) = result.get("access_token") {
-            let access_token = access_token.as_str().unwrap();
+            let access_token = access_token.as_str().unwrap_or("");
             let headers = vec![
                 ("Authorization".to_string(), format!("Bearer {access_token}")),
                 ("Accept".to_string(), "application/json".to_string()),
@@ -48,7 +48,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
                     "500-iam-cert-oauth-get-user-info-error",
                 ));
             }
-            let user_info = result.body.unwrap();
+            let user_info = result.body.unwrap_or_default();
             let user_info = TardisFuns::json.str_to_obj::<Value>(&user_info)?;
             funs.cache().set_ex(&format!("{OAUTH2_GITHUB_USER_INFO_CACHE_KEY}{access_token}"), &user_info.to_string(), 5).await?;
             if let Some(id) = user_info.get("id") {
@@ -70,7 +70,7 @@ impl IamCertOAuth2Spi for IamCertOAuth2SpiGithub {
         } else {
             let mut v_error = "";
             if let Some(error) = result.get("error") {
-                v_error = error.as_str().unwrap();
+                v_error = error.as_str().unwrap_or("");
             }
             Err(funs.err().not_found(
                 "oauth_spi_github",

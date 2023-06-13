@@ -312,7 +312,7 @@ impl IamConfigDataTypeKind {
 
     pub fn to_int(&self, value: String) -> Option<i64> {
         match self {
-            IamConfigDataTypeKind::Number => Some(value.parse().unwrap()),
+            IamConfigDataTypeKind::Number => Some(value.parse().unwrap_or_default()),
             IamConfigDataTypeKind::Month => None,
             IamConfigDataTypeKind::Minute => None,
             IamConfigDataTypeKind::Hour => None,
@@ -325,7 +325,7 @@ impl IamConfigDataTypeKind {
 
     pub fn to_float(&self, value: String) -> Option<f64> {
         match self {
-            IamConfigDataTypeKind::Number => Some(value.parse().unwrap()),
+            IamConfigDataTypeKind::Number => Some(value.parse().unwrap_or_default()),
             IamConfigDataTypeKind::Month => None,
             IamConfigDataTypeKind::Minute => None,
             IamConfigDataTypeKind::Hour => None,
@@ -338,11 +338,11 @@ impl IamConfigDataTypeKind {
 
     pub fn to_sec(&self, value: String) -> Option<i64> {
         match self {
-            IamConfigDataTypeKind::Number => Some(value.parse().unwrap()),
-            IamConfigDataTypeKind::Month => Some(value.parse::<i64>().unwrap() * 30 * 24 * 60 * 60),
-            IamConfigDataTypeKind::Minute => Some(value.parse::<i64>().unwrap() * 60),
-            IamConfigDataTypeKind::Hour => Some(value.parse::<i64>().unwrap() * 60 * 60),
-            IamConfigDataTypeKind::Day => Some(value.parse::<i64>().unwrap() * 24 * 60 * 60),
+            IamConfigDataTypeKind::Number => Some(value.parse().unwrap_or_default()),
+            IamConfigDataTypeKind::Month => Some(value.parse::<i64>().unwrap_or_default() * 30 * 24 * 60 * 60),
+            IamConfigDataTypeKind::Minute => Some(value.parse::<i64>().unwrap_or_default() * 60),
+            IamConfigDataTypeKind::Hour => Some(value.parse::<i64>().unwrap_or_default() * 60 * 60),
+            IamConfigDataTypeKind::Day => Some(value.parse::<i64>().unwrap_or_default() * 24 * 60 * 60),
             IamConfigDataTypeKind::DatetimeRange => None,
             IamConfigDataTypeKind::TimeRange => None,
             IamConfigDataTypeKind::Ips => None,

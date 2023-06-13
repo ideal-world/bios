@@ -9,6 +9,7 @@ members = [
     "support/auth",
     "support/enhance-wasm",
     "services/*",
+    "sdk/*",
 ]
 
 [workspace.package]
@@ -30,6 +31,8 @@ publish = false
 lto = true
 codegen-units = 1
 opt-level = "z"
+panic = "abort"
+strip = true
 
 [workspace.dependencies]
 # basic
@@ -42,32 +45,5 @@ fancy-regex = { version = "0" }
 run_script = { version = "0.10" }
 
 # tardis
-tardis = { version = "0.1.0-beta.7" }
-
-# crypto
-base64 = { version = "0.21" }
-hex = { version = "0.4" }
-libsm = { version = "=0.5.0" }
-num-bigint = { version = "0.4.3" }
-
-# wasm
-console_error_panic_hook = { version = "0" }
-wee_alloc = { version = "0" }
-wasm-bindgen = { version = "0", features = ["serde-serialize"] }
-wasm-bindgen-futures = { version = "0" }
-serde-wasm-bindgen = { version = "0" }
-js-sys = { version = "0" }
-web-sys = { version = "0", features = [
-    'Headers',
-    'Request',
-    'RequestInit',
-    'RequestCredentials',
-    'RequestMode',
-    'Response',
-    'Window',
-    'console',
-    'BroadcastChannel',
-    'Storage',
-] }
-wasm-bindgen-test = { version = "0" }
-getrandom = { version = "^0.2", features = ["js"] }
+tardis = { version = "=0.1.0-beta.10" }
+# tardis = { paths = "../tardis/tardis" }

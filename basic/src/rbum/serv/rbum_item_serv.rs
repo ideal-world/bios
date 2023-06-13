@@ -12,6 +12,7 @@ use tardis::web::poem_openapi::types::{ParseFromJSON, ToJSON};
 use tardis::web::web_resp::TardisPage;
 use tardis::{TardisFuns, TardisFunsInst};
 
+use super::rbum_crud_serv::IdNameResp;
 use crate::process::task_processor::TaskProcessor;
 use crate::rbum::domain::{rbum_cert, rbum_cert_conf, rbum_domain, rbum_item, rbum_item_attr, rbum_kind, rbum_kind_attr, rbum_rel, rbum_set_item};
 use crate::rbum::dto::rbum_filer_dto::{
@@ -30,6 +31,11 @@ use crate::rbum::serv::rbum_domain_serv::RbumDomainServ;
 use crate::rbum::serv::rbum_kind_serv::{RbumKindAttrServ, RbumKindServ};
 use crate::rbum::serv::rbum_rel_serv::RbumRelServ;
 use crate::rbum::serv::rbum_set_serv::RbumSetItemServ;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref RBUM_ITEM_TABLE: Alias = Alias::new("rbum_item");
+}
 
 pub struct RbumItemServ;
 
@@ -477,7 +483,9 @@ where
                 scope_level: filter.basic().scope_level.clone(),
                 enabled: filter.basic().enabled,
                 name: filter.basic().name.clone(),
+                names: filter.basic().names.clone(),
                 code: filter.basic().code.clone(),
+                codes: filter.basic().codes.clone(),
                 rbum_kind_id: if filter.basic().rbum_kind_id.is_some() {
                     filter.basic().rbum_kind_id.clone()
                 } else {
@@ -501,7 +509,6 @@ where
         if let Some(rbum_item_rel_filter_req) = &filter.rel2() {
             Self::package_rel(&mut query, Alias::new("rbum_rel2"), rbum_item_rel_filter_req);
         }
-        // query.distinct();
         Ok(query)
     }
 
@@ -683,6 +690,8 @@ where
             Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.column((rbum_item::Entity, rbum_item::Column::Id));
         if let Some(sort) = desc_sort_by_create {
             query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -695,6 +704,50 @@ where
             page_number: page_number as u64,
             total_size,
             records: records.into_iter().map(|resp| resp.id).collect(),
+        })
+    }
+
+    async fn paginate_id_name_items(
+        filter: &ItemFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<IdNameResp>> {
+        Self::do_paginate_id_name_items(filter, page_number, page_size, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    async fn do_paginate_id_name_items(
+        filter: &ItemFilterReq,
+        page_number: u32,
+        page_size: u32,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<TardisPage<IdNameResp>> {
+        let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
+        );
+        Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.columns([(rbum_item::Entity, rbum_item::Column::Id), (rbum_item::Entity, rbum_item::Column::Name)]);
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        let (records, total_size) = funs.db().paginate_dtos::<IdNameResp>(&query, page_number as u64, page_size as u64).await?;
+        Ok(TardisPage {
+            page_size: page_size as u64,
+            page_number: page_number as u64,
+            total_size,
+            records,
         })
     }
 
@@ -818,6 +871,8 @@ where
             Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
         );
         Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.column((rbum_item::Entity, rbum_item::Column::Id));
         if let Some(sort) = desc_sort_by_create {
             query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
@@ -825,6 +880,40 @@ where
             query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
         }
         Ok(funs.db().find_dtos::<IdResp>(&query).await?.into_iter().map(|resp| resp.id).collect())
+    }
+
+    async fn find_id_name_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, String>> {
+        Self::do_find_id_name_items(filter, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+    }
+
+    async fn do_find_id_name_items(
+        filter: &ItemFilterReq,
+        desc_sort_by_create: Option<bool>,
+        desc_sort_by_update: Option<bool>,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,
+    ) -> TardisResult<HashMap<String, String>> {
+        let mut query = Self::package_item_query(false, filter, funs, ctx).await?;
+        query.inner_join(
+            Alias::new(Self::get_ext_table_name()),
+            Expr::col((Alias::new(Self::get_ext_table_name()), ID_FIELD.clone())).equals((rbum_item::Entity, rbum_item::Column::Id)),
+        );
+        Self::package_ext_query(&mut query, false, filter, funs, ctx).await?;
+        query.clear_selects();
+        query.columns([(rbum_item::Entity, rbum_item::Column::Id), (rbum_item::Entity, rbum_item::Column::Name)]);
+        if let Some(sort) = desc_sort_by_create {
+            query.order_by((rbum_item::Entity, CREATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        if let Some(sort) = desc_sort_by_update {
+            query.order_by((rbum_item::Entity, UPDATE_TIME_FIELD.clone()), if sort { Order::Desc } else { Order::Asc });
+        }
+        Ok(funs.db().find_dtos::<IdNameResp>(&query).await?.into_iter().map(|resp| (resp.id, resp.name)).collect())
     }
 
     async fn find_items(

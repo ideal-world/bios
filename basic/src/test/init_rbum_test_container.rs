@@ -28,6 +28,7 @@ pub async fn init(docker: &Cli, sql_init_path: Option<String>) -> TardisResult<L
     let url = format!("redis://127.0.0.1:{port}/0");
     env::set_var("TARDIS_FW.CACHE.URL", url);
 
+    // TODO remove
     let rabbit_container = TardisTestContainer::rabbit_custom(docker);
     let port = rabbit_container.get_host_port_ipv4(5672);
     let url = format!("amqp://guest:guest@127.0.0.1:{port}/%2f");

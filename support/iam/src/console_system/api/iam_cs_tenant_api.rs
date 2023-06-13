@@ -11,26 +11,24 @@ use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::iam_constants;
 use bios_basic::rbum::dto::rbum_filer_dto::RbumBasicFilterReq;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
-use tardis::tokio::{self, task};
 
 pub struct IamCsTenantApi;
 
 /// System Console Tenant API
 #[poem_openapi::OpenApi(prefix_path = "/cs/tenant", tag = "bios_basic::ApiTag::System")]
 impl IamCsTenantApi {
-    /// Add Tenant  安全审计日志--添加租户
+    /// Add Tenant
     #[oai(path = "/", method = "post")]
     async fn add(&self, add_req: Json<IamTenantAggAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<String> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
         let result = IamTenantServ::add_tenant_agg(&add_req.0, &funs).await?.0;
         funs.commit().await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 
-    /// Modify Tenant By Tenant Id 安全审计日志--禁用租户、启用租户、编辑租户
+    /// Modify Tenant By Tenant Id
     ///
     /// When code = 202, the return value is the asynchronous task id
     #[oai(path = "/:id", method = "put")]
@@ -46,9 +44,7 @@ impl IamCsTenantApi {
         funs.begin().await?;
         IamTenantServ::modify_tenant_agg(&id.0, &modify_req.0, &funs, &ctx).await?;
         funs.commit().await?;
-        let ctx_task = ctx.clone();
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx_task.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         if let Some(task_id) = TaskProcessor::get_task_id_with_ctx(&ctx).await? {
             TardisResp::accepted(Some(task_id))
         } else {
@@ -74,8 +70,7 @@ impl IamCsTenantApi {
             &ctx,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.execute_task()));
-        let _ = task_handle.await;
+        ctx.execute_task().await?;
         TardisResp::ok(result)
     }
 
@@ -110,8 +105,7 @@ impl IamCsTenantApi {
             &ctx.0,
         )
         .await?;
-        let task_handle = task::spawn_blocking(move || tokio::runtime::Runtime::new().unwrap().block_on(ctx.0.execute_task()));
-        let _ = task_handle.await;
+        ctx.0.execute_task().await?;
         TardisResp::ok(result)
     }
 }

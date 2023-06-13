@@ -56,3 +56,6 @@ node_modules
 #macos
 .DS_Store
 gateway/example/log
+
+# pre-commit
+.pre-commit-config.yaml

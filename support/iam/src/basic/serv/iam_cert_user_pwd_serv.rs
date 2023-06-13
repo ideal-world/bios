@@ -5,7 +5,7 @@ use tardis::{TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_cert_conf_dto::{RbumCertConfAddReq, RbumCertConfModifyReq};
 use bios_basic::rbum::dto::rbum_cert_dto::{RbumCertAddReq, RbumCertModifyReq};
-use bios_basic::rbum::dto::rbum_filer_dto::RbumCertFilterReq;
+use bios_basic::rbum::dto::rbum_filer_dto::{RbumCertConfFilterReq, RbumCertFilterReq};
 use bios_basic::rbum::rbum_enumeration::{RbumCertConfStatusKind, RbumCertRelKind, RbumCertStatusKind};
 use bios_basic::rbum::serv::rbum_cert_serv::{RbumCertConfServ, RbumCertServ};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
@@ -62,6 +62,43 @@ impl IamCertUserPwdServ {
     }
 
     pub async fn modify_cert_conf(id: &str, modify_req: &IamCertConfUserPwdAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let conf = RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq { ..Default::default() }, funs, ctx).await?;
+        let ext = TardisFuns::json.str_to_obj::<IamCertConfUserPwdAddOrModifyReq>(conf.ext.as_str())?;
+        let mut log_tasks = vec![];
+        if modify_req.sk_rule_len_max != ext.sk_rule_len_max || modify_req.sk_rule_len_min != ext.sk_rule_len_min {
+            log_tasks.push((
+                format!("修改密码长度{}-{}", modify_req.sk_rule_len_min, modify_req.sk_rule_len_max),
+                "ModifyPasswordLength".to_string(),
+            ));
+        }
+        if modify_req.sk_rule_need_num != ext.sk_rule_need_num
+            || modify_req.sk_rule_need_uppercase != ext.sk_rule_need_uppercase
+            || modify_req.sk_rule_need_lowercase != ext.sk_rule_need_lowercase
+            || modify_req.sk_rule_need_spec_char != ext.sk_rule_need_spec_char
+        {
+            log_tasks.push(("修改密码复杂度".to_string(), "ModifyPasswordComplexity".to_string()));
+        }
+        if modify_req.expire_sec != ext.expire_sec {
+            log_tasks.push((format!("修改密码有效期为{}", modify_req.expire_sec / 86400), "ModifyPasswordValidityPeriod".to_string()));
+        }
+        if modify_req.sk_lock_cycle_sec != ext.sk_lock_cycle_sec
+            || modify_req.sk_lock_err_times != ext.sk_lock_err_times
+            || modify_req.sk_lock_duration_sec != ext.sk_lock_duration_sec
+        {
+            log_tasks.push((
+                format!(
+                    "修改密码错误设定为{}分钟内连续错误{}次即被锁定{}分钟",
+                    modify_req.sk_lock_cycle_sec / 60,
+                    modify_req.sk_lock_err_times,
+                    modify_req.sk_lock_duration_sec / 60
+                ),
+                "ModifyPasswordErrorSetting".to_string(),
+            ));
+        }
+        for (op_describe, op_kind) in log_tasks {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+        }
+
         RbumCertConfServ::modify_rbum(
             id,
             &mut RbumCertConfModifyReq {
@@ -156,6 +193,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: None,
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -166,6 +204,15 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
+
+            let _ = SpiLogClient::add_ctx_task(
+                LogParamTag::IamAccount,
+                Some(ctx.owner.clone()),
+                "修改密码".to_string(),
+                Some("ModifyPassword".to_string()),
+                ctx,
+            )
+            .await;
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(rel_iam_item_id, funs).await
         } else {
             Err(funs.err().not_found(
@@ -209,6 +256,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: Some(modify_req.new_ak.clone()),
                     sk: Some(modify_req.sk.clone()),
+                    is_ignore_check_sk: true,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -219,7 +267,7 @@ impl IamCertUserPwdServ {
                 ctx,
             )
             .await?;
-            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, true, "".to_string(), funs, ctx.clone()).await?;
+            IamAccountServ::async_add_or_modify_account_search(cert.rel_rbum_id, Box::new(true), "".to_string(), funs, ctx).await?;
             Ok(())
         } else {
             Err(funs.err().not_found(
@@ -251,7 +299,7 @@ impl IamCertUserPwdServ {
         )
         .await?;
         if let Some(cert) = cert {
-            RbumCertServ::reset_sk(&cert.id, &new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+            RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
             IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
             IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
             RbumCertServ::modify_rbum(
@@ -259,6 +307,7 @@ impl IamCertUserPwdServ {
                 &mut RbumCertModifyReq {
                     ak: None,
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -316,7 +365,7 @@ impl IamCertUserPwdServ {
         .await?;
         if let Some(cert) = cert {
             if cert.status.eq(&RbumCertStatusKind::Pending) {
-                RbumCertServ::reset_sk(&cert.id, &new_sk, &RbumCertFilterReq::default(), funs, ctx).await?;
+                RbumCertServ::reset_sk(&cert.id, &new_sk, true, &RbumCertFilterReq::default(), funs, ctx).await?;
                 IamCertPhoneVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
                 IamCertMailVCodeServ::send_pwd(rel_iam_item_id, &new_sk, funs, ctx).await?;
                 RbumCertServ::modify_rbum(
@@ -324,6 +373,7 @@ impl IamCertUserPwdServ {
                     &mut RbumCertModifyReq {
                         ak: None,
                         sk: None,
+                        is_ignore_check_sk: false,
                         ext: None,
                         start_time: None,
                         end_time: None,

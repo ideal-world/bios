@@ -120,7 +120,7 @@ impl IamCpAccountServ {
             )
             .await?
             .into_iter()
-            .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
+            .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or_default(), r.ak))
             .collect(),
             exts: account_attrs
                 .into_iter()

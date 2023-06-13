@@ -245,7 +245,7 @@ impl IamTenantServ {
             None
         };
         IamCertServ::init_default_ident_conf(
-            &mut IamCertConfUserPwdAddOrModifyReq {
+            &IamCertConfUserPwdAddOrModifyReq {
                 ak_rule_len_min: platform_config.cert_conf_by_user_pwd.ak_rule_len_min,
                 ak_rule_len_max: platform_config.cert_conf_by_user_pwd.ak_rule_len_max,
                 sk_rule_len_min: platform_config.cert_conf_by_user_pwd.sk_rule_len_min,
@@ -278,26 +278,22 @@ impl IamTenantServ {
         }
 
         // Init tenant config
-        IamConfigServ::add_or_modify_batch(
-            &tenant_id,
-            platform_config
-                .config
-                .iter()
-                .map(|r| IamConfigAggOrModifyReq {
-                    name: Some(r.name.clone()),
-                    note: Some(r.note.clone()),
-                    value1: Some(r.value1.clone()),
-                    value2: Some(r.value2.clone()),
-                    ext: Some(r.ext.clone()),
-                    disabled: Some(r.disabled),
-                    data_type: IamConfigDataTypeKind::parse(&r.data_type).unwrap(),
-                    code: IamConfigKind::parse(&r.code).unwrap(),
-                })
-                .collect::<Vec<IamConfigAggOrModifyReq>>(),
-            funs,
-            &tenant_ctx,
-        )
-        .await?;
+        let mut reqs = vec![];
+        for r in platform_config.config.iter() {
+            let data_type = IamConfigDataTypeKind::parse(&r.data_type)?;
+            let code = IamConfigKind::parse(&r.code)?;
+            reqs.push(IamConfigAggOrModifyReq {
+                name: Some(r.name.clone()),
+                note: Some(r.note.clone()),
+                value1: Some(r.value1.clone()),
+                value2: Some(r.value2.clone()),
+                ext: Some(r.ext.clone()),
+                disabled: Some(r.disabled),
+                data_type,
+                code,
+            });
+        }
+        IamConfigServ::add_or_modify_batch(&tenant_id, reqs, funs, &tenant_ctx).await?;
 
         // Init admin pwd
         let admin_pwd: String = if let Some(admin_password) = &add_req.admin_password {
@@ -357,8 +353,9 @@ impl IamTenantServ {
             &tenant_ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(admin_id, false, "".to_string(), funs, tenant_ctx.clone()).await?;
-        IamAccountServ::async_add_or_modify_account_search(audit_id, false, "".to_string(), funs, tenant_ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(admin_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
+        IamAccountServ::async_add_or_modify_account_search(audit_id, Box::new(false), "".to_string(), funs, &tenant_ctx).await?;
+        tenant_ctx.execute_task().await?;
         Ok((tenant_id, admin_pwd, audit_pwd))
     }
 
@@ -389,15 +386,26 @@ impl IamTenantServ {
             && modify_req.cert_conf_by_mail_vcode.is_none()
             && modify_req.cert_conf_by_oauth2.is_none()
             && modify_req.cert_conf_by_ldap.is_none()
+            && modify_req.config.is_none()
         {
             return Ok(());
         }
 
+        let mut log_tasks = vec![];
+        if modify_req.cert_conf_by_phone_vcode.is_some() {
+            log_tasks.push(("修改认证方式为手机号".to_string(), "ModifyCertifiedWay".to_string()));
+        }
+        if modify_req.cert_conf_by_mail_vcode.is_some() {
+            log_tasks.push(("修改认证方式为邮箱".to_string(), "ModifyCertifiedWay".to_string()));
+        }
+        for (op_describe, op_kind) in log_tasks {
+            let _ = SpiLogClient::add_ctx_task(LogParamTag::SecurityAlarm, None, op_describe, Some(op_kind), ctx).await;
+        }
         // Init cert conf
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
 
         if let Some(cert_conf_by_user_pwd) = &modify_req.cert_conf_by_user_pwd {
-            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap();
+            let cert_conf_by_user_pwd_id = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).map(|r| r.id.clone()).unwrap_or_default();
             IamCertUserPwdServ::modify_cert_conf(&cert_conf_by_user_pwd_id, cert_conf_by_user_pwd, funs, ctx).await?;
         }
         if let Some(cert_conf_by_phone_vcode) = modify_req.cert_conf_by_phone_vcode {
@@ -430,7 +438,13 @@ impl IamTenantServ {
                 let modify_cert_conf_by_oauth2 =
                     cert_conf_by_oauth2.iter().filter(|r| cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
                 for modify in modify_cert_conf_by_oauth2 {
-                    IamCertOAuth2Serv::modify_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(&modify.supplier.to_string()).unwrap(), modify, funs, ctx).await?;
+                    IamCertOAuth2Serv::modify_cert_conf(
+                        cert_conf_by_oauth2_supplier_id_map.get(&modify.supplier.to_string()).unwrap_or(&"".to_string()),
+                        modify,
+                        funs,
+                        ctx,
+                    )
+                    .await?;
                 }
 
                 let add_cert_conf_by_oauth2 = cert_conf_by_oauth2.iter().filter(|r| !cert_conf_by_oauth2_supplier_id_map.contains_key(&r.supplier.to_string())).collect::<Vec<_>>();
@@ -443,7 +457,7 @@ impl IamTenantServ {
                     .filter(|r| !cert_conf_by_oauth2.iter().map(|y| y.supplier.clone().to_string()).any(|x| x == r.to_string()))
                     .collect::<Vec<_>>();
                 for delete in delete_cert_conf_code_by_oauth2 {
-                    IamCertServ::disable_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(delete).unwrap(), funs, ctx).await?;
+                    IamCertServ::disable_cert_conf(cert_conf_by_oauth2_supplier_id_map.get(delete).unwrap_or(&"".to_string()), funs, ctx).await?;
                 }
             } else {
                 for delete_id in old_cert_conf_by_oauth2.iter().map(|r| r.id.clone()).collect::<Vec<String>>() {
@@ -470,7 +484,6 @@ impl IamTenantServ {
 
     pub async fn get_tenant_config_agg(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantConfigResp> {
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_owned()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
         let config = IamConfigServ::find_rbums(
             &IamConfigFilterReq {
                 rel_item_id: Some(id.to_owned()),
@@ -512,23 +525,26 @@ impl IamTenantServ {
             })
         }
         let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };
-        let tenant_config = IamTenantConfigResp {
-            cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
-            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
-            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
-            config,
-            cert_conf_by_oauth2,
-            cert_conf_by_ldap,
-            strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
-        };
+        if let Some(cert_conf_by_user_pwd) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()) {
+            let tenant_config = IamTenantConfigResp {
+                cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
+                cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
+                cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
+                config,
+                cert_conf_by_oauth2,
+                cert_conf_by_ldap,
+                strict_security_mode: funs.conf::<IamConfig>().strict_security_mode,
+            };
 
-        Ok(tenant_config)
+            Ok(tenant_config)
+        } else {
+            Err(funs.err().not_found("iam_tenant_serv", "get_tenant_config_agg", "not found cert config", "404-iam-cert-conf-not-exist"))
+        }
     }
 
     pub async fn get_tenant_agg(id: &str, filter: &IamTenantFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamTenantAggDetailResp> {
         let tenant = Self::get_item(id, filter, funs, ctx).await?;
         let cert_confs = IamCertServ::find_cert_conf(true, Some(id.to_string()), None, None, funs, ctx).await?;
-        let cert_conf_by_user_pwd = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()).unwrap();
 
         let cert_conf_by_oauth2s = cert_confs.iter().filter(|r| r.kind == IamCertExtKind::OAuth2.to_string()).collect::<Vec<_>>();
         let cert_conf_by_oauth2 = if !cert_conf_by_oauth2s.is_empty() {
@@ -560,29 +576,32 @@ impl IamTenantServ {
             })
         }
         let cert_conf_by_ldap = if vec1.is_empty() { None } else { Some(vec1) };
+        if let Some(cert_conf_by_user_pwd) = cert_confs.iter().find(|r| r.kind == IamCertKernelKind::UserPwd.to_string()) {
+            let tenant = IamTenantAggDetailResp {
+                id: tenant.id.clone(),
+                name: tenant.name.clone(),
+                own_paths: tenant.own_paths.clone(),
+                owner: tenant.owner.clone(),
+                owner_name: tenant.owner_name.clone(),
+                create_time: tenant.create_time,
+                update_time: tenant.update_time,
+                disabled: tenant.disabled,
+                icon: tenant.icon.clone(),
+                sort: tenant.sort,
+                contact_phone: tenant.contact_phone.clone(),
+                note: tenant.note.clone(),
+                account_self_reg: tenant.account_self_reg,
+                cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
+                cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
+                cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
+                cert_conf_by_oauth2,
+                cert_conf_by_ldap,
+            };
 
-        let tenant = IamTenantAggDetailResp {
-            id: tenant.id.clone(),
-            name: tenant.name.clone(),
-            own_paths: tenant.own_paths.clone(),
-            owner: tenant.owner.clone(),
-            owner_name: tenant.owner_name.clone(),
-            create_time: tenant.create_time,
-            update_time: tenant.update_time,
-            disabled: tenant.disabled,
-            icon: tenant.icon.clone(),
-            sort: tenant.sort,
-            contact_phone: tenant.contact_phone.clone(),
-            note: tenant.note.clone(),
-            account_self_reg: tenant.account_self_reg,
-            cert_conf_by_user_pwd: TardisFuns::json.str_to_obj(&cert_conf_by_user_pwd.ext)?,
-            cert_conf_by_phone_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::PhoneVCode.to_string()),
-            cert_conf_by_mail_vcode: cert_confs.iter().any(|r| r.kind == IamCertKernelKind::MailVCode.to_string()),
-            cert_conf_by_oauth2,
-            cert_conf_by_ldap,
-        };
-
-        Ok(tenant)
+            Ok(tenant)
+        } else {
+            Err(funs.err().not_found("iam_tenant_serv", "get_tenant_agg", "not found cert config", "404-iam-cert-conf-not-exist"))
+        }
     }
 
     pub async fn find_name_by_ids(ids: Vec<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<String>> {

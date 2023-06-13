@@ -352,6 +352,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             end_time: None,
             conn_uri: None,
             status: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -449,6 +450,7 @@ async fn test_rbum_cert_conf_is_ak_repeatable(context: &TardisContext) -> Tardis
             end_time: None,
             conn_uri: None,
             status: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -777,7 +779,8 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             start_time: None,
             end_time: None,
             conn_uri: None,
-            status: None
+            status: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context
@@ -795,6 +798,7 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
             end_time: None,
             conn_uri: None,
             status: None,
+            is_ignore_check_sk: false,
         },
         &funs,
         context,
@@ -813,10 +817,10 @@ async fn test_rbum_cert_basic(context: &TardisContext) -> TardisResult<()> {
     assert_eq!(RbumCertServ::show_sk(&cert_root_id, &RbumCertFilterReq::default(), &funs, context).await?, "12345678");
 
     info!("【test_rbum_cert】 : Test Reset SK : RbumCertServ::reset_sk");
-    assert!(RbumCertServ::reset_sk("11", "111", &RbumCertFilterReq::default(), &funs, context).await.is_err());
-    assert!(RbumCertServ::reset_sk(&cert_gudaoxuri_id, "111", &RbumCertFilterReq::default(), &funs, context).await.is_err());
-    RbumCertServ::reset_sk(&cert_gudaoxuri_id, "87654321", &RbumCertFilterReq::default(), &funs, context).await?;
-    RbumCertServ::reset_sk(&cert_root_id, "87654321", &RbumCertFilterReq::default(), &funs, context).await?;
+    assert!(RbumCertServ::reset_sk("11", "111", false, &RbumCertFilterReq::default(), &funs, context).await.is_err());
+    assert!(RbumCertServ::reset_sk(&cert_gudaoxuri_id, "111", false, &RbumCertFilterReq::default(), &funs, context).await.is_err());
+    RbumCertServ::reset_sk(&cert_gudaoxuri_id, "87654321", false, &RbumCertFilterReq::default(), &funs, context).await?;
+    RbumCertServ::reset_sk(&cert_root_id, "87654321", false, &RbumCertFilterReq::default(), &funs, context).await?;
 
     info!("【test_rbum_cert】 : Test Change SK : RbumCertServ::change_sk");
     assert!(RbumCertServ::change_sk("11", "11", "111", &RbumCertFilterReq::default(), &funs, context).await.is_err());

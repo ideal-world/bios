@@ -103,7 +103,9 @@ impl IamCertOAuth2Serv {
     }
 
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertConfOAuth2Resp> {
-        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await.map(|i| TardisFuns::json.str_to_obj(&i.ext).unwrap())
+        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx)
+            .await
+            .map(|i: bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp| TardisFuns::json.str_to_obj(&i.ext))?
     }
 
     pub async fn add_or_modify_cert(
@@ -131,6 +133,7 @@ impl IamCertOAuth2Serv {
                 &mut RbumCertModifyReq {
                     ak: Some(add_or_modify_req.open_id.clone()),
                     sk: None,
+                    is_ignore_check_sk: false,
                     ext: None,
                     start_time: None,
                     end_time: None,
@@ -243,7 +246,8 @@ impl IamCertOAuth2Serv {
             &mock_ctx,
         )
         .await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), false, "".to_string(), funs, mock_ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.clone(), Box::new(false), "".to_string(), funs, &mock_ctx).await?;
+        mock_ctx.execute_task().await?;
         Ok((account_id, oauth_token_info.access_token))
     }
 

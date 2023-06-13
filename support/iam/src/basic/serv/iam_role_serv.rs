@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use bios_basic::process::task_processor::TaskProcessor;
 use tardis::basic::dto::TardisContext;
+use tardis::basic::field::TrimString;
 use tardis::basic::result::TardisResult;
 use tardis::db::sea_orm::sea_query::{Expr, SelectStatement};
 use tardis::db::sea_orm::EntityName;
@@ -157,12 +158,15 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
                 &funs.conf::<IamConfig>().cache_key_async_task_status,
                 || async move {
                     let funs = iam_constants::get_tardis_inst();
-                    let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap() as isize;
+                    let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                     let mut page_number = 1;
                     while count > 0 {
-                        let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                        let mut ids = Vec::new();
+                        if let Ok(page) = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx_clone).await {
+                            ids = page.records;
+                        }
                         for id in ids {
-                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                            IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
                         }
                         page_number += 1;
                         count -= 100;
@@ -179,10 +183,10 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
         let mut op_kind = String::new();
         if modify_req.name.is_some() {
             if Self::is_custom_role(role.kind, role.scope_level) {
-                op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap());
+                op_describe = format!("编辑自定义角色名称为{}", modify_req.name.as_ref().unwrap_or(&TrimString::from("")));
                 op_kind = "ModifyCustomizeRoleName".to_string();
             } else {
-                op_describe = format!("编辑内置角色名称为{}", modify_req.name.as_ref().unwrap());
+                op_describe = format!("编辑内置角色名称为{}", modify_req.name.as_ref().unwrap_or(&TrimString::from("")));
                 op_kind = "ModifyBuiltRoleName".to_string();
             }
         }
@@ -230,12 +234,15 @@ impl RbumItemCrudOperation<iam_role::ActiveModel, IamRoleAddReq, IamRoleModifyRe
             &funs.conf::<IamConfig>().cache_key_async_task_status,
             || async move {
                 let funs = iam_constants::get_tardis_inst();
-                let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap() as isize;
+                let mut count = IamRoleServ::count_rel_accounts(&role_id, &funs, &ctx_clone).await.unwrap_or_default() as isize;
                 let mut page_number = 1;
                 while count > 0 {
-                    let ids = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx_clone).await.unwrap().records;
+                    let mut ids = Vec::new();
+                    if let Ok(page) = IamRoleServ::paginate_id_rel_accounts(&role_id, page_number, 100, None, None, &funs, &ctx_clone).await {
+                        ids = page.records;
+                    }
                     for id in ids {
-                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await.unwrap();
+                        IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(&id, &funs).await?;
                     }
                     page_number += 1;
                     count -= 100;
@@ -355,7 +362,7 @@ impl IamRoleServ {
         // TODO only bind the same own_paths roles
         // E.g. sys admin can't bind tenant admin
         IamRelServ::add_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, None, None, false, false, funs, ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         Ok(())
     }
 
@@ -379,7 +386,7 @@ impl IamRoleServ {
             }
         }
         IamRelServ::delete_simple_rel(&IamRelKind::IamAccountRole, account_id, role_id, funs, ctx).await?;
-        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), true, "".to_string(), funs, ctx.clone()).await?;
+        IamAccountServ::async_add_or_modify_account_search(account_id.to_string(), Box::new(true), "".to_string(), funs, ctx).await?;
         Ok(())
     }
 

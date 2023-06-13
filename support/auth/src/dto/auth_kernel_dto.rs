@@ -9,7 +9,7 @@ use tardis::{
 
 use crate::auth_config::AuthConfig;
 
-#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug, Clone)]
 pub struct AuthReq {
     pub scheme: String,
     pub path: String,
@@ -61,7 +61,7 @@ impl AuthResp {
                     sync_task_fns: Default::default(),
                     async_task_fns: Default::default(),
                 };
-                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap())
+                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap_or_default())
             } else {
                 "".to_string()
             },
@@ -131,23 +131,23 @@ impl ResContainerNode {
     }
 
     pub fn insert_child(&mut self, key: &str) {
-        self.children.as_mut().unwrap().insert(key.to_string(), ResContainerNode::new());
+        self.children.as_mut().expect("[Auth.kernel] children get none").insert(key.to_string(), ResContainerNode::new());
     }
 
     pub fn get_child(&self, key: &str) -> &ResContainerNode {
-        self.children.as_ref().unwrap().get(key).unwrap()
+        self.children.as_ref().expect("[Auth.kernel] children get none").get(key).unwrap_or_else(|| panic!("[Auth.kernel] children get key:{key} none"))
     }
 
     pub fn get_child_mut(&mut self, key: &str) -> &mut ResContainerNode {
-        self.children.as_mut().unwrap().get_mut(key).unwrap()
+        self.children.as_mut().expect("[Auth.kernel] children get none").get_mut(key).unwrap_or_else(|| panic!("[Auth.kernel] children get key:{key} none"))
     }
 
     pub fn get_child_opt(&self, key: &str) -> Option<&ResContainerNode> {
-        self.children.as_ref().unwrap().get(key)
+        self.children.as_ref().expect("[Auth.kernel] children get none").get(key)
     }
 
     pub fn remove_child(&mut self, key: &str) {
-        self.children.as_mut().unwrap().remove(key);
+        self.children.as_mut().expect("[Auth.kernel] children get none").remove(key);
     }
 
     pub fn insert_leaf(
@@ -160,7 +160,7 @@ impl ResContainerNode {
         need_crypto_resp: bool,
         need_double_auth: bool,
     ) {
-        self.children.as_mut().unwrap().insert(
+        self.children.as_mut().expect("[Auth.kernel] children get none").insert(
             key.to_string(),
             ResContainerNode {
                 children: None,
@@ -177,7 +177,7 @@ impl ResContainerNode {
     }
 
     pub fn get_leaf_info(&self) -> ResContainerLeafInfo {
-        self.leaf_info.as_ref().unwrap().clone()
+        self.leaf_info.as_ref().expect("[Auth.kernel] leaf_info get none").clone()
     }
 }
 
@@ -220,6 +220,8 @@ pub struct ResAuthInfo {
     pub groups: Option<String>,
     pub apps: Option<String>,
     pub tenants: Option<String>,
+    pub st: Option<i64>,
+    pub et: Option<i64>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]

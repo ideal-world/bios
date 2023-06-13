@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use bios_basic::process::task_processor::TaskProcessor;
 use bios_basic::rbum::rbum_config::RbumConfigApi;
 use bios_basic::rbum::rbum_enumeration::RbumRelFromKind;
 use itertools::Itertools;
@@ -16,7 +15,7 @@ use tardis::db::sea_orm::*;
 
 use tardis::serde_json::json;
 use tardis::web::web_resp::{TardisPage, Void};
-use tardis::{serde_json, TardisFuns, TardisFunsInst};
+use tardis::{serde_json, tokio, TardisFuns, TardisFunsInst};
 
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumCertFilterReq, RbumItemRelFilterReq};
 use bios_basic::rbum::dto::rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq};
@@ -103,8 +102,8 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         if modify_req.name.is_none() && modify_req.scope_level.is_none() && modify_req.status.is_none() && modify_req.disabled.is_none() {
             return Ok(None);
         }
-        let disabled = if modify_req.status.is_some() {
-            match modify_req.status.as_ref().unwrap() {
+        let disabled = if let Some(status) = modify_req.status.as_ref() {
+            match status {
                 IamAccountStatusKind::Active => Some(false),
                 IamAccountStatusKind::Dormant => Some(true),
                 IamAccountStatusKind::Logout => Some(true),
@@ -145,28 +144,28 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
             IamIdentCacheServ::delete_tokens_and_contexts_by_account_id(id, funs).await?;
         }
 
+        let mut tasks = vec![];
         let mut op_describe = String::new();
         let mut op_kind = String::new();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
-            op_describe = "注销账号".to_string();
-            op_kind = "Logout".to_string();
-        } else if modify_req.status == Some(IamAccountStatusKind::Dormant) {
-            op_describe = "休眠账号".to_string();
-            op_kind = "DormantAccount".to_string();
-        } else if modify_req.status == Some(IamAccountStatusKind::Active) {
-            op_describe = "激活账号".to_string();
-            op_kind = "ActivateAccount".to_string();
-        } else if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
-            op_describe = "解锁账号".to_string();
-            op_kind = "UnlockAccount".to_string();
-        } else if modify_req.icon.is_some() {
-            op_describe = "修改账号头像".to_string();
-            op_kind = "ModifyAccountIcon".to_string();
-        } else if modify_req.name.is_some() {
-            op_describe = format!("修改姓名为{}", modify_req.name.as_ref().unwrap());
-            op_kind = "ModifyName".to_string();
+            tasks.push(("注销账号".to_string(), "Logout".to_string()));
         }
-        if !op_describe.is_empty() {
+        if modify_req.status == Some(IamAccountStatusKind::Dormant) {
+            tasks.push(("休眠账号".to_string(), "DormantAccount".to_string()));
+        }
+        if modify_req.status == Some(IamAccountStatusKind::Active) {
+            tasks.push(("激活账号".to_string(), "ActivateAccount".to_string()));
+        }
+        if modify_req.lock_status == Some(IamAccountLockStateKind::Unlocked) {
+            tasks.push(("解锁账号".to_string(), "UnlockAccount".to_string()));
+        }
+        if modify_req.icon.is_some() {
+            tasks.push(("修改账号头像".to_string(), "ModifyAccountIcon".to_string()));
+        }
+        if let Some(name) = modify_req.name.as_ref() {
+            tasks.push((format!("修改姓名为{}", name), "ModifyName".to_string()));
+        }
+        for (op_describe, op_kind) in tasks {
             let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some(op_kind), ctx).await;
         }
 
@@ -369,6 +368,16 @@ impl IamAccountServ {
                 IamSetServ::delete_set_item(&deleted_item_id, funs, ctx).await?;
             }
         }
+        if let Some(cert_phone) = &modify_req.cert_phone {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                IamCertPhoneVCodeServ::add_or_modify_cert(cert_phone, id, &cert_conf.id, funs, ctx).await?;
+            }
+        }
+        if let Some(cert_mail) = &modify_req.cert_mail {
+            if let Some(cert_conf) = IamCertServ::get_cert_conf_id_and_ext_opt_by_kind(&IamCertKernelKind::MailVCode.to_string(), Some(ctx.own_paths.clone()), funs).await? {
+                IamCertMailVCodeServ::add_or_modify_cert(cert_mail, id, &cert_conf.id, funs, ctx).await?;
+            }
+        }
         if let Some(exts) = &modify_req.exts {
             IamAttrServ::add_or_modify_account_attr_values(id, exts.clone(), funs, ctx).await?;
         }
@@ -517,7 +526,7 @@ impl IamAccountServ {
             )
             .await?
             .into_iter()
-            .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
+            .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or("".to_string()), r.ak))
             .collect(),
             orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             exts: account_attrs
@@ -588,7 +597,7 @@ impl IamAccountServ {
                 )
                 .await?
                 .into_iter()
-                .map(|r| (r.rel_rbum_cert_conf_code.unwrap(), r.ak))
+                .map(|r| (r.rel_rbum_cert_conf_code.unwrap_or("".to_string()), r.ak))
                 .collect(),
                 orgs: IamSetServ::find_set_paths(&account.id, &set_id, funs, ctx).await?.into_iter().map(|r| r.into_iter().map(|rr| rr.name).join("/")).collect(),
             });
@@ -697,16 +706,16 @@ impl IamAccountServ {
         )
         .await?;
         for id in ids {
-            let account = accounts.iter().find(|r| r.id == id);
-            if account.is_none() {
+            if let Some(account) = accounts.iter().find(|r| r.id == id) {
+                let lock_status = if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &id)).await? {
+                    IamAccountLockStateKind::PasswordLocked
+                } else {
+                    account.lock_status.clone()
+                };
+                lock_accounts.push(format!("{},{}", id, lock_status.to_string()));
+            } else {
                 continue;
             }
-            let lock_status = if funs.cache().exists(&format!("{}{}", funs.rbum_conf_cache_key_cert_locked_(), &id)).await? {
-                IamAccountLockStateKind::PasswordLocked
-            } else {
-                account.unwrap().lock_status.clone()
-            };
-            lock_accounts.push(format!("{},{}", id, lock_status.to_string()));
         }
         Ok(lock_accounts)
     }
@@ -803,14 +812,19 @@ impl IamAccountServ {
 
     // todo
     // 通过异步任务来处理，但是在异步任务中，增加一个延迟，来保证数据的一致性，同时在异步任务中，数据获取完整在进行一个查询，来保证数据的一致性
-    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: bool, logout_msg: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
+    pub async fn async_add_or_modify_account_search(account_id: String, is_modify: Box<bool>, logout_msg: String, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        let mock_ctx = TardisContext {
+            own_paths: "".to_string(),
+            ..ctx.clone()
+        };
         let account_resp = IamAccountServ::get_account_detail_aggs(
             &account_id,
             &IamAccountFilterReq {
                 basic: RbumBasicFilterReq {
                     ignore_scope: true,
-                    with_sub_own_paths: true,
                     own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -818,38 +832,42 @@ impl IamAccountServ {
             true,
             true,
             funs,
-            &ctx,
+            &mock_ctx,
         )
         .await?;
-        let r = TaskProcessor::execute_task(
-            &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
-                let funs = iam_constants::get_tardis_inst();
-                Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx).await
-            },
-            funs,
-        )
-        .await?;
-        sleep(Duration::from_millis(100)).await;
-        Ok(r)
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    sleep(Duration::from_secs(1)).await;
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::add_or_modify_account_search(account_resp, is_modify, &logout_msg, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
+        .await
     }
 
-    pub async fn async_delete_account_search(account_id: String, funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<i64> {
-        TaskProcessor::execute_task(
-            &funs.conf::<IamConfig>().cache_key_async_task_status,
-            move || async move {
-                let funs = iam_constants::get_tardis_inst();
-                Self::delete_account_search(&account_id, &funs, &ctx).await
-            },
-            funs,
-        )
+    pub async fn async_delete_account_search(account_id: String, _funs: &TardisFunsInst, ctx: TardisContext) -> TardisResult<()> {
+        let ctx_clone = ctx.clone();
+        ctx.add_async_task(Box::new(|| {
+            Box::pin(async move {
+                let task_handle = tokio::spawn(async move {
+                    let funs = iam_constants::get_tardis_inst();
+                    let _ = Self::delete_account_search(&account_id, &funs, &ctx_clone).await;
+                });
+                task_handle.await.unwrap();
+                Ok(())
+            })
+        }))
         .await
     }
 
     // account 全局搜索埋点方法
     pub async fn add_or_modify_account_search(
         account_resp: IamAccountDetailAggResp,
-        is_modify: bool,
+        is_modify: Box<bool>,
         logout_msg: &str,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -895,7 +913,7 @@ impl IamAccountServ {
         };
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap_or_default()),
         )]);
         #[cfg(feature = "spi_kv")]
         {
@@ -942,24 +960,26 @@ impl IamAccountServ {
                     "logout_msg":logout_msg,
                 },
             });
-            if !account_resp.own_paths.is_empty() {
-                search_body.as_object_mut().unwrap().insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
-            }
-            search_body.as_object_mut().unwrap().insert(
-                "visit_keys".to_string(),
-                json!({
-                    "roles": account_roles,
-                    "apps": account_app_ids,
-                    "groups": account_resp_dept_id,
-                    "tenants" : [ account_resp.own_paths ]
-                }),
-            );
-            //add search
-            if is_modify {
-                search_body.as_object_mut().unwrap().insert("ext_override".to_string(), serde_json::Value::from(true));
-                funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/{key}"), &search_body, headers.clone()).await.unwrap();
-            } else {
-                funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await.unwrap();
+            if let Some(search_body) = search_body.as_object_mut() {
+                if !account_resp.own_paths.is_empty() {
+                    search_body.insert("own_paths".to_string(), serde_json::Value::from(account_resp.own_paths.clone()));
+                }
+                search_body.insert(
+                    "visit_keys".to_string(),
+                    json!({
+                        "roles": account_roles,
+                        "apps": account_app_ids,
+                        "groups": account_resp_dept_id,
+                        "tenants" : [ account_resp.own_paths ]
+                    }),
+                );
+                //add search
+                if *is_modify {
+                    search_body.insert("ext_override".to_string(), serde_json::Value::from(true));
+                    funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item/{tag}/{key}"), &search_body, headers.clone()).await?;
+                } else {
+                    funs.web_client().put_obj_to_str(&format!("{search_url}/ci/item"), &search_body, headers.clone()).await?;
+                }
             }
         }
         Ok(())
@@ -976,7 +996,7 @@ impl IamAccountServ {
             };
             let headers = Some(vec![(
                 "Tardis-Context".to_string(),
-                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap()),
+                TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&spi_ctx).unwrap_or_default()),
             )]);
 
             let tag = funs.conf::<IamConfig>().spi.search_account_tag.clone();

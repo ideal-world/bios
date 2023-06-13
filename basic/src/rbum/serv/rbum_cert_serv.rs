@@ -335,6 +335,7 @@ impl RbumCertConfServ {
     pub async fn get_rbum_cert_conf_id_and_ext_by_kind_supplier(
         kind: &str,
         supplier: &str,
+        ignore_status: bool,
         rbum_domain_id: &str,
         rbum_item_id: &str,
         funs: &TardisFunsInst,
@@ -345,9 +346,11 @@ impl RbumCertConfServ {
             .column(rbum_cert_conf::Column::Ext)
             .from(rbum_cert_conf::Entity)
             .and_where(Expr::col(rbum_cert_conf::Column::Kind).eq(kind))
-            .and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()))
             .and_where(Expr::col(rbum_cert_conf::Column::RelRbumDomainId).eq(rbum_domain_id))
             .and_where(Expr::col(rbum_cert_conf::Column::RelRbumItemId).eq(rbum_item_id));
+        if !ignore_status {
+            conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Status).eq(RbumCertConfStatusKind::Enabled.to_int()));
+        }
         //Ldap can be no supplier
         if kind != "Ldap" || !supplier.is_empty() {
             conf_info_stat.and_where(Expr::col(rbum_cert_conf::Column::Supplier).eq(supplier));
@@ -995,7 +998,6 @@ impl RbumCertServ {
         }
     }
 
-    // 安全审计日志--密码锁定账号
     async fn process_lock_in_cache(rbum_item_id: &str, sk_lock_cycle_sec: i32, sk_lock_err_times: i16, sk_lock_duration_sec: i32, funs: &TardisFunsInst) -> TardisResult<()> {
         if sk_lock_cycle_sec == 0 || sk_lock_err_times == 0 || sk_lock_duration_sec == 0 {
             return Ok(());
@@ -1031,7 +1033,7 @@ impl RbumCertServ {
         }
     }
 
-    pub async fn reset_sk(id: &str, new_sk: &str, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn reset_sk(id: &str, new_sk: &str, is_ignore_check_sk: bool, filter: &RbumCertFilterReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert = Self::peek_rbum(id, filter, funs, ctx).await?;
         let new_sk = if let Some(rel_rbum_cert_conf_id) = &rbum_cert.rel_rbum_cert_conf_id {
             let rbum_cert_conf = RbumCertConfServ::peek_rbum(
@@ -1049,6 +1051,7 @@ impl RbumCertServ {
                     .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "reset_sk", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
                     .is_match(new_sk)
                     .unwrap_or(false)
+                && !is_ignore_check_sk
             {
                 return Err(funs.err().bad_request(
                     &Self::get_obj_name(),
@@ -1239,6 +1242,7 @@ impl RbumCertServ {
                     .map_err(|e| funs.err().bad_request(&Self::get_obj_name(), "modify", &format!("sk rule is invalid:{e}"), "400-rbum-cert-conf-sk-rule-invalid"))?
                     .is_match(sk.as_ref())
                     .unwrap_or(false)
+                && !modify_req.is_ignore_check_sk
             {
                 return Err(funs.err().bad_request(
                     &Self::get_obj_name(),
@@ -1259,7 +1263,7 @@ impl RbumCertServ {
                         .and_where(Expr::col(rbum_cert::Column::Ak).eq(modify_req.ak.as_ref().unwrap().0.as_str()))
                         .and_where(Expr::col(rbum_cert::Column::RelRbumCertConfId).eq(rbum_cert_conf.id.clone()))
                         .and_where(Expr::col(rbum_cert::Column::OwnPaths).like(format!("{}%", ctx.own_paths).as_str()))
-                        .and_where(Expr::col(rbum_cert::Column::Id).ne(format!("{id}%").as_str())),
+                        .and_where(Expr::col(rbum_cert::Column::Id).ne(format!("{id}").as_str())),
                 )
                 .await?
                 > 0

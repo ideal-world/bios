@@ -136,20 +136,20 @@ impl RbumItemCrudOperation<plugin_api::ActiveModel, PluginApiAddOrModifyReq, Plu
 impl PluginApiServ {
     pub async fn add_or_modify_item(add_modify_req: &mut PluginApiAddOrModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let id = Self::get_id_by_code(&add_modify_req.code, funs, ctx).await?;
-        if id.is_none() {
-            Self::add_item(add_modify_req, funs, ctx).await?;
+        if let Some(id) = id {
+            Self::modify_item(&id, add_modify_req, funs, ctx).await?;
         } else {
-            Self::modify_item(id.unwrap().as_str(), add_modify_req, funs, ctx).await?;
+            Self::add_item(add_modify_req, funs, ctx).await?;
         }
         Ok(add_modify_req.code.to_string())
     }
 
     pub async fn delete_by_code(code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
         let id = Self::get_id_by_code(code, funs, ctx).await?;
-        if id.is_none() {
-            Err(funs.err().not_found(&Self::get_obj_name(), "delete", "", ""))
+        if let Some(id) = id {
+            Self::delete_item(&id, funs, ctx).await
         } else {
-            Self::delete_item(id.unwrap().as_str(), funs, ctx).await
+            Err(funs.err().not_found(&Self::get_obj_name(), "delete", "", ""))
         }
     }
 

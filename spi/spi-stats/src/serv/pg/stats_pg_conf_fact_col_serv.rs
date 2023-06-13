@@ -277,28 +277,28 @@ WHERE
         .into_iter()
         .map(|item| {
             if total_size == 0 {
-                total_size = item.try_get("", "total").unwrap();
+                total_size = item.try_get("", "total")?;
             }
-            StatsConfFactColInfoResp {
-                key: item.try_get("", "key").unwrap(),
-                show_name: item.try_get("", "show_name").unwrap(),
-                kind: item.try_get("", "kind").unwrap(),
-                dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key").unwrap(),
-                dim_multi_values: item.try_get("", "dim_multi_values").unwrap(),
-                mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type").unwrap().is_none() {
+            Ok(StatsConfFactColInfoResp {
+                key: item.try_get("", "key")?,
+                show_name: item.try_get("", "show_name")?,
+                kind: item.try_get("", "kind")?,
+                dim_rel_conf_dim_key: item.try_get("", "dim_rel_conf_dim_key")?,
+                dim_multi_values: item.try_get("", "dim_multi_values")?,
+                mes_data_type: if item.try_get::<Option<String>>("", "mes_data_type")?.is_none() {
                     None
                 } else {
-                    Some(item.try_get("", "mes_data_type").unwrap())
+                    Some(item.try_get("", "mes_data_type")?)
                 },
-                mes_frequency: item.try_get("", "mes_frequency").unwrap(),
-                mes_act_by_dim_conf_keys: item.try_get("", "mes_act_by_dim_conf_keys").unwrap(),
-                rel_conf_fact_and_col_key: item.try_get("", "rel_conf_fact_and_col_key").unwrap(),
-                remark: item.try_get("", "remark").unwrap(),
-                create_time: item.try_get("", "create_time").unwrap(),
-                update_time: item.try_get("", "update_time").unwrap(),
-            }
+                mes_frequency: item.try_get("", "mes_frequency")?,
+                mes_act_by_dim_conf_keys: item.try_get("", "mes_act_by_dim_conf_keys")?,
+                rel_conf_fact_and_col_key: item.try_get("", "rel_conf_fact_and_col_key")?,
+                remark: item.try_get("", "remark")?,
+                create_time: item.try_get("", "create_time")?,
+                update_time: item.try_get("", "update_time")?,
+            })
         })
-        .collect();
+        .collect::<TardisResult<_>>()?;
     Ok(TardisPage {
         page_size: page_size as u64,
         page_number: page_number as u64,

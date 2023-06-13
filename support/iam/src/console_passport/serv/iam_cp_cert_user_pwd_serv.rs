@@ -42,8 +42,8 @@ impl IamCpCertUserPwdServ {
             funs,
         )
         .await;
-        let (_, _, rbum_item_id) = if validate_resp.is_ok() {
-            validate_resp.unwrap()
+        let (_, _, rbum_item_id) = if let Ok(validate_resp) = validate_resp {
+            validate_resp
         } else {
             if let Some(e) = validate_resp.clone().err() {
                 // throw out Err when sk is expired and cert is locked
@@ -132,7 +132,7 @@ impl IamCpCertUserPwdServ {
 
         let id = ctx.owner.to_string();
         let op_describe = format!("修改用户名为{}", req.new_ak.as_ref());
-        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id.to_string()), op_describe, Some("ModifyUserName".to_string()), &ctx).await;
+        let _ = SpiLogClient::add_ctx_task(LogParamTag::IamAccount, Some(id), op_describe, Some("ModifyUserName".to_string()), &ctx).await;
 
         Ok(())
     }
@@ -154,17 +154,27 @@ impl IamCpCertUserPwdServ {
         if let Some(supplier) = supplier {
             IamCertLdapServ::validate_by_ldap(sk, &supplier, funs, ctx).await?;
         } else {
-            Self::validate_by_user_pwd(sk, funs, ctx).await?;
+            Self::validate_by_user_pwd(sk, false, funs, ctx).await?;
         }
         IamIdentCacheServ::add_double_auth(&ctx.owner, funs).await?;
         Ok(())
     }
 
-    pub async fn validate_by_user_pwd(sk: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn validate_by_user_pwd(sk: &str, ignore_end_time: bool, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(ctx), funs).await?;
         let user_pwd_cert = IamCertServ::get_kernel_cert(&ctx.owner, &IamCertKernelKind::UserPwd, funs, ctx).await?;
 
-        let (_, _, _) = IamCertServ::validate_by_ak_and_sk(&user_pwd_cert.ak, sk, Some(&rbum_cert_conf_id), None, false, Some(ctx.own_paths.clone()), None, funs).await?;
+        let (_, _, _) = IamCertServ::validate_by_ak_and_sk(
+            &user_pwd_cert.ak,
+            sk,
+            Some(&rbum_cert_conf_id),
+            None,
+            ignore_end_time,
+            Some(ctx.own_paths.clone()),
+            None,
+            funs,
+        )
+        .await?;
         Ok(())
     }
 
@@ -185,8 +195,8 @@ impl IamCpCertUserPwdServ {
             funs,
         )
         .await;
-        let (_, _, rbum_item_id) = if validate_resp.is_ok() {
-            validate_resp.unwrap()
+        let (_, _, rbum_item_id) = if let Ok(validate_resp) = validate_resp {
+            validate_resp
         } else {
             if let Some(e) = validate_resp.clone().err() {
                 // throw out Err when sk is expired and cert is locked
