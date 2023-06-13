@@ -249,6 +249,10 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: &IamLd
                 return;
             }
             ServerOps::Whoami(req) => vec![session.do_whoami(&req)],
+            ServerOps::Compare(_) => {
+                // No need to notify on Compare (per rfc4511)
+                return;
+            }
         };
 
         for rmsg in result.into_iter() {
