@@ -141,7 +141,7 @@ pub async fn test_multi_level_by_sys_context(
     let (
         sys_attr1_id,
         sys_attr2_global_id,
-        t1_attr1_id,
+        _t1_attr1_id,
         t2_attr1_id,
         t2_attr2_tenant_id,
         t2_a1_attr1_id,
@@ -244,7 +244,7 @@ pub async fn test_multi_level_by_tenant_context(
     let (
         sys_attr1_id,
         sys_attr2_global_id,
-        t1_attr1_id,
+        _t1_attr1_id,
         t2_attr1_id,
         t2_attr2_tenant_id,
         t2_a1_attr1_id,
@@ -359,7 +359,7 @@ pub async fn test_multi_level_by_app_context(
     let (
         sys_attr1_id,
         sys_attr2_global_id,
-        t1_attr1_id,
+        _t1_attr1_id,
         t2_attr1_id,
         t2_attr2_tenant_id,
         t2_a1_attr1_id,

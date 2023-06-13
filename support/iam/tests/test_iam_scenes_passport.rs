@@ -17,11 +17,11 @@ use bios_basic::rbum::rbum_enumeration::{RbumDataTypeKind, RbumWidgetTypeKind};
 use bios_iam::basic::dto::iam_account_dto::{IamAccountAggAddReq, IamAccountInfoResp, IamAccountInfoWithUserPwdAkResp, IamAccountSelfModifyReq, IamCpUserPwdBindResp};
 use bios_iam::basic::dto::iam_app_dto::IamAppAggAddReq;
 use bios_iam::basic::dto::iam_attr_dto::IamKindAttrAddReq;
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfOAuth2AddOrModifyReq, IamCertConfUserPwdAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfLdapAddOrModifyReq, IamCertConfOAuth2AddOrModifyReq};
 use bios_iam::basic::dto::iam_cert_dto::{IamCertPwdNewReq, IamCertUserPwdModifyReq, IamCertUserPwdRestReq};
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetItemWithDefaultSetAddReq};
 use bios_iam::basic::dto::iam_tenant_dto::{IamTenantAggAddReq, IamTenantBoneResp};
-use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, IamCertLdapServ, OrgFieldMap};
+use bios_iam::basic::serv::iam_cert_ldap_serv::{AccountFieldMap, IamCertLdapServ};
 use bios_iam::console_passport::dto::iam_cp_account_dto::IamCpAccountInfoResp;
 use bios_iam::iam_constants;
 use bios_iam::iam_constants::RBUM_SCOPE_LEVEL_TENANT;
@@ -818,7 +818,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     };
     //add global account ldap login config
     IamCertLdapServ::add_cert_conf(
-        &&IamCertConfLdapAddOrModifyReq {
+        &IamCertConfLdapAddOrModifyReq {
             supplier: Some(TrimString(LDAP_SUPPLIER.into())),
             name: LDAP_SUPPLIER.into(),
             conn_uri: env::var("TARDIS_FW.LDAP.URL").unwrap(),
@@ -850,7 +850,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
             //     field_dept_name_remarks: "".to_string(),
             //     field_parent_dept_id_remarks: "".to_string(),
             // },
-            timeout: todo!(),
+            timeout: None,
         },
         None,
         &funs,
@@ -858,7 +858,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
     )
     .await?;
 
-    let global_account_id: String = client
+    let _global_account_id: String = client
         .post(
             "/ct/account",
             &IamAccountAggAddReq {
@@ -961,7 +961,7 @@ pub async fn login_by_ldap(client: &mut BIOSWebTestClient) -> TardisResult<()> {
 
     let tenant1_user1 = "user3";
     let tenant1_user1_pwd = "1234567";
-    let tenant1_account_id: String = client
+    let _tenant1_account_id: String = client
         .post(
             "/ct/account",
             &IamAccountAggAddReq {

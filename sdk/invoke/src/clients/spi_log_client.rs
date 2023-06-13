@@ -44,7 +44,7 @@ pub struct LogItemFindResp {
 }
 
 impl SpiLogClient {
-    pub async fn add<T: ?Sized + Serialize>(
+    pub async fn add(
         tag: &str,
         content: &str,
         ext: Option<Value>,
@@ -80,6 +80,6 @@ impl SpiLogClient {
         let log_url: String = BaseSpiClient::module_url(InvokeModuleKind::Log, funs).await?;
         let headers = BaseSpiClient::headers(None, funs, ctx).await?;
         let resp = funs.web_client().put::<LogItemFindReq, TardisResp<TardisPage<LogItemFindResp>>>(&format!("{log_url}/ci/item"), &find_req, headers.clone()).await?;
-        Ok(BaseSpiClient::package_resp(resp)?)
+        BaseSpiClient::package_resp(resp)
     }
 }

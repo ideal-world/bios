@@ -73,7 +73,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     )
     .await?;
 
-    let res_id2 = IamResServ::add_item(
+    let _res_id2 = IamResServ::add_item(
         &mut IamResAddReq {
             name: TrimString("测试资源2".to_string()),
             code: TrimString("test_code2".to_string()),
@@ -383,7 +383,7 @@ pub async fn test_multi_level_by_sys_context(
     )
     .await?;
 
-    let (res_sys_id, res_sys_global_id, res_t1_id, res_t2_id, res_t2_tenant_id, res_t2_a1_id, res_t2_a2_id) =
+    let (res_sys_id, res_sys_global_id, res_t1_id, _res_t2_id, _res_t2_tenant_id, res_t2_a1_id, _res_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_res】 : test_multi_level : Modify Res By sys_context");
@@ -543,7 +543,7 @@ pub async fn test_multi_level_by_tenant_context(
     )
     .await?;
 
-    let (res_sys_id, res_sys_global_id, res_t1_id, res_t2_id, res_t2_tenant_id, res_t2_a1_id, res_t2_a2_id) =
+    let (res_sys_id, res_sys_global_id, res_t1_id, res_t2_id, _res_t2_tenant_id, res_t2_a1_id, _res_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_res】 : test_multi_level : Modify Res By tenant_context");

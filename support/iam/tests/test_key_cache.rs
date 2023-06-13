@@ -10,7 +10,7 @@ use tardis::TardisFuns;
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_iam::basic::dto::iam_account_dto::IamAccountAggAddReq;
 use bios_iam::basic::dto::iam_app_dto::{IamAppAggAddReq, IamAppModifyReq};
-use bios_iam::basic::dto::iam_cert_conf_dto::{IamCertConfTokenModifyReq, IamCertConfUserPwdAddOrModifyReq};
+use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfTokenModifyReq;
 use bios_iam::basic::dto::iam_cert_dto::{IamCertUserPwdModifyReq, IamCertUserPwdRestReq, IamContextFetchReq};
 use bios_iam::basic::dto::iam_res_dto::{IamResAddReq, IamResModifyReq};
 use bios_iam::basic::dto::iam_role_dto::{IamRoleAddReq, IamRoleAggModifyReq, IamRoleModifyReq};
@@ -34,7 +34,7 @@ use bios_iam::iam_enumeration::{IamCertKernelKind, IamCertTokenKind, IamResKind}
 pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     let funs = iam_constants::get_tardis_inst();
     info!("【test_cc_cert】 : test_key_cache");
-    let (tenant_id, tenant_admin_pwd, tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
+    let (tenant_id, tenant_admin_pwd, _tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
         &IamTenantAggAddReq {
             name: TrimString("缓存测试租户".to_string()),
             icon: None,
@@ -660,7 +660,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await
     .is_ok());
-    let app_admin_context = IamIdentCacheServ::get_context(
+    let _app_admin_context = IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: None,
@@ -712,7 +712,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
         &funs,
     )
     .await?;
-    let app_admin_context = IamIdentCacheServ::get_context(
+    let _app_admin_context = IamIdentCacheServ::get_context(
         &IamContextFetchReq {
             token: account_resp.token.to_string(),
             app_id: Some(app_id.clone()),
@@ -1000,7 +1000,7 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     // ====================global account cache test===============================
     info!("【test_key_cache】 global account cache test, expected is_global is true");
     let mock_ctx = TardisContext { ..Default::default() };
-    let account_id2 = IamAccountServ::add_account_agg(
+    let _account_id2 = IamAccountServ::add_account_agg(
         &IamAccountAggAddReq {
             id: None,
             name: TrimString("全局账号".to_string()),
@@ -1085,9 +1085,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     let is_global = IamAccountServ::is_global_account(&account_resp4.account_id, &funs, &tenant_admin_context).await?;
-    assert_eq!(is_global, true);
+    assert!(is_global);
     assert_eq!(
-        funs.cache().hlen(&format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp4.account_id).as_str()).await?,
+        funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_resp4.account_id).as_str()).await?,
         2
     );
 
@@ -1139,9 +1139,9 @@ pub async fn test(system_admin_context: &TardisContext) -> TardisResult<()> {
     )
     .await?;
     let is_global = IamAccountServ::is_global_account(&account_id2, &funs, &ctx).await?;
-    assert_eq!(is_global, false);
+    assert!(!is_global);
     assert_eq!(
-        funs.cache().hlen(&format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id2).as_str()).await?,
+        funs.cache().hlen(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id2).as_str()).await?,
         2
     );
     Ok(())

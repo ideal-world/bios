@@ -48,6 +48,6 @@ impl BaseSpiClient {
             }
             return Ok(body.data);
         }
-        return Err(TardisError::bad_request("The requested schema does not exist", ""));
+        Err(TardisError::bad_request("The requested schema does not exist", ""))
     }
 }

@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use bios_basic::rbum::dto::rbum_filer_dto::{RbumBasicFilterReq, RbumRelFilterReq, RbumSetTreeFilterReq};
 use bios_basic::rbum::serv::rbum_item_serv::RbumItemCrudOperation;
 use bios_basic::rbum::serv::rbum_set_serv::RbumSetServ;
-use bios_iam::basic::dto::iam_account_dto::{IamAccountAddReq, IamAccountAggAddReq};
+use bios_iam::basic::dto::iam_account_dto::IamAccountAddReq;
 use bios_iam::basic::serv::iam_account_serv::IamAccountServ;
 use bios_iam::basic::serv::iam_cert_serv::IamCertServ;
-use bios_iam::console_system::api::iam_cs_org_api::IamCsOrgApi;
+
 use bios_iam::console_system::serv::iam_cs_org_serv::IamCsOrgServ;
 use tardis::basic::dto::TardisContext;
 use tardis::basic::field::TrimString;
@@ -15,7 +13,7 @@ use tardis::log::info;
 use tardis::TardisFunsInst;
 
 use bios_basic::rbum::dto::rbum_set_item_dto::RbumSetItemModifyReq;
-use bios_basic::rbum::rbum_enumeration::{RbumCertStatusKind, RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
+use bios_basic::rbum::rbum_enumeration::{RbumRelFromKind, RbumScopeLevelKind, RbumSetCateLevelQueryKind};
 use bios_basic::rbum::serv::rbum_crud_serv::RbumCrudOperation;
 use bios_basic::rbum::serv::rbum_rel_serv::RbumRelServ;
 use bios_iam::basic::dto::iam_set_dto::{IamSetCateAddReq, IamSetCateModifyReq, IamSetItemAddReq};
@@ -297,7 +295,7 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     println!("raw...tree======={:?}", tree);
     let cates_size = tree.main.len();
 
-    IamSetServ::copy_tree_to_new_set(&tree, &another_set_id, None, Some(another_set_cate_id1.clone()), &funs, &another_context).await?;
+    IamSetServ::copy_tree_to_new_set(&tree, &another_set_id, None, Some(another_set_cate_id1.clone()), &funs, another_context).await?;
 
     let another_tree = RbumSetServ::get_tree(
         &another_set_id,
@@ -345,7 +343,7 @@ async fn test_multi_level_add<'a>(
 ) -> TardisResult<(String, String, String, String, String, String, String)> {
     info!("【test_cc_set】 : test_multi_level : Add Set Cate");
 
-    let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
+    let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, funs, sys_context).await?;
 
     let set_cate_sys_global_id = IamSetServ::add_set_cate(
         &sys_set_id,
@@ -358,7 +356,7 @@ async fn test_multi_level_add<'a>(
             rbum_parent_cate_id: None,
             scope_level: Some(RBUM_SCOPE_LEVEL_GLOBAL),
         },
-        &funs,
+        funs,
         sys_context,
     )
     .await?;
@@ -374,7 +372,7 @@ async fn test_multi_level_add<'a>(
             rbum_parent_cate_id: Some(set_cate_sys_global_id.clone()),
             scope_level: None,
         },
-        &funs,
+        funs,
         sys_context,
     )
     .await?;
@@ -390,7 +388,7 @@ async fn test_multi_level_add<'a>(
             rbum_parent_cate_id: Some(set_cate_sys_global_id.clone()),
             scope_level: None,
         },
-        &funs,
+        funs,
         t1_context,
     )
     .await?;
@@ -482,7 +480,7 @@ pub async fn test_multi_level_by_sys_context(
 
     let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
 
-    let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
+    let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, _set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_set】 : test_multi_level : Modify Set Cate By sys_context");
@@ -555,7 +553,7 @@ pub async fn test_multi_level_by_sys_context(
     )
     .await?;
     assert_eq!(tree.main.len(), 7);
-    assert!(tree.main.iter().find(|i| i.name == "t1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
+    assert!(tree.main.iter().any(|i| i.name == "t1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE));
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By sys_context");
     assert!(IamSetServ::delete_set_cate(&set_cate_t2_tenant_id, &funs, sys_context).await.is_err());
@@ -578,7 +576,7 @@ pub async fn test_multi_level_by_tenant_context(
     funs.begin().await?;
 
     let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
-    let t1_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, t1_context).await?;
+    let _t1_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, t1_context).await?;
     let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
@@ -683,7 +681,7 @@ pub async fn test_multi_level_by_tenant_context(
     )
     .await?;
     assert_eq!(tree.main.len(), 5);
-    assert!(tree.main.iter().find(|i| i.name == "t2私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
+    assert!(tree.main.iter().any(|i| i.name == "t2私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE));
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By tenant_context");
     assert!(IamSetServ::delete_set_cate(&set_cate_t2_tenant_id, &funs, t2_context).await.is_err());
@@ -707,7 +705,7 @@ pub async fn test_multi_level_by_app_context(
 
     let sys_set_id = IamSetServ::get_default_set_id_by_ctx(&IamSetKind::Org, &funs, sys_context).await?;
 
-    let (set_cate_sys_id, set_cate_sys_global_id, set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
+    let (set_cate_sys_id, set_cate_sys_global_id, _set_cate_t1_id, set_cate_t2_id, set_cate_t2_tenant_id, set_cate_t2_a1_id, set_cate_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_set】 : test_multi_level : Modify Set By app_context");
@@ -813,7 +811,7 @@ pub async fn test_multi_level_by_app_context(
     )
     .await?;
     assert_eq!(tree.main.len(), 3);
-    assert!(tree.main.iter().find(|i| i.name == "t2_a1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE).is_some());
+    assert!(tree.main.iter().any(|i| i.name == "t2_a1私有部门_modify" && i.scope_level == RBUM_SCOPE_LEVEL_PRIVATE));
 
     info!("【test_cc_set】 : test_multi_level : Delete Set Cate By app_context");
     let item_id1 = IamSetServ::add_set_item(
@@ -865,7 +863,7 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
 
-    let set_cate_sys_pri_id = IamSetServ::add_set_cate(
+    let _set_cate_sys_pri_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
             bus_code: None,
@@ -896,7 +894,7 @@ pub async fn test_bind_platform_to_tenant_node(
         sys_context,
     )
     .await?;
-    let set_cate_xxx_sub_sub_id = IamSetServ::add_set_cate(
+    let _set_cate_xxx_sub_sub_id = IamSetServ::add_set_cate(
         &sys_set_id,
         &IamSetCateAddReq {
             name: TrimString("xxx公司_子部门_子部门".to_string()),
@@ -912,7 +910,7 @@ pub async fn test_bind_platform_to_tenant_node(
     )
     .await?;
 
-    let new_t1_set_cate_id = IamSetServ::add_set_cate(
+    let _new_t1_set_cate_id = IamSetServ::add_set_cate(
         &t1_set_id,
         &IamSetCateAddReq {
             name: TrimString("t1_子部门".to_string()),

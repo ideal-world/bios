@@ -217,13 +217,7 @@ impl LdapSession {
 fn extract_cn(dn: &str) -> Option<String> {
     match CN_R.captures(dn) {
         None => None,
-        Some(cap) => {
-            if let Some(cn) = cap.get(2) {
-                Some(cn.as_str().to_string())
-            } else {
-                None
-            }
-        }
+        Some(cap) => cap.get(2).map(|cn| cn.as_str().to_string()),
     }
 }
 

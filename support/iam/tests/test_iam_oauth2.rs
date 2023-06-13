@@ -1,4 +1,3 @@
-use bios_iam::basic::dto::iam_cert_conf_dto::IamCertConfOAuth2AddOrModifyReq;
 use bios_iam::basic::dto::iam_tenant_dto::IamTenantAggModifyReq;
 use bios_iam::basic::serv::iam_cert_oauth2_serv::IamCertOAuth2Serv;
 use bios_iam::basic::serv::iam_tenant_serv::IamTenantServ;
