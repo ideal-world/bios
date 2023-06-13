@@ -156,6 +156,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowModelAddReq {
                 name: TrimString("基础流程".to_string()),
                 init_state_id: state_init_id.clone(),
+                state_ids: "".to_string(),
                 icon: None,
                 info: None,
                 transitions: None,
@@ -272,6 +273,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 icon: None,
                 info: None,
                 init_state_id: None,
+                state_ids: None,
                 modify_transitions: None,
                 delete_transitions: None,
                 tag: None,

@@ -21,6 +21,8 @@ pub struct Model {
     /// Define the initial state of each model
     /// 定义每个模块的初始状态
     pub init_state_id: String,
+    /// Selected states / 选中的所有状态
+    pub state_ids: String,
     /// Tags / 标签
     ///
     /// Used for model classification

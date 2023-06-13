@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp};
+use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelModifyStatsReq};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 
@@ -107,4 +107,19 @@ impl FlowCcModelApi {
         funs.commit().await?;
         TardisResp::ok(Void {})
     }
+
+    /// 指定模型编辑状态
+    #[oai(path = "/:flow_model_id/stats", method = "patch")]
+    async fn modify_stats(&self, flow_model_id: Path<String>, mut modify_req: Json<FlowModelModifyStatsReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+        let mut funs = flow_constants::get_tardis_inst();
+        funs.begin().await?;
+        FlowModelServ::modify_stats(&flow_model_id.0, &mut modify_req, &funs, &ctx.0).await?;
+        funs.commit().await?;
+        TardisResp::ok(Void {})
+    }
 }
+// 指定状态添加动作
+// 指定状态编辑动作
+// 指定状态删除动作
+// 指定状态设为初始
+// 指定动作编辑验证表单

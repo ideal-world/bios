@@ -71,13 +71,11 @@ pub struct Model {
     /// 进入此流转时，需要调用的外部接口
     ///
     /// action similar to `Event` in BPMN
-    /// TODO 该功能未实现
     pub action_by_pre_callback: String,
     /// External interface to be called when leaving this transition
     /// 离开此流转时，需要调用的外部接口
     ///
     /// action similar to `Event` in BPMN
-    /// TODO 该功能未实现
     pub action_by_post_callback: String,
 
     pub rel_flow_model_id: String,

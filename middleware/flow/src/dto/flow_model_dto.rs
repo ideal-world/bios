@@ -24,6 +24,7 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
 
     pub init_state_id: String,
+    pub state_ids: String,
 
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
 
@@ -34,7 +35,7 @@ pub struct FlowModelAddReq {
     pub disabled: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
@@ -44,6 +45,7 @@ pub struct FlowModelModifyReq {
     pub info: Option<String>,
 
     pub init_state_id: Option<String>,
+    pub state_ids: Option<String>,
 
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
@@ -64,6 +66,7 @@ pub struct FlowModelSummaryResp {
     pub info: String,
 
     pub init_state_id: String,
+    pub state_ids: String,
 
     pub owner: String,
     pub create_time: DateTime<Utc>,
@@ -82,6 +85,7 @@ pub struct FlowModelDetailResp {
     pub info: String,
 
     pub init_state_id: String,
+    pub state_ids: String,
 
     // TODO
     pub transitions: Option<Value>,
@@ -123,4 +127,20 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
         &None
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+pub struct FlowModelModifyStatsReq {
+    #[oai(validator(min_length = "2", max_length = "200"))]
+    pub stats_id: TrimString,
+    pub op: ModifyStatsOpKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum ModifyStatsOpKind {
+    #[sea_orm(string_value = "add")]
+    Add,
+    #[sea_orm(string_value = "delete")]
+    Delete,
 }

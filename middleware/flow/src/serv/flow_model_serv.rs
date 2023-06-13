@@ -23,7 +23,7 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp},
+        flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelModifyStatsReq, ModifyStatsOpKind},
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
@@ -436,5 +436,45 @@ impl FlowModelServ {
         } else {
             Ok(false)
         }
+    }
+
+    pub async fn modify_stats(flow_model_id: &str, modify_req: &mut FlowModelModifyStatsReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let model = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let mut state_ids: Vec<&str> = model.state_ids.split(',').collect();
+        match modify_req.op {
+            ModifyStatsOpKind::Add => {
+                if state_ids.iter().any(|id| **id == modify_req.stats_id.to_string()) {
+                    return Err(funs.err().internal_error(&Self::get_obj_name(), "modify_stats", "stats is exist", "500-insert-stats-duplicate"));
+                }
+                state_ids.push(&modify_req.stats_id);
+            },
+            ModifyStatsOpKind::Delete => {
+                state_ids.retain(|id| **id != modify_req.stats_id.to_string());
+            },
+        };
+
+        Self::modify_item(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                state_ids: Some(state_ids.join(",")),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
     }
 }
