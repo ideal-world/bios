@@ -7,36 +7,42 @@ use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::chrono::Utc;
 use tardis::db::reldb_client::TardisRelDBlConnection;
-use tardis::db::sea_orm::{FromQueryResult, Value};
+use tardis::db::sea_orm::{DbErr, FromQueryResult, Value};
 use tardis::log::trace;
 use tardis::tokio::sync::RwLock;
 use tardis::tokio::time::{self, Duration};
 use tardis::{basic::dto::TardisContext, db::reldb_client::TardisRelDBClient};
-use tardis::{serde_json, TardisFuns, TardisFunsInst};
+use tardis::{serde_json::Value as JsonValue, TardisFuns, TardisFunsInst};
 
 lazy_static! {
     static ref TX_CONTAINER: RwLock<HashMap<String, (TardisRelDBlConnection, i64, bool)>> = RwLock::new(HashMap::new());
 }
 
-fn parse_params(params: &serde_json::Value) -> Vec<Value> {
-    params
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|item| {
-            if item.is_string() {
-                Value::from(item.as_str().unwrap())
-            } else if item.is_boolean() {
-                Value::from(item.as_bool().unwrap())
-            } else if item.is_u64() {
-                Value::from(item.as_u64().unwrap())
-            } else if item.is_f64() {
-                Value::from(item.as_f64().unwrap())
-            } else if item.is_i64() {
-                Value::from(item.as_i64().unwrap())
-            } else {
-                // TODO
-                Value::from(item.as_str().unwrap())
+fn parse_params(params: &JsonValue) -> Vec<Value> {
+    let Some(arr) = params.as_array() else {
+        // this means params is not an array, just return an empty array
+        return Vec::new();
+    };
+    arr.iter()
+        .filter_map(|item| {
+            match item {
+                JsonValue::Null => Some(Value::from(None::<u64>)),
+                JsonValue::Bool(b) => Some(Value::from(*b)),
+                JsonValue::Number(n) => {
+                    if let Some(x) = n.as_u64() {
+                        Some(Value::from(x))
+                    } else if let Some(x) = n.as_i64() {
+                        Some(Value::from(x))
+                    } else if let Some(x) = n.as_f64() {
+                        Some(Value::from(x))
+                    } else {
+                        // unreachable
+                        unreachable!("Json number should be parsed as u64, i64 or f64, so is's unreachable here")
+                    }
+                }
+                JsonValue::String(s) => Some(Value::from(s.as_str())),
+                // TODO do not support array and object, just skip over it
+                JsonValue::Array(..) | JsonValue::Object(..) => None,
             }
         })
         .collect::<Vec<Value>>()
@@ -111,7 +117,7 @@ pub async fn dml(dml_req: &mut ReldbDmlReq, tx_id: Option<String>, funs: &Tardis
     }
 }
 
-pub async fn dql(dql_req: &mut ReldbDqlReq, tx_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<serde_json::Value>> {
+pub async fn dql(dql_req: &mut ReldbDqlReq, tx_id: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<Vec<JsonValue>> {
     let bs_inst = funs.init_bs(ctx, true, reldb_initializer::init_fun).await?.inst::<TardisRelDBClient>();
     let params = parse_params(&dql_req.params);
     let resp = if let Some(tx_id) = tx_id {
@@ -126,11 +132,7 @@ pub async fn dql(dql_req: &mut ReldbDqlReq, tx_id: Option<String>, funs: &Tardis
         conn.commit().await?;
         resp
     }?;
-    let mut result: Vec<serde_json::Value> = Vec::new();
-    for row in resp {
-        let json = serde_json::Value::from_query_result_optional(&row, "")?.unwrap();
-        result.push(json);
-    }
+    let result = resp.iter().filter_map(|row| JsonValue::from_query_result_optional(row, "").transpose()).collect::<Result<Vec<JsonValue>, DbErr>>()?;
     Ok(result)
 }
 
@@ -145,10 +147,10 @@ pub async fn clean(clean_interval_sec: u8) {
                     trace!("[SPI-Reldb] tx {} expired", key);
                     match tx_container.remove(&key) {
                         Some((conn, _, true)) => {
-                            conn.commit().await.unwrap();
+                            conn.commit().await?;
                         }
                         Some((conn, _, false)) => {
-                            conn.rollback().await.unwrap();
+                            conn.rollback().await?;
                         }
                         _ => (),
                     }
@@ -156,5 +158,7 @@ pub async fn clean(clean_interval_sec: u8) {
             }
             interval.tick().await;
         }
+        #[allow(unreachable_code)]
+        TardisResult::<()>::Ok(())
     });
 }

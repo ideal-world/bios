@@ -1,4 +1,4 @@
-use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     db::{reldb_client::TardisRelDBClient, sea_orm::Value},
@@ -120,18 +120,21 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         sql_vals.push(Value::from(ts_end));
         where_fragments.push(format!("ts <= ${}", sql_vals.len()));
     }
+    let err_notfound = |ext: &BasicQueryCondInfo| {
+        Err(funs.err().not_found(
+            "item",
+            "log",
+            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext.field, ext.value, &ext.op,),
+            "404-spi-log-op-not-legal",
+        ))
+    };
+    let err_op_in_without_value = || Err(funs.err().bad_request("item", "log", "Request item using 'IN' operator show hava a value", "400-spi-item-op-in-without-value"));
     if let Some(ext) = &find_req.ext {
         for ext_item in ext {
             let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
-            if value.is_none() || ext_item.op != BasicQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
-                return Err(funs.err().not_found(
-                    "item",
-                    "log",
-                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
-                    "404-spi-log-op-not-legal",
-                ));
-            }
-            let mut value = value.unwrap();
+            let Some(mut value) = value else {
+                return err_notfound(ext_item);
+            };
             if ext_item.op == BasicQueryOpKind::In {
                 if value.len() == 1 {
                     where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
@@ -146,7 +149,12 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                     sql_vals.push(val);
                 }
             } else {
-                let value = value.pop().unwrap();
+                if value.len() > 1 {
+                    return err_notfound(ext_item);
+                }
+                let Some(value) = value.pop() else {
+                    return err_op_in_without_value();
+                };
                 if let Value::Bool(_) = value {
                     where_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::TinyInt(_) = value {
@@ -181,18 +189,10 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
         let mut or_fragments = vec![];
         for ext_or_item in ext_or {
             let value = db_helper::json_to_sea_orm_value(&ext_or_item.value, ext_or_item.op == BasicQueryOpKind::Like);
-            if value.is_none() || ext_or_item.op != BasicQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
-                return Err(funs.err().not_found(
-                    "item",
-                    "log",
-                    &format!(
-                        "The ext field=[{}] value=[{}] operation=[{}] is not legal.",
-                        &ext_or_item.field, ext_or_item.value, &ext_or_item.op,
-                    ),
-                    "404-spi-log-op-not-legal",
-                ));
-            }
-            let mut value = value.unwrap();
+
+            let Some(mut value) = value else {
+                return err_notfound(ext_or_item);
+            };
             if ext_or_item.op == BasicQueryOpKind::In {
                 if value.len() == 1 {
                     or_fragments.push(format!("ext -> '{}' ? ${}", ext_or_item.field, sql_vals.len() + 1));
@@ -207,7 +207,12 @@ pub async fn find(find_req: &mut LogItemFindReq, funs: &TardisFunsInst, ctx: &Ta
                     sql_vals.push(val);
                 }
             } else {
-                let value = value.pop().unwrap();
+                if value.len() > 1 {
+                    return err_notfound(ext_or_item);
+                }
+                let Some(value) = value.pop() else {
+                    return err_op_in_without_value();
+                };
                 if let Value::Bool(_) = value {
                     or_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_or_item.field, ext_or_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::TinyInt(_) = value {
@@ -277,21 +282,21 @@ ORDER BY ts DESC
         .into_iter()
         .map(|item| {
             if total_size == 0 {
-                total_size = item.try_get("", "total").unwrap();
+                total_size = item.try_get("", "total")?;
             }
-            LogItemFindResp {
-                ts: item.try_get("", "ts").unwrap(),
-                key: item.try_get("", "key").unwrap(),
-                op: item.try_get("", "op").unwrap(),
-                ext: item.try_get("", "ext").unwrap(),
-                content: item.try_get("", "content").unwrap(),
-                rel_key: item.try_get("", "rel_key").unwrap(),
-                kind: item.try_get("", "kind").unwrap(),
-                owner: item.try_get("", "owner").unwrap(),
-                own_paths: item.try_get("", "own_paths").unwrap(),
-            }
+            Ok(LogItemFindResp {
+                ts: item.try_get("", "ts")?,
+                key: item.try_get("", "key")?,
+                op: item.try_get("", "op")?,
+                ext: item.try_get("", "ext")?,
+                content: item.try_get("", "content")?,
+                rel_key: item.try_get("", "rel_key")?,
+                kind: item.try_get("", "kind")?,
+                owner: item.try_get("", "owner")?,
+                own_paths: item.try_get("", "own_paths")?,
+            })
         })
-        .collect::<Vec<LogItemFindResp>>();
+        .collect::<TardisResult<Vec<_>>>()?;
 
     Ok(TardisPage {
         page_size: find_req.page_size as u64,

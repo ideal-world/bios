@@ -15,10 +15,10 @@ pub struct PluginExecServ;
 impl PluginExecServ {
     pub async fn exec(kind_code: &str, api_code: &str, exec_req: PluginExecReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisHttpResponse<String>> {
         let kind_id = RbumKindServ::get_rbum_kind_id_by_code(kind_code, funs).await?;
-        if kind_id.is_none() {
+        let Some(kind_id) = kind_id else {
             return Err(funs.err().not_found(&PluginApiServ::get_obj_name(), "exec", "exec kind is not fond", ""));
-        }
-        let spi_api = PluginApiServ::get_by_code(&kind_id.unwrap(), api_code, funs, ctx).await?;
+        };
+        let spi_api = PluginApiServ::get_by_code(&kind_id, api_code, funs, ctx).await?;
         let result;
         if let Some(spi_api) = &spi_api {
             let spi_bs = PluginBsServ::get_bs_by_rel_up(Some(kind_code.to_owned()), funs, ctx).await?;
