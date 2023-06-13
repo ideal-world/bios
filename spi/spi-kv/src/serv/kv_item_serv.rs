@@ -79,24 +79,8 @@ pub async fn find_key_names(keys: Vec<String>, funs: &TardisFunsInst, ctx: &Tard
             .into_iter()
             .map::<TardisResult<KvNameFindResp>, _>(|item| {
                 Ok(KvNameFindResp {
-                    key: item
-                        .key
-                        .strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME)
-                        .unwrap_or("")
-                        .to_string(),
-                    name: item
-                        .value
-                        .as_str()
-                        .ok_or(TardisError::internal_error(
-                            &format!(
-                                "{ty}'s value is not a str, key: {key}, value: {value}",
-                                ty = stringify!(KvNameFindResp),
-                                key = item.key,
-                                value = item.value
-                            ),
-                            "",
-                        ))?
-                        .to_string(),
+                    key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_KEY_NAME).unwrap_or("").to_string(),
+                    name: item.value.as_str().unwrap_or("").to_string(),
                     create_time: item.create_time,
                     update_time: item.update_time,
                 })
@@ -147,11 +131,7 @@ pub async fn find_tags(key_prefix: String, page_number: u32, page_size: u16, fun
                 .into_iter()
                 .map(|item| {
                     Ok(KvTagFindResp {
-                        key: item
-                            .key
-                            .strip_prefix(kv_constants::KEY_PREFIX_BY_TAG)
-                            .unwrap_or("")
-                            .to_string(),
+                        key: item.key.strip_prefix(kv_constants::KEY_PREFIX_BY_TAG).unwrap_or("").to_string(),
                         items: TardisFuns::json.json_to_obj(item.value)?,
                         create_time: item.create_time,
                         update_time: item.update_time,
