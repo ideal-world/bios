@@ -79,8 +79,6 @@ impl FlowCcStateApi {
     ) -> TardisApiResult<TardisPage<FlowStateSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
         let result = if is_global.0 {
-            let mut global_ctx = ctx.0.clone();
-            global_ctx.own_paths = "".to_string();
             FlowStateServ::paginate_items(
                 &FlowStateFilterReq {
                     basic: RbumBasicFilterReq {
@@ -100,7 +98,7 @@ impl FlowCcStateApi {
                 desc_by_create.0,
                 desc_by_update.0,
                 &funs,
-                &global_ctx,
+                &ctx.0,
             )
             .await?
         } else {
