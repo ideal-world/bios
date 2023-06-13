@@ -1,7 +1,6 @@
 use bios_basic::spi::spi_constants;
 use bios_basic::spi::spi_funs::SpiBsInstExtractor;
 use tardis::basic::dto::TardisContext;
-use tardis::basic::error::TardisError;
 use tardis::basic::result::TardisResult;
 use tardis::serde_json::json;
 use tardis::web::web_resp::TardisPage;
