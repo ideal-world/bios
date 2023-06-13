@@ -56,7 +56,7 @@ async fn init_data() -> TardisResult<()> {
         owner: "".to_string(),
         ..Default::default()
     };
-    let _ = spi_initializer::add_kind(&"gitlib", &funs, &ctx).await?;
+    spi_initializer::add_kind("gitlib", &funs, &ctx).await?;
     let kind_id = RbumKindServ::get_rbum_kind_id_by_code("gitlib", &funs).await?.unwrap();
     let kind_attr_1 = RbumKindAttrServ::add_rbum(
         &mut RbumKindAttrAddReq {
@@ -177,7 +177,7 @@ async fn init_data() -> TardisResult<()> {
                 conn_uri: base_url.to_string(),
                 ak: TrimString("minioadmin".to_string()),
                 sk: TrimString("minioadmin".to_string()),
-                ext: format!(r#"{{"region":"us-east-1"}}"#),
+                ext: r#"{"region":"us-east-1"}"#.to_string(),
                 private: false,
                 disabled: None,
             },
@@ -208,7 +208,7 @@ async fn init_data() -> TardisResult<()> {
     ];
     let _: String = client
         .put(
-            &format!("/ci/spi/plugin/api"),
+            "/ci/spi/plugin/api",
             &PluginApiAddOrModifyReq {
                 code: TrimString("test-api".to_string()),
                 name: TrimString("test-api".to_string()),

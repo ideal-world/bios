@@ -551,7 +551,7 @@ pub async fn test_fact_col_conf(client: &mut TestHttpClient) -> TardisResult<()>
     assert_eq!(list.records[0]["remark"].as_str().unwrap(), "需求来源说明");
     assert_eq!(list.records[0]["kind"].as_str().unwrap(), "dimension");
     assert_eq!(list.records[0]["dim_rel_conf_dim_key"].as_str().unwrap(), "address");
-    assert_eq!(list.records[0]["dim_multi_values"].as_bool().unwrap(), false);
+    assert!(!list.records[0]["dim_multi_values"].as_bool().unwrap());
     assert!(list.records[0]["mes_data_type"].is_null());
     assert!(list.records[0]["mes_frequency"].is_null());
     assert!(list.records[0]["mes_act_by_dim_conf_keys"].is_null());

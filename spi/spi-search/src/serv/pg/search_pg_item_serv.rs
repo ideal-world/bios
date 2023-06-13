@@ -1,4 +1,4 @@
-use bios_basic::{basic_enumeration::BasicQueryOpKind, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
+use bios_basic::{basic_enumeration::BasicQueryOpKind, dto::BasicQueryCondInfo, helper::db_helper, spi::spi_funs::SpiBsInstExtractor};
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::Utc,
@@ -137,7 +137,7 @@ async fn get_ext(tag: &str, key: &str, table_name: &str, conn: &TardisRelDBlConn
         .query_one(&format!("SELECT ext FROM {table_name} WHERE key = $1"), vec![Value::from(key)])
         .await?
         .ok_or_else(|| funs.err().not_found("item", "get_ext", &format!("search item [{key}] not found in [{tag}]"), "404-spi-search-item-not-exist"))?;
-    Ok(result.try_get("", "ext").unwrap())
+    Ok(result.try_get("", "ext")?)
 }
 
 pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<TardisPage<SearchItemSearchResp>> {
@@ -266,18 +266,20 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
         sql_vals.push(Value::from(update_time_end));
         where_fragments.push(format!("update_time <= ${}", sql_vals.len()));
     }
+    let err_not_found = |ext_item: &BasicQueryCondInfo| {
+        Err(funs.err().not_found(
+            "item",
+            "search",
+            &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
+            "404-spi-search-op-not-legal",
+        ))
+    };
     if let Some(ext) = &search_req.query.ext {
         for ext_item in ext {
             let value = db_helper::json_to_sea_orm_value(&ext_item.value, ext_item.op == BasicQueryOpKind::Like);
-            if value.is_none() || ext_item.op != BasicQueryOpKind::In && value.as_ref().unwrap().len() > 1 {
-                return Err(funs.err().not_found(
-                    "item",
-                    "search",
-                    &format!("The ext field=[{}] value=[{}] operation=[{}] is not legal.", &ext_item.field, ext_item.value, &ext_item.op,),
-                    "404-spi-search-op-not-legal",
-                ));
-            }
-            let mut value = value.unwrap();
+            let Some(mut value) = value else {
+                return err_not_found(ext_item)
+            };
             if ext_item.op == BasicQueryOpKind::In {
                 if value.len() == 1 {
                     where_fragments.push(format!("ext -> '{}' ? ${}", ext_item.field, sql_vals.len() + 1));
@@ -292,7 +294,17 @@ pub async fn search(search_req: &mut SearchItemSearchReq, funs: &TardisFunsInst,
                     sql_vals.push(val);
                 }
             } else {
-                let value = value.pop().unwrap();
+                if value.len() > 1 {
+                    return err_not_found(ext_item);
+                }
+                let Some(value) = value.pop() else {
+                    return Err(funs.err().bad_request(
+                        "item",
+                        "search",
+                        "Request item using 'IN' operator show hava a value",
+                        "400-spi-item-op-in-without-value",
+                    ))
+                };
                 if let Value::Bool(_) = value {
                     where_fragments.push(format!("(ext ->> '{}')::boolean {} ${}", ext_item.field, ext_item.op.to_sql(), sql_vals.len() + 1));
                 } else if let Value::TinyInt(_) = value {
@@ -376,22 +388,22 @@ WHERE
         .into_iter()
         .map(|item| {
             if search_req.page.fetch_total && total_size == 0 {
-                total_size = item.try_get("", "total").unwrap();
+                total_size = item.try_get("", "total")?;
             }
-            SearchItemSearchResp {
-                kind: item.try_get("", "kind").unwrap(),
-                key: item.try_get("", "key").unwrap(),
-                title: item.try_get("", "title").unwrap(),
-                owner: item.try_get("", "owner").unwrap(),
-                own_paths: item.try_get("", "own_paths").unwrap(),
-                create_time: item.try_get("", "create_time").unwrap(),
-                update_time: item.try_get("", "update_time").unwrap(),
-                ext: item.try_get("", "ext").unwrap(),
-                rank_title: item.try_get("", "rank_title").unwrap(),
-                rank_content: item.try_get("", "rank_content").unwrap(),
-            }
+            Ok(SearchItemSearchResp {
+                kind: item.try_get("", "kind")?,
+                key: item.try_get("", "key")?,
+                title: item.try_get("", "title")?,
+                owner: item.try_get("", "owner")?,
+                own_paths: item.try_get("", "own_paths")?,
+                create_time: item.try_get("", "create_time")?,
+                update_time: item.try_get("", "update_time")?,
+                ext: item.try_get("", "ext")?,
+                rank_title: item.try_get("", "rank_title")?,
+                rank_content: item.try_get("", "rank_content")?,
+            })
         })
-        .collect::<Vec<SearchItemSearchResp>>();
+        .collect::<TardisResult<Vec<SearchItemSearchResp>>>()?;
 
     Ok(TardisPage {
         page_size: search_req.page.size as u64,
@@ -404,9 +416,10 @@ WHERE
 fn merge(a: &mut serde_json::Value, b: serde_json::Value) {
     match (a, b) {
         (a @ &mut serde_json::Value::Object(_), serde_json::Value::Object(b)) => {
-            let a = a.as_object_mut().unwrap();
-            for (k, v) in b {
-                merge(a.entry(k).or_insert(serde_json::Value::Null), v);
+            if let Some(a) = a.as_object_mut() {
+                for (k, v) in b {
+                    merge(a.entry(k).or_insert(serde_json::Value::Null), v);
+                }
             }
         }
         (a, b) => *a = b,
