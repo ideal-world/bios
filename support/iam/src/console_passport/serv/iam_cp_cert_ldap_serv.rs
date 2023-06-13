@@ -84,8 +84,7 @@ impl IamCpCertLdapServ {
     /// return String or "" empty String
     async fn get_pwd_cert_name(account_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<(String, String)> {
         let resp = IamCertServ::get_kernel_cert(account_id, &IamCertKernelKind::UserPwd, funs, ctx).await;
-        if resp.is_ok() {
-            let with_sk_resp = resp.unwrap();
+        if let Ok(with_sk_resp) = resp {
             Ok((with_sk_resp.ak, with_sk_resp.status.to_string()))
         } else {
             Ok(("".into(), "".into()))

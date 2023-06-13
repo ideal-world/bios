@@ -189,7 +189,7 @@ impl IamSetServ {
             };
 
             if let Some(tag) = tag {
-                let _ = SpiLogClient::add_ctx_task(tag, Some(result.as_ref().unwrap().to_string()), op_describe, op_kind, ctx).await;
+                let _ = SpiLogClient::add_ctx_task(tag, Some(result.clone().unwrap_or_default()), op_describe, op_kind, ctx).await;
             }
         }
 
@@ -356,11 +356,12 @@ impl IamSetServ {
                         .collect::<Vec<RbumSetTreeMainResp>>(),
                 );
                 if set_filter.fetch_cate_item {
-                    let ext_resp = tenant_resp.ext.unwrap();
-                    resp_items.extend(ext_resp.items);
-                    resp_item_domains.extend(ext_resp.item_domains);
-                    resp_item_kinds.extend(ext_resp.item_kinds);
-                    resp_item_number_agg.extend(ext_resp.item_number_agg);
+                    if let Some(ext_resp) = tenant_resp.ext {
+                        resp_items.extend(ext_resp.items);
+                        resp_item_domains.extend(ext_resp.item_domains);
+                        resp_item_kinds.extend(ext_resp.item_kinds);
+                        resp_item_number_agg.extend(ext_resp.item_number_agg);
+                    }
                 }
             }
             //把原来的resp.main完全拷贝到result_main中
@@ -374,7 +375,7 @@ impl IamSetServ {
                     if pid.is_none() {
                         break;
                     }
-                    if let Some(p_node) = result_main.iter_mut().find(|r| r.id == pid.clone().unwrap()) {
+                    if let Some(p_node) = result_main.iter_mut().find(|r| pid.is_some() && r.id == pid.clone().unwrap_or_default()) {
                         p_node.ext = json!({"disable_import":true}).to_string();
                         pid = p_node.pid.clone();
                     } else {
@@ -385,12 +386,13 @@ impl IamSetServ {
         }
         let mut result = RbumSetTreeResp { main: result_main, ext: None };
         if filter.fetch_cate_item {
-            let mut ext_resp = resp.ext.clone().unwrap();
-            ext_resp.items.extend(resp_items);
-            ext_resp.item_domains.extend(resp_item_domains);
-            ext_resp.item_kinds.extend(resp_item_kinds);
-            ext_resp.item_number_agg.extend(resp_item_number_agg);
-            result.ext = Some(ext_resp);
+            if let Some(mut ext_resp) = resp.ext.clone() {
+                ext_resp.items.extend(resp_items);
+                ext_resp.item_domains.extend(resp_item_domains);
+                ext_resp.item_kinds.extend(resp_item_kinds);
+                ext_resp.item_number_agg.extend(resp_item_number_agg);
+                result.ext = Some(ext_resp);
+            }
         }
         Ok(result)
     }
@@ -409,11 +411,14 @@ impl IamSetServ {
             ctx,
         )
         .await?;
-        let tree_ext = tree_with_account.ext.as_ref().unwrap();
-        let account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
+        let mut account_rel_sys_codes = vec![];
+        if let Some(tree_ext) = tree_with_account.ext.as_ref() {
+            account_rel_sys_codes = tree_with_account.main.into_iter().filter(|cate| !tree_ext.items[&cate.id].is_empty()).map(|cate| cate.sys_code).collect::<Vec<String>>();
+        }
         if account_rel_sys_codes.is_empty() {
             return Ok(RbumSetTreeResp { main: vec![], ext: None });
         }
+
         Self::get_tree(
             set_id,
             &mut RbumSetTreeFilterReq {
@@ -457,20 +462,23 @@ impl IamSetServ {
         let cate_exts = exts.map(|exts| exts.split(',').map(|r| r.to_string()).collect());
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
         let menu_sys_code = String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?;
-        Self::get_tree_with_sys_code(set_id, &menu_sys_code, cate_exts, funs, ctx).await
+        Self::get_tree_with_sys_codes(set_id, Some(vec![menu_sys_code]), cate_exts, funs, ctx).await
     }
 
     pub async fn get_api_tree(set_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumSetTreeResp> {
         let set_cate_sys_code_node_len = funs.rbum_conf_set_cate_sys_code_node_len();
-        let api_sys_code = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?).unwrap();
-        Self::get_tree_with_sys_code(set_id, &api_sys_code, None, funs, ctx).await
+        if let Some(api_sys_code) = TardisFuns::field.incr_by_base36(&String::from_utf8(vec![b'0'; set_cate_sys_code_node_len])?) {
+            Self::get_tree_with_sys_codes(set_id, Some(vec![api_sys_code]), None, funs, ctx).await
+        } else {
+            Self::get_tree_with_sys_codes(set_id, None, None, funs, ctx).await
+        }
     }
 
-    pub async fn get_cate_id_with_sys_code(set_id: &str, filter_sys_code: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_cate_id_with_sys_code(set_id: &str, filter_sys_code: Option<Vec<String>>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let rbum_cate = RbumSetCateServ::find_one_rbum(
             &RbumSetCateFilterReq {
                 rel_rbum_set_id: Some(set_id.to_string()),
-                sys_codes: Some(vec![filter_sys_code.to_string()]),
+                sys_codes: filter_sys_code,
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::Current),
                 ..Default::default()
             },
@@ -481,9 +489,9 @@ impl IamSetServ {
         Ok(rbum_cate.as_ref().map(|r| r.id.clone()).unwrap_or_default())
     }
 
-    async fn get_tree_with_sys_code(
+    async fn get_tree_with_sys_codes(
         set_id: &str,
-        filter_sys_code: &str,
+        filter_sys_codes: Option<Vec<String>>,
         cate_exts: Option<Vec<String>>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
@@ -492,7 +500,7 @@ impl IamSetServ {
             set_id,
             &RbumSetTreeFilterReq {
                 fetch_cate_item: true,
-                sys_codes: Some(vec![filter_sys_code.to_string()]),
+                sys_codes: filter_sys_codes,
                 sys_code_query_kind: Some(RbumSetCateLevelQueryKind::CurrentAndSub),
                 cate_exts,
                 ..Default::default()
@@ -672,7 +680,7 @@ impl IamSetServ {
         let mut cate_item_vec = if let Some(ext) = &delete_tree.ext { ext.items.to_owned() } else { HashMap::new() };
         while !stack.is_empty() {
             let mut loop_cate_vec = cate_vec.clone();
-            let loop_pid = stack.pop().unwrap();
+            let loop_pid = stack.pop().unwrap_or_default();
             loop_cate_vec.retain(|cate| cate.pid == loop_pid);
             //have sub tree?
             let have_next_node = !loop_cate_vec.is_empty();
@@ -690,8 +698,8 @@ impl IamSetServ {
                 stack.push(Some(r.id.clone()));
             }
             if !have_next_node && loop_pid.is_some() && loop_pid != pid {
-                Self::delete_set_cate(&loop_pid.clone().unwrap(), funs, ctx).await?;
-                cate_vec.retain(|c| c.id != loop_pid.clone().unwrap());
+                Self::delete_set_cate(&loop_pid.clone().unwrap_or_default(), funs, ctx).await?;
+                cate_vec.retain(|c| c.id != loop_pid.clone().unwrap_or_default());
             }
         }
 
@@ -716,8 +724,8 @@ impl IamSetServ {
 
         while !old_stack.is_empty() {
             let mut loop_cate_vec = cate_vec.clone();
-            let loop_pid = old_stack.pop().unwrap();
-            let loop_target_pid = target_stack.pop().unwrap();
+            let loop_pid = old_stack.pop().unwrap_or_default();
+            let loop_target_pid = target_stack.pop().unwrap_or_default();
             loop_cate_vec.retain(|cate| cate.pid == loop_pid);
             for r in loop_cate_vec {
                 let new_cate_id = Self::add_set_cate(

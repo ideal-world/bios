@@ -9,6 +9,7 @@ members = [
     "support/auth",
     "support/enhance-wasm",
     "services/*",
+    "sdk/*",
 ]
 
 [workspace.package]
