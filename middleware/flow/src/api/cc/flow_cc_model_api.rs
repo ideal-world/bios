@@ -120,7 +120,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// 指定状态添加动作
+    /// Add Transition By Model Id / 指定状态添加动作
     #[oai(path = "/:flow_model_id/transition", method = "post")]
     async fn add_transition(&self, flow_model_id: Path<String>, add_req: Json<FlowTransitionAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -130,7 +130,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// 指定状态编辑动作
+    /// Modify Transition By Model Id / 指定状态编辑动作
     #[oai(path = "/:flow_model_id/transition", method = "patch")]
     async fn modify_transition(&self, flow_model_id: Path<String>, modify_req: Json<FlowTransitionModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -140,7 +140,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// 指定状态删除动作
+    /// Delete Transition By Model Id / 指定状态删除动作
     #[oai(path = "/:flow_model_id/transition/:transition_id", method = "delete")]
     async fn delete_transitions(&self, flow_model_id: Path<String>, transition_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -150,7 +150,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// 指定状态设为初始
+    /// Modify Init State By Model Id / 指定状态设为初始
     #[oai(path = "/:flow_model_id/init_state/:state_id", method = "patch")]
     async fn modify_init_state(&self, flow_model_id: Path<String>, state_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
@@ -160,7 +160,7 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 
-    /// 指定动作编辑验证表单
+    /// Modify Verify Form Data By Transition Id / 指定动作编辑验证表单
     #[oai(path = "/:flow_model_id/transition/:transition_id/var", method = "patch")]
     async fn modify_transition_var(
         &self,
@@ -176,4 +176,3 @@ impl FlowCcModelApi {
         TardisResp::ok(Void {})
     }
 }
-// 指定动作编辑验证表单
