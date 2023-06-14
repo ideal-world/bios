@@ -18,7 +18,7 @@ pub(crate) async fn init(service_url: &str, serv_config: Option<ServConfig>) -> 
         format!("{service_url}/")
     };
     let serv_config = if let Some(serv_config) = serv_config {
-        log::log(&"[BIOS] Init by spec config.".to_string());
+        log::log("[BIOS] Init by spec config.");
         serv_config
     } else {
         log::log(&format!("[BIOS] Init by url: {service_url}."));

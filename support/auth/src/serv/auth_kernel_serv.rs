@@ -289,7 +289,7 @@ pub async fn do_auth(ctx: &AuthContext) -> TardisResult<Option<ResContainerLeafI
             }
             if let Some(matched_tenants) = &auth.tenants {
                 if let Some(iam_tenant_id) = &ctx.tenant_id {
-                    if matched_tenants.contains(&format!("#{iam_tenant_id}#")) || matched_tenants.contains(&format!("#*#")) {
+                    if matched_tenants.contains(&format!("#{iam_tenant_id}#")) || matched_tenants.contains(&"#*#".to_string()) {
                         return Ok(Some(matched_res));
                     }
                 }

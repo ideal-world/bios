@@ -37,7 +37,7 @@ impl IamIdentCacheServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<()> {
         let token_value = if let Some(renewal_expire_sec) = renewal_expire_sec {
-            format!("{token_kind},{rel_iam_item_id},{}", renewal_expire_sec.to_string())
+            format!("{token_kind},{rel_iam_item_id},{}", renewal_expire_sec)
         } else {
             format!("{token_kind},{rel_iam_item_id}")
         };

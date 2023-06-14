@@ -710,7 +710,7 @@ impl IamAccountServ {
                 } else {
                     account.lock_status.clone()
                 };
-                lock_accounts.push(format!("{},{}", id, lock_status.to_string()));
+                lock_accounts.push(format!("{},{}", id, lock_status));
             } else {
                 continue;
             }

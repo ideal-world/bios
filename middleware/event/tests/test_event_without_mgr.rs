@@ -110,7 +110,7 @@ async fn add_listener(avatars: Vec<TrimString>, http_client: &TestHttpClient) ->
                 topic_code: TrimString("coo".to_string()),
                 topic_sk: Some("ut001".to_string()),
                 events: None,
-                avatars: avatars,
+                avatars,
                 subscribe_mode: true,
             },
         )

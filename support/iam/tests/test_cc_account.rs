@@ -30,7 +30,7 @@ pub async fn test(
     Ok(())
 }
 
-async fn test_single_level(context: &TardisContext, account_name: &str, role_name: &str, another_context: &TardisContext) -> TardisResult<()> {
+async fn test_single_level(context: &TardisContext, _account_name: &str, role_name: &str, another_context: &TardisContext) -> TardisResult<()> {
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
     info!("【test_cc_account】 : test_single_level : Prepare : Add Role");
@@ -258,7 +258,7 @@ pub async fn test_multi_level_by_sys_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let (account_sys_id, account_t1_id, account_t2_id, account_t2_a1_id, account_t2_a2_id) =
+    let (account_sys_id, account_t1_id, _account_t2_id, account_t2_a1_id, _account_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_account】 : test_multi_level : Modify Account By sys_context");
@@ -368,7 +368,7 @@ pub async fn test_multi_level_by_tenant_context(
     let mut funs = iam_constants::get_tardis_inst();
     funs.begin().await?;
 
-    let (account_sys_id, account_t1_id, account_t2_id, account_t2_a1_id, account_t2_a2_id) =
+    let (account_sys_id, account_t1_id, account_t2_id, account_t2_a1_id, _account_t2_a2_id) =
         test_multi_level_add(sys_context, t1_context, t2_context, t2_a1_context, t2_a2_context, &funs).await?;
 
     info!("【test_cc_account】 : test_multi_level : Modify Account By tenant_context");

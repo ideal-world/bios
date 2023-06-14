@@ -18,8 +18,8 @@ pub async fn test(
     sys_context: &TardisContext,
     t1_context: &TardisContext,
     t2_context: &TardisContext,
-    t2_a1_context: &TardisContext,
-    t2_a2_context: &TardisContext,
+    _t2_a1_context: &TardisContext,
+    _t2_a2_context: &TardisContext,
 ) -> TardisResult<()> {
     test_single_level(sys_context, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, t1_context).await?;
     test_single_level(t1_context, RBUM_ITEM_NAME_SYS_ADMIN_ACCOUNT, t2_context).await?;
@@ -181,7 +181,7 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             conn_uri: None,
         },
         &funs,
-        &another_context,
+        another_context,
     )
     .await?;
 
@@ -194,10 +194,10 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
             conn_uri: None,
         },
         &funs,
-        &another_context,
+        another_context,
     )
     .await?;
-    IamCertServ::modify_manage_cert_ext(&manage_cert_visa_id, "测试用户名/密码2", &funs, &another_context).await?;
+    IamCertServ::modify_manage_cert_ext(&manage_cert_visa_id, "测试用户名/密码2", &funs, another_context).await?;
     let manage_cert_result = IamCertServ::paginate_certs(
         &RbumCertFilterReq {
             supplier: Some(vec![pwd_supplier.to_string(), visa_supplier.to_string()]),
@@ -208,19 +208,19 @@ async fn test_single_level(context: &TardisContext, ak: &str, another_context: &
         None,
         None,
         &funs,
-        &another_context,
+        another_context,
     )
     .await?;
     assert_eq!(manage_cert_result.records.len(), 2);
 
-    IamCertServ::add_rel_cert(&manage_cert_pwd_id, "123456", None, None, Some(another_context.own_paths.clone()), &funs, &another_context).await?;
-    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 1);
-    IamCertServ::add_rel_cert(&manage_cert_visa_id, "123456", None, None, Some(another_context.own_paths.clone()), &funs, &another_context).await?;
-    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 2);
-    IamCertServ::delete_rel_cert(&manage_cert_pwd_id, "123456", &funs, &another_context).await?;
-    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 1);
-    IamCertServ::delete_rel_cert(&manage_cert_visa_id, "123456", &funs, &another_context).await?;
-    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, &another_context).await?.len(), 0);
+    IamCertServ::add_rel_cert(&manage_cert_pwd_id, "123456", None, None, Some(another_context.own_paths.clone()), &funs, another_context).await?;
+    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, another_context).await?.len(), 1);
+    IamCertServ::add_rel_cert(&manage_cert_visa_id, "123456", None, None, Some(another_context.own_paths.clone()), &funs, another_context).await?;
+    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, another_context).await?.len(), 2);
+    IamCertServ::delete_rel_cert(&manage_cert_pwd_id, "123456", &funs, another_context).await?;
+    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, another_context).await?.len(), 1);
+    IamCertServ::delete_rel_cert(&manage_cert_visa_id, "123456", &funs, another_context).await?;
+    assert_eq!(IamCertServ::find_to_simple_rel_cert("123456", None, None, &funs, another_context).await?.len(), 0);
     funs.rollback().await?;
     Ok(())
 }
