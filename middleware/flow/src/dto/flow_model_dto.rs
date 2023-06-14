@@ -130,15 +130,15 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
 }
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowModelModifyStatsReq {
+pub struct FlowModelModifyStateReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
-    pub stats_id: TrimString,
-    pub op: ModifyStatsOpKind,
+    pub state_id: TrimString,
+    pub op: ModifyStateOpKind,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
 #[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
-pub enum ModifyStatsOpKind {
+pub enum ModifyStateOpKind {
     #[sea_orm(string_value = "add")]
     Add,
     #[sea_orm(string_value = "delete")]

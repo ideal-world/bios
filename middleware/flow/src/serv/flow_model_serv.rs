@@ -23,9 +23,10 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowModelModifyStatsReq, ModifyStatsOpKind},
+        flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelModifyStateReq, FlowModelSummaryResp, ModifyStateOpKind},
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
+        flow_var_dto::FlowVarInfo,
     },
     flow_config::FlowBasicInfoManager,
     serv::flow_state_serv::FlowStateServ,
@@ -176,7 +177,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
-    async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = add_req.iter().map(|req| req.from_flow_state_id.to_string()).chain(add_req.iter().map(|req| req.to_flow_state_id.to_string())).unique().collect_vec();
         let flow_state_ids_len = flow_state_ids.len();
         if FlowStateServ::count_items(
@@ -232,7 +233,7 @@ impl FlowModelServ {
         funs.db().insert_many(flow_transitions, ctx).await
     }
 
-    async fn modify_transitions(flow_model_id: &str, modify_req: &Vec<FlowTransitionModifyReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_transitions(flow_model_id: &str, modify_req: &Vec<FlowTransitionModifyReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = modify_req
             .iter()
             .filter(|req| req.from_flow_state_id.is_some())
@@ -340,7 +341,7 @@ impl FlowModelServ {
         Ok(())
     }
 
-    async fn delete_transitions(flow_model_id: &str, delete_flow_transition_ids: &Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_transitions(flow_model_id: &str, delete_flow_transition_ids: &Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         let delete_flow_transition_ids_lens = delete_flow_transition_ids.len();
         if funs
             .db()
@@ -438,7 +439,7 @@ impl FlowModelServ {
         }
     }
 
-    pub async fn modify_stats(flow_model_id: &str, modify_req: &mut FlowModelModifyStatsReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_state(flow_model_id: &str, modify_req: &mut FlowModelModifyStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let model = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -454,15 +455,15 @@ impl FlowModelServ {
         .await?;
         let mut state_ids: Vec<&str> = model.state_ids.split(',').collect();
         match modify_req.op {
-            ModifyStatsOpKind::Add => {
-                if state_ids.iter().any(|id| **id == modify_req.stats_id.to_string()) {
+            ModifyStateOpKind::Add => {
+                if state_ids.iter().any(|id| **id == modify_req.state_id.to_string()) {
                     return Err(funs.err().internal_error(&Self::get_obj_name(), "modify_stats", "stats is exist", "500-insert-stats-duplicate"));
                 }
-                state_ids.push(&modify_req.stats_id);
-            },
-            ModifyStatsOpKind::Delete => {
-                state_ids.retain(|id| **id != modify_req.stats_id.to_string());
-            },
+                state_ids.push(&modify_req.state_id);
+            }
+            ModifyStateOpKind::Delete => {
+                state_ids.retain(|id| **id != modify_req.state_id.to_string());
+            }
         };
 
         Self::modify_item(
@@ -475,6 +476,58 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
+        Ok(())
+    }
+
+    pub async fn modify_init_state(flow_model_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let model = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        let state_ids: Vec<&str> = model.state_ids.split(',').collect();
+        if state_ids.iter().any(|id| *id != state_id) {
+            return Err(funs.err().internal_error(&Self::get_obj_name(), "modify_init_state", "stats is not exist", "500-init-stats-not-exist"));
+        }
+        Self::modify_item(
+            flow_model_id,
+            &mut FlowModelModifyReq {
+                init_state_id: Some(state_id.to_string()),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn modify_transition_var(flow_model_id: &str, transition_id: &str, modify_req: Vec<FlowVarInfo>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        let modify = FlowTransitionModifyReq {
+            id: transition_id.into(),
+            name: None,
+            from_flow_state_id: None,
+            to_flow_state_id: None,
+            transfer_by_auto: None,
+            transfer_by_timer: None,
+            guard_by_creator: None,
+            guard_by_his_operators: None,
+            guard_by_spec_account_ids: None,
+            guard_by_spec_role_ids: None,
+            guard_by_other_conds: None,
+            vars_collect: Some(modify_req),
+            action_by_pre_callback: None,
+            action_by_post_callback: None,
+        };
+        Self::modify_transitions(flow_model_id, &vec![modify], funs, ctx).await?;
         Ok(())
     }
 }
