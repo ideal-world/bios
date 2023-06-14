@@ -7,8 +7,6 @@ use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
 use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelModifyStateReq, FlowModelSummaryResp};
-use crate::dto::flow_transition_dto::{FlowTransitionAddReq, FlowTransitionModifyReq};
-use crate::dto::flow_var_dto::FlowVarInfo;
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 
@@ -116,62 +114,6 @@ impl FlowCcModelApi {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
         FlowModelServ::modify_state(&flow_model_id.0, &mut modify_req, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Add Transition By Model Id / 指定状态添加动作
-    #[oai(path = "/:flow_model_id/transition", method = "post")]
-    async fn add_transition(&self, flow_model_id: Path<String>, add_req: Json<FlowTransitionAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::add_transitions(&flow_model_id.0, &vec![add_req.0], &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Modify Transition By Model Id / 指定状态编辑动作
-    #[oai(path = "/:flow_model_id/transition", method = "patch")]
-    async fn modify_transition(&self, flow_model_id: Path<String>, modify_req: Json<FlowTransitionModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_transitions(&flow_model_id.0, &vec![modify_req.0], &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Delete Transition By Model Id / 指定状态删除动作
-    #[oai(path = "/:flow_model_id/transition/:transition_id", method = "delete")]
-    async fn delete_transitions(&self, flow_model_id: Path<String>, transition_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::delete_transitions(&flow_model_id.0, &vec![transition_id.0], &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Modify Init State By Model Id / 指定状态设为初始
-    #[oai(path = "/:flow_model_id/init_state/:state_id", method = "patch")]
-    async fn modify_init_state(&self, flow_model_id: Path<String>, state_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_init_state(&flow_model_id.0, &state_id.0, &funs, &ctx.0).await?;
-        funs.commit().await?;
-        TardisResp::ok(Void {})
-    }
-
-    /// Modify Verify Form Data By Transition Id / 指定动作编辑验证表单
-    #[oai(path = "/:flow_model_id/transition/:transition_id/var", method = "patch")]
-    async fn modify_transition_var(
-        &self,
-        flow_model_id: Path<String>,
-        transition_id: Path<String>,
-        modify_req: Json<Vec<FlowVarInfo>>,
-        ctx: TardisContextExtractor,
-    ) -> TardisApiResult<Void> {
-        let mut funs = flow_constants::get_tardis_inst();
-        funs.begin().await?;
-        FlowModelServ::modify_transition_var(&flow_model_id.0, &transition_id.0, modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

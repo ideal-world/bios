@@ -26,7 +26,6 @@ use crate::{
         flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelModifyStateReq, FlowModelSummaryResp, ModifyStateOpKind},
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
-        flow_var_dto::FlowVarInfo,
     },
     flow_config::FlowBasicInfoManager,
     serv::flow_state_serv::FlowStateServ,
@@ -476,58 +475,6 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        Ok(())
-    }
-
-    pub async fn modify_init_state(flow_model_id: &str, state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let model = Self::get_item(
-            flow_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        let state_ids: Vec<&str> = model.state_ids.split(',').collect();
-        if state_ids.iter().any(|id| *id != state_id) {
-            return Err(funs.err().internal_error(&Self::get_obj_name(), "modify_init_state", "stats is not exist", "500-init-stats-not-exist"));
-        }
-        Self::modify_item(
-            flow_model_id,
-            &mut FlowModelModifyReq {
-                init_state_id: Some(state_id.to_string()),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(())
-    }
-
-    pub async fn modify_transition_var(flow_model_id: &str, transition_id: &str, modify_req: Vec<FlowVarInfo>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let modify = FlowTransitionModifyReq {
-            id: transition_id.into(),
-            name: None,
-            from_flow_state_id: None,
-            to_flow_state_id: None,
-            transfer_by_auto: None,
-            transfer_by_timer: None,
-            guard_by_creator: None,
-            guard_by_his_operators: None,
-            guard_by_spec_account_ids: None,
-            guard_by_spec_role_ids: None,
-            guard_by_other_conds: None,
-            vars_collect: Some(modify_req),
-            action_by_pre_callback: None,
-            action_by_post_callback: None,
-        };
-        Self::modify_transitions(flow_model_id, &vec![modify], funs, ctx).await?;
         Ok(())
     }
 }
