@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
@@ -23,7 +25,7 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelModifyStateReq, FlowModelSummaryResp, ModifyStateOpKind},
+        flow_model_dto::{FlowModelAddReq, FlowModelDetail, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateDetail},
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
@@ -31,6 +33,8 @@ use crate::{
     serv::flow_state_serv::FlowStateServ,
 };
 use async_trait::async_trait;
+
+use super::flow_rel_serv::FlowRelServ;
 
 pub struct FlowModelServ;
 
@@ -438,8 +442,8 @@ impl FlowModelServ {
         }
     }
 
-    pub async fn modify_state(flow_model_id: &str, modify_req: &mut FlowModelModifyStateReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-        let model = Self::get_item(
+    pub async fn find_item_detail_by_id(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetail> {
+        let model_detail = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
@@ -452,29 +456,35 @@ impl FlowModelServ {
             ctx,
         )
         .await?;
-        let mut state_ids: Vec<&str> = model.state_ids.split(',').collect();
-        match modify_req.op {
-            ModifyStateOpKind::Add => {
-                if state_ids.iter().any(|id| **id == modify_req.state_id.to_string()) {
-                    return Err(funs.err().internal_error(&Self::get_obj_name(), "modify_stats", "stats is exist", "500-insert-stats-duplicate"));
-                }
-                state_ids.push(&modify_req.state_id);
-            }
-            ModifyStateOpKind::Delete => {
-                state_ids.retain(|id| **id != modify_req.state_id.to_string());
-            }
-        };
 
-        Self::modify_item(
-            flow_model_id,
-            &mut FlowModelModifyReq {
-                state_ids: Some(state_ids.join(",")),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
-        Ok(())
+        // find rel state
+        let state_ids =
+            FlowRelServ::find_to_simple_rels(flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| (rel.rel_id.clone(), rel.rel_name.clone())).collect::<Vec<_>>();
+        let mut states = HashMap::new();
+        for (state_id, state_name) in state_ids {
+            let state_detail = FlowStateDetail {
+                id: state_id.clone(),
+                name: state_name,
+                is_init: model_detail.init_state_id == state_id,
+                transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
+            };
+            states.insert(state_id, state_detail);
+        }
+
+        Ok(FlowModelDetail {
+            id: model_detail.id,
+            name: model_detail.name,
+            icon: model_detail.icon,
+            info: model_detail.info,
+            init_state_id: model_detail.init_state_id,
+            states,
+            own_paths: model_detail.own_paths,
+            owner: model_detail.owner,
+            create_time: model_detail.create_time,
+            update_time: model_detail.update_time,
+            tag: model_detail.tag,
+            scope_level: model_detail.scope_level,
+            disabled: model_detail.disabled,
+        })
     }
 }

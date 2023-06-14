@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -24,7 +26,6 @@ pub struct FlowModelAddReq {
     pub info: Option<String>,
 
     pub init_state_id: String,
-    pub state_ids: String,
 
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
 
@@ -45,7 +46,6 @@ pub struct FlowModelModifyReq {
     pub info: Option<String>,
 
     pub init_state_id: Option<String>,
-    pub state_ids: Option<String>,
 
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
@@ -66,7 +66,6 @@ pub struct FlowModelSummaryResp {
     pub info: String,
 
     pub init_state_id: String,
-    pub state_ids: String,
 
     pub owner: String,
     pub create_time: DateTime<Utc>,
@@ -85,7 +84,6 @@ pub struct FlowModelDetailResp {
     pub info: String,
 
     pub init_state_id: String,
-    pub state_ids: String,
 
     // TODO
     pub transitions: Option<Value>,
@@ -129,18 +127,32 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
-pub struct FlowModelModifyStateReq {
-    #[oai(validator(min_length = "2", max_length = "200"))]
-    pub state_id: TrimString,
-    pub op: ModifyStateOpKind,
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowModelDetail {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub info: String,
+
+    pub init_state_id: String,
+
+    pub states: HashMap<String, FlowStateDetail>,
+
+    pub own_paths: String,
+    pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+
+    pub tag: String,
+
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
-#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
-pub enum ModifyStateOpKind {
-    #[sea_orm(string_value = "add")]
-    Add,
-    #[sea_orm(string_value = "delete")]
-    Delete,
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowStateDetail {
+    pub id: String,
+    pub name: String,
+    pub is_init: bool,
+    pub transitions: Vec<FlowTransitionDetailResp>,
 }
