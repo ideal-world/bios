@@ -22,7 +22,7 @@ impl IamCpAccountApi {
     async fn modify(&self, mut modify_req: Json<IamAccountSelfModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
         funs.begin().await?;
-        let ctx = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
+        let ctx: tardis::basic::dto::TardisContext = IamCertServ::use_sys_or_tenant_ctx_unsafe(ctx.0)?;
         IamAccountServ::self_modify_account(&mut modify_req.0, &funs, &ctx).await?;
         IamAccountServ::async_add_or_modify_account_search(ctx.clone().owner, Box::new(true), "".to_string(), &funs, &ctx).await?;
         funs.commit().await?;
