@@ -31,7 +31,7 @@ impl FlowCcModelApi {
     async fn modify(&self, flow_model_id: Path<String>, mut modify_req: Json<FlowModelModifyReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = flow_constants::get_tardis_inst();
         funs.begin().await?;
-        FlowModelServ::modify_item(&flow_model_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
+        FlowModelServ::add_or_modify_model(&flow_model_id.0, &mut modify_req.0, &funs, &ctx.0).await?;
         funs.commit().await?;
         TardisResp::ok(Void {})
     }

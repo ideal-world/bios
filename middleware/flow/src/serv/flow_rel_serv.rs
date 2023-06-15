@@ -36,7 +36,7 @@ impl FlowRelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        if Self::exist_rels(&flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await? {
+        if Self::exist_rels(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await? {
             return if ignore_exist_error {
                 Ok(())
             } else {

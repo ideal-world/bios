@@ -44,7 +44,7 @@ pub struct FlowInstServ;
 impl FlowInstServ {
     pub async fn start(start_req: &FlowInstStartReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         // get model by own_paths
-        let flow_model_id = Self::get_model_id_by_own_paths("", funs, ctx).await?;
+        let flow_model_id = Self::get_model_id_by_own_paths(&start_req.tag, funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
             &flow_model_id,
             &FlowModelFilterReq {
@@ -102,7 +102,7 @@ impl FlowInstServ {
             result = FlowModelServ::find_one_item(
                 &FlowModelFilterReq {
                     basic: RbumBasicFilterReq {
-                        own_paths: Some(ctx.own_paths.split_once("/").unwrap_or_default().0.to_string()),
+                        own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
                         ..Default::default()
                     },
                     tag: Some(tag.to_string()),

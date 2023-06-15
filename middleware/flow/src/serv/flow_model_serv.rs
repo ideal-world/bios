@@ -180,7 +180,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
-    pub async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn init_model(_funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         // Self::add_item(&mut FlowModelAddReq {
         //     name: "基础流程".into(),
         //     init_state_id: "".to_string(),
@@ -503,5 +503,62 @@ impl FlowModelServ {
             scope_level: model_detail.scope_level,
             disabled: model_detail.disabled,
         })
+    }
+
+    // add or modify model by own_paths
+    pub async fn add_or_modify_model(flow_model_id: &str, modify_req: &mut FlowModelModifyReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let current_model = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // when the own_paths of current mode isn't the own_paths of ctx,it shows that I need add a new model with this model
+        let result = if current_model.own_paths == ctx.own_paths {
+            // modify
+            Self::modify_item(flow_model_id, modify_req, funs, ctx).await?;
+            flow_model_id.to_string()
+        } else {
+            // add
+            let transitions = current_model.transitions();
+            let model_id = Self::add_item(
+                &mut FlowModelAddReq {
+                    name: modify_req.name.clone().map_or(current_model.name.into(), |name| name),
+                    icon: modify_req.icon.clone().map_or(Some(current_model.icon), Some),
+                    info: modify_req.info.clone().map_or(Some(current_model.info), Some),
+                    init_state_id: modify_req.init_state_id.clone().map_or(current_model.init_state_id, |init_state_id| init_state_id),
+                    transitions: modify_req.add_transitions.clone().map_or(Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()), Some),
+                    template: false,
+                    rel_model_id: flow_model_id.to_string(),
+                    tag: modify_req.tag.clone().map_or(Some(current_model.tag), Some),
+                    scope_level: modify_req.scope_level.clone().map_or(Some(current_model.scope_level), Some),
+                    disabled: modify_req.disabled.map_or(Some(current_model.disabled), Some),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+
+            Self::modify_item(
+                flow_model_id,
+                &mut FlowModelModifyReq {
+                    template: Some(true),
+                    ..Default::default()
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+            model_id
+        };
+
+        Ok(result)
     }
 }
