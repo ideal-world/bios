@@ -25,7 +25,7 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelDetail, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateDetail},
+        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp},
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
@@ -180,6 +180,20 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
+    pub async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // Self::add_item(&mut FlowModelAddReq {
+        //     name: "基础流程".into(),
+        //     init_state_id: "".to_string(),
+        //     icon: None,
+        //     info: None,
+        //     transitions: None,
+        //     tag: None,
+        //     scope_level: None,
+        //     disabled: None,
+        // }, funs, ctx).await?;
+        Ok(())
+    }
+
     pub async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = add_req.iter().map(|req| req.from_flow_state_id.to_string()).chain(add_req.iter().map(|req| req.to_flow_state_id.to_string())).unique().collect_vec();
         let flow_state_ids_len = flow_state_ids.len();
@@ -442,7 +456,7 @@ impl FlowModelServ {
         }
     }
 
-    pub async fn find_item_detail_by_id(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelDetail> {
+    pub async fn get_item_detail_aggs(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
         let model_detail = Self::get_item(
             flow_model_id,
             &FlowModelFilterReq {
@@ -462,7 +476,7 @@ impl FlowModelServ {
             FlowRelServ::find_to_simple_rels(flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| (rel.rel_id.clone(), rel.rel_name.clone())).collect::<Vec<_>>();
         let mut states = HashMap::new();
         for (state_id, state_name) in state_ids {
-            let state_detail = FlowStateDetail {
+            let state_detail = FlowStateAggResp {
                 id: state_id.clone(),
                 name: state_name,
                 is_init: model_detail.init_state_id == state_id,
@@ -471,7 +485,7 @@ impl FlowModelServ {
             states.insert(state_id, state_detail);
         }
 
-        Ok(FlowModelDetail {
+        Ok(FlowModelAggResp {
             id: model_detail.id,
             name: model_detail.name,
             icon: model_detail.icon,

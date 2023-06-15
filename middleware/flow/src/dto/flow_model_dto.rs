@@ -128,7 +128,7 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct FlowModelDetail {
+pub struct FlowModelAggResp {
     pub id: String,
     pub name: String,
     pub icon: String,
@@ -136,7 +136,7 @@ pub struct FlowModelDetail {
 
     pub init_state_id: String,
 
-    pub states: HashMap<String, FlowStateDetail>,
+    pub states: HashMap<String, FlowStateAggResp>,
 
     pub own_paths: String,
     pub owner: String,
@@ -150,7 +150,7 @@ pub struct FlowModelDetail {
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
-pub struct FlowStateDetail {
+pub struct FlowStateAggResp {
     pub id: String,
     pub name: String,
     pub is_init: bool,

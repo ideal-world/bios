@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelDetail, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp};
+use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::FlowRelServ;
@@ -38,9 +38,9 @@ impl FlowCcModelApi {
 
     /// Get Model By Model Id / 获取模型
     #[oai(path = "/:flow_model_id", method = "get")]
-    async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<FlowModelDetail> {
+    async fn get(&self, flow_model_id: Path<String>, ctx: TardisContextExtractor) -> TardisApiResult<FlowModelAggResp> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowModelServ::find_item_detail_by_id(&flow_model_id.0, &funs, &ctx.0).await?;
+        let result = FlowModelServ::get_item_detail_aggs(&flow_model_id.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 
