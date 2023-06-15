@@ -42,9 +42,11 @@ use crate::{
 pub struct FlowInstServ;
 
 impl FlowInstServ {
-    pub async fn start(flow_model_id: &str, start_req: &FlowInstStartReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn start(start_req: &FlowInstStartReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        // get model by own_paths
+        let flow_model_id = Self::get_model_id_by_own_paths("", funs, ctx).await?;
         let flow_model = FlowModelServ::get_item(
-            flow_model_id,
+            &flow_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
@@ -78,6 +80,42 @@ impl FlowInstServ {
         .await?;
 
         Ok(id)
+    }
+
+    async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let mut result = None;
+        // try get model in app path
+        result = FlowModelServ::find_one_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                },
+                tag: Some(tag.to_string()),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // try get model in tenant path or default model
+        if result.is_none() {
+            result = FlowModelServ::find_one_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(ctx.own_paths.split_once("/").unwrap_or_default().0.to_string()),
+                        ..Default::default()
+                    },
+                    tag: Some(tag.to_string()),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        match result {
+            Some(model) => Ok(model.id),
+            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-model-not-found")),
+        }
     }
 
     pub async fn abort(flow_inst_id: &str, abort_req: &FlowInstAbortReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
