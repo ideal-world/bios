@@ -34,7 +34,7 @@ use crate::{
 };
 use async_trait::async_trait;
 
-use super::flow_rel_serv::FlowRelServ;
+use super::flow_rel_serv::{FlowRelKind, FlowRelServ};
 
 pub struct FlowModelServ;
 
@@ -472,8 +472,11 @@ impl FlowModelServ {
         .await?;
 
         // find rel state
-        let state_ids =
-            FlowRelServ::find_to_simple_rels(flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| (rel.rel_id.clone(), rel.rel_name.clone())).collect::<Vec<_>>();
+        let state_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+            .await?
+            .iter()
+            .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone()))
+            .collect::<Vec<_>>();
         let mut states = HashMap::new();
         for (state_id, state_name) in state_ids {
             let state_detail = FlowStateAggResp {
