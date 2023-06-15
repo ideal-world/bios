@@ -145,8 +145,6 @@ impl RbumItemCrudOperation<iam_account::ActiveModel, IamAccountAddReq, IamAccoun
         }
 
         let mut tasks = vec![];
-        let _op_describe = String::new();
-        let _op_kind = String::new();
         if modify_req.status == Some(IamAccountStatusKind::Logout) {
             tasks.push(("注销账号".to_string(), "Logout".to_string()));
         }

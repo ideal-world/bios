@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::{
         rbum_filer_dto::RbumBasicFilterReq,
@@ -23,7 +25,7 @@ use tardis::{
 use crate::{
     domain::{flow_model, flow_transition},
     dto::{
-        flow_model_dto::{FlowModelAddReq, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp},
+        flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelDetailResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowStateAggResp},
         flow_state_dto::FlowStateFilterReq,
         flow_transition_dto::{FlowTransitionAddReq, FlowTransitionDetailResp, FlowTransitionModifyReq},
     },
@@ -31,6 +33,8 @@ use crate::{
     serv::flow_state_serv::FlowStateServ,
 };
 use async_trait::async_trait;
+
+use super::flow_rel_serv::FlowRelServ;
 
 pub struct FlowModelServ;
 
@@ -176,7 +180,21 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
 }
 
 impl FlowModelServ {
-    async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn init_model(funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        // Self::add_item(&mut FlowModelAddReq {
+        //     name: "基础流程".into(),
+        //     init_state_id: "".to_string(),
+        //     icon: None,
+        //     info: None,
+        //     transitions: None,
+        //     tag: None,
+        //     scope_level: None,
+        //     disabled: None,
+        // }, funs, ctx).await?;
+        Ok(())
+    }
+
+    pub async fn add_transitions(flow_model_id: &str, add_req: &[FlowTransitionAddReq], funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = add_req.iter().map(|req| req.from_flow_state_id.to_string()).chain(add_req.iter().map(|req| req.to_flow_state_id.to_string())).unique().collect_vec();
         let flow_state_ids_len = flow_state_ids.len();
         if FlowStateServ::count_items(
@@ -232,7 +250,7 @@ impl FlowModelServ {
         funs.db().insert_many(flow_transitions, ctx).await
     }
 
-    async fn modify_transitions(flow_model_id: &str, modify_req: &Vec<FlowTransitionModifyReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn modify_transitions(flow_model_id: &str, modify_req: &Vec<FlowTransitionModifyReq>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let flow_state_ids = modify_req
             .iter()
             .filter(|req| req.from_flow_state_id.is_some())
@@ -340,7 +358,7 @@ impl FlowModelServ {
         Ok(())
     }
 
-    async fn delete_transitions(flow_model_id: &str, delete_flow_transition_ids: &Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_transitions(flow_model_id: &str, delete_flow_transition_ids: &Vec<String>, funs: &TardisFunsInst, _ctx: &TardisContext) -> TardisResult<()> {
         let delete_flow_transition_ids_lens = delete_flow_transition_ids.len();
         if funs
             .db()
@@ -436,5 +454,51 @@ impl FlowModelServ {
         } else {
             Ok(false)
         }
+    }
+
+    pub async fn get_item_detail_aggs(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
+        let model_detail = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+
+        // find rel state
+        let state_ids =
+            FlowRelServ::find_to_simple_rels(flow_model_id, None, None, funs, ctx).await?.iter().map(|rel| (rel.rel_id.clone(), rel.rel_name.clone())).collect::<Vec<_>>();
+        let mut states = HashMap::new();
+        for (state_id, state_name) in state_ids {
+            let state_detail = FlowStateAggResp {
+                id: state_id.clone(),
+                name: state_name,
+                is_init: model_detail.init_state_id == state_id,
+                transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
+            };
+            states.insert(state_id, state_detail);
+        }
+
+        Ok(FlowModelAggResp {
+            id: model_detail.id,
+            name: model_detail.name,
+            icon: model_detail.icon,
+            info: model_detail.info,
+            init_state_id: model_detail.init_state_id,
+            states,
+            own_paths: model_detail.own_paths,
+            owner: model_detail.owner,
+            create_time: model_detail.create_time,
+            update_time: model_detail.update_time,
+            tag: model_detail.tag,
+            scope_level: model_detail.scope_level,
+            disabled: model_detail.disabled,
+        })
     }
 }

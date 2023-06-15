@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bios_basic::rbum::{
     dto::rbum_filer_dto::{RbumBasicFilterReq, RbumItemFilterFetcher, RbumItemRelFilterReq},
     rbum_enumeration::RbumScopeLevelKind,
@@ -34,7 +36,7 @@ pub struct FlowModelAddReq {
     pub disabled: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, poem_openapi::Object)]
 pub struct FlowModelModifyReq {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: Option<TrimString>,
@@ -123,4 +125,34 @@ impl RbumItemFilterFetcher for FlowModelFilterReq {
     fn rel2(&self) -> &Option<RbumItemRelFilterReq> {
         &None
     }
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowModelAggResp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub info: String,
+
+    pub init_state_id: String,
+
+    pub states: HashMap<String, FlowStateAggResp>,
+
+    pub own_paths: String,
+    pub owner: String,
+    pub create_time: DateTime<Utc>,
+    pub update_time: DateTime<Utc>,
+
+    pub tag: String,
+
+    pub scope_level: RbumScopeLevelKind,
+    pub disabled: bool,
+}
+
+#[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
+pub struct FlowStateAggResp {
+    pub id: String,
+    pub name: String,
+    pub is_init: bool,
+    pub transitions: Vec<FlowTransitionDetailResp>,
 }
