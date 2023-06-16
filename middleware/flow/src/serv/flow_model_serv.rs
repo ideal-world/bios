@@ -5,14 +5,17 @@ use bios_basic::rbum::{
         rbum_filer_dto::RbumBasicFilterReq,
         rbum_item_dto::{RbumItemKernelAddReq, RbumItemKernelModifyReq},
     },
+    rbum_enumeration::RbumScopeLevelKind,
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
         rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
     },
 };
 use itertools::Itertools;
+use serde_json::Value;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
+    chrono::Utc,
     db::sea_orm::{
         sea_query::{Alias, Cond, Expr, Query, SelectStatement},
         EntityName, EntityTrait, JoinType, QueryFilter, Set,
@@ -68,6 +71,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             init_state_id: Set(add_req.init_state_id.to_string()),
             tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
+            rel_model_id: Set(add_req.rel_model_id.as_ref().unwrap_or(&"".to_string()).to_string()),
+            template: Set(add_req.template),
             ..Default::default()
         })
     }
@@ -457,51 +462,210 @@ impl FlowModelServ {
     }
 
     pub async fn get_item_detail_aggs(flow_model_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowModelAggResp> {
-        let model_detail = Self::get_item(
-            flow_model_id,
-            &FlowModelFilterReq {
-                basic: RbumBasicFilterReq {
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?;
+        // let model_detail = Self::get_item(
+        //     flow_model_id,
+        //     &FlowModelFilterReq {
+        //         basic: RbumBasicFilterReq {
+        //             with_sub_own_paths: true,
+        //             ..Default::default()
+        //         },
+        //         ..Default::default()
+        //     },
+        //     funs,
+        //     ctx,
+        // )
+        // .await?;
 
-        // find rel state
-        let state_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
-            .await?
-            .iter()
-            .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone()))
-            .collect::<Vec<_>>();
+        // // find rel state
+        // let state_ids = FlowRelServ::find_to_simple_rels(&FlowRelKind::FlowModelState, flow_model_id, None, None, funs, ctx)
+        //     .await?
+        //     .iter()
+        //     .map(|rel| (rel.rel_id.clone(), rel.rel_name.clone()))
+        //     .collect::<Vec<_>>();
+        // let mut states = HashMap::new();
+        // for (state_id, state_name) in state_ids {
+        //     let state_detail = FlowStateAggResp {
+        //         id: state_id.clone(),
+        //         name: state_name,
+        //         is_init: model_detail.init_state_id == state_id,
+        //         transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
+        //     };
+        //     states.insert(state_id, state_detail);
+        // }
+
+        // Ok(FlowModelAggResp {
+        //     id: model_detail.id,
+        //     name: model_detail.name,
+        //     icon: model_detail.icon,
+        //     info: model_detail.info,
+        //     init_state_id: model_detail.init_state_id,
+        //     states,
+        //     own_paths: model_detail.own_paths,
+        //     owner: model_detail.owner,
+        //     create_time: model_detail.create_time,
+        //     update_time: model_detail.update_time,
+        //     tag: model_detail.tag,
+        //     scope_level: model_detail.scope_level,
+        //     disabled: model_detail.disabled,
+        // })
+        // mock
         let mut states = HashMap::new();
-        for (state_id, state_name) in state_ids {
-            let state_detail = FlowStateAggResp {
-                id: state_id.clone(),
-                name: state_name,
-                is_init: model_detail.init_state_id == state_id,
-                transitions: model_detail.transitions().into_iter().filter(|transition| transition.from_flow_state_id == state_id.clone()).collect_vec(),
-            };
-            states.insert(state_id, state_detail);
-        }
-
+        states.insert(
+            "init-uGmZr5_XuKuzRHmTlTCYM".to_string(),
+            FlowStateAggResp {
+                id: "init-uGmZr5_XuKuzRHmTlTCYM".to_string(),
+                name: "初始".to_string(),
+                is_init: true,
+                transitions: vec![
+                    FlowTransitionDetailResp {
+                        id: "i5UF6Z8DxJpwYH_KLSuVb".to_string(),
+                        name: "确认任务".to_string(),
+                        from_flow_state_id: "init-uGmZr5_XuKuzRHmTlTCYM".to_string(),
+                        from_flow_state_name: "初始".to_string(),
+                        to_flow_state_id: "confirmed-4Sm4pIy8S9OG5vQVmjthH".to_string(),
+                        to_flow_state_name: "已确认".to_string(),
+                        guard_by_spec_role_ids: vec!["admin".to_string()],
+                        transfer_by_auto: false,
+                        transfer_by_timer: "".to_string(),
+                        guard_by_creator: false,
+                        guard_by_his_operators: false,
+                        guard_by_spec_account_ids: vec![],
+                        guard_by_other_conds: TardisFuns::json.str_to_json("")?,
+                        vars_collect: TardisFuns::json.str_to_json("")?,
+                        action_by_pre_callback: "".to_string(),
+                        action_by_post_callback: "".to_string(),
+                    },
+                    FlowTransitionDetailResp {
+                        id: "b__q-cpWONmsvgicMB1xR".to_string(),
+                        name: "拒绝任务".to_string(),
+                        from_flow_state_id: "init-uGmZr5_XuKuzRHmTlTCYM".to_string(),
+                        from_flow_state_name: "初始".to_string(),
+                        to_flow_state_id: "rejected-51N3EGZNiuwrZcC7A_ouW".to_string(),
+                        to_flow_state_name: "已拒绝".to_string(),
+                        guard_by_spec_role_ids: vec![],
+                        transfer_by_auto: false,
+                        transfer_by_timer: "".to_string(),
+                        guard_by_creator: false,
+                        guard_by_his_operators: false,
+                        guard_by_spec_account_ids: vec![],
+                        guard_by_other_conds: TardisFuns::json.str_to_json("")?,
+                        vars_collect: TardisFuns::json.str_to_json("")?,
+                        action_by_pre_callback: "".to_string(),
+                        action_by_post_callback: "".to_string(),
+                    },
+                ],
+            },
+        );
+        states.insert(
+            "confirmed-4Sm4pIy8S9OG5vQVmjthH".to_string(),
+            FlowStateAggResp {
+                id: "confirmed-4Sm4pIy8S9OG5vQVmjthH".to_string(),
+                name: "已确认".to_string(),
+                is_init: true,
+                transitions: vec![FlowTransitionDetailResp {
+                    id: "pBb-7CEUGxfuiRnkVjP70".to_string(),
+                    name: "分配任务".to_string(),
+                    from_flow_state_id: "confirmed-4Sm4pIy8S9OG5vQVmjthH".to_string(),
+                    from_flow_state_name: "已确认".to_string(),
+                    to_flow_state_id: "assigned-AcIReTG9RDw16fl_GwJ3G".to_string(),
+                    to_flow_state_name: "已分配".to_string(),
+                    guard_by_spec_role_ids: vec![],
+                    transfer_by_auto: false,
+                    transfer_by_timer: "".to_string(),
+                    guard_by_creator: false,
+                    guard_by_his_operators: false,
+                    guard_by_spec_account_ids: vec![],
+                    guard_by_other_conds: TardisFuns::json.str_to_json("")?,
+                    vars_collect: TardisFuns::json.str_to_json("")?,
+                    action_by_pre_callback: "".to_string(),
+                    action_by_post_callback: "".to_string(),
+                }],
+            },
+        );
+        states.insert(
+            "rejected-51N3EGZNiuwrZcC7A_ouW".to_string(),
+            FlowStateAggResp {
+                id: "rejected-51N3EGZNiuwrZcC7A_ouW".to_string(),
+                name: "已拒绝".to_string(),
+                is_init: true,
+                transitions: vec![],
+            },
+        );
+        states.insert(
+            "assigned-AcIReTG9RDw16fl_GwJ3G".to_string(),
+            FlowStateAggResp {
+                id: "assigned-AcIReTG9RDw16fl_GwJ3G".to_string(),
+                name: "已分配".to_string(),
+                is_init: true,
+                transitions: vec![FlowTransitionDetailResp {
+                    id: "HZ23sUvOOadS802KfNAB3".to_string(),
+                    name: "执行任务".to_string(),
+                    from_flow_state_id: "assigned-AcIReTG9RDw16fl_GwJ3G".to_string(),
+                    from_flow_state_name: "已分配".to_string(),
+                    to_flow_state_id: "executing-uGwpwQpZKOmAOdH5n2z4c".to_string(),
+                    to_flow_state_name: "执行中".to_string(),
+                    guard_by_spec_role_ids: vec![],
+                    transfer_by_auto: false,
+                    transfer_by_timer: "".to_string(),
+                    guard_by_creator: false,
+                    guard_by_his_operators: false,
+                    guard_by_spec_account_ids: vec![],
+                    guard_by_other_conds: TardisFuns::json.str_to_json("")?,
+                    vars_collect: TardisFuns::json.str_to_json("")?,
+                    action_by_pre_callback: "".to_string(),
+                    action_by_post_callback: "".to_string(),
+                }],
+            },
+        );
+        states.insert(
+            "executing-uGwpwQpZKOmAOdH5n2z4c".to_string(),
+            FlowStateAggResp {
+                id: "executing-uGwpwQpZKOmAOdH5n2z4c".to_string(),
+                name: "执行中".to_string(),
+                is_init: true,
+                transitions: vec![FlowTransitionDetailResp {
+                    id: "IWvT49XiwRbWALKQ1rLQB".to_string(),
+                    name: "关闭任务".to_string(),
+                    from_flow_state_id: "executing-uGwpwQpZKOmAOdH5n2z4c".to_string(),
+                    from_flow_state_name: "执行中".to_string(),
+                    to_flow_state_id: "finish-_lyTxR7t0DfS2eNE8jzHr".to_string(),
+                    to_flow_state_name: "已完成".to_string(),
+                    guard_by_spec_role_ids: vec![],
+                    transfer_by_auto: false,
+                    transfer_by_timer: "".to_string(),
+                    guard_by_creator: false,
+                    guard_by_his_operators: false,
+                    guard_by_spec_account_ids: vec![],
+                    guard_by_other_conds: TardisFuns::json.str_to_json("")?,
+                    vars_collect: TardisFuns::json.str_to_json("")?,
+                    action_by_pre_callback: "".to_string(),
+                    action_by_post_callback: "".to_string(),
+                }],
+            },
+        );
+        states.insert(
+            "finish-_lyTxR7t0DfS2eNE8jzHr".to_string(),
+            FlowStateAggResp {
+                id: "finish-_lyTxR7t0DfS2eNE8jzHr".to_string(),
+                name: "已完成".to_string(),
+                is_init: true,
+                transitions: vec![],
+            },
+        );
         Ok(FlowModelAggResp {
-            id: model_detail.id,
-            name: model_detail.name,
-            icon: model_detail.icon,
-            info: model_detail.info,
-            init_state_id: model_detail.init_state_id,
+            id: "j7v8xVLsIlOk_BXW6jNr6".to_string(),
+            name: "基础流程".to_string(),
+            icon: "".to_string(),
+            info: "".to_string(),
+            init_state_id: "init-uGmZr5_XuKuzRHmTlTCYM".to_string(),
             states,
-            own_paths: model_detail.own_paths,
-            owner: model_detail.owner,
-            create_time: model_detail.create_time,
-            update_time: model_detail.update_time,
-            tag: model_detail.tag,
-            scope_level: model_detail.scope_level,
-            disabled: model_detail.disabled,
+            own_paths: "".to_string(),
+            owner: "".to_string(),
+            create_time: Utc::now(),
+            update_time: Utc::now(),
+            tag: "".to_string(),
+            scope_level: RbumScopeLevelKind::Private,
+            disabled: false,
         })
     }
 
@@ -536,7 +700,7 @@ impl FlowModelServ {
                     init_state_id: modify_req.init_state_id.clone().map_or(current_model.init_state_id, |init_state_id| init_state_id),
                     transitions: modify_req.add_transitions.clone().map_or(Some(transitions.into_iter().map(|trans| trans.into()).collect_vec()), Some),
                     template: false,
-                    rel_model_id: flow_model_id.to_string(),
+                    rel_model_id: Some(flow_model_id.to_string()),
                     tag: modify_req.tag.clone().map_or(Some(current_model.tag), Some),
                     scope_level: modify_req.scope_level.clone().map_or(Some(current_model.scope_level), Some),
                     disabled: modify_req.disabled.map_or(Some(current_model.disabled), Some),

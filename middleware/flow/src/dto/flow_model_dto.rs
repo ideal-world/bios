@@ -30,7 +30,7 @@ pub struct FlowModelAddReq {
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
 
     pub template: bool,
-    pub rel_model_id: String,
+    pub rel_model_id: Option<String>,
 
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub tag: Option<String>,

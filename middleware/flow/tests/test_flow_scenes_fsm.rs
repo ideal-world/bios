@@ -162,6 +162,8 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 tag: None,
                 scope_level: None,
                 disabled: None,
+                rel_model_id: None,
+                template: false,
             },
         )
         .await;
@@ -277,6 +279,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 tag: None,
                 scope_level: None,
                 disabled: None,
+                template: None,
             },
         )
         .await;
