@@ -274,7 +274,7 @@ impl IamCpCertApi {
         TardisResp::ok(resp)
     }
 
-    /// exist Mail
+    /// exist phone
     #[oai(path = "/exist/phonevcode", method = "put")]
     async fn exist_phone(&self, exist_req: Json<IamCpExistPhoneVCodeReq>) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
