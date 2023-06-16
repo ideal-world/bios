@@ -290,10 +290,23 @@ impl IamIdentCacheServ {
     }
 
     pub async fn get_account_context(account_id: &str, field: &str, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
-        if let Some(context) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), field).await? {
-            return TardisFuns::json.str_to_obj(&context);
+        let mut context = if let Some(context) = funs.cache().hget(format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id).as_str(), field).await? {
+            TardisFuns::json.str_to_obj::<TardisContext>(&context)?
+        } else {
+            return Err(funs.err().not_found("get_account_context", "get", "not found context", "404-iam-cache-context-not-exist"));
+        };
+        if !field.is_empty() {
+            if let Some(tenant_context) = funs.cache().hget(&format!("{}{}", funs.conf::<IamConfig>().cache_key_account_info_, account_id), "").await? {
+                let tenant_context = TardisFuns::json.str_to_obj::<TardisContext>(&tenant_context)?;
+                if !tenant_context.roles.is_empty() {
+                    context.roles.extend(tenant_context.roles);
+                }
+                if !tenant_context.groups.is_empty() {
+                    context.groups.extend(tenant_context.groups);
+                }
+            }
         }
-        Err(funs.err().not_found("get_account_context", "get", "not found context", "404-iam-cache-context-not-exist"))
+        Ok(context)
     }
 
     pub async fn get_context(fetch_req: &IamContextFetchReq, funs: &TardisFunsInst) -> TardisResult<TardisContext> {
