@@ -29,6 +29,9 @@ pub struct FlowModelAddReq {
 
     pub transitions: Option<Vec<FlowTransitionAddReq>>,
 
+    pub template: bool,
+    pub rel_model_id: Option<String>,
+
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub tag: Option<String>,
 
@@ -46,6 +49,8 @@ pub struct FlowModelModifyReq {
     pub info: Option<String>,
 
     pub init_state_id: Option<String>,
+
+    pub template: Option<bool>,
 
     pub add_transitions: Option<Vec<FlowTransitionAddReq>>,
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
@@ -76,7 +81,7 @@ pub struct FlowModelSummaryResp {
     pub disabled: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowModelDetailResp {
     pub id: String,
     pub name: String,

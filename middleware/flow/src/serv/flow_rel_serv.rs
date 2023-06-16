@@ -8,6 +8,9 @@ use bios_basic::rbum::{
     rbum_enumeration::{RbumRelEnvKind, RbumRelFromKind},
     serv::rbum_rel_serv::RbumRelServ,
 };
+use serde::{Deserialize, Serialize};
+use tardis::db::sea_orm;
+use tardis::db::sea_orm::strum::Display;
 use tardis::{
     basic::{dto::TardisContext, result::TardisResult},
     chrono::{Duration, Utc},
@@ -16,10 +19,14 @@ use tardis::{
 
 pub struct FlowRelServ;
 
-const REL_KIND: &str = "FlowModelState";
+#[derive(Display, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, sea_orm::strum::EnumString)]
+pub enum FlowRelKind {
+    FlowModelState,
+}
 
 impl FlowRelServ {
     pub async fn add_simple_rel(
+        flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         flow_state_id: &str,
         start_timestamp: Option<i64>,
@@ -29,18 +36,18 @@ impl FlowRelServ {
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<()> {
-        if Self::exist_rels(flow_model_id, flow_state_id, funs, ctx).await? {
+        if Self::exist_rels(flow_rel_kind, flow_model_id, flow_state_id, funs, ctx).await? {
             return if ignore_exist_error {
                 Ok(())
             } else {
-                Err(funs.err().conflict(REL_KIND, "add_simple_rel", "associated already exists", "409-rbum-rel-exist"))
+                Err(funs.err().conflict(&flow_rel_kind.to_string(), "add_simple_rel", "associated already exists", "409-rbum-rel-exist"))
             };
         }
         let value1 = start_timestamp.unwrap_or_else(|| Utc::now().timestamp());
         let value2 = end_timestamp.unwrap_or_else(|| (Utc::now() + Duration::days(365 * 100)).timestamp());
         let req = &mut RbumRelAggAddReq {
             rel: RbumRelAddReq {
-                tag: REL_KIND.to_string(),
+                tag: flow_rel_kind.to_string(),
                 note: None,
                 from_rbum_kind: RbumRelFromKind::Item,
                 from_rbum_id: flow_model_id.to_string(),
@@ -64,14 +71,14 @@ impl FlowRelServ {
         Ok(())
     }
 
-    pub async fn delete_simple_rel(flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+    pub async fn delete_simple_rel(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let rel_ids = RbumRelServ::find_id_rbums(
             &RbumRelFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
-                tag: Some(REL_KIND.to_string()),
+                tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(flow_model_id.to_string()),
                 to_rbum_item_id: Some(flow_state_id.to_string()),
@@ -93,11 +100,11 @@ impl FlowRelServ {
         Ok(())
     }
 
-    async fn exist_rels(flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+    async fn exist_rels(flow_rel_kind: &FlowRelKind, flow_model_id: &str, flow_state_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
         // TODO In-depth inspection
         RbumRelServ::exist_simple_rel(
             &RbumRelFindReq {
-                tag: Some(REL_KIND.to_string()),
+                tag: Some(flow_rel_kind.to_string()),
                 from_rbum_kind: Some(RbumRelFromKind::Item),
                 from_rbum_id: Some(flow_model_id.to_string()),
                 to_rbum_item_id: Some(flow_state_id.to_string()),
@@ -111,12 +118,13 @@ impl FlowRelServ {
     }
 
     pub async fn find_to_simple_rels(
+        flow_rel_kind: &FlowRelKind,
         flow_model_id: &str,
         desc_sort_by_create: Option<bool>,
         desc_sort_by_update: Option<bool>,
         funs: &TardisFunsInst,
         ctx: &TardisContext,
     ) -> TardisResult<Vec<RbumRelBoneResp>> {
-        RbumRelServ::find_to_simple_rels(REL_KIND, flow_model_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
+        RbumRelServ::find_to_simple_rels(&flow_rel_kind.to_string(), flow_model_id, desc_sort_by_create, desc_sort_by_update, funs, ctx).await
     }
 }
