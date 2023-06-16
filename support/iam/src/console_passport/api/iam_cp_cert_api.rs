@@ -143,14 +143,15 @@ impl IamCpCertApi {
 
     /// new userpwd-cert password by account_id
     ///
-    /// only used for userpwd-cert status is Pending and user is global account
+    /// only for user is global account
     #[oai(path = "/cert/userpwd/reset", method = "put")]
-    async fn new_password_for_pending_status(&self, account_id: Query<String>, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn new_password_for_pending_status(&self, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        let ctx = IamCertServ::use_global_account_ctx(ctx.0, &account_id.0, &funs).await?;
+        let account_id = &ctx.0.owner.clone();
+        let ctx = IamCertServ::use_global_account_ctx(ctx.0, account_id, &funs).await?;
         funs.begin().await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
-        IamCertUserPwdServ::reset_sk_for_pending_status(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
+        IamCertUserPwdServ::reset_sk_to_enable_status(&modify_req.0, &ctx.owner, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})

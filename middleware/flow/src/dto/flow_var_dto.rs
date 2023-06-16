@@ -11,7 +11,7 @@ pub struct FlowVarSimpleInfo {
     pub required: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object)]
 pub struct FlowVarInfo {
     #[oai(validator(min_length = "2", max_length = "200"))]
     pub name: String,
