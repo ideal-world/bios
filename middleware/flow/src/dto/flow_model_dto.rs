@@ -161,3 +161,16 @@ pub struct FlowStateAggResp {
     pub is_init: bool,
     pub transitions: Vec<FlowTransitionDetailResp>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum FlowTagKind {
+    #[sea_orm(string_value = "ticket_states")]
+    Ticket,
+    #[sea_orm(string_value = "proj_states")]
+    Project,
+    #[sea_orm(string_value = "milestone_states")]
+    Milestone,
+    #[sea_orm(string_value = "iter_states")]
+    Iter,
+}
