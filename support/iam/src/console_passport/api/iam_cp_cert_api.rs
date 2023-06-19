@@ -1,3 +1,4 @@
+use tardis::basic::dto::TardisContext;
 use tardis::web::context_extractor::TardisContextExtractor;
 use tardis::web::poem_openapi;
 use tardis::web::poem_openapi::param::Query;
@@ -23,8 +24,8 @@ use crate::basic::serv::iam_cert_user_pwd_serv::IamCertUserPwdServ;
 use crate::basic::serv::iam_key_cache_serv::IamIdentCacheServ;
 use crate::basic::serv::iam_tenant_serv::IamTenantServ;
 use crate::console_passport::dto::iam_cp_cert_dto::{
-    IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq, IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq,
-    IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
+    IamCpExistMailVCodeReq, IamCpExistPhoneVCodeReq, IamCpLdapLoginReq, IamCpMailVCodeLoginGenVCodeReq, IamCpMailVCodeLoginReq, IamCpOAuth2LoginReq,
+    IamCpPhoneVCodeLoginGenVCodeReq, IamCpPhoneVCodeLoginSendVCodeReq, IamCpUserPwdBindWithLdapReq, IamCpUserPwdCheckReq, IamCpUserPwdLoginReq,
 };
 #[cfg(feature = "ldap_client")]
 use crate::console_passport::serv::iam_cp_cert_ldap_serv::IamCpCertLdapServ;
@@ -142,14 +143,15 @@ impl IamCpCertApi {
 
     /// new userpwd-cert password by account_id
     ///
-    /// only used for userpwd-cert status is Pending and user is global account
+    /// only for user is global account
     #[oai(path = "/cert/userpwd/reset", method = "put")]
-    async fn new_password_for_pending_status(&self, account_id: Query<String>, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
+    async fn new_password_for_pending_status(&self, modify_req: Json<IamCertUserPwdRestReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
         let mut funs = iam_constants::get_tardis_inst();
-        let ctx = IamCertServ::use_global_account_ctx(ctx.0, &account_id.0, &funs).await?;
+        let account_id = &ctx.0.owner.clone();
+        let ctx = IamCertServ::use_global_account_ctx(ctx.0, account_id, &funs).await?;
         funs.begin().await?;
         let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(IamCertKernelKind::UserPwd.to_string().as_str(), get_max_level_id_by_context(&ctx), &funs).await?;
-        IamCertUserPwdServ::reset_sk_for_pending_status(&modify_req.0, &account_id.0, &rbum_cert_conf_id, &funs, &ctx).await?;
+        IamCertUserPwdServ::reset_sk_to_enable_status(&modify_req.0, &ctx.owner, &rbum_cert_conf_id, &funs, &ctx).await?;
         funs.commit().await?;
         ctx.execute_task().await?;
         TardisResp::ok(Void {})
@@ -221,6 +223,18 @@ impl IamCpCertApi {
     //     TardisResp::ok(Void {})
     // }
 
+    /// exist Mail
+    #[oai(path = "/exist/mailvcode", method = "put")]
+    async fn exist_mail(&self, exist_req: Json<IamCpExistMailVCodeReq>) -> TardisApiResult<bool> {
+        let funs = iam_constants::get_tardis_inst();
+        let mock_ctx = TardisContext {
+            own_paths: exist_req.0.tenant_id.to_string(),
+            ..Default::default()
+        };
+        let count = IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::MailVCode.to_string(), &exist_req.0.mail, &funs, &mock_ctx).await?;
+        TardisResp::ok(count > 0)
+    }
+
     /// Send bind Mail
     #[oai(path = "/cert/mailvcode/send", method = "put")]
     async fn send_bind_mail(&self, req: Json<IamCertMailVCodeAddReq>, ctx: TardisContextExtractor) -> TardisApiResult<Void> {
@@ -261,6 +275,18 @@ impl IamCpCertApi {
         let resp = IamCpCertMailVCodeServ::login_by_mail_vocde(&login_req.0, &funs).await?;
         funs.commit().await?;
         TardisResp::ok(resp)
+    }
+
+    /// exist Mail
+    #[oai(path = "/exist/phonevcode", method = "put")]
+    async fn exist_phone(&self, exist_req: Json<IamCpExistPhoneVCodeReq>) -> TardisApiResult<bool> {
+        let funs = iam_constants::get_tardis_inst();
+        let mock_ctx = TardisContext {
+            own_paths: exist_req.0.tenant_id.to_string(),
+            ..Default::default()
+        };
+        let count = IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), &exist_req.0.phone, &funs, &mock_ctx).await?;
+        TardisResp::ok(count > 0)
     }
 
     /// Send bind phone

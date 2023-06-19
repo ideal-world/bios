@@ -280,9 +280,17 @@ impl IamCertMailVCodeServ {
         Err(funs.err().unauthorized("iam_cert_mail_vcode", "activate", "email or verification code error", "401-iam-cert-valid"))
     }
 
-    pub async fn send_login_mail(mail: &str, own_paths: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+    pub async fn send_login_mail(mail: &str, tenant_id: &str, funs: &TardisFunsInst) -> TardisResult<()> {
+        let own_paths = tenant_id.to_string();
+        let mock_ctx = TardisContext {
+            own_paths: own_paths.to_string(),
+            ..Default::default()
+        };
+        if IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::MailVCode.to_string(), mail, funs, &mock_ctx).await? == 0 {
+            return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "email not find", "404-iam-cert-email-not-exist"));
+        }
         let vcode = Self::get_vcode();
-        RbumCertServ::add_vcode_to_cache(mail, &vcode, own_paths, funs).await?;
+        RbumCertServ::add_vcode_to_cache(mail, &vcode, &own_paths, funs).await?;
         MailClient::send_vcode(mail, None, &vcode, funs).await?;
         Ok(())
     }

@@ -159,7 +159,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 icon: None,
                 info: None,
                 transitions: None,
-                tag: None,
+                tag: Some("proj_states".to_string()),
                 scope_level: None,
                 disabled: None,
                 rel_model_id: None,
