@@ -2,8 +2,11 @@ use std::{collections::HashMap, str::FromStr};
 
 use async_trait::async_trait;
 use bios_auth::{
-    dto::auth_kernel_dto::{AuthReq, AuthResp},
-    serv::auth_kernel_serv,
+    dto::{
+        auth_crypto_dto::AuthEncryptReq,
+        auth_kernel_dto::{AuthReq, AuthResp},
+    },
+    serv::{auth_crypto_serv, auth_kernel_serv},
 };
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
@@ -11,7 +14,7 @@ use spacegate_kernel::{
     functions::http_route::SgHttpRouteMatchInst,
     http::{self, uri::Port, HeaderMap, HeaderName, HeaderValue},
     plugins::{
-        context::SgRoutePluginContext,
+        context::{SgRouteFilterRequestAction, SgRoutePluginContext},
         filters::{BoxSgPluginFilter, SgPluginFilter, SgPluginFilterDef, SgPluginFilterKind},
     },
 };
@@ -56,15 +59,37 @@ impl SgPluginFilter for SgFilterAuth {
         if ctx.get_req_method() == &http::Method::OPTIONS {
             return Ok((true, ctx));
         }
-        let result = auth_kernel_serv::auth(&mut ctx_to_authReq(&mut ctx).await?, false).await?;
-        Ok((true, ctx))
+        match auth_kernel_serv::auth(&mut ctx_to_auth_req(&mut ctx).await?, false).await {
+            Ok(auth_resp) => {
+                if auth_resp.allow {
+                    ctx = success_auth_resp_to_ctx(auth_resp, ctx)?;
+                } else {
+                    ctx.set_action(SgRouteFilterRequestAction::Response);
+                    ctx.set_resp_body(auth_resp.reason.map(|s| s.into_bytes()).unwrap_or_default())?;
+                    return Ok((false, ctx));
+                };
+                Ok((true, ctx))
+            }
+            Err(e) => {
+                ctx.set_action(SgRouteFilterRequestAction::Response);
+                ctx.set_resp_body(format!("[Plugin.Auth] auth return error:{e}").into_bytes())?;
+                Ok((false, ctx))
+            }
+        }
     }
 
-    async fn resp_filter(&self, _: &str, ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+    async fn resp_filter(&self, _: &str, mut ctx: SgRoutePluginContext, _: Option<&SgHttpRouteMatchInst>) -> TardisResult<(bool, SgRoutePluginContext)> {
+        match auth_crypto_serv::encrypt_body(&ctx_to_auth_encrypt_req(&mut ctx).await?).await {
+            Ok(encrypt_resp) => {
+                ctx.set_resp_headers();
+                ctx.set_resp_body(encrypt_resp.body.into_bytes())?;
+            }
+            Err(e) => {}
+        };
         Ok((true, ctx))
     }
 }
-async fn ctx_to_authReq(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthReq> {
+async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthReq> {
     let url = ctx.get_req_uri().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
     let mut headers = HashMap::new();
@@ -72,7 +97,7 @@ async fn ctx_to_authReq(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthReq>
     for header_name in req_headers.keys().cloned() {
         headers.insert(
             header_name.to_string(),
-            req_headers.get(header_name).clone().expect("").to_str().map_err(|e| TardisError::format_error("[auth] request header error", ""))?.to_string(),
+            req_headers.get(header_name).clone().expect("").to_str().map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] request header error :{e}"), ""))?.to_string(),
         );
     }
     Ok(AuthReq {
@@ -97,16 +122,33 @@ async fn ctx_to_authReq(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthReq>
         body: ctx.pop_req_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()),
     })
 }
+
 fn success_auth_resp_to_ctx(auth_resp: AuthResp, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
-    let a = HeaderMap::new();
+    let mut new_headers = HeaderMap::new();
     for header in auth_resp.headers {
-        a.insert(
-            HeaderName::from_str(&header.0).map_err(|e| TardisError::format_error("[auth] request header error", ""))?,
-            HeaderValue::from_str(&header.1).map_err(|e| TardisError::format_error("[auth] request header error", ""))?,
+        new_headers.insert(
+            HeaderName::from_str(&header.0).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] request header error :{e}"), ""))?,
+            HeaderValue::from_str(&header.1).map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] request header error :{e}"), ""))?,
         );
     }
 
-    ctx.set_resp_headers(a);
-    ctx.set_req_body(auth_resp.body);
-    ctx
+    ctx.set_resp_headers(new_headers);
+    ctx.set_req_body(auth_resp.body.map(|s| s.into_bytes()).unwrap_or_default())?;
+    Ok(ctx)
+}
+
+async fn ctx_to_auth_encrypt_req(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthEncryptReq> {
+    let mut headers = HashMap::new();
+    let resp_headers = ctx.get_resp_headers();
+    for header_name in resp_headers.keys().cloned() {
+        headers.insert(
+            header_name.to_string(),
+            resp_headers.get(header_name).clone().expect("").to_str().map_err(|e| TardisError::format_error(&format!("[Plugin.Auth] response header error :{e}"), ""))?.to_string(),
+        );
+    }
+
+    Ok(AuthEncryptReq {
+        headers,
+        body: ctx.pop_resp_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()).unwrap_or_default(),
+    })
 }

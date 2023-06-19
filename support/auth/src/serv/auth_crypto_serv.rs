@@ -133,7 +133,7 @@ pub(crate) async fn decrypt_req(
     }
 }
 
-pub(crate) async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp> {
+pub async fn encrypt_body(req: &AuthEncryptReq) -> TardisResult<AuthEncryptResp> {
     let config = TardisFuns::cs_config::<AuthConfig>(DOMAIN_CODE);
     let pub_key = if let Some(r) = req.headers.get(&config.head_key_crypto).or_else(|| req.headers.get(&config.head_key_crypto.to_lowercase())) {
         r
