@@ -69,7 +69,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             icon: Set(add_req.icon.as_ref().unwrap_or(&"".to_string()).to_string()),
             info: Set(add_req.info.as_ref().unwrap_or(&"".to_string()).to_string()),
             init_state_id: Set(add_req.init_state_id.to_string()),
-            tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
+            tag: Set(add_req.tag.clone()),
             rel_model_id: Set(add_req.rel_model_id.as_ref().unwrap_or(&"".to_string()).to_string()),
             template: Set(add_req.template),
             ..Default::default()
@@ -113,7 +113,7 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             flow_model.init_state_id = Set(init_state_id.to_string());
         }
         if let Some(tag) = &modify_req.tag {
-            flow_model.tag = Set(tag.to_string());
+            flow_model.tag = Set(Some(tag.clone()));
         }
         Ok(Some(flow_model))
     }
@@ -381,7 +381,7 @@ impl FlowModelServ {
                         action_by_post_callback: None,
                     },
                 ]),
-                tag: Some(FlowTagKind::Ticket.to_string()),
+                tag: Some(FlowTagKind::Ticket),
                 scope_level: None,
                 disabled: None,
                 template: true,

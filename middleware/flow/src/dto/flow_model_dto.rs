@@ -32,8 +32,7 @@ pub struct FlowModelAddReq {
     pub template: bool,
     pub rel_model_id: Option<String>,
 
-    #[oai(validator(min_length = "2", max_length = "200"))]
-    pub tag: Option<String>,
+    pub tag: Option<FlowTagKind>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -56,8 +55,7 @@ pub struct FlowModelModifyReq {
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
     pub delete_transitions: Option<Vec<String>>,
 
-    #[oai(validator(min_length = "2", max_length = "200"))]
-    pub tag: Option<String>,
+    pub tag: Option<FlowTagKind>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -98,7 +96,7 @@ pub struct FlowModelDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub tag: String,
+    pub tag: FlowTagKind,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,

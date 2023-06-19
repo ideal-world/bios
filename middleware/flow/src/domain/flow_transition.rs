@@ -69,7 +69,7 @@ pub struct Model {
 
     /// rear action config / 关于后置动作的配置
     /// TODO FlowRearActionInfo
-    pub rear_action: Json,
+    // pub rear_action: Json,
 
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口

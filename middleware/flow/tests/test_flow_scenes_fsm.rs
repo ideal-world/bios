@@ -6,7 +6,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq};
+use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq, FlowTagKind};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
@@ -159,7 +159,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 icon: None,
                 info: None,
                 transitions: None,
-                tag: Some("proj_states".to_string()),
+                tag: Some(FlowTagKind::Project),
                 scope_level: None,
                 disabled: None,
                 rel_model_id: None,

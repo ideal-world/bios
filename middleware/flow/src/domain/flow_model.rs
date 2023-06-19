@@ -2,6 +2,8 @@ use tardis::db::sea_orm;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
+use crate::dto::flow_model_dto::FlowTagKind;
+
 /// Model / 模型
 ///
 /// Used to define processes, each process contains one or more transitions (associated with `flow_transition`)
@@ -40,7 +42,8 @@ pub struct Model {
     /// Used for model classification
     /// 用于模型分类
     #[index]
-    pub tag: String,
+    #[tardis_entity(custom_type = "String")]
+    pub tag: Option<FlowTagKind>,
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,
