@@ -119,7 +119,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: Some(context.ak),
         })
     } else if let Some(ak_authorization) = get_ak_key(req, config) {
-        let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag) {
+        let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag).or_else(|| req.headers.get(&config.head_key_date_flag.to_lowercase())) {
             req_date
         } else {
             return Err(TardisError::unauthorized(
