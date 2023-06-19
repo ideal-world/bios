@@ -227,10 +227,8 @@ impl IamCpCertApi {
     #[oai(path = "/exist/mailvcode", method = "put")]
     async fn exist_mail(&self, exist_req: Json<IamCpExistMailVCodeReq>) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
-        let mock_ctx = TardisContext {
-            own_paths: exist_req.0.tenant_id.to_string(),
-            ..Default::default()
-        };
+        let own_paths = if let Some(tenant_id) = exist_req.0.tenant_id { tenant_id } else { "".to_string() };
+        let mock_ctx = TardisContext { own_paths, ..Default::default() };
         let count = IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::MailVCode.to_string(), &exist_req.0.mail, &funs, &mock_ctx).await?;
         TardisResp::ok(count > 0)
     }
@@ -277,14 +275,12 @@ impl IamCpCertApi {
         TardisResp::ok(resp)
     }
 
-    /// exist Mail
+    /// exist phone
     #[oai(path = "/exist/phonevcode", method = "put")]
     async fn exist_phone(&self, exist_req: Json<IamCpExistPhoneVCodeReq>) -> TardisApiResult<bool> {
         let funs = iam_constants::get_tardis_inst();
-        let mock_ctx = TardisContext {
-            own_paths: exist_req.0.tenant_id.to_string(),
-            ..Default::default()
-        };
+        let own_paths = if let Some(tenant_id) = exist_req.0.tenant_id { tenant_id } else { "".to_string() };
+        let mock_ctx = TardisContext { own_paths, ..Default::default() };
         let count = IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), &exist_req.0.phone, &funs, &mock_ctx).await?;
         TardisResp::ok(count > 0)
     }
