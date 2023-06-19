@@ -9,11 +9,14 @@ use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchI
 use crate::search_initializer;
 
 use super::pg;
+use super::es;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
     match funs.init(ctx, true, search_initializer::init_fun).await?.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => pg::search_pg_item_serv::add(add_req, funs, ctx).await,
+        #[cfg(feature = "spi-es")]
+        spi_constants::SPI_ES_KIND_CODE => pg::search_pg_item_serv::add(add_req, funs, ctx).await,
         kind_code => Err(funs.bs_not_implemented(kind_code)),
     }
 }
