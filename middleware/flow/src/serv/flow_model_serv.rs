@@ -8,7 +8,7 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
-        rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE, self},
+        rbum_item_serv::{self, RbumItemCrudOperation, RBUM_ITEM_TABLE},
     },
 };
 use itertools::Itertools;
@@ -88,8 +88,15 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
             funs,
             ctx,
         )
-        .await?.is_some() {
-            return Err(funs.err().internal_error("flow_model_serv", "before_add_item", "There can only be one model under the same tag and own_paths", "500-mx-flow-internal-error"))
+        .await?
+        .is_some()
+        {
+            return Err(funs.err().internal_error(
+                "flow_model_serv",
+                "before_add_item",
+                "There can only be one model under the same tag and own_paths",
+                "500-mx-flow-internal-error",
+            ));
         }
         Ok(())
     }

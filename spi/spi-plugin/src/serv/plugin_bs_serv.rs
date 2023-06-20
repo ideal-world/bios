@@ -5,10 +5,12 @@ use bios_basic::{
             rbum_rel_agg_dto::RbumRelAggResp,
             rbum_rel_attr_dto::RbumRelAttrAddReq,
         },
+        helper::rbum_scope_helper,
         rbum_enumeration::RbumRelFromKind,
         serv::{
             rbum_crud_serv::RbumCrudOperation,
             rbum_item_serv::RbumItemCrudOperation,
+            rbum_kind_serv::RbumKindServ,
             rbum_rel_serv::{RbumRelAttrServ, RbumRelServ},
         },
     },
@@ -25,7 +27,15 @@ use tardis::{
     TardisFunsInst,
 };
 
-use crate::dto::plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp};
+use crate::{
+    dto::{
+        plugin_bs_dto::{PluginBsAddReq, PluginBsCertInfoResp, PluginBsInfoResp},
+        plugin_kind_dto::PluginKindAggResp,
+    },
+    plugin_enumeration::PluginAppBindRelKind,
+};
+
+use super::plugin_rel_serv::PluginRelServ;
 
 pub struct PluginBsServ;
 
@@ -140,11 +150,27 @@ impl PluginBsServ {
         })
     }
 
+    pub async fn get_cert_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
+        let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
+        let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
+        Ok(PluginBsCertInfoResp {
+            id: bs.id,
+            name: bs.name,
+            conn_uri: bs.conn_uri,
+            ak: bs.ak,
+            sk: bs.sk,
+            ext: bs.ext,
+            private: bs.private,
+            rel: Some(rel_agg),
+        })
+    }
+
     pub async fn get_bs_by_rel(kind_code: Option<String>, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
         let bs = SpiBsServ::find_one_item(
             &SpiBsFilterReq {
                 basic: RbumBasicFilterReq {
                     with_sub_own_paths: true,
+                    own_paths: Some("".to_string()),
                     enabled: Some(true),
                     ..Default::default()
                 },
@@ -178,19 +204,28 @@ impl PluginBsServ {
     }
 
     pub async fn get_bs_by_rel_up(kind_code: Option<String>, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsCertInfoResp> {
-        let own_paths = Self::get_parent_own_paths(ctx.own_paths.as_str())?;
-        let mut resp = Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"));
-        for own_path in own_paths {
-            resp = Self::get_bs_by_rel(kind_code.clone(), own_path.as_str(), funs, ctx).await;
-            info!("【get_bs_by_rel_up】 {}: {}", own_path, resp.is_ok());
-            if resp.is_ok() {
-                break;
+        let kind_id = RbumKindServ::get_rbum_kind_id_by_code(&kind_code.clone().unwrap_or_default(), funs).await?;
+
+        if let Some(kind_id) = kind_id {
+            if let Some(rel_bind) = PluginRelServ::find_from_simple_rels(
+                &PluginAppBindRelKind::PluginAppBindKind,
+                &RbumRelFromKind::Item,
+                &rbum_scope_helper::get_max_level_id_by_context(ctx).unwrap_or_default(),
+                Some(kind_id.clone()),
+                true,
+                None,
+                None,
+                funs,
+                ctx,
+            )
+            .await?
+            .get(0)
+            {
+                let rel = PluginRelServ::get_rel(&rel_bind.rel_id, funs, ctx).await?;
+                return Self::get_cert_bs(&rel.from_rbum_id, &rel.to_rbum_item_id, funs, ctx).await;
             }
         }
-        match resp {
-            Ok(bs) => Ok(bs),
-            Err(err) => Err(err),
-        }
+        Err(funs.err().not_found(&SpiBsServ::get_obj_name(), "get_bs_by_rel_up", "not found backend service", "404-spi-bs-not-exist"))
     }
 
     pub async fn get_bs_rel_agg(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<RbumRelAggResp> {

@@ -6,7 +6,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq, FlowTagKind, FlowModelAggResp};
+use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelModifyReq, FlowTagKind};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;

@@ -241,6 +241,7 @@ impl FlowInstServ {
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
+                rel_business_obj_id: todo!(),
             })
             .collect_vec())
     }
@@ -331,6 +332,7 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
+                    rel_business_obj_id: todo!(),
                 })
                 .collect_vec(),
         })

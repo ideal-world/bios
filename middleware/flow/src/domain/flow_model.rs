@@ -1,7 +1,7 @@
 use tardis::db::sea_orm;
+use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
-use tardis::db::sea_orm::prelude::Json;
 
 use crate::dto::flow_model_dto::FlowTagKind;
 
@@ -20,7 +20,7 @@ pub struct Model {
     pub icon: String,
     pub info: String,
 
-     /// Model variable list / 模型变量列表
+    /// Model variable list / 模型变量列表
     pub vars: Option<Json>,
 
     /// Initial state / 初始状态
@@ -51,11 +51,11 @@ pub struct Model {
     pub tag: Option<FlowTagKind>,
 
     /// External Data Interaction Interface / 外部的数据交互接口
-    /// 
+    ///
     /// Request Method: PUT
-    /// 
+    ///
     /// Request Context-Type: application/json
-    /// 
+    ///
     /// ## Get related information
     /// ```
     /// Request Body:{
@@ -68,7 +68,7 @@ pub struct Model {
     ///         "rel_changed_state": "" // 关联变更的状态，可选
     ///     }
     /// }
-    /// 
+    ///
     /// Response Body: {
     ///     "code": "200",
     ///     "msg": "",
@@ -76,9 +76,9 @@ pub struct Model {
     ///         "rel_bus_obj_id": "" // 关联的业务对象Id
     ///     }]
     /// }
-    /// 
+    ///
     /// ## 变更通知
-    /// 
+    ///
     /// Request Body:{
     ///     "kind": "", // NOTIFY_CHANGES
     ///     "curr_tag": "", // 当前类型，对应于此模型的 `tag` 字段
@@ -89,7 +89,7 @@ pub struct Model {
     ///         "changed_vars": {} // 变更的变量列表
     ///     }
     /// }
-    /// 
+    ///
     /// Response Body: {
     ///     "code": "200",
     ///     "msg": "",
