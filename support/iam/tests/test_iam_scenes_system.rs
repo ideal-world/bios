@@ -190,7 +190,7 @@ pub async fn sys_console_tenant_mgr_page(sysadmin_name: &str, sysadmin_password:
         let task_id = modify_tenant_resp.data.unwrap().unwrap();
         print!("modify tenant task id: {}", task_id);
 
-        let task_status: bool = client.get(&format!("/cc/system/task/{}", task_id)).await;
+        let _task_status: bool = client.get(&format!("/cc/system/task/{}", task_id)).await;
     }
     // Get Tenant by Tenant Id
     let tenant: IamTenantAggDetailResp = client.get(&format!("/cs/tenant/{}?tenant_id={}", tenant_id, tenant_id)).await;

@@ -217,10 +217,7 @@ impl LdapSession {
 fn extract_cn(dn: &str) -> Option<String> {
     match CN_R.captures(dn) {
         None => None,
-        Some(cap) => {
-            let cn = cap.get(2).unwrap().as_str();
-            Some(cn.to_string())
-        }
+        Some(cap) => cap.get(2).map(|cn| cn.as_str().to_string()),
     }
 }
 
@@ -252,6 +249,10 @@ async fn handle_client(socket: TcpStream, _addr: net::SocketAddr, config: &IamLd
                 return;
             }
             ServerOps::Whoami(req) => vec![session.do_whoami(&req)],
+            ServerOps::Compare(_) => {
+                // No need to notify on Compare (per rfc4511)
+                return;
+            }
         };
 
         for rmsg in result.into_iter() {
@@ -270,7 +271,7 @@ pub async fn start() -> TardisResult<()> {
     let config = &config.ldap;
     let addr_str = format!("0.0.0.0:{}", config.port);
     let addr = net::SocketAddr::from_str(&addr_str).map_err(|e| TardisError::format_error(&format!("[TardisLdapServer] Address error: {e:?}"), "406-iam-ldap-addr-error"))?;
-    let listener = Box::new(TcpListener::bind(&addr).await.unwrap());
+    let listener = Box::new(TcpListener::bind(&addr).await?);
     tokio::spawn(async move {
         loop {
             match listener.accept().await {

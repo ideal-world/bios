@@ -109,9 +109,9 @@ pub async fn test(context1: &TardisContext, context2: &TardisContext) -> TardisR
     assert!(apps.records.iter().any(|i| i.name == "测试应用"));
 
     info!("【test_ct_app】 : Delete App By Id, with err");
-    assert!(IamAppServ::delete_item_with_all_rels("11111", &funs, &context1).await.is_err());
+    assert!(IamAppServ::delete_item_with_all_rels("11111", &funs, context1).await.is_err());
     info!("【test_ct_app】 : Delete App By Id, with err");
-    assert!(IamAppServ::delete_item_with_all_rels(&app_id1, &funs, &context2).await.is_err());
+    assert!(IamAppServ::delete_item_with_all_rels(&app_id1, &funs, context2).await.is_err());
     info!("【test_ct_app】 : Delete App By Id");
     assert_eq!(
         IamAppServ::paginate_items(

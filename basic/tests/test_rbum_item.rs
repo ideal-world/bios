@@ -350,7 +350,7 @@ async fn test_rbum_item_attr(context: &TardisContext) -> TardisResult<()> {
 async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisResult<()> {
     let mut funs = TardisFuns::inst_with_db_conn("".to_string(), None);
     funs.begin().await?;
-    let compatible_type = TardisFuns::reldb_by_module_or_default(&"".to_string()).compatible_type();
+    let compatible_type = TardisFuns::reldb_by_module_or_default("").compatible_type();
     TardisFuns::inst_with_db_conn("".to_string(), None).db().init(test_iam_account::ActiveModel::init(TardisFuns::reldb().backend(), None, compatible_type)).await?;
 
     info!("【test_rbum_item_attr】 : Prepare : RbumKindServ::add_rbum");
@@ -613,7 +613,7 @@ async fn test_rbum_item_attr_has_main_table(context: &TardisContext) -> TardisRe
     let main_values = funs
         .db()
         .get_dto::<IamAccountResp>(
-            &Query::select()
+            Query::select()
                 .column(test_iam_account::Column::Id)
                 .column(test_iam_account::Column::Ext1Idx)
                 .column(test_iam_account::Column::Ext2)

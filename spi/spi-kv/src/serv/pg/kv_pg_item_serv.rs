@@ -164,17 +164,17 @@ WHERE
         .into_iter()
         .map(|item| {
             if total_size == 0 {
-                total_size = item.try_get("", "total").unwrap();
+                total_size = item.try_get("", "total")?;
             }
-            KvItemSummaryResp {
-                key: item.try_get("", "k").unwrap(),
-                value: item.try_get("", "v").unwrap(),
-                info: item.try_get("", "info").unwrap(),
-                create_time: item.try_get("", "create_time").unwrap(),
-                update_time: item.try_get("", "update_time").unwrap(),
-            }
+            Ok(KvItemSummaryResp {
+                key: item.try_get("", "k")?,
+                value: item.try_get("", "v")?,
+                info: item.try_get("", "info")?,
+                create_time: item.try_get("", "create_time")?,
+                update_time: item.try_get("", "update_time")?,
+            })
         })
-        .collect();
+        .collect::<TardisResult<Vec<_>>>()?;
     Ok(TardisPage {
         page_size: match_req.page_size as u64,
         page_number: match_req.page_number as u64,

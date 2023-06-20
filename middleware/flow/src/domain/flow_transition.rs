@@ -67,17 +67,19 @@ pub struct Model {
     /// TODO Vec<FlowVarInfo>
     pub vars_collect: Json,
 
+    /// rear action config / 关于后置动作的配置
+    /// TODO FlowRearActionInfo
+    // pub rear_action: Json,
+
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口
     ///
     /// action similar to `Event` in BPMN
-    /// TODO 该功能未实现
     pub action_by_pre_callback: String,
     /// External interface to be called when leaving this transition
     /// 离开此流转时，需要调用的外部接口
     ///
     /// action similar to `Event` in BPMN
-    /// TODO 该功能未实现
     pub action_by_post_callback: String,
 
     /// TODO Vec<FlowTransitionActionByVarChangeInfo>

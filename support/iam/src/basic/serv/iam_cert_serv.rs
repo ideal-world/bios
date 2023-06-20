@@ -439,7 +439,7 @@ impl IamCertServ {
                 kind: Some(IamCertExtKind::ThirdParty.to_string()),
                 supplier: Some(add_req.supplier.clone()),
                 vcode: None,
-                ext: Some(add_req.ext.as_ref().unwrap().to_string()),
+                ext: Some(add_req.ext.clone().unwrap_or_default()),
                 start_time: None,
                 end_time: None,
                 conn_uri: add_req.conn_uri.clone(),
@@ -463,7 +463,7 @@ impl IamCertServ {
             &mut RbumCertModifyReq {
                 ext: modify_req.ext.clone(),
                 ak: Some(TrimString(modify_req.ak.trim().to_string())),
-                sk: Some(TrimString(modify_req.sk.as_ref().unwrap().to_string())),
+                sk: Some(TrimString(modify_req.sk.clone().unwrap_or_default())),
                 is_ignore_check_sk: false,
                 start_time: None,
                 end_time: None,
@@ -583,12 +583,7 @@ impl IamCertServ {
                 ctx,
             )
             .await;
-            is_ldap = if cert_conf.is_ok() {
-                let resp = cert_conf.unwrap();
-                resp.kind == "Ldap"
-            } else {
-                false
-            };
+            is_ldap = if let Ok(resp) = cert_conf { resp.kind == "Ldap" } else { false };
             RbumCertFilterReq {
                 basic: RbumBasicFilterReq {
                     own_paths: Some(tenant_id.to_string()),
@@ -892,6 +887,38 @@ impl IamCertServ {
         Ok(result)
     }
 
+    pub async fn find_global_cert_conf_id_by_kind(kind: &str, tenant_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<Vec<String>> {
+        let mut cert_conf_ids = Vec::new();
+        let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(kind, None, funs).await?;
+        cert_conf_ids.push(global_rbum_cert_conf_id);
+        if let Some(tenant_id) = tenant_id {
+            let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(kind, Some(tenant_id.to_owned()), funs).await?;
+            cert_conf_ids.push(rbum_cert_conf_id);
+        }
+        Ok(cert_conf_ids)
+    }
+
+    pub async fn count_cert_ak_by_kind(kind: &str, ak: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<u64> {
+        let cert_conf_ids = Self::find_global_cert_conf_id_by_kind(kind, rbum_scope_helper::get_path_item(RBUM_SCOPE_LEVEL_TENANT.to_int(), &ctx.own_paths), funs).await?;
+        let count = RbumCertServ::count_rbums(
+            &RbumCertFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some("".to_string()),
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ak: Some(ak.to_string()),
+                rel_rbum_kind: Some(RbumCertRelKind::Item),
+                rel_rbum_cert_conf_ids: Some(cert_conf_ids),
+                ..Default::default()
+            },
+            funs,
+            &ctx,
+        )
+        .await?;
+        return Ok(count);
+    }
+
     pub async fn get_cert_conf_id_by_kind(kind: &str, rel_iam_item_id: Option<String>, funs: &TardisFunsInst) -> TardisResult<String> {
         Self::get_cert_conf_id_and_ext_by_kind_supplier(kind, "", rel_iam_item_id, funs).await.map(|r| r.id)
     }
@@ -1127,7 +1154,7 @@ impl IamCertServ {
     pub async fn add_or_modify_sync_third_integration_config(req: IamThirdIntegrationSyncAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         let headers = Some(vec![(
             "Tardis-Context".to_string(),
-            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx).unwrap()),
+            TardisFuns::crypto.base64.encode(&TardisFuns::json.obj_to_string(&ctx)?),
         )]);
         let schedule_url = funs.conf::<IamConfig>().spi.schedule_url.clone();
 
@@ -1146,8 +1173,7 @@ impl IamCertServ {
                         ]),
                         headers.clone(),
                     )
-                    .await
-                    .unwrap();
+                    .await?;
             }
         }
 
@@ -1227,9 +1253,26 @@ impl IamCertServ {
         funs: &TardisFunsInst,
     ) -> TardisResult<(String, RbumCertRelKind, String)> {
         let result: Result<(String, RbumCertRelKind, String), tardis::basic::error::TardisError> = if rbum_cert_conf_id.is_some() {
-            RbumCertServ::validate_by_spec_cert_conf(ak, input_sk, rbum_cert_conf_id.unwrap(), ignore_end_time, own_paths.as_ref().unwrap(), funs).await
+            RbumCertServ::validate_by_spec_cert_conf(
+                ak,
+                input_sk,
+                rbum_cert_conf_id.unwrap_or(""),
+                ignore_end_time,
+                own_paths.clone().unwrap_or_default().as_str(),
+                funs,
+            )
+            .await
         } else {
-            RbumCertServ::validate_by_ak_and_basic_sk(ak, input_sk, rel_rbum_kind.unwrap(), ignore_end_time, own_paths.clone(), allowed_kinds.unwrap(), funs).await
+            RbumCertServ::validate_by_ak_and_basic_sk(
+                ak,
+                input_sk,
+                rel_rbum_kind.unwrap_or(&RbumCertRelKind::Item),
+                ignore_end_time,
+                own_paths.clone(),
+                allowed_kinds.unwrap_or_default(),
+                funs,
+            )
+            .await
         };
         if let Err(e) = result.as_ref() {
             if e.message.as_str() == "cert is locked" {

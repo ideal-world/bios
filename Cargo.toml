@@ -4,13 +4,12 @@ members = [
     "basic",
     "spi/*",
     "gateway/test",
-    "middleware/event",
-    "middleware/schedule",
-    "middleware/flow",
+    "middleware/*",
     "support/iam",
     "support/auth",
     "support/enhance-wasm",
     "services/*",
+    "sdk/*",
 ]
 
 [workspace.package]

@@ -339,29 +339,9 @@ impl IamCertPhoneVCodeServ {
             own_paths: own_paths.to_string(),
             ..Default::default()
         };
-        let rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), Some(tenant_id.to_owned()), funs).await?;
-        let global_rbum_cert_conf_id = IamCertServ::get_cert_conf_id_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), None, funs).await?;
-        if RbumCertServ::count_rbums(
-            &RbumCertFilterReq {
-                basic: RbumBasicFilterReq {
-                    own_paths: Some("".to_string()),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                ak: Some(phone.to_string()),
-                rel_rbum_kind: Some(RbumCertRelKind::Item),
-                rel_rbum_cert_conf_ids: Some(vec![rbum_cert_conf_id, global_rbum_cert_conf_id]),
-                ..Default::default()
-            },
-            funs,
-            &mock_ctx,
-        )
-        .await?
-            == 0
-        {
-            return Err(funs.err().not_found("iam_cert_phone_vcode", "activate", "phone not find", "404-iam-cert-phone-not-exist"));
+        if IamCertServ::count_cert_ak_by_kind(&IamCertKernelKind::PhoneVCode.to_string(), phone, funs, &mock_ctx).await? == 0 {
+            return Err(funs.err().not_found("iam_cert_phone_vcode", "send", "phone not find", "404-iam-cert-phone-not-exist"));
         }
-
         let vcode = Self::get_vcode();
         RbumCertServ::add_vcode_to_cache(phone, &vcode, &own_paths, funs).await?;
         SmsClient::send_vcode(phone, &vcode, funs, &mock_ctx).await
@@ -408,5 +388,4 @@ impl IamCertPhoneVCodeServ {
         }
         Ok(())
     }
-    // TODO
 }

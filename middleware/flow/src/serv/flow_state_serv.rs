@@ -67,7 +67,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             kind_conf: Set(add_req.kind_conf.as_ref().unwrap_or(&json!({})).clone()),
             template: Set(add_req.template.unwrap_or(false)),
             rel_state_id: Set(add_req.rel_state_id.as_ref().unwrap_or(&"".to_string()).to_string()),
-            tag: Set(add_req.tag.as_ref().unwrap_or(&"".to_string()).to_string()),
+            tags: Set(add_req.tags.as_ref().unwrap_or(&vec![]).to_vec().join(",")),
             ..Default::default()
         })
     }
@@ -106,7 +106,7 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
             && modify_req.kind_conf.is_none()
             && modify_req.template.is_none()
             && modify_req.rel_state_id.is_none()
-            && modify_req.tag.is_none()
+            && modify_req.tags.is_none()
         {
             return Ok(None);
         }
@@ -135,8 +135,8 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         if let Some(rel_state_id) = &modify_req.rel_state_id {
             flow_state.rel_state_id = Set(rel_state_id.to_string());
         }
-        if let Some(tag) = &modify_req.tag {
-            flow_state.tag = Set(tag.to_string());
+        if let Some(tags) = &modify_req.tags {
+            flow_state.tags = Set(tags.to_vec().join(","));
         }
         Ok(Some(flow_state))
     }
@@ -157,13 +157,13 @@ impl RbumItemCrudOperation<flow_state::ActiveModel, FlowStateAddReq, FlowStateMo
         query.column((flow_state::Entity, flow_state::Column::KindConf));
         query.column((flow_state::Entity, flow_state::Column::Template));
         query.column((flow_state::Entity, flow_state::Column::RelStateId));
-        query.column((flow_state::Entity, flow_state::Column::Tag));
+        query.column((flow_state::Entity, flow_state::Column::Tags));
 
         if let Some(sys_state) = &filter.sys_state {
             query.and_where(Expr::col(flow_state::Column::SysState).eq(sys_state.clone()));
         }
         if let Some(tag) = &filter.tag {
-            query.and_where(Expr::col(flow_state::Column::Tag).eq(tag.as_str()));
+            query.and_where(Expr::col(flow_state::Column::Tags).like(format!("%{}%", tag)));
         }
         if let Some(state_kind) = &filter.state_kind {
             query.and_where(Expr::col(flow_state::Column::StateKind).eq(state_kind.clone()));

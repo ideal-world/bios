@@ -1,6 +1,6 @@
 use bios_basic::spi::{serv::spi_bs_serv::SpiBsServ, spi_funs::SpiBsInstExtractor, spi_initializer::common};
 use tardis::{
-    basic::{dto::TardisContext, result::TardisResult},
+    basic::{dto::TardisContext, error::TardisError, result::TardisResult},
     os::os_client::TardisOSClient,
     TardisFunsInst,
 };
@@ -28,7 +28,10 @@ pub async fn presign_obj_url(
             if private {
                 client.object_get_url(object_path, exp_secs, bucket_name)
             } else {
-                Ok(format!("{}/{}/{}", spi_bs.conn_uri, bucket_name.unwrap(), object_path))
+                let Some(bucket_name) = bucket_name else {
+                    return Err(TardisError::internal_error("Cannot get public bucket name while presign object url, it may due to the lack of isolation_flag", "500-spi-object-s3-cannot-get-bucket-name"));
+                };
+                Ok(format!("{}/{}/{}", spi_bs.conn_uri, bucket_name, object_path))
             }
         }
     }

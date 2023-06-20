@@ -32,8 +32,9 @@ use crate::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
             FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowTagKind},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
+        flow_transition_dto::FlowTransitionDetailResp,
     },
     serv::{flow_model_serv::FlowModelServ, flow_state_serv::FlowStateServ},
 };
@@ -41,37 +42,28 @@ use crate::{
 pub struct FlowInstServ;
 
 impl FlowInstServ {
-    pub async fn start(flow_model_id: &str, start_req: &FlowInstStartReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
-        let flow_model = FlowModelServ::find_items(
+    pub async fn start(start_req: &FlowInstStartReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        // get model by own_paths
+        let flow_model_id = Self::get_model_id_by_own_paths(&start_req.tag, funs, ctx).await?;
+        let flow_model = FlowModelServ::get_item(
+            &flow_model_id,
             &FlowModelFilterReq {
                 basic: RbumBasicFilterReq {
-                    ids: Some(vec![flow_model_id.to_string()]),
                     with_sub_own_paths: true,
                     ..Default::default()
                 },
                 ..Default::default()
             },
-            None,
-            None,
             funs,
             ctx,
         )
-        .await?
-        .pop();
-        if flow_model.is_none() {
-            return Err(funs.err().not_found(
-                "flow_inst",
-                "start",
-                &format!("flow model {} not found", flow_model_id),
-                "404-flow-inst-rel-model-not-found",
-            ));
-        }
+        .await?;
         let id = TardisFuns::field.nanoid();
         let flow_inst: flow_inst::ActiveModel = flow_inst::ActiveModel {
             id: Set(id.clone()),
             rel_flow_model_id: Set(flow_model_id.to_string()),
 
-            current_state_id: Set(flow_model.unwrap().init_state_id),
+            current_state_id: Set(flow_model.init_state_id.clone()),
 
             create_vars: Set(start_req.create_vars.as_ref().map(|vars| TardisFuns::json.obj_to_json(vars).unwrap())),
             create_ctx: Set(FlowOperationContext::from_ctx(ctx)),
@@ -80,7 +72,50 @@ impl FlowInstServ {
             ..Default::default()
         };
         funs.db().insert_one(flow_inst, ctx).await?;
+
+        Self::do_request_webhook(
+            None,
+            flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == flow_model.init_state_id).collect_vec().pop(),
+        )
+        .await?;
+
         Ok(id)
+    }
+
+    pub async fn get_model_id_by_own_paths(tag: &FlowTagKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+        let mut result = None;
+        // try get model in app path
+        result = FlowModelServ::find_one_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                },
+                tag: Some(tag.clone()),
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        // try get model in tenant path or default model
+        if result.is_none() {
+            result = FlowModelServ::find_one_item(
+                &FlowModelFilterReq {
+                    basic: RbumBasicFilterReq {
+                        own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
+                        ..Default::default()
+                    },
+                    tag: Some(tag.clone()),
+                },
+                funs,
+                ctx,
+            )
+            .await?;
+        }
+        match result {
+            Some(model) => Ok(model.id),
+            None => Err(funs.err().not_found("flow_inst_serv", "get_model_id_by_own_paths", "model not found", "404-model-not-found")),
+        }
     }
 
     pub async fn abort(flow_inst_id: &str, abort_req: &FlowInstAbortReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
@@ -212,6 +247,7 @@ impl FlowInstServ {
 
     pub async fn paginate(
         flow_model_id: Option<String>,
+        tag: Option<FlowTagKind>,
         finish: Option<bool>,
         with_sub: Option<bool>,
         page_number: u32,
@@ -263,6 +299,10 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
         }
         if let Some(flow_model_id) = flow_model_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(&tag, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {
@@ -368,6 +408,7 @@ impl FlowInstServ {
 
     pub async fn transfer(flow_inst_id: &str, transfer_req: &FlowInstTransferReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<FlowInstTransferResp> {
         let flow_inst = Self::get(flow_inst_id, funs, ctx).await?;
+        let current_state_id = flow_inst.current_state_id.clone();
         let flow_model = FlowModelServ::get_item(
             &flow_inst.rel_flow_model_id,
             &FlowModelFilterReq {
@@ -435,11 +476,39 @@ impl FlowInstServ {
 
         funs.db().update_one(flow_inst, ctx).await?;
 
+        Self::do_request_webhook(
+            flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == current_state_id).collect_vec().pop(),
+            flow_model.transitions().iter().filter(|model_transition| model_transition.to_flow_state_id == next_flow_state.id).collect_vec().pop(),
+        )
+        .await?;
+
         Ok(FlowInstTransferResp {
             new_flow_state_id: next_flow_transition.next_flow_state_id,
             new_flow_state_name: next_flow_transition.next_flow_state_name,
             vars: Some(new_vars),
         })
+    }
+
+    /// request webhook when the transition occurs
+    async fn do_request_webhook(from_transion_detail: Option<&FlowTransitionDetailResp>, to_transion_detail: Option<&FlowTransitionDetailResp>) -> TardisResult<()> {
+        if let Some(from_transion_detail) = from_transion_detail {
+            if !from_transion_detail.action_by_post_callback.is_empty() {
+                let callback_url = format!(
+                    "{}?transion={}",
+                    from_transion_detail.action_by_post_callback.as_str(),
+                    from_transion_detail.to_flow_state_name
+                );
+                let _ = TardisFuns::web_client().get_to_str(&callback_url, None).await?;
+            }
+        }
+        if let Some(to_transion_detail) = to_transion_detail {
+            if !to_transion_detail.action_by_pre_callback.is_empty() {
+                let callback_url = format!("{}?transion={}", to_transion_detail.action_by_pre_callback.as_str(), to_transion_detail.to_flow_state_name);
+                let _ = TardisFuns::web_client().get_to_str(&callback_url, None).await?;
+            }
+        }
+
+        Ok(())
     }
 
     /// The kernel function of flow processing

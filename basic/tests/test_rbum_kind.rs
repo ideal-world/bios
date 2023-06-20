@@ -21,7 +21,7 @@ pub async fn test(context: &TardisContext) -> TardisResult<()> {
 }
 
 async fn test_rbum_kind_url() -> TardisResult<()> {
-    assert_eq!(false, RbumKindAttrServ::url_match("http://iam/{key}?{key}=1&{key2}=2").unwrap());
+    assert!(!RbumKindAttrServ::url_match("http://iam/{key}?{key}=1&{key2}=2").unwrap());
     assert_eq!(
         "http://iam/t1?t1=1&t2=2",
         RbumKindAttrServ::url_replace(
@@ -31,18 +31,15 @@ async fn test_rbum_kind_url() -> TardisResult<()> {
         .unwrap()
         .as_str()
     );
-    assert_eq!(
-        true,
-        RbumKindAttrServ::url_match(
-            RbumKindAttrServ::url_replace(
-                "http://iam/{key}?{key}=1&{key2}=2",
-                HashMap::from([("key".to_string(), "t1".to_string()), ("key2".to_string(), "t2".to_string())]),
-            )
-            .unwrap()
-            .as_str(),
+    assert!(RbumKindAttrServ::url_match(
+        RbumKindAttrServ::url_replace(
+            "http://iam/{key}?{key}=1&{key2}=2",
+            HashMap::from([("key".to_string(), "t1".to_string()), ("key2".to_string(), "t2".to_string())]),
         )
         .unwrap()
-    );
+        .as_str(),
+    )
+    .unwrap());
     Ok(())
 }
 

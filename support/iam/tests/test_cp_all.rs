@@ -28,7 +28,7 @@ pub async fn test(sysadmin_info: (&str, &str), system_admin_context: &TardisCont
     funs.begin().await?;
 
     info!("【test_cp_all】 : Prepare : IamCsTenantServ::add_tenant");
-    let (tenant_id, tenant_admin_pwd, tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
+    let (tenant_id, tenant_admin_pwd, _tenant_audit_pwd) = IamTenantServ::add_tenant_agg(
         &IamTenantAggAddReq {
             name: TrimString("测试租户1".to_string()),
             icon: None,

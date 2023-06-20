@@ -103,7 +103,9 @@ impl IamCertOAuth2Serv {
     }
 
     pub async fn get_cert_conf(id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<IamCertConfOAuth2Resp> {
-        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx).await.map(|i| TardisFuns::json.str_to_obj(&i.ext).unwrap())
+        RbumCertConfServ::get_rbum(id, &RbumCertConfFilterReq::default(), funs, ctx)
+            .await
+            .map(|i: bios_basic::rbum::dto::rbum_cert_conf_dto::RbumCertConfDetailResp| TardisFuns::json.str_to_obj(&i.ext))?
     }
 
     pub async fn add_or_modify_cert(

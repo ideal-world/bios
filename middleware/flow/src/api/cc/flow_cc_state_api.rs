@@ -70,6 +70,7 @@ impl FlowCcStateApi {
         enabled: Query<Option<bool>>,
         template: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
+        is_global: Query<Option<bool>>,
         page_number: Query<u32>,
         page_size: Query<u32>,
         desc_by_create: Query<Option<bool>>,
@@ -77,12 +78,24 @@ impl FlowCcStateApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<FlowStateSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
+
+        let (own_paths, with_sub_own_paths) = if let Some(is_global) = is_global.0 {
+            if is_global {
+                (Some("".to_string()), false)
+            } else {
+                (Some("".to_string()), with_sub.0.unwrap_or(false))
+            }
+        } else {
+            (Some("".to_string()), true)
+        };
+
         let result = FlowStateServ::paginate_items(
             &FlowStateFilterReq {
                 basic: RbumBasicFilterReq {
                     ids: ids.0.map(|ids| ids.split(',').map(|id| id.to_string()).collect::<Vec<String>>()),
                     name: name.0,
-                    with_sub_own_paths: with_sub.0.unwrap_or(false),
+                    with_sub_own_paths,
+                    own_paths,
                     enabled: enabled.0,
                     ..Default::default()
                 },
@@ -99,6 +112,7 @@ impl FlowCcStateApi {
             &ctx.0,
         )
         .await?;
+
         TardisResp::ok(result)
     }
 

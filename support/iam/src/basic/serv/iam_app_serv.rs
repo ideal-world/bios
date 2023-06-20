@@ -27,7 +27,7 @@ use crate::basic::serv::iam_rel_serv::IamRelServ;
 use crate::basic::serv::iam_role_serv::IamRoleServ;
 use crate::basic::serv::iam_set_serv::IamSetServ;
 use crate::iam_config::{IamBasicConfigApi, IamBasicInfoManager, IamConfig};
-use crate::iam_constants;
+use crate::iam_constants::{self, RBUM_SCOPE_LEVEL_PRIVATE};
 use crate::iam_constants::{RBUM_ITEM_ID_APP_LEN, RBUM_SCOPE_LEVEL_APP};
 use crate::iam_enumeration::{IamRelKind, IamSetKind};
 pub struct IamAppServ;
@@ -108,7 +108,7 @@ impl RbumItemCrudOperation<iam_app::ActiveModel, IamAppAddReq, IamAppModifyReq, 
             IamIdentCacheServ::delete_tokens_and_contexts_by_tenant_or_app(id, true, funs, ctx).await?;
         }
         #[cfg(feature = "spi_kv")]
-        Self::add_or_modify_app_kv(id, funs, ctx).await.unwrap();
+        Self::add_or_modify_app_kv(id, funs, ctx).await?;
         Ok(())
     }
 
@@ -133,7 +133,7 @@ impl IamAppServ {
     }
 
     pub fn is_app_level_by_ctx(ctx: &TardisContext) -> bool {
-        rbum_scope_helper::get_scope_level_by_context(ctx).unwrap() == RBUM_SCOPE_LEVEL_APP
+        rbum_scope_helper::get_scope_level_by_context(ctx).unwrap_or(RBUM_SCOPE_LEVEL_PRIVATE) == RBUM_SCOPE_LEVEL_APP
     }
 
     pub fn get_id_by_ctx(ctx: &TardisContext, funs: &TardisFunsInst) -> TardisResult<String> {

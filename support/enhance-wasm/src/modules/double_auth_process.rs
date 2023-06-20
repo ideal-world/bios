@@ -87,5 +87,6 @@ mod tests {
         sleep(Duration::from_secs(2));
         assert!(need_auth("GET", "iam/ct/all/ddd").unwrap());
         assert!(!need_auth("GET", "iam/cc/ddd").unwrap());
+        assert!(!need_auth("GET", "iam/cc/ddd?test1=1&test2=2").unwrap());
     }
 }

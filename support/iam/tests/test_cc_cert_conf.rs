@@ -15,8 +15,8 @@ pub async fn test(
     sys_context: &TardisContext,
     t1_context: &TardisContext,
     t2_context: &TardisContext,
-    t2_a1_context: &TardisContext,
-    t2_a2_context: &TardisContext,
+    _t2_a1_context: &TardisContext,
+    _t2_a2_context: &TardisContext,
 ) -> TardisResult<()> {
     test_single_level(sys_context, t1_context).await?;
     test_single_level(t1_context, t2_context).await?;
@@ -148,14 +148,14 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     .await?;
 
     info!("【test_ct_cert_conf】 : test_single_level : Get Cert Conf By Id");
-    assert!(IamCertServ::get_cert_conf(&cert_conf_user_pwd_id, get_max_level_id_by_context(&context), &funs, another_context).await.is_err());
-    let cert_conf = IamCertServ::get_cert_conf(&cert_conf_user_pwd_id, get_max_level_id_by_context(&context), &funs, context).await?;
+    assert!(IamCertServ::get_cert_conf(&cert_conf_user_pwd_id, get_max_level_id_by_context(context), &funs, another_context).await.is_err());
+    let cert_conf = IamCertServ::get_cert_conf(&cert_conf_user_pwd_id, get_max_level_id_by_context(context), &funs, context).await?;
     assert_eq!(cert_conf.id, cert_conf_user_pwd_id);
     assert_eq!(cert_conf.ak_note, "");
-    let cert_conf = IamCertServ::get_cert_conf(&cert_conf_mail_vcode_id, get_max_level_id_by_context(&context), &funs, context).await?;
+    let cert_conf = IamCertServ::get_cert_conf(&cert_conf_mail_vcode_id, get_max_level_id_by_context(context), &funs, context).await?;
     assert_eq!(cert_conf.id, cert_conf_mail_vcode_id);
     assert_eq!(cert_conf.ak_note, "ddddd1");
-    let cert_conf = IamCertServ::get_cert_conf(&cert_conf_phone_vcode_id, get_max_level_id_by_context(&context), &funs, context).await?;
+    let cert_conf = IamCertServ::get_cert_conf(&cert_conf_phone_vcode_id, get_max_level_id_by_context(context), &funs, context).await?;
     assert_eq!(cert_conf.id, cert_conf_phone_vcode_id);
     assert_eq!(cert_conf.ak_note, "ddddd1");
 
@@ -166,13 +166,13 @@ async fn test_single_level(context: &TardisContext, another_context: &TardisCont
     // assert_eq!(cert_conf.total_size, 10);
 
     info!("【test_ct_cert_conf】 : test_single_level : Delete Cert Conf By Id");
-    assert!(IamCertServ::delete_cert_conf("11111", &funs, &context).await.is_err());
-    assert!(IamCertServ::delete_cert_conf(&cert_conf_phone_vcode_id, &funs, &another_context).await.is_err());
+    assert!(IamCertServ::delete_cert_conf("11111", &funs, context).await.is_err());
+    assert!(IamCertServ::delete_cert_conf(&cert_conf_phone_vcode_id, &funs, another_context).await.is_err());
     assert_eq!(
         IamCertServ::paginate_cert_conf(Some(cert_conf_phone_vcode_id.clone()), None, None, false, None, 1, 10, None, None, &funs, context).await?.total_size,
         1
     );
-    IamCertServ::delete_cert_conf(&cert_conf_phone_vcode_id, &funs, &context).await?;
+    IamCertServ::delete_cert_conf(&cert_conf_phone_vcode_id, &funs, context).await?;
     assert_eq!(
         IamCertServ::paginate_cert_conf(Some(cert_conf_phone_vcode_id.clone()), None, None, false, None, 1, 10, None, None, &funs, context).await?.total_size,
         0

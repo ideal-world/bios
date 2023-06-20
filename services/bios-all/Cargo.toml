@@ -27,3 +27,4 @@ bios-spi-search = { path = "../../spi/spi-search" }
 bios-spi-stats = { path = "../../spi/spi-stats" }
 
 bios-mw-schedule = { path = "../../middleware/schedule" }
+bios-mw-flow = { path = "../../middleware/flow" }

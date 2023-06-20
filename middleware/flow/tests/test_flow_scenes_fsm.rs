@@ -6,7 +6,7 @@ use bios_mw_flow::dto::flow_inst_dto::{
     FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstTransferReq,
     FlowInstTransferResp,
 };
-use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq};
+use bios_mw_flow::dto::flow_model_dto::{FlowModelAddReq, FlowModelModifyReq, FlowTagKind, FlowModelAggResp};
 use bios_mw_flow::dto::flow_state_dto::{FlowStateAddReq, FlowStateSummaryResp, FlowSysStateKind};
 use bios_mw_flow::dto::flow_transition_dto::FlowTransitionAddReq;
 use bios_mw_flow::dto::flow_var_dto::FlowVarInfo;
@@ -39,7 +39,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("初始".to_string())),
                 id_prefix: Some(TrimString("init".to_string())),
-                tag: Some("proj_states".to_string()),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Start,
                 icon: None,
                 info: None,
@@ -58,7 +58,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已确认".to_string())),
                 id_prefix: Some(TrimString("confirmed".to_string())),
-                tag: Some("proj_states".to_string()),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -77,7 +77,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已拒绝".to_string())),
                 id_prefix: Some(TrimString("rejected".to_string())),
-                tag: Some("proj_states".to_string()),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -96,7 +96,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已分配".to_string())),
                 id_prefix: Some(TrimString("assigned".to_string())),
-                tag: Some("proj_states".to_string()),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -115,7 +115,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("执行中".to_string())),
                 id_prefix: Some(TrimString("executing".to_string())),
-                tag: Some("proj_states".to_string()),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Progress,
                 icon: None,
                 info: None,
@@ -134,7 +134,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
             &FlowStateAddReq {
                 name: Some(TrimString("已完成".to_string())),
                 id_prefix: Some(TrimString("finish".to_string())),
-                tag: Some("proj_states".to_string()),
+                tags: Some(vec!["proj_states".to_string()]),
                 sys_state: FlowSysStateKind::Finish,
                 icon: None,
                 info: None,
@@ -148,7 +148,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         )
         .await;
     // Get states list
-    let _states: TardisPage<FlowStateSummaryResp> = client.get(&format!("/cc/state?tag=proj_states&template=false&enabled=true&page_number=1&page_size=100")).await;
+    let _states: TardisPage<FlowStateSummaryResp> = client.get("/cc/state?tag=proj_states&template=false&enabled=true&page_number=1&page_size=100").await;
     // Add a model
     let model_id: String = client
         .post(
@@ -159,9 +159,11 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 icon: None,
                 info: None,
                 transitions: None,
-                tag: None,
+                tag: Some(FlowTagKind::Project),
                 scope_level: None,
                 disabled: None,
+                rel_model_id: None,
+                template: false,
             },
         )
         .await;
@@ -277,11 +279,23 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
                 tag: None,
                 scope_level: None,
                 disabled: None,
+                template: None,
             },
         )
         .await;
+
+    let _model_agg: FlowModelAggResp = client.get(&format!("/cc/model/{}", model_id)).await;
+
     // Start a instance
-    let inst_id: String = client.post(&format!("/cc/inst?flow_model_id={}", model_id), &FlowInstStartReq { create_vars: None }).await;
+    let inst_id: String = client
+        .post(
+            "/cc/inst",
+            &FlowInstStartReq {
+                tag: FlowTagKind::Project,
+                create_vars: None,
+            },
+        )
+        .await;
     // Get the current status of some tasks
     let names: HashMap<String, String> = client.get(&format!("/cc/state/names?ids={}&ids={}", state_init_id, state_assigned_id)).await;
     assert_eq!(names[&state_init_id], "初始");
@@ -305,7 +319,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
     // Find the state and transfer information of the specified instances in batch
     let state_and_next_transitions: Vec<FlowInstFindStateAndTransitionsResp> = client
         .put(
-            &format!("/cc/inst/batch/state_transitions"),
+            "/cc/inst/batch/state_transitions",
             &vec![FlowInstFindStateAndTransitionsReq {
                 flow_inst_id: inst_id.clone(),
                 vars: None,

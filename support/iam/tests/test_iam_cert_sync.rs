@@ -17,9 +17,9 @@ pub async fn test(
     ldap_account_num: u64,
     conf_ldap_add_or_modify_req: IamCertConfLdapAddOrModifyReq,
     admin_ctx: &TardisContext,
-    tenant1_admin_context: &TardisContext,
-    tenant2_admin_context: &TardisContext,
-) -> () {
+    _tenant1_admin_context: &TardisContext,
+    _tenant2_admin_context: &TardisContext,
+) {
     let funs = iam_constants::get_tardis_inst();
     //不能开启事务 iam_sync_ldap_user_to_iam 这个方法里有自己的事务
     info!("【test ldap conf curd】");
@@ -33,7 +33,7 @@ pub async fn test(
     assert!(IamCertLdapServ::add_cert_conf(&err_req_param, None, &funs, admin_ctx).await.is_err());
 
     let ldap_cert_conf_id = IamCertLdapServ::add_cert_conf(&conf_ldap_add_or_modify_req, None, &funs, admin_ctx).await.unwrap();
-    let ldap_cert_conf = IamCertLdapServ::get_cert_conf(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
+    let _ldap_cert_conf = IamCertLdapServ::get_cert_conf(&ldap_cert_conf_id, &funs, admin_ctx).await.unwrap();
 
     info!("【test ldap sync function】");
     let conf_id = IamCertServ::get_cert_conf_id_by_kind("Ldap", None, &funs).await.unwrap();

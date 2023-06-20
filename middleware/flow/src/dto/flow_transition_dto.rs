@@ -4,7 +4,7 @@ use tardis::{basic::field::TrimString, db::sea_orm, serde_json::Value, web::poem
 
 use super::flow_var_dto::FlowVarInfo;
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, poem_openapi::Object)]
 pub struct FlowTransitionAddReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub from_flow_state_id: String,
@@ -57,7 +57,7 @@ pub struct FlowTransitionModifyReq {
     pub action_by_post_callback: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, poem_openapi::Object, sea_orm::FromQueryResult)]
+#[derive(Serialize, Deserialize, Debug, Clone, poem_openapi::Object, sea_orm::FromQueryResult)]
 pub struct FlowTransitionDetailResp {
     pub id: String,
     pub name: String,
@@ -101,6 +101,28 @@ impl FlowTransitionDetailResp {
     }
 }
 
+impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
+    fn from(value: FlowTransitionDetailResp) -> Self {
+        let guard_by_other_conds = value.guard_by_other_conds();
+        let vars_collect = value.vars_collect();
+        FlowTransitionAddReq {
+            from_flow_state_id: value.from_flow_state_id,
+            to_flow_state_id: value.to_flow_state_id,
+            name: Some(value.name.into()),
+            transfer_by_auto: Some(value.transfer_by_auto),
+            transfer_by_timer: Some(value.transfer_by_timer),
+            guard_by_creator: Some(value.guard_by_creator),
+            guard_by_his_operators: Some(value.guard_by_his_operators),
+            guard_by_spec_account_ids: Some(value.guard_by_spec_account_ids),
+            guard_by_spec_role_ids: Some(value.guard_by_spec_role_ids),
+            guard_by_other_conds,
+            vars_collect,
+            action_by_pre_callback: Some(value.action_by_pre_callback),
+            action_by_post_callback: Some(value.action_by_post_callback),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
 pub struct FlowTransitionActionByVarChangeInfo {
     pub current: bool,
@@ -114,4 +136,5 @@ pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
     pub obj_state_ids: Vec<String>,
     pub changed_state_id: String,
-}
+
+
