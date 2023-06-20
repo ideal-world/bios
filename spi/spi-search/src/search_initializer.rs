@@ -31,6 +31,8 @@ pub async fn init_fun(bs_cert: SpiBsCertResp, ctx: &TardisContext, mgr: bool) ->
     match bs_cert.kind_code.as_str() {
         #[cfg(feature = "spi-pg")]
         spi_constants::SPI_PG_KIND_CODE => spi_initializer::common_pg::init(&bs_cert, ctx, mgr).await,
+        // #[cfg(feature = "spi-es")]
+        // spi_constants::SPI_ES_KIND_CODE => spi_initializer::common_es::init(&bs_cert, ctx, mgr).await,
         _ => Err(bs_cert.bs_not_implemented())?,
     }
 }
