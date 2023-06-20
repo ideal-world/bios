@@ -48,6 +48,7 @@ impl FlowCcInstApi {
     #[oai(path = "/", method = "get")]
     async fn paginate(
         &self,
+        flow_model_id: Query<Option<String>>,
         tag: Query<Option<String>>,
         finish: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
@@ -56,7 +57,7 @@ impl FlowCcInstApi {
         ctx: TardisContextExtractor,
     ) -> TardisApiResult<TardisPage<FlowInstSummaryResp>> {
         let funs = flow_constants::get_tardis_inst();
-        let result = FlowInstServ::paginate(tag.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
+        let result = FlowInstServ::paginate(flow_model_id.0, tag.0, finish.0, with_sub.0, page_number.0, page_size.0, &funs, &ctx.0).await?;
         TardisResp::ok(result)
     }
 

@@ -246,6 +246,7 @@ impl FlowInstServ {
     }
 
     pub async fn paginate(
+        flow_model_id: Option<String>,
         tag: Option<String>,
         finish: Option<bool>,
         with_sub: Option<bool>,
@@ -296,6 +297,9 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).like(format!("{}%", ctx.own_paths)));
         } else {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
+        }
+        if let Some(flow_model_id) = flow_model_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(tag) = tag {
             let flow_model_id = Self::get_model_id_by_own_paths(&tag, funs, ctx).await?;
