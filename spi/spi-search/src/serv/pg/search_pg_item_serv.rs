@@ -16,8 +16,6 @@ use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchI
 use super::search_pg_initializer;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let params = TardisFuns::json.obj_to_string(add_req)?;
-    println!("add params: {}", params);
     let mut params = Vec::new();
     params.push(Value::from(add_req.kind.to_string()));
     params.push(Value::from(add_req.key.to_string()));

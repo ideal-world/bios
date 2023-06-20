@@ -16,29 +16,10 @@ use crate::dto::search_item_dto::{SearchItemAddReq, SearchItemModifyReq, SearchI
 use super::search_es_initializer;
 
 pub async fn add(add_req: &mut SearchItemAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
-    let params = TardisFuns::json.obj_to_string(add_req)?;
-    let mut params = Vec::new();
-    params.push(Value::from(add_req.kind.to_string()));
-    params.push(Value::from(add_req.key.to_string()));
-    params.push(Value::from(add_req.title.as_str()));
-    params.push(Value::from(add_req.title.as_str()));
-    params.push(Value::from(add_req.content.as_str()));
-    params.push(Value::from(add_req.owner.as_ref().unwrap_or(&"".to_string()).as_str()));
-    params.push(Value::from(add_req.own_paths.as_ref().unwrap_or(&"".to_string()).as_str()));
-    params.push(Value::from(if let Some(create_time) = add_req.create_time { create_time } else { Utc::now() }));
-    params.push(Value::from(if let Some(update_time) = add_req.update_time { update_time } else { Utc::now() }));
-    params.push(Value::from(if let Some(ext) = &add_req.ext {
-        ext.clone()
-    } else {
-        TardisFuns::json.str_to_json("{}")?
-    }));
-    if let Some(visit_keys) = &add_req.visit_keys {
-        params.push(Value::from(visit_keys.to_sql()));
-    };
-
-
+    let data = format!(r#"{{"data": {}}}"#, TardisFuns::json.obj_to_string(add_req)?);
     let client = TardisFuns::search();
     search_es_initializer::init_index(client, &add_req.tag).await?;
+    client.create_record(&add_req.tag, &data).await?;
     Ok(())
 }
 
