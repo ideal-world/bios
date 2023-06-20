@@ -136,5 +136,4 @@ pub struct FlowTransitionActionByStateChangeInfo {
     pub obj_tag: String,
     pub obj_state_ids: Vec<String>,
     pub changed_state_id: String,
-
-
+}
