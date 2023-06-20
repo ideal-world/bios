@@ -28,7 +28,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build rust
-        run: cargo build --release
+        run: cargo build --release --bin spacegateway
 
       - name: Copy binary to workspace
         run: cp ./target/release/spacegateway ./gateway/spacegateway/
