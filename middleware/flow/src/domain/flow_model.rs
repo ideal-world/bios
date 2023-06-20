@@ -28,6 +28,53 @@ pub struct Model {
     #[index]
     pub tag: String,
 
+    /// External Data Interaction Interface / 外部的数据交互接口
+    /// 
+    /// Request Method: PUT
+    /// 
+    /// Request Context-Type: application/Json
+    /// 
+    /// ## Get related information
+    /// ```
+    /// Request Body:{
+    ///     "kind": "", // FETCH_REL_OBJ
+    ///     "curr_tag": "", // 当前类型，对应于此模型的 `tag` 字段
+    ///     "curr_bus_obj_id": "", // 当前业务对象Id
+    ///     "fetch_rel_obj": {
+    ///         "rel_tag": "", // 关联类型，对应于此模型的 `tag` 字段
+    ///         "rel_state_ids": [""] // 关联状态Id，可选
+    ///     }
+    /// }
+    /// 
+    /// Response Body: {
+    ///     "code": "200",
+    ///     "msg": "",
+    ///     "data": [{
+    ///         "rel_bus_obj_id": "" // 关联的业务对象Id
+    ///     }]
+    /// }
+    /// 
+    /// ## 变更通知
+    /// 
+    /// Request Body:{
+    ///     "kind": "", // NOTIFY_CHANGES
+    ///     "curr_tag": "", // 当前类型，对应于此模型的 `tag` 字段
+    ///     "curr_bus_obj_id": "", // 当前业务对象Id
+    ///     "notify_changes": {
+    ///         "rel_tag": "", // 关联类型，对应于此模型的 `tag` 字段
+    ///         "rel_bus_obj_id": "", // 关联的业务对象Id
+    ///         "changed_vars": {} // 变更的变量列表
+    ///     }
+    /// }
+    /// 
+    /// Response Body: {
+    ///     "code": "200",
+    ///     "msg": "",
+    ///     "data": {}
+    /// }
+    /// ```
+    pub exchange_data_url: String,
+
     #[fill_ctx(own_paths)]
     pub own_paths: String,
 }

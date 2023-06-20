@@ -13,6 +13,7 @@ use super::flow_var_dto::FlowVarInfo;
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {
+    pub rel_business_obj_id: String,
     pub create_vars: Option<HashMap<String, Value>>,
 }
 
@@ -26,6 +27,7 @@ pub struct FlowInstSummaryResp {
     pub id: String,
     pub rel_flow_model_id: String,
     pub rel_flow_model_name: String,
+    pub rel_business_obj_id: String,
 
     pub current_state_id: String,
 
@@ -45,6 +47,7 @@ pub struct FlowInstDetailResp {
     pub id: String,
     pub rel_flow_model_id: String,
     pub rel_flow_model_name: String,
+    pub rel_business_obj_id: String,
 
     pub current_state_id: String,
     pub current_state_name: Option<String>,

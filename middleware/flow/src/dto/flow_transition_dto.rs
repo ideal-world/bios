@@ -100,3 +100,18 @@ impl FlowTransitionDetailResp {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowTransitionActionByVarChangeInfo {
+    pub current: bool,
+    pub obj_tag: Option<String>,
+    pub var_name: String,
+    pub changed_val: Value,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, poem_openapi::Object, sea_orm::FromJsonQueryResult)]
+pub struct FlowTransitionActionByStateChangeInfo {
+    pub obj_tag: String,
+    pub obj_state_ids: Vec<String>,
+    pub changed_state_id: String,
+}

@@ -80,6 +80,12 @@ pub struct Model {
     /// TODO 该功能未实现
     pub action_by_post_callback: String,
 
+    /// TODO Vec<FlowTransitionActionByVarChangeInfo>
+    pub action_by_post_var_changes: Json,
+
+    /// TODO Vec<FlowTransitionActionByStateChangeInfo>
+    pub action_by_post_state_changes: Json,
+
     pub rel_flow_model_id: String,
 
     #[fill_ctx(own_paths)]
