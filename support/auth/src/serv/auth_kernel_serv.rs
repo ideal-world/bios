@@ -56,12 +56,12 @@ fn check(req: &mut AuthReq) -> TardisResult<bool> {
 }
 
 async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheClient) -> TardisResult<AuthContext> {
-    let rbum_kind = if let Some(rbum_kind) = req.headers.get(&config.head_key_protocol) {
+    let rbum_kind = if let Some(rbum_kind) = req.headers.get(&config.head_key_protocol).or_else(|| req.headers.get(&config.head_key_protocol.to_lowercase())) {
         rbum_kind.to_string()
     } else {
         "iam-res".to_string()
     };
-    let app_id = if let Some(app_id) = req.headers.get(&config.head_key_app) {
+    let app_id = if let Some(app_id) = req.headers.get(&config.head_key_app).or_else(|| req.headers.get(&config.head_key_app.to_lowercase())) {
         app_id.to_string()
     } else {
         "".to_string()
@@ -70,7 +70,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
     let rbum_uri = format!("{}://{}", rbum_kind, req.path);
     let rbum_action = req.method.to_lowercase();
 
-    if let Some(token) = req.headers.get(&config.head_key_token) {
+    if let Some(token) = req.headers.get(&config.head_key_token).or_else(|| req.headers.get(&config.head_key_token.to_lowercase())) {
         let account_id = if let Some(token_value) = cache_client.get(&format!("{}{}", config.cache_key_token_info, token)).await? {
             trace!("Token info: {}", token_value);
             let account_info: Vec<&str> = token_value.split(',').collect::<Vec<_>>();
@@ -119,7 +119,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
             ak: Some(context.ak),
         })
     } else if let Some(ak_authorization) = get_ak_key(req, config) {
-        let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag) {
+        let req_date = if let Some(req_date) = req.headers.get(&config.head_key_date_flag).or_else(|| req.headers.get(&config.head_key_date_flag.to_lowercase())) {
             req_date
         } else {
             return Err(TardisError::unauthorized(
@@ -127,7 +127,7 @@ async fn ident(req: &AuthReq, config: &AuthConfig, cache_client: &TardisCacheCli
                 "401-auth-req-ak-not-exist",
             ));
         };
-        let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx) {
+        let bios_ctx = if let Some(bios_ctx) = req.headers.get(&config.head_key_bios_ctx).or_else(|| req.headers.get(&config.head_key_bios_ctx.to_lowercase())) {
             TardisFuns::json.str_to_obj::<TardisContext>(&TardisFuns::crypto.base64.decode(bios_ctx)?)?
         } else {
             return Err(TardisError::unauthorized(

@@ -19,7 +19,7 @@ pub struct IamCpExistMailVCodeReq {
     #[oai(validator(min_length = "2", max_length = "255", custom = "tardis::web::web_validation::Mail"))]
     pub mail: String,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tenant_id: String,
+    pub tenant_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
@@ -55,7 +55,7 @@ pub struct IamCpExistPhoneVCodeReq {
     #[oai(validator(min_length = "2", max_length = "255"))]
     pub phone: TrimString,
     #[oai(validator(min_length = "2", max_length = "255"))]
-    pub tenant_id: String,
+    pub tenant_id: Option<String>,
 }
 
 #[derive(poem_openapi::Object, Serialize, Deserialize, Debug)]
