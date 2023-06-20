@@ -316,6 +316,7 @@ impl FlowModelServ {
                         transfer_by_timer: None,
                         guard_by_creator: Some(true),
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -331,6 +332,7 @@ impl FlowModelServ {
                         transfer_by_timer: None,
                         guard_by_creator: Some(true),
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -346,6 +348,7 @@ impl FlowModelServ {
                         transfer_by_timer: None,
                         guard_by_creator: None,
                         guard_by_his_operators: Some(true),
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -361,6 +364,7 @@ impl FlowModelServ {
                         transfer_by_timer: None,
                         guard_by_creator: Some(true),
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -376,6 +380,7 @@ impl FlowModelServ {
                         transfer_by_timer: None,
                         guard_by_creator: Some(true),
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -391,6 +396,7 @@ impl FlowModelServ {
                         transfer_by_timer: None,
                         guard_by_creator: Some(true),
                         guard_by_his_operators: None,
+                        guard_by_assigned: None,
                         guard_by_spec_account_ids: None,
                         guard_by_spec_role_ids: None,
                         guard_by_other_conds: None,
@@ -749,6 +755,7 @@ impl FlowModelServ {
                         transfer_by_timer: "".to_string(),
                         guard_by_creator: false,
                         guard_by_his_operators: false,
+                        guard_by_assigned: false,
                         guard_by_spec_account_ids: vec![],
                         guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
                         vars_collect: TardisFuns::json.str_to_json("{}")?,
@@ -767,9 +774,10 @@ impl FlowModelServ {
                         transfer_by_timer: "".to_string(),
                         guard_by_creator: false,
                         guard_by_his_operators: false,
+                        guard_by_assigned: false,
                         guard_by_spec_account_ids: vec![],
                         guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
-                        vars_collect: TardisFuns::json.str_to_json("{}")?,
+                        vars_collect: TardisFuns::json.str_to_json("[]")?,
                         action_by_pre_callback: "".to_string(),
                         action_by_post_callback: "".to_string(),
                     },
@@ -781,7 +789,7 @@ impl FlowModelServ {
             FlowStateAggResp {
                 id: "confirmed-4Sm4pIy8S9OG5vQVmjthH".to_string(),
                 name: "已确认".to_string(),
-                is_init: true,
+                is_init: false,
                 transitions: vec![FlowTransitionDetailResp {
                     id: "pBb-7CEUGxfuiRnkVjP70".to_string(),
                     name: "分配任务".to_string(),
@@ -794,6 +802,7 @@ impl FlowModelServ {
                     transfer_by_timer: "".to_string(),
                     guard_by_creator: false,
                     guard_by_his_operators: false,
+                    guard_by_assigned: false,
                     guard_by_spec_account_ids: vec![],
                     guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
                     vars_collect: TardisFuns::json.str_to_json("{}")?,
@@ -807,7 +816,7 @@ impl FlowModelServ {
             FlowStateAggResp {
                 id: "rejected-51N3EGZNiuwrZcC7A_ouW".to_string(),
                 name: "已拒绝".to_string(),
-                is_init: true,
+                is_init: false,
                 transitions: vec![],
             },
         );
@@ -816,7 +825,7 @@ impl FlowModelServ {
             FlowStateAggResp {
                 id: "assigned-AcIReTG9RDw16fl_GwJ3G".to_string(),
                 name: "已分配".to_string(),
-                is_init: true,
+                is_init: false,
                 transitions: vec![FlowTransitionDetailResp {
                     id: "HZ23sUvOOadS802KfNAB3".to_string(),
                     name: "执行任务".to_string(),
@@ -829,6 +838,7 @@ impl FlowModelServ {
                     transfer_by_timer: "".to_string(),
                     guard_by_creator: false,
                     guard_by_his_operators: false,
+                    guard_by_assigned: false,
                     guard_by_spec_account_ids: vec![],
                     guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
                     vars_collect: TardisFuns::json.str_to_json("{}")?,
@@ -842,7 +852,7 @@ impl FlowModelServ {
             FlowStateAggResp {
                 id: "executing-uGwpwQpZKOmAOdH5n2z4c".to_string(),
                 name: "执行中".to_string(),
-                is_init: true,
+                is_init: false,
                 transitions: vec![FlowTransitionDetailResp {
                     id: "IWvT49XiwRbWALKQ1rLQB".to_string(),
                     name: "关闭任务".to_string(),
@@ -855,6 +865,7 @@ impl FlowModelServ {
                     transfer_by_timer: "".to_string(),
                     guard_by_creator: false,
                     guard_by_his_operators: false,
+                    guard_by_assigned: false,
                     guard_by_spec_account_ids: vec![],
                     guard_by_other_conds: TardisFuns::json.str_to_json("{}")?,
                     vars_collect: TardisFuns::json.str_to_json("{}")?,
@@ -868,7 +879,7 @@ impl FlowModelServ {
             FlowStateAggResp {
                 id: "finish-_lyTxR7t0DfS2eNE8jzHr".to_string(),
                 name: "已完成".to_string(),
-                is_init: true,
+                is_init: false,
                 transitions: vec![],
             },
         );
@@ -944,5 +955,37 @@ impl FlowModelServ {
         };
 
         Ok(result)
+    }
+
+    pub async fn add_state(flow_rel_kind: &FlowRelKind,
+        flow_model_id: &str,
+        flow_state_id: &str,
+        start_timestamp: Option<i64>,
+        end_timestamp: Option<i64>,
+        ignore_exist_error: bool,
+        to_is_outside: bool,
+        funs: &TardisFunsInst,
+        ctx: &TardisContext,) -> TardisResult<()> 
+    {
+        let current_model = Self::get_item(
+            flow_model_id,
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    with_sub_own_paths: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?;
+        if current_model.own_paths == ctx.own_paths {
+            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, flow_model_id, flow_state_id, None, None, false, false, funs, ctx).await?;
+        } else {
+            let model_id = Self::add_or_modify_model(flow_model_id, &mut FlowModelModifyReq::default(), funs, ctx).await?;
+            FlowRelServ::add_simple_rel(&FlowRelKind::FlowModelState, &model_id, flow_state_id, None, None, false, false, funs, ctx).await?;
+        }
+        Ok(())
     }
 }

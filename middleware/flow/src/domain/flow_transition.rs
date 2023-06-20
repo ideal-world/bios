@@ -45,6 +45,9 @@ pub struct Model {
     /// Transfer condition: the current operator is a historical operator
     /// 流转条件：当前操作人是历史操作人
     pub guard_by_his_operators: bool,
+    /// Transfer condition: the current operator is a historical operator
+    /// 流转条件：当前操作人是指定执行人
+    pub guard_by_assigned: bool,
     /// Transfer condition: the current operator contains the corresponding users
     /// 流转条件：当前操作人包含对应的用户
     pub guard_by_spec_account_ids: Vec<String>,
@@ -66,10 +69,6 @@ pub struct Model {
     /// 当进入此流转时，需要采集的变量列表
     /// TODO Vec<FlowVarInfo>
     pub vars_collect: Json,
-
-    /// rear action config / 关于后置动作的配置
-    /// TODO FlowRearActionInfo
-    // pub rear_action: Json,
 
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口
