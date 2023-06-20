@@ -1,3 +1,4 @@
+#![warn(clippy::unwrap_used)]
 use plugin::auth;
 use tardis::{basic::result::TardisResult, tokio, TardisFuns};
 

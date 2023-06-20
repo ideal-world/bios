@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, mem, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use bios_auth::{
@@ -10,6 +10,7 @@ use bios_auth::{
     },
     serv::{auth_crypto_serv, auth_kernel_serv},
 };
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use spacegate_kernel::{
     config::http_route_dto::SgHttpRouteRule,
@@ -23,10 +24,16 @@ use spacegate_kernel::{
 use tardis::{
     async_trait,
     basic::{error::TardisError, result::TardisResult},
-    config::config_dto::{CacheConfig, FrameworkConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
+    config::config_dto::{AppConfig, CacheConfig, FrameworkConfig, TardisConfig, WebServerConfig, WebServerModuleConfig},
+    log,
     serde_json::{self, Value},
+    tokio::{self, sync::Mutex, task::JoinHandle},
     TardisFuns,
 };
+
+lazy_static! {
+    static ref SHUTDOWN: Arc<Mutex<Option<JoinHandle<()>>>> = <_>::default();
+}
 
 pub const CODE: &str = "auth";
 pub struct SgFilterAuthDef;
@@ -38,12 +45,22 @@ impl SgPluginFilterDef for SgFilterAuthDef {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct SgFilterAuth {
     auth_config: AuthConfig,
     port: u16,
     cache_url: String,
+}
+
+impl Default for SgFilterAuth {
+    fn default() -> Self {
+        Self {
+            auth_config: Default::default(),
+            port: 8080,
+            cache_url: "redis://127.0.0.1:6379".to_string(),
+        }
+    }
 }
 
 #[async_trait]
@@ -61,6 +78,11 @@ impl SgPluginFilter for SgFilterAuth {
         TardisFuns::init_conf(TardisConfig {
             cs,
             fw: FrameworkConfig {
+                app: AppConfig {
+                    name: "spacegate.plugin.auth".to_string(),
+                    desc: "This is a spacegate plugin-auth".to_string(),
+                    ..Default::default()
+                },
                 web_server: WebServerConfig {
                     enabled: true,
                     port: self.port,
@@ -77,10 +99,25 @@ impl SgPluginFilter for SgFilterAuth {
         })
         .await?;
         let web_server = TardisFuns::web_server();
-        auth_initializer::init(web_server).await
+        auth_initializer::init(web_server).await?;
+        let mut shut_down = SHUTDOWN.lock().await;
+        let join_handle = tokio::spawn(async move {
+            let _ = web_server.start().await;
+        });
+        *shut_down = Some(join_handle);
+        Ok(())
     }
 
     async fn destroy(&self) -> TardisResult<()> {
+        let mut shut_down = SHUTDOWN.lock().await;
+        let mut swap_shutdown: Option<JoinHandle<()>> = None;
+        mem::swap(&mut *shut_down, &mut swap_shutdown);
+        if let Some(shutdown) = swap_shutdown {
+            if !shutdown.is_finished() {
+                shutdown.abort();
+            };
+            log::info!("[SG.Filter.Status] Server stopped");
+        };
         Ok(())
     }
 
@@ -182,4 +219,59 @@ fn headermap_header_to_hashmap(old_headers: HeaderMap) -> TardisResult<HashMap<S
         );
     }
     Ok(new_headers)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use tardis::{
+        test::test_container::TardisTestContainer,
+        testcontainers::{self, clients::Cli, images::redis::Redis, Container},
+        tokio,
+        web::web_resp::TardisResp,
+    };
+
+    use super::*;
+    #[tokio::test]
+    async fn test_auth_plugin() {
+        env::set_var("RUST_LOG", "debug,bios_auth=trace,tardis=trace");
+        tracing_subscriber::fmt::init();
+
+        let docker = testcontainers::clients::Cli::default();
+        let _x = docker_init(&docker).await.unwrap();
+
+        let filter_auth = SgFilterAuth {
+            cache_url: env::var("TARDIS_FW.CACHE.URL").unwrap(),
+            ..Default::default()
+        };
+
+        filter_auth.init(&[]).await.unwrap();
+
+        let apis = TardisFuns::web_client().get::<TardisResp<Value>>(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await.unwrap().body;
+        assert!(apis.is_some());
+        let apis = apis.unwrap();
+        assert!(apis.code == 200.to_string());
+        assert!(apis.data.is_some());
+
+        //dont need to decrypt
+
+        filter_auth.destroy().await.unwrap();
+
+        let test_result = TardisFuns::web_client().get_to_str(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await;
+        assert!(test_result.is_err() || test_result.unwrap().code == 502);
+    }
+
+    pub struct LifeHold<'a> {
+        pub redis: Container<'a, Redis>,
+    }
+
+    async fn docker_init(docker: &Cli) -> TardisResult<LifeHold<'_>> {
+        let redis_container = TardisTestContainer::redis_custom(docker);
+        let port = redis_container.get_host_port_ipv4(6379);
+        let url = format!("redis://127.0.0.1:{port}/0",);
+        env::set_var("TARDIS_FW.CACHE.URL", url);
+
+        Ok(LifeHold { redis: redis_container })
+    }
 }
