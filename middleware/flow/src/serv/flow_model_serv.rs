@@ -8,7 +8,7 @@ use bios_basic::rbum::{
     rbum_enumeration::RbumScopeLevelKind,
     serv::{
         rbum_crud_serv::{ID_FIELD, NAME_FIELD, REL_DOMAIN_ID_FIELD, REL_KIND_ID_FIELD},
-        rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE},
+        rbum_item_serv::{RbumItemCrudOperation, RBUM_ITEM_TABLE, self},
     },
 };
 use itertools::Itertools;
@@ -76,6 +76,24 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         })
     }
 
+    async fn before_add_item(add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
+        if FlowModelServ::find_one_item(
+            &FlowModelFilterReq {
+                basic: RbumBasicFilterReq {
+                    own_paths: Some(ctx.own_paths.clone()),
+                    ..Default::default()
+                },
+                tag: add_req.tag.clone(),
+            },
+            funs,
+            ctx,
+        )
+        .await?.is_some() {
+            return Err(funs.err().internal_error("flow_model_serv", "before_add_item", "There can only be one model under the same tag and own_paths", "500-mx-flow-internal-error"))
+        }
+        Ok(())
+    }
+
     async fn after_add_item(flow_model_id: &str, add_req: &mut FlowModelAddReq, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<()> {
         if let Some(transitions) = &add_req.transitions {
             Self::add_transitions(flow_model_id, transitions, funs, ctx).await?;
@@ -137,8 +155,8 @@ impl RbumItemCrudOperation<flow_model::ActiveModel, FlowModelAddReq, FlowModelMo
         query.column((flow_model::Entity, flow_model::Column::InitStateId));
         query.column((flow_model::Entity, flow_model::Column::Tag));
         query.expr_as(Expr::val(json! {()}), Alias::new("transitions"));
-        if let Some(tag) = &filter.tag {
-            query.and_where(Expr::col(flow_model::Column::Tag).eq(tag.as_str()));
+        if let Some(tag) = filter.tag.clone() {
+            query.and_where(Expr::col(flow_model::Column::Tag).eq(tag));
         }
         Ok(())
     }

@@ -6,7 +6,7 @@ use tardis::web::poem_openapi::param::{Path, Query};
 use tardis::web::poem_openapi::payload::Json;
 use tardis::web::web_resp::{TardisApiResult, TardisPage, TardisResp, Void};
 
-use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp};
+use crate::dto::flow_model_dto::{FlowModelAddReq, FlowModelAggResp, FlowModelFilterReq, FlowModelModifyReq, FlowModelSummaryResp, FlowTagKind};
 use crate::flow_constants;
 use crate::serv::flow_model_serv::FlowModelServ;
 use crate::serv::flow_rel_serv::{FlowRelKind, FlowRelServ};
@@ -51,7 +51,7 @@ impl FlowCcModelApi {
         &self,
         flow_model_ids: Query<Option<String>>,
         name: Query<Option<String>>,
-        tag: Query<Option<String>>,
+        tag: Query<Option<FlowTagKind>>,
         enabled: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,

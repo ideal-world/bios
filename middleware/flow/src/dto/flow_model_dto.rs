@@ -115,7 +115,7 @@ impl FlowModelDetailResp {
 #[serde(default)]
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub tag: Option<String>,
+    pub tag: Option<FlowTagKind>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {

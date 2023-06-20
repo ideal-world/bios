@@ -8,6 +8,7 @@ use crate::dto::flow_inst_dto::{
     FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq, FlowInstFindStateAndTransitionsResp,
     FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp,
 };
+use crate::dto::flow_model_dto::FlowTagKind;
 use crate::flow_constants;
 use crate::serv::flow_inst_serv::FlowInstServ;
 
@@ -49,7 +50,7 @@ impl FlowCcInstApi {
     async fn paginate(
         &self,
         flow_model_id: Query<Option<String>>,
-        tag: Query<Option<String>>,
+        tag: Query<Option<FlowTagKind>>,
         finish: Query<Option<bool>>,
         with_sub: Query<Option<bool>>,
         page_number: Query<u32>,

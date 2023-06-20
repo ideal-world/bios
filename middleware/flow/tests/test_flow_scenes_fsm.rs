@@ -291,7 +291,7 @@ pub async fn test(client: &mut TestHttpClient) -> TardisResult<()> {
         .post(
             "/cc/inst",
             &FlowInstStartReq {
-                tag: "proj_states".to_string(),
+                tag: FlowTagKind::Project,
                 create_vars: None,
             },
         )
