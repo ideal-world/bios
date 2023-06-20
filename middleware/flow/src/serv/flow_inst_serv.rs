@@ -32,7 +32,7 @@ use crate::{
             FlowInstAbortReq, FlowInstDetailResp, FlowInstFindNextTransitionResp, FlowInstFindNextTransitionsReq, FlowInstFindStateAndTransitionsReq,
             FlowInstFindStateAndTransitionsResp, FlowInstStartReq, FlowInstSummaryResp, FlowInstTransferReq, FlowInstTransferResp, FlowInstTransitionInfo, FlowOperationContext,
         },
-        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq},
+        flow_model_dto::{FlowModelDetailResp, FlowModelFilterReq, FlowTagKind},
         flow_state_dto::{FlowStateFilterReq, FlowSysStateKind},
         flow_transition_dto::FlowTransitionDetailResp,
     },
@@ -82,7 +82,7 @@ impl FlowInstServ {
         Ok(id)
     }
 
-    async fn get_model_id_by_own_paths(tag: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
+    pub async fn get_model_id_by_own_paths(tag: &FlowTagKind, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<String> {
         let mut result = None;
         // try get model in app path
         result = FlowModelServ::find_one_item(
@@ -91,7 +91,7 @@ impl FlowInstServ {
                     own_paths: Some(ctx.own_paths.clone()),
                     ..Default::default()
                 },
-                tag: Some(tag.to_string()),
+                tag: Some(tag.clone()),
             },
             funs,
             ctx,
@@ -105,7 +105,7 @@ impl FlowInstServ {
                         own_paths: Some(ctx.own_paths.split_once('/').unwrap_or_default().0.to_string()),
                         ..Default::default()
                     },
-                    tag: Some(tag.to_string()),
+                    tag: Some(tag.clone()),
                 },
                 funs,
                 ctx,
@@ -247,6 +247,7 @@ impl FlowInstServ {
 
     pub async fn paginate(
         flow_model_id: Option<String>,
+        tag: Option<FlowTagKind>,
         finish: Option<bool>,
         with_sub: Option<bool>,
         page_number: u32,
@@ -298,6 +299,10 @@ impl FlowInstServ {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::OwnPaths)).eq(ctx.own_paths.as_str()));
         }
         if let Some(flow_model_id) = flow_model_id {
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(&tag, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {

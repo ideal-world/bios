@@ -9,11 +9,11 @@ use tardis::{
     web::poem_openapi,
 };
 
-use super::flow_var_dto::FlowVarInfo;
+use super::{flow_var_dto::FlowVarInfo, flow_model_dto::FlowTagKind};
 
 #[derive(Serialize, Deserialize, Debug, poem_openapi::Object)]
 pub struct FlowInstStartReq {
-    pub tag: String,
+    pub tag: FlowTagKind,
     pub create_vars: Option<HashMap<String, Value>>,
 }
 

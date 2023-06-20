@@ -32,8 +32,7 @@ pub struct FlowModelAddReq {
     pub template: bool,
     pub rel_model_id: Option<String>,
 
-    #[oai(validator(min_length = "2", max_length = "200"))]
-    pub tag: Option<String>,
+    pub tag: Option<FlowTagKind>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -56,8 +55,7 @@ pub struct FlowModelModifyReq {
     pub modify_transitions: Option<Vec<FlowTransitionModifyReq>>,
     pub delete_transitions: Option<Vec<String>>,
 
-    #[oai(validator(min_length = "2", max_length = "200"))]
-    pub tag: Option<String>,
+    pub tag: Option<FlowTagKind>,
 
     pub scope_level: Option<RbumScopeLevelKind>,
     pub disabled: Option<bool>,
@@ -98,7 +96,7 @@ pub struct FlowModelDetailResp {
     pub create_time: DateTime<Utc>,
     pub update_time: DateTime<Utc>,
 
-    pub tag: String,
+    pub tag: FlowTagKind,
 
     pub scope_level: RbumScopeLevelKind,
     pub disabled: bool,
@@ -117,7 +115,7 @@ impl FlowModelDetailResp {
 #[serde(default)]
 pub struct FlowModelFilterReq {
     pub basic: RbumBasicFilterReq,
-    pub tag: Option<String>,
+    pub tag: Option<FlowTagKind>,
 }
 
 impl RbumItemFilterFetcher for FlowModelFilterReq {
@@ -160,4 +158,17 @@ pub struct FlowStateAggResp {
     pub name: String,
     pub is_init: bool,
     pub transitions: Vec<FlowTransitionDetailResp>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, poem_openapi::Enum, sea_orm::strum::EnumIter, sea_orm::DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(255))")]
+pub enum FlowTagKind {
+    #[sea_orm(string_value = "ticket_states")]
+    Ticket,
+    #[sea_orm(string_value = "proj_states")]
+    Project,
+    #[sea_orm(string_value = "milestone_states")]
+    Milestone,
+    #[sea_orm(string_value = "iter_states")]
+    Iter,
 }
