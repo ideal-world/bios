@@ -96,7 +96,7 @@ pub struct Model {
     ///     "data": {}
     /// }
     /// ```
-    pub exchange_data_url: String,
+    // pub exchange_data_url: String,
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,
