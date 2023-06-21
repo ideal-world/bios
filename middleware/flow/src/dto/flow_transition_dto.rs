@@ -20,6 +20,7 @@ pub struct FlowTransitionAddReq {
 
     pub guard_by_creator: Option<bool>,
     pub guard_by_his_operators: Option<bool>,
+    pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
@@ -47,6 +48,7 @@ pub struct FlowTransitionModifyReq {
 
     pub guard_by_creator: Option<bool>,
     pub guard_by_his_operators: Option<bool>,
+    pub guard_by_assigned: Option<bool>,
     pub guard_by_spec_account_ids: Option<Vec<String>>,
     pub guard_by_spec_role_ids: Option<Vec<String>>,
     pub guard_by_other_conds: Option<Vec<Vec<BasicQueryCondInfo>>>,
@@ -72,6 +74,7 @@ pub struct FlowTransitionDetailResp {
 
     pub guard_by_creator: bool,
     pub guard_by_his_operators: bool,
+    pub guard_by_assigned: bool,
     pub guard_by_spec_account_ids: Vec<String>,
     pub guard_by_spec_role_ids: Vec<String>,
     // TODO
@@ -113,6 +116,7 @@ impl From<FlowTransitionDetailResp> for FlowTransitionAddReq {
             transfer_by_timer: Some(value.transfer_by_timer),
             guard_by_creator: Some(value.guard_by_creator),
             guard_by_his_operators: Some(value.guard_by_his_operators),
+            guard_by_assigned: Some(value.guard_by_assigned),
             guard_by_spec_account_ids: Some(value.guard_by_spec_account_ids),
             guard_by_spec_role_ids: Some(value.guard_by_spec_role_ids),
             guard_by_other_conds,
