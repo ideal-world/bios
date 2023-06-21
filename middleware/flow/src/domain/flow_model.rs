@@ -1,4 +1,5 @@
 use tardis::db::sea_orm;
+use tardis::db::sea_orm::prelude::Json;
 use tardis::db::sea_orm::*;
 use tardis::{TardisCreateEntity, TardisEmptyBehavior, TardisEmptyRelation};
 
@@ -18,6 +19,10 @@ pub struct Model {
     pub id: String,
     pub icon: String,
     pub info: String,
+
+    /// Model variable list / 模型变量列表
+    pub vars: Option<Json>,
+
     /// Initial state / 初始状态
     ///
     /// Define the initial state of each model
@@ -44,6 +49,54 @@ pub struct Model {
     #[index]
     #[tardis_entity(custom_type = "String")]
     pub tag: Option<FlowTagKind>,
+
+    /// External Data Interaction Interface / 外部的数据交互接口
+    ///
+    /// Request Method: PUT
+    ///
+    /// Request Context-Type: application/json
+    ///
+    /// ## Get related information
+    /// ```
+    /// Request Body:{
+    ///     "kind": "", // FETCH_REL_OBJ
+    ///     "curr_tag": "", // 当前类型，对应于此模型的 `tag` 字段
+    ///     "curr_bus_obj_id": "", // 当前业务对象Id
+    ///     "fetch_rel_obj": {
+    ///         "rel_tag": "", // 关联类型，对应于此模型的 `tag` 字段
+    ///         "rel_curr_state_ids": [""] // 关联状态Id，可选
+    ///         "rel_changed_state": "" // 关联变更的状态，可选
+    ///     }
+    /// }
+    ///
+    /// Response Body: {
+    ///     "code": "200",
+    ///     "msg": "",
+    ///     "data": [{
+    ///         "rel_bus_obj_id": "" // 关联的业务对象Id
+    ///     }]
+    /// }
+    ///
+    /// ## 变更通知
+    ///
+    /// Request Body:{
+    ///     "kind": "", // NOTIFY_CHANGES
+    ///     "curr_tag": "", // 当前类型，对应于此模型的 `tag` 字段
+    ///     "curr_bus_obj_id": "", // 当前业务对象Id
+    ///     "notify_changes": {
+    ///         "rel_tag": "", // 关联类型，对应于此模型的 `tag` 字段
+    ///         "rel_bus_obj_id": "", // 关联的业务对象Id
+    ///         "changed_vars": {} // 变更的变量列表
+    ///     }
+    /// }
+    ///
+    /// Response Body: {
+    ///     "code": "200",
+    ///     "msg": "",
+    ///     "data": {}
+    /// }
+    /// ```
+    pub exchange_data_url: String,
 
     #[fill_ctx(own_paths)]
     pub own_paths: String,

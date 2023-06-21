@@ -241,6 +241,7 @@ impl FlowInstServ {
                 current_state_id: inst.current_state_id,
                 current_state_name: inst.current_state_name,
                 current_vars: inst.current_vars.map(|current_vars| TardisFuns::json.json_to_obj(current_vars).unwrap()),
+                rel_business_obj_id: todo!(),
             })
             .collect_vec())
     }
@@ -301,8 +302,12 @@ impl FlowInstServ {
         if let Some(flow_model_id) = flow_model_id {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
-        if let Some(tag) = tag {
-            let flow_model_id = Self::get_model_id_by_own_paths(&tag, funs, ctx).await?;
+        if let Some(tag) = &tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = &tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {
@@ -331,6 +336,7 @@ impl FlowInstServ {
                     output_message: inst.output_message,
                     own_paths: inst.own_paths,
                     current_state_id: inst.current_state_id,
+                    rel_business_obj_id: todo!(),
                 })
                 .collect_vec(),
         })

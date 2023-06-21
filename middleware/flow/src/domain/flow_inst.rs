@@ -14,6 +14,10 @@ pub struct Model {
     #[index]
     pub rel_flow_model_id: String,
 
+    /// Business object Id / 关联的业务对象Id
+    #[index]
+    pub rel_business_obj_id: String,
+
     /// Current state / 当前状态
     ///
     /// This state needs to be updated after each transfer

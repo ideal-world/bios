@@ -70,6 +70,10 @@ pub struct Model {
     /// TODO Vec<FlowVarInfo>
     pub vars_collect: Json,
 
+    /// rear action config / 关于后置动作的配置
+    /// TODO FlowRearActionInfo
+    // pub rear_action: Json,
+
     /// External interface to be called when entering this transition
     /// 进入此流转时，需要调用的外部接口
     ///
@@ -80,6 +84,12 @@ pub struct Model {
     ///
     /// action similar to `Event` in BPMN
     pub action_by_post_callback: String,
+
+    /// TODO Vec<FlowTransitionActionByVarChangeInfo>
+    pub action_by_post_var_changes: Json,
+
+    /// TODO Vec<FlowTransitionActionByStateChangeInfo>
+    pub action_by_post_state_changes: Json,
 
     pub rel_flow_model_id: String,
 
