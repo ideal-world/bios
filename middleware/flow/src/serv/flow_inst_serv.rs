@@ -302,8 +302,12 @@ impl FlowInstServ {
         if let Some(flow_model_id) = flow_model_id {
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
-        if let Some(tag) = tag {
-            let flow_model_id = Self::get_model_id_by_own_paths(&tag, funs, ctx).await?;
+        if let Some(tag) = &tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
+            query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
+        }
+        if let Some(tag) = &tag {
+            let flow_model_id = Self::get_model_id_by_own_paths(tag, funs, ctx).await?;
             query.and_where(Expr::col((flow_inst::Entity, flow_inst::Column::RelFlowModelId)).eq(flow_model_id));
         }
         if let Some(finish) = finish {
@@ -550,6 +554,7 @@ impl FlowInstServ {
                 {
                     return false;
                 }
+                // TODO guard_by_assigned is not implement
                 if let Some(guard_by_other_conds) = model_transition.guard_by_other_conds() {
                     let mut check_vars: HashMap<String, Value> = HashMap::new();
                     if let Some(current_vars) = &flow_inst.current_vars {
