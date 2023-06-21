@@ -125,10 +125,11 @@ impl SgPluginFilter for SgFilterAuth {
         if ctx.get_req_method() == &http::Method::OPTIONS {
             return Ok((true, ctx));
         }
-        match auth_kernel_serv::auth(&mut ctx_to_auth_req(&mut ctx).await?, false).await {
+        let (mut auth_req, req_body) = ctx_to_auth_req(&mut ctx).await?;
+        match auth_kernel_serv::auth(&mut auth_req, false).await {
             Ok(auth_resp) => {
                 if auth_resp.allow {
-                    ctx = success_auth_resp_to_ctx(auth_resp, ctx)?;
+                    ctx = success_auth_resp_to_ctx(auth_resp, req_body, ctx)?;
                 } else {
                     ctx.set_action(SgRouteFilterRequestAction::Response);
                     ctx.set_resp_body(auth_resp.reason.map(|s| s.into_bytes()).unwrap_or_default())?;
@@ -155,38 +156,46 @@ impl SgPluginFilter for SgFilterAuth {
         Ok((true, ctx))
     }
 }
-async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<AuthReq> {
+async fn ctx_to_auth_req(ctx: &mut SgRoutePluginContext) -> TardisResult<(AuthReq, Vec<u8>)> {
     let url = ctx.get_req_uri().clone();
     let scheme = url.scheme().map(|s| s.to_string()).unwrap_or("http".to_string());
     let headers = headermap_header_to_hashmap(ctx.get_req_headers().clone())?;
+    let req_body = ctx.pop_req_body().await?;
 
-    Ok(AuthReq {
-        scheme: scheme.clone(),
-        path: url.path().to_string(),
-        query: url
-            .query()
-            .map(|q| {
-                q.split('&')
-                    .map(|s| {
-                        let a: Vec<_> = s.split('=').collect();
-                        (a[0].to_string(), a[1].to_string())
-                    })
-                    .collect()
-            })
-            .unwrap_or_default(),
-        method: ctx.get_req_method().to_string(),
-        host: url.host().unwrap_or("127.0.0.1").to_string(),
-        port: url.port().map(|p| p.as_u16()).unwrap_or_else(|| if scheme == "https" { 443 } else { 80 }),
-        headers,
-        body: ctx.pop_req_body().await?.map(|s| String::from_utf8_lossy(&s).to_string()),
-    })
+    Ok((
+        AuthReq {
+            scheme: scheme.clone(),
+            path: url.path().to_string(),
+            query: url
+                .query()
+                .map(|q| {
+                    q.split('&')
+                        .map(|s| {
+                            let a: Vec<_> = s.split('=').collect();
+                            (a[0].to_string(), a[1].to_string())
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            method: ctx.get_req_method().to_string(),
+            host: url.host().unwrap_or("127.0.0.1").to_string(),
+            port: url.port().map(|p| p.as_u16()).unwrap_or_else(|| if scheme == "https" { 443 } else { 80 }),
+            headers,
+            body: req_body.clone().map(|s| String::from_utf8_lossy(&s).to_string()),
+        },
+        req_body.unwrap_or_default(),
+    ))
 }
 
-fn success_auth_resp_to_ctx(auth_resp: AuthResp, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
+fn success_auth_resp_to_ctx(auth_resp: AuthResp, old_req_body: Vec<u8>, mut ctx: SgRoutePluginContext) -> TardisResult<SgRoutePluginContext> {
     let new_headers = hashmap_header_to_headermap(auth_resp.headers.clone())?;
 
     ctx.set_resp_headers(new_headers);
-    ctx.set_req_body(auth_resp.body.map(|s| s.into_bytes()).unwrap_or_default())?;
+    if let Some(new_body) = auth_resp.body {
+        ctx.set_req_body(new_body.into_bytes())?;
+    } else {
+        ctx.set_req_body(old_req_body)?;
+    }
     Ok(ctx)
 }
 
@@ -225,6 +234,8 @@ fn headermap_header_to_hashmap(old_headers: HeaderMap) -> TardisResult<HashMap<S
 mod tests {
     use std::env;
 
+    use spacegate_kernel::http::{Method, Uri, Version};
+    use spacegate_kernel::hyper::Body;
     use tardis::{
         test::test_container::TardisTestContainer,
         testcontainers::{self, clients::Cli, images::redis::Redis, Container},
@@ -254,8 +265,30 @@ mod tests {
         assert!(apis.code == 200.to_string());
         assert!(apis.data.is_some());
 
+        let test_body_value = r##"test_body_value!@#$%^&*():"中文测试"##;
         //dont need to decrypt
+        let header = HeaderMap::new();
+        let ctx = SgRoutePluginContext::new(
+            Method::POST,
+            Uri::from_static("http://sg.idealworld.group/test1"),
+            Version::HTTP_11,
+            header,
+            Body::from(test_body_value),
+            "127.0.0.1:8080".parse().unwrap(),
+            "".to_string(),
+            None,
+        );
+        let (is_ok, mut before_filter_ctx) = filter_auth.req_filter("", ctx, None).await.unwrap();
+        assert!(is_ok);
+        let req_body = before_filter_ctx.pop_req_body().await.unwrap();
+        assert!(req_body.is_some());
+        let req_body = req_body.unwrap();
+        let req_body = String::from_utf8(req_body).unwrap();
+        println!("req_body:{req_body} test_body_value:{test_body_value}");
+        assert_eq!(req_body, test_body_value.to_string());
 
+        //TODO 
+        
         filter_auth.destroy().await.unwrap();
 
         let test_result = TardisFuns::web_client().get_to_str(&format!("http://127.0.0.1:{}/auth/auth/apis", filter_auth.port), None).await;
