@@ -47,28 +47,7 @@ impl PluginBsServ {
             ));
         }
         let bs = SpiBsServ::peek_item(bs_id, &SpiBsFilterReq::default(), funs, ctx).await?;
-        if SpiBsServ::count_items(
-            &SpiBsFilterReq {
-                basic: RbumBasicFilterReq {
-                    ids: Some(vec![bs_id.to_string()]),
-                    with_sub_own_paths: true,
-                    ..Default::default()
-                },
-                rel: Some(RbumItemRelFilterReq {
-                    rel_by_from: true,
-                    tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
-                    from_rbum_kind: Some(RbumRelFromKind::Item),
-                    rel_item_id: Some(app_tenant_id.to_owned()),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-            funs,
-            ctx,
-        )
-        .await?
-            > 0
-        {
+        if Self::exist_bs(bs_id, app_tenant_id, funs, ctx).await? {
             let rel_agg = Self::get_bs_rel_agg(bs_id, app_tenant_id, funs, ctx).await?;
             for attrs in rel_agg.attrs {
                 RbumRelAttrServ::delete_rbum(&attrs.id, funs, ctx).await?;
@@ -135,6 +114,33 @@ impl PluginBsServ {
             total_size: rel_agg.total_size,
             records: bs_records,
         })
+    }
+
+    pub async fn exist_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<bool> {
+        if SpiBsServ::count_items(
+            &SpiBsFilterReq {
+                basic: RbumBasicFilterReq {
+                    ids: Some(vec![bs_id.to_string()]),
+                    ..Default::default()
+                },
+                rel: Some(RbumItemRelFilterReq {
+                    rel_by_from: true,
+                    tag: Some(spi_constants::SPI_IDENT_REL_TAG.to_string()),
+                    from_rbum_kind: Some(RbumRelFromKind::Item),
+                    rel_item_id: Some(app_tenant_id.to_owned()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            funs,
+            ctx,
+        )
+        .await?
+            > 0
+        {
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     pub async fn get_bs(bs_id: &str, app_tenant_id: &str, funs: &TardisFunsInst, ctx: &TardisContext) -> TardisResult<PluginBsInfoResp> {
@@ -254,7 +260,7 @@ impl PluginBsServ {
                 return Ok(last);
             }
         }
-        Err(funs.err().conflict(&SpiBsServ::get_obj_name(), "get_bs", "not found backend", ""))
+        Err(funs.err().conflict(&SpiBsServ::get_obj_name(), "get_bs", "Not Configured bs app_tenant_id .", ""))
     }
 
     pub fn get_parent_own_paths(own_paths: &str) -> TardisResult<Vec<String>> {
